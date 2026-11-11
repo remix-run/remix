@@ -4439,32 +4439,6 @@ describe('stream', () => {
   })
 
   describe('frames', () => {
-    it('serializes prefetch opt-ins for blocking and non-blocking frames only when enabled', async () => {
-      let html = await drain(
-        renderToStream(
-          <main>
-            <Frame src="/blocking" prefetch />
-            <Frame src="/streamed" prefetch fallback={<p>Loading</p>} />
-            <Frame src="/disabled" prefetch={false} />
-            <Frame src="/default" />
-          </main>,
-          { resolveFrame: () => '<p>Frame</p>' },
-        ),
-      )
-      let data = parseRmxDataFromHtml(html)
-      let frames = Object.values(data.f).map((frame) => {
-        if (typeof frame !== 'object' || frame === null || !('src' in frame))
-          throw new Error('Expected frame metadata')
-        return [frame.src, 'prefetch' in frame ? frame.prefetch : undefined]
-      })
-      expect(frames).toEqual([
-        ['/blocking', true],
-        ['/streamed', true],
-        ['/disabled', undefined],
-        ['/default', undefined],
-      ])
-    })
-
     it('adds frame scripts for non-blocking frames', async () => {
       // Test non-blocking frame (with fallback)
       let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {

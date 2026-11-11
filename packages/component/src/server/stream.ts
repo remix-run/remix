@@ -197,7 +197,6 @@ interface FrameData {
   status: 'pending' | 'resolved'
   name?: string
   src: string
-  prefetch?: true
 }
 
 interface RenderContext {
@@ -634,7 +633,6 @@ function buildFrameSegment(
     status: props.fallback ? 'pending' : 'resolved',
     name: props.name,
     src: props.src,
-    prefetch: props.prefetch === true ? true : undefined,
   })
 
   let seg: FrameSegment = {

@@ -26,7 +26,7 @@ export interface PrefetchContext {
   signal: AbortSignal
 }
 
-/** A nested frame source discovered in HTML from a `<Frame prefetch>` declaration. */
+/** A same-origin nested frame source discovered in prefetched HTML. */
 export interface PrefetchFrameReference {
   /** Absolute frame source URL without a hash. */
   readonly src: string
@@ -36,9 +36,9 @@ export interface PrefetchFrameReference {
 
 /** References to delegate to Remix's native asset hints and nested frame fetching. */
 export interface PrefetchReferences {
-  /** Original asset elements, including supported elements selected from the fragment. */
+  /** Original asset elements to prefetch (defaults to discovered asset declarations). */
   assets?: readonly Element[]
-  /** Nested frame requests to fetch using the same overrides. */
+  /** Nested frame requests to fetch using the same overrides (defaults to none). */
   frames?: readonly PrefetchFrameReference[]
 }
 
@@ -50,7 +50,7 @@ export interface PrefetchFrameContext extends PrefetchContext {
   fragment: DocumentFragment
   /** Original script and link declarations, including those inside templates. */
   assets: readonly Element[]
-  /** Opted-in nested frame requests, resolved against `baseURL`. */
+  /** All discovered same-origin nested frame requests, resolved against `baseURL`. */
   frames: readonly PrefetchFrameReference[]
   /** Final response URL resolved with the first `<base href>`, when present. */
   baseURL: string
@@ -69,9 +69,10 @@ export interface DefaultPrefetchOverrides {
    */
   fetch?(url: string, init: RequestInit, context: PrefetchContext): Promise<Response>
   /**
-   * Handles each parsed response. Call `prefetchReferences()` to delegate all discovered references,
-   * or pass selected arrays; omitted arrays retain their discovered defaults. Returning without
-   * delegating skips Remix's work. The hook may perform and await its own prefetching instead.
+   * Handles each parsed response. Call `prefetchReferences()` to prefetch discovered assets,
+   * or pass selected arrays. Omitted assets use discovered defaults; omitted frames are not fetched.
+   * Pass `frames` explicitly to prefetch nested sources. Returning without delegating skips Remix's
+   * work. The hook may perform and await its own prefetching instead.
    *
    * @param prefetchReferences Starts selected default work while the hook is active.
    * @param context Parsed HTML, source elements, frame references, and cancellation context.
@@ -103,11 +104,12 @@ const initialAnchorPrefetch = createAnchorPrefetching()
 let prefetchAnchor = initialAnchorPrefetch
 
 /**
- * Fetches and parses frame HTML, then prefetches discovered assets and opted-in nested frames.
+ * Fetches and parses frame HTML, then prefetches discovered assets.
  *
  * Overrides receive the prepared GET request and the inert parsed fragment. Native asset hints
  * never run scripts or apply styles. Pending requests are shared by source and target; the first
- * caller supplies the overrides. Completed responses are discarded. Failures and cancellation
+ * caller supplies the overrides. Nested sources are exposed to the frame hook and fetched only
+ * when explicitly selected. Completed responses are discarded. Failures and cancellation
  * finish without affecting navigation, and custom work must honor the provided signal.
  *
  * @param src Same-origin frame source, resolved against the document base URL.
@@ -130,8 +132,8 @@ export function defaultPrefetch(
  * `<link rel="prefetch">` hints.
  * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Pass
  * `prefetch` to `run()` to change this behavior, or delegate to {@link defaultPrefetch} with overrides.
- * Opted-in nested `<Frame prefetch>` sources use the same strategy. Cross-origin URLs, the current
- * untargeted page, and browsers where Remix doesn't handle navigations are skipped.
+ * Custom frame hooks can select nested sources to prefetch using the same strategy. Cross-origin
+ * URLs, the current untargeted page, and browsers where Remix doesn't handle navigations are skipped.
  *
  * Anchor calls read link source and target metadata, supply the triggering element, and cancel
  * this caller when the anchor disconnects. Explicit options override destination metadata. Anchors
@@ -646,7 +648,7 @@ export function createDefaultPrefetch(
           selectedAssets.set(key, ready)
           requests.push(ready)
         }
-        for (let frame of references?.frames ?? frames) {
+        for (let frame of references?.frames ?? []) {
           try {
             let url = new URL(frame.src, baseURL)
             if (url.protocol !== 'http:' && url.protocol !== 'https:') continue
@@ -825,8 +827,6 @@ function discoverFrames(elements: Element[], baseURL: string): PrefetchFrameRefe
       if (
         typeof frame !== 'object' ||
         frame === null ||
-        !('prefetch' in frame) ||
-        frame.prefetch !== true ||
         !('src' in frame) ||
         typeof frame.src !== 'string' ||
         !frame.src

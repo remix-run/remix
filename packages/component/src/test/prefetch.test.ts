@@ -1207,7 +1207,7 @@ describe('defaultPrefetch overrides', () => {
           return Promise.resolve(
             htmlResponse(
               new URL(url).pathname === '/page'
-                ? '<script id="rmx-data" type="application/json">{"f":{"child":{"src":"/child","prefetch":true}}}</script>'
+                ? '<script id="rmx-data" type="application/json">{"f":{"child":{"src":"/child"}}}</script>'
                 : '<main>Child</main>',
             ),
           )
@@ -1217,7 +1217,7 @@ describe('defaultPrefetch overrides', () => {
             parsed.resolve(context)
             await release.promise
           }
-          await prefetchReferences()
+          await prefetchReferences({ frames: context.frames })
         },
       },
     )
@@ -1320,8 +1320,12 @@ describe('defaultPrefetch overrides', () => {
       renderToStream(
         jsx('main', {
           children: [
-            jsx(Frame, { src: './keep#hash', name: 'details', prefetch: true }),
-            jsx(Frame, { src: './skip', name: 'sidebar', prefetch: true }),
+            jsx(Frame, { src: './keep#hash', name: 'details' }),
+            jsx(Frame, {
+              src: './skip',
+              name: 'sidebar',
+              fallback: jsx('p', { children: 'Loading' }),
+            }),
             jsx(Frame, { src: './unmarked' }),
           ],
         }),
@@ -1346,6 +1350,7 @@ describe('defaultPrefetch overrides', () => {
         expect(frames.map((frame) => new URL(frame.src).pathname)).toEqual([
           '/resources/keep',
           '/resources/skip',
+          '/resources/unmarked',
         ])
         fragment.querySelector('#rmx-data')?.remove()
         let image = fragment.querySelector('img[data-prefetch]')
@@ -1373,6 +1378,41 @@ describe('defaultPrefetch overrides', () => {
     ])
   })
 
+  it('exposes frame references from nested templates without starting default nested fetches', async (t) => {
+    startTestPrefetching(t)
+    stubLinkPrefetchSupport(t, true)
+    let html = `<script src="/entry.js"></script>
+      <script id="rmx-data" type="application/json">{"f":{
+        "eager":{"src":"/eager","name":"details","status":"resolved"},
+        "fallback":{"src":"/fallback","name":"sidebar","status":"pending"},
+        "crossOrigin":{"src":"https://example.com/frame"},
+        "invalidName":{"src":"/invalid","name":42}
+      }}</script>
+      <template><script id="rmx-data" type="application/json">{"f":{
+        "nested":{"src":"/nested#section"}
+      }}</script><link rel="stylesheet" href="/nested.css"></template>`
+    let transport = mock.fn(async () => htmlResponse(html))
+    let hints = collectHints(t)
+    await defaultPrefetch('/page', undefined, { fetch: transport })
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/entry.js', '/nested.css'])
+    hints.length = 0
+    await defaultPrefetch('/page', undefined, {
+      fetch: transport,
+      async frame(prefetchReferences, { frames }) {
+        expect(frames).toEqual([
+          { src: new URL('/eager', location.href).href, target: 'details' },
+          { src: new URL('/fallback', location.href).href, target: 'sidebar' },
+          { src: new URL('/nested', location.href).href, target: undefined },
+        ])
+        expect(Object.isFrozen(frames)).toBe(true)
+        await prefetchReferences()
+      },
+    })
+    expect(transport).toHaveBeenCalledTimes(2)
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/entry.js', '/nested.css'])
+  })
+
   it('does not fall back when the frame hook skips or throws, and permits later attempts', async (t) => {
     startTestPrefetching(t)
     stubLinkPrefetchSupport(t, true)
@@ -1391,13 +1431,13 @@ describe('defaultPrefetch overrides', () => {
     expect(transport).toHaveBeenCalledTimes(3)
   })
 
-  it('defaults omitted reference lists and deduplicates repeated delegations', async (t) => {
+  it('defaults omitted assets, skips omitted frames, and deduplicates repeated delegations', async (t) => {
     startTestPrefetching(t)
     stubLinkPrefetchSupport(t, true)
     let transport = mock.fn(async (url: RequestInfo | URL) =>
       new URL(String(url)).pathname === '/page'
         ? htmlResponse(`<script src="/one.js"></script><script src="/two.js"></script>
-            <script id="rmx-data" type="application/json">{"f":{"child":{"src":"/child","prefetch":true}}}</script>`)
+            <script id="rmx-data" type="application/json">{"f":{"child":{"src":"/child"}}}</script>`)
         : htmlResponse('<main>Child</main>'),
     )
     let hints = collectHints(t)
@@ -1414,7 +1454,7 @@ describe('defaultPrefetch overrides', () => {
     })
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/one.js', '/two.js'])
     expect(transport.mock.calls.map((call) => new URL(String(call.arguments[0])).pathname)).toEqual(
-      ['/page', '/child'],
+      ['/page'],
     )
   })
 
@@ -1459,7 +1499,7 @@ describe('defaultPrefetch overrides', () => {
       let other = new URL(String(url)).pathname === '/first' ? '/second' : '/first'
       return htmlResponse(
         `<script id="rmx-data" type="application/json">${JSON.stringify({
-          f: { nested: { src: other, prefetch: true } },
+          f: { nested: { src: other } },
         })}</script>`,
       )
     })
@@ -1470,7 +1510,7 @@ describe('defaultPrefetch overrides', () => {
       async frame(prefetchReferences, context) {
         let pathname = new URL(context.src).pathname
         parsed.push(pathname)
-        await prefetchReferences()
+        await prefetchReferences({ frames: context.frames })
         origins.set(pathname, context.element)
       },
     }
