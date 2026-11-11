@@ -10,7 +10,7 @@ import { promisify } from 'node:util'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createHmrSupervisor, getSupervisorChokidarWatcher } from './lib/runner.ts'
+import { createHmrSupervisor, getSupervisorWatchEvents } from './lib/runner.ts'
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url))
 const nodeTsxImportUrl = import.meta.resolve('@remix-run/node-tsx')
@@ -57,6 +57,45 @@ describe('node-hmr', () => {
 
       await waitForHotUpdate(server, /message\.ts/)
       assert.equal(await fetchText(ready.port), 'two')
+      assert.equal(server.readyCount, 1)
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('keeps watching the dependencies of a hot updated module', async () => {
+    let getMessageSource = (prefix: string) =>
+      [
+        `import { suffix } from './suffix.ts'`,
+        `export let message = ${JSON.stringify(prefix)} + suffix`,
+        `export function getMessage() {`,
+        `  return message`,
+        `}`,
+        `if (import.meta.hot) {`,
+        `  import.meta.hot.accept((module) => {`,
+        `    message = String(module.message)`,
+        `  })`,
+        `}`,
+      ].join('\n')
+    await using fixture = await createFixture({
+      'server.ts': getServerSource('./message.ts', 'getMessage()'),
+      'message.ts': getMessageSource('one'),
+      'suffix.ts': `export const suffix = '-a'`,
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one-a')
+
+      await writeFileAtomically(path.join(fixture.path, 'message.ts'), getMessageSource('two'))
+      await waitForHotUpdate(server, /message\.ts/)
+      assert.equal(await fetchText(ready.port), 'two-a')
+
+      // Node does not load the unchanged dependency again when the updated module imports it.
+      await writeFileAtomically(path.join(fixture.path, 'suffix.ts'), `export const suffix = '-b'`)
+      await waitForHotUpdate(server, /suffix\.ts/)
+      assert.equal(await fetchText(ready.port), 'two-b')
       assert.equal(server.readyCount, 1)
     } finally {
       await server.stop()
@@ -218,7 +257,7 @@ describe('node-hmr', () => {
 
     try {
       await supervisor.ready()
-      let watcher = getSupervisorChokidarWatcher(supervisor)!
+      let watcher = getSupervisorWatchEvents(supervisor)!
       let entryStats = await fs.stat(path.join(fixture.path, 'server.ts'))
       let messageStats = await fs.stat(path.join(fixture.path, 'message.ts'))
       watcher.emit('all', 'change', 'message.ts', messageStats)
@@ -250,7 +289,7 @@ describe('node-hmr', () => {
 
     try {
       await supervisor.ready()
-      let watcher = getSupervisorChokidarWatcher(supervisor)
+      let watcher = getSupervisorWatchEvents(supervisor)
       assert.ok(watcher)
 
       let entryPath = path.join(fixture.path, 'server.ts')
@@ -420,7 +459,7 @@ describe('node-hmr', () => {
     try {
       await supervisor.ready()
       events = await connectHmrEvents(await fs.readFile(hmrUrlFile, 'utf-8'))
-      let watcher = getSupervisorChokidarWatcher(supervisor)
+      let watcher = getSupervisorWatchEvents(supervisor)
       assert.ok(watcher)
 
       let watchFileStats = await fs.stat(watchFile)

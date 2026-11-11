@@ -156,10 +156,10 @@ export function createFileChangeEventDeduper(): (
   }
 }
 
-const chokidarWatcherBySupervisor = new WeakMap<object, EventEmitter>()
+const watchEventsBySupervisor = new WeakMap<object, EventEmitter>()
 
-export function getSupervisorChokidarWatcher(supervisor: object): EventEmitter | undefined {
-  return chokidarWatcherBySupervisor.get(supervisor)
+export function getSupervisorWatchEvents(supervisor: object): EventEmitter | undefined {
+  return watchEventsBySupervisor.get(supervisor)
 }
 
 interface BrowserHmrChannelOptions {
@@ -397,6 +397,7 @@ export function createHmrSupervisor(options: {
     if (message.type === 'node-hmr:child:hot-module-updated') {
       acceptedHotUpdateCount += 1
       serverGeneration += 1
+      syncWatchedModuleFiles()
       if (state.status === 'running') {
         flushAcceptedHotUpdateBrowserEvent()
       }
@@ -444,12 +445,16 @@ export function createHmrSupervisor(options: {
       return
     }
 
+    let isHotUpdate = moduleStore.getModule(message.url) !== undefined
     moduleStore.setModule({
       filePath: message.filePath,
       hmr: message.hmr,
       url: message.url,
     })
-    syncWatchedModuleFiles()
+    // A hot updated module reports its imports after this message, and Node does not load its
+    // unchanged dependencies again. Keep watching them until the update is accepted and the
+    // module's imports are known.
+    if (!isHotUpdate) syncWatchedModuleFiles()
   }
 
   function watchKnownModuleFile(filePath: string): void {
@@ -538,6 +543,8 @@ export function createHmrSupervisor(options: {
       if (directoryWatchers.has(directory)) continue
       let directoryWatcher = watch(directory, watchOptions)
       directoryWatcher.on('all', (...args) => watchEvents.emit('all', ...args))
+      // Without a listener, a watcher error would throw before the watcher reports ready.
+      directoryWatcher.on('error', (error) => console.error(error))
       directoryWatcher.once('ready', () => {
         startingDirectoryWatchers.delete(directoryWatcher)
         resolveReadyWaiters()
@@ -546,6 +553,8 @@ export function createHmrSupervisor(options: {
       directoryWatchers.set(directory, directoryWatcher)
     }
     browserWatchedFilePaths = nextBrowserWatchedFilePaths
+    // Closing a watcher that was still starting can be what makes the runner ready.
+    resolveReadyWaiters()
   }
 
   function handleWatchEvent(event: string, changedPath: string, stats?: Stats) {
@@ -1026,7 +1035,7 @@ export function createHmrSupervisor(options: {
 
     stop,
   }
-  chokidarWatcherBySupervisor.set(supervisor, watchEvents)
+  watchEventsBySupervisor.set(supervisor, watchEvents)
   return supervisor
 }
 
