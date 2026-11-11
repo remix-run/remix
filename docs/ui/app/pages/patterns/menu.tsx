@@ -44,7 +44,9 @@ const anatomyCode = await highlightSource(`
       mix={[
         menu.popover(),
         css({
-          '&:popover-open': {},
+          '&[data-open]': {},
+          '&[data-state="open"]': {},
+          '&[data-state="closed"]': {},
           '&[data-close-animation="none"]': {},
         }),
       ]}
@@ -111,7 +113,9 @@ const submenuAnatomyCode = await highlightSource(`
       mix={[
         menu.popover(),
         css({
-          '&:popover-open': {},
+          '&[data-open]': {},
+          '&[data-state="open"]': {},
+          '&[data-state="closed"]': {},
           '&[data-menu-submenu]': {},
           '&[data-close-animation="none"]': {},
         }),
@@ -129,13 +133,20 @@ const submenuAnatomyCode = await highlightSource(`
 `)
 
 const actionsCode = await highlightSource(`
-  <div mix={menu.onMenuSelect((event) => {
-    if (event.item.name === 'copy') {
-      copySelection()
-    }
-  })}>
-    {/* Menu */}
-  </div>
+  <Portal>
+    <div mix={[
+      menu.popover(),
+      menu.onMenuSelect((event) => {
+        if (event.item.name === 'copy') {
+          copySelection()
+        }
+      }),
+    ]}>
+      <div mix={menu.list()}>
+        <div mix={menu.item({ name: 'copy' })}>Copy</div>
+      </div>
+    </div>
+  </Portal>
 `)
 
 const labelsCode = await highlightSource(`
@@ -206,7 +217,8 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <p>
           <code>onMenuSelect()</code> receives the selected item on the menu or an ancestor.{' '}
           <code>item.name</code> identifies the action. <code>item.value</code> carries an optional
-          string payload.
+          string payload. Events follow DOM ancestry. With portals, attach the handler to each popup
+          that should handle selection, or to an ancestor at the portal destination.
         </p>
         <CodeBlock html={actionsCode} />
       </Section>
@@ -334,11 +346,18 @@ export default function MenuPage(handle: Handle<PageProps>) {
         </p>
         <h3 id="popover-reference">popover()</h3>
         <p>
-          Creates a manual native popover. Root and submenu surfaces coordinate dismissal and focus.
+          Creates an ordinary floating surface. Root and submenu surfaces coordinate stacking,
+          dismissal and focus. Use a Portal to escape clipping ancestors.
         </p>
         <ApiTable id="popover-attributes" label="Attribute" typeLabel="Value">
-          <ApiEntry name="popover" type="manual">
-            Native top-layer surface.
+          <ApiEntry name="data-popover" type="present">
+            Identifies the popup surface.
+          </ApiEntry>
+          <ApiEntry name="data-open" type="present | absent">
+            Present while the popup is shown.
+          </ApiEntry>
+          <ApiEntry name="data-state" type="open | closed">
+            Requested popup state.
           </ApiEntry>
           <ApiEntry name="data-menu-submenu" type="true | absent">
             Present on child surfaces.

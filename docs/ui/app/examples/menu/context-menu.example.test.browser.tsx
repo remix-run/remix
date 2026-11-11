@@ -6,11 +6,11 @@ import { element, key, mount, waitFor } from '../test-helpers.ts'
 describe('Context menu example', () => {
   it('opens at the pointer and activates a file action', async (t) => {
     let result = await mount(t, <Example />)
-    let target = element(result.container, '[tabindex="0"]')
-    let surface = element(result.container, '[popover]')
-    let list = element(result.container, '[role="menu"]')
+    let target = element(document.body, '[tabindex="0"]')
+    let surface = element(document.body, '[data-popover]')
+    let list = element(document.body, '[role="menu"]')
     let selected: string | undefined
-    result.container.addEventListener('rmx:menu-select', (event) => {
+    document.body.addEventListener('rmx:menu-select', (event) => {
       selected = event.item.name
     })
 
@@ -22,7 +22,7 @@ describe('Context menu example', () => {
     })
     await result.act(() => target.dispatchEvent(event))
     assert.equal(event.defaultPrevented, true)
-    await waitFor(() => assert.equal(surface.matches(':popover-open'), true))
+    await waitFor(() => assert.equal(surface.matches('[data-open]'), true))
     await waitFor(() => assert.equal(document.activeElement, list))
     assert.equal(surface.style.left, '180px')
     assert.equal(surface.style.top, '120px')
@@ -30,15 +30,15 @@ describe('Context menu example', () => {
     await result.act(() => key(list, 'ArrowDown'))
     await result.act(() => key(list, 'Enter'))
     await waitFor(() => assert.equal(selected, 'rename'))
-    await waitFor(() => assert.equal(surface.matches(':popover-open'), false))
+    await waitFor(() => assert.equal(surface.matches('[data-open]'), false))
     await waitFor(() => assert.equal(document.activeElement, target))
   })
 
   it('opens with either keyboard context-menu shortcut and restores focus', async (t) => {
     let result = await mount(t, <Example />)
-    let target = element(result.container, '[tabindex="0"]')
-    let surface = element(result.container, '[popover]')
-    let list = element(result.container, '[role="menu"]')
+    let target = element(document.body, '[tabindex="0"]')
+    let surface = element(document.body, '[data-popover]')
+    let list = element(document.body, '[role="menu"]')
 
     target.focus()
     await result.act(() => {
@@ -51,17 +51,17 @@ describe('Context menu example', () => {
         }),
       )
     })
-    await waitFor(() => assert.equal(surface.matches(':popover-open'), true))
+    await waitFor(() => assert.equal(surface.matches('[data-open]'), true))
     await waitFor(() => assert.equal(document.activeElement, list))
     await result.act(() => key(list, 'Escape'))
-    await waitFor(() => assert.equal(surface.matches(':popover-open'), false))
+    await waitFor(() => assert.equal(surface.matches('[data-open]'), false))
     await waitFor(() => assert.equal(document.activeElement, target))
 
     await result.act(() => key(target, 'ContextMenu'))
-    await waitFor(() => assert.equal(surface.matches(':popover-open'), true))
+    await waitFor(() => assert.equal(surface.matches('[data-open]'), true))
     await waitFor(() => assert.equal(document.activeElement, list))
     await result.act(() => key(list, 'Escape'))
-    await waitFor(() => assert.equal(surface.matches(':popover-open'), false))
+    await waitFor(() => assert.equal(surface.matches('[data-open]'), false))
     await waitFor(() => assert.equal(document.activeElement, target))
   })
 })

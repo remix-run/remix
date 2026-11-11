@@ -2385,6 +2385,9 @@ importers:
       '@remix-run/data-schema':
         specifier: workspace:*
         version: link:../data-schema
+      tabbable:
+        specifier: ^6.3.0
+        version: 6.5.1
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
@@ -2398,6 +2401,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.7
       playwright:
         specifier: 'catalog:'
         version: 1.63.0
@@ -6260,6 +6266,9 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
+  tabbable@6.5.1:
+    resolution: {integrity: sha512-dMCuwDUY6Noz3zVKLefBC4wq+aJV20yc7vWmM7uTNGwtQSFF5kX7OUIUsxuVajz/bdt5Xqdah3/0NLjth+cM5A==}
+
   tar-stream@3.1.7:
     resolution: {integrity: sha512-qJj60CXt7IU1Ffyc3NJMjh6EkuCFej46zUqJ4J7pqYlThyd9bO0XBTmcOIhSzZJVWfsLks0+nle/j538YAW9RQ==}
 
@@ -10097,6 +10106,8 @@ snapshots:
       csso: 5.0.5
       picocolors: 1.1.1
       sax: 1.6.0
+
+  tabbable@6.5.1: {}
 
   tar-stream@3.1.7:
     dependencies:

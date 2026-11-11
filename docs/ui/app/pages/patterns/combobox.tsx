@@ -44,7 +44,9 @@ const anatomyCode = await highlightSource(`
       mix={[
         combobox.popover(),
         css({
-          '&:popover-open': {},
+          '&[data-open]': {},
+          '&[data-state="open"]': {},
+          '&[data-state="closed"]': {},
           '&[data-show-reason="hint"]': {},
           '&[data-show-reason="nav"]': {},
         }),
@@ -315,7 +317,7 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
         <h3 id="popover-reference">popover()</h3>
         <p>
           Synchronizes the popup minimum width to the input and anchors below it. Allows input
-          clicks while open. Adds native <code>popover=&quot;manual&quot;</code> behavior.
+          clicks while open. Uses the shared ordinary DOM popover behavior and stacking order.
         </p>
         <ApiTable id="popover-attributes" label="Attribute" typeLabel="Value">
           <ApiEntry name="data-show-reason" type="hint | nav">

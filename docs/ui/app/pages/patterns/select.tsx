@@ -47,7 +47,9 @@ const anatomyCode = await highlightSource(`
         mix={[
           select.popover(),
           css({
-            '&:popover-open': {},
+            '&[data-open]': {},
+          '&[data-state="open"]': {},
+          '&[data-state="closed"]': {},
           }),
         ]}
       >

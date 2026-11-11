@@ -6,15 +6,15 @@ import { button, element, mount, waitFor } from '../test-helpers.ts'
 describe('Select form example', () => {
   it('submits the newly selected delivery value', async (t) => {
     let result = await mount(t, <Example />)
-    let form = result.container.querySelector('form')
+    let form = document.body.querySelector('form')
     assert.ok(form)
     assert.equal(new FormData(form).get('delivery'), 'standard')
-    await result.act(() => button(result.container, 'Delivery method').click())
-    await result.act(() => element(result.container, '[role="option"]:nth-child(2)').click())
+    await result.act(() => button(document.body, 'Delivery method').click())
+    await result.act(() => element(document.body, '[role="option"]:nth-child(2)').click())
     await waitFor(() => assert.equal(new FormData(form).get('delivery'), 'express'))
-    await result.act(() => button(result.container, 'Save delivery preference').click())
+    await result.act(() => button(document.body, 'Save delivery preference').click())
     assert.equal(
-      element(result.container, '[role="status"]').textContent,
+      element(document.body, '[role="status"]').textContent,
       'Express delivery confirmed',
     )
   })

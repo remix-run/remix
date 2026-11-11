@@ -7,6 +7,7 @@
 ```tsx
 import { on, type Handle } from 'remix/component'
 import * as popover from '@remix-run/ui/popover'
+import { Portal } from '@remix-run/ui/portal'
 import { panelStyle } from './popover.styles'
 
 export function ViewOptions(handle: Handle) {
@@ -35,22 +36,24 @@ export function ViewOptions(handle: Handle) {
         View options
       </button>
 
-      <div
-        mix={[
-          panelStyle,
-          popover.surface({
-            open,
-            onHide() {
-              closePopover()
-            },
-          }),
-        ]}
-      >
-        <button mix={[popover.focusOnShow(), on('click', closePopover)]} type="button">
-          Close
-        </button>
-        <div>Panel content</div>
-      </div>
+      <Portal>
+        <div
+          mix={[
+            panelStyle,
+            popover.surface({
+              open,
+              onHide() {
+                closePopover()
+              },
+            }),
+          ]}
+        >
+          <button mix={[popover.focusOnShow(), on('click', closePopover)]} type="button">
+            Close
+          </button>
+          <div>Panel content</div>
+        </div>
+      </Portal>
     </popover.Context>
   )
 }
@@ -70,7 +73,8 @@ Registers the host element as the anchor for the current popover surface.
 
 Turns the host into the controlled popover surface.
 
-- Wires `popover="manual"` and native `showPopover()` / `hidePopover()` behavior.
+- Renders an ordinary element with fixed positioning and shared overlay stacking.
+- Exposes `data-popover`, `data-open` while shown, and `data-state="open"` or `"closed"`.
 - Calls `onHide` for `Escape` and outside clicks with a `PopoverHideRequest`.
 - Restores focus to the registered hide target unless `restoreFocusOnHide: false`.
 - Accepts `closeOnAnchorClick: false` when the anchor must stay interactive while open.
@@ -99,3 +103,11 @@ Registers the element that should receive focus again when the popover closes.
 - `popover.focusOnShow()` wins on open when present.
 - `popover.focusOnHide()` is used on close by default when focus restoration is enabled.
 - `closeOnAnchorClick: false` keeps anchor clicks inside the current session, which is useful for input-driven popovers like comboboxes.
+
+## Portals and styling
+
+Wrap the surface in `Portal` from `@remix-run/ui/portal` to render in the document body and escape clipping or transformed ancestors. The anchor and surface retain the same component context. Put theme variables and typography on the destination or surface, since DOM inheritance and event bubbling follow the destination. Inline surfaces remain supported when their ancestors permit floating content.
+
+Style visibility with `[data-open]` and entrance/exit motion with `[data-state="open"]` or `[data-state="closed"]`. The surface keeps `data-open`, stacking order, and its scroll lock until finite exit animations finish. Reopening supersedes a pending close. Native `:popover-open`, `beforetoggle`, and `toggle` no longer apply. React to your controlled `open` state and use `handle.queueTask()` for DOM work after rendering. Opening and closing do not invoke native popover methods.
+
+Dialogs, menus, selects, comboboxes, and popovers share stacking and dismissal order. Set `--rmx-layer-base` on the document root to offset all participating overlays relative to other application content. Portals avoid ancestor stacking contexts; arbitrary external widgets still need to respect a modal dialog's focus and inert boundaries.

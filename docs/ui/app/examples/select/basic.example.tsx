@@ -1,3 +1,4 @@
+import { Portal } from '@remix-run/ui/portal'
 import * as select from '@remix-run/ui/select'
 import * as popover from '@remix-run/ui/popover'
 import { css } from 'remix/component'
@@ -6,20 +7,15 @@ import type { Handle } from 'remix/component'
 export default function ExampleSelect(handle: Handle) {
   return () => (
     <div
-      mix={css({
-        '--text': 'light-dark(#202027, #eeeef2)',
-
-        colorScheme: 'light dark',
-        '&, & *, &::before, &::after, & *::before, & *::after': {
-          boxSizing: 'border-box',
-        },
-        display: 'grid',
-        gap: '8px',
-        width: '320px',
-        maxWidth: '100%',
-        color: 'var(--text)',
-        font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-      })}
+      mix={[
+        themeStyle,
+        css({
+          display: 'grid',
+          gap: '8px',
+          width: '320px',
+          maxWidth: '100%',
+        }),
+      ]}
     >
       <span
         id={`${handle.id}-label`}
@@ -67,95 +63,104 @@ export default function ExampleSelect(handle: Handle) {
           <ChevronDownIcon />
         </button>
         <popover.Context>
-          <div
-            mix={[
-              select.popover(),
-              css({
-                colorScheme: 'light dark',
-                margin: 0,
-                padding: '6px',
-                minWidth: '220px',
-                maxWidth: 'calc(100vw - 32px)',
-                border: '1px solid light-dark(#e0e0e6, #393940)',
-                borderRadius: '10px',
-                background: 'light-dark(#fff, #1b1b20)',
-                color: 'var(--text)',
-                boxShadow: '0 12px 32px #00000024',
-                font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-                opacity: 0,
-                transition:
-                  'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-                '&:popover-open': {
-                  opacity: 1,
-                  '@starting-style': {
-                    opacity: 0,
-                  },
-                },
-                '@media (prefers-reduced-motion: reduce)': {
-                  transition: 'none',
-                },
-              }),
-            ]}
-          >
+          <Portal>
             <div
-              aria-label="Delivery methods"
               mix={[
-                select.list(),
+                select.popover(),
+                themeStyle,
                 css({
-                  display: 'grid',
-                  gap: '2px',
-                  maxHeight: '240px',
-                  overflow: 'auto',
-                  outline: 0,
+                  margin: 0,
+                  padding: '6px',
+                  minWidth: '220px',
+                  maxWidth: 'calc(100vw - 32px)',
+                  border: '1px solid light-dark(#e0e0e6, #393940)',
+                  borderRadius: '10px',
+                  background: 'light-dark(#fff, #1b1b20)',
+                  boxShadow: '0 12px 32px #00000024',
+                  opacity: 0,
+                  transition: 'opacity 140ms ease',
+                  '&[data-state="open"]': {
+                    opacity: 1,
+                    '@starting-style': {
+                      opacity: 0,
+                    },
+                  },
+                  '@media (prefers-reduced-motion: reduce)': {
+                    transition: 'none',
+                  },
                 }),
               ]}
             >
-              {options.map((option) => (
-                <div
-                  key={option.value}
-                  mix={[
-                    select.option(option),
-                    css({
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '12px',
-                      padding: '10px 12px',
-                      borderRadius: '6px',
-                      cursor: 'default',
-                      '&[hidden]': {
-                        display: 'none',
-                      },
-                      '&[data-highlighted="true"]': {
-                        background: 'light-dark(#eeeef3, #303038)',
-                      },
-                      '&[aria-selected="true"]': {
-                        background: 'light-dark(#e4e4eb, #3b3b44)',
-                      },
-                      '&[aria-disabled="true"]': {
-                        opacity: 0.4,
-                        cursor: 'not-allowed',
-                      },
-                      '&[aria-selected="true"][data-highlighted="true"]': {
-                        boxShadow: 'inset 0 0 0 1px light-dark(#a5a5af, #777782)',
-                      },
-                      '&[data-select-flash]': {
-                        background: 'light-dark(#d6d6e0, #4b4b56)',
-                      },
-                    }),
-                  ]}
-                >
-                  {option.label}
-                </div>
-              ))}
+              <div
+                aria-label="Delivery methods"
+                mix={[
+                  select.list(),
+                  css({
+                    display: 'grid',
+                    gap: '2px',
+                    maxHeight: '240px',
+                    overflow: 'auto',
+                    outline: 0,
+                  }),
+                ]}
+              >
+                {options.map((option) => (
+                  <div
+                    key={option.value}
+                    mix={[
+                      select.option(option),
+                      css({
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        cursor: 'default',
+                        '&[hidden]': {
+                          display: 'none',
+                        },
+                        '&[data-highlighted="true"]': {
+                          background: 'light-dark(#eeeef3, #303038)',
+                        },
+                        '&[aria-selected="true"]': {
+                          background: 'light-dark(#e4e4eb, #3b3b44)',
+                        },
+                        '&[aria-disabled="true"]': {
+                          opacity: 0.4,
+                          cursor: 'not-allowed',
+                        },
+                        '&[aria-selected="true"][data-highlighted="true"]': {
+                          boxShadow: 'inset 0 0 0 1px light-dark(#a5a5af, #777782)',
+                        },
+                        '&[data-select-flash]': {
+                          background: 'light-dark(#d6d6e0, #4b4b56)',
+                        },
+                      }),
+                    ]}
+                  >
+                    {option.label}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          </Portal>
         </popover.Context>
         <input mix={select.hiddenInput()} />
       </select.Context>
     </div>
   )
 }
+
+const themeStyle = css({
+  '--text': 'light-dark(#202027, #eeeef2)',
+  colorScheme: 'light dark',
+  '&, & *, &::before, &::after, & *::before, & *::after': {
+    boxSizing: 'border-box',
+  },
+  color: 'var(--text)',
+  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+})
 
 function SelectedLabel(handle: Handle) {
   let context = handle.context.get(select.Context)

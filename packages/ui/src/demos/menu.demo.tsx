@@ -1,3 +1,4 @@
+import { Portal } from '@remix-run/ui/portal'
 import { css, type Handle } from '@remix-run/component'
 import * as menu from '@remix-run/ui/menu'
 
@@ -11,18 +12,12 @@ export default function Example(handle: Handle) {
 
   return () => (
     <div
-      mix={[
-        menu.onMenuSelect((event) => {
-          selected = event.item.name
-          void handle.update()
-        }),
-        css({
-          display: 'grid',
-          justifyItems: 'start',
-          gap: '8px',
-          width: 'min(100%, 16rem)',
-        }),
-      ]}
+      mix={css({
+        display: 'grid',
+        justifyItems: 'start',
+        gap: '8px',
+        width: 'min(100%, 16rem)',
+      })}
     >
       <menu.Context label="Project actions">
         <button
@@ -49,39 +44,45 @@ export default function Example(handle: Handle) {
           Actions
         </button>
 
-        <div
-          mix={[
-            menu.popover(),
-            css({
-              boxSizing: 'border-box',
-              minWidth: '10rem',
-              margin: 0,
-              border: '1px solid light-dark(#d1d1d1, #444444)',
-              borderRadius: '6px',
-              background: 'light-dark(#ffffff, #1a1a1a)',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
-              padding: '4px',
-              '&:popover-open': {
-                display: 'block',
-              },
-            }),
-          ]}
-        >
+        <Portal>
           <div
             mix={[
-              menu.list(),
+              menu.popover(),
+              menu.onMenuSelect((event) => {
+                selected = event.item.name
+                void handle.update()
+              }),
               css({
-                display: 'grid',
-                gap: '2px',
-                outline: 0,
+                boxSizing: 'border-box',
+                minWidth: '10rem',
+                margin: 0,
+                border: '1px solid light-dark(#d1d1d1, #444444)',
+                borderRadius: '6px',
+                background: 'light-dark(#ffffff, #1a1a1a)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+                padding: '4px',
+                '&[data-open]': {
+                  display: 'block',
+                },
               }),
             ]}
           >
-            <div mix={[menu.item({ name: 'rename' }), itemCss]}>Rename</div>
-            <div mix={[menu.item({ name: 'duplicate' }), itemCss]}>Duplicate</div>
-            <div mix={[menu.item({ disabled: true, name: 'archive' }), itemCss]}>Archive</div>
+            <div
+              mix={[
+                menu.list(),
+                css({
+                  display: 'grid',
+                  gap: '2px',
+                  outline: 0,
+                }),
+              ]}
+            >
+              <div mix={[menu.item({ name: 'rename' }), itemCss]}>Rename</div>
+              <div mix={[menu.item({ name: 'duplicate' }), itemCss]}>Duplicate</div>
+              <div mix={[menu.item({ disabled: true, name: 'archive' }), itemCss]}>Archive</div>
+            </div>
           </div>
-        </div>
+        </Portal>
       </menu.Context>
 
       <p

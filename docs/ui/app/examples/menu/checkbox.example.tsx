@@ -1,3 +1,4 @@
+import { Portal } from '@remix-run/ui/portal'
 import * as menu from '@remix-run/ui/menu'
 import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
@@ -7,22 +8,10 @@ export default function ExampleMenu(handle: Handle) {
   return () => (
     <div
       mix={[
-        menu.onMenuSelect((event) => {
-          if (event.item.checked) enabled.add(event.item.name)
-          else enabled.delete(event.item.name)
-          handle.update()
-        }),
+        themeStyle,
         css({
-          '--text': 'light-dark(#202027, #eeeef2)',
-
-          colorScheme: 'light dark',
-          '&, & *, &::before, &::after, & *::before, & *::after': {
-            boxSizing: 'border-box',
-          },
           width: 'fit-content',
           maxWidth: '100%',
-          color: 'var(--text)',
-          font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
         }),
       ]}
     >
@@ -62,99 +51,113 @@ export default function ExampleMenu(handle: Handle) {
         >
           View <ChevronDownIcon />
         </button>
-        <div
-          mix={[
-            menu.popover(),
-            css({
-              colorScheme: 'light dark',
-              margin: 0,
-              padding: '6px',
-              minWidth: '220px',
-              maxWidth: 'calc(100vw - 32px)',
-              border: '1px solid light-dark(#e0e0e6, #393940)',
-              borderRadius: '10px',
-              background: 'light-dark(#fff, #1b1b20)',
-              color: 'var(--text)',
-              boxShadow: '0 12px 32px #00000024',
-              font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-              opacity: 0,
-              transition:
-                'opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete',
-              '&[data-close-animation="none"]': {
-                transition: 'none',
-              },
-              '&:popover-open': {
-                opacity: 1,
-                '@starting-style': {
-                  opacity: 0,
-                },
-              },
-              '@media (prefers-reduced-motion: reduce)': {
-                transition: 'none',
-              },
-            }),
-          ]}
-        >
+        <Portal>
           <div
             mix={[
-              menu.list(),
+              menu.onMenuSelect((event) => {
+                if (event.item.checked) enabled.add(event.item.name)
+                else enabled.delete(event.item.name)
+                handle.update()
+              }),
+              menu.popover(),
+              themeStyle,
               css({
-                display: 'grid',
-                gap: '2px',
-                maxHeight: '240px',
-                overflow: 'auto',
-                outline: 0,
+                margin: 0,
+                padding: '6px',
+                minWidth: '220px',
+                maxWidth: 'calc(100vw - 32px)',
+                border: '1px solid light-dark(#e0e0e6, #393940)',
+                borderRadius: '10px',
+                background: 'light-dark(#fff, #1b1b20)',
+                boxShadow: '0 12px 32px #00000024',
+                opacity: 0,
+                transition: 'opacity 140ms ease',
+                '&[data-close-animation="none"]': {
+                  transition: 'none',
+                },
+                '&[data-state="open"]': {
+                  opacity: 1,
+                  '@starting-style': {
+                    opacity: 0,
+                  },
+                },
+                '@media (prefers-reduced-motion: reduce)': {
+                  transition: 'none',
+                },
               }),
             ]}
           >
-            {options.map((option) => (
-              <div
-                key={option.name}
-                mix={[
-                  menu.item({
-                    name: option.name,
-                    type: 'checkbox',
-                    checked: enabled.has(option.name),
-                  }),
-                  css({
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '20px',
-                    padding: '9px 12px',
-                    borderRadius: '6px',
-                    outline: 0,
-                    cursor: 'default',
-                    '&[data-highlighted]': {
-                      background: 'light-dark(#eeeef3, #303038)',
-                    },
-                    '&[data-menu-flash]': {
-                      background: 'light-dark(#dedee7, #454550)',
-                      color: 'light-dark(#202027, #eeeef2)',
-                    },
-                    '&[aria-disabled]': {
-                      opacity: 0.4,
-                    },
-                  }),
-                ]}
-              >
-                {option.label}
-                <span
-                  aria-hidden="true"
-                  mix={css({
-                    opacity: enabled.has(option.name) ? 1 : 0,
-                  })}
+            <div
+              mix={[
+                menu.list(),
+                css({
+                  display: 'grid',
+                  gap: '2px',
+                  maxHeight: '240px',
+                  overflow: 'auto',
+                  outline: 0,
+                }),
+              ]}
+            >
+              {options.map((option) => (
+                <div
+                  key={option.name}
+                  mix={[
+                    menu.item({
+                      name: option.name,
+                      type: 'checkbox',
+                      checked: enabled.has(option.name),
+                    }),
+                    css({
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '20px',
+                      padding: '9px 12px',
+                      borderRadius: '6px',
+                      outline: 0,
+                      cursor: 'default',
+                      '&[data-highlighted]': {
+                        background: 'light-dark(#eeeef3, #303038)',
+                      },
+                      '&[data-menu-flash]': {
+                        background: 'light-dark(#dedee7, #454550)',
+                        color: 'light-dark(#202027, #eeeef2)',
+                      },
+                      '&[aria-disabled]': {
+                        opacity: 0.4,
+                      },
+                    }),
+                  ]}
                 >
-                  <CheckIcon />
-                </span>
-              </div>
-            ))}
+                  {option.label}
+                  <span
+                    aria-hidden="true"
+                    mix={css({
+                      opacity: enabled.has(option.name) ? 1 : 0,
+                    })}
+                  >
+                    <CheckIcon />
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </Portal>
       </menu.Context>
     </div>
   )
 }
+
+const themeStyle = css({
+  '--text': 'light-dark(#202027, #eeeef2)',
+  colorScheme: 'light dark',
+  '&, & *, &::before, &::after, & *::before, & *::after': {
+    boxSizing: 'border-box',
+  },
+  color: 'var(--text)',
+  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+})
 
 function ChevronDownIcon() {
   return () => (

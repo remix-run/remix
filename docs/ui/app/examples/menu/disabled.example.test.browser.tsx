@@ -6,12 +6,12 @@ import { button, element, key, mount, waitFor } from '../test-helpers.ts'
 describe('Disabled menu item example', () => {
   it('skips Undo while allowing enabled actions to be selected', async (t) => {
     let result = await mount(t, <Example />)
-    let trigger = button(result.container, 'Edit')
-    let list = element(result.container, '[role="menu"]')
+    let trigger = button(document.body, 'Edit')
+    let list = element(document.body, '[role="menu"]')
     let items = list.querySelectorAll('[role="menuitem"]')
     let undo = element(list, '[role="menuitem"]')
     let selected: string | undefined
-    result.container.addEventListener('rmx:menu-select', (event) => {
+    document.body.addEventListener('rmx:menu-select', (event) => {
       selected = event.item.name
     })
 
@@ -21,7 +21,7 @@ describe('Disabled menu item example', () => {
     await waitFor(() => assert.equal(document.activeElement, items[1]))
     await result.act(() => undo.click())
     assert.equal(selected, undefined)
-    assert.equal(element(result.container, '[popover]').matches(':popover-open'), true)
+    assert.equal(element(document.body, '[data-popover]').matches('[data-open]'), true)
 
     await result.act(() => key(list, 'u'))
     assert.equal(document.activeElement, items[1])
@@ -30,7 +30,7 @@ describe('Disabled menu item example', () => {
     await result.act(() => key(list, 'Enter'))
     await waitFor(() => assert.equal(selected, 'cut'))
     await waitFor(() =>
-      assert.equal(element(result.container, '[popover]').matches(':popover-open'), false),
+      assert.equal(element(document.body, '[data-popover]').matches('[data-open]'), false),
     )
     await waitFor(() => assert.equal(document.activeElement, trigger))
   })

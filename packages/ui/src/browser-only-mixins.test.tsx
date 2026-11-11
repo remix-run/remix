@@ -40,6 +40,10 @@ describe('browser-only mixins during server rendering', () => {
       </popover.Context>,
     )
 
-    expect(html).toBe('<button>Open</button><div popover="manual">Content</div>')
+    expect(html).toContain('<button>Open</button>')
+    expect(html).toContain('data-popover="" data-state="closed"')
+    expect(html).toContain('&:not([data-open])')
+    expect(html).toContain('display: none')
+    expect(html).not.toContain('popover="manual"')
   })
 })

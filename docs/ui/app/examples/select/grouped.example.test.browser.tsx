@@ -6,15 +6,15 @@ import { button, element, input, key, mount, waitFor } from '../test-helpers.ts'
 describe('Grouped select example', () => {
   it('names groups and commits a choice reached across a group boundary', async (t) => {
     let result = await mount(t, <Example />)
-    let trigger = button(result.container, 'Standard delivery')
-    let list = element(result.container, '[role="listbox"]')
+    let trigger = button(document.body, 'Standard delivery')
+    let list = element(document.body, '[role="listbox"]')
     let groups = list.querySelectorAll('[role="group"]')
 
     assert.equal(groups.length, 2)
     assert.deepEqual(
       Array.from(groups, (group) =>
         element(
-          result.container,
+          document.body,
           `[id="${group.getAttribute('aria-labelledby')}"]`,
         ).textContent?.trim(),
       ),
@@ -27,24 +27,21 @@ describe('Grouped select example', () => {
     await result.act(() => key(list, 'ArrowDown'))
     await result.act(() => key(list, 'ArrowDown'))
 
-    let highlighted = element(
-      result.container,
-      `[id="${list.getAttribute('aria-activedescendant')}"]`,
-    )
+    let highlighted = element(document.body, `[id="${list.getAttribute('aria-activedescendant')}"]`)
     assert.equal(highlighted.textContent?.trim(), 'Collect in store')
     assert.equal(document.activeElement, list)
-    assert.equal(input(result.container, 'input[type="hidden"]').value, 'standard')
+    assert.equal(input(document.body, 'input[type="hidden"]').value, 'standard')
 
     await result.act(() => key(list, 'Enter'))
-    await waitFor(() =>
-      assert.equal(input(result.container, 'input[type="hidden"]').value, 'store'),
-    )
+    await waitFor(() => assert.equal(input(document.body, 'input[type="hidden"]').value, 'store'))
     await waitFor(() => assert.equal(trigger.textContent?.trim(), 'Collect in store'))
-    assert.equal(element(result.container, '[popover]').matches(':popover-open'), false)
+    await waitFor(() =>
+      assert.equal(element(document.body, '[data-popover]').matches('[data-open]'), false),
+    )
     assert.equal(document.activeElement, trigger)
     assert.equal(
       element(
-        result.container,
+        document.body,
         `[id="${trigger.getAttribute('aria-labelledby')}"]`,
       ).textContent?.trim(),
       'Delivery method',

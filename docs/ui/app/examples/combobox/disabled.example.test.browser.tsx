@@ -6,10 +6,10 @@ import { element, input, mount } from '../test-helpers.ts'
 describe('Disabled combobox example', () => {
   it('prevents editing and opening the state picker', async (t) => {
     let result = await mount(t, <Example />)
-    let search = input(result.container, '[role="combobox"]')
+    let search = input(document.body, '[role="combobox"]')
     assert.equal(search.disabled, true)
     await result.act(() => search.click())
     assert.notEqual(search.getAttribute('aria-expanded'), 'true')
-    assert.equal(element(result.container, '[popover]').matches(':popover-open'), false)
+    assert.equal(element(document.body, '[data-popover]').matches('[data-open]'), false)
   })
 })
