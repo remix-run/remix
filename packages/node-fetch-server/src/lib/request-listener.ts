@@ -1,5 +1,6 @@
 import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
+import { constants as http2Constants } from 'node:http2'
 import * as net from 'node:net'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
@@ -9,8 +10,10 @@ import {
   createRequestLifecycle,
   isRequestAlreadyAborted,
   isRequestAbortReason,
+  isRequestComplete,
   markRequestAbortReason,
   observeResponseForRequestLifecycle,
+  onResponseFinished,
 } from './request-abort.ts'
 
 // "Internal Server Error"
@@ -300,13 +303,25 @@ function destroyResponse(
   }
 }
 
+// The rest of an abandoned HTTP/1.1 request body is read and discarded when it is at most this many
+// bytes, so the connection can serve its next request. A larger rest is left unread, and the
+// connection is closed after the response instead.
+const maxDiscardedBodySize = 1024 * 1024
+
+// How long a connection closed with part of the request body unread stays open after the
+// response. Closing it sooner resets the connection while the client is still sending, and the
+// client can lose the response before it reads it.
+const unreadBodyLingerTime = 2000
+
 function createRequestBodyStream(
   req: http.IncomingMessage | http2.Http2ServerRequest,
+  res: http.ServerResponse | http2.Http2ServerResponse,
   lifecycle: RequestLifecycle,
 ): ReadableStream<Uint8Array> {
   let bodyController: ReadableStreamDefaultController<Uint8Array> | undefined
   let requestEnded = false
   let bodyClosed = false
+  let receivedBytes = 0
 
   function cleanup({ keepErrorListener = false }: { keepErrorListener?: boolean } = {}) {
     req.removeListener('data', onData)
@@ -335,13 +350,12 @@ function createRequestBodyStream(
     if (bodyClosed) return
     bodyClosed = true
     cleanup()
-    // Removing the data listener does not stop a flowing request, so without this the rest of
-    // the body would be read off the socket and discarded
-    req.pause()
+    abandonRequestBody(req, res, receivedBytes)
   }
 
   function onData(chunk: Buffer) {
     if (bodyController == null) return
+    receivedBytes += chunk.byteLength
     bodyController.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
 
     // Apply backpressure: once the stream's queue is full, stop pulling data off the socket until
@@ -370,7 +384,19 @@ function createRequestBodyStream(
     if (!requestEnded) abortBody(createRequestAbortError(), { keepErrorListener: true })
   }
 
-  return new ReadableStream({
+  // Node discards a request body nobody read once the response finishes. Listening for the body
+  // here opts out of that, so do the same for a body the handler never started reading.
+  onResponseFinished(res, () => {
+    if (bodyClosed || body.locked || isRequestComplete(req)) return
+    bodyClosed = true
+    cleanup()
+    bodyController?.error(
+      new DOMException('The request body was not read before the response finished.', 'AbortError'),
+    )
+    abandonRequestBody(req, res, receivedBytes)
+  })
+
+  let body = new ReadableStream<Uint8Array>({
     start(controller) {
       bodyController = controller
 
@@ -396,6 +422,90 @@ function createRequestBodyStream(
     cancel() {
       cancelBody()
     },
+  })
+
+  return body
+}
+
+// How long to wait for the end of an HTTP/2 response to be sent before giving up on resetting its
+// stream. Sending it waits on flow control, so a client that stops reading can delay it.
+const endOfResponseTimeout = 2000
+
+// The writable side of an HTTP/2 stream finishes before the frame that ends the response is sent,
+// and resetting the stream first truncates the response. Node has no event for the frame being
+// sent, so check the stream state until it is.
+function whenEndOfResponseSent(stream: http2.ServerHttp2Stream, callback: (sent: boolean) => void) {
+  let deadline = Date.now() + endOfResponseTimeout
+  function check() {
+    if (stream.destroyed) return
+    if (stream.state?.localClose === 1) callback(true)
+    else if (Date.now() >= deadline) callback(false)
+    else setTimeout(check, 1).unref()
+  }
+  check()
+}
+
+// Stops the rest of a request body that will not be read from holding up its connection
+function abandonRequestBody(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  receivedBytes: number,
+): void {
+  if (isRequestComplete(req)) {
+    // The rest is already buffered, so let it drain
+    req.resume()
+    return
+  }
+
+  if (req.httpVersionMajor !== 1) {
+    // Stop reading, and once the whole response is sent, reset the stream with NO_ERROR, which
+    // tells the client to stop sending without failing the response (RFC 9113, section 8.1)
+    req.pause()
+    let stream = (req as http2.Http2ServerRequest).stream
+    onResponseFinished(res, () => {
+      whenEndOfResponseSent(stream, (sent) => {
+        if (sent && !stream.closed) stream.close(http2Constants.NGHTTP2_NO_ERROR)
+        // Without a reset this reads and discards the rest of the body. With one, the stream
+        // still has to read what it buffered before it finishes closing.
+        req.resume()
+      })
+    })
+    return
+  }
+
+  // A missing or invalid Content-Length makes this NaN, which counts as too large
+  let remainingBytes = Number(req.headers['content-length']) - receivedBytes
+  if (remainingBytes <= maxDiscardedBodySize) {
+    // With the data listener removed, a flowing request discards what it reads
+    req.resume()
+    return
+  }
+
+  // Too much to read it all, so close the connection after the response. Until then, keep reading
+  // a little more, so a client that disconnects soon is still noticed.
+  let http1Res = res as http.ServerResponse
+  if (!http1Res.headersSent) http1Res.setHeader('Connection', 'close')
+  let discardedBytes = 0
+  function onDiscardedData(chunk: Buffer) {
+    discardedBytes += chunk.byteLength
+    if (discardedBytes > maxDiscardedBodySize) stopDiscarding()
+  }
+  function stopDiscarding() {
+    req.removeListener('data', onDiscardedData)
+    req.pause()
+  }
+  req.on('data', onDiscardedData)
+  req.resume()
+
+  let socket = (req as http.IncomingMessage).socket
+  onResponseFinished(res, () => {
+    stopDiscarding()
+    if (socket.destroyed) return
+    // Node destroys a `Connection: close` socket as soon as the response is flushed. Half-close it
+    // instead, so the client gets the response and the end of the connection before a reset.
+    socket.removeListener('finish', socket.destroy)
+    socket.end()
+    setTimeout(() => socket.destroy(), unreadBodyLingerTime).unref()
   })
 }
 
@@ -434,7 +544,7 @@ export function createRequest(
   let init: RequestInit = { method, headers, signal: lifecycle.signal }
 
   if (method !== 'GET' && method !== 'HEAD') {
-    init.body = createRequestBodyStream(req, lifecycle)
+    init.body = createRequestBodyStream(req, res, lifecycle)
 
     // init.duplex = 'half' must be set when body is a ReadableStream, and Node follows the spec.
     // However, this property is not defined in the TypeScript types for RequestInit, so we have
