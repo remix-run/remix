@@ -1,1 +1,1 @@
-`CacheControl` now recognizes directive names case-insensitively, so mixed-case values such as `No-Store` and `MAX-AGE=60` are preserved when parsed and serialized.
+`CacheControl.from()` no longer drops directives whose names aren't lowercase, such as `No-Store` or `MAX-AGE=60`.
