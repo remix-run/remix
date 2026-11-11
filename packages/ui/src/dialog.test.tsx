@@ -6,6 +6,8 @@ import * as dialog from './dialog.ts'
 import { Portal } from './portal.tsx'
 import * as popover from './popover.ts'
 import * as menu from './menu.tsx'
+import { press } from './press.ts'
+import { mouseClick, pointer } from './test/pointer.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
 
@@ -44,6 +46,25 @@ function Example(handle: Handle<dialog.DialogContextProps>) {
         <p mix={dialog.description()}>Your public information.</p>
         <input id="name" aria-label="Name" />
         <button id="close" mix={dialog.close()}>
+          Done
+        </button>
+      </div>
+    </dialog.Context>
+  )
+}
+
+// The example with its trigger and close button opted into press.
+function PressExample(handle: Handle<dialog.DialogContextProps>) {
+  return () => (
+    <dialog.Context {...handle.props}>
+      <button id="trigger" mix={[dialog.trigger(), press()]}>
+        Edit profile
+      </button>
+      <div mix={dialog.surface()}>
+        <h2 mix={dialog.title()}>Profile</h2>
+        <p mix={dialog.description()}>Your public information.</p>
+        <input id="name" aria-label="Name" />
+        <button id="close" mix={[dialog.close(), press()]}>
           Done
         </button>
       </div>
@@ -215,6 +236,129 @@ describe('dialog', () => {
     )
     await settle(root)
     expect(document.activeElement).toBe(get(container, '[role="dialog"]'))
+  })
+
+  it('opens and closes on click, not on mouse press', async () => {
+    let { container, root } = render(<Example />)
+    let trigger = get<HTMLButtonElement>(container, '#trigger')
+    let surface = get<HTMLElement>(container, '[role="dialog"]')
+
+    pointer(trigger, 'pointerdown')
+    await settle(root)
+    expect(surface.matches('[data-open]')).toBe(false)
+
+    pointer(trigger, 'pointerup')
+    trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    await settle(root)
+    expect(surface.matches('[data-open]')).toBe(true)
+
+    let close = get(container, '#close')
+    pointer(close, 'pointerdown')
+    await settle(root)
+    expect(surface.matches('[data-open]')).toBe(true)
+    mouseClick(close)
+    await settle(root)
+    expect(surface.matches('[data-open]')).toBe(false)
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('keeps a mouse press on the trigger and close button from taking focus back', async () => {
+    let { container } = render(<Example />)
+
+    for (let id of ['#trigger', '#close']) {
+      expect(pointer(get(container, id), 'pointerdown').defaultPrevented).toBe(true)
+      expect(
+        pointer(get(container, id), 'pointerdown', { pointerType: 'touch' }).defaultPrevented,
+      ).toBe(false)
+      expect(pointer(get(container, id), 'pointerdown', { button: 2 }).defaultPrevented).toBe(false)
+    }
+  })
+
+  it('opens and closes on mouse press with press(), without the release dismissing it', async () => {
+    let { container, root } = render(<PressExample />)
+    let trigger = get<HTMLButtonElement>(container, '#trigger')
+    let surface = get<HTMLElement>(container, '[role="dialog"]')
+
+    pointer(trigger, 'pointerdown')
+    await settle(root)
+    expect(surface.matches('[data-open]')).toBe(true)
+    expect(document.activeElement?.id).toBe('name')
+
+    // A backdrop under the pointer retargets the release, so the click lands on a common ancestor.
+    pointer(document.body, 'pointerup')
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    await settle(root)
+    expect(surface.matches('[data-open]')).toBe(true)
+
+    pointer(get(container, '#close'), 'pointerdown')
+    await settle(root)
+    expect(surface.matches('[data-open]')).toBe(false)
+    expect(document.activeElement).toBe(trigger)
+
+    // The click that trails the press neither reopens nor toggles anything.
+    pointer(get(container, '#close'), 'pointerup')
+    get(container, '#close').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await settle(root)
+    expect(surface.matches('[data-open]')).toBe(false)
+  })
+
+  it('opens a nested dialog on press with press() without dismissing its parent', async () => {
+    let { container, root } = render(
+      <dialog.Context defaultOpen>
+        <div id="parent" mix={dialog.surface()}>
+          <dialog.Context>
+            <button id="child-trigger" mix={[dialog.trigger(), press()]}>
+              Child
+            </button>
+            <div id="child" mix={dialog.surface()}>
+              <button id="child-close" mix={[dialog.close(), press()]}>
+                Close child
+              </button>
+            </div>
+          </dialog.Context>
+        </div>
+      </dialog.Context>,
+    )
+    await settle(root)
+    let parent = get<HTMLElement>(container, '#parent')
+    let child = get<HTMLElement>(container, '#child')
+
+    pointer(get(container, '#child-trigger'), 'pointerdown')
+    await settle(root)
+    expect(child.matches('[data-open]')).toBe(true)
+
+    pointer(document.body, 'pointerup')
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    await settle(root)
+    expect(child.matches('[data-open]')).toBe(true)
+    expect(parent.matches('[data-open]')).toBe(true)
+
+    pointer(get(container, '#child-close'), 'pointerdown')
+    await settle(root)
+    expect(child.matches('[data-open]')).toBe(false)
+    expect(parent.matches('[data-open]')).toBe(true)
+    expect(document.activeElement?.id).toBe('child-trigger')
+  })
+
+  it('waits for the click when press() buttons are pressed by touch', async () => {
+    let { container, root } = render(<PressExample />)
+    let surface = get<HTMLElement>(container, '[role="dialog"]')
+
+    expect(
+      pointer(get(container, '#trigger'), 'pointerdown', { pointerType: 'touch' }).defaultPrevented,
+    ).toBe(false)
+    await settle(root)
+    expect(surface.matches('[data-open]')).toBe(false)
+    get<HTMLButtonElement>(container, '#trigger').click()
+    await settle(root)
+    expect(surface.matches('[data-open]')).toBe(true)
+
+    pointer(get(container, '#close'), 'pointerdown', { pointerType: 'touch' })
+    await settle(root)
+    expect(surface.matches('[data-open]')).toBe(true)
+    get<HTMLButtonElement>(container, '#close').click()
+    await settle(root)
+    expect(surface.matches('[data-open]')).toBe(false)
   })
 
   it('uses an explicit focus return target even after the opener is removed', async () => {

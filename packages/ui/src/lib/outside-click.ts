@@ -21,12 +21,40 @@ const onOutsideClick = createMixin<
       let node = event.node
       let doc = node.ownerDocument
 
+      // A click is dispatched on the common ancestor of where the press started and ended, so a
+      // press that began inside (a drag that left the surface), or before this layer was active
+      // (a trigger that opened it on press), would otherwise count as outside.
+      let ignoreClick = false
+
+      doc.addEventListener(
+        'pointerdown',
+        (event) => {
+          let target = event.target instanceof Node ? event.target : null
+          ignoreClick = !active || (!!target && (node.contains(target) || isInsideTarget(target)))
+        },
+        { capture: true, signal: handle.signal },
+      )
+
+      function endPress() {
+        // The click, when there is one, is dispatched in the same task as the pointerup.
+        setTimeout(() => {
+          ignoreClick = false
+        })
+      }
+
+      doc.addEventListener('pointerup', endPress, { capture: true, signal: handle.signal })
+      doc.addEventListener('pointercancel', endPress, { capture: true, signal: handle.signal })
+
       doc.addEventListener(
         'click',
         (event) => {
           let target = event.target instanceof Node ? event.target : null
 
-          if (!active || (target && (node.contains(target) || isInsideTarget(target)))) {
+          if (
+            !active ||
+            ignoreClick ||
+            (target && (node.contains(target) || isInsideTarget(target)))
+          ) {
             return
           }
 

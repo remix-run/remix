@@ -6,7 +6,13 @@ import { describe, it, type TestContext } from '@remix-run/test'
 
 async function openFixture(
   t: TestContext,
-  options: { modal?: boolean; confirm?: boolean; detached?: boolean } = {},
+  options: {
+    modal?: boolean
+    confirm?: boolean
+    detached?: boolean
+    open?: boolean
+    press?: boolean
+  } = {},
 ) {
   let result = await build({
     entryPoints: [fileURLToPath(new URL('./dialog.fixture.tsx', import.meta.url))],
@@ -51,10 +57,37 @@ async function openFixture(
   if (options.modal === false) params.set('modal', 'false')
   if (options.confirm) params.set('confirm', 'true')
   if (options.detached) params.set('detached', 'true')
+  if (options.press) params.set('press', 'true')
   await page.goto(`/?${params}`)
-  await page.locator('#trigger').click()
-  await page.locator('[data-testid="dialog"][data-open]').waitFor()
+  if (options.open !== false) {
+    await page.locator('#trigger').click()
+    await page.locator('[data-testid="dialog"][data-open]').waitFor()
+  }
   return page
+}
+
+async function pressDown(page: Awaited<ReturnType<typeof openFixture>>, selector: string) {
+  let box = await page.locator(selector).boundingBox()
+  if (!box) throw new Error(`Missing geometry for ${selector}`)
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+}
+
+async function nextFrames(page: Awaited<ReturnType<typeof openFixture>>) {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  )
+}
+
+function isActive(page: Awaited<ReturnType<typeof openFixture>>, selector: string) {
+  return page.locator(selector).evaluate((node) => node === document.activeElement)
+}
+
+function isOpen(page: Awaited<ReturnType<typeof openFixture>>, testId: string) {
+  return page.locator(`[data-testid="${testId}"]`).evaluate((node) => node.matches('[data-open]'))
 }
 
 describe('dialog browser interactions', () => {
@@ -314,5 +347,104 @@ describe('dialog browser interactions', () => {
     await page.locator('[data-testid="dialog"][data-open]').waitFor()
     await page.keyboard.press('Escape')
     await page.locator('[data-testid="dialog"][data-open]').waitFor({ state: 'hidden' })
+  })
+
+  it('opens on mouse press with press() and is not dismissed by the release over its own backdrop', async (t) => {
+    let page = await openFixture(t, { press: true, open: false })
+    await pressDown(page, '#trigger')
+    await page.locator('[data-testid="dialog"][data-open]').waitFor()
+    // The release lands on the backdrop that now covers the opener.
+    expect(
+      await page.locator('#trigger').evaluate((node) => {
+        let rect = node.getBoundingClientRect()
+        return document
+          .elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
+          ?.matches('[data-testid="backdrop"]')
+      }),
+    ).toBe(true)
+    await page.mouse.up()
+    await nextFrames(page)
+    expect(await isOpen(page, 'dialog')).toBe(true)
+    expect(await isActive(page, '#name')).toBe(true)
+    expect(await page.locator('#outside').textContent()).toBe('Outside 0')
+    await page.mouse.click(2, 2)
+    await page.locator('[data-testid="dialog"][data-open]').waitFor({ state: 'hidden' })
+  })
+
+  it('closes on mouse press of a press() close button and returns focus to the trigger', async (t) => {
+    let page = await openFixture(t, { press: true, open: false })
+    await pressDown(page, '#trigger')
+    await page.locator('[data-testid="dialog"][data-open]').waitFor()
+    await page.mouse.up()
+    await pressDown(page, '#close')
+    await page.locator('[data-testid="dialog"][data-open]').waitFor({ state: 'hidden' })
+    await page.locator('#trigger:focus').waitFor()
+    await page.mouse.up()
+    await nextFrames(page)
+    expect(await isOpen(page, 'dialog')).toBe(false)
+    expect(await isActive(page, '#trigger')).toBe(true)
+  })
+
+  it('opens and closes a nested dialog on press with press() and returns focus to its opener', async (t) => {
+    let page = await openFixture(t, { press: true })
+    await pressDown(page, '#child-trigger')
+    await page.locator('[data-testid="child-dialog"][data-open]').waitFor()
+    await page.mouse.up()
+    await nextFrames(page)
+    expect(await isOpen(page, 'child-dialog')).toBe(true)
+    expect(await isOpen(page, 'dialog')).toBe(true)
+    await pressDown(page, '#child-close')
+    await page.locator('[data-testid="child-dialog"][data-open]').waitFor({ state: 'hidden' })
+    await page.mouse.up()
+    await nextFrames(page)
+    expect(await isOpen(page, 'dialog')).toBe(true)
+    await page.locator('#child-trigger:focus').waitFor()
+  })
+
+  it('toggles a non-modal dialog closed on press of its press() trigger', async (t) => {
+    let page = await openFixture(t, { press: true, modal: false, open: false })
+    await pressDown(page, '#trigger')
+    await page.locator('[data-testid="dialog"][data-open]').waitFor()
+    await page.mouse.up()
+    await nextFrames(page)
+    expect(await isOpen(page, 'dialog')).toBe(true)
+    expect(await isActive(page, '#name')).toBe(true)
+    await pressDown(page, '#trigger')
+    await page.locator('[data-testid="dialog"][data-open]').waitFor({ state: 'hidden' })
+    await page.mouse.up()
+    await nextFrames(page)
+    expect(await isOpen(page, 'dialog')).toBe(false)
+  })
+
+  it('opens on release by default, and a press dragged off the trigger opens nothing', async (t) => {
+    let page = await openFixture(t, { open: false })
+    await pressDown(page, '#trigger')
+    await nextFrames(page)
+    expect(await isOpen(page, 'dialog')).toBe(false)
+    await page.mouse.up()
+    await page.locator('[data-testid="dialog"][data-open]').waitFor()
+    await page.keyboard.press('Escape')
+    await page.locator('[data-testid="dialog"][data-open]').waitFor({ state: 'hidden' })
+
+    await pressDown(page, '#trigger')
+    await page.mouse.move(2, 2)
+    await page.mouse.up()
+    await nextFrames(page)
+    expect(await isOpen(page, 'dialog')).toBe(false)
+  })
+
+  it('keeps keyboard activation on the native click', async (t) => {
+    let page = await openFixture(t, { open: false, press: true })
+    await page.locator('#trigger').focus()
+    await page.keyboard.press('Enter')
+    await page.locator('[data-testid="dialog"][data-open]').waitFor()
+    await page.keyboard.press('Escape')
+    await page.locator('[data-testid="dialog"][data-open]').waitFor({ state: 'hidden' })
+    await page.locator('#trigger:focus').waitFor()
+    await page.keyboard.down('Space')
+    await nextFrames(page)
+    expect(await isOpen(page, 'dialog')).toBe(false)
+    await page.keyboard.up('Space')
+    await page.locator('[data-testid="dialog"][data-open]').waitFor()
   })
 })

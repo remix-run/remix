@@ -5,6 +5,7 @@ import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
 
 import * as listbox from './listbox.ts'
 import type { ListboxOption, ListboxRef, ListboxValue } from './listbox.ts'
+import { pointer } from './test/pointer.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
 
@@ -145,8 +146,12 @@ function click(target: HTMLElement, options: { button?: number } = {}) {
   )
 }
 
-function mouse(target: HTMLElement, type: 'mouseleave' | 'mousemove') {
-  target.dispatchEvent(new MouseEvent(type, { bubbles: true }))
+function mouse(
+  target: HTMLElement,
+  type: 'pointerleave' | 'pointermove',
+  pointerType: 'mouse' | 'pen' | 'touch' = 'mouse',
+) {
+  target.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerType }))
 }
 
 async function settle(root: ReturnType<typeof createRoot>) {
@@ -245,6 +250,27 @@ describe('listbox', () => {
       }),
     )
     expect(react.getAttribute('aria-selected')).toBe('false')
+  })
+
+  it('selects an option on the click, not on mouse press', async () => {
+    let selections: string[] = []
+    let { container, root } = renderApp(
+      renderListbox({
+        onSelect(value) {
+          selections.push(String(value))
+        },
+      }),
+    )
+    let react = getOptionByText(container, 'React')
+
+    pointer(react, 'pointerdown')
+    await settle(root)
+    expect(selections).toEqual([])
+
+    pointer(react, 'pointerup')
+    click(react)
+    await settle(root)
+    expect(selections).toEqual(['react'])
   })
 
   it('calls ref once with a live object exposing active and selected options', async () => {
@@ -583,7 +609,7 @@ describe('listbox', () => {
     expect(refs[0]?.matchSearchText('zz')).toBeNull()
   })
 
-  it('mousemove and mouseleave update the controlled highlight for enabled options', async () => {
+  it('pointermove and pointerleave update the controlled highlight for enabled options', async () => {
     let highlights: SelectionCall[] = []
     let { container, root } = renderControlledListbox({
       onHighlight(value, option) {
@@ -593,7 +619,7 @@ describe('listbox', () => {
 
     let react = getOptionByText(container, 'React')
 
-    mouse(react, 'mousemove')
+    mouse(react, 'pointermove')
     await settle(root)
 
     expect(highlights).toHaveLength(1)
@@ -607,7 +633,7 @@ describe('listbox', () => {
     )
     expect(react.dataset.highlighted).toBe('true')
 
-    mouse(react, 'mouseleave')
+    mouse(react, 'pointerleave')
     await settle(root)
 
     expect(highlights).toHaveLength(2)
@@ -615,7 +641,45 @@ describe('listbox', () => {
     expect(react.dataset.highlighted).toBe('false')
   })
 
-  it('ignores mousemove and click interactions on disabled options', async () => {
+  it('highlights on pointermove from a mouse or pen, not touch', async () => {
+    let { container, root } = renderControlledListbox({})
+    let react = getOptionByText(container, 'React')
+
+    mouse(react, 'pointermove', 'touch')
+    await settle(root)
+    expect(react.dataset.highlighted).toBe('false')
+
+    mouse(react, 'pointermove', 'pen')
+    await settle(root)
+    expect(react.dataset.highlighted).toBe('true')
+
+    mouse(react, 'pointerleave', 'touch')
+    await settle(root)
+    expect(react.dataset.highlighted).toBe('true')
+  })
+
+  it('highlights while a mouse button is held, as in a press-and-drag selection', async () => {
+    let { container, root } = renderControlledListbox({})
+    let react = getOptionByText(container, 'React')
+
+    react.dispatchEvent(
+      new PointerEvent('pointermove', { bubbles: true, pointerType: 'mouse', buttons: 1 }),
+    )
+    await settle(root)
+    expect(react.dataset.highlighted).toBe('true')
+  })
+
+  it('keeps text unselectable with a default cursor on enabled and disabled options', () => {
+    let { container } = renderControlledListbox({})
+
+    for (let text of ['React', 'React Router']) {
+      let style = getComputedStyle(getOptionByText(container, text))
+      expect(style.cursor).toBe('default')
+      expect(style.userSelect).toBe('none')
+    }
+  })
+
+  it('ignores pointermove and click interactions on disabled options', async () => {
     let highlights: SelectionCall[] = []
     let selections: SelectionCall[] = []
     let { container, root } = renderControlledListbox({
@@ -629,7 +693,7 @@ describe('listbox', () => {
 
     let reactRouter = getOptionByText(container, 'React Router')
 
-    mouse(reactRouter, 'mousemove')
+    mouse(reactRouter, 'pointermove')
     await settle(root)
     click(reactRouter)
     await settle(root)
@@ -665,7 +729,7 @@ describe('listbox', () => {
     expect(react.getAttribute('aria-selected')).toBe('true')
   })
 
-  it('tracks hover with mousemove and selects the clicked option after moving between options', async () => {
+  it('tracks hover with pointermove and selects the clicked option after moving between options', async () => {
     let highlights: SelectionCall[] = []
     let selections: SelectionCall[] = []
     let { container, root } = renderControlledListbox({
@@ -680,9 +744,9 @@ describe('listbox', () => {
     let react = getOptionByText(container, 'React')
     let preact = getOptionByText(container, 'Preact')
 
-    mouse(react, 'mousemove')
+    mouse(react, 'pointermove')
     await settle(root)
-    mouse(preact, 'mousemove')
+    mouse(preact, 'pointermove')
     await settle(root)
     click(preact)
     await settle(root)
@@ -726,7 +790,7 @@ describe('listbox', () => {
     expect(selections.map((selection) => selection.value)).toEqual(['react'])
     expect(react.getAttribute('aria-selected')).toBe('true')
 
-    mouse(preact, 'mousemove')
+    mouse(preact, 'pointermove')
     await settle(root)
 
     expect(highlights.map((highlight) => highlight.value)).toEqual(['remix', 'react', 'preact'])

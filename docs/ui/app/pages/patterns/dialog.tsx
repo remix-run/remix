@@ -91,6 +91,12 @@ export default function DialogPage(handle: Handle<PageProps>) {
           locking.
         </p>
         <CodeBlock html={controlledCode} />
+        <p>
+          <code>dialog.trigger()</code> and <code>dialog.close()</code> activate on click. Add{' '}
+          <code>press()</code> to either to respond on mouse press: they keep the press from moving
+          focus to the button, and the release of a press that opened the dialog does not dismiss
+          it.
+        </p>
       </Section>
       <Section id="composition" title="Nesting and placement">
         <p>

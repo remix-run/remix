@@ -6,6 +6,7 @@ import { createRoot, on, type Handle, type RemixNode } from '@remix-run/componen
 import * as popover from './popover.ts'
 import * as menu from './menu.tsx'
 import type { PopoverHideRequest } from './popover.ts'
+import { pointer } from './test/pointer.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
 
@@ -434,6 +435,81 @@ describe('popover', () => {
     expect(isPopoverOpen(surface)).toBe(true)
   })
 
+  it('does not close when a press starts inside the surface and its click lands outside', async () => {
+    let onHide = mock.fn()
+    let { container, root } = renderPopover({ onHide })
+
+    let anchor = getById<HTMLButtonElement>(container, 'anchor')
+    let inside = getById<HTMLButtonElement>(container, 'inside')
+    let outside = getById<HTMLButtonElement>(container, 'outside')
+    let surface = getById<HTMLDivElement>(container, 'surface')
+
+    click(anchor)
+    await settle(root)
+
+    pointer(inside, 'pointerdown')
+    pointer(outside, 'pointerup')
+    container.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }))
+    await settle(root)
+
+    expect(onHide).not.toHaveBeenCalled()
+    expect(isPopoverOpen(surface)).toBe(true)
+
+    // The guard clears once the press ends, so the next outside click dismisses.
+    await new Promise((resolve) => setTimeout(resolve))
+    click(outside)
+    await settle(root)
+
+    expect(onHide).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not close when the press that opened it releases outside and clicks', async () => {
+    let onHide = mock.fn()
+    let { container, root } = renderPopover({ onHide })
+
+    let anchor = getById<HTMLButtonElement>(container, 'anchor')
+    let outside = getById<HTMLButtonElement>(container, 'outside')
+    let surface = getById<HTMLDivElement>(container, 'surface')
+
+    // The anchor opens on press, so the layer is inactive when the pointerdown happens.
+    pointer(anchor, 'pointerdown')
+    click(anchor)
+    await settle(root)
+    expect(isPopoverOpen(surface)).toBe(true)
+
+    pointer(outside, 'pointerup')
+    container.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }))
+    await settle(root)
+
+    expect(onHide).not.toHaveBeenCalled()
+    expect(isPopoverOpen(surface)).toBe(true)
+
+    await new Promise((resolve) => setTimeout(resolve))
+    pointer(outside, 'pointerdown')
+    click(outside)
+    await settle(root)
+
+    expect(onHide).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a mouse press on the anchor from taking focus when the surface has an initial target', async () => {
+    let { container, root } = renderPopover({ withShowFocus: true })
+    await settle(root)
+    let anchor = getById<HTMLButtonElement>(container, 'anchor')
+
+    expect(pointer(anchor, 'pointerdown').defaultPrevented).toBe(true)
+    expect(pointer(anchor, 'pointerdown', { button: 2 }).defaultPrevented).toBe(false)
+    expect(pointer(anchor, 'pointerdown', { pointerType: 'touch' }).defaultPrevented).toBe(false)
+    expect(pointer(anchor, 'pointerdown', { pointerType: 'pen' }).defaultPrevented).toBe(false)
+  })
+
+  it('leaves the anchor press alone when the surface has no initial focus target', async () => {
+    let { container, root } = renderPopover()
+    await settle(root)
+
+    expect(pointer(getById(container, 'anchor'), 'pointerdown').defaultPrevented).toBe(false)
+  })
+
   it('can ignore anchor clicks while open when closeOnAnchorClick is false', async () => {
     let onHide = mock.fn()
     let { container, root } = renderPopover({
@@ -496,6 +572,25 @@ describe('popover', () => {
     await settle(root)
 
     expect(document.activeElement).toBe(anchor)
+  })
+
+  it('does not restore focus to the hide target when another element holds focus', async () => {
+    let { container, root } = renderPopover({
+      withHideFocus: true,
+      withShowFocus: true,
+    })
+
+    let anchor = getById<HTMLButtonElement>(container, 'anchor')
+    let outside = getById<HTMLButtonElement>(container, 'outside')
+
+    click(anchor)
+    await settle(root)
+
+    outside.focus()
+    click(outside)
+    await settle(root)
+
+    expect(document.activeElement).toBe(outside)
   })
 
   it('can skip restoring focus on hide', async () => {

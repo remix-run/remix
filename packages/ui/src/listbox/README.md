@@ -67,7 +67,7 @@ Use `textValue` when the visible label is not the best string for typeahead sear
 
 - `Context`: provider for controlled `value` and `activeValue`, option registration, selection, highlighting, and optional ref access.
 - `list()`: wires `role="listbox"`, default `tabIndex={-1}`, keyboard navigation, focus scrolling, and typeahead highlighting.
-- `option(options)`: registers an option with required `label` and `value`, optional `disabled` and `textValue`, and wires `role="option"`, id, selected, disabled, highlighted, mouse, and click behavior.
+- `option(options)`: registers an option with required `label` and `value`, optional `disabled` and `textValue`, and wires `role="option"`, id, selected, disabled, highlighted, mouse, and click behavior. Options highlight on `pointermove` from a mouse or pen (not touch), including while a mouse button is held, and set `cursor: default` and `user-select: none` (with `-webkit-user-select`) in the `rmx` layer, disabled options included. A mouse press that starts on one option and is released over another selects the option under the release, and a release outside the list selects nothing. Selection happens on release, or on press when the option also uses [`press()`](https://github.com/remix-run/remix/blob/main/packages/ui/src/press/README.md).
 - `ListboxValue`: selected or active value, represented as `string | null`.
 - `ListboxContext` and `ListboxProviderProps`: provider context and prop types for controlled listboxes.
 - `ListboxOption`: option input shape with `label`, `value`, optional `disabled`, and optional `textValue`.

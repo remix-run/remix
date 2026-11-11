@@ -1,6 +1,7 @@
 import {
   attrs,
   createMixin,
+  css,
   on,
   ref,
   type Dispatched,
@@ -15,6 +16,7 @@ import { hiddenTypeahead, matchNextItemBySearchText, type SearchValue } from './
 import { waitForCssTransition } from './lib/wait-for-css-transition.ts'
 import { wait } from './lib/wait.ts'
 import { createHoverAim } from './lib/hover-aim.ts'
+import { commitOnRelease, openOnPress } from './lib/popup-press.ts'
 
 const MENU_SELECT_EVENT = 'rmx:menu-select' as const
 const MENU_FLASH_DURATION_MS = 60
@@ -801,6 +803,10 @@ const triggerMixin: MixinFactory<HTMLElement, [options?: MenuTriggerOptions], El
           placement: 'bottom-start',
           ...options,
         }),
+        openOnPress({
+          isOpen: () => context.isOpen,
+          open: () => void context.open({ strategy: 'list' }),
+        }),
         on('click', () => {
           if (context.isOpen) {
             void context.closeAll()
@@ -1104,7 +1110,9 @@ const itemMixin: MixinFactory<HTMLElement, [options: MenuItemOptions], ElementPr
         'data-menu-flash': isFlashing ? 'true' : undefined,
         'data-highlighted': context.activeId === handle.id ? 'true' : undefined,
       }),
+      css({ cursor: 'default', userSelect: 'none', webkitUserSelect: 'none' }),
       !options.disabled && [
+        commitOnRelease(),
         on('click', () => {
           void context.activateItem(handle.id)
         }),
@@ -1224,7 +1232,9 @@ const submenuTriggerMixin: MixinFactory<
         placement: 'right-start',
         relativeTo: SUBMENU_ANCHOR_RELATIVE_TO,
       }),
+      css({ cursor: 'default', userSelect: 'none', webkitUserSelect: 'none' }),
       !options.disabled && [
+        commitOnRelease(),
         on('click', () => {
           parent.highlight(handle.id, { focus: true })
           void childMenu.open({ focus: false, strategy: 'none' })

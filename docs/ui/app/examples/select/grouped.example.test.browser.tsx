@@ -38,7 +38,7 @@ describe('Grouped select example', () => {
     await waitFor(() =>
       assert.equal(element(document.body, '[data-popover]').matches('[data-open]'), false),
     )
-    assert.equal(document.activeElement, trigger)
+    await waitFor(() => assert.equal(document.activeElement, trigger))
     assert.equal(
       element(
         document.body,

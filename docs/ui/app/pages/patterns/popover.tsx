@@ -198,6 +198,12 @@ export default function PopoverPage(handle: Handle<PageProps>) {
           Opening shows an ordinary DOM surface and locks page scrolling. Escape closes the topmost
           Remix popup or dialog first.
         </p>
+        <p>
+          The click that follows a press that started before the surface opened, or inside it, never
+          dismisses it. Triggers can add <code>press()</code> to open on mouse press: when the
+          surface has a <code>focusOnShow()</code> target, <code>anchor()</code> keeps the press
+          from taking focus back.
+        </p>
         <CodeBlock html={stateCode} />
         <h3 id="anchor-interaction">Interactive anchors</h3>
         <p>

@@ -15,6 +15,7 @@ import * as popover from './popover.ts'
 import { hiddenTypeahead } from './lib/typeahead.ts'
 import { waitForCssTransition } from './lib/wait-for-css-transition.ts'
 import { onKeyDown } from './lib/keydown.ts'
+import { openOnPress } from './lib/popup-press.ts'
 import type { AnchorOptions } from './anchor.ts'
 
 const SELECT_CHANGE_EVENT = 'rmx:select-change' as const
@@ -383,8 +384,13 @@ const triggerMixin: MixinFactory<HTMLButtonElement, [], ElementProps> = createMi
     hiddenTypeahead((text) => {
       context.selectTypeaheadMatch(text)
     }),
+    openOnPress({ isOpen: () => context.isOpen, open: () => context.open() }),
     on('click', () => {
-      context.open()
+      if (context.isOpen) {
+        context.close()
+      } else {
+        context.open()
+      }
     }),
     onKeyDown('ArrowDown', () => {
       context.open()
@@ -417,6 +423,7 @@ const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
       popover.surface({
         open: context.isOpen,
         onHide: context.close,
+        closeOnAnchorClick: false,
       }),
     ]
   }

@@ -1,7 +1,8 @@
 import type { Handle } from '@remix-run/component'
-import { css, on, ref } from '@remix-run/component'
+import { css, ref } from '@remix-run/component'
 
 import { animateEntrance, animateExit } from '@remix-run/ui/animation'
+import { press } from '@remix-run/ui/press'
 
 type Ripple = {
   id: number
@@ -38,36 +39,19 @@ export function MaterialRipple(handle: Handle) {
     }
   }
 
-  function createCenteredRipple() {
-    if (!buttonEl) return
-    let rect = buttonEl.getBoundingClientRect()
-    createRipple(rect.left + rect.width / 2, rect.top + rect.height / 2)
-  }
-
   return () => (
     <button
       mix={[
         ref((el) => {
           buttonEl = el
         }),
-        on('pointerdown', (event) => {
-          if (event.isPrimary === false) return
-          createRipple(event.clientX, event.clientY)
+        press({
+          activate: false,
+          onPressStart({ clientX, clientY }) {
+            createRipple(clientX, clientY)
+          },
+          onPressEnd: removeAllRipples,
         }),
-        on('pointerup', removeAllRipples),
-        on('pointercancel', removeAllRipples),
-        on('pointerleave', removeAllRipples),
-        on('keydown', (event) => {
-          if (!(event.key === 'Enter' || event.key === ' ') || event.repeat) return
-          event.preventDefault()
-          createCenteredRipple()
-        }),
-        on('keyup', (event) => {
-          if (!(event.key === 'Enter' || event.key === ' ')) return
-          event.preventDefault()
-          removeAllRipples()
-        }),
-        on('blur', removeAllRipples),
         css({
           position: 'relative',
           display: 'inline-flex',

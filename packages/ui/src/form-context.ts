@@ -9,6 +9,7 @@ import type {
   FormErrors,
   FormSubmission,
 } from '@remix-run/data-schema/experimental/form'
+import { pressableCss } from './lib/press.ts'
 import { getConstraints } from './form-constraints.ts'
 import type { GetConstraintsOptions } from './form-constraints.ts'
 import { fieldValidity, formValidity, getGroupControls, getRepeatedValues } from './form-control.ts'
@@ -348,12 +349,16 @@ export const label = createMixin<
   if (!owner) throw new Error('form.label() requires form.Context')
   return (field, value) => {
     getBinding(field, owner)
-    return attrs({
-      htmlFor:
-        typeof value === 'string' || typeof value === 'number'
-          ? optionId(field.id, value)
-          : field.id,
-    })
+    return [
+      attrs({
+        htmlFor:
+          typeof value === 'string' || typeof value === 'number'
+            ? optionId(field.id, value)
+            : field.id,
+      }),
+      // Labels are activated, not read: no text selection.
+      pressableCss(),
+    ]
   }
 })
 

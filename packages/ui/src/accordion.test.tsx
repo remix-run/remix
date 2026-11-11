@@ -5,6 +5,7 @@ import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
 
 import * as accordion from './accordion.tsx'
 import { AccordionChangeEvent, onAccordionChange } from './accordion.tsx'
+import { mouseClick, pointer } from './test/pointer.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
 
@@ -119,6 +120,20 @@ describe('accordion', () => {
 
     expect(buttons[0].getAttribute('aria-expanded')).toBe('false')
     expect(buttons[2].getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('toggles a trigger on the click, not on mouse press', () => {
+    let { container, root } = renderApp(renderExampleAccordion({ defaultValue: 'account' }))
+    let buttons = getButtons(container)
+
+    pointer(buttons[2], 'pointerdown')
+    root.flush()
+    expect(getButtons(container)[2].getAttribute('aria-expanded')).toBe('false')
+
+    pointer(buttons[2], 'pointerup')
+    buttons[2].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    root.flush()
+    expect(getButtons(container)[2].getAttribute('aria-expanded')).toBe('true')
   })
 
   it('lets a single item collapse by default', () => {

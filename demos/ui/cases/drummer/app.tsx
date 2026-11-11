@@ -1,4 +1,5 @@
-import { css, createMixin, on, ref, type Handle } from 'remix/component'
+import { css, on, ref, type Handle } from 'remix/component'
+import { press } from '@remix-run/ui/press'
 import { Drummer } from './drummer.ts'
 import { tempoEvents } from './tempo-interaction.tsx'
 import {
@@ -13,18 +14,6 @@ import {
   TempoLayout,
 } from './components.tsx'
 import { createVoiceLooper } from './voice-looper.ts'
-
-const onPressDown = createMixin<HTMLElement, [action: () => void]>(() => (action) => [
-  on('pointerdown', (event) => {
-    if (event.isPrimary === false) return
-    action()
-  }),
-  on('keydown', (event) => {
-    if (!(event.key === 'Enter' || event.key === ' ') || event.repeat) return
-    event.preventDefault()
-    action()
-  }),
-])
 
 export function App(handle: Handle<{}, Drummer>) {
   let drummer = new Drummer(80)
@@ -142,11 +131,14 @@ function DrumControls(handle: Handle) {
         disabled={!drummer.isPlaying}
         mix={[
           ref((node: HTMLButtonElement) => (stop = node)),
-          onPressDown(() => {
-            drummer.stop()
-            handle.queueTask(() => {
-              play.focus()
-            })
+          press({
+            activate: false,
+            onPressStart() {
+              drummer.stop()
+              handle.queueTask(() => {
+                play.focus()
+              })
+            },
           }),
         ]}
       >
@@ -165,16 +157,22 @@ function TempoDisplay(handle: Handle) {
         <TempoButton
           orientation="up"
           mix={[
-            onPressDown(() => {
-              drummer.setTempo(drummer.bpm + 1)
+            press({
+              activate: false,
+              onPressStart() {
+                drummer.setTempo(drummer.bpm + 1)
+              },
             }),
             css({ borderTopRightRadius: '18px' }),
           ]}
         />
         <TempoButton
           mix={[
-            onPressDown(() => {
-              drummer.setTempo(drummer.bpm - 1)
+            press({
+              activate: false,
+              onPressStart() {
+                drummer.setTempo(drummer.bpm - 1)
+              },
             }),
             css({ borderBottomRightRadius: '18px' }),
           ]}

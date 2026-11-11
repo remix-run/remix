@@ -1,5 +1,6 @@
-import { createMixin, css, on, type Handle } from '@remix-run/component'
+import { css, on, type Handle } from '@remix-run/component'
 import { animateEntrance, animateExit, spring } from '@remix-run/ui/animation'
+import { press } from '@remix-run/ui/press'
 
 // Demo
 const buttonExitAnimation = {
@@ -60,18 +61,19 @@ function HoldButton(handle: Handle<{ onConfirm: () => void }>) {
     <button
       mix={[
         animateExit(buttonExitAnimation),
-        confirmPress(),
-        on(confirmPress.start, () => {
-          confirming = true
-          handle.update()
-        }),
-        on(confirmPress.cancel, () => {
-          if (!confirming) return
-          confirming = false
-          handle.update()
-        }),
-        on(confirmPress.end, () => {
-          handle.props.onConfirm()
+        press({
+          longPressDuration: PRESS_CONFIRM_TIME,
+          onPressStart() {
+            confirming = true
+            handle.update()
+          },
+          onPressEnd() {
+            confirming = false
+            handle.update()
+          },
+          onLongPress() {
+            handle.props.onConfirm()
+          },
         }),
         css({
           position: 'relative',
@@ -223,95 +225,3 @@ function CheckIcon() {
 }
 
 const PRESS_CONFIRM_TIME = 2000
-const pressConfirmStartEventType = 'demo:press-confirm-start' as const
-const pressConfirmCancelEventType = 'demo:press-confirm-cancel' as const
-const pressConfirmEndEventType = 'demo:press-confirm-end' as const
-
-declare global {
-  interface HTMLElementEventMap {
-    [pressConfirmStartEventType]: Event
-    [pressConfirmCancelEventType]: Event
-    [pressConfirmEndEventType]: Event
-  }
-}
-
-const baseConfirmPress = createMixin<HTMLElement>((handle) => {
-  let timer = 0
-  let pressing = false
-
-  let clearTimer = () => {
-    if (timer) {
-      clearTimeout(timer)
-      timer = 0
-    }
-  }
-
-  let start = (target: Element) => {
-    clearTimer()
-    pressing = true
-    target.dispatchEvent(new Event(pressConfirmStartEventType, { bubbles: true }))
-    timer = window.setTimeout(() => {
-      timer = 0
-      pressing = false
-      target.dispatchEvent(new Event(pressConfirmEndEventType, { bubbles: true }))
-    }, PRESS_CONFIRM_TIME)
-  }
-
-  let cancel = (target: Element) => {
-    if (!pressing) return
-    clearTimer()
-    pressing = false
-    target.dispatchEvent(new Event(pressConfirmCancelEventType, { bubbles: true }))
-  }
-
-  handle.addEventListener('remove', () => {
-    clearTimer()
-    pressing = false
-  })
-
-  return (props) => (
-    <handle.element
-      {...props}
-      mix={[
-        on('pointerdown', (event) => {
-          if (event.isPrimary === false) return
-          start(event.currentTarget)
-        }),
-        on('pointerup', (event) => {
-          cancel(event.currentTarget)
-        }),
-        on('pointercancel', (event) => {
-          cancel(event.currentTarget)
-        }),
-        on('pointerleave', (event) => {
-          cancel(event.currentTarget)
-        }),
-        on('keydown', (event) => {
-          if (!(event.key === 'Enter' || event.key === ' ') || event.repeat) return
-          event.preventDefault()
-          start(event.currentTarget)
-        }),
-        on('keyup', (event) => {
-          if (!(event.key === 'Enter' || event.key === ' ')) return
-          event.preventDefault()
-          cancel(event.currentTarget)
-        }),
-        on('blur', (event) => {
-          cancel(event.currentTarget)
-        }),
-      ]}
-    />
-  )
-})
-
-type ConfirmPressMixin = typeof baseConfirmPress & {
-  readonly start: typeof pressConfirmStartEventType
-  readonly cancel: typeof pressConfirmCancelEventType
-  readonly end: typeof pressConfirmEndEventType
-}
-
-const confirmPress: ConfirmPressMixin = Object.assign(baseConfirmPress, {
-  start: pressConfirmStartEventType,
-  cancel: pressConfirmCancelEventType,
-  end: pressConfirmEndEventType,
-})

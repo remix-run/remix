@@ -9,6 +9,7 @@ import { email, minLength, min, max } from '@remix-run/data-schema/checks'
 import * as form from './form.ts'
 import type { FieldBinding } from './form.ts'
 import { renderForm, renderServerForm, input, edit, blur } from './test/form.tsx'
+import { mouseClick } from './test/pointer.ts'
 
 describe('form.Context', () => {
   it('validates transformed outputs without projecting their bounds onto raw inputs', (t) => {
@@ -41,6 +42,40 @@ describe('form.Context', () => {
     expect(native.checkValidity()).toBe(false)
     edit(node, '12')
     expect(native.checkValidity()).toBe(false)
+  })
+
+  it('keeps label text unselectable with a default cursor and leaves its input selectable', (t) => {
+    let schema = fd.object({ name: fd.text(s.string()) })
+    let view = renderForm(schema, ({ fields }) => (
+      <form mix={form.root()}>
+        <label mix={form.label(fields.name)}>Name</label>
+        <input mix={form.control(fields.name)} />
+      </form>
+    ))
+    t.after(view.cleanup)
+    let label = getComputedStyle(view.container.querySelector('label') as HTMLElement)
+    expect(label.cursor).toBe('default')
+    expect(label.userSelect).toBe('none')
+    expect(getComputedStyle(input(view.container)).userSelect).not.toBe('none')
+  })
+
+  it('toggles the control of a form.label() on mouse press, once', (t) => {
+    let schema = fd.object({ agree: fd.checkbox() })
+    let view = renderForm(schema, ({ fields }) => (
+      <form mix={form.root()}>
+        <label mix={form.label(fields.agree)}>Agree</label>
+        <input type="checkbox" mix={form.control(fields.agree)} />
+      </form>
+    ))
+    t.after(view.cleanup)
+    let label = view.container.querySelector('label') as HTMLElement
+    let checkbox = input(view.container)
+
+    mouseClick(label)
+    expect(checkbox.checked).toBe(true)
+
+    mouseClick(label)
+    expect(checkbox.checked).toBe(false)
   })
 
   it('revalidates a selected radio when its JSX value changes before submission', (t) => {

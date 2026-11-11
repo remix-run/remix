@@ -1,6 +1,7 @@
 import {
   attrs,
   createMixin,
+  css,
   on,
   type ElementProps,
   type Handle,
@@ -8,6 +9,7 @@ import {
   type RemixNode,
 } from '@remix-run/component'
 import { hiddenTypeahead, matchNextItemBySearchText, type SearchValue } from './lib/typeahead.ts'
+import { commitOnRelease } from './lib/popup-press.ts'
 
 export type ListboxValue = string | null
 
@@ -305,15 +307,22 @@ const optionMixin: MixinFactory<HTMLElement, [option: Omit<ListboxOption, 'id'>]
           'aria-disabled': option.disabled ? 'true' : 'false',
           'data-highlighted': context.activeValue === option.value ? 'true' : 'false',
         }),
+        // Items are chosen, not read: no text cursor and no text selection, including when disabled.
+        css({ cursor: 'default', userSelect: 'none', webkitUserSelect: 'none' }),
         !option.disabled && [
+          commitOnRelease(),
           on('click', () => {
             context.select(option.value)
           }),
-          on('mousemove', () => {
-            if (context.activeValue === option.value) return
+          // Pointer events, not mouse events: a press that prevented default on `pointerdown` (the
+          // select trigger) suppresses compatibility mouse events until release, which would stop
+          // the highlight following a held drag. Touch is excluded so a scroll doesn't highlight.
+          on('pointermove', (event) => {
+            if (event.pointerType === 'touch' || context.activeValue === option.value) return
             context.highlight(option.value)
           }),
-          on('mouseleave', () => {
+          on('pointerleave', (event) => {
+            if (event.pointerType === 'touch') return
             if (context.activeValue !== option.value) return
             context.highlight(null)
           }),

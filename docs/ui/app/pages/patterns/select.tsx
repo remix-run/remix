@@ -198,7 +198,12 @@ export default function SelectPage(handle: Handle<PageProps>) {
         </p>
         <CodeBlock html={accessibilityCode} />
         <ul>
-          <li>Click, ArrowDown and ArrowUp open the popup.</li>
+          <li>
+            A mouse press on the trigger opens the popup. Dragging from the trigger to an option and
+            releasing selects it, as does pressing one option and releasing over another. Options
+            select on release, and touch, pen and keyboard use click.
+          </li>
+          <li>ArrowDown and ArrowUp open the popup.</li>
           <li>Enter and Space select the highlighted option.</li>
           <li>Escape and outside clicks close the popup and return focus to the trigger.</li>
         </ul>

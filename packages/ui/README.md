@@ -80,6 +80,7 @@ function ViewOptions(handle: Handle) {
 - [`@remix-run/ui/menu`](https://github.com/remix-run/remix/blob/main/packages/ui/src/menu/README.md)
 - [`@remix-run/ui/popover`](https://github.com/remix-run/remix/blob/main/packages/ui/src/popover/README.md)
 - [`@remix-run/ui/portal`](https://github.com/remix-run/remix/blob/main/packages/ui/src/portal/README.md)
+- [`@remix-run/ui/press`](https://github.com/remix-run/remix/blob/main/packages/ui/src/press/README.md)
 - [`@remix-run/ui/select`](https://github.com/remix-run/remix/blob/main/packages/ui/src/select/README.md)
 - [`@remix-run/ui/tabs`](https://github.com/remix-run/remix/blob/main/packages/ui/src/tabs/README.md)
 - [`@remix-run/ui/toast`](https://github.com/remix-run/remix/blob/main/packages/ui/src/toast/README.md)

@@ -301,6 +301,11 @@ export default function MenuPage(handle: Handle<PageProps>) {
         <ul>
           <li>Arrow keys move between enabled items without wrapping.</li>
           <li>Home and End highlight the first and last enabled items.</li>
+          <li>
+            A mouse press on the trigger opens the menu. Dragging from the trigger to an item and
+            releasing activates it, as does pressing one item and releasing over another. Items
+            activate on release, and touch, pen and keyboard use click.
+          </li>
           <li>Enter activates the highlighted item.</li>
           <li>Printable keys perform typeahead.</li>
           <li>Escape closes the menu tree.</li>
@@ -320,9 +325,9 @@ export default function MenuPage(handle: Handle<PageProps>) {
         </ApiTable>
         <h3 id="trigger-reference">trigger(options?)</h3>
         <p>
-          Accepts <code>AnchorOptions</code>. Defaults to bottom-start placement. Click toggles the
-          menu. ArrowDown opens at the first enabled item and ArrowUp at the last. Enter and Space
-          focus the list.
+          Accepts <code>AnchorOptions</code>. Defaults to bottom-start placement. A mouse press
+          opens the menu, a press while it is open or a click toggles it. ArrowDown opens at the
+          first enabled item and ArrowUp at the last. Enter and Space focus the list.
         </p>
         <ApiTable id="trigger-attributes" label="Attribute" typeLabel="Value">
           <ApiEntry name="id" type="string">
