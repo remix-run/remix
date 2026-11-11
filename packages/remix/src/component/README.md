@@ -1230,13 +1230,13 @@ The default resolver sends `X-Remix-Frame: true` for every request, including to
 
 The default resolver doesn't tell the server which page contains the frame. If frame content depends on the containing page, include that context explicitly in the frame's `src`.
 
-`defaultResolveFrame(src, options?, fetchImpl?)` is the resolver used by `run()` unless you provide `resolveFrame`. It follows these rules:
+`defaultResolveFrame(src, options?, overrides?)` is the resolver used by `run()` unless you provide `resolveFrame`. It follows these rules:
 
 - GET form values are already encoded in `src`. `application/x-www-form-urlencoded` submissions use `URLSearchParams`, `text/plain` submissions use CRLF-delimited text, and `multipart/form-data` submissions use `FormData`.
 - It accepts `2xx` responses, and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text.
 - It supplies the `same-origin` Fetch mode, so the default fetch implementation rejects cross-origin sources and redirects, even when the destination allows CORS.
 
-Delegate to `defaultResolveFrame` with a custom fetch implementation to customize requests or return stored responses. The callback receives the URL and prepared `RequestInit`, including the form body, frame headers, abort signal, and `same-origin` mode. Forward these settings when calling `fetch()` to preserve the default request behavior. Fetch generates multipart boundaries. The default resolver validates the returned response before passing it to the frame.
+Pass `{ fetch, commit }` as the third argument to customize requests and rendering. The optional `fetch` implementation can modify requests or return stored responses. The callback receives the URL and prepared `RequestInit`, including the form body, frame headers, abort signal, and `same-origin` mode. Forward these settings when calling `fetch()` to preserve the default request behavior. Fetch generates multipart boundaries. The default resolver validates the returned response before passing it to the frame.
 
 For example, use the browser HTTP cache for Back/Forward navigations, including stale responses:
 
@@ -1249,12 +1249,14 @@ run({
     return mod[exportName]
   },
   resolveFrame(src, options) {
-    return defaultResolveFrame(src, options, (url, init) =>
-      fetch(url, {
-        ...init,
-        cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
-      }),
-    )
+    return defaultResolveFrame(src, options, {
+      fetch(url, init) {
+        return fetch(url, {
+          ...init,
+          cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
+        })
+      },
+    })
   },
 })
 ```
@@ -1266,6 +1268,58 @@ run({
 For application-managed storage with the Cache API, the callback can construct `new Request(url, init)` as a cache key and return a stored `Response`. The app owns cache writes, invalidation, and partitioning by user. Custom fetch implementations also own any changes to request and redirect policies.
 
 Provide a custom `resolveFrame` without delegating when you need another body encoding or response policy. It can return frame content directly, or return the fetched `Response` with any status to render its body. Returning the response lets Remix stream it. When `fetch()` followed a redirect, frames other than the top frame render the response without changing either URL.
+
+#### Wrapping Frame Commits
+
+The `commit(commitFrame, { response, signal })` override runs after a response has been validated and before Remix renders its body. It can wrap the default commit in a same-document view transition:
+
+```ts
+run({
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    return mod[exportName]
+  },
+  resolveFrame(src, options) {
+    let animate =
+      !options?.target &&
+      (options?.navigationType === 'push' || options?.navigationType === 'replace')
+
+    return defaultResolveFrame(src, options, {
+      async commit(commitFrame, { signal }) {
+        if (
+          !animate ||
+          !document.startViewTransition ||
+          matchMedia('(prefers-reduced-motion: reduce)').matches ||
+          signal.aborted
+        ) {
+          return commitFrame()
+        }
+
+        let transition = document.startViewTransition(commitFrame)
+        let skip = () => transition.skipTransition()
+        signal.addEventListener('abort', skip, { once: true })
+        void transition.ready.catch(() => {})
+
+        try {
+          await transition.finished
+        } finally {
+          signal.removeEventListener('abort', skip)
+        }
+      },
+    })
+  },
+})
+```
+
+This example assumes every subframe has a nonempty name, since top-frame and unnamed subframe requests both omit `target`. Add `traverse` to the predicate to animate Back/Forward. The `fetch` and `commit` overrides can be supplied together.
+
+Calling `commitFrame()` starts rendering once. Its promise resolves after the frame has rendered and, for navigation-driven loads, after the enclosing navigation finishes its URL, scroll, and focus handling. A followed redirect's replacement navigation is part of that completion. Independent frame loads and reloads wait only for their own rendering. The original `response`, including its headers and final redirect URL, is available to the callback.
+
+The callback may await the animation's `finished` promise: Remix continues navigation once `commitFrame()` starts rendering. Returning or throwing without calling `commitFrame()` falls back to the default commit; thrown callback errors are reported on the runtime. A callback that never settles and never calls `commitFrame()` holds the update until cancellation. Rendering failures reject `commitFrame()` and are reported through the normal runtime error path.
+
+The callback's `signal` aborts when the update is superseded or disposed, including while an animation is still running. Cancellation releases a pending `commitFrame()` and prevents a later call from rendering stale content. Return the response from `defaultResolveFrame` directly: commit callbacks are consumed with that response, and cloning or replacing it does not copy the callback.
+
+The response body remains a stream. A slow body can delay the new snapshot, and the browser may skip the animation. Avoid waiting for `requestAnimationFrame` inside the update callback: rendering suppression can prevent it from running until the transition is skipped.
 
 ### Preserving Client-Owned DOM
 
