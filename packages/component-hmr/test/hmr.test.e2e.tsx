@@ -579,14 +579,12 @@ describe('component-hmr e2e', { skip: isBun }, () => {
 
       let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
       let entrySource = await fs.readFile(entryPath, 'utf-8')
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await fs.writeFile(
         entryPath,
         entrySource.replace('Frame adoption failed:', 'Updated frame adoption failed:'),
       )
       await reloaded
-      await adopted
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
@@ -651,8 +649,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
 
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await fs.writeFile(
         clientFieldPath,
         [
@@ -665,7 +662,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: after export add')
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
@@ -745,8 +741,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
 
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await fs.writeFile(
         clientFieldPath,
         [
@@ -759,7 +754,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -789,8 +783,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -798,7 +791,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -859,8 +851,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
         await route.continue()
       })
       let updateRequested = page.waitForRequest((request) => isClientUpdate(new URL(request.url())))
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -871,7 +862,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('html[data-server-update-received="true"]').waitFor()
       update.resolve()
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -907,8 +897,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -919,7 +908,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1064,8 +1052,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
 
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await fs.writeFile(
         clientFieldPath,
         [
@@ -1076,7 +1063,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1104,8 +1090,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -1113,7 +1098,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1141,8 +1125,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -1153,7 +1136,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1223,8 +1205,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -1235,7 +1216,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: after object export')
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
@@ -1291,8 +1271,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/client-message.tsx',
@@ -1306,7 +1285,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1337,8 +1315,6 @@ type HmrTestServer = {
   baseUrl: string
   close(): Promise<void>
   restartAssets(): Promise<void>
-  startAssets(): Promise<void>
-  stopAssets(): Promise<void>
 }
 
 type BrowserHmrFileEvent = {
@@ -1385,13 +1361,9 @@ type NodeHmrTestServer = {
 type TestPage = Awaited<ReturnType<TestContext['serve']>>
 
 type PageDiagnostics = {
-  consoleMessages: string[]
+  events: string[]
   getServerOutput?: () => string
-  navigations: string[]
-  pageErrors: string[]
   pendingRequests: Map<PlaywrightRequest, string>
-  requestFailures: string[]
-  responseFailures: string[]
 }
 
 const pageDiagnostics = new WeakMap<TestPage, PageDiagnostics>()
@@ -1409,70 +1381,45 @@ function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): 
     return diagnostics
   }
 
-  diagnostics = {
-    consoleMessages: [],
-    getServerOutput,
-    navigations: [],
-    pageErrors: [],
-    pendingRequests: new Map(),
-    requestFailures: [],
-    responseFailures: [],
-  }
+  let events: string[] = []
+  let pendingRequests = new Map<PlaywrightRequest, string>()
+  diagnostics = { events, getServerOutput, pendingRequests }
   pageDiagnostics.set(page, diagnostics)
 
-  page.on('console', (message) => {
-    diagnostics.consoleMessages.push(`${message.type()}: ${message.text()}`)
-  })
-  page.on('pageerror', (error) => {
-    diagnostics.pageErrors.push(error.stack ?? error.message)
-  })
+  // Elapsed times show which step a timed out wait was stuck on.
+  let startedAt = performance.now()
+  let at = (event: string) => `+${Math.round(performance.now() - startedAt)}ms ${event}`
+
+  page.on('console', (message) => events.push(at(`${message.type()}: ${message.text()}`)))
+  page.on('pageerror', (error) => events.push(at(`pageerror: ${error.stack ?? error.message}`)))
   page.on('framenavigated', (frame) => {
-    if (frame.parentFrame() !== null) return
-    diagnostics.navigations.push(frame.url())
+    if (frame.parentFrame() === null) events.push(at(`navigated: ${frame.url()}`))
   })
+  page.on('load', () => events.push(at('load')))
   page.on('request', (request) => {
-    diagnostics.pendingRequests.set(request, `${request.method()} ${request.url()}`)
+    pendingRequests.set(request, at(`${request.method()} ${request.url()}`))
   })
-  page.on('requestfinished', (request) => {
-    diagnostics.pendingRequests.delete(request)
-  })
+  page.on('requestfinished', (request) => pendingRequests.delete(request))
   page.on('requestfailed', (request) => {
-    diagnostics.pendingRequests.delete(request)
-    let failureText = request.failure()?.errorText
-    diagnostics.requestFailures.push(
-      `${request.method()} ${request.url()}${failureText ? ` (${failureText})` : ''}`,
-    )
+    pendingRequests.delete(request)
+    let reason = request.failure()?.errorText ?? 'unknown'
+    events.push(at(`requestfailed: ${request.method()} ${request.url()} (${reason})`))
   })
   page.on('response', (response) => {
     if (response.status() < 400) return
-    diagnostics.responseFailures.push(`${response.status()} ${response.url()}`)
+    events.push(at(`response: ${response.status()} ${response.url()}`))
   })
 
   return diagnostics
 }
 
 function formatPageDiagnostics(page: TestPage): string {
-  let diagnostics = attachPageDiagnostics(page)
-  let sections = [
-    formatDiagnosticsSection('console', diagnostics.consoleMessages),
-    formatDiagnosticsSection('pageerror', diagnostics.pageErrors),
-    formatDiagnosticsSection('navigation', diagnostics.navigations),
-    formatDiagnosticsSection('pending requests', [...diagnostics.pendingRequests.values()]),
-    formatDiagnosticsSection('requestfailed', diagnostics.requestFailures),
-    formatDiagnosticsSection('response >= 400', diagnostics.responseFailures),
-  ].filter(Boolean)
-
-  let serverOutput = diagnostics.getServerOutput?.()
-  if (serverOutput) {
-    sections.push(`server output:\n${serverOutput}`)
-  }
-
-  return sections.join('\n\n')
-}
-
-function formatDiagnosticsSection(label: string, values: string[]): string {
-  if (values.length === 0) return ''
-  return `${label}:\n${values.slice(-30).join('\n')}`
+  let { events, getServerOutput, pendingRequests } = attachPageDiagnostics(page)
+  return [
+    `page events:\n${events.slice(-60).join('\n')}`,
+    `pending requests:\n${[...pendingRequests.values()].join('\n')}`,
+    `server output:\n${getServerOutput?.() ?? ''}`,
+  ].join('\n\n')
 }
 
 async function createHmrFixture(
@@ -2315,8 +2262,6 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
       await stopAssets()
       await startAssets()
     },
-    startAssets,
-    stopAssets,
     async close() {
       await stopAssets()
       server.closeAllConnections()
@@ -2420,7 +2365,7 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
   })
   let closed = new Promise<void>((resolve) => child.once('close', () => resolve()))
   let readyEvents: Array<{ pid: number; port: number }> = []
-  let proxyReadyEvents: Array<{ pid: number; port: number }> = []
+  let proxyPort: number | undefined
   let lineBuffer = ''
   let processOutput = ''
   let exit: { code: number | null; signal: NodeJS.Signals | null } | null = null
@@ -2440,16 +2385,9 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     lineBuffer = lines.pop() ?? ''
 
     for (let line of lines) {
-      let event = parseReadyEvent(line)
-      if (event !== null) {
-        readyEvents.push(event)
-        continue
-      }
-
-      let proxyEvent = parseProxyReadyEvent(line)
-      if (proxyEvent !== null) {
-        proxyReadyEvents.push(proxyEvent)
-      }
+      let event = parseReadyEvent(line, 'ready')
+      if (event !== null) readyEvents.push(event)
+      proxyPort ??= parseReadyEvent(line, 'proxy-ready')?.port
     }
     notifyStateWaiters()
   })
@@ -2465,11 +2403,11 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     notifyStateWaiters()
   })
 
-  let ready = await waitForProxyReady()
+  await waitForState(() => proxyPort !== undefined, 'Timed out waiting for node-hmr proxy server.')
   await waitForReadyEvent(0)
 
   return {
-    baseUrl: `http://127.0.0.1:${ready.port}`,
+    baseUrl: `http://127.0.0.1:${proxyPort}`,
     async close() {
       closePromise ??= stopProcess(child, closed)
       await closePromise
@@ -2493,7 +2431,10 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
   // Resolves once `check()` passes after process output, and rejects if the process exits first.
   function waitForState(check: () => boolean, message: string): Promise<void> {
     let { promise, resolve, reject } = Promise.withResolvers<void>()
-    let fail = () => reject(new Error(`${message}${getExitText()}\n${processOutput}`))
+    let fail = () => {
+      let exitText = exit ? ` Process exited with code ${exit.code} and signal ${exit.signal}.` : ''
+      reject(new Error(`${message}${exitText}\n${processOutput}`))
+    }
     let update = () => {
       if (check()) resolve()
       else if (exit) fail()
@@ -2509,10 +2450,6 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     return result
   }
 
-  function getExitText(): string {
-    return exit ? ` Process exited with code ${exit.code} and signal ${exit.signal}.` : ''
-  }
-
   async function waitForReadyEvent(index: number): Promise<{ pid: number; port: number }> {
     await waitForState(
       () => readyEvents[index] !== undefined,
@@ -2520,16 +2457,6 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     )
 
     let event = readyEvents[index]
-    assert.ok(event)
-    return event
-  }
-
-  async function waitForProxyReady(): Promise<{ pid: number; port: number }> {
-    await waitForState(
-      () => proxyReadyEvents[0] !== undefined,
-      'Timed out waiting for node-hmr proxy server.',
-    )
-    let event = proxyReadyEvents[0]
     assert.ok(event)
     return event
   }
@@ -2737,45 +2664,36 @@ async function openHmrPage(page: TestPage, options: { hydrate?: boolean } = {}):
 function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
   attachPageDiagnostics(page)
   let result = new Promise<void>((resolve, reject) => {
-    let consoleMessages: string[] = []
-    let pageErrors: string[] = []
     let timeoutMs =
       text === '[remix] HMR connected' || text === 'Frame adoption complete'
         ? browserStartupTimeout
         : consoleMessageTimeout
     let timeout = setTimeout(() => {
       page.off('console', handleConsole)
-      page.off('pageerror', handlePageError)
       reject(
-        new Error(
-          [
-            `Timed out waiting for console message: ${text}`,
-            ...consoleMessages.map((message) => `console: ${message}`),
-            ...pageErrors.map((message) => `pageerror: ${message}`),
-            formatPageDiagnostics(page),
-          ].join('\n'),
-        ),
+        new Error(`Timed out waiting for console message: ${text}\n${formatPageDiagnostics(page)}`),
       )
     }, timeoutMs)
 
     page.on('console', handleConsole)
-    page.on('pageerror', handlePageError)
 
     function handleConsole(message: { text(): string }) {
-      consoleMessages.push(message.text())
-      if (message.text().includes(text)) {
-        clearTimeout(timeout)
-        page.off('console', handleConsole)
-        page.off('pageerror', handlePageError)
-        resolve()
-      }
-    }
-
-    function handlePageError(error: Error) {
-      pageErrors.push(error.stack ?? error.message)
+      if (!message.text().includes(text)) return
+      clearTimeout(timeout)
+      page.off('console', handleConsole)
+      resolve()
     }
   })
   // The triggering navigation can reject before the caller awaits this event.
+  void result.catch(() => {})
+  return result
+}
+
+// Resolves once the page has reloaded and the new document's client entries have hydrated.
+function waitForReloadedApp(page: TestPage): Promise<void> {
+  let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+  let result = waitForNavigation(page).then(() => adopted)
+  // A failed update can leave this unawaited while the page is cleaned up.
   void result.catch(() => {})
   return result
 }
@@ -2806,15 +2724,6 @@ function waitForNavigation(
   // A failed update can leave this event unawaited while the page is cleaned up.
   void result.catch(() => {})
   return result
-}
-
-async function ignoreAbortedNavigation(navigation: Promise<unknown>): Promise<void> {
-  try {
-    await navigation
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('net::ERR_ABORTED')) return
-    throw error
-  }
 }
 
 function monitorLocalRequestFailures(
@@ -2940,44 +2849,17 @@ function waitForStylesheetResponse(
   )
 }
 
-async function get(page: TestPage, pathname: string): Promise<void> {
-  let response = await page.request.get(pathname)
-  assert.ok(response.ok())
-}
-
-function parseReadyEvent(line: string): { pid: number; port: number } | null {
+function parseReadyEvent(
+  line: string,
+  type: 'ready' | 'proxy-ready',
+): { pid: number; port: number } | null {
   try {
     let event: unknown = JSON.parse(line)
     if (
       typeof event === 'object' &&
       event !== null &&
       'type' in event &&
-      event.type === 'ready' &&
-      'port' in event &&
-      typeof event.port === 'number' &&
-      'pid' in event &&
-      typeof event.pid === 'number'
-    ) {
-      return {
-        pid: event.pid,
-        port: event.port,
-      }
-    }
-  } catch {
-    // Ignore non-JSON process output.
-  }
-
-  return null
-}
-
-function parseProxyReadyEvent(line: string): { pid: number; port: number } | null {
-  try {
-    let event: unknown = JSON.parse(line)
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'proxy-ready' &&
+      event.type === type &&
       'port' in event &&
       typeof event.port === 'number' &&
       'pid' in event &&
