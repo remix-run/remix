@@ -72,10 +72,11 @@ import { describe, it } from '@remix-run/test'
 Tests must not depend on wall-clock timing; a test that passes because enough time went by flakes on slow CI.
 
 - Never sleep (`setTimeout(resolve, ms)`, `page.waitForTimeout()`, `sleep`/`delay` helpers), flush "a tick" (`setTimeout(resolve, 0)`, `setImmediate`, repeated `await Promise.resolve()`), or assert on durations from `Date.now()`/`performance.now()`.
-- Await the exact signal that proves the behavior happened: a promise returned by the code under test, an emitted event, a deferred the fixture resolves at a specific point, or a real condition (`MutationObserver`, Playwright web-first assertions, `waitForFunction`/`waitForResponse`/`waitForEvent`, a predicate over actual state). For `requestAnimationFrame` work, wait for that frame or the state it produces.
+- Await the exact signal that proves the behavior happened: a promise returned by the code under test, an emitted event, a deferred the fixture resolves at a specific point, or a real condition (`MutationObserver`, Playwright web-first assertions, `waitForFunction`/`waitForResponse`/`waitForEvent`, a predicate over actual state).
 - Timeouts may only bound failure on an awaited condition, never make a test pass.
 - To prove something did _not_ happen, first await a later observable event that must follow it, then assert the absence.
-- For timer-based code (debounce, retry, timeouts), use `t.useFakeTimers()` with `advance`/`advanceAsync`, or `node:test` mock timers in node-runner exception packages. `t.useFakeTimers()` does not fake `Date`, so for wall-clock code (expiry, dates) inject a clock or mock `Date.now`.
+- For timer-based code (debounce, retry, timeouts), use `t.useFakeTimers()` with `advance`/`advanceAsync`, or `node:test` mock timers in node-runner exception packages. `t.useFakeTimers()` also fakes `Date` and `performance.now()`; pass `{ now }` for wall-clock code such as expiry or dates.
+- Fake timers do not hold animation frames. When code races its own events against frames, such as a fallback that gives up after two frames without a `transitionrun`, mock `requestAnimationFrame` so frames only run when the test runs them. Otherwise a slow runner renders frames while the test awaits something else.
 - If code cannot be tested without sleeping, add a deterministic hook (a returned promise, an event, an injected clock or scheduler).
 
 ## Assertions

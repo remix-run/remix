@@ -5,6 +5,7 @@ import { createRoot, type Handle, type Props, type RemixNode } from '@remix-run/
 
 import { onComboboxChange, type ComboboxChangeEvent, type ComboboxHandle } from './combobox.tsx'
 import * as combobox from './combobox.tsx'
+import { holdAnimationFrames } from './test/animation-frames.ts'
 import { settle } from './test/settle.ts'
 
 const flashDurationMs = 60
@@ -524,6 +525,7 @@ describe('Combobox', () => {
   })
 
   it('Enter selects the active option, flashes it, then closes the popover and emits onComboboxChange', async (t) => {
+    holdAnimationFrames(t)
     timers = t.useFakeTimers()
     let changes: ComboboxChangeEvent[] = []
     let { container, root } = renderObservedCombobox(changes)
@@ -587,6 +589,7 @@ describe('Combobox', () => {
   })
 
   it('selecting from an untouched input delays the visible input commit until after close', async (t) => {
+    holdAnimationFrames(t)
     let changes: ComboboxChangeEvent[] = []
     let { container, root } = renderObservedCombobox(changes)
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
@@ -658,6 +661,7 @@ describe('Combobox', () => {
   })
 
   it('selects the input text after menu selection even when the label is already visible', async (t) => {
+    holdAnimationFrames(t)
     timers = t.useFakeTimers()
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
@@ -683,6 +687,7 @@ describe('Combobox', () => {
   })
 
   it('clears the input selection when arrow navigation starts', async (t) => {
+    holdAnimationFrames(t)
     timers = t.useFakeTimers()
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
@@ -830,6 +835,7 @@ describe('Combobox', () => {
   })
 
   it('pointer selection keeps focus on the input', async (t) => {
+    holdAnimationFrames(t)
     timers = t.useFakeTimers()
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement

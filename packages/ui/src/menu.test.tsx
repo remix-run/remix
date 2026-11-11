@@ -5,6 +5,7 @@ import { createRoot, ref, type Handle, type Props, type RemixNode } from '@remix
 
 import * as menu from './menu.tsx'
 import { onMenuSelect, type MenuSelectEvent } from './menu.tsx'
+import { holdAnimationFrames } from './test/animation-frames.ts'
 import { settle } from './test/settle.ts'
 
 const flashDurationMs = 60
@@ -332,6 +333,9 @@ async function finishDismissal(
   root: ReturnType<typeof createRoot>,
   condition = () => true,
 ) {
+  // The close starts waiting for its transition after the update that hides the surface, so the
+  // transition events have to come after the `toggle` that `settle()` waits for.
+  await settle(root)
   surface.dispatchEvent(new TransitionEvent('transitionrun', { propertyName: 'opacity' }))
   surface.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }))
   await settleUntil(root, condition)
@@ -356,7 +360,8 @@ afterEach(() => {
 })
 
 describe('menu', () => {
-  it('opens from click with focus on the list and toggles closed from the trigger', async () => {
+  it('opens from click with focus on the list and toggles closed from the trigger', async (t) => {
+    holdAnimationFrames(t)
     let { container, root } = renderMenu()
     let trigger = getButtonByText(container, 'View')
     let [rootSurface] = getSurfaces(container)
@@ -860,7 +865,8 @@ describe('menu', () => {
     expect(newFile.getAttribute('data-highlighted')).toBe(null)
   })
 
-  it('marks submenu triggers as dismissing while the full menu tree fades out', async () => {
+  it('marks submenu triggers as dismissing while the full menu tree fades out', async (t) => {
+    holdAnimationFrames(t)
     let { container, root } = renderMenu()
     let trigger = getButtonByText(container, 'View')
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
@@ -890,6 +896,7 @@ describe('menu', () => {
   })
 
   it('dispatches one bubbled selection event from submenu items and closes the full tree', async (t) => {
+    holdAnimationFrames(t)
     let selections: MenuSelectEvent[] = []
     let { container, root } = renderMenu((event) => {
       selections.push(event)
@@ -945,6 +952,7 @@ describe('menu', () => {
   })
 
   it('re-dispatches one selection event from the button so shared ancestors only see it once', async (t) => {
+    holdAnimationFrames(t)
     let buttonSelections: MenuSelectEvent[] = []
     let ancestorSelections: MenuSelectEvent[] = []
     let { container, root } = renderMenu(
@@ -988,6 +996,7 @@ describe('menu', () => {
   })
 
   it('does not swallow parent item clicks while a child submenu is open', async (t) => {
+    holdAnimationFrames(t)
     let selections: MenuSelectEvent[] = []
     let { container, root } = renderMenu((event) => {
       selections.push(event)

@@ -6,6 +6,7 @@ import { createRoot, on, type Handle, type Props, type RemixNode } from '@remix-
 import * as popover from '@remix-run/ui/popover'
 import { onSelectChange, SelectChangeEvent } from './select.tsx'
 import * as select from './select.tsx'
+import { holdAnimationFrames } from './test/animation-frames.ts'
 import { settle } from './test/settle.ts'
 
 const flashDurationMs = 60
@@ -280,6 +281,7 @@ describe('Select', () => {
   })
 
   it('supports a custom label swap delay on the primitive context', async (t) => {
+    holdAnimationFrames(t)
     let { container, root } = renderApp(
       <TestSelect
         defaultLabel="Select a framework"
