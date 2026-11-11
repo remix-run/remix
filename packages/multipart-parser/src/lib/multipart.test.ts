@@ -42,6 +42,25 @@ function createChunkedStream(body: Uint8Array, chunkSize: number): ReadableStrea
   })
 }
 
+// Enqueues `chunk` and never closes, like a sender that has not finished
+function createCancelTrackingStream(chunk: Uint8Array) {
+  let cancelReasons: unknown[] = []
+  let stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(chunk)
+    },
+    cancel(reason) {
+      cancelReasons.push(reason)
+    },
+  })
+
+  return { stream, cancelReasons }
+}
+
+const oversizedPart = new TextEncoder().encode(
+  `--${boundary}\r\nContent-Disposition: form-data; name="a"\r\n\r\n${'x'.repeat(100)}`,
+)
+
 describe('MultipartParser', () => {
   it('accepts boundaries up to 70 characters', () => {
     assert.doesNotThrow(() => new MultipartParser('b'.repeat(70)))
@@ -532,6 +551,41 @@ describe('parseMultipartStream', async () => {
         boundary,
         maxTotalSize: 9,
       })) {
+        // ...
+      }
+    }, MaxTotalSizeExceededError)
+  })
+
+  it('cancels the stream with the error when a limit is exceeded before the stream ends', async () => {
+    let { stream, cancelReasons } = createCancelTrackingStream(oversizedPart)
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartStream(stream, { boundary, maxTotalSize: 10 })) {
+        // ...
+      }
+    }, MaxTotalSizeExceededError)
+    assert.equal(cancelReasons.length, 1)
+    assert.ok(cancelReasons[0] instanceof MaxTotalSizeExceededError)
+  })
+
+  it('cancels the stream when iteration stops before the stream ends', async () => {
+    let { stream, cancelReasons } = createCancelTrackingStream(
+      createMultipartMessage(boundary, { field1: 'value1', field2: 'value2' }),
+    )
+
+    for await (let _ of parseMultipartStream(stream, { boundary })) {
+      break
+    }
+    assert.deepEqual(cancelReasons, [undefined])
+  })
+
+  it('throws a limit error without waiting for a tee branch to finish cancelling', async () => {
+    // Cancelling one branch of a tee doesn't settle until the other branch is cancelled too
+    let { stream } = createCancelTrackingStream(oversizedPart)
+    let [branch] = stream.tee()
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartStream(branch, { boundary, maxTotalSize: 10 })) {
         // ...
       }
     }, MaxTotalSizeExceededError)

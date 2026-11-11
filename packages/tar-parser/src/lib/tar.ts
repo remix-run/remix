@@ -1,4 +1,3 @@
-import { readStream } from './read-stream.ts'
 import {
   buffersEqual,
   concatChunks,
@@ -388,6 +387,10 @@ export interface ParseTarOptions extends ParseTarHeaderOptions {
  * Applies the configured path policy, as in {@link parseTarHeader}, before
  * calling the handler.
  *
+ * Rejects with the first error from parsing or a handler. A stream or async
+ * iterable archive stops being read at that error, and a `ReadableStream`
+ * archive is cancelled.
+ *
  * ```ts
  * import { parseTar } from 'remix/tar-parser';
  *
@@ -500,7 +503,9 @@ export class TarParser {
 
   /**
    * Parse a stream/buffer tar archive and call the given handler for each entry it contains.
-   * Resolves when the parse is finished and all handlers resolve.
+   * Resolves when the parse is finished and all handlers resolve. Rejects with the first error from
+   * parsing or a handler. A stream or async iterable archive stops being read at that error, and a
+   * `ReadableStream` archive is cancelled.
    *
    * @param archive The tar archive source data
    * @param handler A function to call for each entry in the archive
@@ -510,22 +515,74 @@ export class TarParser {
     this.#reset()
 
     let results: Promise<void>[] = []
+    let handlerFailure: { error: unknown } | undefined
+    let rejectPendingRead: ((error: unknown) => void) | undefined
 
     function handleEntry(entry: TarEntry): void {
       let result = Promise.resolve(handler(entry))
-      // A handler may reject before the archive finishes streaming.
-      result.catch(() => {})
+      result.catch((error: unknown) => {
+        handlerFailure ??= { error }
+        rejectPendingRead?.(error)
+      })
       results.push(result)
+    }
+
+    // Waits for a read, but rejects with the first handler rejection as soon as it happens, so
+    // parsing doesn't wait for more input. Each read gets its own promise rather than racing one
+    // shared promise, which would hold on to every settled read and its chunk until parsing ends.
+    async function readUnlessHandlerFailed<result>(read: Promise<result>): Promise<result> {
+      let result = await new Promise<result>((resolve, reject) => {
+        rejectPendingRead = reject
+        read.then(resolve, reject)
+        if (handlerFailure !== undefined) reject(handlerFailure.error)
+      })
+      rejectPendingRead = undefined
+      // A handler can reject after the read settles but before this function resumes
+      if (handlerFailure !== undefined) throw handlerFailure.error
+      return result
     }
 
     try {
       if (archive instanceof ReadableStream) {
-        for await (let chunk of readStream(archive)) {
-          this.#write(chunk, handleEntry)
+        let reader = archive.getReader()
+        try {
+          while (true) {
+            let result = await readUnlessHandlerFailed(reader.read())
+            if (result.done) break
+            this.#write(result.value, handleEntry)
+          }
+        } catch (error) {
+          // Don't wait for the cancel to settle. A tee'd stream, such as the body of a cloned
+          // response, doesn't settle it until every branch is cancelled.
+          reader.cancel(error).catch(() => {})
+          throw error
+        } finally {
+          reader.releaseLock()
         }
       } else if (isAsyncIterable(archive)) {
-        for await (let chunk of archive) {
-          this.#write(chunk, handleEntry)
+        let iterator = archive[Symbol.asyncIterator]()
+        let iteratorFailed = false
+        try {
+          while (true) {
+            let next = new Promise<IteratorResult<Uint8Array>>((resolve) =>
+              resolve(iterator.next()),
+            ).catch((error: unknown) => {
+              iteratorFailed = true
+              throw error
+            })
+            let result = await readUnlessHandlerFailed(next)
+            if (result.done) break
+            this.#write(result.value, handleEntry)
+          }
+        } catch (error) {
+          // Close the iterator like `for await` does, unless the iterator itself failed. Don't
+          // wait for it: an async generator doesn't return until a pending `next()` settles.
+          if (!iteratorFailed) {
+            Promise.resolve()
+              .then(() => iterator.return?.())
+              .catch(() => {})
+          }
+          throw error
         }
       } else if (archive instanceof Uint8Array) {
         this.#write(archive, handleEntry)
@@ -818,11 +875,14 @@ export class TarEntry {
 
     this.#bodyUsed = true
 
+    let reader = this.#body.getReader()
     let chunks: Uint8Array[] = []
     let length = 0
-    for await (let chunk of readStream(this.#body)) {
-      chunks.push(new Uint8Array(chunk))
-      length += chunk.length
+    while (true) {
+      let result = await reader.read()
+      if (result.done) break
+      chunks.push(new Uint8Array(result.value))
+      length += result.value.length
     }
 
     let result = new Uint8Array(length)

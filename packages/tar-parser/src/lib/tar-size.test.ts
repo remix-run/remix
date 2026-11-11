@@ -1,3 +1,6 @@
+import * as v8 from 'node:v8'
+import * as vm from 'node:vm'
+
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
@@ -1097,5 +1100,150 @@ describe('TarEntry body readers', () => {
       [1, 2],
       [3, 4],
     ])
+  })
+})
+
+describe('tar early exit', () => {
+  // Enqueues `chunks` and never closes, like a source that has not finished sending
+  function createUnfinishedStream(chunks: Uint8Array[]) {
+    let cancelReasons: unknown[] = []
+    let stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (let chunk of chunks) controller.enqueue(chunk)
+      },
+      cancel(reason) {
+        cancelReasons.push(reason)
+      },
+    })
+
+    return { stream, cancelReasons }
+  }
+
+  it('cancels and releases a source stream when a limit is exceeded', async () => {
+    let { stream, cancelReasons } = createUnfinishedStream([new Uint8Array(4096)])
+
+    await assert.rejects(
+      () => parseTar(stream, { maxTotalSize: 1024 }, () => {}),
+      MaxTotalSizeExceededError,
+    )
+    assert.equal(cancelReasons.length, 1)
+    assert.ok(cancelReasons[0] instanceof MaxTotalSizeExceededError)
+    assert.equal(stream.locked, false)
+  })
+
+  it('rejects without waiting for a tee branch to finish cancelling', async () => {
+    // Cancelling one branch of a tee doesn't settle until the other branch is cancelled too
+    let { stream } = createUnfinishedStream([new Uint8Array(4096)])
+    let [branch] = stream.tee()
+
+    await assert.rejects(
+      () => parseTar(branch, { maxTotalSize: 1024 }, () => {}),
+      MaxTotalSizeExceededError,
+    )
+  })
+
+  it('cancels a source stream when a handler rejects', { timeout: 1000 }, async () => {
+    let error = new Error('Handler failed')
+    let { stream, cancelReasons } = createUnfinishedStream([createHeader(0)])
+
+    await assert.rejects(
+      () =>
+        parseTar(stream, async () => {
+          throw error
+        }),
+      error,
+    )
+    assert.deepEqual(cancelReasons, [error])
+    assert.equal(stream.locked, false)
+  })
+
+  it('rejects an async iterable source when a handler rejects', { timeout: 1000 }, async () => {
+    let error = new Error('Handler failed')
+    async function* source() {
+      yield createHeader(0)
+      // Never sends more
+      await new Promise(() => {})
+    }
+
+    await assert.rejects(
+      () =>
+        parseTar(source(), async () => {
+          throw error
+        }),
+      error,
+    )
+  })
+
+  it('stops at a handler rejection instead of reading until a later error', async () => {
+    let error = new Error('Handler failed')
+    let entries = 0
+    let blocks = 0
+    // An endless archive of 1-byte entries, each a header block and a body block
+    let source = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(blocks++ % 2 === 0 ? createHeader(1) : new Uint8Array(512))
+      },
+    })
+
+    await assert.rejects(
+      () =>
+        parseTar(source, { maxEntries: Infinity, maxTotalSize: 1024 * 1024 }, async () => {
+          entries++
+          throw error
+        }),
+      error,
+    )
+    assert.ok(
+      entries < 10,
+      `Expected parsing to stop at the first rejection, got ${entries} entries`,
+    )
+  })
+})
+
+describe('tar memory', () => {
+  it('releases archive chunks once their bytes are delivered', async () => {
+    let gc: () => void
+    if ('Bun' in globalThis) {
+      gc = () => (globalThis as { Bun?: { gc(force: boolean): void } }).Bun!.gc(true)
+    } else {
+      v8.setFlagsFromString('--expose-gc')
+      gc = vm.runInNewContext('gc')
+    }
+
+    let chunkSize = 1024
+    let chunkCount = 64
+    let trackedChunks: WeakRef<Uint8Array>[] = []
+    let collected = -1
+    let index = 0
+    let source = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        if (index === 0) {
+          controller.enqueue(createHeader(chunkSize * chunkCount))
+        } else if (index <= chunkCount) {
+          if (index === chunkCount) {
+            // WeakRef targets stay alive until the current task ends
+            await new Promise((resolve) => setTimeout(resolve, 0))
+            gc()
+            collected = trackedChunks.filter((ref) => ref.deref() === undefined).length
+          }
+          let chunk = new Uint8Array(chunkSize)
+          if (index <= 20) trackedChunks.push(new WeakRef(chunk))
+          controller.enqueue(chunk)
+        } else {
+          controller.enqueue(new Uint8Array(1024))
+          controller.close()
+        }
+        index++
+      },
+    })
+
+    await parseTar(source, async (entry) => {
+      for await (let _ of entry.body) {
+        // Discard the content
+      }
+    })
+
+    // Conservative stack scanning can keep the odd chunk alive, so don't require every one
+    assert.ok(collected >= 15, `Expected early chunks to be collected, but ${collected} of 20 were`)
   })
 })
