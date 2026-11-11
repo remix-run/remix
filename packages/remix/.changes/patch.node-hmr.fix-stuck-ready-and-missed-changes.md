@@ -1,1 +1,0 @@
-Dev servers using `remix/node-hmr` no longer stop responding to requests or miss file changes after some hot updates and restarts. See the [`@remix-run/node-hmr` changelog](https://github.com/remix-run/remix/blob/main/packages/node-hmr/CHANGELOG.md) for the specific cases.
