@@ -191,3 +191,20 @@ function getFormEncType(form: HTMLFormElement, submitter: SubmitterElement | nul
   }
   return form.enctype
 }
+
+// Encodes form entries the way browsers do for `application/x-www-form-urlencoded` submissions:
+// line breaks become CRLF and files are replaced by their names.
+export function encodeFormDataAsSearchParams(formData: FormData): URLSearchParams {
+  let params = new URLSearchParams()
+  for (let [name, value] of formData) {
+    params.append(
+      normalizeFormLineBreaks(name),
+      normalizeFormLineBreaks(typeof value === 'string' ? value : value.name),
+    )
+  }
+  return params
+}
+
+export function normalizeFormLineBreaks(value: string): string {
+  return value.replace(/\r\n|\r|\n/g, '\r\n')
+}

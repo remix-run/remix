@@ -8,7 +8,13 @@ import { Example } from './example.tsx'
 import { routes } from '../routes.ts'
 
 export function PageLayout(
-  handle: Handle<{ page: PageMeta; pages: UiPage[]; intro?: RemixNode; children: RemixNode }>,
+  handle: Handle<{
+    page: PageMeta
+    pages: UiPage[]
+    intro?: RemixNode
+    outlet?: RemixNode
+    children: RemixNode
+  }>,
 ) {
   return () => {
     let { page, pages, intro, children } = handle.props
@@ -24,6 +30,7 @@ export function PageLayout(
         pages={pages}
         currentPage={page}
         headings={readPageHeadings(children)}
+        outlet={handle.props.outlet}
       >
         <header class="docs-page-header">
           <p class="docs-page-eyebrow">

@@ -1090,7 +1090,7 @@ let app = run({
 
 ## Frames
 
-`<Frame>` renders the HTML of another route into the current page. Without a `fallback`, the frame blocks until its content resolves. With one, the fallback renders first and the frame's content streams in when it's ready:
+`<Frame>` renders the HTML of another route into the current page. By default, without a `fallback`, the frame blocks until its content resolves. With one, the fallback renders first and the frame's content streams in when it's ready:
 
 ```tsx
 import { Frame } from 'remix/component'
@@ -1114,7 +1114,8 @@ function AlbumPage(handle: Handle<{ albumId: string }>) {
 | ---------- | --------------------------------------------------------------------------------- |
 | `src`      | Required. The URL whose HTML the frame renders and reloads.                       |
 | `name`     | Lets links, forms, and `handle.frames.get(name)` target the frame.                |
-| `fallback` | Content to render while the frame is pending.                                     |
+| `loading`  | `'eager'` (default) loads immediately. `'lazy'` waits until near the viewport.    |
+| `fallback` | Content to render while pending. Lazy loading observes its rendered elements.     |
 | `on`       | Event handlers for events dispatched from the frame element, keyed by event type. |
 
 Frame content can contain other frames and client entries.
@@ -1123,6 +1124,28 @@ Frame content can contain other frames and client entries.
 - **In the browser:** `run()` hydrates the client entries inside each frame and waits for frames that are still streaming. A `<Frame>` first rendered in the browser fetches its content through the [frame resolver](#resolving-frames).
 - **Reload:** `frame.reload()` fetches the frame's `src`, reconciles the new content into the DOM, and passes updated props to the client entries inside it.
 - **Removal:** When a frame is removed, its client entries are cleaned up and nested frames are disposed.
+
+### Lazy Loading
+
+Use `loading="lazy"` for content farther down the page. The server renders only the fallback, and the browser resolves the frame when it approaches the viewport:
+
+```tsx
+<Frame
+  src="/albums/recommendations"
+  loading="lazy"
+  fallback={<section mix={css({ minHeight: '20rem' })}>Loading recommendations…</section>}
+/>
+```
+
+The loading boundary extends one viewport height above and below the viewport and one viewport width to either side. It updates when the viewport resizes.
+
+To defer loading until near the viewport, provide a fallback that renders at least one DOM element for the browser to observe. Give it enough space to represent the pending content and reduce layout shifts. If the fallback renders only text or nothing, the browser logs a warning and loads the frame immediately. The runtime does not insert a placeholder element.
+
+Lazy loading requires `run()` in the browser, and deferred frames do not delay `app.ready()` or ancestor navigation completion. Browsers without `IntersectionObserver` load them immediately.
+
+Once loaded, the content stays mounted when it leaves the viewport. Ancestor reloads refresh loaded lazy frames in the background, keeping their content visible until the new response arrives. Changing `loading` to `'eager'` starts a deferred load immediately. Explicit `frame.reload()`, `frame.replace()`, and targeted navigations also take effect immediately.
+
+If a navigation cancels an unresolved lazy load, the frame resumes observing the viewport so it can load again when nearby. The fallback stays mounted until replacement content starts rendering. Initial viewport loads and viewport retries do not start a new `reloadStart`/`reloadComplete` pair.
 
 ### Nested Frames
 
@@ -1310,7 +1333,7 @@ The event extends `SubmitEvent` and shares the [reload request and completion de
 
 ### Resolving Frames
 
-`run()` installs a default frame resolver. It's used for `<Frame>` elements first rendered in the browser, `frame.reload()` calls, link navigations, and form navigations. Pending frames from the server response are filled in by the streamed HTML, not the resolver. A normal browser document load doesn't use the resolver either.
+`run()` installs a default frame resolver. It's used for `<Frame>` elements first rendered in the browser, lazy frames approaching the viewport, `frame.reload()` calls, link navigations, and form navigations. Pending eager frames from the server response are filled in by the streamed HTML. A normal browser document load doesn't use the resolver either.
 
 The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`. Top-frame and unnamed frame requests omit the target, so give a frame a name when its route needs to tell it apart. The route decides whether to return a full document or a fragment.
 
@@ -1467,10 +1490,12 @@ This prevents Remix from intercepting Navigation API events. Explicit frame relo
 Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Use `data-rmx-prefetch="viewport"` to start loading when the link enters the viewport. For other triggers, such as prefetching a search result as the visitor types, call `prefetch(src, { target })` from `remix/component`.
 
 - Intent prefetching starts after the pointer or keyboard focus rests on the link for 100ms, or immediately when the link is pressed. Viewport prefetching happens once while the link stays mounted with the same source and target.
+- A link that enters the viewport while the page or one of its scrollers is scrolling waits until scrolling has stopped for 150ms, and is prefetched only if it's still in view, so a fast scroll doesn't prefetch every link it passes.
+- Pending viewport prefetches pause while the document is hidden and resume with fresh visibility and eligibility checks when it becomes visible. Intent and imperative triggers keep their existing timing.
 - Prefetching sends the same headers as a frame navigation, including `X-Remix-Target` for named frames, so it matches the request that follows.
 - Remix skips links with `data-rmx-document`, `download`, or a `target` other than `_self`, and named-frame links whose frame isn't mounted. Automatic prefetching is also skipped when the browser reports Save-Data or a `slow-2g` or `2g` connection. Imperative `prefetch()` calls ignore that check.
 
-Remix reads the prefetched HTML without running it and finds the page's JavaScript, CSS, and declared image and font preloads, including those inside nested frames. It adds `<link rel="prefetch">` hints for assets the current page doesn't already have. The hints don't run scripts, apply styles, or follow module imports. Declare important images and fonts on the destination page to include them:
+Remix waits for browser idle time before parsing the downloaded HTML and finding the page's JavaScript, CSS, and declared image and font preloads, including those inside nested frames. It adds `<link rel="prefetch">` hints for assets the current page doesn't already have. Idle callbacks use a one-second timeout so busy pages can still make progress. Browsers without `requestIdleCallback` yield through timers instead. The hints don't run scripts, apply styles, or follow module imports. Declare important images and fonts on the destination page to include them:
 
 ```html
 <link rel="preload" as="image" href="/images/product-hero.jpg" />

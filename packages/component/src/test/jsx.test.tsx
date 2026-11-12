@@ -1,8 +1,8 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { Assert, Equal } from './utils.ts'
-import type { Handle, RemixNode } from '../runtime/component.ts'
-import { createMixin, on, ref, unsafeHTML } from '../index.ts'
+import type { FrameProps, Handle, RemixNode } from '../runtime/component.ts'
+import { createMixin, Frame, on, ref, unsafeHTML } from '../index.ts'
 
 import type {
   Dispatched,
@@ -24,6 +24,23 @@ describe('jsx', () => {
     let element = <div>Hello, world!</div>
     expect(element.type).toBe('div')
     expect(element.props.children).toEqual('Hello, world!')
+  })
+
+  it('supports extending and forwarding FrameProps', () => {
+    interface CustomFrameProps extends FrameProps {
+      label: string
+    }
+    let props: CustomFrameProps = { src: '/frame', label: 'Frame', loading: 'lazy' }
+    let forwarded = <Frame {...props} />
+    let eager = <Frame src="/frame" />
+    let eagerText = <Frame src="/frame" loading="eager" fallback="Loading" />
+    let lazy = <Frame src="/frame" loading="lazy" fallback={<p>Loading</p>} />
+    let missing = <Frame src="/frame" loading="lazy" />
+    let text = <Frame src="/frame" loading="lazy" fallback="Loading" />
+    let empty = <Frame src="/frame" loading="lazy" fallback={null} />
+
+    expect(forwarded.props).toEqual(props)
+    expect([eager, eagerText, lazy, missing, text, empty]).toHaveLength(6)
   })
 
   it('preserves generic component prop types in JSX', () => {

@@ -227,8 +227,10 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
 
+      # Keep dependency ordering on Windows. The unsorted `pnpm test` schedule overlaps the
+      # browser-heavy workspaces, which overloads this runner and times out e2e navigations.
       - name: Run tests
-        run: pnpm test
+        run: pnpm --recursive --workspace-concurrency=4 --stream run test
 
   test_webkit_macos:
     name: test (WebKit, macOS)

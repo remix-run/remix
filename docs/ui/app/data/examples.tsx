@@ -9,13 +9,17 @@ type DemoComponent = (handle: Handle) => () => RemixNode
 
 export interface LoadedExample {
   Component: DemoComponent
+  Outlet?: DemoComponent
   Preview: DemoComponent
   sourceHtml: string
 }
 
 const examplesUrl = new URL('../examples/', import.meta.url)
 
-export async function loadExample(name: string): Promise<LoadedExample> {
+export async function loadExample(
+  name: string,
+  options: { outlet?: string } = {},
+): Promise<LoadedExample> {
   if (!/^[\w-]+(?:\/[\w-]+)+$/.test(name)) {
     throw new Error(`Invalid UI example name: ${name}`)
   }
@@ -30,9 +34,18 @@ export async function loadExample(name: string): Promise<LoadedExample> {
     throw new Error(`Example must default export a Remix component: ${module}`)
   }
   let Example = mod.default
+  let Outlet: DemoComponent | undefined
+  if (options.outlet !== undefined) {
+    let outlet = Reflect.get(mod, options.outlet)
+    if (!isDemoComponent(outlet)) throw new Error(`Missing example outlet: ${options.outlet}`)
+    Outlet = clientEntry(`${module.href}#${options.outlet}`, function ExampleOutlet(handle) {
+      return outlet(handle)
+    })
+  }
   let source = await readFile(module, 'utf8')
   return {
     Preview: Example,
+    Outlet,
     Component: clientEntry(`${module.href}#default`, function InteractiveExample(handle) {
       return Example(handle)
     }),

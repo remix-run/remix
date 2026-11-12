@@ -14,7 +14,7 @@ import type {
 } from '@remix-run/data-table'
 import { getTablePrimaryKey } from '@remix-run/data-table'
 
-import { compileSqliteOperation } from './sql-compiler.ts'
+import { compileSqliteOperation, quoteIdentifier } from './sql-compiler.ts'
 
 /**
  * Synchronous SQLite client accepted by `createSqliteDatabase()`.
@@ -190,7 +190,7 @@ export class SqliteDatabaseDriver implements DatabaseDriver<'sqlite'> {
       return {
         rows,
         affectedRows: normalizeAffectedRowsForReader(request.operation.kind, rows),
-        insertId: normalizeInsertIdForReader(request.operation.kind, request.operation, rows),
+        insertId: normalizeInsertIdForReader(request.operation, rows),
       }
     }
 
@@ -198,7 +198,7 @@ export class SqliteDatabaseDriver implements DatabaseDriver<'sqlite'> {
 
     return {
       affectedRows: normalizeAffectedRowsForRun(request.operation.kind, result),
-      insertId: normalizeInsertIdForRun(request.operation.kind, request.operation, result),
+      insertId: normalizeInsertIdForRun(request.operation, result),
     }
   }
 
@@ -574,11 +574,10 @@ function normalizeAffectedRowsForReader(
 }
 
 function normalizeInsertIdForReader(
-  kind: DataManipulationRequest['operation']['kind'],
   operation: DataManipulationRequest['operation'],
   rows: Record<string, unknown>[],
 ): unknown {
-  if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
+  if (!isInsertOperation(operation)) {
     return undefined
   }
 
@@ -606,11 +605,10 @@ function normalizeAffectedRowsForRun(
 }
 
 function normalizeInsertIdForRun(
-  kind: DataManipulationRequest['operation']['kind'],
   operation: DataManipulationRequest['operation'],
   result: SqliteRunResult,
 ): unknown {
-  if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
+  if (!isInsertOperation(operation)) {
     return undefined
   }
 
@@ -648,10 +646,6 @@ function shouldReadStatement(
   }
 }
 
-function quoteIdentifier(value: string): string {
-  return '"' + value.replace(/"/g, '""') + '"'
-}
-
 function isWriteOperationKind(kind: DataManipulationRequest['operation']['kind']): boolean {
   return (
     kind === 'insert' ||
@@ -660,10 +654,6 @@ function isWriteOperationKind(kind: DataManipulationRequest['operation']['kind']
     kind === 'delete' ||
     kind === 'upsert'
   )
-}
-
-function isInsertOperationKind(kind: DataManipulationRequest['operation']['kind']): boolean {
-  return kind === 'insert' || kind === 'insertMany' || kind === 'upsert'
 }
 
 function isInsertOperation(

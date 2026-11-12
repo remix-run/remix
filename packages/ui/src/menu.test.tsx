@@ -5,6 +5,8 @@ import { createRoot, ref, type Handle, type Props, type RemixNode } from '@remix
 
 import * as menu from './menu.tsx'
 import { onMenuSelect, type MenuSelectEvent } from './menu.tsx'
+import { holdAnimationFrames } from './test/animation-frames.ts'
+import { settle } from './test/settle.ts'
 
 const flashDurationMs = 60
 let roots: Array<ReturnType<typeof createRoot>> = []
@@ -300,22 +302,22 @@ function mockRect(target: HTMLElement, left: number, top: number, width: number,
   target.getBoundingClientRect = () => new DOMRect(left, top, width, height)
 }
 
-async function settle(root: ReturnType<typeof createRoot>) {
-  await Promise.resolve()
-  root.flush()
-  await Promise.resolve()
-  root.flush()
-}
-
-async function settleFrames(root: ReturnType<typeof createRoot>) {
+// Menus move focus and finish closing after awaiting `handle.update()` promises that
+// `root.flush()` can't drain, so wait for the DOM or focus to reach the expected state.
+async function settleUntil(root: ReturnType<typeof createRoot>, condition: () => boolean) {
+  await settle(root)
+  if (condition()) return
   await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        resolve()
-      })
-    })
+    let observer = new MutationObserver(check)
+    function check() {
+      if (!condition()) return
+      observer.disconnect()
+      document.removeEventListener('focusin', check)
+      resolve()
+    }
+    observer.observe(document.body, { attributes: true, childList: true, subtree: true })
+    document.addEventListener('focusin', check)
   })
-
   await settle(root)
 }
 
@@ -326,11 +328,17 @@ async function finishSelectionFlash(root: ReturnType<typeof createRoot>) {
   await settle(root)
 }
 
-async function finishDismissal(surface: HTMLElement, root: ReturnType<typeof createRoot>) {
-  await Promise.resolve()
+async function finishDismissal(
+  surface: HTMLElement,
+  root: ReturnType<typeof createRoot>,
+  condition = () => true,
+) {
+  // The close starts waiting for its transition after the update that hides the surface, so the
+  // transition events have to come after the `toggle` that `settle()` waits for.
+  await settle(root)
   surface.dispatchEvent(new TransitionEvent('transitionrun', { propertyName: 'opacity' }))
   surface.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }))
-  await settle(root)
+  await settleUntil(root, condition)
 }
 
 let scrollIntoViewSpy: ReturnType<typeof mock.method>
@@ -352,21 +360,22 @@ afterEach(() => {
 })
 
 describe('menu', () => {
-  it('opens from click with focus on the list and toggles closed from the trigger', async () => {
+  it('opens from click with focus on the list and toggles closed from the trigger', async (t) => {
+    holdAnimationFrames(t)
     let { container, root } = renderMenu()
     let trigger = getButtonByText(container, 'View')
     let [rootSurface] = getSurfaces(container)
     let [rootList] = getLists(container)
 
     click(trigger)
-    await settleFrames(root)
+    await settle(root)
 
     expect(rootSurface.matches(':popover-open')).toBe(true)
     expect(document.activeElement).toBe(rootList)
 
     click(trigger)
     await settle(root)
-    await finishDismissal(rootSurface, root)
+    await finishDismissal(rootSurface, root, () => document.activeElement === trigger)
 
     expect(rootSurface.matches(':popover-open')).toBe(false)
     expect(document.activeElement).toBe(trigger)
@@ -381,7 +390,7 @@ describe('menu', () => {
     mockRect(rootSurface, 0, 0, 160, 96)
 
     let event = contextMenu(trigger, 220, 140)
-    await settleFrames(root)
+    await settle(root)
 
     expect(event.defaultPrevented).toBe(true)
     expect(rootSurface.matches(':popover-open')).toBe(true)
@@ -400,13 +409,14 @@ describe('menu', () => {
     mockRect(rootSurface, 0, 0, 160, 96)
 
     contextMenu(trigger, 220, 140)
-    await settleFrames(root)
+    await settle(root)
 
     expect(rootSurface.style.left).toBe('220px')
     expect(rootSurface.style.top).toBe('140px')
 
     contextMenu(trigger, 260, 180)
-    await settleFrames(root)
+    // anchor.ts repositions an open surface from its requestAnimationFrame position poll.
+    await new Promise(requestAnimationFrame)
 
     expect(rootSurface.matches(':popover-open')).toBe(true)
     expect(rootSurface.style.left).toBe('260px')
@@ -423,7 +433,7 @@ describe('menu', () => {
     mockRect(rootSurface, 0, 0, 160, 96)
 
     let event = key(trigger, 'F10', { shiftKey: true })
-    await settleFrames(root)
+    await settle(root)
 
     expect(event.defaultPrevented).toBe(true)
     expect(rootSurface.matches(':popover-open')).toBe(true)
@@ -439,12 +449,12 @@ describe('menu', () => {
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     expect(document.activeElement).toBe(wordWrap)
 
     key(wordWrap, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     expect(document.activeElement).toBe(zoom)
     expect(zoom.dataset.highlighted).toBe('true')
@@ -457,7 +467,7 @@ describe('menu', () => {
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     expect(document.activeElement).toBe(wordWrap)
 
@@ -468,7 +478,7 @@ describe('menu', () => {
     expect(wordWrap.getAttribute('data-highlighted')).toBe('true')
 
     key(wordWrap, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     expect(document.activeElement).toBe(zoom)
 
@@ -487,21 +497,21 @@ describe('menu', () => {
     let zoomIn = getMenuItemByText(container, 'Zoom in')
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     expect(document.activeElement).toBe(zoom)
 
     key(zoom, 'ArrowRight')
-    await settleFrames(root)
+    await settle(root)
 
     expect(childSurface.matches(':popover-open')).toBe(true)
     expect(document.activeElement).toBe(zoomIn)
 
     key(zoomIn, 'ArrowLeft')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     expect(childSurface.getAttribute('data-close-animation')).toBe('none')
     expect(childSurface.matches(':popover-open')).toBe(false)
@@ -518,13 +528,13 @@ describe('menu', () => {
     let zoomIn = getMenuItemByText(container, 'Zoom in')
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
     await settle(root)
 
     key(zoom, 'ArrowRight')
-    await settleFrames(root)
+    await settle(root)
 
     let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
@@ -554,13 +564,13 @@ describe('menu', () => {
     mockRect(zoomIn, 160, 104, 128, 32)
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
     await settle(root)
 
     key(zoom, 'ArrowRight')
-    await settleFrames(root)
+    await settle(root)
 
     expect(childSurface.style.left).toBe('140px')
     expect(childSurface.style.top).toBe('36px')
@@ -574,10 +584,10 @@ describe('menu', () => {
     let [, childSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     expect(document.activeElement).toBe(zoom)
 
@@ -594,13 +604,14 @@ describe('menu', () => {
     let trigger = getButtonByText(container, 'View')
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
     let [, childSurface] = getSurfaces(container)
+    timers = t.useFakeTimers()
     let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     expect(document.activeElement).toBe(zoom)
 
@@ -610,10 +621,8 @@ describe('menu', () => {
 
     expect(submenuDelay).toBeDefined()
 
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, submenuDelay! + 10)
-    })
-    await settleFrames(root)
+    await timers.advanceAsync(submenuDelay!)
+    await settle(root)
 
     expect(childSurface.matches(':popover-open')).toBe(true)
     expect(document.activeElement).toBe(zoom)
@@ -625,12 +634,12 @@ describe('menu', () => {
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
 
     click(trigger)
-    await settleFrames(root)
+    await settle(root)
 
     let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     pointerMove(zoom)
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     let submenuDelayCalls = setTimeoutSpy.mock.calls.filter(
       (call) => typeof call.arguments[1] === 'number' && (call.arguments[1] as number) > 0,
@@ -645,12 +654,13 @@ describe('menu', () => {
     let [, childSurface] = getSurfaces(container)
 
     click(trigger)
-    await settleFrames(root)
+    await settle(root)
 
+    timers = t.useFakeTimers()
     let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     pointerMove(zoom)
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     let submenuDelay = setTimeoutSpy.mock.calls
       .map((call) => call.arguments[1])
@@ -669,10 +679,8 @@ describe('menu', () => {
     pointerMove(zoom)
     await settle(root)
 
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, submenuDelay! + 10)
-    })
-    await settleFrames(root)
+    await timers.advanceAsync(submenuDelay!)
+    await settle(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
     expect(childSurface.matches(':popover-open')).toBe(true)
@@ -687,12 +695,13 @@ describe('menu', () => {
     let [, childSurface] = getSurfaces(container)
 
     click(trigger)
-    await settleFrames(root)
+    await settle(root)
 
+    timers = t.useFakeTimers()
     let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     pointerMove(zoom)
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     let submenuDelay = setTimeoutSpy.mock.calls
       .map((call) => call.arguments[1])
@@ -711,10 +720,8 @@ describe('menu', () => {
     pointerMove(zoom)
     await settle(root)
 
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, submenuDelay! + 10)
-    })
-    await settleFrames(root)
+    await timers.advanceAsync(submenuDelay!)
+    await settle(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
     expect(childSurface.matches(':popover-open')).toBe(true)
@@ -728,13 +735,13 @@ describe('menu', () => {
     let [, childSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
     await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowRight')
-    await settleFrames(root)
+    await settle(root)
 
     mockRect(zoom, 40, 40, 100, 32)
     mockRect(childSurface, 160, 40, 120, 120)
@@ -756,13 +763,13 @@ describe('menu', () => {
     let [, childSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
     await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowRight')
-    await settleFrames(root)
+    await settle(root)
 
     mockRect(zoom, 40, 40, 100, 32)
     mockRect(childSurface, 140, 40, 120, 120)
@@ -785,13 +792,13 @@ describe('menu', () => {
     let zoomOut = getMenuItemByText(container, 'Zoom out')
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
     await settle(root)
 
     key(zoom, 'ArrowRight')
-    await settleFrames(root)
+    await settle(root)
 
     mockRect(zoom, 40, 40, 100, 32)
     mockRect(childSurface, 140, 40, 120, 120)
@@ -800,12 +807,12 @@ describe('menu', () => {
     await settle(root)
 
     pointerMove(zoomOut)
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoomOut)
 
     expect(document.activeElement).toBe(zoomOut)
 
     key(zoomOut, 'ArrowLeft')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     expect(childSurface.matches(':popover-open')).toBe(false)
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
@@ -820,13 +827,13 @@ describe('menu', () => {
     let [, childSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
     await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowRight')
-    await settleFrames(root)
+    await settle(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
     expect(childSurface.matches(':popover-open')).toBe(true)
@@ -845,7 +852,7 @@ describe('menu', () => {
     let separator = getSeparator(container)
 
     click(trigger)
-    await settleFrames(root)
+    await settle(root)
 
     pointerMove(newFile)
     await settle(root)
@@ -858,7 +865,8 @@ describe('menu', () => {
     expect(newFile.getAttribute('data-highlighted')).toBe(null)
   })
 
-  it('marks submenu triggers as dismissing while the full menu tree fades out', async () => {
+  it('marks submenu triggers as dismissing while the full menu tree fades out', async (t) => {
+    holdAnimationFrames(t)
     let { container, root } = renderMenu()
     let trigger = getButtonByText(container, 'View')
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
@@ -866,13 +874,13 @@ describe('menu', () => {
     let [rootSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
     await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowRight')
-    await settleFrames(root)
+    await settle(root)
 
     key(zoomIn, 'Escape')
     await settle(root)
@@ -880,7 +888,7 @@ describe('menu', () => {
     expect(zoom.getAttribute('aria-expanded')).toBe('false')
     expect(zoom.getAttribute('data-submenu-state')).toBe('dismissing')
 
-    await finishDismissal(rootSurface, root)
+    await finishDismissal(rootSurface, root, () => !zoom.hasAttribute('data-submenu-state'))
 
     expect(zoom.getAttribute('data-submenu-state')).toBe(null)
     expect(rootSurface.matches(':popover-open')).toBe(false)
@@ -888,6 +896,7 @@ describe('menu', () => {
   })
 
   it('dispatches one bubbled selection event from submenu items and closes the full tree', async (t) => {
+    holdAnimationFrames(t)
     let selections: MenuSelectEvent[] = []
     let { container, root } = renderMenu((event) => {
       selections.push(event)
@@ -898,13 +907,13 @@ describe('menu', () => {
     let [rootSurface, childSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
     await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowRight')
-    await settleFrames(root)
+    await settle(root)
 
     timers = t.useFakeTimers()
 
@@ -927,7 +936,7 @@ describe('menu', () => {
     expect(rootSurface.getAttribute('data-close-animation')).toBe(null)
     expect(childSurface.getAttribute('data-close-animation')).toBe(null)
 
-    await finishDismissal(rootSurface, root)
+    await finishDismissal(rootSurface, root, () => !zoom.hasAttribute('data-submenu-state'))
 
     expect(selections).toHaveLength(1)
     expect(selections[0]!.item).toMatchObject({
@@ -943,6 +952,7 @@ describe('menu', () => {
   })
 
   it('re-dispatches one selection event from the button so shared ancestors only see it once', async (t) => {
+    holdAnimationFrames(t)
     let buttonSelections: MenuSelectEvent[] = []
     let ancestorSelections: MenuSelectEvent[] = []
     let { container, root } = renderMenu(
@@ -958,7 +968,7 @@ describe('menu', () => {
     let [rootSurface] = getSurfaces(container)
 
     click(trigger)
-    await settleFrames(root)
+    await settle(root)
 
     timers = t.useFakeTimers()
 
@@ -986,6 +996,7 @@ describe('menu', () => {
   })
 
   it('does not swallow parent item clicks while a child submenu is open', async (t) => {
+    holdAnimationFrames(t)
     let selections: MenuSelectEvent[] = []
     let { container, root } = renderMenu((event) => {
       selections.push(event)
@@ -995,13 +1006,13 @@ describe('menu', () => {
     let [, childSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settleFrames(root)
+    await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
     await settle(root)
 
     key(document.activeElement as HTMLElement, 'ArrowRight')
-    await settleFrames(root)
+    await settle(root)
 
     timers = t.useFakeTimers()
 
@@ -1021,7 +1032,11 @@ describe('menu', () => {
     expect(wordWrap.getAttribute('data-highlighted')).toBe('true')
     expect(rootSurface?.getAttribute('data-close-animation')).toBe(null)
 
-    await finishDismissal(rootSurface as HTMLElement, root)
+    await finishDismissal(
+      rootSurface as HTMLElement,
+      root,
+      () => document.activeElement === trigger,
+    )
 
     expect(selections).toHaveLength(1)
     expect(selections[0]!.item).toMatchObject({
