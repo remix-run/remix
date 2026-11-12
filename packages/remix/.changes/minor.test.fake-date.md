@@ -1,0 +1,1 @@
+`t.useFakeTimers()` from `remix/test` now also fakes `Date`, `performance.now()`, `setImmediate()`, and `AbortSignal.timeout()`, starting at the Unix epoch unless you pass a `now` option, so wall-clock code can be tested by advancing the fake clock.

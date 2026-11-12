@@ -19,6 +19,8 @@ const TOP_FRAME_SRC_HEADER = 'X-Remix-Top-Frame-Src'
 // Internal subrequests report errors through the enclosing render.
 // Browser frame requests use the same headers, so identify internal requests by object identity.
 const internalFrameRequests = new WeakSet<Request>()
+// Keyed by body so responses rebuilt with `new Response(response.body, response)` keep waiting.
+const pendingShells = new WeakMap<ReadableStream<Uint8Array>, Promise<void>>()
 const MAX_FRAME_REDIRECTS = 20
 const FRAME_REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 const FRAME_REQUEST_HEADERS_TO_REMOVE = [
@@ -71,7 +73,7 @@ export type RenderFunction = (node: RemixNode, init?: ResponseInit) => Response
 export function render(
   options: RenderOptions = {},
 ): Middleware<{ key: typeof Renderer; value: RenderFunction; property: 'render' }> {
-  return renderWith((context) => {
+  let installRenderer = renderWith((context) => {
     let request = context.request
     let topFrameSrc = getTopFrameSrc(request)
     let onError = internalFrameRequests.has(request) ? () => {} : options.onError
@@ -80,21 +82,62 @@ export function render(
     if (nonce !== undefined) context.set(CspNonce, nonce)
 
     return function render(node: RemixNode, init?: ResponseInit): Response {
-      let stream = renderToStream(node, {
-        frameSrc: request.url,
-        topFrameSrc,
-        signal: request.signal,
-        onError,
-        nonce: getCspNonce(context),
-        resolveFrame: (src, target, frameContext) =>
-          resolveFrame(context, src, target, frameContext),
-        resolveClientEntry: (entryId, component) =>
-          resolveClientEntry(options.assets, entryId, component),
-      })
-
-      return createHtmlResponse(stream, init)
+      let { stream, shell } = trackShell(
+        renderToStream(node, {
+          frameSrc: request.url,
+          topFrameSrc,
+          signal: request.signal,
+          onError,
+          nonce: getCspNonce(context),
+          resolveFrame: (src, target, frameContext) =>
+            resolveFrame(context, src, target, frameContext),
+          resolveClientEntry: (entryId, component) =>
+            resolveClientEntry(options.assets, entryId, component),
+        }),
+      )
+      let response = createHtmlResponse(stream, init)
+      if (response.body != null) pendingShells.set(response.body, shell)
+      return response
     }
   })
+
+  return async (context, next) => {
+    let response = await installRenderer(context, next)
+    // Wait for the shell so render errors reject the request before the status is sent.
+    if (response.body != null) await pendingShells.get(response.body)
+    return response
+  }
+}
+
+// The first chunk from renderToStream() contains the whole shell, so shell render errors
+// reject the first read. Content streamed after it can no longer change the response status.
+function trackShell(source: ReadableStream<Uint8Array>): {
+  stream: ReadableStream<Uint8Array>
+  shell: Promise<void>
+} {
+  let reader = source.getReader()
+  let firstRead: Promise<ReadableStreamReadResult<Uint8Array>> | undefined = reader.read()
+  let shell = firstRead.then(() => {})
+  // Responses that never reach the middleware still error through their body.
+  shell.catch(() => {})
+
+  let stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      let read = firstRead ?? reader.read()
+      firstRead = undefined
+      let result = await read
+      if (result.done) {
+        controller.close()
+      } else {
+        controller.enqueue(result.value)
+      }
+    },
+    cancel(reason) {
+      return reader.cancel(reason)
+    },
+  })
+
+  return { stream, shell }
 }
 
 function getTopFrameSrc(request: Request): string {

@@ -12,6 +12,7 @@ import {
   type RenderFn,
 } from './component.ts'
 import { invariant } from './invariant.ts'
+import { encodeFormDataAsSearchParams } from './form-navigation.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
@@ -682,15 +683,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     if (formData) {
       if (method !== 'post') {
         let url = new URL(src, container.doc.baseURI)
-        let query = new URLSearchParams()
-        let normalizeNewlines = (value: string) => value.replace(/\r\n|\r|\n/g, '\r\n')
-        for (let [name, value] of formData) {
-          query.append(
-            normalizeNewlines(name),
-            normalizeNewlines(typeof value === 'string' ? value : value.name),
-          )
-        }
-        url.search = `?${query}`
+        url.search = `?${encodeFormDataAsSearchParams(formData)}`
         src = url.href
         formData = undefined
       } else {
@@ -711,23 +704,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function startReloadTransition(options?: FrameNavigationOptions): FrameReloadTransition {
-    let controller = startReload(options?.signal)
+    let controller = beginReload('direct', options?.signal)
     let committed = Promise.withResolvers<void>()
-    let commitStarted = false
-    let finished = resolveAndRenderReload(controller, options, (ready) => {
-      if (commitStarted) return
-      commitStarted = true
-      void ready.then(committed.resolve, committed.reject)
-    })
+    let finished = resolveAndRenderReload(controller, committed, options)
 
     // Settle committed when a reload is aborted or fails before rendering any content.
     void finished.then(() => committed.resolve(), committed.reject)
 
     return { signal: controller.signal, committed: committed.promise, finished }
-  }
-
-  function startReload(signal?: AbortSignal): AbortController {
-    return beginReload('direct', signal)
   }
 
   function beginClientFrameReloadForAncestorReload(signal: AbortSignal): {
@@ -778,8 +762,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   async function resolveAndRenderReload(
     controller: AbortController,
+    committed: PromiseWithResolvers<void>,
     options?: FrameNavigationOptions,
-    resolveCommit?: (ready: Promise<void>) => void,
   ): Promise<FrameReloadResult> {
     let isStale = () => reloadController !== controller || controller.signal.aborted
     try {
@@ -804,7 +788,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
           if (commitStarted) return
           commitStarted = true
           blockingFrameTracker.finalize()
-          resolveCommit?.(blockingFrameTracker.ready())
+          void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
         },
       })
       reconciliationTracker.finalize()
@@ -964,7 +948,7 @@ function diffFrame(
 
   // If the frame hasn't resolved yet, preserve existing cancel/remount behavior
   // so pending streams from the old src cannot take over the new src.
-  if (currName !== nextName || (currSrc !== nextSrc && !curr._state.resolved)) {
+  if (currName !== nextName || (currSrc !== nextSrc && curr._state.content.status !== 'resolved')) {
     let replaceAnchor = curr._rangeEnd.nextSibling ?? anchor
     remove(curr, domParent, context)
     return insertFrame(next, domParent, vParent, context, svg, replaceAnchor)
@@ -989,9 +973,10 @@ function diffFrame(
     resolveClientFrame(committed, frameRuntime, serverFrameReload)
   }
 
-  if (!committed._state.resolved && committed._state.fallbackRoot) {
-    getNonceManager().inheritRootResourceNonces(committed._state.fallbackRoot, vParent)
-    committed._state.fallbackRoot.render(committed.props.fallback ?? null)
+  let { content } = committed._state
+  if (content.status === 'fallback') {
+    getNonceManager().inheritRootResourceNonces(content.fallbackRoot, vParent)
+    content.fallbackRoot.render(committed.props.fallback ?? null)
   }
   return committed
 }
@@ -1032,10 +1017,8 @@ function insertFrame(
       cursor.current = end.nextSibling
       return commitFrameNode(node, vParent, svg, start, end, {
         instance,
-        resolveToken: 0,
+        content: { status: 'resolved' },
         resolveController: undefined,
-        fallbackRoot: undefined,
-        resolved: true,
       })
     }
   }
@@ -1056,9 +1039,7 @@ function insertFrame(
   let instance = createFrameInstance(node, start, end, runtime, getContext)
   let committed = commitFrameNode(node, vParent, svg, start, end, {
     instance,
-    fallbackRoot,
-    resolved: false,
-    resolveToken: 0,
+    content: { status: 'fallback', fallbackRoot },
     resolveController: undefined,
   })
   resolveClientFrame(committed, runtime, runtime.serverFrameReload)
@@ -1120,8 +1101,6 @@ function resolveClientFrame(
   let state = node._state
   let instance = state.instance
 
-  let token = state.resolveToken + 1
-  state.resolveToken = token
   state.resolveController?.abort()
   let reload = serverFrameReload
     ? instance.beginClientFrameReloadForAncestorReload(serverFrameReload.signal)
@@ -1131,35 +1110,42 @@ function resolveClientFrame(
   }
   let resolveController = reload?.controller ?? new AbortController()
   state.resolveController = resolveController
-  let isStale = () => state.resolveToken !== token || resolveController.signal.aborted
+  let { signal } = resolveController
   let frameCommitted = Promise.withResolvers<void>()
 
   let resolve = Promise.resolve()
     .then(() =>
       runtime.resolveFrame(frameSrc, {
-        signal: resolveController.signal,
+        signal,
         target: getFrameName(node),
       }),
     )
     .then(async (resolution) => {
-      if (isStale()) return
+      if (signal.aborted) return
       let { content, nonce } = await unwrapFrameResolution(resolution)
-      if (isStale()) return
-      state.fallbackRoot?.dispose()
-      state.fallbackRoot = undefined
-      let nextContent = asAbortableFrameContent(content, resolveController.signal)
+      if (signal.aborted) return
+      if (state.content.status === 'fallback') {
+        state.content.fallbackRoot.dispose()
+        state.content = { status: 'rendering' }
+      }
+      let nextContent = asAbortableFrameContent(content, signal)
       await instance.render(nextContent, {
         nonce,
-        signal: resolveController.signal,
+        signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
         blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
-        onCommit: frameCommitted.resolve,
+        onCommit() {
+          // Mark resolved as soon as the content is visible so a src change that arrives while
+          // sub-frames are still settling reloads in place instead of remounting with the fallback.
+          if (!signal.aborted) state.content = { status: 'resolved' }
+          frameCommitted.resolve()
+        },
       })
-      if (isStale()) return
-      state.resolved = true
+      if (signal.aborted) return
+      state.content = { status: 'resolved' }
     })
     .catch((error) => {
-      if (reload && !isStale()) {
+      if (reload && !signal.aborted) {
         runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       }
     })
@@ -1181,11 +1167,9 @@ function resolveClientFrame(
 
 function disposeFrameResources(node: CommittedFrameNode): void {
   let state = node._state
-  state.resolveToken++
   state.resolveController?.abort()
   state.resolveController = undefined
-  state.fallbackRoot?.dispose()
-  state.fallbackRoot = undefined
+  if (state.content.status === 'fallback') state.content.fallbackRoot.dispose()
 
   state.instance.dispose()
 }
