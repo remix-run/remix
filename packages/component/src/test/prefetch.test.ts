@@ -183,6 +183,72 @@ function stubConnection(
   })
 }
 
+function stubIdleCallbacks(t: TestContext) {
+  let requestDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'requestIdleCallback')
+  let cancelDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'cancelIdleCallback')
+  let callbacks = new Map<number, IdleRequestCallback>()
+  let changes = new EventTarget()
+  let nextHandle = 0
+  let timeout: number | undefined
+  Object.defineProperty(globalThis, 'requestIdleCallback', {
+    configurable: true,
+    writable: true,
+    value(callback: IdleRequestCallback, options?: IdleRequestOptions) {
+      timeout = options?.timeout
+      callbacks.set(++nextHandle, callback)
+      changes.dispatchEvent(new Event('change'))
+      return nextHandle
+    },
+  })
+  Object.defineProperty(globalThis, 'cancelIdleCallback', {
+    configurable: true,
+    writable: true,
+    value(handle: number) {
+      callbacks.delete(handle)
+    },
+  })
+  function restore() {
+    if (requestDescriptor)
+      Object.defineProperty(globalThis, 'requestIdleCallback', requestDescriptor)
+    else Reflect.deleteProperty(globalThis, 'requestIdleCallback')
+    if (cancelDescriptor) Object.defineProperty(globalThis, 'cancelIdleCallback', cancelDescriptor)
+    else Reflect.deleteProperty(globalThis, 'cancelIdleCallback')
+  }
+  t.after(restore)
+  return {
+    get pending() {
+      return callbacks.size
+    },
+    get timeout() {
+      return timeout
+    },
+    async waitFor(count = 1) {
+      while (callbacks.size < count) {
+        await new Promise((resolve) => changes.addEventListener('change', resolve, { once: true }))
+      }
+    },
+    flush(deadline: IdleDeadline = { didTimeout: false, timeRemaining: () => 50 }) {
+      for (let [handle, callback] of Array.from(callbacks)) {
+        if (!callbacks.delete(handle)) continue
+        callback(deadline)
+      }
+    },
+  }
+}
+
+function stubDocumentVisibility(t: TestContext, hidden = false) {
+  let descriptor = Object.getOwnPropertyDescriptor(document, 'hidden')
+  Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden })
+  t.after(() => {
+    if (descriptor) Object.defineProperty(document, 'hidden', descriptor)
+    else Reflect.deleteProperty(document, 'hidden')
+  })
+  return function setHidden(value: boolean) {
+    hidden = value
+    document.dispatchEvent(new Event('visibilitychange'))
+  }
+}
+
 function createPrefetch(t: TestContext) {
   let controller = new AbortController()
   t.after(() => controller.abort())
@@ -714,6 +780,91 @@ describe('prefetch', () => {
   })
 
   describe('viewport', () => {
+    it('waits for initially hidden documents to become visible before prefetching', (t) => {
+      let setHidden = stubDocumentVisibility(t, true)
+      let intersections = stubViewportIntersections(t)
+      let prefetchFrame = mock.fn()
+      let anchor = createViewportLink('/products/shirt')
+      startTestPrefetching(t, prefetchFrame)
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      expect(prefetchFrame).not.toHaveBeenCalled()
+
+      setHidden(false)
+      expect(prefetchFrame).not.toHaveBeenCalled()
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    })
+
+    it('pauses links waiting for scrolling and refreshes intersections when the document returns', async (t) => {
+      let timers = t.useFakeTimers()
+      let setHidden = stubDocumentVisibility(t)
+      let prefetchFrame = mock.fn()
+      let passed = createViewportLink('/passed')
+      let download = createViewportLink('/download')
+      let visible = createViewportLink('/visible')
+      startTestPrefetching(t, prefetchFrame)
+      document.dispatchEvent(new Event('scroll'))
+      expect(await readIntersection(passed)).toBe(true)
+      expect(await readIntersection(download)).toBe(true)
+      expect(await readIntersection(visible)).toBe(true)
+      expect(prefetchFrame).not.toHaveBeenCalled()
+
+      setHidden(true)
+      timers.advance(150)
+      expect(prefetchFrame).not.toHaveBeenCalled()
+      passed.style.top = `${innerHeight + 100}px`
+      download.setAttribute('download', '')
+
+      setHidden(false)
+      expect(prefetchFrame).not.toHaveBeenCalled()
+      expect(await readIntersection(passed)).toBe(false)
+      expect(await readIntersection(visible)).toBe(true)
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+      expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
+    })
+
+    it('does not resume hidden viewport work after disposal', (t) => {
+      let setHidden = stubDocumentVisibility(t, true)
+      let intersections = stubViewportIntersections(t)
+      let prefetchFrame = mock.fn()
+      let controller = new AbortController()
+      t.after(() => controller.abort())
+      let anchor = createViewportLink('/products/shirt')
+      startPrefetching(controller.signal, prefetchFrame)
+      intersections.queue(anchor, true)
+      intersections.deliver()
+
+      controller.abort()
+      setHidden(false)
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      expect(prefetchFrame).not.toHaveBeenCalled()
+    })
+
+    it('rechecks removed links and eligibility when scrolling stops', (t) => {
+      let timers = t.useFakeTimers()
+      let intersections = stubViewportIntersections(t)
+      let prefetchFrame = mock.fn()
+      let removed = createViewportLink('/removed')
+      let download = createViewportLink('/download')
+      let visible = createViewportLink('/visible')
+      startTestPrefetching(t, prefetchFrame)
+      document.dispatchEvent(new Event('scroll'))
+      intersections.queue(removed, true)
+      intersections.queue(download, true)
+      intersections.queue(visible, true)
+      intersections.deliver()
+
+      removed.remove()
+      download.setAttribute('download', '')
+      timers.advance(150)
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+      expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
+    })
+
     it('prefetches initial named-frame links and observes changes to source and target', async (t) => {
       let prefetchFrame = mock.fn()
       let anchor = createViewportLink('/products/shirt')
@@ -1039,6 +1190,43 @@ describe('prefetch', () => {
 })
 
 describe('default frame prefetch', () => {
+  it('downloads HTML immediately and waits for idle time before discovering assets', async (t) => {
+    let idle = stubIdleCallbacks(t)
+    stubLinkPrefetchSupport(t, true)
+    let fetch = t.mock.method(globalThis, 'fetch', async () =>
+      htmlResponse('<script src="/entry.js"></script>'),
+    )
+    let hints = collectHints(t)
+    let { prefetch } = createPrefetch(t)
+    let ready = prefetch(new URL('/page', location.href).href)
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+    await idle.waitFor()
+    expect(idle.timeout).toBe(1000)
+    expect(hints).toHaveLength(0)
+    idle.flush()
+    await ready
+    expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/entry.js'])
+  })
+
+  it('cancels HTML discovery waiting for idle time on disposal', async (t) => {
+    let idle = stubIdleCallbacks(t)
+    stubLinkPrefetchSupport(t, true)
+    t.mock.method(globalThis, 'fetch', async () =>
+      htmlResponse('<script src="/entry.js"></script>'),
+    )
+    let hints = collectHints(t)
+    let { prefetch, controller } = createPrefetch(t)
+    let ready = prefetch(new URL('/page', location.href).href)
+
+    await idle.waitFor()
+    controller.abort()
+    await ready
+    expect(idle.pending).toBe(0)
+    idle.flush()
+    expect(hints).toHaveLength(0)
+  })
+
   it('discovers explicit assets in inert HTML and nested templates without using its import map', async (t) => {
     stubLinkPrefetchSupport(t, true)
     t.mock.method(globalThis, 'fetch', async () =>
@@ -1240,6 +1428,7 @@ describe('default frame prefetch', () => {
   })
 
   it('deduplicates pending asset hints across pages and targets and removes failed hints', async (t) => {
+    let idle = stubIdleCallbacks(t)
     stubLinkPrefetchSupport(t, true)
     let html = Promise.withResolvers<string>()
     t.mock.method(globalThis, 'fetch', async () => {
@@ -1270,6 +1459,8 @@ describe('default frame prefetch', () => {
       prefetch(new URL('/first', location.href).href, { target: 'details' }),
     ])
     html.resolve('<script src="/shared.js"></script>')
+    await idle.waitFor(3)
+    idle.flush()
     await linked.promise
     expect(hints).toHaveLength(1)
     hints[0].dispatchEvent(new Event('error'))
