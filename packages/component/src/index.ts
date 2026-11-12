@@ -79,6 +79,7 @@ export type { NavigationOptions, UpdateUrlOptions } from './runtime/navigation.t
 export { defaultPrefetch, prefetch } from './runtime/prefetch.ts'
 export type {
   DefaultPrefetchOverrides,
+  PrefetchAnchorOptions,
   PrefetchContext,
   PrefetchFrame,
   PrefetchFrameContext,

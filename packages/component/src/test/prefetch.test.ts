@@ -937,7 +937,7 @@ describe('prefetch', () => {
 })
 
 describe('anchor prefetch ownership', () => {
-  it('prefetches unmarked anchors with frame metadata and explicit target overrides', async (t) => {
+  it('uses the navigation destination and triggering element of unmarked anchors', async (t) => {
     let callback = mock.fn()
     let anchor = createIntentLink('/page#section')
     anchor.removeAttribute('data-rmx-prefetch')
@@ -949,16 +949,20 @@ describe('anchor prefetch ownership', () => {
       target: 'details',
       element: anchor,
     })
+    // @ts-expect-error Anchor calls cannot override their DOM frame target.
     prefetch(anchor, { target: 'sidebar' })
-    expectPrefetchCall(callback, new URL('/partial', location.href).href, {
-      target: 'sidebar',
-      element: anchor,
-    })
+    // @ts-expect-error Anchor calls cannot override their DOM frame target.
     prefetch(anchor, { target: '' })
-    expectPrefetchCall(callback, new URL('/page', location.href).href, {
-      target: '',
-      element: anchor,
-    })
+    // @ts-expect-error Anchor calls supply their own triggering element.
+    prefetch(anchor, { element: document.createElement('span') })
+
+    expect(callback).toHaveBeenCalledTimes(4)
+    for (let call of callback.mock.calls) {
+      expect(call.arguments).toMatchObject([
+        new URL('/partial', location.href).href,
+        { target: 'details', element: anchor },
+      ])
+    }
   })
 
   it('skips detached and ineligible anchors without requiring a declarative marker', (t) => {

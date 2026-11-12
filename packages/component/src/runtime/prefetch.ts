@@ -11,6 +11,12 @@ export interface PrefetchOptions {
   element?: Element
 }
 
+/** Cancellation options for prefetching an anchor's navigation destination. */
+export interface PrefetchAnchorOptions {
+  /** Cancels this caller's prefetch, retaining work shared with other callers. */
+  signal?: AbortSignal
+}
+
 /** Shared frame request and its initiating element for prefetch hooks. */
 export interface PrefetchContext {
   /** Requested absolute frame source URL. */
@@ -139,17 +145,32 @@ export function defaultPrefetch(
  * URLs, the current untargeted page, and browsers where Remix doesn't handle navigations are skipped.
  *
  * Anchor calls read link source and target metadata, supply the triggering element, and cancel
- * this caller when the anchor disconnects. Explicit options override destination metadata. Anchors
+ * this caller when the anchor disconnects. Anchor options only accept a cancellation signal. Anchors
  * must be connected and eligible for frame navigation; no prefetch marker is required.
  *
  * @param href URL resolved against the document base URL, or the connected link to prefetch.
+ * @param options Cancellation signal for this caller.
+ */
+export function prefetch(href: HTMLAnchorElement, options?: PrefetchAnchorOptions): void
+/**
+ * Prefetches a URL with an optional destination frame, cancellation signal, and triggering element.
+ *
+ * @param href URL resolved against the document base URL.
  * @param options Destination frame, cancellation signal, and triggering element.
  */
+export function prefetch(href: string, options?: PrefetchOptions): void
+/**
+ * Prefetches a URL or anchor with an optional cancellation signal.
+ *
+ * @param href URL resolved against the document base URL, or the connected link to prefetch.
+ * @param options Cancellation signal for this caller.
+ */
+export function prefetch(href: string | HTMLAnchorElement, options?: PrefetchAnchorOptions): void
 export function prefetch(href: string | HTMLAnchorElement, options?: PrefetchOptions): void {
   let request =
     typeof href === 'string'
       ? getPrefetchRequest(href, options)
-      : getAnchorPrefetchRequest(href, options)
+      : getAnchorPrefetchRequest(href, options?.signal)
   if (request && (typeof href === 'string' || hasPrefetchTarget(request))) {
     dispatchPrefetch(request, typeof href === 'string' ? undefined : href)
   }
@@ -458,7 +479,7 @@ function getIntentAnchor(target: EventTarget | null): HTMLAnchorElement | null {
 
 function getAnchorPrefetchRequest(
   anchor: HTMLAnchorElement,
-  options?: PrefetchOptions,
+  signal?: AbortSignal,
 ): PrefetchRequest | undefined {
   if (
     !anchor.isConnected ||
@@ -472,7 +493,8 @@ function getAnchorPrefetchRequest(
   let href = getSameOriginHref(anchor.href)
   let src = getSameOriginHref(anchor.getAttribute('data-rmx-src') ?? anchor.href)
   if (!href || !src) return
-  let target = options?.target ?? anchor.getAttribute('data-rmx-target') ?? undefined
+  let target = anchor.getAttribute('data-rmx-target') ?? undefined
+  let options = signal ? { signal } : undefined
   return getPrefetchRequest(target ? src : href, target ? { ...options, target } : options)
 }
 
