@@ -1881,7 +1881,7 @@ describe('defaultPrefetch overrides', () => {
     expect(document.documentElement.dataset.prefetchExecuted).toBe(undefined)
   })
 
-  it('exposes usable asset URLs while leaving responsive and incomplete declarations in the fragment', async (t) => {
+  it('exposes usable asset URLs while leaving unsupported and incomplete declarations in the fragment', async (t) => {
     startTestPrefetching(t)
     let context: PrefetchFrameContext | undefined
     await defaultPrefetch('/page', undefined, {
@@ -1908,7 +1908,7 @@ describe('defaultPrefetch overrides', () => {
     })
     if (!context) throw new Error('Expected parsed frame context')
     let { assets, fragment } = context
-    expect(assets.map((element) => element.id)).toEqual(['script', 'style', 'data', 'captions'])
+    expect(assets.map((element) => element.id)).toEqual(['script', 'style', 'data'])
     expect(assets[0].getAttribute('src')).toBe('entry.js')
     expect(fragment.querySelector('#responsive')?.hasAttribute('href')).toBe(false)
     expect(fragment.querySelector('#responsive')?.getAttribute('media')).toBe('not all')
@@ -1920,6 +1920,8 @@ describe('defaultPrefetch overrides', () => {
     )
     expect(fragment.querySelectorAll('script[src]')).toHaveLength(5)
     expect(fragment.querySelector('link[rel="stylesheet"]:not([href])')).not.toBe(null)
+    let template = fragment.querySelector('template')
+    expect(template?.content.querySelector('#captions')?.getAttribute('href')).toBe('captions.vtt')
   })
 
   it('selects original assets, adds marked images, and controls nested frame requests', async (t) => {
@@ -2473,7 +2475,7 @@ describe('default frame prefetch', () => {
     expect(hints[0].referrerPolicy).toBe('no-referrer')
   })
 
-  it('prefetches explicit image preload URLs, including nested templates', async (t) => {
+  it('prefetches image and fetch preload URLs, including nested templates, while skipping track preloads', async (t) => {
     stubLinkPrefetchSupport(t, true)
     t.mock.method(globalThis, 'fetch', async () =>
       htmlResponse(`<base href="/images/">
@@ -2493,9 +2495,8 @@ describe('default frame prefetch', () => {
       '/images/hero.jpg',
       '/images/detail.jpg',
       '/images/data.json',
-      '/images/captions.vtt',
     ])
-    expect(hints.map((link) => link.as)).toEqual(['image', 'image', 'fetch', 'track'])
+    expect(hints.map((link) => link.as)).toEqual(['image', 'image', 'fetch'])
     expect(hints.every((link) => link.fetchPriority === 'low')).toBe(true)
     expect(hints[0].crossOrigin).toBe('anonymous')
     expect(hints[0].referrerPolicy).toBe('no-referrer')

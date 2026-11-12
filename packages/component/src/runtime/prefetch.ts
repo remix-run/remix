@@ -63,7 +63,7 @@ export interface PrefetchFrameContext extends PrefetchContext {
   fragment: DocumentFragment
   /**
    * Original script and link declarations supported by native prefetch hints, including inside
-   * templates. Responsive image preloads are omitted; query `fragment` for custom image loading.
+   * templates. Responsive image and track preloads are omitted; query `fragment` for custom loading.
    */
   assets: readonly Element[]
   /** All discovered same-origin nested frame requests, resolved against `baseURL`. */
@@ -88,7 +88,7 @@ export interface DefaultPrefetchOverrides {
    * Handles each parsed response. Call `prefetchReferences()` to prefetch discovered assets,
    * or pass selected arrays. Omitted assets use discovered defaults; omitted frames are not fetched.
    * Pass `frames` explicitly to prefetch nested sources. Returning without delegating skips Remix's
-   * work. Responsive image declarations are skipped by native hints; the hook may perform and
+   * work. Responsive image and track preloads are skipped by native hints; the hook may perform and
    * await its own image loading or other prefetching instead.
    *
    * @param prefetchReferences Starts selected default work while the hook is active.
@@ -114,7 +114,7 @@ type PrefetchRequest = [src: string, options?: PrefetchFrameOptions]
 const INTENT_DELAY_MS = 100
 const SCROLL_SETTLE_MS = 150
 const IDLE_TIMEOUT_MS = 1000
-const PRELOAD_DESTINATIONS = ['fetch', 'font', 'image', 'script', 'style', 'track']
+const PRELOAD_DESTINATIONS = ['fetch', 'font', 'image', 'script', 'style']
 
 const initialPrefetch = createDefaultPrefetch()
 let defaultPrefetchFrame = initialPrefetch
@@ -150,7 +150,7 @@ export function defaultPrefetch(
 /**
  * Prefetches frame content so a later navigation can reuse the response. By default this
  * fetches HTML and discovers external JavaScript, CSS, and explicit preloads. Assets use
- * `<link rel="prefetch">` hints; responsive image declarations require a custom `frame` hook.
+ * `<link rel="prefetch">` hints; responsive image and track preloads require a custom `frame` hook.
  * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Pass
  * `prefetch` to `run()` to change this behavior, or delegate to {@link defaultPrefetch} with overrides.
  * Custom frame hooks can select nested sources to prefetch using the same strategy. Cross-origin
