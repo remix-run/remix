@@ -10,6 +10,7 @@ import {
   type ResolveFrameOptions,
 } from './frame-runtime.ts'
 import { startNavigationListener } from './navigation.ts'
+import { encodeFormDataAsSearchParams, normalizeFormLineBreaks } from './form-navigation.ts'
 import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
 import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
@@ -88,25 +89,17 @@ function getRequestBody(options?: ResolveFrameOptions): {
   if (encType === 'text/plain') {
     let body = ''
     for (let [name, value] of formData) {
-      name = normalizeLineBreaks(name)
-      value = normalizeLineBreaks(typeof value === 'string' ? value : value.name)
+      name = normalizeFormLineBreaks(name)
+      value = normalizeFormLineBreaks(typeof value === 'string' ? value : value.name)
       body += `${name}=${value}\r\n`
     }
     return { body: new Blob([body], { type: 'text/plain' }), encType: 'text/plain' }
   }
 
-  let body = new URLSearchParams()
-  for (let [name, value] of formData) {
-    body.append(
-      normalizeLineBreaks(name),
-      normalizeLineBreaks(typeof value === 'string' ? value : value.name),
-    )
+  return {
+    body: encodeFormDataAsSearchParams(formData),
+    encType: 'application/x-www-form-urlencoded',
   }
-  return { body, encType: 'application/x-www-form-urlencoded' }
-}
-
-function normalizeLineBreaks(value: string): string {
-  return value.replace(/\r\n|\r|\n/g, '\r\n')
 }
 
 async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {

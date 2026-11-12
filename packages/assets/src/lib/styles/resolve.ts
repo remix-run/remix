@@ -12,6 +12,7 @@ import type { ModuleRecord, ModuleTracking } from '../module-store.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { EmittedStyle } from './emit.ts'
 import type { TransformedStyle } from './transform.ts'
+import { isNoEntityError } from '../fs-errors.ts'
 
 type StyleRecord = ModuleRecord<TransformedStyle, ResolvedStyle, EmittedStyle>
 
@@ -380,12 +381,6 @@ function isStyleFilePath(filePath: string): boolean {
 
 function isExternalUrl(url: string): boolean {
   return url.startsWith('#') || url.startsWith('//') || /^[A-Za-z][A-Za-z\d+.-]*:/.test(url)
-}
-
-function isNoEntityError(error: unknown): error is NodeJS.ErrnoException & { code: 'ENOENT' } {
-  return (
-    error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT'
-  )
 }
 
 function toResolveError(error: unknown, importerPath: string): AssetServerCompilationError {

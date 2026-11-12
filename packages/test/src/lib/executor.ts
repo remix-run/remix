@@ -3,6 +3,7 @@ import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
 import type { SerializedOnlyPattern } from './config.ts'
 
+// Test code may replace global timers before hooks or subsequent deadlines run.
 const realSetTimeout = globalThis.setTimeout.bind(globalThis)
 const realClearTimeout = globalThis.clearTimeout.bind(globalThis)
 

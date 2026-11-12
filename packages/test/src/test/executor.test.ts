@@ -37,8 +37,6 @@ interface TestFixture extends RunnableOptions {
 
 type TestSuitesGlobal = typeof globalThis & { __testSuites?: SuiteFixture[] }
 
-const realSetTimeout = globalThis.setTimeout.bind(globalThis)
-
 describe('runTests lifecycle hook failures', () => {
   it('reports cleanup errors with cyclic causes without recursing indefinitely', async () => {
     let error = new Error('cyclic cleanup failure')
@@ -222,6 +220,80 @@ describe('runTests lifecycle hook failures', () => {
 })
 
 describe('runTests timeouts and signals', () => {
+  it('prevents timed out async tests from enabling clocks in a later test', async () => {
+    let resume = Promise.withResolvers<void>()
+    let resumed = Promise.withResolvers<void>()
+    let lateClock: ReturnType<TestContext['useFakeTimers']> | undefined
+    let lateError: unknown
+    let originalDate = Date
+    try {
+      let results = await runWithSuites([
+        {
+          name: 'suite',
+          tests: [
+            {
+              name: 'timed out test',
+              timeout: 5,
+              async fn(t) {
+                t.useFakeTimers()
+                await resume.promise
+                try {
+                  lateClock = t.useFakeTimers({ now: 1000 })
+                } catch (error) {
+                  lateError = error
+                } finally {
+                  resumed.resolve()
+                }
+              },
+            },
+            {
+              name: 'later test',
+              async fn() {
+                resume.resolve()
+                await resumed.promise
+                assert.equal(Date, originalDate)
+                assert.ok(lateError instanceof Error)
+                assert.match(lateError.message, /finished/)
+              },
+            },
+          ],
+        },
+      ])
+      assert.equal(results.failed, 1)
+      assert.equal(results.passed, 1)
+      assert.match(results.tests[0].error?.message ?? '', /Test timed out/)
+    } finally {
+      lateClock?.restore()
+    }
+  })
+
+  it('keeps runner deadlines independent of replaced global timers', async (t) => {
+    let setTimeoutSpy = t.mock.method(globalThis, 'setTimeout', () => {
+      throw new Error('global timer used for a runner deadline')
+    })
+    let clearTimeoutSpy = t.mock.method(globalThis, 'clearTimeout')
+
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        tests: [
+          {
+            name: 'timed out test',
+            timeout: 5,
+            fn() {
+              return new Promise(() => {})
+            },
+          },
+        ],
+      },
+    ])
+
+    assert.equal(results.failed, 1)
+    assert.match(results.tests[0].error?.message ?? '', /Test timed out after 5ms/)
+    assert.equal(setTimeoutSpy.mock.callCount(), 0)
+    assert.equal(clearTimeoutSpy.mock.callCount(), 0)
+  })
+
   it('cancels unfinished polling before the next test without aborting the public signal', async () => {
     let attempt = Promise.withResolvers<never>()
     let stopped: Promise<unknown> | undefined
@@ -254,7 +326,7 @@ describe('runTests timeouts and signals', () => {
               assert.equal(error.name, 'AbortError')
               assert.equal(signal?.aborted, false)
               attempt.reject(new Error('late failure'))
-              await new Promise((resolve) => realSetTimeout(resolve, 15))
+              await assert.rejects(attempt.promise, /late failure/)
               assert.equal(attempts, 1)
             },
           },
@@ -279,29 +351,6 @@ describe('runTests timeouts and signals', () => {
     assert.equal(results.failed, 1)
     assert.match(results.tests[0]?.error?.message ?? '', /Test timed out after 5ms/)
     assert.match(results.tests[0]?.error?.message ?? '', /afterEach timed out after 5ms/)
-  })
-
-  it('clears a real watchdog when the test enables fake timers', async () => {
-    let signal: AbortSignal | undefined
-    let results = await runWithSuites([
-      {
-        name: 'suite',
-        tests: [
-          {
-            name: 'test',
-            timeout: 5,
-            fn(t) {
-              signal = t.signal
-              t.useFakeTimers()
-            },
-          },
-        ],
-      },
-    ])
-
-    await new Promise((resolve) => realSetTimeout(resolve, 15))
-    assert.equal(results.passed, 1)
-    assert.equal(signal?.aborted, false)
   })
 
   it('fails tests that exceed their timeout and aborts the test signal', async () => {
@@ -372,6 +421,7 @@ describe('runTests timeouts and signals', () => {
   it('aborts the test signal when a user-provided signal aborts', async () => {
     let controller = new AbortController()
     let testSignalAborted = false
+    let testStarted = Promise.withResolvers<void>()
     let signal: AbortSignal | undefined
     let pollingError: unknown
     let attempt = Promise.withResolvers<void>()
@@ -392,6 +442,7 @@ describe('runTests timeouts and signals', () => {
                 },
                 { once: true },
               )
+              testStarted.resolve()
               return t
                 .waitFor(() => attempt.promise)
                 .catch((error: unknown) => {
@@ -404,11 +455,11 @@ describe('runTests timeouts and signals', () => {
       },
     ])
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await testStarted.promise
     controller.abort(new Error('stop'))
     let results = await resultsPromise
     attempt.resolve()
-    await Promise.resolve()
+    await attempt.promise
 
     assert.equal(testSignalAborted, true)
     assert.equal(results.passed, 0)

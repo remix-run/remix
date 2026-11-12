@@ -94,10 +94,14 @@ export interface FrameFallbackRoot {
 
 export type FrameMountState = {
   instance: FrameInstance
-  fallbackRoot?: FrameFallbackRoot
-  resolveToken: number
+  // A client-inserted frame shows its fallback until its first resolution starts rendering, and it
+  // resolves once that render finishes. Server-rendered frames start resolved.
+  content:
+    | { status: 'fallback'; fallbackRoot: FrameFallbackRoot }
+    | { status: 'rendering' }
+    | { status: 'resolved' }
+  // Aborted when a newer resolution starts or the frame is disposed.
   resolveController?: AbortController
-  resolved: boolean
 }
 
 export class NamedFrameRegistry {

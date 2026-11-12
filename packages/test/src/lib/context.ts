@@ -1,6 +1,6 @@
 import type { Browser, Page } from 'playwright'
 import type { V8CoverageEntry } from './coverage.ts'
-import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
+import { createFakeTimers, type FakeTimers, type FakeTimersOptions } from './fake-timers.ts'
 import { mock, type MockCall, type MockContext, type MockFunction } from './mock.ts'
 import type { getPlaywrightPageOptions } from './playwright.ts'
 import { waitFor } from './wait-for.ts'
@@ -93,11 +93,17 @@ export interface TestContext {
   }
 
   /**
-   * Activates fake timers for testing time-dependent code.
+   * Activates fake timers for testing time-dependent code. Replaces
+   * `setTimeout`, `setInterval`, `setImmediate`, their clear functions,
+   * `AbortSignal.timeout()`, `Date`, and `performance.now()` with fakes driven
+   * by the returned handle. Restores timers on abort or before test cleanup callbacks run.
+   * Calling again restores the previous clock and starts a new one.
+   * Calling after the test finishes or aborts throws.
    *
+   * @param options Optional settings, such as the `now` time the fake `Date` starts at.
    * @returns {FakeTimers} A fake timers instance for controlling time
    */
-  useFakeTimers(): FakeTimers
+  useFakeTimers(options?: FakeTimersOptions): FakeTimers
 
   /**
    * Wires a running test server up to a Playwright page so the test can drive
@@ -130,8 +136,24 @@ export function createTestContext(options?: CreateTestContextOptions): {
 } {
   let cleanups: Array<() => void | Promise<void>> = []
   let lifetime = new AbortController()
+  let fakeTimers: FakeTimers | undefined
+  let closed = false
+  let timerErrors: unknown[] = []
   let signal = options?.signal ?? new AbortController().signal
   let pollingSignal = AbortSignal.any([signal, lifetime.signal])
+  // A dependent signal cannot be silenced by stopImmediatePropagation on t.signal.
+  let timerSignal = AbortSignal.any([signal])
+
+  function closeTimers(): void {
+    closed = true
+    try {
+      fakeTimers?.restore()
+    } catch (error) {
+      timerErrors.push(error)
+    }
+  }
+
+  timerSignal.addEventListener('abort', closeTimers, { once: true })
 
   let testContext: TestContext = {
     signal,
@@ -158,9 +180,15 @@ export function createTestContext(options?: CreateTestContextOptions): {
     after(fn) {
       cleanups.push(fn)
     },
-    useFakeTimers() {
-      let timers = createFakeTimers()
-      cleanups.push(timers.restore)
+    useFakeTimers(options) {
+      if (closed || signal.aborted) throw new Error('This test context has already finished')
+      fakeTimers?.restore()
+      let timers = createFakeTimers(options)
+      fakeTimers = timers
+      if (closed || signal.aborted) {
+        timers.restore()
+        throw new Error('This test context has already finished')
+      }
       return timers
     },
     async serve(server) {
@@ -207,7 +235,9 @@ export function createTestContext(options?: CreateTestContextOptions): {
     testContext,
     async cleanup() {
       lifetime.abort()
-      let errors: unknown[] = []
+      closeTimers()
+      timerSignal.removeEventListener('abort', closeTimers)
+      let errors = timerErrors.splice(0)
       for (let fn of cleanups) {
         try {
           await fn()
