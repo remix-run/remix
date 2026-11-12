@@ -9,7 +9,10 @@ export interface ReloadDetails {
   readonly method: string
   /** Form encoding of the initiating POST reload. `null` for GET reloads. */
   readonly encType: string | null
-  /** Submitted form entries for a POST reload. `null` for GET reloads. */
+  /**
+   * Submitted form entries for a POST reload. `null` for GET reloads.
+   * Shared with the initiating request; copy the entries before modifying them.
+   */
   readonly formData: FormData | null
   /** The actual submit button, or `null` when there is no submitter. */
   readonly submitter: HTMLElement | null

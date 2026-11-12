@@ -275,7 +275,7 @@ export type FrameResolution = FrameContent | Response
 export type FrameHandleEventMap = {
   /** A direct reload or an ancestor-driven reload has started. */
   reloadStart: FrameReloadStartEvent
-  /** Reload processing has ended, including cancellation or failure. */
+  /** Reload processing has ended, including cancellation or failure. Replaced requests omit it. */
   reloadComplete: Event
 }
 
