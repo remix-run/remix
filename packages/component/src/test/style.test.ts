@@ -100,6 +100,22 @@ describe('processStyleClass', () => {
     expect(result.css).not.toContain('height')
   })
 
+  it('renders nested selectors that start with an identifier', () => {
+    let result = processStyleClass(
+      {
+        color: 'black',
+        ':hover > &': { color: 'blue' },
+        'ul:hover &': { color: 'red' },
+      },
+      new Map(),
+    )
+
+    expect(result.css).toContain('ul:hover & {')
+    expect(result.css).toContain('color: red')
+    expect(result.css).not.toContain('[object Object]')
+    expect(result.css).toContain(':hover > & {')
+  })
+
   it('keeps nested selectors and media queries', () => {
     let cache = new Map<string, { selector: string; css: string }>()
     let result = processStyleClass(

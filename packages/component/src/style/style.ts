@@ -78,17 +78,6 @@ export function normalizeCssValue(key: string, value: unknown): string | undefin
   return String(value)
 }
 
-// Check if a style property is a nested selector or media query
-function isComplexSelector(key: string): boolean {
-  return (
-    key.startsWith('&') ||
-    key.startsWith('@') ||
-    key.startsWith(':') ||
-    key.startsWith('[') ||
-    key.startsWith('.')
-  )
-}
-
 // Detect @keyframes (including vendor-prefixed variants)
 function isKeyframesAtRule(key: string): boolean {
   return /^@(?:-(?:webkit|moz|o)-)?keyframes/.test(key.toLowerCase())
@@ -147,10 +136,12 @@ function styleBodyToCss(
   let rules: string[] = []
 
   for (let [key, value] of Object.entries(styles)) {
-    if (isComplexSelector(key)) {
+    if (isRecord(value)) {
       // Allow nested rules to be conditionally disabled.
       // e.g. { '&:hover': condition ? undefined : { ... } }
-      let rule = isRecord(value) ? renderRule?.(key, value) : undefined
+      // Object values are nested rules, including selectors that start with
+      // an identifier (`ul:hover &`).
+      let rule = renderRule?.(key, value)
       if (rule) rules.push(rule)
     } else {
       let normalizedValue = normalizeCssValue(key, value)
