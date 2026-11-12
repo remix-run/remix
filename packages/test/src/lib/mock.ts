@@ -79,6 +79,7 @@ const createObject = Object.create
 const defineProperty = Object.defineProperty
 const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor
 const getPrototypeOf = Object.getPrototypeOf
+const isArray = Array.isArray
 const isSafeInteger = Number.isSafeInteger
 const setProperty = Reflect.set
 
@@ -486,7 +487,7 @@ export function createMockTracker(
     impl?: (...args: never[]) => unknown,
     options: MockMethodOptions = {},
   ): MockFunction {
-    if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+    if (options === null || typeof options !== 'object' || isArray(options)) {
       throw new TypeError('options must be an object')
     }
     let { getter = false, setter = false } = options

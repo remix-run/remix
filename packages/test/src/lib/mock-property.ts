@@ -57,6 +57,7 @@ const OriginalError = Error
 const createObject = Object.create
 const defineProperty = Object.defineProperty
 const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor
+const isArray = Array.isArray
 const isSafeInteger = Number.isSafeInteger
 
 export function createPropertyMock<target extends object, key extends keyof target>(
@@ -64,7 +65,7 @@ export function createPropertyMock<target extends object, key extends keyof targ
   propertyName: key,
   values: [value?: target[key]],
 ): { property: MockProperty<target, key>; restore(): void } {
-  if (object === null || typeof object !== 'object' || Array.isArray(object)) {
+  if (object === null || typeof object !== 'object' || isArray(object)) {
     throw new TypeError('object must be a non-array object')
   }
   if (typeof propertyName !== 'string' && typeof propertyName !== 'symbol') {

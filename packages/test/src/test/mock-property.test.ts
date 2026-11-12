@@ -58,6 +58,20 @@ describe('mock.property', () => {
     assert.deepEqual(Object.getOwnPropertyDescriptor(target, 'value'), descriptor)
   })
 
+  it('creates property mocks without calling a mocked array validator', (t) => {
+    let target = { value: 1 }
+    let isArray = t.mock.method(Array, 'isArray', () => true)
+    try {
+      t.mock.property(target, 'value', 2)
+      assert.equal(target.value, 2)
+      isArray.mock.mockImplementation((value: unknown): value is unknown[] => false)
+      assert.throws(() => Reflect.apply(t.mock.property, t.mock, [[1], '0', 2]), /non-array object/)
+      assert.equal(isArray.mock.callCount(), 0)
+    } finally {
+      isArray.mock.restore()
+    }
+  })
+
   it('distinguishes an omitted value from explicit undefined for string and symbol keys', (t) => {
     let key = Symbol('value')
     let target = { value: 1 as number | undefined, [key]: 'original' as string | undefined }
