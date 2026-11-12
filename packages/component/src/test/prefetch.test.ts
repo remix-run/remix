@@ -11,7 +11,7 @@ import {
 } from '../runtime/prefetch.ts'
 import { run } from '../runtime/run.ts'
 import { renderToStream } from '../server/stream.ts'
-import { drain } from './utils.ts'
+import { drain, nextDomMutation } from './utils.ts'
 import { defaultPrefetch, type DefaultPrefetchOverrides, type PrefetchContext } from '../index.ts'
 
 function expectPrefetchCall(
@@ -827,6 +827,31 @@ describe('prefetch', () => {
       expectPrefetchCall(prefetchFrame, anchor.href, { element: anchor })
     })
 
+    it('retains viewport work on exit and starts fresh work after its marker is restored', async (t) => {
+      let signals: AbortSignal[] = []
+      startTestPrefetching(t, (_src, options) => {
+        if (!options?.signal) throw new Error('Expected caller signal')
+        signals.push(options.signal)
+      })
+      let anchor = createViewportLink('/page')
+      expect(await readIntersection(anchor)).toBe(true)
+      expect(signals).toHaveLength(1)
+
+      anchor.style.top = `${innerHeight + 100}px`
+      expect(await readIntersection(anchor)).toBe(false)
+      expect(signals[0].aborted).toBe(false)
+      let changed = nextDomMutation()
+      anchor.removeAttribute('data-rmx-prefetch')
+      await changed
+      expect(signals[0].aborted).toBe(true)
+
+      anchor.setAttribute('data-rmx-prefetch', 'viewport')
+      anchor.style.top = '0px'
+      expect(await readIntersection(anchor)).toBe(true)
+      expect(signals).toHaveLength(2)
+      expect(signals[1].aborted).toBe(false)
+    })
+
     it('skips ineligible links and observes links when they become eligible', async (t) => {
       let prefetchFrame = mock.fn()
       let download = createViewportLink('/products/download')
@@ -987,6 +1012,138 @@ describe('anchor prefetch ownership', () => {
     anchor.href = '/page'
     prefetch(anchor)
     expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancels changed frame destinations while retaining equivalent source metadata', async (t) => {
+    let signals: AbortSignal[] = []
+    let callback = mock.fn((_src: string, options?: PrefetchOptions) => {
+      if (!options?.signal) throw new Error('Expected caller signal')
+      signals.push(options.signal)
+    })
+    let anchor = createIntentLink('/page#section')
+    anchor.setAttribute('data-rmx-src', '/partial#section')
+    anchor.setAttribute('data-rmx-target', 'details')
+    await startNamedFramePrefetching(t, callback, anchor)
+    prefetch(anchor)
+
+    let changed = nextDomMutation()
+    anchor.href = '/different-link#section'
+    anchor.setAttribute('data-rmx-src', '/partial#other')
+    await changed
+    expect(signals[0].aborted).toBe(false)
+
+    changed = nextDomMutation()
+    anchor.setAttribute('data-rmx-src', '/next#section')
+    await changed
+    expect(signals[0].aborted).toBe(true)
+    prefetch(anchor)
+    expectPrefetchCall(callback, new URL('/next', location.href).href, {
+      target: 'details',
+      element: anchor,
+    })
+
+    changed = nextDomMutation()
+    anchor.setAttribute('data-rmx-target', 'sidebar')
+    await changed
+    expect(signals[1].aborted).toBe(true)
+    prefetch(anchor)
+    expectPrefetchCall(callback, new URL('/next', location.href).href, {
+      target: 'sidebar',
+      element: anchor,
+    })
+    expect(signals[2].aborted).toBe(false)
+  })
+
+  it('cancels callers when their anchors become ineligible', async (t) => {
+    let signals: AbortSignal[] = []
+    startTestPrefetching(t, (_src, options) => {
+      if (!options?.signal) throw new Error('Expected caller signal')
+      signals.push(options.signal)
+    })
+    let download = createIntentLink('/download')
+    let documentNavigation = createIntentLink('/document')
+    let newTab = createIntentLink('/new-tab')
+    let missingHref = createIntentLink('/missing-href')
+    let crossOrigin = createIntentLink('/cross-origin')
+    let missingFrame = createIntentLink('/missing-frame')
+    for (let anchor of [
+      download,
+      documentNavigation,
+      newTab,
+      missingHref,
+      crossOrigin,
+      missingFrame,
+    ]) {
+      prefetch(anchor)
+    }
+    expect(signals).toHaveLength(6)
+
+    let changed = nextDomMutation()
+    download.download = 'page.html'
+    documentNavigation.setAttribute('data-rmx-document', '')
+    newTab.target = '_blank'
+    missingHref.removeAttribute('href')
+    crossOrigin.href = 'https://example.com/page'
+    missingFrame.setAttribute('data-rmx-target', 'unmounted')
+    await changed
+    expect(signals.every((signal) => signal.aborted)).toBe(true)
+  })
+
+  it('cancels removed declarative markers while retaining imperative owners of shared work', async (t) => {
+    let response = Promise.withResolvers<Response>()
+    t.after(() => response.resolve(htmlResponse('Finished')))
+    let sharedSignal: AbortSignal | undefined
+    let fetch = mock.fn((_url: string, init: RequestInit) => {
+      sharedSignal = init.signal ?? undefined
+      return response.promise
+    })
+    let signals: AbortSignal[] = []
+    startTestPrefetching(t, (src, options) => {
+      if (!options?.signal) throw new Error('Expected caller signal')
+      signals.push(options.signal)
+      return defaultPrefetch(src, options, { fetch })
+    })
+    let anchor = createIntentLink('/shared')
+    press(anchor)
+    prefetch(anchor)
+    if (!sharedSignal) throw new Error('Expected shared signal')
+    expect(fetch).toHaveBeenCalledTimes(1)
+
+    let changed = nextDomMutation()
+    anchor.removeAttribute('data-rmx-prefetch')
+    await changed
+    expect(signals[0].aborted).toBe(true)
+    expect(signals[1].aborted).toBe(false)
+    expect(sharedSignal.aborted).toBe(false)
+
+    changed = nextDomMutation()
+    anchor.href = '/different'
+    await changed
+    expect(signals[1].aborted).toBe(true)
+    expect(sharedSignal.aborted).toBe(true)
+  })
+
+  it('retains declarative callers across supported trigger modes and cancels disabled markers', async (t) => {
+    let signal: AbortSignal | undefined
+    startTestPrefetching(t, (_src, options) => {
+      signal ??= options?.signal
+    })
+    let anchor = createIntentLink('/page')
+    press(anchor)
+    if (!signal) throw new Error('Expected caller signal')
+
+    let changed = nextDomMutation()
+    anchor.setAttribute('data-rmx-prefetch', 'viewport')
+    await changed
+    expect(signal.aborted).toBe(false)
+    changed = nextDomMutation()
+    anchor.setAttribute('data-rmx-prefetch', 'intent')
+    await changed
+    expect(signal.aborted).toBe(false)
+    changed = nextDomMutation()
+    anchor.setAttribute('data-rmx-prefetch', 'none')
+    await changed
+    expect(signal.aborted).toBe(true)
   })
 
   it('cancels queued intent and imperative callers without IntersectionObserver or callback promises', async (t) => {

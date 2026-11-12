@@ -25,7 +25,8 @@ export interface PrefetchContext {
   target: string | undefined
   /**
    * First caller's live triggering element. Nested requests inherit it, and later callers joining
-   * shared work do not replace it. It may be disconnected while another caller retains the work.
+   * shared work do not replace it. It may be disconnected or point elsewhere while another caller
+   * retains the work.
    */
   readonly element: Element | undefined
   /** Aborts when all callers cancel or the runtime is disposed. */
@@ -145,8 +146,9 @@ export function defaultPrefetch(
  * URLs, the current untargeted page, and browsers where Remix doesn't handle navigations are skipped.
  *
  * Anchor calls read link source and target metadata, supply the triggering element, and cancel
- * this caller when the anchor disconnects. Anchor options only accept a cancellation signal. Anchors
- * must be connected and eligible for frame navigation; no prefetch marker is required.
+ * this caller when the anchor disconnects or its navigation destination or eligibility changes.
+ * Anchor options only accept a cancellation signal. Anchors must be connected and eligible for
+ * frame navigation; no prefetch marker is required.
  *
  * @param href URL resolved against the document base URL, or the connected link to prefetch.
  * @param options Cancellation signal for this caller.
@@ -179,8 +181,9 @@ export function prefetch(href: string | HTMLAnchorElement, options?: PrefetchOpt
 function dispatchPrefetch(
   request: PrefetchRequest,
   anchor?: HTMLAnchorElement,
+  trigger?: 'intent' | 'viewport',
 ): void | Promise<void> {
-  if (anchor) return prefetchAnchor(request, anchor)
+  if (anchor) return prefetchAnchor(request, anchor, trigger)
   let [src, options] = request
   let result = options ? prefetchFrame(src, options) : prefetchFrame(src)
   void Promise.resolve(result).catch(() => {})
@@ -190,14 +193,33 @@ function dispatchPrefetch(
 function createAnchorPrefetching(
   signal?: AbortSignal,
   updateViewport?: (anchor: HTMLAnchorElement) => void,
-): (request: PrefetchRequest, anchor: HTMLAnchorElement) => void {
-  let pending = new WeakMap<HTMLAnchorElement, Set<AbortController>>()
+): (request: PrefetchRequest, anchor: HTMLAnchorElement, trigger?: 'intent' | 'viewport') => void {
+  interface Caller {
+    controller: AbortController
+    src: string
+    target: string | undefined
+    declarative: boolean
+  }
+  let pending = new WeakMap<HTMLAnchorElement, Set<Caller>>()
   let count = 0
   let mutations: MutationObserver | undefined
 
   function update(anchor: HTMLAnchorElement): void {
-    if (!anchor.isConnected) {
-      for (let controller of pending.get(anchor) ?? []) controller.abort()
+    let callers = pending.get(anchor)
+    if (callers) {
+      let request = getAnchorPrefetchRequest(anchor)
+      let marker = anchor.getAttribute('data-rmx-prefetch')
+      for (let caller of callers) {
+        if (
+          !request ||
+          !hasPrefetchTarget(request) ||
+          caller.src !== request[0] ||
+          caller.target !== request[1]?.target ||
+          (caller.declarative && marker !== 'intent' && marker !== 'viewport')
+        ) {
+          caller.controller.abort()
+        }
+      }
     }
     updateViewport?.(anchor)
   }
@@ -242,7 +264,7 @@ function createAnchorPrefetching(
     scan(document.documentElement)
   }
 
-  return function prefetch([src, options], anchor) {
+  return function prefetch([src, options], anchor, trigger) {
     if (signal?.aborted || options?.signal?.aborted || !anchor.isConnected) return
     observe()
     let controller = new AbortController()
@@ -251,16 +273,22 @@ function createAnchorPrefetching(
     if (options?.signal) signals.push(options.signal)
     let callerSignal = AbortSignal.any(signals)
     let reference = new WeakRef(anchor)
-    let controllers = pending.get(anchor) ?? new Set<AbortController>()
-    controllers.add(controller)
-    pending.set(anchor, controllers)
+    let callers = pending.get(anchor) ?? new Set<Caller>()
+    let caller: Caller = {
+      controller,
+      src,
+      target: options?.target,
+      declarative: trigger !== undefined,
+    }
+    callers.add(caller)
+    pending.set(anchor, callers)
     count++
 
     function finish(): void {
-      if (!controllers.delete(controller)) return
+      if (!callers.delete(caller)) return
       callerSignal.removeEventListener('abort', finish)
       let element = reference.deref()
-      if (controllers.size === 0 && element) pending.delete(element)
+      if (callers.size === 0 && element) pending.delete(element)
       if (--count === 0 && !updateViewport) {
         mutations?.disconnect()
         mutations = undefined
@@ -337,7 +365,7 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
     }
     intent.prefetched = true
     let request = getAnchorPrefetchRequest(intent.anchor)
-    if (request && hasPrefetchTarget(request)) dispatchPrefetch(request, intent.anchor)
+    if (request && hasPrefetchTarget(request)) dispatchPrefetch(request, intent.anchor, 'intent')
   }
   function stopResting(intent: Intent | undefined) {
     if (intent !== pointerIntent && intent !== focusIntent) clearTimeout(intent?.timer)
@@ -441,7 +469,7 @@ function startViewportPrefetching(
       if (completed.get(target) === key) continue
       completed.set(target, key)
       viewport.unobserve(target)
-      dispatchPrefetch(request, target)
+      dispatchPrefetch(request, target, 'viewport')
     }
   })
 
@@ -453,7 +481,11 @@ function startViewportPrefetching(
     }
     // Named frames can still be hydrating here; check their registration when the link enters view.
     let request = getRequest(anchor)
-    if (request && completed.get(anchor) !== JSON.stringify(request)) viewport.observe(anchor)
+    if (!request) {
+      completed.delete(anchor)
+      return
+    }
+    if (completed.get(anchor) !== JSON.stringify(request)) viewport.observe(anchor)
   }
 
   signal.addEventListener('abort', () => viewport.disconnect(), { once: true })
