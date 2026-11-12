@@ -5,7 +5,7 @@ import { createStyleManager } from '../style/stylesheet.ts'
 describe('createStyleManager', () => {
   it('does not adopt an empty stylesheet until styles are inserted', () => {
     let before = document.adoptedStyleSheets.length
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
 
     expect(document.adoptedStyleSheets.length).toBe(before)
 
@@ -13,7 +13,7 @@ describe('createStyleManager', () => {
   })
 
   it('inserts a rule once and increments count on repeat', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
     mgr.insert('rmx-a', '.rmx-a { color: red; }')
     let sheet = document.adoptedStyleSheets[document.adoptedStyleSheets.length - 1]
     expect(mgr.has('rmx-a')).toBe(true)
@@ -26,7 +26,7 @@ describe('createStyleManager', () => {
 
     // Verify layer and content
     let cssText = sheet.cssRules[0]?.cssText || ''
-    expect(cssText.includes('@layer rmx-test')).toBe(true)
+    expect(cssText.includes('@layer rmx.rmx-a')).toBe(true)
     expect(cssText.includes('.rmx-a')).toBe(true)
     expect(cssText.match(/\n\s+\.rmx-a\s*\{/g)?.length).toBe(1) // Selector rule appears once
 
@@ -34,24 +34,14 @@ describe('createStyleManager', () => {
     mgr.dispose()
   })
 
-  it('uses default layer name when not provided', () => {
-    let mgr = createStyleManager()
-    mgr.insert('rmx-a', '.rmx-a { color: red; }')
-    let sheet = document.adoptedStyleSheets[document.adoptedStyleSheets.length - 1]
-    let cssText = sheet.cssRules[0]?.cssText || ''
-    expect(cssText.includes('@layer rmx')).toBe(true)
-    // cleanup
-    mgr.dispose()
-  })
-
   it('returns false for has() when class was never inserted', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
     expect(mgr.has('rmx-never-inserted')).toBe(false)
     mgr.dispose()
   })
 
   it('safely handles removing a class that was never inserted', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
     let initialLength = document.adoptedStyleSheets.length
 
     mgr.remove('rmx-never-inserted')
@@ -62,10 +52,10 @@ describe('createStyleManager', () => {
     mgr.dispose()
   })
 
-  it('handles multiple managers with different layers independently', () => {
+  it('gives each manager its own stylesheet', () => {
     let before = document.adoptedStyleSheets.length
-    let mgr1 = createStyleManager('layer-1')
-    let mgr2 = createStyleManager('layer-2')
+    let mgr1 = createStyleManager()
+    let mgr2 = createStyleManager()
 
     mgr1.insert('rmx-a', '.rmx-a { color: red; }')
     mgr2.insert('rmx-a', '.rmx-a { color: blue; }')
@@ -76,8 +66,8 @@ describe('createStyleManager', () => {
 
     expect(sheet1.cssRules.length).toBe(1)
     expect(sheet2.cssRules.length).toBe(1)
-    expect(sheet1.cssRules[0]?.cssText).toContain('@layer layer-1.rmx-a')
-    expect(sheet2.cssRules[0]?.cssText).toContain('@layer layer-2.rmx-a')
+    expect(sheet1.cssRules[0]?.cssText).toContain('color: red')
+    expect(sheet2.cssRules[0]?.cssText).toContain('color: blue')
 
     // cleanup
     mgr1.dispose()
@@ -85,7 +75,7 @@ describe('createStyleManager', () => {
   })
 
   it('handles complex CSS rules with nested selectors and at-rules', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
 
     let complexRule = `
       .rmx-complex {
@@ -114,7 +104,7 @@ describe('createStyleManager', () => {
   })
 
   it('removes only when count reaches zero and reindexes', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
     mgr.insert('rmx-a', '.rmx-a { color: red; }')
     mgr.insert('rmx-b', '.rmx-b { color: blue; }')
     mgr.insert('rmx-a', '.rmx-a { color: red; }')
@@ -142,7 +132,7 @@ describe('createStyleManager', () => {
   })
 
   it('keeps other rules stable when removing from the middle (reindex correctness)', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
 
     mgr.insert('rmx-a', '.rmx-a { color: red; }')
     mgr.insert('rmx-b', '.rmx-b { color: blue; }')
@@ -169,7 +159,7 @@ describe('createStyleManager', () => {
   })
 
   it('styles apply to the DOM while present and stop applying after full removal', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
 
     let el = document.createElement('div')
     document.body.appendChild(el)
@@ -193,8 +183,8 @@ describe('createStyleManager', () => {
   })
 
   it('keeps duplicate selectors in their original cascade layer order across managers', () => {
-    let mgr1 = createStyleManager('rmx-test')
-    let mgr2 = createStyleManager('rmx-test')
+    let mgr1 = createStyleManager()
+    let mgr2 = createStyleManager()
     let el = document.createElement('button')
     document.body.appendChild(el)
 
@@ -219,7 +209,7 @@ describe('createStyleManager', () => {
     expect(document.querySelector('style[data-rmx-style]')).not.toBeNull()
 
     // Create manager and adopt server styles for its frame
-    let mgr = createStyleManager('rmx')
+    let mgr = createStyleManager()
     mgr.adoptServerStyles(document)
 
     // Tag should be removed after adoption
@@ -249,10 +239,10 @@ describe('createStyleManager', () => {
   })
 
   it('leaves detached styles unadopted until they connect to the active document', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
     let style = document.createElement('style')
     style.setAttribute('data-rmx-style', 'rmxc-detached')
-    style.textContent = '@layer rmx-test { .rmxc-detached { color: red; } }'
+    style.textContent = '@layer rmx { .rmxc-detached { color: red; } }'
 
     expect(Array.from(mgr.adoptServerStyles([style]))).toEqual([])
     expect(mgr.has('rmxc-detached')).toBe(false)
@@ -265,11 +255,11 @@ describe('createStyleManager', () => {
   })
 
   it('does not pin an existing client rule from a detached server tag', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
     mgr.insert('rmxc-detached', '.rmxc-detached { color: red; }')
     let style = document.createElement('style')
     style.setAttribute('data-rmx-style', 'rmxc-detached')
-    style.textContent = '@layer rmx-test { .rmxc-detached { color: red; } }'
+    style.textContent = '@layer rmx { .rmxc-detached { color: red; } }'
 
     expect(Array.from(mgr.adoptServerStyles([style]))).toEqual([])
     mgr.remove('rmxc-detached')
@@ -278,12 +268,12 @@ describe('createStyleManager', () => {
     mgr.dispose()
   })
 
-  it('does not start transitions when adopting server-rendered styles', async () => {
+  it('does not start transitions when adopting server-rendered styles', () => {
     let host = document.createElement('div')
     let serverStyle = document.createElement('style')
     serverStyle.setAttribute('data-rmx-style', 'rmxc-adopt-transition')
     serverStyle.textContent = `
-      @layer rmx-test.rmxc-adopt-transition {
+      @layer rmx.rmxc-adopt-transition {
         .rmxc-adopt-transition {
           --offset: 8px;
           display: block;
@@ -318,26 +308,21 @@ describe('createStyleManager', () => {
     expect(beforeTransform).toBe('matrix(1, 0, 0, 1, 8, 0)')
     expect(beforeWidth).toBe('18px')
 
-    let transitionRuns: string[] = []
-    el.addEventListener('transitionrun', (event) => {
-      let transition = event as TransitionEvent
-      transitionRuns.push(`${transition.pseudoElement}:${transition.propertyName}`)
-    })
-
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
     mgr.adoptServerStyles([host])
-    await waitForTransitionWindow()
 
+    // Reading computed styles flushes the style change that would create any CSS transitions,
+    // and getAnimations() reports them as soon as they are created.
     expect(getComputedStyle(el, '::before').transform).toBe(beforeTransform)
     expect(getComputedStyle(el, '::before').width).toBe(beforeWidth)
-    expect(transitionRuns).toEqual([])
+    expect(el.getAnimations({ subtree: true })).toEqual([])
 
     host.remove()
     mgr.dispose()
   })
 
   it('adopts server style tags added after manager creation', () => {
-    let mgr = createStyleManager('rmx')
+    let mgr = createStyleManager()
 
     let streamedStyle = document.createElement('style')
     streamedStyle.setAttribute('data-rmx-style', 'rmxc-stream1')
@@ -353,7 +338,7 @@ describe('createStyleManager', () => {
   })
 
   it('deduplicates streamed server style tags by selector identity', () => {
-    let mgr = createStyleManager('rmx')
+    let mgr = createStyleManager()
 
     function appendStreamedStyle() {
       let streamedStyle = document.createElement('style')
@@ -386,7 +371,7 @@ describe('createStyleManager', () => {
   })
 
   it('adopts server style tags in document order', () => {
-    let mgr = createStyleManager('rmx')
+    let mgr = createStyleManager()
     let container = document.createElement('div')
 
     for (let selector of ['rmxc-base', 'rmxc-trigger', 'rmxc-user']) {
@@ -414,7 +399,7 @@ describe('createStyleManager', () => {
 
   it('removes the adopted stylesheet when reset leaves the manager empty', () => {
     let before = document.adoptedStyleSheets.length
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
 
     mgr.insert('rmx-a', '.rmx-a { color: red; }')
     expect(document.adoptedStyleSheets.length).toBe(before + 1)
@@ -427,7 +412,7 @@ describe('createStyleManager', () => {
   })
 
   it('tracks manager generations when stylesheet state is cleared', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
     let initialGeneration = mgr.getGeneration()
 
     mgr.insert('rmx-a', '.rmx-a { color: red; }')
@@ -441,13 +426,13 @@ describe('createStyleManager', () => {
   })
 
   it('adoptServerStyles returns the set of selectors it processed', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
 
     let container = document.createElement('div')
     for (let selector of ['rmxc-first', 'rmxc-second']) {
       let style = document.createElement('style')
       style.setAttribute('data-rmx-style', selector)
-      style.textContent = `@layer rmx-test { .${selector} { color: red; } }`
+      style.textContent = `@layer rmx { .${selector} { color: red; } }`
       container.appendChild(style)
     }
     document.body.appendChild(container)
@@ -459,7 +444,7 @@ describe('createStyleManager', () => {
     // is short-circuited as a duplicate.
     let duplicateStyle = document.createElement('style')
     duplicateStyle.setAttribute('data-rmx-style', 'rmxc-first')
-    duplicateStyle.textContent = '@layer rmx-test { .rmxc-first { color: red; } }'
+    duplicateStyle.textContent = '@layer rmx { .rmxc-first { color: red; } }'
     container.appendChild(duplicateStyle)
 
     let secondAdoption = mgr.adoptServerStyles([container])
@@ -470,7 +455,7 @@ describe('createStyleManager', () => {
   })
 
   it('selectors() iterates the currently-tracked selectors', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
     expect(Array.from(mgr.selectors())).toEqual([])
 
     mgr.insert('rmx-a', '.rmx-a { color: red; }')
@@ -481,14 +466,14 @@ describe('createStyleManager', () => {
   })
 
   it('keeps server-adopted rules across later adoptions (pinning)', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
 
     // First page: adopts A and shared
     let first = document.createElement('div')
     for (let selector of ['rmxc-only-first', 'rmxc-shared']) {
       let style = document.createElement('style')
       style.setAttribute('data-rmx-style', selector)
-      style.textContent = `@layer rmx-test { .${selector} { color: red; } }`
+      style.textContent = `@layer rmx { .${selector} { color: red; } }`
       first.appendChild(style)
     }
     document.body.appendChild(first)
@@ -505,7 +490,7 @@ describe('createStyleManager', () => {
     for (let selector of ['rmxc-only-second', 'rmxc-shared']) {
       let style = document.createElement('style')
       style.setAttribute('data-rmx-style', selector)
-      style.textContent = `@layer rmx-test { .${selector} { color: blue; } }`
+      style.textContent = `@layer rmx { .${selector} { color: blue; } }`
       second.appendChild(style)
     }
     document.body.appendChild(second)
@@ -520,7 +505,7 @@ describe('createStyleManager', () => {
   })
 
   it('pins a client-inserted rule when a server tag for the same selector is adopted', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
 
     // A client-side css mixin inserts first (e.g. transient UI state), then a
     // streamed fragment arrives carrying the same selector.
@@ -529,7 +514,7 @@ describe('createStyleManager', () => {
     let host = document.createElement('div')
     let style = document.createElement('style')
     style.setAttribute('data-rmx-style', 'rmxc-upgrade')
-    style.textContent = '@layer rmx-test { .rmxc-upgrade { color: red; } }'
+    style.textContent = '@layer rmx { .rmxc-upgrade { color: red; } }'
     host.appendChild(style)
     document.body.appendChild(host)
     mgr.adoptServerStyles([host])
@@ -544,7 +529,7 @@ describe('createStyleManager', () => {
   })
 
   it('drops client-only rules when their last ref is removed', () => {
-    let mgr = createStyleManager('rmx-test')
+    let mgr = createStyleManager()
 
     // Dynamic styles mint a new class per value; rules that never came from
     // the server must be released so they cannot accumulate.
@@ -558,9 +543,3 @@ describe('createStyleManager', () => {
     mgr.dispose()
   })
 })
-
-async function waitForTransitionWindow(): Promise<void> {
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-  await new Promise<void>((resolve) => setTimeout(resolve, 120))
-}

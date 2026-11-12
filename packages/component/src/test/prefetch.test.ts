@@ -1,5 +1,5 @@
 import { expect } from '@remix-run/assert'
-import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
+import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import { Frame } from '../runtime/frame.ts'
 import { jsx } from '../runtime/core/vnode.ts'
 import {
@@ -58,14 +58,66 @@ function createViewportLink(href: string, visible = true): HTMLAnchorElement {
   return anchor
 }
 
-function readIntersection(anchor: HTMLAnchorElement): Promise<boolean> {
-  return new Promise((resolve) => {
-    let observer = new IntersectionObserver(([entry]) => {
+const NativeIntersectionObserver = globalThis.IntersectionObserver
+// Each runtime viewport observer's targets, mapped to the last intersection state it delivered.
+const runtimeTargets = new Set<Map<Element, boolean | undefined>>()
+const runtimeTargetsChanged = new EventTarget()
+
+class TrackedIntersectionObserver extends NativeIntersectionObserver {
+  #targets: Map<Element, boolean | undefined>
+
+  constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+    let targets = new Map<Element, boolean | undefined>()
+    super((entries, observer) => {
+      callback(entries, observer)
+      for (let entry of entries) {
+        if (targets.has(entry.target)) targets.set(entry.target, entry.isIntersecting)
+      }
+      runtimeTargetsChanged.dispatchEvent(new Event('change'))
+    }, options)
+    this.#targets = targets
+    runtimeTargets.add(targets)
+  }
+
+  observe(target: Element) {
+    this.#targets.set(target, undefined)
+    super.observe(target)
+  }
+
+  unobserve(target: Element) {
+    this.#targets.delete(target)
+    super.unobserve(target)
+    runtimeTargetsChanged.dispatchEvent(new Event('change'))
+  }
+
+  disconnect() {
+    runtimeTargets.delete(this.#targets)
+    super.disconnect()
+    runtimeTargetsChanged.dispatchEvent(new Event('change'))
+  }
+}
+
+// Reads the anchor's intersection state once every runtime observer watching it has delivered the
+// same state, so the runtime has already reacted to it. Browsers don't reliably deliver a new
+// observer's entries after the runtime's, so a plain observer can't prove that.
+async function readIntersection(anchor: HTMLAnchorElement): Promise<boolean> {
+  let isIntersecting = await new Promise<boolean>((resolve) => {
+    let observer = new NativeIntersectionObserver(([entry]) => {
       observer.disconnect()
-      setTimeout(() => resolve(entry.isIntersecting), 0)
+      resolve(entry.isIntersecting)
     })
     observer.observe(anchor)
   })
+  let settled = () =>
+    Array.from(runtimeTargets).every(
+      (targets) => !targets.has(anchor) || targets.get(anchor) === isIntersecting,
+    )
+  while (!settled()) {
+    await new Promise((resolve) =>
+      runtimeTargetsChanged.addEventListener('change', resolve, { once: true }),
+    )
+  }
+  return isIntersecting
 }
 
 function press(element: Element, pointerType = 'mouse') {
@@ -86,10 +138,6 @@ function movePointer(from: Element, to: Element) {
   to.dispatchEvent(
     new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse', relatedTarget: from }),
   )
-}
-
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function stubViewportIntersections(t: TestContext) {
@@ -174,11 +222,18 @@ function htmlResponse(html: string) {
 }
 
 describe('prefetch', () => {
+  beforeEach(() => {
+    globalThis.IntersectionObserver = TrackedIntersectionObserver
+  })
+
   afterEach(() => {
+    globalThis.IntersectionObserver = NativeIntersectionObserver
+    runtimeTargets.clear()
     document.body.textContent = ''
   })
 
   it('skips intent and viewport prefetching when Save-Data is enabled', async (t) => {
+    let timers = t.useFakeTimers()
     stubConnection(t, { saveData: true, effectiveType: '4g' })
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
@@ -191,7 +246,7 @@ describe('prefetch', () => {
     focused.focus()
     press(pressed, 'touch')
     expect(await readIntersection(visible)).toBe(true)
-    await wait(150)
+    timers.advance(150)
 
     expect(prefetchFrame).not.toHaveBeenCalled()
   })
@@ -247,6 +302,7 @@ describe('prefetch', () => {
   })
 
   it('checks connection settings after the intent delay and allows a later press', async (t) => {
+    let timers = t.useFakeTimers()
     let connection = { saveData: false }
     stubConnection(t, connection)
     let prefetchFrame = mock.fn()
@@ -255,7 +311,7 @@ describe('prefetch', () => {
 
     movePointer(document.body, anchor)
     connection.saveData = true
-    await wait(150)
+    timers.advance(150)
     expect(prefetchFrame).not.toHaveBeenCalled()
 
     connection.saveData = false
@@ -294,6 +350,7 @@ describe('prefetch', () => {
   })
 
   it('prefetches intent links after mouse hover or keyboard focus rests on them', async (t) => {
+    let timers = t.useFakeTimers()
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     let hovered = createIntentLink('/products/hovered')
@@ -301,15 +358,16 @@ describe('prefetch', () => {
 
     hovered.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }))
     expect(prefetchFrame).not.toHaveBeenCalled()
-    await wait(150)
+    timers.advance(150)
     expect(prefetchFrame).toHaveBeenCalledWith(hovered.href)
 
     focused.focus()
-    await wait(150)
+    timers.advance(150)
     expect(prefetchFrame).toHaveBeenCalledWith(focused.href)
   })
 
   it('cancels the prefetch when the pointer leaves before the intent delay', async (t) => {
+    let timers = t.useFakeTimers()
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     let anchor = createIntentLink('/products/shirt')
@@ -318,7 +376,7 @@ describe('prefetch', () => {
     anchor.dispatchEvent(
       new PointerEvent('pointerout', { bubbles: true, relatedTarget: document.body }),
     )
-    await wait(150)
+    timers.advance(150)
 
     expect(prefetchFrame).not.toHaveBeenCalled()
   })
@@ -334,6 +392,7 @@ describe('prefetch', () => {
   })
 
   it('prefetches once across descendants during a hover and again on a later hover', async (t) => {
+    let timers = t.useFakeTimers()
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     let anchor = createIntentLink('/products/shirt')
@@ -342,20 +401,21 @@ describe('prefetch', () => {
     anchor.replaceChildren(first, second)
 
     movePointer(document.body, first)
-    await wait(150)
+    timers.advance(150)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
 
     movePointer(first, second)
-    await wait(150)
+    timers.advance(150)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
 
     movePointer(second, document.body)
     movePointer(document.body, first)
-    await wait(150)
+    timers.advance(150)
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
   })
 
   it('keeps keyboard focus intent when the pointer enters and leaves another link', async (t) => {
+    let timers = t.useFakeTimers()
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     let focused = createIntentLink('/products/focused')
@@ -364,7 +424,7 @@ describe('prefetch', () => {
     focused.focus()
     movePointer(document.body, hovered)
     movePointer(hovered, document.body)
-    await wait(150)
+    timers.advance(150)
 
     expect(document.activeElement).toBe(focused)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
@@ -372,6 +432,7 @@ describe('prefetch', () => {
   })
 
   it('prefetches separate hovered and focused links without replacing either intent', async (t) => {
+    let timers = t.useFakeTimers()
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     let focused = createIntentLink('/products/focused')
@@ -379,7 +440,7 @@ describe('prefetch', () => {
 
     focused.focus()
     movePointer(document.body, hovered)
-    await wait(150)
+    timers.advance(150)
 
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
     expect(prefetchFrame).toHaveBeenCalledWith(focused.href)
@@ -387,6 +448,7 @@ describe('prefetch', () => {
   })
 
   it('keeps hover intent when another link loses focus', async (t) => {
+    let timers = t.useFakeTimers()
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     let focused = createIntentLink('/products/focused')
@@ -395,13 +457,14 @@ describe('prefetch', () => {
     focused.focus()
     movePointer(document.body, hovered)
     focused.blur()
-    await wait(150)
+    timers.advance(150)
 
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
     expect(prefetchFrame).toHaveBeenCalledWith(hovered.href)
   })
 
   it('keeps focus intent when the pointer leaves the same link', async (t) => {
+    let timers = t.useFakeTimers()
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     let anchor = createIntentLink('/products/shirt')
@@ -409,12 +472,13 @@ describe('prefetch', () => {
     movePointer(document.body, anchor)
     anchor.focus()
     movePointer(anchor, document.body)
-    await wait(150)
+    timers.advance(150)
 
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
   })
 
   it('keeps hover intent when the same link loses focus', async (t) => {
+    let timers = t.useFakeTimers()
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     let anchor = createIntentLink('/products/shirt')
@@ -422,27 +486,29 @@ describe('prefetch', () => {
     anchor.focus()
     movePointer(document.body, anchor)
     anchor.blur()
-    await wait(150)
+    timers.advance(150)
 
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
   })
 
   it('does not repeat completed hover prefetch on press or focus', async (t) => {
+    let timers = t.useFakeTimers()
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     let anchor = createIntentLink('/products/shirt')
 
     movePointer(document.body, anchor)
-    await wait(150)
+    timers.advance(150)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
 
     press(anchor)
     anchor.focus()
-    await wait(150)
+    timers.advance(150)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
   })
 
   it('prefetches on an early press without repeating after the hover or focus delay', async (t) => {
+    let timers = t.useFakeTimers()
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     let anchor = createIntentLink('/products/shirt')
@@ -451,11 +517,12 @@ describe('prefetch', () => {
     press(anchor)
     anchor.focus()
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    await wait(150)
+    timers.advance(150)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
   })
 
   it('prefetches touch and pen presses immediately without repeating on focus', async (t) => {
+    let timers = t.useFakeTimers()
     let prefetchFrame = mock.fn()
     startTestPrefetching(t, prefetchFrame)
     let touched = createIntentLink('/products/touched')
@@ -464,17 +531,18 @@ describe('prefetch', () => {
     press(touched, 'touch')
     touched.focus()
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    await wait(150)
+    timers.advance(150)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
 
     press(penned, 'pen')
     penned.focus()
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
-    await wait(150)
+    timers.advance(150)
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
   })
 
-  it('cancels pending hover and focus intent when disposed', async () => {
+  it('cancels pending hover and focus intent when disposed', async (t) => {
+    let timers = t.useFakeTimers()
     let prefetchFrame = mock.fn()
     let controller = new AbortController()
     startPrefetching(controller.signal, prefetchFrame)
@@ -485,7 +553,7 @@ describe('prefetch', () => {
     focused.focus()
     controller.abort()
     press(hovered)
-    await wait(150)
+    timers.advance(150)
 
     expect(prefetchFrame).not.toHaveBeenCalled()
   })
@@ -524,6 +592,7 @@ describe('prefetch', () => {
   it('prefetches named-frame intent links with their target and source override', async (t) => {
     let prefetchFrame = mock.fn()
     await startNamedFramePrefetching(t, prefetchFrame)
+    let timers = t.useFakeTimers()
     let anchor = createIntentLink('/products/shirt')
     anchor.setAttribute('data-rmx-target', 'details')
     press(anchor)
@@ -533,7 +602,7 @@ describe('prefetch', () => {
     overridden.setAttribute('data-rmx-target', 'details')
     overridden.setAttribute('data-rmx-src', './partials/hat?size=small#details')
     movePointer(document.body, overridden)
-    await wait(150)
+    timers.advance(150)
     expect(prefetchFrame).toHaveBeenCalledWith(
       new URL('./partials/hat?size=small', document.baseURI).href,
       { target: 'details' },
@@ -725,6 +794,7 @@ describe('prefetch', () => {
     })
 
     it('does not repeat on reentry or fragment changes but observes changed destinations', async (t) => {
+      let timers = t.useFakeTimers()
       let prefetchFrame = mock.fn()
       let anchor = createViewportLink('/products/shirt#details')
       startTestPrefetching(t, prefetchFrame)
@@ -738,7 +808,7 @@ describe('prefetch', () => {
       expect(await readIntersection(anchor)).toBe(true)
       press(anchor)
       anchor.focus()
-      await wait(150)
+      timers.advance(150)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
 
       anchor.hash = 'reviews'
@@ -811,6 +881,7 @@ describe('prefetch', () => {
     })
 
     it('does not repeat a viewport prefetch after changing from pending intent', async (t) => {
+      let timers = t.useFakeTimers()
       let prefetchFrame = mock.fn()
       let anchor = createViewportLink('/products/shirt')
       anchor.setAttribute('data-rmx-prefetch', 'intent')
@@ -820,7 +891,7 @@ describe('prefetch', () => {
       anchor.setAttribute('data-rmx-prefetch', 'viewport')
       expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      await wait(150)
+      timers.advance(150)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
     })
 

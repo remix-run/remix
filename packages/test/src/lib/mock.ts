@@ -57,6 +57,8 @@ const defineProperty = Object.defineProperty
 const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor
 const isSafeInteger = Number.isSafeInteger
 const setProperty = Reflect.set
+const deleteProperty = Reflect.deleteProperty
+const getProperty = Reflect.get
 
 // A required implementation preserves generic signatures during type inference.
 function createMockFn<T extends (...args: any[]) => any>(impl: T): MockFunction<T>
@@ -131,13 +133,60 @@ interface MethodRestoration {
   object: object
   method: PropertyKey
   original: unknown
-  descriptor: PropertyDescriptor | undefined
   restored: boolean
+  restoreOriginal(): void
 }
 
-const methodRestorations = new WeakMap<object, MethodRestoration>()
+// Worker bootstrap and transformed test modules can load separate copies.
+const restorationsKey = Symbol.for('remix.test.methodRestorations')
+const realm = globalThis as typeof globalThis & {
+  [restorationsKey]?: WeakMap<object, MethodRestoration>
+}
+const methodRestorations = (realm[restorationsKey] ??= new WeakMap())
 const getMethodRestoration = methodRestorations.get.bind(methodRestorations)
 const setMethodRestoration = methodRestorations.set.bind(methodRestorations)
+
+function trackRestoration(value: object, restoration: MethodRestoration): () => void {
+  setMethodRestoration(value, restoration)
+  return () => {
+    let target = restoration
+    // Skip replacements that have already been restored beneath a newer spy.
+    while (typeof target.original === 'function') {
+      let previous = getMethodRestoration(target.original)
+      if (
+        !previous?.restored ||
+        previous.object !== target.object ||
+        previous.method !== target.method
+      )
+        break
+      target = previous
+    }
+    target.restoreOriginal()
+    restoration.restored = true
+  }
+}
+
+export function replaceProperty(object: object, method: PropertyKey, value: object): () => void {
+  let original = getProperty(object, method)
+  let descriptor = getOwnPropertyDescriptor(object, method)
+  defineProperty(object, method, {
+    configurable: descriptor?.configurable ?? true,
+    enumerable: descriptor?.enumerable ?? true,
+    writable: descriptor && 'writable' in descriptor ? descriptor.writable : true,
+    value,
+  })
+  return trackRestoration(value, {
+    object,
+    method,
+    original,
+    restored: false,
+    restoreOriginal() {
+      if (descriptor) defineProperty(object, method, descriptor)
+      else if (!deleteProperty(object, method))
+        throw new TypeError('Unable to restore the property')
+    },
+  })
+}
 
 function createMethodMock<T extends object, K extends keyof T>(
   obj: T,
@@ -149,32 +198,18 @@ function createMethodMock<T extends object, K extends keyof T>(
   // Initial overrides retain the existing permissive behavior, including absent methods.
   let mockFn = createMockFn((impl ?? original) as Method<T, K>)
   if (!setProperty(obj, method, mockFn)) throw new TypeError('Unable to mock the method')
-  let restoration: MethodRestoration = {
+  mockFn.mock.restore = trackRestoration(mockFn, {
     object: obj,
     method,
     original,
-    descriptor,
     restored: false,
-  }
-  setMethodRestoration(mockFn, restoration)
-  mockFn.mock.restore = () => {
-    let target = restoration
-    // A nested mock must not reinstall a spy that was manually restored earlier.
-    while (typeof target.original === 'function') {
-      let previous = getMethodRestoration(target.original)
-      if (!previous?.restored || previous.object !== obj || previous.method !== method) break
-      target = previous
-    }
-    if (target.descriptor) {
-      defineProperty(obj, method, target.descriptor)
-    }
-    if (!target.descriptor || !('value' in target.descriptor)) {
-      if (!setProperty(obj, method, target.original)) {
-        throw new TypeError('Unable to restore the method')
+    restoreOriginal() {
+      if (descriptor) defineProperty(obj, method, descriptor)
+      if (!descriptor || !('value' in descriptor)) {
+        if (!setProperty(obj, method, original)) throw new TypeError('Unable to restore the method')
       }
-    }
-    restoration.restored = true
-  }
+    },
+  })
   return mockFn
 }
 
