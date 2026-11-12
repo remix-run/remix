@@ -1,4 +1,5 @@
 import { getNonceManager } from './nonce.ts'
+import { markServerRenderedNodes } from './diff-dom.ts'
 import { createFrame, setAppFrames } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
@@ -133,6 +134,7 @@ async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): 
  * @returns The running application runtime.
  */
 export function run(init: RunInit): AppRuntime {
+  markServerRenderedNodes(document.childNodes)
   getNonceManager()
   let styleManager = createStyleManager()
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()

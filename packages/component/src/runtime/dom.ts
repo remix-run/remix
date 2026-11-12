@@ -1559,11 +1559,17 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
   /** The `translate` HTML attribute. */
   translate?: Trackable<TranslateValue | undefined>
   /**
-   * Preserve the current element attributes and children during frame DOM reconciliation.
+   * Preserve live attributes and children during frame reconciliation.
    *
    * Server rendering and initial hydration still process this element and its children. On later
-   * frame reloads, a matched element with `data-rmx-preserve-dom` keeps its live DOM so custom
-   * elements and imperative widgets can own their subtree.
+   * frame reloads, an incoming matched element with this attribute keeps its live attributes and
+   * children so custom elements and imperative widgets can own their subtree.
+   *
+   * Client-only marked hosts created during or after hydration survive omission while their parent
+   * survives. Elements present when `run()` starts or supplied by later HTML remain removable by
+   * server omission. Matching a client-only host to incoming HTML also gives the server control of
+   * its lifetime. Use a stable `data-rmx-key` to disambiguate hosts from same-tag server siblings;
+   * incoming HTML with that key and tag can reclaim a host with or without this attribute.
    */
   'data-rmx-preserve-dom'?: Trackable<boolean | '' | undefined>
 

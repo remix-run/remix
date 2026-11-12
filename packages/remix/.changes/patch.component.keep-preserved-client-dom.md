@@ -1,1 +1,1 @@
-Frame reloads now keep client-created elements marked with `data-rmx-preserve-dom`, such as a portal host appended to `<body>`, instead of removing and re-adding them, so open overlays keep focus, transitions, and scroll position.
+Frame reloads now retain client-only elements marked with `data-rmx-preserve-dom`, allowing portal hosts created during or after hydration to keep focus, transitions, and scroll position. Server-rendered elements remain removable by omission. A client-only host matched by later server HTML also becomes removable by omission.

@@ -1249,11 +1249,18 @@ Use `data-rmx-preserve-dom` on the smallest element whose live DOM should belong
 ```
 
 - The runtime still renders the element's children during server rendering and hydrates any initial client entries inside it. The attribute only affects later frame reloads. When incoming frame HTML has `data-rmx-preserve-dom` on a matched element, the runtime keeps that element's current attributes and children instead of applying incoming changes below it.
-- A current element with `data-rmx-preserve-dom` that the incoming HTML doesn't match is kept, not removed. This is how client-created DOM, such as a portal host appended to `<body>`, survives frame reloads without being detached, which would blur focus, restart CSS transitions, and reset scroll. Elements without the attribute are still removed.
-- Unmatched preserved elements never move. Matched siblings update around them, and new siblings are inserted before any that trail their parent. An unkeyed preserved element pairs only with an incoming preserved element, so an unrelated incoming sibling can't take it over.
-- A preserved element is removed with its parent when the parent isn't matched, and nothing recreates it after client code removes it. Frame reloads only keep it. Client code owns its lifetime.
-- Add `data-rmx-key` when the element can move among siblings, so reloads match the same live element before falling back to matching by position.
+- Client-only elements marked with `data-rmx-preserve-dom`, such as portal hosts appended to `<body>` during or after hydration, survive frame reloads that omit them. They stay connected, preserving focus, transitions, and scroll position. New siblings are inserted before trailing retained hosts.
+- Elements present when `run()` starts are treated as server-rendered. These elements, and elements supplied by later frame HTML, keep their existing server-controlled lifetime: omitting them removes them and disposes any client entries inside. Removing the preservation attribute from a matched server element resumes normal attribute and child updates, including for unkeyed elements.
+- An unkeyed client-only host can match an incoming preserved element of the same tag. A keyed host can match incoming HTML with the same `data-rmx-key` and tag, with or without the preservation attribute. Once matched, its lifetime belongs to the server: a later response can remove it by omission. Use stable keys when client hosts and server widgets share a tag, or when elements can move among siblings.
+- A client-only host is removed with its parent when the parent isn't matched, and nothing recreates it after client code removes it. Keep hosts under a stable parent and remove them when their client owner is done.
 - Avoid wrapping Remix-owned UI that should keep receiving server-driven frame updates. A client entry inside `data-rmx-preserve-dom` hydrates from the initial HTML, but later frame reloads won't patch new server-rendered children or props through the preserved element. Put the client entry outside the preserved element when it needs future frame data, or put `data-rmx-preserve-dom` inside the client entry around only the imperative DOM.
+
+To return an existing keyed element to server control, change the server response while keeping its key and tag:
+
+```diff
+-<div data-rmx-key="widget" data-rmx-preserve-dom></div>
++<div data-rmx-key="widget">Updated server content</div>
+```
 
 ### Preserving Client-Owned Attributes
 

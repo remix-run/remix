@@ -408,6 +408,95 @@ describe('run', () => {
     expect(document.getElementById('next-page')?.textContent).toBe('Next page')
   })
 
+  it('removes initially server-rendered preserved elements and disposes their client entries', async (t) => {
+    let dispose = mock.fn()
+    let Entry = createDisposableEntry('/preserved.js#Entry', dispose)
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <div data-rmx-preserve-dom>
+          <Entry />
+        </div>,
+      ),
+    )
+    let app = run({ loadModule: () => Entry, resolveFrame: () => renderDocumentContent('Next') })
+    t.after(() => app.dispose())
+    await app.ready()
+    expect(document.querySelector('section')?.textContent).toBe('Entry')
+    expect(dispose).toHaveBeenCalledTimes(0)
+
+    await app.frames.top.reload()
+
+    expect(document.body.innerHTML).toBe('<main>Next</main>')
+    expect(dispose).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a client-only host created during hydration across repeated reloads', async (t) => {
+    let [inserted, resolveInserted] = withResolvers<HTMLDivElement>()
+    let Entry = clientEntry('/portal.js#Entry', function Entry(handle: Handle) {
+      handle.queueTask(() => {
+        let host = document.createElement('div')
+        host.setAttribute('data-rmx-preserve-dom', '')
+        document.body.append(host)
+        resolveInserted(host)
+      })
+      return () => <p>Entry</p>
+    })
+    document.body.innerHTML = await drain(renderToStream(<Entry />))
+    let app = run({ loadModule: () => Entry, resolveFrame: () => renderDocumentContent('Next') })
+    t.after(() => app.dispose())
+    await app.ready()
+    let host = await inserted
+
+    await app.frames.top.reload()
+    await app.frames.top.reload()
+
+    expect(document.body.lastElementChild).toBe(host)
+    expect(document.querySelector('main')?.textContent).toBe('Next')
+  })
+
+  it('keeps an unkeyed server widget beside a same-tag client host on unchanged reloads', async (t) => {
+    let dispose = mock.fn()
+    let Entry = createDisposableEntry('/widget.js#Entry', dispose)
+    let content = (
+      <>
+        <main>Page</main>
+        <div data-rmx-preserve-dom>
+          <Entry />
+        </div>
+      </>
+    )
+    document.body.innerHTML = await drain(renderToStream(content))
+    let html = await drainWithProtocol(
+      renderToStream(
+        <html>
+          <head />
+          <body>{content}</body>
+        </html>,
+      ),
+    )
+    let app = run({ loadModule: () => Entry, resolveFrame: () => html })
+    t.after(() => app.dispose())
+    await app.ready()
+    let [main, widget] = Array.from(document.body.children)
+    let entry = widget.firstElementChild
+    let host = document.createElement('div')
+    host.setAttribute('data-rmx-preserve-dom', '')
+    document.body.append(host)
+    let records: MutationRecord[] = []
+    let observer = new MutationObserver((batch) => records.push(...batch))
+    observer.observe(document.body, { childList: true, subtree: true })
+    t.after(() => observer.disconnect())
+
+    await app.frames.top.reload()
+    await app.frames.top.reload()
+
+    expect(Array.from(document.body.children)).toEqual([main, widget, host])
+    expect(widget.firstElementChild).toBe(entry)
+    expect(dispose).toHaveBeenCalledTimes(0)
+    records.push(...observer.takeRecords())
+    expect(records).toEqual([])
+  })
+
   it('keeps client-created preserved elements, and their focus, when the top frame reloads', async (t) => {
     let { app } = await setupReloadBodyTest(t)
     let host = document.createElement('div')
@@ -424,7 +513,7 @@ describe('run', () => {
     app.frames.top.src = '/saved'
 
     await app.frames.top.reload()
-    await Promise.resolve()
+    records.push(...observer.takeRecords())
 
     expect(main?.textContent).toBe('Saved')
     expect(Array.from(document.body.children)).toEqual([main, host])
@@ -441,9 +530,6 @@ describe('run', () => {
         resolveFrame: () => '<p id="frame-content">Initial</p>',
       }),
     )
-    let host = document.createElement('div')
-    host.setAttribute('data-rmx-preserve-dom', '')
-    document.body.append(host)
     t.mock.method(
       globalThis,
       'fetch',
@@ -465,6 +551,9 @@ describe('run', () => {
     let app = run({ loadModule: mock.fn() })
     t.after(() => app.dispose())
     await app.ready()
+    let host = document.createElement('div')
+    host.setAttribute('data-rmx-preserve-dom', '')
+    document.body.append(host)
     let removed: Node[] = []
     let observer = new MutationObserver((batch) =>
       batch.forEach((record) => removed.push(...record.removedNodes)),
@@ -473,11 +562,39 @@ describe('run', () => {
     t.after(() => observer.disconnect())
 
     await app.frames.top.reload()
-    await Promise.resolve()
+    observer.takeRecords().forEach((record) => removed.push(...record.removedNodes))
 
     expect(document.getElementById('frame-content')?.textContent).toBe('Fresh')
     expect(document.body.lastElementChild).toBe(host)
     expect(removed).not.toContain(host)
+  })
+
+  it('removes preserved HTML from a later named-frame response while keeping client-only hosts', async (t) => {
+    document.body.innerHTML = await drain(
+      renderToStream(<Frame name="details" src="/frame" />, {
+        resolveFrame: () => '<section>Initial</section>',
+      }),
+    )
+    let html = '<section><div data-rmx-preserve-dom>Server widget</div></section>'
+    let app = run({ loadModule: mock.fn(), resolveFrame: () => html })
+    t.after(() => app.dispose())
+    await app.ready()
+    let frame = app.frames.get('details')
+    invariant(frame)
+    await frame.reload()
+    let section = document.querySelector('section')
+    let widget = section?.firstElementChild
+    invariant(section && widget)
+    let host = document.createElement('div')
+    host.setAttribute('data-rmx-preserve-dom', '')
+    section.append(host)
+    html = '<section><p>Next</p></section>'
+
+    await frame.reload()
+
+    expect(widget.isConnected).toBe(false)
+    expect(section.lastElementChild).toBe(host)
+    expect(section.querySelector('p')?.textContent).toBe('Next')
   })
 
   it('retains the requested source without retaining the previous method or body', async (t) => {
