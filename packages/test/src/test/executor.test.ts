@@ -38,6 +38,85 @@ interface TestFixture extends RunnableOptions {
 type TestSuitesGlobal = typeof globalThis & { __testSuites?: SuiteFixture[] }
 
 describe('runTests lifecycle hook failures', () => {
+  it('restores property and accessor mocks after test and cleanup failures and continues', async () => {
+    let target = {
+      value: 1,
+      get accessor() {
+        return 1
+      },
+      get late() {
+        return 1
+      },
+    }
+    let descriptors = Object.getOwnPropertyDescriptors(target)
+    let order: string[] = []
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        afterEach: [
+          {
+            fn() {
+              order.push('afterEach')
+            },
+          },
+        ],
+        tests: [
+          {
+            name: 'failed test',
+            fn(t) {
+              t.after(() => {
+                order.push('first cleanup')
+                throw new Error('cleanup failed')
+              })
+              t.mock.property(target, 'value', 2)
+              t.mock.getter(target, 'accessor', () => 2)
+              t.after(() => {
+                order.push('second cleanup')
+                t.mock.getter(target, 'late', () => 2)
+              })
+              throw new Error('test failed')
+            },
+          },
+          {
+            name: 'next test',
+            fn() {
+              assert.deepEqual(Object.getOwnPropertyDescriptors(target), descriptors)
+            },
+          },
+        ],
+      },
+    ])
+    assert.equal(results.failed, 1)
+    assert.equal(results.passed, 1)
+    assert.match(
+      results.tests[0].error?.message ?? '',
+      /test failed\ncleanup failed: cleanup failed/,
+    )
+    assert.deepEqual(order, ['first cleanup', 'second cleanup', 'afterEach', 'afterEach'])
+  })
+
+  it('attempts other mock restorations when one descriptor can no longer be restored', async () => {
+    let target = { first: 1, second: 2 }
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        tests: [
+          {
+            name: 'failed restore',
+            fn(t) {
+              t.mock.property(target, 'first', 3)
+              t.mock.property(target, 'second', 4)
+              Object.defineProperty(target, 'second', { configurable: false })
+            },
+          },
+        ],
+      },
+    ])
+    assert.equal(results.failed, 1)
+    assert.equal(target.first, 1)
+    assert.match(results.tests[0].error?.message ?? '', /cleanup failed/)
+  })
+
   it('reports cleanup errors with cyclic causes without recursing indefinitely', async () => {
     let error = new Error('cyclic cleanup failure')
     error.cause = error
