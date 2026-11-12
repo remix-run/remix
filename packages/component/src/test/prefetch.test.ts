@@ -1897,7 +1897,8 @@ describe('defaultPrefetch overrides', () => {
           <link rel="stylesheet" href="http://[">
           <link id="responsive" rel="preload" as="image" imagesrcset="hero.jpg 1x, hero@2x.jpg 2x"
             imagesizes="100vw" media="not all">
-          <link rel="preload" as="image" imagesrcset="http://[ 1x">
+          <link id="unparsed-responsive" rel="preload" as="image" imagesrcset="http://[ 1x">
+          <link rel="preload" as="image" imagesrcset="   ">
           <link id="data" rel="preload" as="fetch" href="data.json">
           <template><link id="captions" rel="preload" as="track" href="captions.vtt"></template>`),
       frame(_prefetchReferences, value) {
@@ -1910,12 +1911,14 @@ describe('defaultPrefetch overrides', () => {
       'script',
       'style',
       'responsive',
+      'unparsed-responsive',
       'data',
       'captions',
     ])
     expect(assets[0].getAttribute('src')).toBe('entry.js')
     expect(assets[2].hasAttribute('href')).toBe(false)
     expect(assets[2].getAttribute('media')).toBe('not all')
+    expect(assets[3].getAttribute('imagesrcset')).toBe('http://[ 1x')
     expect(fragment.querySelectorAll('script[src]')).toHaveLength(5)
     expect(fragment.querySelector('link[rel="stylesheet"]:not([href])')).not.toBe(null)
   })
@@ -2207,7 +2210,7 @@ describe('defaultPrefetch overrides', () => {
     expect(frame).toHaveBeenCalledTimes(1)
   })
 
-  it('allows applications to preload responsive Images and fetch their own assets', async (t) => {
+  it('allows applications to handle responsive image preloads and fetch their own assets', async (t) => {
     startTestPrefetching(t)
     let small =
       'data:image/svg+xml,' +
@@ -2221,19 +2224,20 @@ describe('defaultPrefetch overrides', () => {
 
     await defaultPrefetch('/page', undefined, {
       fetch: async () =>
-        htmlResponse(`<img data-prefetch src="${small}"
-        srcset="${small} 1x, ${large} 2x" sizes="100vw" referrerpolicy="no-referrer">`),
-      async frame(_prefetchReferences, { fragment, signal }) {
-        let source = fragment.querySelector('img')
-        if (!source) throw new Error('Expected an image')
+        htmlResponse(`<link rel="preload" as="image" href="${small}"
+        imagesrcset="${small} 1x, ${large} 2x" imagesizes="100vw" referrerpolicy="no-referrer">`),
+      async frame(prefetchReferences, { assets, signal }) {
+        let source = assets[0]
+        if (!(source instanceof HTMLLinkElement)) throw new Error('Expected an image preload')
         let image = new Image()
         image.fetchPriority = 'low'
         image.referrerPolicy = source.referrerPolicy
-        image.sizes = source.sizes
-        image.srcset = source.srcset
-        image.src = source.getAttribute('src') ?? ''
+        image.sizes = source.imageSizes
+        image.srcset = source.imageSrcset
+        image.src = source.getAttribute('href') ?? ''
         images.push(image)
         await Promise.all([
+          prefetchReferences(),
           image.decode(),
           fetch('data:text/plain,custom-asset', { signal }).then(async (response) => {
             fetched = await response.text()
@@ -2500,7 +2504,7 @@ describe('default frame prefetch', () => {
     expect(hints.every((link) => !link.isConnected)).toBe(true)
   })
 
-  it('prefetches responsive image preloads while skipping active images and unmatched media', async (t) => {
+  it('skips responsive image preloads, active images, and unmatched media', async (t) => {
     stubLinkPrefetchSupport(t, true)
     let active = document.createElement('link')
     active.rel = 'preload'
@@ -2522,75 +2526,11 @@ describe('default frame prefetch', () => {
     await prefetch(new URL('/page', location.href).href)
 
     expect(hints.map((link) => link.getAttribute('href'))).toEqual([
-      new URL('/images/fallback.jpg', location.href).href,
-      null,
       new URL('/images/screen.jpg', location.href).href,
     ])
     expect(hints[0].as).toBe('image')
-    expect(hints[0].rel).toBe('preload')
-    expect(hints[0].imageSrcset).toBe(
-      `${new URL('/images/small.jpg', location.href).href} 400w, ${new URL('/images/large.jpg', location.href).href} 1200w`,
-    )
-    expect(hints[0].imageSizes).toBe('100vw')
-    expect(hints[1].imageSrcset).toBe(`${new URL('/images/responsive.jpg', location.href).href} 1x`)
+    expect(hints[0].rel).toBe('prefetch')
     expect(hints.every((link) => link.fetchPriority === 'low')).toBe(true)
-  })
-
-  it('lets the browser select a responsive preload against the destination base URL and sizes', async (t) => {
-    let baseURL = new URL(`/prefetch-responsive-${crypto.randomUUID()}/`, location.href)
-    let selected = new URL('small,image.png', baseURL).href
-    let requested = Promise.withResolvers<string>()
-    let observer = new PerformanceObserver((list) => {
-      for (let entry of list.getEntries()) {
-        if (entry.name.startsWith(baseURL.href)) requested.resolve(entry.name)
-      }
-    })
-    observer.observe({ type: 'resource' })
-    t.after(() => observer.disconnect())
-    let { prefetch } = createPrefetch(t)
-    await prefetch(new URL('/page', location.href).href, undefined, {
-      fetch: async () =>
-        htmlResponse(`<base href="${baseURL.href}">
-          <link rel="preload" as="image" imagesrcset="small,image.png 16w, large.png 16384w"
-            imagesizes="1px" fetchpriority="high">`),
-    })
-    expect(await requested.promise).toBe(selected)
-  })
-
-  it('deduplicates responsive declarations by source set and sizes and removes pending preloads on cancellation', async (t) => {
-    let idle = stubIdleCallbacks(t)
-    let hints: HTMLLinkElement[] = []
-    let linked = Promise.withResolvers<void>()
-    let observer = new MutationObserver((records) => {
-      for (let record of records) {
-        for (let node of record.addedNodes) {
-          if (node instanceof HTMLLinkElement && node.rel === 'preload') {
-            hints.push(node)
-            if (hints.length === 3) linked.resolve()
-          }
-        }
-      }
-    })
-    observer.observe(document.head, { childList: true })
-    t.after(() => observer.disconnect())
-    let { prefetch, controller } = createPrefetch(t)
-    let ready = prefetch(new URL('/page', location.href).href, undefined, {
-      fetch: async () =>
-        htmlResponse(`<base href="/responsive/">
-          <link rel="preload" as="image" imagesrcset="one.png 16w, two.png 32w" imagesizes="1px">
-          <link rel="preload" as="image" imagesrcset="one.png 16w, two.png 32w" imagesizes="1px">
-          <link rel="preload" as="image" imagesrcset="one.png 16w, two.png 32w" imagesizes="2px">
-          <link rel="preload" as="image" imagesrcset="three.png 1x">`),
-    })
-    await idle.waitFor()
-    idle.flush()
-    await linked.promise
-    expect(hints).toHaveLength(3)
-    expect(hints.map((link) => link.imageSizes)).toEqual(['1px', '2px', ''])
-    expect(hints[2].imageSrcset).toBe(`${new URL('/responsive/three.png', location.href).href} 1x`)
-    controller.abort()
-    await ready
-    expect(hints.every((link) => !link.isConnected)).toBe(true)
   })
 
   it('prefetches explicit font preload URLs, honoring media, active assets, and CORS', async (t) => {

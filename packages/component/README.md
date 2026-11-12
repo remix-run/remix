@@ -1386,18 +1386,12 @@ Add `data-rmx-prefetch="intent"` to a link to start loading its page when the vi
 - Prefetching uses low fetch priority and sends `X-Remix-Prefetch: true` alongside the frame navigation headers, including `X-Remix-Target` for named frames. Servers can recognize speculative HTML requests and return `503` under load; Remix skips unsuccessful responses.
 - Remix skips links with `data-rmx-document`, `download`, or a `target` other than `_self`, and named-frame links whose frame isn't mounted. Automatic prefetching is also skipped when the browser reports Save-Data or a `slow-2g` or `2g` connection. Imperative `prefetch()` calls ignore that check.
 
-Remix waits for browser idle time before parsing the downloaded HTML and finding the page's scripts, stylesheets, module preloads, and explicit preloads, including those inside nested frames. Supported preload destinations are `fetch`, `font`, `image`, `script`, `style`, and `track`. Declarations need a usable HTTP(S) URL; responsive image preloads can instead supply their sources through `imagesrcset` without an `href`. Missing, blank, malformed, and non-HTTP(S) sources are omitted from discovery.
+Remix waits for browser idle time before parsing the downloaded HTML and finding the page's scripts, stylesheets, module preloads, and explicit preloads, including those inside nested frames. Supported preload destinations are `fetch`, `font`, `image`, `script`, `style`, and `track`. Declarations need a usable HTTP(S) URL; missing, blank, malformed, and non-HTTP(S) sources are omitted from discovery. Responsive image preloads with nonempty `imagesrcset` are also exposed unchanged to the `frame` hook, even without an `href`. Remix does not parse or validate their source sets.
 
-Remix adds low-priority `<link rel="prefetch">` hints for assets the current page doesn't already have. Responsive image declarations use `<link rel="preload" as="image" fetchpriority="low">`, preserving `imagesrcset`, `imagesizes`, `media`, and request attributes so the browser selects the candidate for the current viewport. Candidate URLs resolve against the destination HTML's base URL. Low-priority preload starts more eagerly than native prefetch. Preloads whose `media` doesn't match are skipped. Idle callbacks use a one-second timeout so busy pages can still make progress; browsers without `requestIdleCallback` yield through timers instead. These hints don't run scripts, apply styles, or follow module imports. Declare important images and fonts on the destination page to include them:
+Remix adds low-priority `<link rel="prefetch">` hints for assets the current page doesn't already have. Responsive image preloads are skipped, including their fallback `href`; applications can handle them in a custom `frame` hook. Preloads whose `media` doesn't match are also skipped. Idle callbacks use a one-second timeout so busy pages can still make progress; browsers without `requestIdleCallback` yield through timers instead. These hints don't run scripts, apply styles, or follow module imports. Declare important nonresponsive images and fonts on the destination page to include them in default prefetching:
 
 ```html
 <link rel="preload" as="image" href="/images/product-hero.jpg" />
-<link
-  rel="preload"
-  as="image"
-  imagesrcset="/images/hero-small.jpg 400w, /images/hero-large.jpg 1200w"
-  imagesizes="100vw"
-/>
 <link rel="preload" as="font" href="/fonts/body.woff2" type="font/woff2" crossorigin />
 ```
 
@@ -1437,7 +1431,12 @@ run({
         return fetch(url, init)
       },
       async frame(prefetchReferences, { fragment, assets, frames, baseURL, signal }) {
-        let images = fragment.querySelectorAll('img[data-prefetch]')
+        let images = [
+          ...fragment.querySelectorAll('img[data-prefetch]'),
+          ...assets.filter(
+            (element) => element instanceof HTMLLinkElement && element.as === 'image',
+          ),
+        ]
         let selectedAssets = assets.filter(
           (element) => !(element instanceof HTMLLinkElement && element.as === 'image'),
         )
@@ -1451,7 +1450,7 @@ run({
 })
 ```
 
-`prefetchImages` is an application helper that creates and retains its own `Image` instances. It can preserve `srcset`, `sizes`, CORS, and referrer settings, normalize relative URLs against `baseURL`, await `decode()`, and use the app's own queue and cancellation policy. The hook can also make its own `fetch()` calls.
+`prefetchImages` is an application helper that creates and retains its own `Image` instances. It can read `srcset` and `sizes` from images or `imagesrcset` and `imagesizes` from preload links, preserve CORS and referrer settings, normalize relative URLs against `baseURL`, await `decode()`, and use the app's own queue and cancellation policy. The hook can also make its own `fetch()` calls.
 
 The `fetch` override receives a prepared same-origin `GET` with frame headers, `X-Remix-Prefetch: true`, low priority, and an abort signal. Forward `init` to preserve those settings. It can wait for an application queue, retry, or return a cached response. Remix skips non-HTML and unsuccessful responses, including `503`; automatic retry and `Retry-After` handling belong to the override.
 
@@ -1463,7 +1462,7 @@ Shared work continues while another caller needs it, so `context.element` can be
 
 The `frame` override runs independently for each successfully parsed response, including selected nested requests. Its context contains `src`, `target`, `element`, the consumed `response`, the inert `fragment`, `baseURL`, `signal`, and the original discovered `assets` and all same-origin `frames`. Asset discovery includes usable sources inside nested templates, responsive image preload declarations, and declarations with unmatched media. Original attributes are preserved; incomplete declarations remain in `fragment`. Reading URL attributes such as `src` and `href` and resolving them against `baseURL` avoids resolving them against the current document. Remix never mounts the fragment.
 
-`prefetchReferences()` delegates discovered assets. Omitted `assets` retains that default; `assets: []` skips native asset work. Omitted `frames` starts no nested-source requests. Pass `{ frames }` or a selected frame array explicitly to opt into those fetches; `frames: []` also skips them. Assets can include supported elements from the original fragment or its templates, such as a selected nonresponsive `<img src>`. Unsupported and foreign elements are ignored. Native hints don't evaluate scripts. Responsive `<link rel="preload" as="image">` declarations use low-priority preload hints; ordinary responsive `<img>` elements require an application helper. Nested requests use the same overrides.
+`prefetchReferences()` delegates discovered assets. Omitted `assets` retains that default; `assets: []` skips native asset work. Omitted `frames` starts no nested-source requests. Pass `{ frames }` or a selected frame array explicitly to opt into those fetches; `frames: []` also skips them. Assets can include supported elements from the original fragment or its templates, such as a selected nonresponsive `<img src>`. Unsupported and foreign elements are ignored. Native hints don't evaluate scripts. Responsive `<link rel="preload" as="image">` declarations and responsive `<img>` elements require application-managed loading; passing them to `prefetchReferences()` also skips them. Nested requests use the same overrides.
 
 When a `frame` override is present, returning or throwing without delegating skips Remix's asset and nested-frame work. The continuation accepts calls until the hook settles and becomes harmless after cancellation. Repeated delegations don't repeat the same references within that frame. `defaultPrefetch()` waits for the hook and delegated work, even if the hook doesn't return the continuation's promise. Failures finish without affecting navigation.
 

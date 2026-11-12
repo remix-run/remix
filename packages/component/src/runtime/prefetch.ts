@@ -61,7 +61,10 @@ export interface PrefetchFrameContext extends PrefetchContext {
   response: Response
   /** Inert HTML fragment, including templates; it is never mounted by Remix. */
   fragment: DocumentFragment
-  /** Original script and link declarations with usable HTTP(S) sources, including inside templates. */
+  /**
+   * Original script and link declarations with usable HTTP(S) sources, including inside templates.
+   * Responsive image preloads with nonempty `imagesrcset` are exposed unchanged for custom loading.
+   */
   assets: readonly Element[]
   /** All discovered same-origin nested frame requests, resolved against `baseURL`. */
   frames: readonly PrefetchFrameReference[]
@@ -85,7 +88,8 @@ export interface DefaultPrefetchOverrides {
    * Handles each parsed response. Call `prefetchReferences()` to prefetch discovered assets,
    * or pass selected arrays. Omitted assets use discovered defaults; omitted frames are not fetched.
    * Pass `frames` explicitly to prefetch nested sources. Returning without delegating skips Remix's
-   * work. The hook may perform and await its own prefetching instead.
+   * work. Responsive image declarations are skipped by native hints; the hook may perform and
+   * await its own image loading or other prefetching instead.
    *
    * @param prefetchReferences Starts selected default work while the hook is active.
    * @param context Parsed HTML, source elements, frame references, and cancellation context.
@@ -146,7 +150,7 @@ export function defaultPrefetch(
 /**
  * Prefetches frame content so a later navigation can reuse the response. By default this
  * fetches HTML and discovers external JavaScript, CSS, and explicit preloads. Assets use
- * `<link rel="prefetch">` hints; responsive image declarations use low-priority preload hints.
+ * `<link rel="prefetch">` hints; responsive image declarations require a custom `frame` hook.
  * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Pass
  * `prefetch` to `run()` to change this behavior, or delegate to {@link defaultPrefetch} with overrides.
  * Custom frame hooks can select nested sources to prefetch using the same strategy. Cross-origin
@@ -958,7 +962,7 @@ function isAssetReference(element: Element, baseURL: string): boolean {
     (getAssetHref(element.getAttribute('href'), baseURL) !== undefined ||
       (element.relList.contains('preload') &&
         element.as === 'image' &&
-        resolveImageSrcset(element.imageSrcset, baseURL) !== undefined))
+        element.imageSrcset.trim() !== ''))
   )
 }
 
@@ -970,37 +974,6 @@ function getAssetHref(value: string | null, baseURL: string): string | undefined
   } catch {
     // Incomplete or malformed declarations remain available through the fragment.
   }
-}
-
-function resolveImageSrcset(value: string, baseURL: string): string | undefined {
-  let candidates: string[] = []
-  let position = 0
-  while (position < value.length) {
-    while (position < value.length && /[\t\n\f\r ,]/.test(value[position])) position++
-    let start = position
-    while (position < value.length && !/[\t\n\f\r ]/.test(value[position])) position++
-    let url = value.slice(start, position)
-    let descriptors = ''
-    // Srcset URLs can contain commas; only trailing commas or descriptor separators end a candidate.
-    if (url.endsWith(',')) {
-      url = url.replace(/,+$/, '')
-    } else {
-      start = position
-      let inParentheses = false
-      while (position < value.length) {
-        let character = value[position]
-        if (character === ',' && !inParentheses) break
-        if (character === '(') inParentheses = true
-        else if (character === ')') inParentheses = false
-        position++
-      }
-      descriptors = value.slice(start, position).trim()
-      if (value[position] === ',') position++
-    }
-    let href = getAssetHref(url, baseURL)
-    if (href) candidates.push(descriptors ? `${href} ${descriptors}` : href)
-  }
-  return candidates.length > 0 ? candidates.join(', ') : undefined
 }
 
 function discoverFrames(elements: Element[], baseURL: string): PrefetchFrameReference[] {
@@ -1050,6 +1023,13 @@ function discoverFrames(elements: Element[], baseURL: string): PrefetchFrameRefe
 function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement | undefined {
   if (element instanceof HTMLLinkElement) {
     if (
+      element.relList.contains('preload') &&
+      element.as === 'image' &&
+      element.imageSrcset.trim() !== ''
+    ) {
+      return
+    }
+    if (
       !element.relList.contains('modulepreload') &&
       !element.relList.contains('stylesheet') &&
       !(element.relList.contains('preload') && PRELOAD_DESTINATIONS.includes(element.as))
@@ -1078,13 +1058,7 @@ function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement
     element.getAttribute(element instanceof HTMLLinkElement ? 'href' : 'src'),
     baseUrl,
   )
-  let imageSrcset =
-    element instanceof HTMLLinkElement &&
-    element.relList.contains('preload') &&
-    element.as === 'image'
-      ? resolveImageSrcset(element.imageSrcset, baseUrl)
-      : undefined
-  if (!href && !imageSrcset) return
+  if (!href) return
 
   let isModule =
     element instanceof HTMLScriptElement
@@ -1092,20 +1066,13 @@ function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement
       : element instanceof HTMLLinkElement && element.relList.contains('modulepreload')
   let link = document.createElement('link')
   // Ordinary prefetches don't evaluate modules or resolve their imports in the current import map.
-  link.rel = imageSrcset ? 'preload' : 'prefetch'
+  link.rel = 'prefetch'
   link.fetchPriority = 'low'
   link.as = element instanceof HTMLImageElement ? 'image' : 'script'
   if (element instanceof HTMLLinkElement && !isModule) {
     link.as = element.relList.contains('stylesheet') ? 'style' : element.as
   }
-  if (href) link.href = href
-  if (imageSrcset && element instanceof HTMLLinkElement) {
-    if (!('imageSrcset' in link) || !('imageSizes' in link)) return
-    link.imageSrcset = imageSrcset
-    link.imageSizes = element.imageSizes
-    link.media = element.media
-    link.type = element.type
-  }
+  link.href = href
   for (let name of ['integrity', 'referrerpolicy']) {
     let value = element.getAttribute(name)
     if (value !== null) link.setAttribute(name, value)
@@ -1120,15 +1087,5 @@ function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement
 }
 
 function assetKey(link: HTMLLinkElement): string {
-  return JSON.stringify([
-    link.href,
-    link.as,
-    link.crossOrigin,
-    link.integrity,
-    link.referrerPolicy,
-    link.imageSrcset,
-    link.imageSizes,
-    link.media,
-    link.type,
-  ])
+  return JSON.stringify([link.href, link.as, link.crossOrigin, link.integrity, link.referrerPolicy])
 }
