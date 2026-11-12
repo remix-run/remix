@@ -1099,14 +1099,25 @@ function mountHostNode(
 ): CommittedHostNode {
   let hostProps = resolved.props
   let childInputs = node._children
-  // Server option attributes already reflect the select's winning value. Preserve them and edits.
-  patchHostProps(
-    {},
-    childCursor && dom instanceof HTMLOptionElement
-      ? { ...hostProps, selected: undefined }
-      : hostProps,
-    dom,
-  )
+  let hydratedProps = hostProps
+  let editedBeforeHydration: 'value' | 'checked' | undefined
+  if (childCursor) {
+    // Server option attributes already reflect the select's winning value. Preserve them and edits.
+    if (dom instanceof HTMLOptionElement) hydratedProps = { ...hostProps, selected: undefined }
+    // Keep what the user typed or toggled before this control hydrated. It's replayed below.
+    if (dom instanceof HTMLInputElement && (dom.type === 'checkbox' || dom.type === 'radio')) {
+      if (dom.checked !== dom.defaultChecked) editedBeforeHydration = 'checked'
+    } else if (
+      (dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement) &&
+      dom.value !== dom.defaultValue
+    ) {
+      editedBeforeHydration = 'value'
+    }
+    if (editedBeforeHydration) {
+      hydratedProps = { ...hydratedProps, [editedBeforeHydration]: undefined }
+    }
+  }
+  patchHostProps({}, hydratedProps, dom)
   let committed = commitHostNode(node, vParent, svg, dom, resolved)
 
   if (hostProps.innerHTML != null) {
@@ -1129,6 +1140,24 @@ function mountHostNode(
 
   setupHostNode(committed, context.scheduler)
   bindNodeMixRuntime(committed, context, false, parent)
+
+  if (editedBeforeHydration) {
+    // Replay the edit once handlers are attached so app state catches up with what the user sees.
+    context.scheduler.enqueueTasks([
+      () => {
+        if (!dom.isConnected) return
+        // Selecting a radio unchecks the rest of its group, and only the selected one fires events.
+        if (dom instanceof HTMLInputElement && dom.type === 'radio' && !dom.checked) {
+          return
+        }
+        dom.dispatchEvent(new Event('input', { bubbles: true }))
+        // A focused text control still fires its own `change` when it loses focus.
+        if (editedBeforeHydration === 'checked' || dom.ownerDocument.activeElement !== dom) {
+          dom.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+      },
+    ])
+  }
   return committed
 }
 
