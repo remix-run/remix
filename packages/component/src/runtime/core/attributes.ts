@@ -114,7 +114,11 @@ function isBooleanishStringAttribute(name: string): boolean {
 }
 
 // Remix reads these by presence, so `true` renders an empty attribute and `false` omits it.
-const REMIX_BOOLEAN_ATTRIBUTES = new Set(['data-rmx-document', 'data-rmx-preserve-dom'])
+const REMIX_BOOLEAN_ATTRIBUTES = new Set([
+  'data-rmx-document',
+  'data-rmx-preserve-dom',
+  'data-rmx-client-dom',
+])
 
 export function shouldStringifyBooleanAttribute(name: string): boolean {
   return (

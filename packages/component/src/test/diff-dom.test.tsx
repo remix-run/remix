@@ -835,7 +835,7 @@ describe('diffNodes', () => {
 
     it('keeps a client-created preserved element and does not pair it with a shifted incoming one', () => {
       let current = parseHead(
-        '<style data-rmx-preserve-dom="client">.client{}</style><link rel="modulepreload" href="/a.js">',
+        '<style data-rmx-client-dom>.client{}</style><link rel="modulepreload" href="/a.js">',
       )
       let [style, preload] = Array.from(current.head.children)
 
@@ -857,7 +857,7 @@ describe('diffNodes', () => {
       let current = parseHead('<meta name="obsolete" content="old">' + html)
       let [meta, serverStyle] = Array.from(current.head.children)
       let clientStyle = current.createElement('style')
-      clientStyle.setAttribute('data-rmx-preserve-dom', 'client')
+      clientStyle.setAttribute('data-rmx-client-dom', '')
       clientStyle.textContent = '.client{}'
       current.head.prepend(clientStyle)
       let mutations = recordMutations(current.head)
@@ -1039,20 +1039,17 @@ describe('diffNodes', () => {
       expect(div.innerHTML).toBe('<button>Client</button>')
     })
 
-    it('preserves live DOM with explicit server ownership and removes it by omission', () => {
+    it('preserves live DOM when incoming HTML adds preservation and removes it by omission', () => {
       let container = document.createElement('div')
       container.innerHTML = '<div class="client"><button>Client</button></div>'
       let widget = container.firstElementChild
       let button = widget?.firstChild
       invariant(widget && button)
 
-      diffDom(
-        container,
-        '<div data-rmx-preserve-dom="server" class="server"><span>Server</span></div>',
-      )
+      diffDom(container, '<div data-rmx-preserve-dom class="server"><span>Server</span></div>')
 
       expect(container.firstElementChild).toBe(widget)
-      expect(widget.getAttribute('data-rmx-preserve-dom')).toBe('server')
+      expect(widget.getAttribute('data-rmx-preserve-dom')).toBe('')
       expect(widget.className).toBe('client')
       expect(widget.firstChild).toBe(button)
 
@@ -1101,7 +1098,7 @@ describe('diffNodes', () => {
     it('reuses a preserved widget after an omitted preserved host on repeated reloads', () => {
       let container = document.createElement('div')
       container.innerHTML =
-        '<div data-rmx-preserve-dom="client">Client host</div><p>Old</p>' +
+        '<div data-rmx-client-dom>Client host</div><p>Old</p>' +
         '<section id="widget" data-rmx-preserve-dom><button>Client</button></section>'
       let [host, sibling, widget] = Array.from(container.children)
       let button = widget.firstChild
@@ -1460,7 +1457,7 @@ describe('diffNodes', () => {
     })
 
     describe('client-owned DOM', () => {
-      it('applies the client ownership value when incoming HTML first grants ownership', () => {
+      it('applies data-rmx-client-dom when incoming HTML first grants ownership', () => {
         let container = document.createElement('div')
         container.innerHTML =
           '<main>Initial</main><div data-rmx-key="widget" data-rmx-preserve-dom>Live widget</div>'
@@ -1468,16 +1465,16 @@ describe('diffNodes', () => {
 
         diffDom(
           container,
-          '<main>Next</main><div data-rmx-key="widget" data-rmx-preserve-dom="client">Server</div>',
+          '<main>Next</main><div data-rmx-key="widget" data-rmx-client-dom>Server</div>',
         )
 
-        expect(widget.getAttribute('data-rmx-preserve-dom')).toBe('client')
+        expect(widget.getAttribute('data-rmx-client-dom')).toBe('')
         expect(widget.textContent).toBe('Live widget')
         diffDom(container, '<main>Final</main>')
         expect(Array.from(container.children)).toEqual([main, widget])
       })
 
-      it('removes a client-created element with the ordinary preservation mode when omitted', () => {
+      it('removes a client-created element with the data-rmx-preserve-dom attribute when omitted', () => {
         let container = document.createElement('div')
         container.innerHTML = '<main>Initial</main>'
         let widget = document.createElement('div')
@@ -1493,7 +1490,7 @@ describe('diffNodes', () => {
       it('keeps an explicitly client-owned element regardless of its origin', () => {
         let container = document.createElement('div')
         container.innerHTML =
-          '<main>Old</main><div data-rmx-preserve-dom="client"><button>Client</button></div>'
+          '<main>Old</main><div data-rmx-client-dom><button>Client</button></div>'
         let [main, host] = Array.from(container.children)
         let button = host.firstChild
         let mutations = recordMutations(container)
@@ -1508,7 +1505,7 @@ describe('diffNodes', () => {
 
       it('does not match a client-owned element with unkeyed preserved server HTML', () => {
         let container = document.createElement('div')
-        container.innerHTML = '<main>Initial</main><div data-rmx-preserve-dom="client">Client</div>'
+        container.innerHTML = '<main>Initial</main><div data-rmx-client-dom>Client</div>'
         let [main, host] = Array.from(container.children)
         let html = '<main>Next</main><div data-rmx-preserve-dom>Server</div>'
 
@@ -1526,10 +1523,10 @@ describe('diffNodes', () => {
         expect(host.textContent).toBe('Client')
       })
 
-      it('does not match a client-owned element with server HTML carrying the same key', () => {
+      it('gives client ownership precedence over preservation when server HTML carries the same key', () => {
         let container = document.createElement('div')
         container.innerHTML =
-          '<main>Initial</main><div data-rmx-key="host" data-rmx-preserve-dom="client">Client</div>'
+          '<main>Initial</main><div data-rmx-key="host" data-rmx-client-dom data-rmx-preserve-dom>Client</div>'
         let [main, host] = Array.from(container.children)
         let html = '<main>Next</main><div data-rmx-key="host">Server</div>'
 
@@ -1545,21 +1542,42 @@ describe('diffNodes', () => {
         expect(host.textContent).toBe('Client')
       })
 
-      it('returns a client-owned element to server reconciliation when client code changes its mode', () => {
+      it('returns a client-owned element to server reconciliation when client code removes data-rmx-client-dom', () => {
         let container = document.createElement('div')
         container.innerHTML =
-          '<main>Initial</main><div data-rmx-key="host" data-rmx-preserve-dom="client">Client</div>'
+          '<main>Initial</main><div data-rmx-key="host" data-rmx-client-dom>Client</div>'
         let [main, host] = Array.from(container.children)
         diffDom(container, '<main>Next</main>')
-        host.setAttribute('data-rmx-preserve-dom', 'server')
+        host.removeAttribute('data-rmx-client-dom')
 
         diffDom(container, '<main>Next</main><div data-rmx-key="host">Server</div>')
 
         expect(Array.from(container.children)).toEqual([main, host])
         expect(host.textContent).toBe('Server')
-        expect(host.hasAttribute('data-rmx-preserve-dom')).toBe(false)
+        expect(host.hasAttribute('data-rmx-client-dom')).toBe(false)
         diffDom(container, '<main>Final</main>')
         expect(Array.from(container.children)).toEqual([main])
+      })
+
+      it('continues preserving live DOM after client code releases an element with both attributes', () => {
+        let container = document.createElement('div')
+        container.innerHTML =
+          '<div data-rmx-key="host" data-rmx-client-dom data-rmx-preserve-dom><button>Client</button></div>'
+        let host = container.firstElementChild
+        let button = host?.firstChild
+        invariant(host && button)
+
+        diffDom(container, '')
+        expect(container.firstElementChild).toBe(host)
+        host.removeAttribute('data-rmx-client-dom')
+
+        diffDom(container, '<div data-rmx-key="host" data-rmx-preserve-dom>Server</div>')
+
+        expect(container.firstElementChild).toBe(host)
+        expect(host.firstChild).toBe(button)
+        expect(host.hasAttribute('data-rmx-preserve-dom')).toBe(true)
+        diffDom(container, '')
+        expect(container.childNodes.length).toBe(0)
       })
 
       it('distinguishes ordinary preserved descendants from client-owned hosts created on connection', (t) => {
@@ -1570,7 +1588,7 @@ describe('diffNodes', () => {
             class extends HTMLElement {
               connectedCallback() {
                 let host = document.createElement('div')
-                host.setAttribute('data-rmx-preserve-dom', 'client')
+                host.setAttribute('data-rmx-client-dom', '')
                 host.setAttribute('data-client-host', '')
                 this.append(host)
               }
@@ -1600,7 +1618,7 @@ describe('diffNodes', () => {
       it('does not move matched siblings around trailing client-owned elements', () => {
         let container = document.createElement('div')
         container.innerHTML =
-          '<header>H</header><main>M</main><footer>F</footer><div data-rmx-preserve-dom="client"></div><div data-rmx-preserve-dom="client"></div>'
+          '<header>H</header><main>M</main><footer>F</footer><div data-rmx-client-dom></div><div data-rmx-client-dom></div>'
         let [header, main, footer, host1, host2] = Array.from(container.children)
         let mutations = recordMutations(container)
 
@@ -1614,14 +1632,14 @@ describe('diffNodes', () => {
 
       it('inserts new siblings before trailing client-owned elements', () => {
         let container = document.createElement('div')
-        container.innerHTML = '<main>M</main><div data-rmx-preserve-dom="client"></div>'
+        container.innerHTML = '<main>M</main><div data-rmx-client-dom></div>'
         let [main, host] = Array.from(container.children)
         let mutations = recordMutations(container)
 
         diffDom(container, '<main>M</main><aside>A</aside><footer>F</footer>')
 
         expect(container.innerHTML).toBe(
-          '<main>M</main><aside>A</aside><footer>F</footer><div data-rmx-preserve-dom="client"></div>',
+          '<main>M</main><aside>A</aside><footer>F</footer><div data-rmx-client-dom=""></div>',
         )
         expect(container.firstElementChild).toBe(main)
         expect(container.lastElementChild).toBe(host)
@@ -1634,7 +1652,7 @@ describe('diffNodes', () => {
       it('keeps leading, middle, and trailing client-owned elements while siblings update', () => {
         let container = document.createElement('div')
         container.innerHTML =
-          '<i data-rmx-preserve-dom="client">lead</i><p>A</p><b data-rmx-preserve-dom="client">mid</b><p>B</p><u data-rmx-preserve-dom="client">tail</u>'
+          '<i data-rmx-client-dom>lead</i><p>A</p><b data-rmx-client-dom>mid</b><p>B</p><u data-rmx-client-dom>tail</u>'
         let [lead, a, mid, b, tail] = Array.from(container.children)
         let mutations = recordMutations(container)
 
@@ -1651,7 +1669,7 @@ describe('diffNodes', () => {
       it('moves keyed siblings without detaching a client-owned element between them', () => {
         let container = document.createElement('div')
         container.innerHTML =
-          '<p data-rmx-key="a">A</p><div data-rmx-preserve-dom="client"></div><p data-rmx-key="b">B</p><p data-rmx-key="c">C</p>'
+          '<p data-rmx-key="a">A</p><div data-rmx-client-dom></div><p data-rmx-key="b">B</p><p data-rmx-key="c">C</p>'
         let [a, host, b, c] = Array.from(container.children)
         let mutations = recordMutations(container)
 
@@ -1670,7 +1688,7 @@ describe('diffNodes', () => {
       it('removes client-owned elements with an unmatched parent', () => {
         let container = document.createElement('div')
         container.innerHTML =
-          '<section><div data-rmx-preserve-dom="client"></div></section><main data-rmx-key="m">M</main>'
+          '<section><div data-rmx-client-dom></div></section><main data-rmx-key="m">M</main>'
         let main = container.querySelector('main')
 
         diffDom(container, '<main data-rmx-key="m">M</main>')
@@ -1681,7 +1699,7 @@ describe('diffNodes', () => {
 
       it('does not resurrect a client-owned element its owner removed', () => {
         let container = document.createElement('div')
-        container.innerHTML = '<main>M</main><div data-rmx-preserve-dom="client"></div>'
+        container.innerHTML = '<main>M</main><div data-rmx-client-dom></div>'
         let [main, host] = Array.from(container.children)
         diffDom(container, '<main>M</main>')
         host.remove()

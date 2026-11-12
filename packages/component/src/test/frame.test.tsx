@@ -733,12 +733,12 @@ describe('run', () => {
     expect(document.getElementById('next-page')?.textContent).toBe('Next page')
   })
 
-  it('removes explicitly server-owned preserved elements and disposes their client entries', async (t) => {
+  it('removes server-rendered preserved elements and disposes their client entries', async (t) => {
     let dispose = mock.fn()
     let Entry = createDisposableEntry('/preserved.js#Entry', dispose)
     document.body.innerHTML = await drain(
       renderToStream(
-        <div data-rmx-preserve-dom="server">
+        <div data-rmx-preserve-dom>
           <Entry />
         </div>,
       ),
@@ -760,7 +760,7 @@ describe('run', () => {
     let Entry = createDisposableEntry('/client-owned.js#Entry', dispose)
     document.body.innerHTML = await drain(
       renderToStream(
-        <div data-rmx-preserve-dom="client">
+        <div data-rmx-client-dom>
           <Entry />
         </div>,
       ),
@@ -785,7 +785,7 @@ describe('run', () => {
     let Entry = clientEntry('/portal.js#Entry', function Entry(handle: Handle) {
       handle.queueTask(() => {
         let host = document.createElement('div')
-        host.setAttribute('data-rmx-preserve-dom', 'client')
+        host.setAttribute('data-rmx-client-dom', '')
         document.body.append(host)
         resolveInserted(host)
       })
@@ -830,7 +830,7 @@ describe('run', () => {
     let [main, widget] = Array.from(document.body.children)
     let entry = widget.firstElementChild
     let host = document.createElement('div')
-    host.setAttribute('data-rmx-preserve-dom', 'client')
+    host.setAttribute('data-rmx-client-dom', '')
     document.body.append(host)
     let records: MutationRecord[] = []
     let observer = new MutationObserver((batch) => records.push(...batch))
@@ -850,7 +850,7 @@ describe('run', () => {
   it('keeps client-created preserved elements, and their focus, when the top frame reloads', async (t) => {
     let { app } = await setupReloadBodyTest(t)
     let host = document.createElement('div')
-    host.setAttribute('data-rmx-preserve-dom', 'client')
+    host.setAttribute('data-rmx-client-dom', '')
     let input = document.createElement('input')
     host.append(input)
     document.body.append(host)
@@ -902,7 +902,7 @@ describe('run', () => {
     t.after(() => app.dispose())
     await app.ready()
     let host = document.createElement('div')
-    host.setAttribute('data-rmx-preserve-dom', 'client')
+    host.setAttribute('data-rmx-client-dom', '')
     document.body.append(host)
     let removed: Node[] = []
     let observer = new MutationObserver((batch) =>
@@ -936,7 +936,7 @@ describe('run', () => {
     let widget = section?.firstElementChild
     invariant(section && widget)
     let host = document.createElement('div')
-    host.setAttribute('data-rmx-preserve-dom', 'client')
+    host.setAttribute('data-rmx-client-dom', '')
     section.append(host)
     html = '<section><p>Next</p></section>'
 
@@ -5893,7 +5893,7 @@ describe('run', () => {
         let widget = container.querySelector('[data-rmx-key="widget"]')
         invariant(widget)
         let host = document.createElement('div')
-        host.setAttribute('data-rmx-preserve-dom', 'client')
+        host.setAttribute('data-rmx-client-dom', '')
         widget.after(host)
         resolveHydrated({ frame: handle.frame, host })
       })

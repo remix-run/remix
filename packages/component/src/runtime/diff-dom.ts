@@ -73,6 +73,7 @@ type SiblingDiff = {
 }
 
 const REMIX_PRESERVE_DOM_ATTRIBUTE = 'data-rmx-preserve-dom'
+const REMIX_CLIENT_DOM_ATTRIBUTE = 'data-rmx-client-dom'
 
 export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
   let parent = curr[0]?.parentNode ?? context.regionParent ?? null
@@ -200,13 +201,13 @@ export function diffElementAttributes(current: Element, next: Element): void {
 }
 
 function shouldPreserveDomElement(current: Element, next: Element): boolean {
-  let mode = next.getAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)
-  if (mode === null) return false
-  if (mode === 'client' || !current.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) {
-    current.setAttribute(
-      REMIX_PRESERVE_DOM_ATTRIBUTE,
-      mode === 'client' || mode === 'server' ? mode : '',
-    )
+  if (next.hasAttribute(REMIX_CLIENT_DOM_ATTRIBUTE)) {
+    current.setAttribute(REMIX_CLIENT_DOM_ATTRIBUTE, '')
+    return true
+  }
+  if (!next.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) return false
+  if (!current.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) {
+    current.setAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE, '')
   }
   return true
 }
@@ -547,7 +548,7 @@ function placeSiblingUnits(
   let { parent, currentUnits, used } = diff
   let stable = getStableCommittedIndexes(diff, committed)
 
-  // Unmatched preserved elements stay in place. Insert before the trailing ones so
+  // Unmatched client-owned elements stay in place. Insert before the trailing ones so
   // client-owned nodes keep trailing the region, instead of appending after them.
   let anchor: Node | null = regionTailRef
   for (let i = currentUnits.length - 1; i >= 0 && !used[i]; i--) {
@@ -705,9 +706,7 @@ function parseSiblingUnits(nodes: Node[], source: 'current' | 'next'): SiblingUn
       kind: 'node',
       node,
       clientOwned:
-        source === 'current' &&
-        isElement(node) &&
-        node.getAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE) === 'client',
+        source === 'current' && isElement(node) && node.hasAttribute(REMIX_CLIENT_DOM_ATTRIBUTE),
       startIndex: i,
       endIndex: i,
     })
@@ -774,7 +773,11 @@ function isClientOwnedUnit(unit: SiblingUnit): boolean {
 }
 
 function isPreservedDomElement(node: Node): node is Element {
-  return isElement(node) && node.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)
+  return (
+    isElement(node) &&
+    (node.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE) ||
+      node.hasAttribute(REMIX_CLIENT_DOM_ATTRIBUTE))
+  )
 }
 
 function nodeTypesComparable(a: Node, b: Node): boolean {
