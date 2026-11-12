@@ -204,22 +204,14 @@ function startViewportPrefetching(signal: AbortSignal): void {
   }
 
   function schedule(): void {
-    if (
-      signal.aborted ||
-      document.hidden ||
-      scrolling !== undefined ||
-      cancelIdle ||
-      entered.size === 0
-    )
-      return
+    if (signal.aborted || scrolling !== undefined || cancelIdle || entered.size === 0) return
     cancelIdle = scheduleIdlePrefetch((deadline) => {
       try {
-        if (signal.aborted || document.hidden) return
         intersect(viewport.takeRecords())
         if (!canPrefetchAutomatically()) entered.clear()
         let started = false
         for (let anchor of entered) {
-          if (signal.aborted || document.hidden || scrolling !== undefined) break
+          if (signal.aborted || scrolling !== undefined) break
           if (deadline.didTimeout ? started : deadline.timeRemaining() <= 0) break
           entered.delete(anchor)
           prefetchAnchor(anchor)
@@ -233,23 +225,6 @@ function startViewportPrefetching(signal: AbortSignal): void {
   }
 
   let viewport = new IntersectionObserver(intersect)
-
-  document.addEventListener(
-    'visibilitychange',
-    () => {
-      if (document.hidden) {
-        cancelIdle?.()
-        cancelIdle = undefined
-      } else {
-        // Layout may have changed while hidden. Reobserve queued links for fresh intersections.
-        for (let { target } of viewport.takeRecords()) {
-          if (target instanceof HTMLAnchorElement) entered.add(target)
-        }
-        for (let anchor of entered) update(anchor)
-      }
-    },
-    { signal },
-  )
 
   // Scroll events don't bubble, so a capturing listener also hears nested scrollers.
   document.addEventListener(
