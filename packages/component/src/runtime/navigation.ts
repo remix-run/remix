@@ -129,15 +129,22 @@ function resyncWebKitScrollAfterNavigation(
 
     // WebKit can reset its internal scroll position without synchronizing the visual viewport.
     // https://bugs.webkit.org/show_bug.cgi?id=309542
-    if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 0) return
-    // A commit wrapper can suppress animation frames until its snapshot is captured. The swap
-    // already repaints the viewport; don't leave that snapshot at the nudge's temporary offset.
-    if (getFrameCommitNavigation(event.signal)?.pendingCommits) return
-    window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
-    requestAnimationFrame(() => {
-      if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 1) return
-      window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
-    })
+    function resyncScroll() {
+      if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 0) return
+      window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
+      requestAnimationFrame(() => {
+        if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 1) return
+        window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
+      })
+    }
+
+    // A commit hook may pause animation frames for a view-transition snapshot. Wait for frames
+    // to resume before nudging, while keeping the repair for hooks that don't animate.
+    if (getFrameCommitNavigation(event.signal)?.pendingCommits) {
+      requestAnimationFrame(resyncScroll)
+    } else {
+      resyncScroll()
+    }
   }, stop)
 }
 

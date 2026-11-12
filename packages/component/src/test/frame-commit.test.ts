@@ -664,8 +664,51 @@ describe('defaultResolveFrame commit', () => {
     expect(document.getElementById('commit-page')?.textContent).toBe('initial')
   })
 
-  it('captures the reset scroll position without a post-navigation animation-frame wait', async (t) => {
+  it('resynchronizes WebKit scrolling with a nonanimated commit hook', async (t) => {
+    t.mock.getter(
+      navigator,
+      'userAgent',
+      () => 'Mozilla/5.0 AppleWebKit/605.1.15 Version/18.6 Safari/605.1.15',
+    )
+    let fixture = await setup(
+      t,
+      (commitFrame) => commitFrame(),
+      async () => page('<div style="height:4000px">next</div>'),
+    )
+    document.body.innerHTML = '<main style="height:4000px">initial</main>'
+    window.scrollTo(0, 600)
+    let scrollTo = t.mock.method(window, 'scrollTo')
+    let animationFrames: FrameRequestCallback[] = []
+    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+      animationFrames.push(callback)
+      return animationFrames.length
+    })
+
+    await navigate(fixture.url('scroll'))
+    expect(window.scrollY).toBe(0)
+    expect(scrollTo).not.toHaveBeenCalled()
+    expect(animationFrames.length).toBe(1)
+
+    animationFrames.shift()?.(0)
+    expect(scrollTo).toHaveBeenNthCalledWith(1, { behavior: 'instant', left: 0, top: 1 })
+    expect(window.scrollY).toBe(1)
+    animationFrames.shift()?.(0)
+    expect(scrollTo).toHaveBeenNthCalledWith(2, { behavior: 'instant', left: 0, top: 0 })
+    expect(window.scrollY).toBe(0)
+    expect(fixture.transitions.length).toBe(0)
+    expect(fixture.errors).toEqual([])
+  })
+
+  it('captures reset scroll before resynchronizing WebKit after a view-transition snapshot', async (t) => {
+    t.mock.getter(
+      navigator,
+      'userAgent',
+      () => 'Mozilla/5.0 AppleWebKit/605.1.15 Version/18.6 Safari/605.1.15',
+    )
     let captured = Promise.withResolvers<void>()
+    let repaired = Promise.withResolvers<void>()
+    let snapshotReady = false
+    let nudgedAfterSnapshot: boolean | undefined
     let fixture = await setup(
       t,
       async (commitFrame) => {
@@ -675,7 +718,12 @@ describe('defaultResolveFrame commit', () => {
           expect(document.activeElement).toBe(document.body)
           captured.resolve()
         })
-        void transition.ready.catch(() => {})
+        void transition.ready.then(
+          () => {
+            snapshotReady = true
+          },
+          () => {},
+        )
         await transition.finished
       },
       async () => page('<div style="height:4000px">next</div>'),
@@ -684,10 +732,19 @@ describe('defaultResolveFrame commit', () => {
     document.getElementById('old-input')?.focus()
     window.scrollTo(0, 600)
     expect(window.scrollY).toBeGreaterThan(0)
+    let nativeScrollTo = window.scrollTo.bind(window)
+    t.mock.method(window, 'scrollTo', (options: ScrollToOptions) => {
+      if (options.top === 1) nudgedAfterSnapshot = snapshotReady
+      nativeScrollTo(options)
+      if (options.top === 0) repaired.resolve()
+    })
     await navigate(fixture.url('scroll'))
     await captured.promise
     await fixture.transitions[0]?.ready
     await fixture.transitions[0]?.finished
+    await repaired.promise
+    expect(nudgedAfterSnapshot).toBe(true)
+    expect(window.scrollY).toBe(0)
     expect(fixture.errors).toEqual([])
   })
 })
