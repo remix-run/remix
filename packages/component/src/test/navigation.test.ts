@@ -1069,7 +1069,7 @@ describe('navigate', () => {
     button.setAttribute('data-rmx-reset-focus', 'after-transition')
     form.append(button)
     document.body.append(form)
-    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+    submitFormWithoutNavigating(form, button)
     let intercept = mock.fn()
 
     dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
@@ -1118,7 +1118,7 @@ describe('navigate', () => {
     button.setAttribute('data-rmx-reset-focus', 'false')
     form.append(button)
     document.body.append(form)
-    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+    submitFormWithoutNavigating(form, button)
     let intercept = mock.fn()
 
     dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
@@ -1135,7 +1135,7 @@ describe('navigate', () => {
     button.setAttribute('data-rmx-reset-focus', 'true')
     form.append(button)
     document.body.append(form)
-    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+    submitFormWithoutNavigating(form, button)
     let intercept = mock.fn()
 
     dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
@@ -2369,7 +2369,7 @@ describe('frame navigation sources', () => {
     form.append(button)
     document.body.append(form)
     t.after(() => form.remove())
-    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+    submitFormWithoutNavigating(form, button)
     let event = createFormNavigateEvent(form, { destinationUrl: form.action, intercept })
     Object.assign(event, { scroll() {} })
     let transition = dispatch(event)
@@ -2927,6 +2927,13 @@ function waitForNavigationSuccess(): Promise<void> {
   return new Promise((resolve) => {
     window.navigation.addEventListener('navigatesuccess', () => resolve(), { once: true })
   })
+}
+
+// Firefox submits synthetic submit events, so detach the fixture before the default action.
+function submitFormWithoutNavigating(form: HTMLFormElement, submitter: HTMLButtonElement): void {
+  form.addEventListener('submit', () => form.remove(), { once: true })
+  form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter }))
+  new FormData(form)
 }
 
 function createFormNavigateEvent(

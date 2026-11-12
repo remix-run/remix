@@ -461,7 +461,7 @@ spy.mock.restore()
 
 ### Browser Testing
 
-Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each in-browser test suite runs in an isolated `iframe` so it has access to its own `document` instance.
+Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each test file gets its own document. Chromium and WebKit use an isolated `iframe`; Firefox uses a separate window and starts tests after it finishes loading to work around Firefox history navigation bugs.
 
 #### `render()`
 

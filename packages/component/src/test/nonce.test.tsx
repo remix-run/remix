@@ -166,17 +166,25 @@ async function renderLateEntryUnderCsp(t: TestContext, importMapNonce?: string) 
     }),
   )
   let runHref = new URL('../runtime/run.ts', import.meta.url).href
+  let loaderHref = new URL('../../../multiple-import-maps-polyfill/src/index.ts', import.meta.url)
+    .href
   let completionMessage = crypto.randomUUID()
   let bootstrap = `
     import { run } from ${JSON.stringify(runHref)}
+    import { detectMultipleImportMapSupport, importModule, preloadShim } from ${JSON.stringify(loaderHref)}
     let error = ''
     let app = run({
       resolveFrame() {
         return ${JSON.stringify(frameHtml).replace(/</g, '\\u003c')}
       },
       async loadModule(href, name) {
-        try { return (await import(href))[name] }
+        try { return (await importModule(href))[name] }
         catch (cause) { error = String(cause); throw cause }
+      },
+      async processClientEntryPreloads(preloads) {
+        if (await detectMultipleImportMapSupport()) return preloads
+        await preloadShim(preloads)
+        return []
       },
     })
     app.addEventListener('error', (event) => { error = String(event.error) })
@@ -199,7 +207,7 @@ async function renderLateEntryUnderCsp(t: TestContext, importMapNonce?: string) 
         <head>
           <meta
             httpEquiv="Content-Security-Policy"
-            content={`script-src 'self' data: 'nonce-${policyNonce}'; style-src 'nonce-${policyNonce}'`}
+            content={`script-src 'self' data: blob: 'nonce-${policyNonce}'; style-src 'nonce-${policyNonce}'`}
           />
           {importMapNonce && <ImportMap nonce={importMapNonce} value={{}} />}
           <script type="module" nonce={policyNonce}>

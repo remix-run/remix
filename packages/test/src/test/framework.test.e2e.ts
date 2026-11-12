@@ -1,5 +1,7 @@
-import * as assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
 import { createTestServer } from '@remix-run/node-fetch-server/test'
+import { fileURLToPath } from 'node:url'
+import { startServer } from '../app/server.ts'
 import { describe, it } from '../lib/framework.ts'
 
 function html(body: string): Response {
@@ -29,6 +31,30 @@ function notFound(): Response {
 }
 
 describe('e2e tests', () => {
+  it('reports a blocked test window as a failed file and completes the run', async (t) => {
+    let { server, baseUrl } = await startServer([
+      fileURLToPath(new URL('./framework.test.browser.ts', import.meta.url)),
+    ])
+    let page = await t.serve({
+      baseUrl,
+      close() {
+        return new Promise<void>((resolve, reject) => {
+          server.close((error) => (error ? reject(error) : resolve()))
+        })
+      },
+    })
+    await page.addInitScript(() => {
+      window.open = () => null
+    })
+    await page.route('**/file-results', (route) => route.fulfill({ status: 200 }))
+    let report = page.waitForRequest('**/file-results')
+    await page.goto('/?isolation=window')
+    let results = (await report).postDataJSON()
+    assert.equal(results.failed, 1)
+    assert.equal(results.tests[0].error.message, 'Could not open the browser test window')
+    await page.waitForFunction('window.__testsDone')
+  })
+
   it('runs playwright against a fetch handler', async (t) => {
     let handler = (request: Request) => {
       let url = new URL(request.url)

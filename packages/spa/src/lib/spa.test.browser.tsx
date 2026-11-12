@@ -53,8 +53,9 @@ describe('render', () => {
     let initialUrl = window.location.href
     let router = createRouter({ middleware: [render()] })
     router.get(new URL(initialUrl).pathname, ({ render }) => render(<p>Initial</p>))
-    router.get('/search', ({ request, render }) => {
-      expect(request.body).toBeNull()
+    router.get('/search', async ({ request, render }) => {
+      expect(await request.text()).toBe('')
+      if ('body' in request) expect(request.body).toBeNull()
       expect(new URL(request.url).search).toBe('?name=Ada+Lovelace&name=Grace')
       return render(<p>Found</p>)
     })
@@ -285,7 +286,8 @@ describe('run', () => {
     expect(requests[0]!.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
     expect(await requests[0]!.text()).toBe('name=Ada')
     expect(requests[1]!.headers.get('Content-Type')).toBeNull()
-    expect(requests[1]!.body).toBeNull()
+    expect(await requests[1]!.text()).toBe('')
+    if ('body' in requests[1]!) expect(requests[1]!.body).toBeNull()
     expect(document.body.textContent).toBe('Saved')
     expect(app.frames.top.src).toBe('/save')
     expect(window.location.href).toBe(initialUrl)

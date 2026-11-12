@@ -11,6 +11,7 @@ const lexerPath = fileURLToPath(import.meta.resolve('es-module-lexer/minimal/js'
 declare global {
   interface Window {
     continuePreloadTest(): void
+    moduleExecutions: Record<string, number>
   }
 }
 
@@ -76,10 +77,14 @@ describe('multiple import map polyfill', () => {
 
   it('preloads only the requested modules and reuses their fetches', async (t) => {
     let requests = new Map<string, number>()
+    let sourceFetches = new Map<string, number>()
     let page = await t.serve(
       await createTestServer(async (request) => {
         let url = new URL(request.url)
         requests.set(url.pathname, (requests.get(url.pathname) ?? 0) + 1)
+        if (request.headers.get('Sec-Fetch-Dest') === 'empty') {
+          sourceFetches.set(url.pathname, (sourceFetches.get(url.pathname) ?? 0) + 1)
+        }
 
         if (url.pathname === '/') return html(preloadDocument)
         if (url.pathname === '/dist/index.js') return file('dist/index.js')
@@ -103,8 +108,19 @@ describe('multiple import map polyfill', () => {
     await page.locator('#preload-result').waitFor({ state: 'attached' })
 
     assert.equal(await page.locator('#preload-result').textContent(), 'parent:child')
-    assert.equal(requests.get('/preload-parent.hash.js'), 1)
-    assert.equal(requests.get('/preload-child.hash.js'), 1)
+    assert.equal(await page.locator('#preload-result').getAttribute('data-same-module'), 'true')
+    assert.deepEqual(await page.evaluate(() => window.moduleExecutions), {
+      preloadParent: 1,
+      preloadChild: 1,
+    })
+    // WebKit's ephemeral contexts can fetch source again through the native module loader.
+    // The polyfill must still fetch once, with at most one additional native request.
+    let maxRequests = page.context().browser()?.browserType().name() === 'webkit' ? 2 : 1
+    for (let pathname of ['/preload-parent.hash.js', '/preload-child.hash.js']) {
+      assert.equal(sourceFetches.get(pathname), 1, pathname)
+      let count = requests.get(pathname) ?? 0
+      assert.ok(count >= 1 && count <= maxRequests, `${pathname}: ${count} requests`)
+    }
   })
 
   it('ignores preload failures and reports them when importing', async (t) => {
@@ -136,10 +152,14 @@ describe('multiple import map polyfill', () => {
 
   it('loads JavaScript graphs and preloads modules through import maps appended at runtime', async (t) => {
     let requests = new Map<string, number>()
+    let sourceFetches = new Map<string, number>()
     let page = await t.serve(
       await createTestServer(async (request) => {
         let url = new URL(request.url)
         requests.set(url.pathname, (requests.get(url.pathname) ?? 0) + 1)
+        if (request.headers.get('Sec-Fetch-Dest') === 'empty') {
+          sourceFetches.set(url.pathname, (sourceFetches.get(url.pathname) ?? 0) + 1)
+        }
 
         if (url.pathname === '/') return html(testDocument)
         if (url.pathname === '/dist/index.js') return file('dist/index.js')
@@ -164,9 +184,17 @@ describe('multiple import map polyfill', () => {
     assert.equal(await page.locator('script[noshim]').count(), 0)
 
     assert.equal(requests.get('/feature.hash.js'), 1)
-    assert.equal(requests.get('/late.hash.js'), 1)
-    assert.equal(requests.get('/cycle-a.hash.js'), 1)
-    assert.equal(requests.get('/cycle-b.hash.js'), 1)
+    assert.deepEqual(await page.evaluate(() => window.moduleExecutions), {
+      late: 1,
+      cycleA: 1,
+      cycleB: 1,
+    })
+    let maxRequests = page.context().browser()?.browserType().name() === 'webkit' ? 2 : 1
+    for (let pathname of ['/late.hash.js', '/cycle-a.hash.js', '/cycle-b.hash.js']) {
+      assert.equal(sourceFetches.get(pathname), 1, pathname)
+      let count = requests.get(pathname) ?? 0
+      assert.ok(count >= 1 && count <= maxRequests, `${pathname}: ${count} requests`)
+    }
   })
 
   it('uses native loading when supported and the polyfill for late maps otherwise', async (t) => {
@@ -518,9 +546,10 @@ const preloadDocument = `
     await new Promise((resolve) => (window.continuePreloadTest = resolve))
 
     let module = await importShim('/preload-parent.js')
+    let repeated = await importShim('/preload-parent.js')
     document.body.insertAdjacentHTML(
       'beforeend',
-      '<div id="preload-result">' + module.value + '</div>',
+      '<div id="preload-result" data-same-module="' + (module === repeated) + '">' + module.value + '</div>',
     )
   </script>
 </body>
@@ -936,7 +965,11 @@ const modules: Record<string, string> = {
     export const value = 'shared'
   `,
   '/initial.hash.js': `export const value = 'initial'`,
-  '/late.hash.js': `export const value = 'late'`,
+  '/late.hash.js': `
+    globalThis.moduleExecutions ??= {}
+    globalThis.moduleExecutions.late = (globalThis.moduleExecutions.late ?? 0) + 1
+    export const value = 'late'
+  `,
   '/latest.hash.js': `export const value = 'latest'`,
   '/nested.hash.js': `export const value = 'nested'`,
   '/dynamic-late.hash.js': `export const value = 'dynamic'`,
@@ -953,21 +986,31 @@ const modules: Record<string, string> = {
     export function loadNested() { return import('/nested.js') }
   `,
   '/cycle-a.hash.js': `
+    globalThis.moduleExecutions ??= {}
+    globalThis.moduleExecutions.cycleA = (globalThis.moduleExecutions.cycleA ?? 0) + 1
     import { b, readA } from '/cycle-b.js'
     export const a = 'a'
     export { readA }
     export function readB() { return b }
   `,
   '/cycle-b.hash.js': `
+    globalThis.moduleExecutions ??= {}
+    globalThis.moduleExecutions.cycleB = (globalThis.moduleExecutions.cycleB ?? 0) + 1
     import { a } from '/cycle-a.js'
     export const b = 'b'
     export function readA() { return a }
   `,
   '/preload-parent.hash.js': `
+    globalThis.moduleExecutions ??= {}
+    globalThis.moduleExecutions.preloadParent = (globalThis.moduleExecutions.preloadParent ?? 0) + 1
     import { value as child } from '/preload-child.js'
     export const value = 'parent:' + child
   `,
-  '/preload-child.hash.js': `export const value = 'child'`,
+  '/preload-child.hash.js': `
+    globalThis.moduleExecutions ??= {}
+    globalThis.moduleExecutions.preloadChild = (globalThis.moduleExecutions.preloadChild ?? 0) + 1
+    export const value = 'child'
+  `,
   '/declarative.js': `globalThis.declarativeModuleExecuted = true`,
   '/helper.hash.js': `export const value = 'helper'`,
 }

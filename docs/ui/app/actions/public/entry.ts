@@ -11,7 +11,7 @@ import { closePagefindSearch, startPagefindSearch } from 'remix-docs-shared/sear
 startNavigationGuard()
 startPagefindSearch()
 
-const app = run({
+export const app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await importModule(moduleUrl)
     let Component = mod[exportName]
