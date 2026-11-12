@@ -18,6 +18,7 @@ export type PrefetchFrame = (src: string, options?: PrefetchOptions) => void
 type PrefetchRequest = [src: string, options?: PrefetchOptions]
 
 const INTENT_DELAY_MS = 100
+const SCROLL_SETTLE_MS = 150
 
 const defaultPrefetch = createDefaultPrefetch()
 let prefetchFrame: PrefetchFrame = defaultPrefetch
@@ -171,28 +172,60 @@ function startViewportPrefetching(signal: AbortSignal): void {
   if (typeof IntersectionObserver === 'undefined') return
 
   let completed = new WeakMap<HTMLAnchorElement, string>()
+  // A scroll passes many links the visitor never looks at. Links that enter view while the page
+  // scrolls wait for it to stop and start only if they're still in view.
+  let entered = new Set<HTMLAnchorElement>()
+  let scrolling: ReturnType<typeof setTimeout> | undefined
 
   function getRequest(anchor: HTMLAnchorElement): PrefetchRequest | undefined {
     if (anchor.getAttribute('data-rmx-prefetch') !== 'viewport') return
     return getAnchorPrefetchRequest(anchor)
   }
 
-  let viewport = new IntersectionObserver((entries) => {
-    if (signal.aborted || !canPrefetchAutomatically()) return
+  function prefetchAnchor(anchor: HTMLAnchorElement): void {
+    let request = getRequest(anchor)
+    if (!request || !hasPrefetchTarget(request)) return
+    let key = JSON.stringify(request)
+    if (completed.get(anchor) === key) return
+    completed.set(anchor, key)
+    viewport.unobserve(anchor)
+    prefetchFrame(...request)
+  }
+
+  function intersect(entries: IntersectionObserverEntry[]): void {
+    if (signal.aborted) return
+    let canPrefetch = canPrefetchAutomatically()
     for (let { target, isIntersecting } of entries) {
-      if (!isIntersecting || !(target instanceof HTMLAnchorElement)) continue
-      let request = getRequest(target)
-      if (!request || !hasPrefetchTarget(request)) continue
-      let key = JSON.stringify(request)
-      if (completed.get(target) === key) continue
-      completed.set(target, key)
-      viewport.unobserve(target)
-      prefetchFrame(...request)
+      if (!(target instanceof HTMLAnchorElement)) continue
+      if (!isIntersecting) entered.delete(target)
+      else if (scrolling !== undefined) entered.add(target)
+      else if (canPrefetch) prefetchAnchor(target)
     }
-  })
+  }
+
+  let viewport = new IntersectionObserver(intersect)
+
+  // Scroll events don't bubble, so a capturing listener also hears nested scrollers.
+  document.addEventListener(
+    'scroll',
+    () => {
+      clearTimeout(scrolling)
+      scrolling = setTimeout(() => {
+        // Keep deferring until queued entries and exits reflect the final scroll position.
+        intersect(viewport.takeRecords())
+        scrolling = undefined
+        if (canPrefetchAutomatically()) {
+          for (let anchor of entered) prefetchAnchor(anchor)
+        }
+        entered.clear()
+      }, SCROLL_SETTLE_MS)
+    },
+    { capture: true, passive: true, signal },
+  )
 
   function update(anchor: HTMLAnchorElement): void {
     viewport.unobserve(anchor)
+    entered.delete(anchor)
     if (!anchor.isConnected) {
       completed.delete(anchor)
       return
@@ -237,6 +270,8 @@ function startViewportPrefetching(signal: AbortSignal): void {
   signal.addEventListener(
     'abort',
     () => {
+      clearTimeout(scrolling)
+      entered.clear()
       mutations.disconnect()
       viewport.disconnect()
     },

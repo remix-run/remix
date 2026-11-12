@@ -1381,6 +1381,7 @@ This prevents Remix from intercepting Navigation API events. Explicit frame relo
 Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Use `data-rmx-prefetch="viewport"` to start loading when the link enters the viewport. For other triggers, such as prefetching a search result as the visitor types, call `prefetch(src, { target })` from `remix/component`.
 
 - Intent prefetching starts after the pointer or keyboard focus rests on the link for 100ms, or immediately when the link is pressed. Viewport prefetching happens once while the link stays mounted with the same source and target.
+- A link that enters the viewport while the page or one of its scrollers is scrolling waits until scrolling has stopped for 150ms, and is prefetched only if it's still in view, so a fast scroll doesn't prefetch every link it passes.
 - Prefetching sends the same headers as a frame navigation, including `X-Remix-Target` for named frames, so it matches the request that follows.
 - Remix skips links with `data-rmx-document`, `download`, or a `target` other than `_self`, and named-frame links whose frame isn't mounted. Automatic prefetching is also skipped when the browser reports Save-Data or a `slow-2g` or `2g` connection. Imperative `prefetch()` calls ignore that check.
 
