@@ -65,6 +65,10 @@
       "types": "./src/tabs.ts",
       "default": "./src/tabs.ts"
     },
+    "./toast": {
+      "types": "./src/toast.tsx",
+      "default": "./src/toast.tsx"
+    },
     "./toggle": {
       "types": "./src/toggle.ts",
       "default": "./src/toggle.ts"
@@ -112,6 +116,10 @@
       "./tabs": {
         "types": "./dist/tabs.d.ts",
         "default": "./dist/tabs.js"
+      },
+      "./toast": {
+        "types": "./dist/toast.d.ts",
+        "default": "./dist/toast.js"
       },
       "./toggle": {
         "types": "./dist/toggle.d.ts",

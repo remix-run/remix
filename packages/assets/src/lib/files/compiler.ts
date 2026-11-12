@@ -23,6 +23,7 @@ import type {
   SourceFileRecord,
   SourceFileStore,
 } from './store.ts'
+import { isNoEntityError } from '../fs-errors.ts'
 
 type EmittedFile = {
   body: Uint8Array
@@ -806,17 +807,6 @@ function resolveExistingFilePath(filePath: string): string | null {
     if (isNoEntityError(error)) return null
     throw error
   }
-}
-
-function isNoEntityError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }
 
 async function readFileContents(identityPath: string): Promise<Uint8Array> {

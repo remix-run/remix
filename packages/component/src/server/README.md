@@ -26,7 +26,7 @@ let html = await renderToString(<App />, { nonce })
 
 ## renderToStream
 
-Renders a component tree to a streaming response. The initial HTML is sent immediately. Any `<Frame>` components with a `fallback` prop will render the fallback first, then stream the resolved content as it becomes available.
+Renders a component tree to a streaming response. The initial HTML is sent immediately. Eager `<Frame>` components with a `fallback` prop render the fallback first, then stream the resolved content as it becomes available. Lazy frames render only their fallback and load later in the browser.
 
 ```tsx
 import { renderToStream } from 'remix/component/server'
@@ -63,7 +63,7 @@ return new Response(stream, {
 - **`frameSrc`** - Seeds SSR frame state for the current render. When provided, server-rendered components can read `handle.frame.src` and `handle.frames.top.src` during SSR.
 - **`topFrameSrc`** - Overrides the root frame URL used for `handle.frames.top.src`. This is mainly useful when calling `renderToStream()` from inside `resolveFrame()` for a nested frame render.
 - **`signal`** - Cancels pending server rendering work. Pass `request.signal` so client disconnects can stop unresolved frame work without invoking `onError` for the disconnect itself.
-- **`resolveFrame(src, target, context)`** - Called when a `<Frame>` needs its content. Return a string of HTML, a `ReadableStream<Uint8Array>`, or a promise of either. `context.currentFrameSrc` is the URL for the frame that contains the `<Frame>`, and `context.topFrameSrc` is the outer document URL. `context.nonce` carries the enclosing render's nonce for nested renders. Required if your component tree contains `<Frame>` elements.
+- **`resolveFrame(src, target, context)`** - Called when an eager `<Frame>` needs its content. Return a string of HTML, a `ReadableStream<Uint8Array>`, or a promise of either. `context.currentFrameSrc` is the URL for the frame that contains the `<Frame>`, and `context.topFrameSrc` is the outer document URL. `context.nonce` carries the enclosing render's nonce for nested renders. Required if your component tree contains eager `<Frame>` elements.
 - **`resolveClientEntry(entryId, component)`** - Resolves the public module URL, export name, optional import map, and optional module preload hrefs for a hydrated client entry.
 - **`onError(error)`** - Receives rendering errors and defaults to logging them. Fatal errors reject the stream even when a handler is supplied.
 - **`nonce`** - CSP nonce for generated import maps, module preloads, and CSS mixin styles. Use a fresh, unpredictable value for each document response and the same value in its policy.
@@ -99,8 +99,11 @@ When the initial document was rendered with `nonce` and a response's CSP identif
 
 When the stream encounters a `<Frame>` component:
 
+- **With `loading="lazy"`**: Only the fallback and frame metadata are rendered. The server does not resolve the source or stream a content template. To defer browser loading, provide a fallback that renders an element. After `run()` starts in the browser, the frame loads through the browser resolver when its fallback approaches the viewport. If the fallback renders no elements, the browser logs a warning and loads the frame immediately.
 - **Without `fallback`** (blocking): The frame content is awaited before the initial HTML chunk is sent. The resolved content appears inline.
 - **With `fallback`** (non-blocking): The fallback is rendered inline in the initial chunk. Once the frame resolves, a `<template>` element containing the real content is streamed at the end of the response. The client swaps it in automatically.
+
+The blocking and streaming behaviors use `loading="eager"`, which is the default.
 
 This means the first chunk always contains a complete, renderable page. Slow data sources don't block the initial paint.
 

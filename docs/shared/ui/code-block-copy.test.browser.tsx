@@ -7,19 +7,16 @@ import { CodeBlockCopyButtons } from './public/code-block-copy.tsx'
 describe('CodeBlockCopyButtons', () => {
   it('restarts after navigation and cancels stale clipboard work', async (t) => {
     let attemptedCopies: string[] = []
-    let resolveFirstCopy: (() => void) | undefined
+    let firstCopy = Promise.withResolvers<void>()
+    let lastCopy = Promise.resolve()
     let clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {
         writeText(text: string) {
           attemptedCopies.push(text)
-          if (attemptedCopies.length === 1) {
-            return new Promise<void>((resolve) => {
-              resolveFirstCopy = resolve
-            })
-          }
-          return Promise.resolve()
+          lastCopy = attemptedCopies.length === 1 ? firstCopy.promise : Promise.resolve()
+          return lastCopy
         },
       },
     })
@@ -60,13 +57,13 @@ describe('CodeBlockCopyButtons', () => {
     root.render(<CodeBlockCopyButtons rootId="next-code-blocks" />)
     root.flush()
 
-    if (!resolveFirstCopy) throw new Error('Clipboard write did not start')
-    resolveFirstCopy()
-    await Promise.resolve()
+    // The click handler awaited each write before this test did, so it has finished.
+    firstCopy.resolve()
+    await firstCopy.promise
     assert.equal(copyButton.hasAttribute('data-copied'), false)
 
     copyButton.click()
-    await Promise.resolve()
+    await lastCopy
     assert.deepEqual(attemptedCopies, ['let count = 1', 'let count = 1'])
     assert.equal(copyButton.getAttribute('data-copied'), 'true')
 

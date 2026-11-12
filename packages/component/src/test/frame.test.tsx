@@ -6,12 +6,20 @@ import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import { Frame, getNamedFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
+import type { ResolveFrame } from '../runtime/frame-runtime.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
 import { css, navigate, on } from '../index.ts'
 import { jsx } from '../runtime/core/vnode.ts'
-import { drain, readChunks, withResolvers } from './utils.ts'
+import {
+  drain,
+  nextDomMutation,
+  readChunks,
+  trackUnhandledRejections,
+  waitForDom,
+  withResolvers,
+} from './utils.ts'
 
 async function setupReloadBodyTest(t: TestContext) {
   document.body.innerHTML = '<main>Initial</main>'
@@ -132,13 +140,18 @@ async function renderSplitFrameTemplate(
   })
   await app.ready()
 
-  if (scenario === 'observer') document.write(templateHtml.slice(0, split))
-  await new Promise((resolve) => setTimeout(resolve, 0))
+  if (scenario === 'observer') {
+    let observed = nextDomMutation()
+    document.write(templateHtml.slice(0, split))
+    await observed
+  }
+  // Publishing a template removes it from the document, so it's still here until it completes.
+  expect(document.querySelector('template')).not.toBe(null)
   expect(document.querySelector('#fallback')?.textContent).toBe('Loading...')
   expect(document.querySelectorAll('[data-item]').length).toBe(0)
   await beforeCompletion?.()
   document.write(templateHtml.slice(split))
-  await new Promise((resolve) => setTimeout(resolve, 0))
+  await waitForDom(() => document.querySelector('#fallback') === null)
   expect(document.readyState).toBe('loading')
 }
 
@@ -160,22 +173,341 @@ async function setupDefaultFrameRequestTest(t: TestContext, name?: string) {
   return { frame, fetchMock }
 }
 
-function waitForElement(
+async function waitForElement(
   selector: string,
   predicate: (element: Element) => boolean = () => true,
-): Promise<Element> {
-  let element = document.querySelector(selector)
-  if (element && predicate(element)) return Promise.resolve(element)
-
-  return new Promise((resolve) => {
-    let observer = new MutationObserver(() => {
-      let element = document.querySelector(selector)
-      if (!element || !predicate(element)) return
-      observer.disconnect()
-      resolve(element)
-    })
-    observer.observe(document.documentElement, { childList: true, subtree: true })
+): Promise<void> {
+  await waitForDom(() => {
+    let element = document.querySelector(selector)
+    return element !== null && predicate(element)
   })
+}
+
+async function waitForText(selector: string, text: string, root: ParentNode = document) {
+  await waitForDom(() => root.querySelector(selector)?.textContent === text, root)
+}
+
+async function waitForTexts(selector: string, texts: string[]) {
+  await waitForDom(() => {
+    let actual = Array.from(document.querySelectorAll(selector), (node) => node.textContent)
+    return actual.length === texts.length && actual.every((text, index) => text === texts[index])
+  })
+}
+
+// Resolves once the frame start marker from a streamed chunk is reconciled into the document.
+async function waitForFrameMarker(chunk: string) {
+  let marker = new RegExp(`<!--\\s*rmx:f:${getCommentMarkerId(chunk, 'rmx:f:')}\\s*-->`)
+  await waitForDom(() => marker.test(document.documentElement.innerHTML))
+}
+
+// Records every text the DOM displays from now on, including text that a later mutation replaced
+// before anyone could look at it, so tests can prove stale content never rendered.
+function recordRenderedText(root: Node = document): { stop(): string[] } {
+  let texts: string[] = []
+  let collect = (records: MutationRecord[]) => {
+    for (let record of records) {
+      if (record.type === 'characterData') texts.push(record.oldValue ?? '')
+      for (let node of record.addedNodes) texts.push(node.textContent ?? '')
+    }
+  }
+  let observer = new MutationObserver(collect)
+  observer.observe(root, {
+    characterData: true,
+    characterDataOldValue: true,
+    childList: true,
+    subtree: true,
+  })
+  return {
+    stop() {
+      collect(observer.takeRecords())
+      observer.disconnect()
+      return texts
+    },
+  }
+}
+
+function waitForIntersection(element: Element): Promise<void> {
+  return new Promise((resolve) => {
+    let observer = new IntersectionObserver(() => {
+      observer.disconnect()
+      // Other observers in this notification batch can run after this callback.
+      requestAnimationFrame(() => resolve())
+    })
+    observer.observe(element)
+  })
+}
+
+type LazyFrameRendering = 'client' | 'hydrated' | 'server'
+
+async function setupLazyFrame(
+  t: TestContext,
+  resolveFrame: ResolveFrame,
+  options: {
+    mode?: LazyFrameRendering
+    resolvePage?: (renderPage: () => Promise<string>) => Promise<string>
+  } = {},
+) {
+  let reveal: (() => Promise<AbortSignal>) | undefined
+  let version = 0
+  function renderContent(version: number, visible = true) {
+    return (
+      <section
+        id="lazy-host"
+        data-version={version}
+        mix={css({ position: 'fixed', top: '100000px', left: 0 })}
+      >
+        {visible ? (
+          <Frame name="lazy" src="/lazy" loading="lazy" fallback={<p id="waiting">Waiting</p>} />
+        ) : null}
+      </section>
+    )
+  }
+  let Entry = clientEntry(
+    '/lazy-entry.js#Entry',
+    function Entry(handle: Handle<{ version: number }>) {
+      let visible = options.mode === 'hydrated'
+      reveal = () => {
+        visible = true
+        return handle.update()
+      }
+      return () => renderContent(handle.props.version, visible)
+    },
+  )
+  let renderPage = () =>
+    renderDocumentContent(
+      options.mode === 'server' ? renderContent(version++) : <Entry version={version++} />,
+    )
+  document.documentElement.innerHTML = await renderPage()
+  let app = run({
+    loadModule: () => Entry,
+    resolveFrame(src, resolveOptions) {
+      return src === '/page'
+        ? (options.resolvePage?.(renderPage) ?? renderPage())
+        : resolveFrame(src, resolveOptions)
+    },
+  })
+  t.after(() => app.dispose())
+  await app.ready()
+  if (options.mode !== 'server') {
+    invariant(reveal)
+    await reveal()
+  }
+  let host = document.getElementById('lazy-host')
+  let frame = app.frames.get('lazy')
+  invariant(host && frame)
+  await waitForIntersection(host)
+  return { app, frame, host, renderPage }
+}
+
+async function assertPendingLazyFrameRestart(t: TestContext, mode: LazyFrameRendering = 'client') {
+  let requests: Array<{
+    signal: AbortSignal
+    response: ReturnType<typeof Promise.withResolvers<string>>
+  }> = []
+  let { app, frame, host } = await setupLazyFrame(
+    t,
+    (_src, options) => {
+      invariant(options?.signal)
+      let response = Promise.withResolvers<string>()
+      requests.push({ signal: options.signal, response })
+      return response.promise
+    },
+    { mode },
+  )
+  let events: string[] = []
+  frame.addEventListener('reloadStart', () => events.push('start'))
+  frame.addEventListener('reloadComplete', () => events.push('complete'))
+  await app.frames.top.reload({ src: '/page' })
+  expect(requests).toEqual([])
+  expect(document.getElementById('waiting')?.textContent).toBe('Waiting')
+  expect(events).toEqual(['start', 'complete'])
+
+  host.style.top = '0'
+  await waitForIntersection(host)
+  expect(requests.length).toBe(1)
+  expect(events).toEqual(['start', 'complete'])
+
+  await app.frames.top.reload({ src: '/page' })
+  expect(requests.length).toBe(2)
+  expect(requests[0]?.signal.aborted).toBe(true)
+  expect(requests[1]?.signal.aborted).toBe(false)
+  requests[0]?.response.resolve('<p id="stale-lazy-content">Stale</p>')
+  await waitForIntersection(host)
+  expect(document.getElementById('stale-lazy-content')).toBe(null)
+  expect(document.getElementById('waiting')?.textContent).toBe('Waiting')
+
+  let completed = new Promise<void>((resolve) => {
+    frame.addEventListener('reloadComplete', () => resolve(), { once: true })
+  })
+  requests[1]?.response.resolve('<p id="fresh-lazy-content">Fresh</p>')
+  await completed
+  expect(document.getElementById('fresh-lazy-content')?.textContent).toBe('Fresh')
+  expect(events).toEqual(['start', 'complete', 'start', 'complete'])
+}
+
+async function assertEagerSsrTakeover(t: TestContext, streaming: boolean, explicitReload = false) {
+  let loading: 'lazy' | 'eager' = 'lazy'
+  let renderPage = () =>
+    renderToStream(
+      <html>
+        <head />
+        <body>
+          <section id="lazy-host" mix={css({ position: 'fixed', top: 0, left: 0 })}>
+            <Frame
+              name="lazy"
+              src="/lazy"
+              loading={loading}
+              fallback={loading === 'lazy' || streaming ? <p>Waiting</p> : undefined}
+            />
+          </section>
+        </body>
+      </html>,
+      { resolveFrame: () => '<p id="fresh-content">Fresh</p>' },
+    )
+  document.documentElement.innerHTML = await drain(renderPage())
+  let response = Promise.withResolvers<string>()
+  let requestSignal: AbortSignal | undefined
+  let app = run({
+    loadModule: mock.fn(),
+    resolveFrame(src, options) {
+      if (src === '/page') return renderPage()
+      requestSignal = options?.signal
+      return response.promise
+    },
+  })
+  t.after(() => app.dispose())
+  await app.ready()
+  let host = document.getElementById('lazy-host')
+  let frame = app.frames.get('lazy')
+  invariant(host && frame)
+  await waitForIntersection(host)
+  invariant(requestSignal)
+  expect(requestSignal.aborted).toBe(false)
+  let events: string[] = []
+  frame.addEventListener('reloadStart', () => events.push('start'))
+  frame.addEventListener('reloadComplete', () => events.push('complete'))
+  let reloaded = explicitReload ? frame.reload() : undefined
+
+  loading = 'eager'
+  await app.frames.top.reload({ src: '/page' })
+  expect(app.frames.get('lazy')).toBe(frame)
+  expect(document.getElementById('fresh-content')?.textContent).toBe('Fresh')
+  response.resolve('<p id="stale-content">Stale</p>')
+  await reloaded
+  await waitForIntersection(host)
+  expect(host.textContent).toBe('Fresh')
+  expect(requestSignal.aborted).toBe(true)
+  expect(events).toEqual(['start', 'complete'])
+}
+
+async function assertSettledLazyFrameRestart(
+  t: TestContext,
+  mode: LazyFrameRendering,
+  options: { failAncestor?: boolean } = {},
+) {
+  let requests: Array<{
+    signal: AbortSignal
+    response: ReturnType<typeof Promise.withResolvers<string>>
+  }> = []
+  let holdPage = false
+  let pageResponse = Promise.withResolvers<string>()
+  let { app, frame, host, renderPage } = await setupLazyFrame(
+    t,
+    (_src, options) => {
+      invariant(options?.signal)
+      let { signal } = options
+      let response = Promise.withResolvers<string>()
+      signal.addEventListener('abort', () => response.reject(signal.reason), { once: true })
+      requests.push({ signal, response })
+      return response.promise
+    },
+    { mode, resolvePage: (renderPage) => (holdPage ? pageResponse.promise : renderPage()) },
+  )
+  host.style.top = '0'
+  await waitForIntersection(host)
+  expect(requests.length).toBe(1)
+  await app.frames.top.reload({ src: '/page' })
+  expect(requests.length).toBe(2)
+
+  host.style.top = '100000px'
+  await waitForIntersection(host)
+  let canceled = new Promise<void>((resolve) => {
+    frame.addEventListener('reloadComplete', () => resolve(), { once: true })
+  })
+  holdPage = true
+  let reloaded = app.frames.top.reload()
+  await canceled
+  expect(requests[1]?.signal.aborted).toBe(true)
+  if (options.failAncestor) {
+    let failure = new Error('Ancestor reload failed')
+    let errors: unknown[] = []
+    app.addEventListener('error', (event) => errors.push(event.error))
+    let rejected = expect(reloaded).rejects.toThrow(failure.message)
+    pageResponse.reject(failure)
+    await rejected
+    expect(errors).toEqual([failure])
+    host.style.top = '0'
+    await waitForIntersection(host)
+  } else {
+    pageResponse.resolve(await renderPage())
+    await reloaded
+  }
+  expect(requests.length).toBe(3)
+  expect(requests[2]?.signal.aborted).toBe(false)
+  let loaded = waitForElement('#fresh-lazy-content')
+  requests[2]?.response.resolve('<p id="fresh-lazy-content">Fresh</p>')
+  await loaded
+  expect(document.getElementById('fresh-lazy-content')?.textContent).toBe('Fresh')
+}
+
+async function assertLazyReloadPreemption(
+  t: TestContext,
+  mode: LazyFrameRendering,
+  options: { ancestorReload?: boolean } = {},
+) {
+  let requests: Array<{
+    src: string
+    signal: AbortSignal
+    response: ReturnType<typeof Promise.withResolvers<string>>
+  }> = []
+  let { app, frame, host } = await setupLazyFrame(
+    t,
+    (src, options) => {
+      invariant(options?.signal)
+      let { signal } = options
+      let response = Promise.withResolvers<string>()
+      signal.addEventListener('abort', () => response.reject(signal.reason), { once: true })
+      requests.push({ src, signal, response })
+      return response.promise
+    },
+    { mode },
+  )
+  host.style.top = '0'
+  await waitForIntersection(host)
+  expect(requests.length).toBe(1)
+  if (options.ancestorReload) {
+    await app.frames.top.reload({ src: '/page' })
+    expect(requests.length).toBe(2)
+    host.style.top = '0'
+  }
+
+  let previous = requests.at(-1)
+  invariant(previous)
+  let reloaded = frame.reload({ src: '/explicit' })
+  let requestCount = requests.length
+  let explicit = requests.at(-1)
+  invariant(explicit)
+  expect(previous.signal.aborted).toBe(true)
+  expect(explicit.src).toBe('/explicit')
+  await waitForIntersection(host)
+  await waitForIntersection(host)
+  expect(requests.length).toBe(requestCount)
+  expect(explicit.signal.aborted).toBe(false)
+
+  explicit.response.resolve('<p id="explicit-lazy-content">Explicit</p>')
+  await reloaded
+  expect(document.getElementById('explicit-lazy-content')?.textContent).toBe('Explicit')
+  expect(frame.src).toBe('/explicit')
 }
 
 function createDisposableEntry(id: string, onDispose: () => void) {
@@ -196,12 +528,6 @@ function createReplacementContent(): RemixNode {
       <section id="details">Details</section>
     </>
   )
-}
-
-async function waitForTransitionWindow(): Promise<void> {
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-  await new Promise<void>((resolve) => setTimeout(resolve, 120))
 }
 
 async function setupFrameNavigationTest(t: TestContext) {
@@ -251,7 +577,6 @@ async function setupFrameNavigationTest(t: TestContext) {
   })
 
   await app.ready()
-  await new Promise((resolve) => setTimeout(resolve, 0))
 
   return {
     baseUrl,
@@ -978,13 +1303,7 @@ describe('run', () => {
 
   it('rejects non-HTML 4xx responses from the default resolver', async (t) => {
     document.body.innerHTML = '<main id="initial">Initial</main>'
-    let unhandledRejections: unknown[] = []
-    let onUnhandledRejection = (event: PromiseRejectionEvent) => {
-      event.preventDefault()
-      unhandledRejections.push(event.reason)
-    }
-    window.addEventListener('unhandledrejection', onUnhandledRejection)
-    t.after(() => window.removeEventListener('unhandledrejection', onUnhandledRejection))
+    let flushUnhandledRejections = trackUnhandledRejections(t)
 
     let fetchMock = t.mock.method(
       globalThis,
@@ -1010,10 +1329,8 @@ describe('run', () => {
       await expect(app.frames.top.reload()).rejects.toThrow(
         'Failed to resolve frame: 404 Not Found',
       )
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
+      expect(await flushUnhandledRejections()).toEqual([])
       expect(fetchMock).toHaveBeenCalledTimes(1)
-      expect(unhandledRejections).toEqual([])
       expect(reportedError).toBeInstanceOf(Error)
       expect((reportedError as Error).message).toBe('Failed to resolve frame: 404 Not Found')
       expect(document.getElementById('initial')?.textContent).toBe('Initial')
@@ -1520,7 +1837,6 @@ describe('run', () => {
 
     topFrame.src = '/b'
     await topFrame.reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     let bodyHtml = document.body.innerHTML
     let hydrationStarts = bodyHtml.match(/<!--\s*rmx:h:/g)?.length ?? 0
@@ -1715,7 +2031,6 @@ describe('run', () => {
     let topFrame = app.frames.top
     topFrame.src = '/root'
     await topFrame.reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('root-entry')).toBe(button)
     expect(button.textContent).toBe('Reloaded: 1')
@@ -1783,7 +2098,6 @@ describe('run', () => {
     let topFrame = app.frames.top
     topFrame.src = '/without-entry'
     await topFrame.reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('removed-entry')).toBeNull()
     expect(document.getElementById('replacement')?.textContent).toBe('Gone')
@@ -1896,7 +2210,6 @@ describe('run', () => {
 
       allowProductModule()
       await reloadPromise
-      await new Promise((resolve) => setTimeout(resolve, 0))
 
       let addButton = document.querySelector('#product-details button')
       invariant(addButton instanceof HTMLButtonElement)
@@ -2070,12 +2383,6 @@ describe('run', () => {
     expect(beforeTransform).toBe('matrix(1, 0, 0, 1, 8, 0)')
     expect(beforeWidth).toBe('18px')
 
-    let transitionRuns: string[] = []
-    target.addEventListener('transitionrun', (event) => {
-      let transition = event as TransitionEvent
-      transitionRuns.push(`${transition.pseudoElement}:${transition.propertyName}`)
-    })
-
     let app = run({
       loadModule(moduleUrl, exportName) {
         if (moduleUrl === '/assets/hydrated-knob.js' && exportName === 'HydratedKnob') {
@@ -2086,11 +2393,11 @@ describe('run', () => {
     })
 
     await app.ready()
-    await waitForTransitionWindow()
 
     expect(getComputedStyle(target, '::before').transform).toBe(beforeTransform)
     expect(getComputedStyle(target, '::before').width).toBe(beforeWidth)
-    expect(transitionRuns).toEqual([])
+    // Reading computed style flushes style, which creates any transition synchronously.
+    expect(target.getAnimations({ subtree: true })).toEqual([])
 
     app.dispose()
   })
@@ -2161,7 +2468,6 @@ describe('run', () => {
     let topFrame = app.frames.top
     topFrame.src = '/without-frame'
     await topFrame.reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('replacement')?.textContent).toBe('Replacement')
     expect(readNamedFrame()).toBeUndefined()
@@ -2170,8 +2476,10 @@ describe('run', () => {
   })
 
   it('hydrates ready modules before slower modules while ready() stays pending', async () => {
+    let [fastHydrated, markFastHydrated] = withResolvers<void>()
     let Fast = clientEntry('/js/fast.js#Fast', function Fast(handle: Handle) {
       let clicked = false
+      handle.queueTask(() => markFastHydrated())
       return () => (
         <button
           id="fast"
@@ -2228,7 +2536,7 @@ describe('run', () => {
       readySettled = true
     })
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await fastHydrated
 
     let fastButton = document.getElementById('fast')
     let slowButton = document.getElementById('slow')
@@ -2931,8 +3239,10 @@ describe('run', () => {
       )
     })
 
+    let [lateHydrated, markLateHydrated] = withResolvers<void>()
     let Late = clientEntry('/js/late.js#Late', function Late(handle: Handle) {
       let clicked = false
+      handle.queueTask(() => markLateHydrated())
       return () => (
         <button
           id="late"
@@ -2962,10 +3272,14 @@ describe('run', () => {
 
     let frameId = getCommentMarkerId(first.value, 'rmx:f:')
     let [lateModulePromise, resolveLateModule] = withResolvers<Function>()
+    let [lateModuleRequested, markLateModuleRequested] = withResolvers<void>()
 
     let loadModule = mock.fn((moduleUrl: string, exportName: string) => {
       if (moduleUrl === '/js/initial.js' && exportName === 'Initial') return Initial
-      if (moduleUrl === '/js/late.js' && exportName === 'Late') return lateModulePromise
+      if (moduleUrl === '/js/late.js' && exportName === 'Late') {
+        markLateModuleRequested()
+        return lateModulePromise
+      }
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
     })
 
@@ -2980,7 +3294,7 @@ describe('run', () => {
     template.innerHTML = await drain(renderToStream(<Late />))
     document.body.appendChild(template)
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await lateModuleRequested
 
     // Late template markers hydrate after ready() and are not part of initial barrier.
     expect(loadModule).toHaveBeenCalledTimes(2)
@@ -2992,7 +3306,7 @@ describe('run', () => {
     expect(lateButton.textContent).toBe('Late')
 
     resolveLateModule(Late)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await lateHydrated
 
     lateButton.click()
     app.flush()
@@ -3086,7 +3400,7 @@ describe('run', () => {
     invariant(!second.done)
     document.body.insertAdjacentHTML('beforeend', second.value)
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('nav', 'Loaded')
 
     expect(document.querySelector('h1')).toBe(h1)
     expect(document.querySelector('p')).toBe(p)
@@ -3139,16 +3453,18 @@ describe('run', () => {
     })
     await app.ready()
 
+    let observed = nextDomMutation()
     document.write(template.value.replace(`<!--${FRAME_TEMPLATE_END_MARKER}-->`, ''))
     document.write('<div>Following sibling</div>')
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await observed
 
     expect(document.readyState).toBe('loading')
+    expect(document.querySelector('template')).not.toBe(null)
     expect(document.querySelector('#fallback')?.textContent).toBe('Loading...')
     expect(document.querySelector('#loaded')).toBe(null)
 
     document.close()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#loaded')
 
     expect(document.readyState).not.toBe('loading')
     expect(document.querySelector('#loaded')?.textContent).toBe('Loaded')
@@ -3157,11 +3473,16 @@ describe('run', () => {
 
   it('preserves every streamed frame item when a script appends a sibling mid-template', async (t) => {
     await renderSplitFrameTemplate(t, 'observer', async () => {
+      let observed = nextDomMutation()
       document.body.append(document.createElement('div'))
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await observed
+    })
+    // The runtime's DOMContentLoaded listener was added first, so it has run when this one does.
+    let loaded = new Promise((resolve) => {
+      document.addEventListener('DOMContentLoaded', resolve, { once: true })
     })
     document.close()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await loaded
 
     expect(
       Array.from(document.querySelectorAll('[data-item]'), (node) => node.textContent),
@@ -3195,7 +3516,7 @@ describe('run', () => {
     let template = await chunks.next()
     invariant(!template.done)
     document.body.insertAdjacentHTML('beforeend', template.value)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#loaded')
 
     expect(document.querySelector('#loaded')?.textContent).toBe('Loaded')
     expect(document.querySelector('#row-template')).toBe(rowTemplate)
@@ -3362,8 +3683,6 @@ describe('run', () => {
 
     await clientFrame.ready()
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
     expect(document.querySelector('p')?.textContent).toBe('Server: 1')
     invariant(reload)
 
@@ -3378,7 +3697,6 @@ describe('run', () => {
     invariant(items.length === 2)
 
     await reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     // Dynamic text updated.
     expect(document.querySelector('p')?.textContent).toBe('Server: 2')
@@ -3450,12 +3768,10 @@ describe('run', () => {
     })
 
     await clientFrame.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(document.getElementById('frame-value')?.textContent).toBe('Initial content')
 
     invariant(reload)
     await reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('frame-content')).toBeNull()
     expect(document.getElementById('frame-value')).toBeNull()
@@ -3533,13 +3849,11 @@ describe('run', () => {
     })
 
     await clientFrame.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('cart-items')).toBeInstanceOf(HTMLElement)
     invariant(removeLastItem)
 
     await removeLastItem()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('cart-items')).toBeNull()
     expect(document.getElementById('empty-cart')?.textContent).toBe('Your cart is empty.')
@@ -3596,13 +3910,11 @@ describe('run', () => {
     })
 
     await clientFrame.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.querySelector('#summary')?.textContent).toBe('Summary: 1')
 
     invariant(reloadSummary)
     await reloadSummary()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.querySelector('#summary')?.textContent).toBe('Summary: 2')
 
@@ -3720,7 +4032,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     invariant(assertTopFrame)
     assertTopFrame()
@@ -3792,7 +4103,6 @@ describe('run', () => {
       resetScroll: false,
     })
     await window.navigation.back().finished
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     let frames = fixture.frames()
     expect(window.location.href).toBe(firstDestinationUrl)
@@ -3800,7 +4110,6 @@ describe('run', () => {
     expect(frames.target.src).toBe(firstTargetSrc)
 
     await window.navigation.forward().finished
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     frames = fixture.frames()
     expect(window.location.href).toBe(secondDestinationUrl)
@@ -3909,21 +4218,24 @@ describe('run', () => {
     app.flush()
     await initialListItems
 
+    let scrolled = new Promise((resolve) =>
+      window.addEventListener('scroll', resolve, { once: true }),
+    )
     window.scrollTo(0, 2500)
     expect(window.scrollY).toBe(2500)
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    await scrolled
 
     await navigate(detailUrl)
     expect(document.getElementById('scroll-detail-page')?.textContent).toContain('Detail')
 
-    let didScroll = false
+    let listItemsRenderedAtScroll: boolean | undefined
     window.navigation.addEventListener(
       'navigate',
       (event) => {
         let scroll = event.scroll.bind(event)
         Object.defineProperty(event, 'scroll', {
           value() {
-            didScroll = true
+            listItemsRenderedAtScroll = document.getElementById('scroll-list-items') != null
             scroll()
           },
         })
@@ -3933,16 +4245,10 @@ describe('run', () => {
 
     let backNavigation = window.navigation.back().finished
     await deferredListItemsRequested
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    )
-
-    expect(didScroll).toBe(false)
-
     resolveDeferredListItems(listItemsContent)
     await backNavigation
 
-    expect(didScroll).toBe(true)
+    expect(listItemsRenderedAtScroll).toBe(true)
     expect(document.getElementById('scroll-list-items')).not.toBe(null)
     expect(window.scrollY).toBe(2500)
   })
@@ -4029,13 +4335,11 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('summary-events')?.textContent).toBe('Summary: 1')
 
     invariant(triggerReloads)
     await triggerReloads()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(summaryReloadStartEvents).toBe(1)
     expect(rowReloadStartEvents).toBe(1)
@@ -4049,6 +4353,7 @@ describe('run', () => {
   it('dispatches reloadStart and reloadComplete events for non-blocking child frames during top frame reloads', async () => {
     let childReloadStartEvents = 0
     let childReloadCompleteEvents = 0
+    let [childReloadCompleted, markChildReloadCompleted] = withResolvers<void>()
     let reloadTopFromChild: undefined | (() => Promise<AbortSignal>)
 
     let ChildReloadObserver = clientEntry(
@@ -4066,6 +4371,7 @@ describe('run', () => {
             'reloadComplete',
             () => {
               childReloadCompleteEvents++
+              markChildReloadCompleted()
             },
             { once: true },
           )
@@ -4146,13 +4452,12 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Initial child')
 
     invariant(reloadTopFromChild)
     let reloadPromise = reloadTopFromChild()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForFrameMarker(firstChunk.value)
 
     expect(childReloadStartEvents).toBe(1)
     expect(childReloadCompleteEvents).toBe(0)
@@ -4160,8 +4465,7 @@ describe('run', () => {
     expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Initial child')
 
     releaseSecondChunk(secondChunk.value)
-    await reloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.all([reloadPromise, childReloadCompleted])
 
     expect(childReloadStartEvents).toBe(1)
     expect(childReloadCompleteEvents).toBe(1)
@@ -4223,8 +4527,6 @@ describe('run', () => {
 
     await clientFrame.ready()
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
     expect(document.querySelector('p')?.textContent).toBe('Server: 1')
     invariant(reload)
 
@@ -4234,7 +4536,6 @@ describe('run', () => {
     invariant(section && paragraph && button)
 
     await reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(document.querySelector('p')?.textContent).toBe('Server: 2')
 
     // Regression guard: reload should preserve node identity even with css-prop styles.
@@ -4322,7 +4623,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     let survivingRow = document.querySelector('[data-row="b"]')
     invariant(survivingRow instanceof HTMLFormElement)
@@ -4338,7 +4638,6 @@ describe('run', () => {
     items = [{ id: 'b', label: 'Heavy Metal Guitar Riffs' }]
     invariant(reload)
     await reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.querySelector('[data-row="a"]')).toBeNull()
     expect(document.querySelector('[data-row="b"]')).toBe(survivingRow)
@@ -4407,7 +4706,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('pending-message')).toBeNull()
     expect(getComputedStyle(document.getElementById('item-count')!).color).toBe('rgb(0, 0, 200)')
@@ -4415,7 +4713,6 @@ describe('run', () => {
     itemCount = 1
     invariant(startPendingReload)
     await startPendingReload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     let pendingMessage = document.getElementById('pending-message')
     invariant(pendingMessage)
@@ -4481,7 +4778,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     invariant(reload)
 
@@ -4590,6 +4886,8 @@ describe('run', () => {
     let secondSignal: AbortSignal | undefined
     let [firstReloadContent, resolveFirstReloadContent] = withResolvers<string>()
     let [secondReloadContent, resolveSecondReloadContent] = withResolvers<string>()
+    let [firstReloadResolving, markFirstReloadResolving] = withResolvers<void>()
+    let [secondReloadResolving, markSecondReloadResolving] = withResolvers<void>()
 
     let ReloadButton = clientEntry(
       '/assets/reload-abort.js#ReloadAbort',
@@ -4632,10 +4930,12 @@ describe('run', () => {
         callCount++
         if (callCount === 1) {
           firstSignal = options?.signal
+          markFirstReloadResolving()
           return firstReloadContent
         }
         if (callCount === 2) {
           secondSignal = options?.signal
+          markSecondReloadResolving()
           return secondReloadContent
         }
         throw new Error(`Unexpected reload call count: ${callCount}`)
@@ -4643,22 +4943,20 @@ describe('run', () => {
     })
 
     await clientFrame.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     invariant(reload)
 
     let firstReloadPromise = reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await firstReloadResolving
     expect(firstSignal?.aborted).toBe(false)
 
     let secondReloadPromise = reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await secondReloadResolving
     expect(firstSignal?.aborted).toBe(true)
     expect(secondSignal?.aborted).toBe(false)
 
     resolveFirstReloadContent('<section><p id="reload-value">Stale</p></section>')
     let firstReloadSignal = await firstReloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(firstReloadSignal).toBe(firstSignal)
     expect(firstReloadSignal.aborted).toBe(true)
 
@@ -4667,7 +4965,6 @@ describe('run', () => {
 
     resolveSecondReloadContent('<section><p id="reload-value">Fresh</p></section>')
     let secondReloadSignal = await secondReloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(secondReloadSignal).toBe(secondSignal)
     expect(secondReloadSignal.aborted).toBe(false)
 
@@ -4731,7 +5028,6 @@ describe('run', () => {
     })
 
     await clientFrame.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     invariant(frameHandle)
     frameHandle.addEventListener('reloadStart', () => events.push('start'))
@@ -4739,16 +5035,13 @@ describe('run', () => {
 
     let firstReloadPromise = frameHandle.reload()
     let secondReloadPromise = frameHandle.reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     resolveFirstReloadContent('<section><p id="reload-value">Stale</p></section>')
     await firstReloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(events).toEqual(['start'])
 
     resolveSecondReloadContent('<section><p id="reload-value">Fresh</p></section>')
     await secondReloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(events).toEqual(['start', 'complete'])
     expect(document.getElementById('reload-value')?.textContent).toBe('Fresh')
 
@@ -4808,7 +5101,6 @@ describe('run', () => {
     })
 
     await clientFrame.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     let main = document.querySelector('main')
     invariant(main)
@@ -4828,7 +5120,6 @@ describe('run', () => {
 
     invariant(reload)
     await reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     let titles = main.querySelectorAll('title')
     expect(titles).toHaveLength(1)
@@ -4873,10 +5164,14 @@ describe('run', () => {
     document.body.innerHTML = html
 
     let [modulePromise, resolveModule] = withResolvers<Function>()
-    let loadModule = mock.fn(async () => modulePromise)
+    let [moduleRequested, markModuleRequested] = withResolvers<void>()
+    let loadModule = mock.fn(async () => {
+      markModuleRequested()
+      return modulePromise
+    })
     let clientFrame = run({ loadModule })
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await moduleRequested
     resolveModule(Counter)
 
     await expect(clientFrame.ready()).resolves.toBeUndefined()
@@ -4949,7 +5244,7 @@ describe('run', () => {
     let second = await chunks.next()
     invariant(!second.done)
     document.body.insertAdjacentHTML('beforeend', second.value)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#frame', 'Loaded!')
 
     // Frame is now rendered.
     expect(document.getElementById('frame')!.textContent).toBe('Loaded!')
@@ -4997,7 +5292,7 @@ describe('run', () => {
     let second = await chunks.next()
     invariant(!second.done)
     document.body.insertAdjacentHTML('beforeend', second.value)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#fast', 'Fast loaded')
 
     // Fast frame is rendered; slow frame still shows fallback.
     expect(document.getElementById('fast')!.textContent).toBe('Fast loaded')
@@ -5008,7 +5303,7 @@ describe('run', () => {
     let third = await chunks.next()
     invariant(!third.done)
     document.body.insertAdjacentHTML('beforeend', third.value)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#slow', 'Slow loaded')
 
     // Both frames are now rendered.
     expect(document.getElementById('fast')!.textContent).toBe('Fast loaded')
@@ -5038,7 +5333,9 @@ describe('run', () => {
       '"f":{"f1":{"status":"pending","src":"/slow"}}}' +
       '</script>'
 
+    let [moduleRequested, markModuleRequested] = withResolvers<void>()
     let loadModuleFn = mock.fn(async () => {
+      markModuleRequested()
       let mod = await modulePromise
       moduleLoaded = true
       return mod
@@ -5046,7 +5343,7 @@ describe('run', () => {
 
     let clientFrame = run({ loadModule: loadModuleFn })
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await moduleRequested
 
     // loadModule must have been called (hydration marker was found).
     expect(loadModuleFn).toHaveBeenCalled()
@@ -5060,7 +5357,7 @@ describe('run', () => {
     template.id = 'f1'
     template.innerHTML = '<span id="frame">Loaded!</span>'
     document.body.appendChild(template)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#frame', 'Loaded!')
 
     // Frame rendered even though module hasn't loaded yet.
     expect(document.getElementById('frame')!.textContent).toBe('Loaded!')
@@ -5076,10 +5373,12 @@ describe('run', () => {
   })
 
   it('hydrates a component inside a nested frame', async () => {
+    let [counterHydrated, markCounterHydrated] = withResolvers<void>()
     let Counter = clientEntry(
       '/js/counter.js#Counter',
       function Counter(handle: Handle<{ initialCount: number }>) {
         let count = handle.props.initialCount
+        handle.queueTask(() => markCounterHydrated())
         return () => (
           <button
             id="nested-counter"
@@ -5132,7 +5431,7 @@ describe('run', () => {
       loadModule: mock.fn(() => Promise.resolve(Counter)),
     })
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await clientFrame.ready()
 
     // Outer frame still shows fallback.
     expect(document.getElementById('outer')!.textContent).toBe('Loading outer…')
@@ -5142,7 +5441,7 @@ describe('run', () => {
     outerTemplate.id = outerFrameId
     outerTemplate.innerHTML = outerContent
     document.body.appendChild(outerTemplate)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#inner')
 
     // Outer frame rendered, inner frame shows fallback.
     expect(document.getElementById('inner')!.textContent).toBe('Loading inner…')
@@ -5152,7 +5451,7 @@ describe('run', () => {
     innerTemplate.id = innerFrameId
     innerTemplate.innerHTML = innerContent
     document.body.appendChild(innerTemplate)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await counterHydrated
 
     // Counter inside the nested frame is hydrated and interactive.
     let button = document.getElementById('nested-counter') as HTMLButtonElement
@@ -5274,9 +5573,11 @@ describe('run', () => {
       },
     )
 
+    let [independentHydrated, markIndependentHydrated] = withResolvers<void>()
     let IndependentEntry = clientEntry(
       '/js/independent.js#IndependentEntry',
-      function IndependentEntry() {
+      function IndependentEntry(handle: Handle) {
+        handle.queueTask(() => markIndependentHydrated())
         return () => (
           <button
             id="independent-action"
@@ -5327,7 +5628,7 @@ describe('run', () => {
 
     await providerRequested
     // Let the immediately available consumer hydrate while the provider import is pending.
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await independentHydrated
     let independentAction = document.getElementById('independent-action')
     invariant(independentAction instanceof HTMLButtonElement)
     independentAction.click()
@@ -5465,7 +5766,7 @@ describe('run', () => {
     outerTemplate.id = outerFrameId
     outerTemplate.innerHTML = outerContent
     document.body.appendChild(outerTemplate)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#outer-content')
 
     // Outer content rendered, middle shows fallback.
     expect(document.getElementById('outer-content')!.textContent).toBe('Outer loaded')
@@ -5476,7 +5777,7 @@ describe('run', () => {
     middleTemplate.id = middleFrameId
     middleTemplate.innerHTML = middleContent
     document.body.appendChild(middleTemplate)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#middle-content')
 
     // Middle content rendered, inner shows fallback.
     expect(document.getElementById('middle-content')!.textContent).toBe('Middle loaded')
@@ -5487,7 +5788,7 @@ describe('run', () => {
     innerTemplate.id = innerFrameId
     innerTemplate.innerHTML = innerContent
     document.body.appendChild(innerTemplate)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#inner-content')
 
     // All three levels rendered.
     expect(document.getElementById('outer-content')!.textContent).toBe('Outer loaded')
@@ -5503,11 +5804,13 @@ describe('run', () => {
   it('reloads a frame that is nested inside another frame', async () => {
     let reloadInner: undefined | (() => Promise<AbortSignal>)
     let renderCount = 0
+    let [reloadButtonHydrated, markReloadButtonHydrated] = withResolvers<void>()
 
     let ReloadButton = clientEntry(
       '/js/reload.js#ReloadButton',
       function ReloadButton(handle: Handle) {
         reloadInner = () => handle.frame.reload()
+        handle.queueTask(() => markReloadButtonHydrated())
         return () => <button id="reload-btn">Reload</button>
       },
     )
@@ -5553,7 +5856,7 @@ describe('run', () => {
       resolveFrame: renderInner,
     })
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await clientFrame.ready()
 
     // Outer is resolved, inner shows fallback.
     expect(document.getElementById('outer-text')!.textContent).toBe('Outer')
@@ -5564,8 +5867,7 @@ describe('run', () => {
     innerTemplate.id = innerFrameId
     innerTemplate.innerHTML = await renderInner()
     document.body.appendChild(innerTemplate)
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await reloadButtonHydrated
 
     // Inner frame rendered with hydrated ReloadButton.
     expect(document.getElementById('inner-text')!.textContent).toBe('Render 1')
@@ -5573,7 +5875,6 @@ describe('run', () => {
 
     // Reload the inner frame — only the inner frame should update.
     await reloadInner()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('inner-text')!.textContent).toBe('Render 2')
     expect(document.getElementById('outer-text')!.textContent).toBe('Outer')
@@ -5666,6 +5967,740 @@ describe('run', () => {
     expect(container.lastChild).toBe(end)
   })
 
+  it('hydrates lazy frames near the viewport once without blocking app.ready()', async (t) => {
+    let requests: string[] = []
+    let { app, host } = await setupLazyFrame(
+      t,
+      (src) => {
+        requests.push(src)
+        return '<p id="lazy-content">Loaded</p>'
+      },
+      { mode: 'server' },
+    )
+    expect(requests).toEqual([])
+    expect(host.textContent).toBe('Waiting')
+    expect(host.children.length).toBe(1)
+    expect(host.firstElementChild?.tagName).toBe('P')
+    expect(app.frames.get('lazy')?.src).toBe('/lazy')
+
+    let loaded = waitForElement('#lazy-content')
+    host.style.top = '0'
+    await loaded
+    expect(requests).toEqual(['/lazy'])
+    expect(host.textContent).toBe('Loaded')
+
+    host.style.top = '100000px'
+    await waitForIntersection(host)
+    host.style.top = '0'
+    await waitForIntersection(host)
+    expect(requests).toEqual(['/lazy'])
+  })
+
+  it('loads lazy frames within one viewport height or width of the visible area', async (t) => {
+    let requests: string[] = []
+    let root = createRoot(container, {
+      frameInit: {
+        resolveFrame(src) {
+          requests.push(src)
+          return `<p id="${src.slice(1)}">Loaded</p>`
+        },
+      },
+    })
+    t.after(() => root.dispose())
+    root.render(
+      <>
+        <section
+          id="vertical-host"
+          mix={css({ position: 'fixed', top: window.innerHeight * 2 + 50, left: 0 })}
+        >
+          <Frame src="/vertical-content" loading="lazy" fallback={<p>Waiting</p>} />
+        </section>
+        <section
+          id="horizontal-host"
+          mix={css({ position: 'fixed', top: 0, left: window.innerWidth * 2 + 50 })}
+        >
+          <Frame src="/horizontal-content" loading="lazy" fallback={<p>Waiting</p>} />
+        </section>
+      </>,
+    )
+    root.flush()
+    let vertical = document.getElementById('vertical-host')
+    let horizontal = document.getElementById('horizontal-host')
+    invariant(vertical && horizontal)
+    await waitForIntersection(vertical)
+    expect(requests).toEqual([])
+
+    let verticalLoaded = waitForElement('#vertical-content')
+    vertical.style.top = `${window.innerHeight * 2 - 50}px`
+    await verticalLoaded
+    expect(requests).toEqual(['/vertical-content'])
+
+    let horizontalLoaded = waitForElement('#horizontal-content')
+    horizontal.style.left = `${window.innerWidth * 2 - 50}px`
+    await horizontalLoaded
+    expect(requests).toEqual(['/vertical-content', '/horizontal-content'])
+  })
+
+  it('warns and loads a client-created lazy frame without a fallback immediately', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let warn = t.mock.method(console, 'warn', () => {})
+    let response = Promise.withResolvers<string>()
+    let resolveFrame = mock.fn(() => response.promise)
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    root.render(jsx(Frame, { src: '/empty', loading: 'lazy' }))
+    root.flush()
+    await waitForIntersection(container)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0]?.arguments).toEqual([
+      'Frame with loading="lazy" requires a fallback that renders an element. Loading "/empty" immediately.',
+    ])
+    expect(container.children.length).toBe(0)
+
+    let loaded = waitForElement('#empty-content')
+    response.resolve('<p id="empty-content">Loaded</p>')
+    await loaded
+    expect(container.children.length).toBe(1)
+  })
+
+  it('warns and loads a hydrated lazy frame with a text-only fallback immediately', async (t) => {
+    function Fallback() {
+      return () => 'Waiting'
+    }
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <section id="lazy-host">
+          <Frame src="/text" loading="lazy" fallback={<Fallback />} />
+        </section>,
+      ),
+    )
+    let host = document.getElementById('lazy-host')
+    invariant(host)
+    host.style.cssText = 'position:fixed;top:100000px;left:0'
+    let warn = t.mock.method(console, 'warn', () => {})
+    let response = Promise.withResolvers<string>()
+    let resolveFrame = mock.fn(() => response.promise)
+    let app = run({ loadModule: mock.fn(), resolveFrame })
+    t.after(() => app.dispose())
+    await app.ready()
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0]?.arguments).toEqual([
+      'Frame with loading="lazy" requires a fallback that renders an element. Loading "/text" immediately.',
+    ])
+    expect(host.textContent).toBe('Waiting')
+    expect(host.children.length).toBe(0)
+
+    let loaded = waitForElement('#text-content')
+    response.resolve('<p id="text-content">Loaded</p>')
+    await loaded
+    expect(host.textContent).toBe('Loaded')
+  })
+
+  it('warns and loads a lazy frame when its fallback stops rendering elements', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let warn = t.mock.method(console, 'warn', () => {})
+    let fallback: Handle | undefined
+    let visible = true
+    function Fallback(handle: Handle) {
+      fallback = handle
+      return () => (visible ? <p>Waiting</p> : null)
+    }
+    let resolveFrame = mock.fn(() => '<p id="removed-fallback-content">Loaded</p>')
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    root.render(<Frame src="/removed-fallback" loading="lazy" fallback={<Fallback />} />)
+    root.flush()
+    await waitForIntersection(container)
+    expect(resolveFrame).not.toHaveBeenCalled()
+    expect(warn.mock.calls.length).toBe(0)
+    invariant(fallback)
+    let loaded = waitForElement('#removed-fallback-content')
+    visible = false
+    await fallback.update()
+    await waitForIntersection(container)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls.length).toBe(1)
+    await loaded
+  })
+
+  it('debounces viewport changes before updating the lazy frame loading boundary', async (t) => {
+    let originalHeight = Object.getOwnPropertyDescriptor(window, 'innerHeight')
+    invariant(originalHeight)
+    t.after(() => Object.defineProperty(window, 'innerHeight', originalHeight))
+    container.style.cssText = `position:fixed;top:${window.innerHeight * 2.5}px;left:0`
+    let resolveFrame = mock.fn(() => '<p id="resized-content">Loaded</p>')
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    let observe = t.mock.method(IntersectionObserver.prototype, 'observe')
+    root.render(<Frame src="/resized-content" loading="lazy" fallback={<p>Waiting</p>} />)
+    root.flush()
+    await waitForIntersection(container)
+    expect(resolveFrame).not.toHaveBeenCalled()
+
+    let loaded = waitForElement('#resized-content')
+    let observationCount = observe.mock.calls.length
+    let timers = t.useFakeTimers()
+    Object.defineProperty(window, 'innerHeight', { value: window.innerHeight * 2 })
+    window.dispatchEvent(new Event('resize'))
+    timers.advance(50)
+    window.dispatchEvent(new Event('resize'))
+    timers.advance(99)
+    expect(observe.mock.calls.length).toBe(observationCount)
+    timers.advance(1)
+    expect(observe.mock.calls.length).toBe(observationCount + 1)
+    timers.restore()
+    await loaded
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+  })
+
+  it('shares a visibility observer and cleans up loaded, removed, and disposed lazy frames', async (t) => {
+    let OriginalObserver = globalThis.IntersectionObserver
+    let observers: IntersectionObserver[] = []
+    globalThis.IntersectionObserver = class extends OriginalObserver {
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        super(callback, options)
+        observers.push(this)
+      }
+    }
+    t.after(() => {
+      globalThis.IntersectionObserver = OriginalObserver
+    })
+    let firstHost = document.createElement('section')
+    let secondHost = document.createElement('section')
+    let removedHost = document.createElement('section')
+    firstHost.style.cssText =
+      secondHost.style.cssText =
+      removedHost.style.cssText =
+        'position:fixed;top:100000px;left:0'
+    container.append(firstHost, secondHost, removedHost)
+    let requests: string[] = []
+    let frameInit = {
+      resolveFrame(src: string) {
+        requests.push(src)
+        return `<p id="${src.slice(1)}">Loaded</p>`
+      },
+    }
+    let first = createRoot(firstHost, { frameInit })
+    let second = createRoot(secondHost, { frameInit })
+    let removed = createRoot(removedHost, { frameInit })
+    t.after(() => {
+      first.dispose()
+      second.dispose()
+      removed.dispose()
+    })
+    first.render(<Frame src="/first" loading="lazy" fallback={<p>First</p>} />)
+    second.render(<Frame src="/second" loading="lazy" fallback={<p>Second</p>} />)
+    removed.render(<Frame src="/removed" loading="lazy" fallback={<p>Removed</p>} />)
+    first.flush()
+    second.flush()
+    removed.flush()
+    expect(observers.length).toBe(1)
+    let observer = observers[0]
+    invariant(observer)
+    let disconnect = t.mock.method(observer, 'disconnect')
+
+    let firstLoaded = waitForElement('#first')
+    firstHost.style.top = '0'
+    await firstLoaded
+    expect(requests).toEqual(['/first'])
+    expect(disconnect).not.toHaveBeenCalled()
+
+    removed.render(null)
+    removed.flush()
+    expect(removedHost.childNodes.length).toBe(0)
+    removed.render(<Frame src="/disposed" loading="lazy" fallback={<p>Disposed</p>} />)
+    removed.flush()
+    removed.dispose()
+    removedHost.style.top = '0'
+    expect(disconnect).not.toHaveBeenCalled()
+    let secondLoaded = waitForElement('#second')
+    secondHost.style.top = '0'
+    await secondLoaded
+    expect(requests).toEqual(['/first', '/second'])
+    expect(observers.length).toBe(1)
+    expect(disconnect).toHaveBeenCalledTimes(1)
+  })
+
+  it('loads a lazy frame after its fallback component replaces the observed element', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let fallback: Handle | undefined
+    let swapped = false
+    function Fallback(handle: Handle) {
+      fallback = handle
+      return () => (swapped ? <section>Waiting</section> : <p>Waiting</p>)
+    }
+    let resolveFrame = mock.fn(() => '<p id="updated-fallback-content">Loaded</p>')
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    root.render(<Frame src="/lazy" loading="lazy" fallback={<Fallback />} />)
+    root.flush()
+    await waitForIntersection(container)
+    invariant(fallback)
+    swapped = true
+    await fallback.update()
+    expect(container.querySelector('section')?.textContent).toBe('Waiting')
+    expect(resolveFrame).not.toHaveBeenCalled()
+
+    container.style.top = '0'
+    await waitForIntersection(container)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('#updated-fallback-content')?.textContent).toBe('Loaded')
+  })
+
+  it('restarts a pending client-created lazy frame during an ancestor reload', async (t) => {
+    await assertPendingLazyFrameRestart(t)
+  })
+
+  it('restarts a pending hydrated lazy frame during an ancestor reload', async (t) => {
+    await assertPendingLazyFrameRestart(t, 'hydrated')
+  })
+
+  it('updates a deferred client frame source and loads when changed to eager', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let requests: string[] = []
+    let root = createRoot(container, {
+      frameInit: {
+        resolveFrame(src) {
+          requests.push(src)
+          return '<p id="eager-content">Loaded</p>'
+        },
+      },
+    })
+    t.after(() => root.dispose())
+    root.render(<Frame src="/old" loading="lazy" fallback={<p>First</p>} />)
+    root.flush()
+    await waitForIntersection(container)
+    root.render(<Frame src="/new" loading="lazy" fallback={<p>Second</p>} />)
+    root.flush()
+    await waitForIntersection(container)
+    expect(requests).toEqual([])
+    expect(container.textContent).toBe('Second')
+
+    let loaded = waitForElement('#eager-content')
+    root.render(<Frame src="/new" loading="eager" fallback="Second" />)
+    root.flush()
+    await loaded
+    expect(requests).toEqual(['/new'])
+  })
+
+  it('loads an offscreen lazy frame immediately for an explicit reload', async (t) => {
+    let requests: string[] = []
+    let { frame, host } = await setupLazyFrame(
+      t,
+      (src) => {
+        requests.push(src)
+        return '<p>Explicitly loaded</p>'
+      },
+      { mode: 'server' },
+    )
+    await frame.reload()
+    expect(host.textContent).toBe('Explicitly loaded')
+    host.style.top = '0'
+    await waitForIntersection(host)
+    expect(requests).toEqual(['/lazy'])
+  })
+
+  it('preserves explicitly reloaded lazy frame content through parent updates', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let parent: Handle | undefined
+    function Entry(handle: Handle) {
+      parent = handle
+      return () => <Frame name="lazy" src="/lazy" loading="lazy" fallback={<p>Waiting</p>} />
+    }
+    let response = Promise.withResolvers<string>()
+    let root = createRoot(container, { frameInit: { resolveFrame: () => response.promise } })
+    t.after(() => root.dispose())
+    root.render(<Entry />)
+    root.flush()
+    invariant(parent)
+    let frame = parent.frames.get('lazy')
+    invariant(frame)
+
+    let reloaded = frame.reload()
+    expect(container.textContent).toBe('Waiting')
+    response.resolve('<p id="reloaded-content">Loaded</p>')
+    await reloaded
+    expect(container.querySelector('#reloaded-content')?.textContent).toBe('Loaded')
+
+    await parent.update()
+    expect(container.querySelector('#reloaded-content')?.textContent).toBe('Loaded')
+  })
+
+  it('loads a lazy frame when a large fallback overlaps the viewport', async (t) => {
+    container.style.cssText = 'position:fixed;top:-50000px;left:0'
+    let resolveFrame = mock.fn(() => '<p id="large-lazy-content">Loaded</p>')
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    let loaded = waitForElement('#large-lazy-content')
+    root.render(<Frame src="/large" loading="lazy" fallback={<p>Waiting</p>} />)
+    root.flush()
+    await waitForIntersection(container)
+    expect(resolveFrame).not.toHaveBeenCalled()
+    root.render(
+      <Frame
+        src="/large"
+        loading="lazy"
+        fallback={<section mix={css({ height: '100000px' })}>Waiting</section>}
+      />,
+    )
+    root.flush()
+    await loaded
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not restart a lazy load after replacement during fallback hydration', async (t) => {
+    let Fallback = clientEntry('/fallback.js#Fallback', function Fallback() {
+      return () => <p>Waiting</p>
+    })
+    document.body.innerHTML = await drain(
+      renderToStream(<Frame name="lazy" src="/lazy" loading="lazy" fallback={<Fallback />} />),
+    )
+    let requested = Promise.withResolvers<void>()
+    let module = Promise.withResolvers<typeof Fallback>()
+    let resolveFrame = mock.fn(() => '<p>Unexpected request</p>')
+    let app = run({
+      async loadModule() {
+        requested.resolve()
+        return await module.promise
+      },
+      resolveFrame,
+    })
+    t.after(() => app.dispose())
+    await requested.promise
+    let frame = app.frames.get('lazy')
+    invariant(frame)
+    await frame.replace('<p id="replacement">Replacement</p>')
+    module.resolve(Fallback)
+    await app.ready()
+    await waitForIntersection(document.body)
+    await waitForIntersection(document.body)
+    expect(resolveFrame).not.toHaveBeenCalled()
+    expect(document.getElementById('replacement')?.textContent).toBe('Replacement')
+  })
+
+  it('starts an eager load while a server-rendered lazy fallback is still hydrating', async (t) => {
+    let loading: 'lazy' | 'eager' = 'lazy'
+    let update: (() => void) | undefined
+    let Fallback = clientEntry('/fallback.js#Fallback', function Fallback() {
+      return () => <p>Waiting</p>
+    })
+    let Entry = clientEntry('/entry.js#Entry', function Entry(handle: Handle) {
+      update = () => void handle.update()
+      return () => <Frame src="/lazy" loading={loading} fallback={<Frame src="/fallback" />} />
+    })
+    document.body.innerHTML = await drain(
+      renderToStream(<Entry />, { resolveFrame: () => renderToStream(<Fallback />) }),
+    )
+    let requested = Promise.withResolvers<void>()
+    let module = Promise.withResolvers<typeof Fallback>()
+    let resolveFrame = mock.fn(() => '<p id="eager-content">Loaded</p>')
+    let app = run({
+      async loadModule(url) {
+        if (url === '/entry.js') return Entry
+        requested.resolve()
+        return await module.promise
+      },
+      resolveFrame,
+    })
+    t.after(() => {
+      module.resolve(Fallback)
+      app.dispose()
+    })
+    await app.ready()
+    await requested.promise
+    invariant(update)
+    loading = 'eager'
+    update()
+    app.flush()
+    await waitForIntersection(document.body)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(document.getElementById('eager-content')?.textContent).toBe('Loaded')
+  })
+
+  it('loads lazy frames eagerly when IntersectionObserver is unavailable', async (t) => {
+    let original = globalThis.IntersectionObserver
+    Object.defineProperty(globalThis, 'IntersectionObserver', { value: undefined })
+    t.after(() => {
+      globalThis.IntersectionObserver = original
+    })
+    let resolveFrame = mock.fn(() => '<p id="unsupported-lazy-content">Loaded</p>')
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    let loaded = waitForElement('#unsupported-lazy-content')
+    root.render(<Frame src="/lazy" loading="lazy" fallback={<p>Waiting</p>} />)
+    root.flush()
+    await loaded
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps lazy frames deferred and refreshes loaded content without blocking ancestor reloads', async (t) => {
+    let fallback = <p>Waiting</p>
+    let renderPage = () =>
+      renderDocumentContent(
+        <section id="lazy-host" mix={css({ position: 'fixed', top: '100000px', left: 0 })}>
+          <Frame name="lazy" src="/lazy" loading="lazy" fallback={fallback} />
+        </section>,
+      )
+    document.documentElement.innerHTML = await renderPage()
+    let requests: string[] = []
+    let refresh = Promise.withResolvers<string>()
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src) {
+        requests.push(src)
+        if (src !== '/lazy') return renderPage()
+        return requests.filter((request) => request === '/lazy').length === 1
+          ? '<p id="lazy-content">Loaded</p>'
+          : refresh.promise
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    let frame = app.frames.get('lazy')
+    invariant(frame)
+    let events: string[] = []
+    frame.addEventListener('reloadStart', () => events.push('start'))
+    frame.addEventListener('reloadComplete', () => events.push('complete'))
+    fallback = <span>Waiting</span>
+    await app.frames.top.reload({ src: '/page' })
+    let host = document.getElementById('lazy-host')
+    invariant(host)
+    await waitForIntersection(host)
+    expect(requests).toEqual(['/page'])
+    expect(host.textContent).toBe('Waiting')
+    expect(events).toEqual(['start', 'complete'])
+
+    let loaded = waitForElement('#lazy-content')
+    host.style.top = '0'
+    await loaded
+    await waitForIntersection(host)
+    expect(events).toEqual(['start', 'complete'])
+    await app.frames.top.reload()
+    expect(document.getElementById('lazy-host')?.textContent).toBe('Loaded')
+    expect(requests).toEqual(['/page', '/lazy', '/page', '/lazy'])
+    expect(events).toEqual(['start', 'complete', 'start'])
+
+    let refreshed = new Promise<void>((resolve) => {
+      frame.addEventListener('reloadComplete', () => resolve(), { once: true })
+    })
+    refresh.resolve('<p id="refreshed-content">Refreshed</p>')
+    await refreshed
+    expect(document.getElementById('lazy-host')?.textContent).toBe('Refreshed')
+    expect(events).toEqual(['start', 'complete', 'start', 'complete'])
+  })
+
+  it('restarts a pending server-rendered lazy frame during an ancestor reload', async (t) => {
+    await assertPendingLazyFrameRestart(t, 'server')
+  })
+
+  it('supersedes a pending lazy request with inline eager SSR content', async (t) => {
+    await assertEagerSsrTakeover(t, false)
+  })
+
+  it('supersedes a pending lazy request with streamed eager SSR content', async (t) => {
+    await assertEagerSsrTakeover(t, true)
+  })
+
+  it('transfers an explicit lazy reload to eager SSR without duplicating reload events', async (t) => {
+    await assertEagerSsrTakeover(t, true, true)
+  })
+
+  it('restarts a settled aborted server lazy load when the next ancestor response arrives', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'server')
+  })
+
+  it('restarts a settled aborted client-created lazy load when the next ancestor response arrives', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'client')
+  })
+
+  it('restarts a settled aborted hydrated lazy load when the next ancestor response arrives', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'hydrated')
+  })
+
+  it('resumes an aborted server lazy load after the ancestor reload fails', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'server', { failAncestor: true })
+  })
+
+  it('resumes an aborted client-created lazy load after the ancestor reload fails', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'client', { failAncestor: true })
+  })
+
+  it('preempts an initial client-created lazy request with an explicit reload', async (t) => {
+    await assertLazyReloadPreemption(t, 'client')
+  })
+
+  it('keeps an explicit reload from rearming an aborted client-created lazy request', async (t) => {
+    await assertLazyReloadPreemption(t, 'client', { ancestorReload: true })
+  })
+
+  it('keeps an explicit reload from rearming an aborted hydrated lazy request', async (t) => {
+    await assertLazyReloadPreemption(t, 'hydrated', { ancestorReload: true })
+  })
+
+  it('resumes a deferred client-created lazy frame after an aborted targeted navigation', async (t) => {
+    let requests: Array<{
+      src: string
+      signal: AbortSignal
+      response: ReturnType<typeof Promise.withResolvers<string>>
+    }> = []
+    let { frame, host } = await setupLazyFrame(t, (src, options) => {
+      invariant(options?.signal)
+      let { signal } = options
+      let response = Promise.withResolvers<string>()
+      signal.addEventListener('abort', () => response.reject(signal.reason), { once: true })
+      requests.push({ src, signal, response })
+      return response.promise
+    })
+    expect(requests.length).toBe(0)
+    let events: string[] = []
+    frame.addEventListener('reloadStart', () => events.push('start'))
+    frame.addEventListener('reloadComplete', () => events.push('complete'))
+
+    frame.src = '/targeted'
+    let controller = new AbortController()
+    let navigation = reloadFrameForNavigation(frame, { signal: controller.signal })
+    expect(requests.length).toBe(1)
+    controller.abort()
+    await navigation.finished
+    expect(requests[0]?.signal.aborted).toBe(true)
+    expect(events).toEqual(['start', 'complete'])
+
+    host.style.top = '0'
+    await waitForIntersection(host)
+    expect(requests.length).toBe(2)
+    expect(requests[1]?.src).toBe('/targeted')
+    expect(requests[1]?.signal.aborted).toBe(false)
+    let loaded = waitForElement('#recovered-lazy-content')
+    requests[1]?.response.resolve('<p id="recovered-lazy-content">Recovered</p>')
+    await loaded
+    await waitForIntersection(host)
+    expect(host.textContent).toContain('Recovered')
+    expect(events).toEqual(['start', 'complete'])
+  })
+
+  it('does not resume lazy observation after a frame changes to eager', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let loading: 'lazy' | 'eager' = 'lazy'
+    let parent: Handle | undefined
+    function Entry(handle: Handle) {
+      parent = handle
+      return () => <Frame name="lazy" src="/lazy" loading={loading} fallback={<p>Waiting</p>} />
+    }
+    let requests: AbortSignal[] = []
+    let root = createRoot(container, {
+      frameInit: {
+        resolveFrame(_src, options) {
+          invariant(options?.signal)
+          let { signal } = options
+          requests.push(signal)
+          return new Promise<string>((_resolve, reject) => {
+            signal.addEventListener('abort', () => reject(signal.reason), { once: true })
+          })
+        },
+      },
+    })
+    t.after(() => root.dispose())
+    root.render(<Entry />)
+    root.flush()
+    invariant(parent)
+    let frame = parent.frames.get('lazy')
+    invariant(frame)
+
+    loading = 'eager'
+    await parent.update()
+    expect(requests.length).toBe(1)
+    let controller = new AbortController()
+    let navigation = reloadFrameForNavigation(frame, { signal: controller.signal })
+    expect(requests.length).toBe(2)
+    controller.abort()
+    await navigation.finished
+
+    container.style.top = '0'
+    await waitForIntersection(container)
+    expect(requests.length).toBe(2)
+    expect(requests.every((signal) => signal.aborted)).toBe(true)
+  })
+
+  it('preserves a lazy fallback when navigation aborts before the first streamed content', async (t) => {
+    let reading = Promise.withResolvers<void>()
+    let stream = new ReadableStream<Uint8Array>({
+      pull() {
+        if (stream.locked) reading.resolve()
+      },
+    })
+    let response = Promise.withResolvers<string>()
+    let requests: string[] = []
+    let warn = t.mock.method(console, 'warn', () => {})
+    let { frame, host } = await setupLazyFrame(t, (src) => {
+      requests.push(src)
+      return requests.length === 1 ? new Response(stream) : response.promise
+    })
+    let fallback = document.getElementById('waiting')
+    invariant(fallback)
+
+    frame.src = '/targeted'
+    let controller = new AbortController()
+    let navigation = reloadFrameForNavigation(frame, { signal: controller.signal })
+    await reading.promise
+    expect(document.getElementById('waiting')).toBe(fallback)
+    controller.abort()
+    await navigation.finished
+    await waitForIntersection(host)
+    expect(document.getElementById('waiting')).toBe(fallback)
+    expect(requests).toEqual(['/targeted'])
+    expect(warn).not.toHaveBeenCalled()
+
+    host.style.top = '0'
+    await waitForIntersection(host)
+    expect(requests).toEqual(['/targeted', '/targeted'])
+    let loaded = waitForElement('#recovered-stream-content')
+    response.resolve('<p id="recovered-stream-content">Recovered</p>')
+    await loaded
+    expect(fallback.isConnected).toBe(false)
+  })
+
+  it('reports failed server-rendered lazy frame requests once', async (t) => {
+    let failure = new Error('Frame request failed')
+    let errors: unknown[] = []
+    let { app, host } = await setupLazyFrame(
+      t,
+      () => {
+        throw failure
+      },
+      { mode: 'server' },
+    )
+    app.addEventListener('error', (event) => errors.push(event.error))
+    host.style.top = '0'
+    await waitForIntersection(host)
+    expect(errors).toEqual([failure])
+    expect(host.textContent).toBe('Waiting')
+  })
+
+  it('reports failed lazy frame requests without retrying on another intersection', async (t) => {
+    let failure = new Error('Frame request failed')
+    let errors: unknown[] = []
+    let resolveFrame = mock.fn(() => {
+      throw failure
+    })
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    let reported = Promise.withResolvers<void>()
+    root.addEventListener('error', (event) => {
+      errors.push(event.error)
+      reported.resolve()
+    })
+    root.render(<Frame src="/failure" loading="lazy" fallback={<p>Waiting</p>} />)
+    root.flush()
+    await reported.promise
+    expect(errors).toEqual([failure])
+    expect(container.textContent).toBe('Waiting')
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    await waitForIntersection(container)
+    container.style.top = '0'
+    await waitForIntersection(container)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+  })
+
   it('renders a client-created Frame with createRoot frameInit', async () => {
     let rootContainer = document.createElement('div')
     document.body.appendChild(rootContainer)
@@ -5681,7 +6716,7 @@ describe('run', () => {
 
     expect(rootContainer.querySelector('#fallback-frame')?.textContent).toBe('Loading…')
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#resolved-frame')
 
     expect(rootContainer.querySelector('#resolved-frame')?.textContent).toBe('Resolved frame')
     root.dispose()
@@ -5711,7 +6746,7 @@ describe('run', () => {
     root.flush()
 
     expect(host.querySelector('#fallback-range-frame')?.textContent).toBe('Loading…')
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#resolved-range-frame')
     expect(host.querySelector('#resolved-range-frame')?.textContent).toBe('Resolved range frame')
     root.dispose()
   })
@@ -5786,7 +6821,7 @@ describe('run', () => {
 
     root.render(<Frame src="/doctype-frame" fallback={<p>Loading…</p>} />)
     root.flush()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#resolved-frame')
 
     expect(rootContainer.querySelector('#resolved-frame')?.textContent).toBe('Resolved')
     expect(rootContainer.textContent).not.toContain('DOCTYPE')
@@ -5805,7 +6840,12 @@ describe('run', () => {
 
     let html = await drain(renderToStream(<Counter initialCount={2} />))
     let container = document.createElement('div')
-    let consoleError = mock.method(console, 'error', () => {})
+    let [errorLogged, markErrorLogged] = withResolvers<void>()
+    let consoleError = mock.method(console, 'error', (...values: unknown[]) => {
+      if (values.some((value) => String(value).includes('loadModule is required'))) {
+        markErrorLogged()
+      }
+    })
 
     try {
       let root = createRoot(container, {
@@ -5816,7 +6856,7 @@ describe('run', () => {
 
       root.render(<Frame src="/counter-frame" fallback={<p>Loading…</p>} />)
       root.flush()
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await errorLogged
 
       expect(consoleError).toHaveBeenCalled()
       expect(
@@ -5849,7 +6889,10 @@ describe('run', () => {
 
     let html = await drain(renderToStream(<Counter initialCount={3} />))
     let container = document.createElement('div')
-    let consoleError = mock.method(console, 'error', () => {})
+    let [errorLogged, markErrorLogged] = withResolvers<void>()
+    let consoleError = mock.method(console, 'error', (...values: unknown[]) => {
+      if (values.some((value) => String(value).includes('is not a function'))) markErrorLogged()
+    })
 
     try {
       let root = createRoot(container, {
@@ -5861,7 +6904,7 @@ describe('run', () => {
 
       root.render(<Frame src="/bad-export-frame" fallback={<p>Loading…</p>} />)
       root.flush()
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await errorLogged
 
       expect(consoleError).toHaveBeenCalled()
       expect(
@@ -5893,7 +6936,7 @@ describe('run', () => {
     root.flush()
     expect(rootContainer.querySelector('#fallback-a')?.textContent).toBe('Loading A…')
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#frame-a')
     expect(rootContainer.querySelector('#frame-a')?.textContent).toBe('A')
 
     let frameA = rootContainer.querySelector('#frame-a')
@@ -5909,7 +6952,7 @@ describe('run', () => {
 
     resolveNextFrame('<p id="frame-b">B</p>')
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#frame-b')
     expect(rootContainer.querySelector('#frame-b')?.textContent).toBe('B')
     root.dispose()
   })
@@ -5959,7 +7002,7 @@ describe('run', () => {
 
     expect(document.getElementById('post-run-fallback')?.textContent).toBe('Loading post-run…')
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#post-run-loaded')
 
     expect(document.getElementById('post-run-loaded')?.textContent).toBe('Post-run loaded')
     app.dispose()
@@ -6022,7 +7065,7 @@ describe('run', () => {
     showFrame()
     app.flush()
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#named-frame-loaded')
 
     expect(document.getElementById('named-frame-loaded')?.textContent).toBe('Loaded')
     expect(resolveFrame).toHaveBeenCalledTimes(1)
@@ -6089,8 +7132,7 @@ describe('run', () => {
     let pageSecond = await pageChunks.next()
     invariant(!pageSecond.done)
     document.body.insertAdjacentHTML('beforeend', pageSecond.value)
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#outer-root')
 
     expect(clientResolveFrame).not.toHaveBeenCalled()
     expect(document.querySelectorAll('#outer-root')).toHaveLength(1)
@@ -6100,8 +7142,7 @@ describe('run', () => {
     nestedTemplate.id = nestedFrameId
     nestedTemplate.innerHTML = '<span id="nested-loaded">Nested loaded</span>'
     document.body.appendChild(nestedTemplate)
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#nested-loaded')
 
     expect(clientResolveFrame).not.toHaveBeenCalled()
     expect(document.querySelectorAll('#nested-loaded')).toHaveLength(1)
@@ -6160,7 +7201,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     // Marker adopted: no client re-fetch, fallback not duplicated, sibling intact.
     expect(clientResolveFrame).not.toHaveBeenCalled()
@@ -6204,7 +7244,7 @@ describe('run', () => {
     let second = await chunks.next()
     invariant(!second.done)
     document.body.insertAdjacentHTML('beforeend', second.value)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#child-frame', 'Loaded child frame')
 
     expect(document.getElementById('child-frame')?.textContent).toBe('Loaded child frame')
     app.dispose()
@@ -6341,18 +7381,17 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     invariant(reload)
     let reloadPromise = reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#outer', 'Reloaded outer')
 
     expect(document.getElementById('outer')?.textContent).toBe('Reloaded outer')
     expect(document.getElementById('nested')?.textContent).toBe('Loading nested…')
 
     releaseSecondChunk(secondChunk.value)
     await reloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#nested', 'Nested loaded')
 
     expect(document.getElementById('nested')?.textContent).toBe('Nested loaded')
   })
@@ -6446,18 +7485,17 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     invariant(reloadTop)
     let reloadPromise = reloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#top-state', 'Reloaded top')
 
     expect(document.getElementById('top-state')?.textContent).toBe('Reloaded top')
     expect(document.getElementById('nested')?.textContent).toBe('Loading nested…')
 
     releaseSecondChunk(secondChunk.value)
     await reloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#nested', 'Nested loaded')
 
     expect(document.getElementById('nested')?.textContent).toBe('Nested loaded')
     app.dispose()
@@ -6526,7 +7564,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     let input = document.getElementById('child-frame-input')
     invariant(input instanceof HTMLInputElement)
@@ -6535,7 +7572,7 @@ describe('run', () => {
 
     let topFrame = app.frames.top
     let reloadPromise = topFrame.reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForFrameMarker(firstChunk.value)
 
     expect(document.getElementById('child-frame-fallback')).toBeNull()
     expect(document.getElementById('child-frame-input')).toBe(input)
@@ -6544,7 +7581,7 @@ describe('run', () => {
 
     releaseSecondChunk(secondChunk.value)
     await reloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#child-frame-label', 'Reloaded child')
 
     expect(document.getElementById('child-frame-fallback')).toBeNull()
     expect(document.getElementById('child-frame-input')).toBe(input)
@@ -6559,6 +7596,7 @@ describe('run', () => {
     let [reloadedChildPromise] = withResolvers<string>()
     let childReloadStartEvents = 0
     let childReloadCompleteEvents = 0
+    let [childReloadCompleted, markChildReloadCompleted] = withResolvers<void>()
     let reloadTopWithPendingChild: undefined | (() => Promise<AbortSignal>)
 
     let PendingChildFrameObserver = clientEntry(
@@ -6578,6 +7616,7 @@ describe('run', () => {
             'reloadComplete',
             () => {
               childReloadCompleteEvents++
+              markChildReloadCompleted()
             },
             { once: true },
           )
@@ -6649,7 +7688,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     let fallback = document.getElementById('child-frame-fallback')
     invariant(fallback instanceof HTMLSpanElement)
@@ -6659,7 +7697,6 @@ describe('run', () => {
     invariant(reloadTopWithPendingChild)
     let reloadPromise = reloadTopWithPendingChild()
     await reloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(childReloadStartEvents).toBe(1)
     expect(childReloadCompleteEvents).toBe(0)
@@ -6670,9 +7707,12 @@ describe('run', () => {
     let staleTemplate = document.createElement('template')
     staleTemplate.id = initialMarkerId
     staleTemplate.innerHTML = '<span id="stale-child-content">Stale child</span>'
+    let staleTemplateObserved = nextDomMutation()
     document.body.appendChild(staleTemplate)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await staleTemplateObserved
 
+    // No runtime template observer claims the stale template, so it stays in the document.
+    expect(staleTemplate.isConnected).toBe(true)
     expect(document.getElementById('stale-child-content')).toBeNull()
     expect(document.getElementById('child-frame-fallback')).toBe(fallback)
     expect(fallback.textContent).toBe('Reloaded fallback')
@@ -6681,7 +7721,7 @@ describe('run', () => {
     freshTemplate.id = reloadedMarkerId
     freshTemplate.innerHTML = '<span id="fresh-child-content">Fresh child</span>'
     document.body.appendChild(freshTemplate)
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.all([waitForElement('#fresh-child-content'), childReloadCompleted])
 
     expect(document.getElementById('stale-child-content')).toBeNull()
     expect(document.getElementById('fresh-child-content')?.textContent).toBe('Fresh child')
@@ -6788,7 +7828,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     let input = document.getElementById('direct-child-frame-input')
     invariant(input instanceof HTMLInputElement)
@@ -6799,7 +7838,7 @@ describe('run', () => {
 
     invariant(reloadParent)
     let reloadPromise = reloadParent()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForFrameMarker(firstChunk.value)
 
     expect(document.getElementById('direct-child-frame-fallback')).toBeNull()
     expect(document.getElementById('direct-child-frame-input')).toBe(input)
@@ -6811,7 +7850,7 @@ describe('run', () => {
 
     releaseSecondChunk(secondChunk.value)
     await reloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#direct-child-frame-label', 'Reloaded direct child')
 
     expect(document.getElementById('direct-child-frame-fallback')).toBeNull()
     expect(document.getElementById('direct-child-frame-input')).toBe(input)
@@ -6916,20 +7955,19 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('blocking-child-frame-label')?.textContent).toBe(
       'Initial blocking child',
     )
 
     let topReload = app.frames.top.reload()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#reload-blocking-child', 'Reloading child')
 
     expect(document.getElementById('reload-blocking-child')?.textContent).toBe('Reloading child')
 
     resolveTopReload(renderDocument('Reloaded by top frame'))
     await topReload
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#reload-blocking-child', 'Reload child')
 
     expect(document.getElementById('blocking-child-frame-label')?.textContent).toBe(
       'Reloaded by top frame',
@@ -6939,7 +7977,7 @@ describe('run', () => {
     let reloadChildButton = document.getElementById('reload-blocking-child')
     invariant(reloadChildButton instanceof HTMLButtonElement)
     reloadChildButton.click()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#blocking-child-frame-label', 'Reloaded by child frame 1')
 
     expect(document.getElementById('blocking-child-frame-label')?.textContent).toBe(
       'Reloaded by child frame 1',
@@ -7021,7 +8059,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('removed-child-content')?.textContent).toBe('Child content')
     expect(document.getElementById('remove-direct-parent-sibling')?.textContent).toBe(
@@ -7030,7 +8067,6 @@ describe('run', () => {
 
     invariant(reloadParent)
     await reloadParent()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('removed-child-content')).toBeNull()
     expect(document.getElementById('removed-child-input')).toBeNull()
@@ -7123,7 +8159,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     let input = document.getElementById('direct-src-child-input')
     invariant(input instanceof HTMLInputElement)
@@ -7132,7 +8167,7 @@ describe('run', () => {
 
     invariant(reloadParent)
     let reloadPromise = reloadParent()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#direct-src-child-fallback')
 
     expect(document.getElementById('direct-src-child-content')).toBeNull()
     expect(document.getElementById('direct-src-child-input')).toBeNull()
@@ -7143,7 +8178,7 @@ describe('run', () => {
 
     resolveChildReload('<p id="direct-src-child-content">Replacement child</p>')
     await reloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#direct-src-child-content', 'Replacement child')
 
     expect(document.getElementById('direct-src-child-fallback')).toBeNull()
     expect(document.getElementById('direct-src-child-content')?.textContent).toBe(
@@ -7238,7 +8273,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     let input = document.getElementById('nested-src-child-input')
     invariant(input instanceof HTMLInputElement)
@@ -7247,7 +8281,7 @@ describe('run', () => {
 
     invariant(reloadParent)
     let reloadPromise = reloadParent()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#nested-src-child-fallback')
 
     expect(document.getElementById('nested-src-child-content')).toBeNull()
     expect(document.getElementById('nested-src-child-input')).toBeNull()
@@ -7258,7 +8292,7 @@ describe('run', () => {
 
     resolveChildReload('<p id="nested-src-child-content">Replacement child</p>')
     await reloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#nested-src-child-content', 'Replacement child')
 
     expect(document.getElementById('nested-src-child-fallback')).toBeNull()
     expect(document.getElementById('nested-src-child-content')?.textContent).toBe(
@@ -7372,7 +8406,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     // Initial load: the island was server-resolved and adopted (no client re-resolve).
     expect(islandClientTargets).toEqual([])
@@ -7381,8 +8414,7 @@ describe('run', () => {
     invariant(reloadParent)
     let reloadPromise = reloadParent()
     await reloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#island-content[data-client-issue]')
 
     // The ancestor reload remounts the clientEntry's keyed frame, which re-resolves
     // on the client exactly once. That re-resolve must carry the frame's name as its
@@ -7395,6 +8427,7 @@ describe('run', () => {
   it('reloads frames inside preserved client entries after server-driven entry rerenders', async () => {
     let reloadTop: undefined | (() => Promise<AbortSignal>)
     let entryFrameEvents: string[] = []
+    let [entryFrameReloaded, markEntryFrameReloaded] = withResolvers<void>()
     let entryFrameServerResolveCount = 0
 
     let EntryWithFrame = clientEntry(
@@ -7428,7 +8461,10 @@ describe('run', () => {
               })
               entryFrame.addEventListener(
                 'reloadComplete',
-                () => entryFrameEvents.push('complete'),
+                () => {
+                  entryFrameEvents.push('complete')
+                  markEntryFrameReloaded()
+                },
                 {
                   signal: handle.signal,
                 },
@@ -7500,7 +8536,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
@@ -7509,8 +8544,7 @@ describe('run', () => {
     expect(entryFrameResolveCount).toBe(0)
 
     invariant(reloadTop)
-    await reloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.all([reloadTop(), entryFrameReloaded])
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
@@ -7596,7 +8630,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
@@ -7605,7 +8638,7 @@ describe('run', () => {
 
     invariant(reloadTop)
     await reloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#entry-frame', 'Reloaded entry frame')
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
@@ -7745,7 +8778,7 @@ describe('run', () => {
 
     await app.ready()
     app.flush()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#blocking-client-only-frame', 'Blocking client-only frame 1')
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
     expect(document.getElementById('blocking-entry-label')?.textContent).toBe(
@@ -7760,7 +8793,7 @@ describe('run', () => {
 
     invariant(reloadTop)
     await reloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#blocking-client-only-frame', 'Blocking client-only frame 2')
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
     expect(document.getElementById('blocking-entry-label')?.textContent).toBe(
@@ -7885,7 +8918,7 @@ describe('run', () => {
 
     await app.ready()
     app.flush()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('[data-shared-frame="client"]', 'Client shared frame 1')
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
     expect(document.getElementById('server-shared-frame')?.textContent).toBe('Initial server frame')
@@ -7899,7 +8932,10 @@ describe('run', () => {
 
     invariant(reloadTop)
     await reloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForTexts('[data-shared-frame="client"]', [
+      'Client shared frame 2',
+      'Client shared frame 3',
+    ])
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
     expect(
@@ -8110,7 +9146,7 @@ describe('run', () => {
 
     await app.ready()
     app.flush()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#client-only-inner-frame', 'Client-only inner frame 1')
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
     expect(document.getElementById('nested-entry-label')?.textContent).toBe('Initial nested entry')
@@ -8126,8 +9162,15 @@ describe('run', () => {
 
     invariant(reloadTop)
     await reloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForDom(
+      () =>
+        document.getElementById('nested-entry-label')?.textContent ===
+          'Reloaded nested entry from browser' &&
+        document.getElementById('middle-entry-label')?.textContent ===
+          'Reloaded middle entry from browser' &&
+        document.getElementById('client-only-inner-frame')?.textContent ===
+          'Client-only inner frame 2',
+    )
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
     expect(document.getElementById('nested-entry-label')?.textContent).toBe(
@@ -8150,6 +9193,7 @@ describe('run', () => {
   it('does not wait for frames inside preserved client entries to finish reloading', async () => {
     let reloadTop: undefined | (() => Promise<AbortSignal>)
     let entryFrameEvents: string[] = []
+    let [entryFrameReloaded, markEntryFrameReloaded] = withResolvers<void>()
 
     let EntryWithPendingFrame = clientEntry(
       '/assets/entry-with-pending-frame.js#EntryWithPendingFrame',
@@ -8161,9 +9205,14 @@ describe('run', () => {
           entryFrame.addEventListener('reloadStart', () => entryFrameEvents.push('start'), {
             signal: handle.signal,
           })
-          entryFrame.addEventListener('reloadComplete', () => entryFrameEvents.push('complete'), {
-            signal: handle.signal,
-          })
+          entryFrame.addEventListener(
+            'reloadComplete',
+            () => {
+              entryFrameEvents.push('complete')
+              markEntryFrameReloaded()
+            },
+            { signal: handle.signal },
+          )
         })
         return () => (
           <section>
@@ -8236,25 +9285,19 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     invariant(reloadTop)
-    let topReloadSettled = false
-    let topReloadPromise = reloadTop().then(() => {
-      topReloadSettled = true
-    })
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    let topReloadSettledBeforeEntryFrame = topReloadSettled
+    // The entry frame content is still unresolved, so this only settles if the top reload doesn't
+    // wait for it.
+    await reloadTop()
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
     expect(entryFrameEvents).toEqual(['start'])
 
     resolveEntryFrameContent('<span id="entry-frame">Reloaded entry frame</span>')
-    await topReloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.all([waitForText('#entry-frame', 'Reloaded entry frame'), entryFrameReloaded])
 
-    expect(topReloadSettledBeforeEntryFrame).toBe(true)
     expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
     expect(entryFrameEvents).toEqual(['start', 'complete'])
     app.dispose()
@@ -8319,6 +9362,7 @@ describe('run', () => {
 
     let entryFrameSignals: AbortSignal[] = []
     let entryFrameResolvers: Array<(content: string) => void> = []
+    let entryFrameRequests = [withResolvers<void>(), withResolvers<void>()]
 
     let app = run({
       loadModule(moduleUrl, exportName) {
@@ -8340,6 +9384,7 @@ describe('run', () => {
           let [contentPromise, resolveContent] = withResolvers<string>()
           entryFrameSignals.push(signal)
           entryFrameResolvers.push(resolveContent)
+          entryFrameRequests[entryFrameSignals.length - 1]?.[1]()
           return contentPromise
         }
         throw new Error(`Unexpected frame src: ${src}`)
@@ -8347,29 +9392,30 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await entryFrameRequests[0]![0]
 
     expect(entryFrameSignals).toHaveLength(1)
     expect(document.getElementById('entry-frame')?.textContent).toBe('Loading entry frame...')
 
     invariant(reloadTop)
     await reloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await entryFrameRequests[1]![0]
 
     expect(entryFrameSignals).toHaveLength(2)
     expect(entryFrameSignals[0]?.aborted).toBe(true)
     expect(entryFrameSignals[1]?.aborted).toBe(false)
 
+    let renderedText = recordRenderedText()
     entryFrameResolvers[0]?.('<span id="entry-frame">Stale entry frame</span>')
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Loading entry frame...')
 
+    // The stale resolution settles before the fresh one, so it would render first if not ignored.
     entryFrameResolvers[1]?.('<span id="entry-frame">Reloaded entry frame</span>')
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#entry-frame', 'Reloaded entry frame')
 
+    expect(renderedText.stop().some((text) => text.includes('Stale entry frame'))).toBe(false)
     expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
     app.dispose()
   })
@@ -8430,6 +9476,9 @@ describe('run', () => {
 
     let inheritedFrameSignal: AbortSignal | undefined
     let [inheritedFrameContentPromise, resolveInheritedFrameContent] = withResolvers<string>()
+    let [inheritedFrameRequested, markInheritedFrameRequested] = withResolvers<void>()
+    let [updatedFrameContentPromise, resolveUpdatedFrameContent] = withResolvers<string>()
+    let [updatedFrameRequested, markUpdatedFrameRequested] = withResolvers<void>()
 
     let app = run({
       loadModule(moduleUrl, exportName) {
@@ -8450,35 +9499,37 @@ describe('run', () => {
         }
         if (src === '/entry-frame-a') {
           inheritedFrameSignal = signal
+          markInheritedFrameRequested()
           return inheritedFrameContentPromise
         }
         if (src === '/entry-frame-b') {
-          return '<span id="entry-frame">Updated entry frame</span>'
+          markUpdatedFrameRequested()
+          return updatedFrameContentPromise
         }
         throw new Error(`Unexpected frame src: ${src}`)
       },
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     invariant(reloadTop)
     invariant(changeFrameSrc)
     let clientChangeFrameSrc = changeFrameSrc
-    await reloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.all([reloadTop(), inheritedFrameRequested])
 
     expect(inheritedFrameSignal?.aborted).toBe(false)
 
-    await clientChangeFrameSrc()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.all([clientChangeFrameSrc(), updatedFrameRequested])
 
     expect(inheritedFrameSignal?.aborted).toBe(true)
-    expect(document.getElementById('entry-frame')?.textContent).toBe('Updated entry frame')
 
+    // The stale resolution settles before the fresh one, so it would render first if not ignored.
+    let renderedText = recordRenderedText()
     resolveInheritedFrameContent('<span id="entry-frame">Stale inherited frame</span>')
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    resolveUpdatedFrameContent('<span id="entry-frame">Updated entry frame</span>')
+    await waitForText('#entry-frame', 'Updated entry frame')
 
+    expect(renderedText.stop().some((text) => text.includes('Stale inherited frame'))).toBe(false)
     expect(document.getElementById('entry-frame')?.textContent).toBe('Updated entry frame')
     app.dispose()
   })
@@ -8539,6 +9590,7 @@ describe('run', () => {
     let [secondTopContentPromise, resolveSecondTopContent] = withResolvers<string>()
     let entryFrameResolvers: Array<(content: string) => void> = []
     let entryFrameSignals: AbortSignal[] = []
+    let entryFrameRequests = [withResolvers<void>(), withResolvers<void>()]
 
     let app = run({
       loadModule(moduleUrl, exportName) {
@@ -8569,6 +9621,7 @@ describe('run', () => {
           let [entryFrameContentPromise, resolveEntryFrameContent] = withResolvers<string>()
           entryFrameSignals.push(signal)
           entryFrameResolvers.push(resolveEntryFrameContent)
+          entryFrameRequests[entryFrameSignals.length - 1]?.[1]()
           return entryFrameContentPromise
         }
         throw new Error(`Unexpected frame src: ${src}`)
@@ -8576,23 +9629,20 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     invariant(reloadTop)
     let clientReloadTop = reloadTop
-    await clientReloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.all([clientReloadTop(), entryFrameRequests[0]![0]])
 
     expect(document.getElementById('entry-label')?.textContent).toBe('First reload')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
     expect(entryFrameResolvers).toHaveLength(1)
 
+    // Starting the second top reload synchronously aborts the first reload's entry frame request.
     let secondReloadPromise = clientReloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
     expect(entryFrameSignals[0]?.aborted).toBe(true)
+    let renderedText = recordRenderedText()
     entryFrameResolvers[0]?.('<span id="entry-frame">Stale entry frame</span>')
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('entry-label')?.textContent).toBe('First reload')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
@@ -8600,16 +9650,16 @@ describe('run', () => {
     resolveSecondTopContent(
       await renderPageWithProtocol('Second reload', 'Unused second streamed entry frame'),
     )
-    await secondReloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.all([secondReloadPromise, entryFrameRequests[1]![0]])
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Second reload')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
     expect(entryFrameResolvers).toHaveLength(2)
 
     entryFrameResolvers[1]?.('<span id="entry-frame">Second entry frame</span>')
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForText('#entry-frame', 'Second entry frame')
 
+    expect(renderedText.stop().some((text) => text.includes('Stale entry frame'))).toBe(false)
     expect(document.getElementById('entry-frame')?.textContent).toBe('Second entry frame')
     app.dispose()
   })
@@ -8617,6 +9667,8 @@ describe('run', () => {
   it('reports reload failures for frames inside preserved client entries', async () => {
     let reloadTop: undefined | (() => Promise<AbortSignal>)
     let entryFrameEvents: string[] = []
+    let [entryFrameReloaded, markEntryFrameReloaded] = withResolvers<void>()
+    let [errorForwarded, markErrorForwarded] = withResolvers<void>()
     let reloadError = new TypeError('Failed to reload entry frame')
 
     let EntryWithFailingFrame = clientEntry(
@@ -8629,9 +9681,14 @@ describe('run', () => {
           entryFrame.addEventListener('reloadStart', () => entryFrameEvents.push('start'), {
             signal: handle.signal,
           })
-          entryFrame.addEventListener('reloadComplete', () => entryFrameEvents.push('complete'), {
-            signal: handle.signal,
-          })
+          entryFrame.addEventListener(
+            'reloadComplete',
+            () => {
+              entryFrameEvents.push('complete')
+              markEntryFrameReloaded()
+            },
+            { signal: handle.signal },
+          )
         })
         return () => (
           <section>
@@ -8702,14 +9759,13 @@ describe('run', () => {
     let forwarded: unknown
     app.addEventListener('error', (event) => {
       forwarded = event.error
+      markErrorForwarded()
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     invariant(reloadTop)
-    await reloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.all([reloadTop(), errorForwarded, entryFrameReloaded])
 
     expect(forwarded).toBe(reloadError)
     expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
@@ -8782,7 +9838,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('entry-render-count')?.textContent).toBe('Entry render: 1')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
@@ -8790,11 +9845,18 @@ describe('run', () => {
 
     invariant(updateEntry)
     await updateEntry()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('entry-render-count')?.textContent).toBe('Entry render: 2')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
     expect(entryFrameResolveCount).toBe(0)
+
+    // An update-triggered reload would resolve before this explicit one, so only one resolve proves
+    // the update didn't reload the frame.
+    let entryFrame = app.frames.get('entry-frame')
+    invariant(entryFrame)
+    await entryFrame.reload()
+    expect(entryFrameResolveCount).toBe(1)
+    expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
     app.dispose()
   })
 
@@ -8817,8 +9879,7 @@ describe('run', () => {
     root.flush()
 
     resolveContent('<p id="result">Resolved content</p>')
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#result')
 
     expect(rootContainer.querySelector('#result')?.textContent).toBe('Resolved content')
     expect(rootContainer.querySelector('#fallback')).toBe(null)
@@ -8831,10 +9892,65 @@ describe('run', () => {
     root.dispose()
   })
 
+  it('reloads a committed client frame in place when src changes while a sub-frame is loading', async (t) => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+    t.after(() => rootContainer.remove())
+
+    let SlowEntry = clientEntry('/assets/slow-entry.js#SlowEntry', function SlowEntry() {
+      return () => <p id="slow">Slow</p>
+    })
+    let firstContent = await drain(
+      renderToStream(
+        <section id="first">
+          <Frame src="/sub" />
+        </section>,
+        { resolveFrame: () => renderFrameContent(<SlowEntry />) },
+      ),
+    )
+    // The parent commits before its sub-frame is ready, because the sub-frame's client entry
+    // module is still loading.
+    let [slowModule, resolveSlowModule] = withResolvers<Function>()
+    let [slowModuleRequested, markSlowModuleRequested] = withResolvers<void>()
+    let [secondContent, resolveSecondContent] = withResolvers<string>()
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        resolveFrame(src) {
+          if (src === '/first') return firstContent
+          if (src === '/second') return secondContent
+          throw new Error(`Unexpected frame src: ${src}`)
+        },
+        loadModule() {
+          markSlowModuleRequested()
+          return slowModule
+        },
+      },
+    })
+    t.after(() => root.dispose())
+    let fallback = <p id="fallback">Loading...</p>
+
+    root.render(<Frame src="/first" fallback={fallback} />)
+    root.flush()
+    await slowModuleRequested
+    expect(rootContainer.querySelector('#first')).not.toBe(null)
+
+    let renderedText = recordRenderedText(rootContainer)
+    root.render(<Frame src="/second" fallback={fallback} />)
+    root.flush()
+    resolveSecondContent('<p id="second">Second</p>')
+    await waitForText('#second', 'Second', rootContainer)
+
+    expect(renderedText.stop().some((text) => text.includes('Loading...'))).toBe(false)
+    expect(rootContainer.querySelector('#first')).toBe(null)
+    resolveSlowModule(SlowEntry)
+  })
+
   it('loads new client-created frame src values during server-driven entry rerenders', async () => {
     let reloadTop: undefined | (() => Promise<AbortSignal>)
     let frameSrc = '/entry-frame-a'
     let entryFrameEvents: string[] = []
+    let entryFrameReloads = [withResolvers<void>(), withResolvers<void>()]
+    let entryFrameReloadCount = 0
 
     let EntryWithChangingFrame = clientEntry(
       '/assets/entry-with-changing-frame.js#EntryWithChangingFrame',
@@ -8849,9 +9965,14 @@ describe('run', () => {
             entryFrame.addEventListener('reloadStart', () => entryFrameEvents.push('start'), {
               signal: handle.signal,
             })
-            entryFrame.addEventListener('reloadComplete', () => entryFrameEvents.push('complete'), {
-              signal: handle.signal,
-            })
+            entryFrame.addEventListener(
+              'reloadComplete',
+              () => {
+                entryFrameEvents.push('complete')
+                entryFrameReloads[entryFrameReloadCount++]?.[1]()
+              },
+              { signal: handle.signal },
+            )
             listening = true
           })
 
@@ -8931,7 +10052,6 @@ describe('run', () => {
     })
 
     await app.ready()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Initial entry')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Initial entry frame')
@@ -8940,16 +10060,14 @@ describe('run', () => {
 
     invariant(reloadTop)
     let clientReloadTop = reloadTop
-    await clientReloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.all([clientReloadTop(), entryFrameReloads[0]![0]])
 
     expect(document.getElementById('entry-label')?.textContent).toBe('Reloaded entry')
     expect(document.getElementById('entry-frame')?.textContent).toBe('Reloaded entry frame')
     expect(resolvedClientFrameSrcs).toEqual(['/entry-frame-b'])
     expect(entryFrameEvents).toEqual(['start', 'complete'])
 
-    await clientReloadTop()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.all([clientReloadTop(), entryFrameReloads[1]![0]])
 
     expect(resolvedClientFrameSrcs).toEqual(['/entry-frame-b', '/entry-frame-c'])
     expect(entryFrameEvents).toEqual(['start', 'complete', 'start', 'complete'])
@@ -8961,6 +10079,7 @@ describe('run', () => {
     document.body.appendChild(rootContainer)
 
     let [slowChunkPromise, resolveSlowChunk] = withResolvers<string>()
+    let [fastChunkPromise, resolveFastChunk] = withResolvers<string>()
 
     function Shell(handle: Handle) {
       let src = '/slow'
@@ -8990,7 +10109,7 @@ describe('run', () => {
             return streamFromChunks([slowChunkPromise])
           }
           if (src === '/fast') {
-            return '<p id="result">Fast result</p>'
+            return streamFromChunks([fastChunkPromise])
           }
           throw new Error(`Unexpected src: ${src}`)
         },
@@ -9006,13 +10125,15 @@ describe('run', () => {
     invariant(switchButton instanceof HTMLButtonElement)
     switchButton.click()
     root.flush()
-    await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(rootContainer.querySelector('#result')?.textContent).toBe('Fast result')
-
+    // Both streams take the same path, and the stale one gets its chunk first, so it would render
+    // before the current one if it weren't cancelled.
+    let renderedText = recordRenderedText(rootContainer)
     resolveSlowChunk('<p id="result">Slow result</p>')
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    resolveFastChunk('<p id="result">Fast result</p>')
+    await waitForText('#result', 'Fast result', rootContainer)
 
+    expect(renderedText.stop().some((text) => text.includes('Slow result'))).toBe(false)
     expect(rootContainer.querySelector('#result')?.textContent).toBe('Fast result')
     root.dispose()
   })
@@ -9044,13 +10165,13 @@ describe('run', () => {
 
     root.render(<Frame src="/html" fallback={<p id="fallback">Loading…</p>} />)
     root.flush()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#stale')
 
     expect(rootContainer.querySelector('#stale')?.textContent).toBe('Stale content')
 
     root.render(<Frame src="/error" fallback={<p id="fallback">Loading…</p>} />)
     root.flush()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#frame-error')
 
     expect(rootContainer.querySelector('#frame-error h2')?.textContent).toBe('Frame Error')
     expect(rootContainer.querySelector('#frame-error p')?.textContent).toBe('Retry the page.')

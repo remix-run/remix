@@ -11,6 +11,7 @@ import type {
 import { AsyncLocalStorage } from 'node:async_hooks'
 
 import { getTablePrimaryKey } from '@remix-run/data-table'
+import { quoteTableRef } from '@remix-run/data-table/sql-helpers'
 import pg from 'pg'
 import type {
   Client as PostgresClient,
@@ -18,7 +19,7 @@ import type {
   PoolClient as PostgresPoolClient,
 } from 'pg'
 
-import { compilePostgresOperation } from './sql-compiler.ts'
+import { compilePostgresOperation, quoteIdentifier } from './sql-compiler.ts'
 
 type TransactionState = {
   client: PostgresClient | PostgresPoolClient
@@ -124,7 +125,7 @@ export class PostgresDatabaseDriver implements DatabaseDriver<'postgres'> {
     return {
       rows,
       affectedRows: normalizeAffectedRows(request.operation.kind, result.rowCount, rows),
-      insertId: normalizeInsertId(request.operation.kind, request.operation, rows),
+      insertId: normalizeInsertId(request.operation, rows),
     }
   }
 
@@ -149,7 +150,7 @@ export class PostgresDatabaseDriver implements DatabaseDriver<'postgres'> {
    * @returns `true` when the table exists.
    */
   async hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
-    let relation = toPostgresRelationName(table)
+    let relation = quoteTableRef(table, quoteIdentifier)
     let client = this.#resolveClient(transaction)
     let result = await client.query('select to_regclass($1) is not null as "exists"', [relation])
     let row = result.rows[0] as Record<string, unknown> | undefined
@@ -168,7 +169,7 @@ export class PostgresDatabaseDriver implements DatabaseDriver<'postgres'> {
     column: string,
     transaction?: TransactionToken,
   ): Promise<boolean> {
-    let relation = toPostgresRelationName(table)
+    let relation = quoteTableRef(table, quoteIdentifier)
     let client = this.#resolveClient(transaction)
     let result = await client.query(
       'select exists (select 1 from pg_attribute where attrelid = to_regclass($1) and attname = $2 and attnum > 0 and not attisdropped) as "exists"',
@@ -696,11 +697,10 @@ function normalizeAffectedRows(
 }
 
 function normalizeInsertId(
-  kind: DataManipulationRequest['operation']['kind'],
   operation: DataManipulationRequest['operation'],
   rows: Record<string, unknown>[],
 ): unknown {
-  if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
+  if (!isInsertOperation(operation)) {
     return undefined
   }
 
@@ -714,18 +714,6 @@ function normalizeInsertId(
   let row = rows[rows.length - 1]
 
   return row ? row[key] : undefined
-}
-
-function quoteIdentifier(value: string): string {
-  return '"' + value.replace(/"/g, '""') + '"'
-}
-
-function toPostgresRelationName(table: TableRef): string {
-  if (table.schema) {
-    return quoteIdentifier(table.schema) + '.' + quoteIdentifier(table.name)
-  }
-
-  return quoteIdentifier(table.name)
 }
 
 function toBooleanExists(value: unknown): boolean {
@@ -742,10 +730,6 @@ function toBooleanExists(value: unknown): boolean {
   }
 
   return false
-}
-
-function isInsertOperationKind(kind: DataManipulationRequest['operation']['kind']): boolean {
-  return kind === 'insert' || kind === 'insertMany' || kind === 'upsert'
 }
 
 function isInsertOperation(
