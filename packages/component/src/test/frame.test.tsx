@@ -6096,15 +6096,15 @@ describe('run', () => {
     expect(host.textContent).toBe('Waiting')
     expect(events).toEqual(['start', 'complete'])
 
-    let loaded = new Promise<void>((resolve) => {
-      frame.addEventListener('reloadComplete', () => resolve(), { once: true })
-    })
+    let loaded = waitForElement('#lazy-content')
     host.style.top = '0'
     await loaded
+    await waitForIntersection(host)
+    expect(events).toEqual(['start', 'complete'])
     await app.frames.top.reload()
     expect(document.getElementById('lazy-host')?.textContent).toBe('Loaded')
     expect(requests).toEqual(['/page', '/lazy', '/page', '/lazy'])
-    expect(events).toEqual(['start', 'complete', 'start', 'complete', 'start'])
+    expect(events).toEqual(['start', 'complete', 'start'])
 
     let refreshed = new Promise<void>((resolve) => {
       frame.addEventListener('reloadComplete', () => resolve(), { once: true })
@@ -6112,7 +6112,7 @@ describe('run', () => {
     refresh.resolve('<p id="refreshed-content">Refreshed</p>')
     await refreshed
     expect(document.getElementById('lazy-host')?.textContent).toBe('Refreshed')
-    expect(events).toEqual(['start', 'complete', 'start', 'complete', 'start', 'complete'])
+    expect(events).toEqual(['start', 'complete', 'start', 'complete'])
   })
 
   it('restarts a pending server-rendered lazy frame during an ancestor reload', async (t) => {
@@ -6166,6 +6166,9 @@ describe('run', () => {
       return response.promise
     })
     expect(requests.length).toBe(0)
+    let events: string[] = []
+    frame.addEventListener('reloadStart', () => events.push('start'))
+    frame.addEventListener('reloadComplete', () => events.push('complete'))
 
     frame.src = '/targeted'
     let controller = new AbortController()
@@ -6174,6 +6177,7 @@ describe('run', () => {
     controller.abort()
     await navigation.finished
     expect(requests[0]?.signal.aborted).toBe(true)
+    expect(events).toEqual(['start', 'complete'])
 
     host.style.top = '0'
     await waitForIntersection(host)
@@ -6183,7 +6187,9 @@ describe('run', () => {
     let loaded = waitForElement('#recovered-lazy-content')
     requests[1]?.response.resolve('<p id="recovered-lazy-content">Recovered</p>')
     await loaded
+    await waitForIntersection(host)
     expect(host.textContent).toContain('Recovered')
+    expect(events).toEqual(['start', 'complete'])
   })
 
   it('does not resume lazy observation after a frame changes to eager', async (t) => {

@@ -2,4 +2,4 @@ Defer below-the-fold frame requests with `<Frame loading="lazy" fallback={<p>Loa
 
 To defer loading until near the viewport, provide a fallback that renders an element to observe. If the fallback renders only text or nothing, the browser warns and loads the frame immediately without inserting a placeholder element.
 
-Unresolved lazy frames resume viewport observation after a navigation cancels their current load. The fallback stays mounted until replacement content starts rendering.
+Unresolved lazy frames resume viewport observation after a navigation cancels their current load. The fallback stays mounted until replacement content starts rendering. Reload events remain scoped to explicit and ancestor-driven reloads.

@@ -1145,7 +1145,7 @@ Lazy loading requires `run()` in the browser, and deferred frames do not delay `
 
 Once loaded, the content stays mounted when it leaves the viewport. Ancestor reloads refresh loaded lazy frames in the background, keeping their content visible until the new response arrives. Changing `loading` to `'eager'` starts a deferred load immediately. Explicit `frame.reload()`, `frame.replace()`, and targeted navigations also take effect immediately.
 
-If a navigation cancels an unresolved lazy load, the frame resumes observing the viewport so it can load again when nearby. The fallback stays mounted until replacement content starts rendering.
+If a navigation cancels an unresolved lazy load, the frame resumes observing the viewport so it can load again when nearby. The fallback stays mounted until replacement content starts rendering. Initial viewport loads and viewport retries do not start a new `reloadStart`/`reloadComplete` pair.
 
 ### Nested Frames
 

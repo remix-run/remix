@@ -737,8 +737,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function loadLazyFrame(signal?: AbortSignal): void {
-    let controller = startReload(signal)
-    // Reload reports errors before rejecting.
+    // Viewport loading completes initial content; active reloads keep their lifecycle.
+    let controller =
+      !signal && reloadState.status === 'idle' && displayedContentStatus !== 'resolved'
+        ? startClientLoad()
+        : startReload(signal)
+    // Resolution reports errors before rejecting.
     void resolveAndRenderReload(controller).catch(() => {})
   }
 
