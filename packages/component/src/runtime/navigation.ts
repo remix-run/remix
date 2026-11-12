@@ -6,7 +6,7 @@ import {
 } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
 import type { FrameHandle, Handle } from './component.ts'
-import { getFrameRuntime, type FrameRuntime } from './frame-runtime.ts'
+import { getFrameRuntime, type FrameNavigationContent, type FrameRuntime } from './frame-runtime.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -333,27 +333,9 @@ export function startNavigationListener(
   let navigation = getInterceptableNavigation()
   if (!navigation) return
   let resolveFormNavigation = createFormNavigationResolver(signal)
-  let coordinator = createNavigationCoordinator(navigation)
-  // WebKit saves the window's position into the current history entry once the page has gone
-  // 300 ms without scrolling, and a traversal makes its destination current before its page
-  // renders. A traversal that takes longer gives the destination the position of the page being
-  // left, which `event.scroll()` then restores. So remember where the window was when each entry
-  // was left, and go back there after the browser restores. Where the browser restored correctly,
-  // the window is already there. Positions are kept by entry key, since WebKit can give the same
-  // entry a new object.
-  let scrollPositions = new Map<string, ScrollToOptions>()
-  let renderedEntryKey = navigation.currentEntry?.key
-  let stopWatchingReload: (() => void) | undefined
-  signal.addEventListener('abort', () => stopWatchingReload?.(), { once: true })
-  navigation.addEventListener(
-    'currententrychange',
-    () => {
-      // Hash and URL-only updates keep the rendered page. Intercepted navigations adopt their
-      // entry only once its content commits, since the history entry changes before rendering.
-      if (!coordinator.needsFrameReload) renderedEntryKey = navigation.currentEntry?.key
-    },
-    { signal },
-  )
+  let topRuntime = getFrameRuntime(options.top)
+  let coordinator = createNavigationCoordinator(navigation, signal, topRuntime)
+  navigation.addEventListener('currententrychange', coordinator.observeCurrentEntry, { signal })
   // When the visitor last pressed a pointer, turned a wheel or pressed a key. Chromium can dispatch
   // input after the navigation it preceded, so a traversal compares times rather than order.
   let lastInputTime = 0
@@ -378,20 +360,6 @@ export function startNavigationListener(
   navigation.addEventListener(
     'navigate',
     (event) => {
-      stopWatchingReload?.()
-      stopWatchingReload = undefined
-      let leavingEntry = navigation.currentEntry
-      if (leavingEntry && leavingEntry.key === renderedEntryKey) {
-        let { key } = leavingEntry
-        if (!scrollPositions.has(key)) {
-          leavingEntry.addEventListener('dispose', () => scrollPositions.delete(key), {
-            once: true,
-            signal,
-          })
-        }
-        scrollPositions.set(key, { left: window.scrollX, top: window.scrollY })
-      }
-
       coordinator.observeEntry()
 
       if (
@@ -473,28 +441,8 @@ export function startNavigationListener(
             frame.src = state.src
             if (!coordinator.isCurrent(event)) return
           }
-          // A direct reload of the target or any ancestor can take over this navigation's reload.
-          // Only reloads started for this navigation may adopt its entry when they commit.
-          let runtimes = new Set<FrameRuntime>()
-          for (let runtime = getFrameRuntime(frame); runtime; runtime = runtime.parent) {
-            runtimes.add(runtime)
-          }
-          let watching = true
-          let onCommit = () => {
-            if (!watching) return
-            renderedEntryKey = navigation.currentEntry?.key
-            stopWatching()
-          }
-          function stopWatching() {
-            watching = false
-            for (let runtime of runtimes) {
-              if (runtime.onReloadCommit === onCommit) runtime.onReloadCommit = undefined
-            }
-          }
-          for (let runtime of runtimes) {
-            runtime.onReloadCommit = onCommit
-          }
-          stopWatchingReload = stopWatching
+          let content = coordinator.trackContent(event, frame)
+          if (!content) return
           let reload = reloadFrame(frame, {
             ...submission,
             signal: event.signal,
@@ -502,10 +450,8 @@ export function startNavigationListener(
           coordinator.transition(event, { type: 'reload-started', signal: reload.signal })
           await reload.committed
           if (!coordinator.transition(event, { type: 'frame-committed' })) return
-          renderedEntryKey = navigation.currentEntry?.key
+          if (!getFrameRuntime(frame)) content.committed()
           if (scroll !== 'manual') {
-            await traversalApplied
-            if (!coordinator.isCurrent(event)) return
             await traversalApplied
             if (!coordinator.isCurrent(event)) return
             // WebKit restores a traversal's position against the layout from before the commit, so
@@ -516,7 +462,9 @@ export function startNavigationListener(
             event.scroll()
             if (!coordinator.isCurrent(event)) return
             webKitScrollResets.get(event)?.()
-            let leftAt = isTraverse ? scrollPositions.get(event.destination.key) : undefined
+            let leftAt = isTraverse
+              ? coordinator.getScrollPosition(event.destination.key)
+              : undefined
             // Browsers don't restore an entry that restores scroll manually, or a position the
             // visitor has scrolled away from. WebKit times events in whole milliseconds, so input in
             // the millisecond the traversal started counts as the visitor's.
@@ -630,7 +578,11 @@ type NavigationCoordinatorEvent =
   | { type: 'frame-committed' }
   | { type: 'frame-finished' }
 
-function createNavigationCoordinator(navigation: Navigation) {
+function createNavigationCoordinator(
+  navigation: Navigation,
+  signal: AbortSignal,
+  topRuntime: FrameRuntime | undefined,
+) {
   let operation: NavigationOperation = { status: 'idle' }
   // Hash changes abort the previous navigation before our listener runs. An aborted or failed
   // operation can still leave destination content that the next navigation needs to load.
@@ -640,7 +592,68 @@ function createNavigationCoordinator(navigation: Navigation) {
   let entry: { status: 'unmarked' } | { status: 'unrendered'; key: string } = { status: 'unmarked' }
   let push: { status: 'none' } | { status: 'awaiting-commit'; fromKey: string } = { status: 'none' }
 
+  // Native history advances before its content renders. Keep entry ownership beyond the original
+  // request: a target or ancestor can replace that request while still rendering the same entry.
+  let displayedEntryKey = navigation.currentEntry?.key
+  let content: FrameNavigationContent | undefined
+  let contentController: AbortController | undefined
+  // WebKit's delayed scroll save can write the outgoing viewport into a traversal's destination.
+  // Entry keys survive the new entry objects WebKit sometimes creates for the same history slot.
+  let scrollPositions = new Map<string, ScrollToOptions>()
+  signal.addEventListener('abort', clearContent, { once: true })
+
+  function clearContent() {
+    contentController?.abort()
+    contentController = undefined
+    if (topRuntime && topRuntime.navigationContent === content)
+      topRuntime.navigationContent = undefined
+    content = undefined
+  }
+
+  function observeCurrentEntry() {
+    if (frameWork === 'satisfied') displayedEntryKey = navigation.currentEntry?.key
+  }
+
+  function trackContent(event: NavigateEvent, target: FrameHandle) {
+    if (!isCurrent(event)) return
+    let key = navigation.currentEntry?.key
+    let controller = new AbortController()
+    contentController = controller
+    let finished = false
+    let pending: FrameNavigationContent = {
+      signal: controller.signal,
+      target,
+      committed() {
+        if (content !== pending || navigation.currentEntry?.key !== key) return
+        displayedEntryKey = key
+        if (finished) frameWork = 'satisfied'
+        if (entry.status === 'unrendered' && entry.key === key) entry = { status: 'unmarked' }
+        if (topRuntime && topRuntime.navigationContent === pending)
+          topRuntime.navigationContent = undefined
+      },
+      finished() {
+        finished = true
+        if (content === pending && displayedEntryKey === key) frameWork = 'satisfied'
+      },
+    }
+    content = pending
+    if (topRuntime) topRuntime.navigationContent = pending
+    return pending
+  }
+
   function observeEntry() {
+    let leaving = navigation.currentEntry
+    if (leaving && leaving.key === displayedEntryKey) {
+      if (!scrollPositions.has(leaving.key)) {
+        let key = leaving.key
+        leaving.addEventListener('dispose', () => scrollPositions.delete(key), {
+          once: true,
+          signal,
+        })
+      }
+      scrollPositions.set(leaving.key, { left: window.scrollX, top: window.scrollY })
+    }
+    clearContent()
     // A currententrychange listener can start the next navigation before our handler runs.
     if (push.status !== 'awaiting-commit') return
     let key = navigation.currentEntry?.key
@@ -673,6 +686,11 @@ function createNavigationCoordinator(navigation: Navigation) {
 
   return {
     observeEntry,
+    observeCurrentEntry,
+    trackContent,
+    getScrollPosition(key: string) {
+      return scrollPositions.get(key)
+    },
     isCurrent,
     release,
     get needsFrameReload() {
@@ -721,9 +739,7 @@ function createNavigationCoordinator(navigation: Navigation) {
         case 'frame-committed':
           if (operation.status !== 'awaiting-commit') return false
           operation = { ...operation, status: 'reconciling' }
-          if (entry.status === 'unrendered' && navigation.currentEntry?.key === entry.key) {
-            entry = { status: 'unmarked' }
-          }
+
           return true
         case 'frame-finished':
           if (operation.status !== 'reconciling') return false

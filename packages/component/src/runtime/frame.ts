@@ -28,6 +28,8 @@ import {
   setClientEntryBoundaryOwner,
   type ClientEntryIdentity,
   type FrameMountState,
+  type FrameContentCommit,
+  type FrameRenderContext,
   type FrameNavigationOptions,
   type FrameReloadResult,
   type FrameReloadTransition,
@@ -294,10 +296,10 @@ export type FrameContext = {
   shouldPreserveHeadNode?: (node: Node) => boolean
   reconciliationTracker?: ReconciliationTracker
   blockingFrameTracker?: ReconciliationTracker
+  contentCommit?: FrameContentCommit
 }
 
 type FrameInit = {
-  parent?: FrameRuntime
   nonce?: string
   name?: string
   loading?: FrameProps['loading']
@@ -350,12 +352,13 @@ type FrameLoadEvent =
   | { type: 'settle'; controller: AbortController }
   | { type: 'release-request' }
   | { type: 'render-start' }
-  | { type: 'render-complete' }
+  | { type: 'render-complete'; contentCommit?: FrameContentCommit }
+  | { type: 'render-failed'; controller: AbortController }
   | { type: 'defer'; load?: () => void }
   | { type: 'activate' }
   | { type: 'cancel-deferral' }
   | { type: 'policy'; loading: FrameProps['loading'] }
-  | { type: 'dispose' }
+  | { type: 'dispose'; replacement?: FrameContentCommit }
 
 type PendingTemplateWatch = {
   markerId: string
@@ -383,11 +386,18 @@ export type FrameInstance = {
     options?: RenderOptions,
   ) => Promise<void>
   matchesIdentity: (src: string, name: string | undefined) => boolean
-  dispose: () => void
+  captureContentCommit: () => FrameContentCommit | undefined
+  waitForContentCommit: (commit: FrameContentCommit) => {
+    displayed: Promise<void>
+    settled: Promise<void>
+  }
+  failContentCommit: (controller: AbortController) => void
+  dispose: (replacement?: FrameContentCommit) => void
   handle: FrameHandle
 }
 
 type RenderOptions = {
+  contentCommit?: FrameContentCommit
   nonce?: string
   documentHref?: string
   flushKind?: FlushKind
@@ -423,6 +433,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
   let pendingTemplateWatch: PendingTemplateWatch | undefined
   let lifecycleController = new AbortController()
+  let contentWaiters = new Map<
+    PromiseWithResolvers<void>,
+    { commit: FrameContentCommit; settled: PromiseWithResolvers<void> }
+  >()
+  let blockingContent: FrameContentCommit | undefined
+  let renderContexts: FrameRenderContext[] = []
 
   async function consumeClientEntryResources(
     source: ParentNode,
@@ -470,10 +486,22 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     $runtime: runtime,
     reload: async (options) => (await reload(options)).signal,
     replace: async (content: FrameContent) => {
-      await render(content)
+      let contentCommit = captureContentCommit()
+      let reconciliationTracker = contentCommit ? createReconciliationTracker() : undefined
+      await render(content, { contentCommit, reconciliationTracker })
+      reconciliationTracker?.finalize()
+      if (reconciliationTracker && contentCommit) {
+        void reconciliationTracker.ready().then(
+          () => {
+            if (!isRenderAborted()) contentCommit.finished(frame)
+          },
+          () => {},
+        )
+      }
     },
   })
   runtime.topFrame = runtime.topFrame ?? init.topFrame ?? frame
+  runtime.captureContentCommit = captureContentCommit
 
   let frameName = init.marker?.name ?? init.name
   if (frameName) {
@@ -495,14 +523,44 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   async function render(content: InternalFrameContent, options?: RenderOptions): Promise<void> {
     if (isRenderAborted(options?.signal)) return
     let ownsData = options?.data === undefined
+    let contentCommit = options?.contentCommit
+    let ownsBlockingTracker =
+      contentCommit !== undefined && options?.blockingFrameTracker === undefined
+    let blockingFrameTracker =
+      options?.blockingFrameTracker ??
+      (ownsBlockingTracker ? contentCommit?.blockingFrameTracker : undefined)
     let renderOptions: ActiveRenderOptions = {
       ...options,
+      blockingFrameTracker,
       data: options?.data ?? {},
     }
-
+    if (contentCommit && blockingFrameTracker) {
+      let onCommit = options?.onCommit
+      renderOptions.onCommit = () => {
+        onCommit?.()
+        if (isRenderAborted(options?.signal)) return
+        if (ownsBlockingTracker) blockingFrameTracker.finalize()
+        contentCommit.contentReadyTracker.finalize()
+        void contentCommit.contentReadyTracker.ready().then(
+          () => {
+            if (!isRenderAborted(options?.signal)) contentCommit.ready()
+          },
+          () => {},
+        )
+      }
+    }
+    let renderContext: FrameRenderContext = {
+      contentCommit,
+      reconciliationTracker: renderOptions.reconciliationTracker,
+      blockingFrameTracker,
+    }
+    renderContexts.push(renderContext)
+    runtime.renderContext = renderContext
     try {
       await renderContent(content, renderOptions)
     } finally {
+      renderContexts.splice(renderContexts.indexOf(renderContext), 1)
+      runtime.renderContext = renderContexts.at(-1)
       if (ownsData) clearRmxData(renderOptions.data)
     }
   }
@@ -534,11 +592,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
 
     if (isRemixNodeFrameContent(content)) {
+      options.contentCommit?.mutating(frame)
       init.disposeFallback?.()
       if (!contentRoot) {
         let currentNodes = getContentNodes()
+        disposeSubFrames(currentNodes, context, options.contentCommit)
         removeVirtualRoots(currentNodes)
-        disposeSubFrames(currentNodes, context)
         clearFrameContent()
         if (container.root instanceof Document) {
           contentRoot = createFrameRoot(container.doc.body, context)
@@ -561,7 +620,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       try {
         contentRoot.render(content)
         await new Promise<void>((resolve) => context.scheduler.enqueueCommitPhase([resolve]))
-        if (!isRenderAborted(options.signal)) transitionLoad({ type: 'render-complete' })
+        if (!isRenderAborted(options.signal))
+          transitionLoad({ type: 'render-complete', contentCommit: options.contentCommit })
         options.onCommit?.()
       } finally {
         runtime.serverFrameReload = previousServerFrameReload
@@ -571,6 +631,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
 
     if (contentRoot) {
+      options.contentCommit?.mutating(frame)
+      disposeSubFrames(getContentNodes(), context, options.contentCommit)
       contentRoot.dispose()
       contentRoot = undefined
     }
@@ -607,8 +669,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       data: options.data,
       reconciliationTracker: options.reconciliationTracker,
       blockingFrameTracker: options.blockingFrameTracker,
+      contentCommit: options.contentCommit,
     }
     let hydrationContainer = container
+    options.contentCommit?.mutating(frame)
 
     if (source instanceof HTMLElement) {
       let head = source.querySelector('head')
@@ -643,7 +707,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
     let subFramesReady = hydrateContainer(hydrationContainer, responseContext, options)
     // Visible content can reload in place while its sub-frames are still settling.
-    if (!isRenderAborted(options.signal)) transitionLoad({ type: 'render-complete' })
+    if (!isRenderAborted(options.signal))
+      transitionLoad({ type: 'render-complete', contentCommit: options.contentCommit })
     options.onCommit?.()
     await subFramesReady
   }
@@ -700,8 +765,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
   }
 
-  function dispose(): void {
-    transitionLoad({ type: 'dispose' })
+  function dispose(replacement?: FrameContentCommit): void {
+    transitionLoad({ type: 'dispose', replacement })
   }
 
   let readyPromise = hydrateInitial()
@@ -726,6 +791,28 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     renderMarkerContent,
     matchesIdentity: (src, name) =>
       loadState.lifecycle !== 'disposed' && frame.src === src && frameName === name,
+    captureContentCommit,
+    waitForContentCommit(commit) {
+      let waiter = Promise.withResolvers<void>()
+      let settled = Promise.withResolvers<void>()
+      blockingContent = commit
+      contentWaiters.set(waiter, { commit, settled })
+      let abort = () => {
+        contentWaiters.delete(waiter)
+        waiter.resolve()
+        settled.resolve()
+      }
+      if (commit.signal.aborted) abort()
+      else commit.signal.addEventListener('abort', abort, { once: true })
+      void waiter.promise.then(
+        () => commit.signal.removeEventListener('abort', abort),
+        () => commit.signal.removeEventListener('abort', abort),
+      )
+      return { displayed: waiter.promise, settled: settled.promise }
+    },
+    failContentCommit(controller) {
+      transitionLoad({ type: 'render-failed', controller })
+    },
     dispose,
     handle: frame,
   }
@@ -739,6 +826,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function loadLazyFrame(signal?: AbortSignal): void {
+    let contentCommit = captureContentCommit()
     // Viewport loading completes initial content; active reloads keep their lifecycle.
     let controller = startLoad(
       !signal && reloadState.status === 'idle' && loadState.content !== 'resolved'
@@ -747,7 +835,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       signal,
     )
     // Resolution reports errors before rejecting.
-    void resolveAndRenderReload(controller).catch(() => {})
+    void resolveAndRenderReload(controller, undefined, undefined, contentCommit).catch(() => {})
   }
 
   function startDeferredLoad(): void {
@@ -772,6 +860,16 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         return
       case 'render-complete':
         loadState.content = 'resolved'
+        for (let [waiter, { commit, settled }] of contentWaiters) {
+          if (commit !== event.contentCommit) continue
+          waiter.resolve()
+          settled.resolve()
+          contentWaiters.delete(waiter)
+        }
+        return
+      case 'render-failed':
+        if (currentLoadController() !== event.controller || event.controller.signal.aborted) return
+        for (let { settled } of contentWaiters.values()) settled.resolve()
         return
       case 'cancel-deferral': {
         let observation = loadState.observation
@@ -884,7 +982,15 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       }
       case 'dispose':
         if (loadState.lifecycle === 'disposed') return
+        event.replacement?.disposed(frame)
         loadState.lifecycle = 'disposed'
+        for (let [waiter, { settled }] of contentWaiters) {
+          waiter.resolve()
+          settled.resolve()
+        }
+        contentWaiters.clear()
+        // Transfer descendants before abort listeners or virtual roots can dispose them.
+        disposeSubFrames(container.childNodes, context, event.replacement)
         transitionLoad({ type: 'cancel-deferral' })
         lifecycleController.abort()
         clearRmxData(context.data)
@@ -899,8 +1005,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         // Remove hydrated virtual roots in this frame's region.
         removeVirtualRoots(container.childNodes)
 
-        // Dispose sub-frames recursively.
-        disposeSubFrames(container.childNodes, context)
         if (ownsStyleManager) {
           context.styleManager.dispose()
         }
@@ -1001,14 +1105,63 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     return await transition.finished
   }
 
+  function captureContentCommit(): FrameContentCommit | undefined {
+    let topRuntime = getFrameRuntime(runtime.topFrame ?? frame)
+    let pending = topRuntime?.navigationContent
+    if (!topRuntime || !pending) return
+    let containsTarget = frame === pending.target
+    if (!containsTarget) {
+      walkNodes(getContentNodes(), (node) => {
+        if (isFrameStart(node) && context.frameInstances.get(node)?.handle === pending.target) {
+          containsTarget = true
+        }
+      })
+    }
+    if (!containsTarget) {
+      // A replacement's blocking child can supersede its request before displaying content.
+      // Continue the same readiness tracker so its successor's nested frames also block adoption.
+      return pending.owner === blockingContent ? blockingContent : undefined
+    }
+
+    let affected = false
+    let commit: FrameContentCommit = {
+      signal: pending.signal,
+      blockingFrameTracker: createReconciliationTracker(),
+      contentReadyTracker: createReconciliationTracker(),
+      disposed(target) {
+        if (topRuntime.navigationContent !== pending || pending.target !== target) return
+        // Transfer before disposal aborts requests: their listeners can synchronously replace again.
+        pending.target = frame
+        pending.owner = commit
+        affected = true
+      },
+      mutating(target) {
+        if (topRuntime.navigationContent !== pending || pending.target !== target) return
+        pending.owner = commit
+        affected = true
+      },
+      ready() {
+        if (affected && topRuntime.navigationContent === pending && pending.owner === commit) {
+          pending.committed()
+        }
+      },
+      finished(target) {
+        if (affected && target === frame && pending.owner === commit) pending.finished()
+      },
+    }
+    return commit
+  }
+
   function startReloadTransition(options?: FrameNavigationOptions): FrameReloadTransition {
-    let onCommit = runtime.onReloadCommit
+    let contentCommit = captureContentCommit()
     let controller = startLoad('direct', options?.signal)
-    let committed = Promise.withResolvers<void>()
-    let finished = resolveAndRenderReload(controller, committed, options, onCommit)
+    let committed = Object.assign(Promise.withResolvers<void>(), { started: false })
+    let finished = resolveAndRenderReload(controller, committed, options, contentCommit)
 
     // Settle committed when a reload is aborted or fails before rendering any content.
-    void finished.then(() => committed.resolve(), committed.reject)
+    void finished.then(() => {
+      if (!committed.started || controller.signal.aborted) committed.resolve()
+    }, committed.reject)
 
     return { signal: controller.signal, committed: committed.promise, finished }
   }
@@ -1024,9 +1177,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   async function resolveAndRenderReload(
     controller: AbortController,
-    committed?: PromiseWithResolvers<void>,
+    committed?: PromiseWithResolvers<void> & { started: boolean },
     options?: FrameNavigationOptions,
-    onCommit?: () => void,
+    contentCommit?: FrameContentCommit,
   ): Promise<FrameReloadResult> {
     let isStale = () => currentLoadController() !== controller || controller.signal.aborted
     try {
@@ -1039,7 +1192,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       let { content, redirectedTo, nonce } = await unwrapFrameResolution(resolution)
       if (isStale()) return { signal: controller.signal }
       let reconciliationTracker = createReconciliationTracker()
-      let blockingFrameTracker = createReconciliationTracker()
+      let blockingFrameTracker =
+        contentCommit?.blockingFrameTracker ?? createReconciliationTracker()
       let commitStarted = false
       await render(content, {
         nonce,
@@ -1047,26 +1201,27 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         signal: controller.signal,
         reconciliationTracker,
         blockingFrameTracker,
+        contentCommit,
         onCommit() {
           if (commitStarted) return
           commitStarted = true
+          if (committed) committed.started = true
           blockingFrameTracker.finalize()
           if (committed) {
-            void blockingFrameTracker.ready().then(() => {
-              if (!isStale()) onCommit?.()
-              committed.resolve()
-            }, committed.reject)
+            void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
           }
         },
       })
       reconciliationTracker.finalize()
       await reconciliationTracker.ready()
+      if (!isStale()) contentCommit?.finished(frame)
       return {
         signal: controller.signal,
         redirectedTo: isStale() ? undefined : redirectedTo,
       }
     } catch (error) {
       if (isStale()) return { signal: controller.signal }
+      transitionLoad({ type: 'render-failed', controller })
       init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       throw error
     } finally {
@@ -1207,8 +1362,8 @@ export function Frame(handle: Handle<FrameProps, FrameHandle>): RenderFn {
 const frameNodeRenderer: FrameNodeRenderer = {
   insert: insertFrame,
   diff: diffFrame,
-  dispose(node) {
-    node._state.instance.dispose()
+  dispose(node, context) {
+    node._state.instance.dispose(getFrameRuntime(context.frame)?.renderContext?.contentCommit)
   },
 }
 
@@ -1236,8 +1391,27 @@ function diffFrame(
     (currSrc !== nextSrc && !curr._state.instance.isDisplayingResolvedContent())
   ) {
     let replaceAnchor = curr._rangeEnd.nextSibling ?? anchor
-    remove(curr, domParent, context)
-    return insertFrame(next, domParent, vParent, context, svg, replaceAnchor)
+    let runtime = getFrameRuntime(frame)
+    let topRuntime = runtime?.topFrame && getFrameRuntime(runtime.topFrame)
+    let previousContext = runtime?.renderContext
+    let contentCommit = previousContext
+      ? previousContext.contentCommit
+      : topRuntime?.navigationContent?.target === curr._state.instance.handle
+        ? runtime?.captureContentCommit?.()
+        : curr._state.instance.captureContentCommit()
+    if (runtime && contentCommit) {
+      runtime.renderContext = {
+        contentCommit,
+        blockingFrameTracker: contentCommit.blockingFrameTracker,
+        reconciliationTracker: previousContext?.reconciliationTracker,
+      }
+    }
+    try {
+      remove(curr, domParent, context)
+      return insertFrame(next, domParent, vParent, context, svg, replaceAnchor)
+    } finally {
+      if (runtime) runtime.renderContext = previousContext
+    }
   }
 
   let committed = commitFrameNode(next, vParent, svg, curr._rangeStart, curr._rangeEnd, curr._state)
@@ -1306,10 +1480,7 @@ function insertFrame(
         instance = createFrameInstance(node, start, end, runtime, getContext)
       } else {
         let instanceRuntime = getFrameRuntime(instance.handle)
-        if (instanceRuntime) {
-          instanceRuntime.parent = runtime
-          instanceRuntime.getContext = getContext
-        }
+        if (instanceRuntime) instanceRuntime.getContext = getContext
       }
 
       cursor.current = end.nextSibling
@@ -1362,9 +1533,9 @@ function createFrameInstance(
 ): FrameInstance {
   let instance = createFrame([start, end], {
     name: getFrameName(node),
-    parent: runtime,
     loading: node.props.loading,
     src: getFrameSrc(node),
+    topFrame: runtime.topFrame,
     getContext,
     errorTarget: runtime.errorTarget,
     loadModule: runtime.loadModule,
@@ -1408,12 +1579,24 @@ function resolveClientFrame(
 ): void {
   let frameSrc = getFrameSrc(node)
   let instance = node._state.instance
+  let renderContext = runtime.renderContext
+  let contentCommit = renderContext ? renderContext.contentCommit : instance.captureContentCommit()
+  let reconciliationTracker =
+    renderContext?.reconciliationTracker ?? serverFrameReload?.reconciliationTracker
+  let blockingFrameTracker =
+    renderContext?.blockingFrameTracker ?? serverFrameReload?.blockingFrameTracker
   let controller = instance.startLoad(
     serverFrameReload ? 'ancestor' : 'initial',
     serverFrameReload?.signal,
   )
   let { signal } = controller
   let frameCommitted = Promise.withResolvers<void>()
+  // A canceled request has finished, but its blocking frame still needs replacement content.
+  let contentReady =
+    contentCommit && blockingFrameTracker && !node.props.fallback
+      ? instance.waitForContentCommit(contentCommit)
+      : undefined
+  if (contentReady) contentCommit?.contentReadyTracker.waitFor(contentReady.displayed)
 
   let resolve = Promise.resolve()
     .then(() =>
@@ -1430,12 +1613,15 @@ function resolveClientFrame(
       await instance.render(nextContent, {
         nonce,
         signal,
-        reconciliationTracker: serverFrameReload?.reconciliationTracker,
-        blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
+        reconciliationTracker,
+        blockingFrameTracker,
+        contentCommit,
         onCommit: frameCommitted.resolve,
       })
+      if (!signal.aborted) contentCommit?.finished(instance.handle)
     })
     .catch((error) => {
+      instance.failContentCommit(controller)
       if ((serverFrameReload || node.props.loading === 'lazy') && !signal.aborted) {
         runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       }
@@ -1445,12 +1631,9 @@ function resolveClientFrame(
       instance.completeLoad(controller)
     })
 
-  if (serverFrameReload?.reconciliationTracker && !node.props.fallback) {
-    serverFrameReload.reconciliationTracker.waitFor(resolve)
-  }
-  if (serverFrameReload?.blockingFrameTracker && !node.props.fallback) {
-    serverFrameReload.blockingFrameTracker.waitFor(frameCommitted.promise)
-  }
+  if (reconciliationTracker && !node.props.fallback) reconciliationTracker.waitFor(resolve)
+  if (blockingFrameTracker && !node.props.fallback)
+    blockingFrameTracker.waitFor(contentReady?.settled ?? frameCommitted.promise)
 }
 
 function asAbortableFrameContent(content: FrameContent, signal: AbortSignal): FrameContent {
@@ -1550,6 +1733,8 @@ function createReconciliationTracker(): ReconciliationTracker {
     resolveReady = resolve
     rejectReady = reject
   })
+
+  void readyPromise.catch(() => {})
 
   function maybeSettle() {
     if (!finalized || pending !== 0) return
@@ -1923,11 +2108,6 @@ function hydrateRegion(
     let nonceManager = getNonceManager()
     nonceManager.addRootResourceNonces(root, resourceNonces)
     nonceManager.addRootResponseNonce(root, context.nonce)
-    if (!signal) {
-      root.render(vElement)
-      return
-    }
-
     let frameRuntime = context.frame.$runtime
     invariant(
       isFrameRuntime(frameRuntime),
@@ -1936,15 +2116,24 @@ function hydrateRegion(
 
     let previousServerFrameReload = frameRuntime.serverFrameReload
 
-    frameRuntime.serverFrameReload = {
-      signal,
+    let previousRenderContext = frameRuntime.renderContext
+    frameRuntime.renderContext = {
+      contentCommit: context.contentCommit,
       reconciliationTracker: context.reconciliationTracker,
       blockingFrameTracker: context.blockingFrameTracker,
+    }
+    if (signal) {
+      frameRuntime.serverFrameReload = {
+        signal,
+        reconciliationTracker: context.reconciliationTracker,
+        blockingFrameTracker: context.blockingFrameTracker,
+      }
     }
     try {
       root.render(vElement)
     } finally {
       frameRuntime.serverFrameReload = previousServerFrameReload
+      frameRuntime.renderContext = previousRenderContext
     }
   }
 
@@ -1999,8 +2188,6 @@ async function createSubFrames(
       let marker = context.data.f?.[id]
 
       if (existingFrame) {
-        let runtime = getFrameRuntime(existingFrame.handle)
-        if (runtime) runtime.parent = getFrameRuntime(context.frame)
         if (marker) {
           let frameMarker: FrameMarkerData = { ...marker, id }
           tasks.push(existingFrame.updateMarker(frameMarker, options))
@@ -2014,7 +2201,6 @@ async function createSubFrames(
             nonce: context.nonce,
             src: frameMarker.src,
             marker: frameMarker,
-            parent: getFrameRuntime(context.frame),
             topFrame: context.topFrame,
             getContext: context.getContext,
             ...getSharedFrameRuntime(context),
@@ -2065,13 +2251,17 @@ function removeVirtualRoots(nodes: Node[]): void {
   })
 }
 
-function disposeSubFrames(nodes: Node[], context: FrameContext): void {
+function disposeSubFrames(
+  nodes: Node[],
+  context: FrameContext,
+  replacement = getFrameRuntime(context.frame)?.renderContext?.contentCommit,
+): void {
   walkNodes(nodes, (node) => {
     if (!isFrameStart(node)) return
     let end = findFrameEndMarker(node)
     let subFrame = context.frameInstances.get(node)
     if (subFrame) {
-      subFrame.dispose()
+      subFrame.dispose(replacement)
       context.frameInstances.delete(node)
     }
     return end

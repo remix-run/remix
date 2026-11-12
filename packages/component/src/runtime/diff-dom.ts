@@ -130,6 +130,8 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
                 data: context.data,
                 signal: context.signal,
                 reconciliationTracker: context.reconciliationTracker,
+                blockingFrameTracker: context.blockingFrameTracker,
+                contentCommit: context.contentCommit,
               },
             )
             if (context.reconciliationTracker) context.reconciliationTracker.waitFor(render)
@@ -940,7 +942,7 @@ function visitSubtree(node: Node, visit: (node: Node) => boolean | void): void {
 function disposeFrameStartMarker(marker: Comment, context: FrameContext): void {
   let subFrame = context.frameInstances.get(marker)
   if (subFrame) {
-    subFrame.dispose()
+    subFrame.dispose(context.contentCommit)
     context.frameInstances.delete(marker)
   }
 }

@@ -253,7 +253,7 @@ export interface FrameNodeRenderer {
     svg: boolean,
     anchor?: Node,
   ): CommittedFrameNode
-  dispose(node: CommittedFrameNode): void
+  dispose(node: CommittedFrameNode, context: ReconcileContext): void
 }
 
 export type FrameComponent = ElementFunction & { readonly [FRAME_NODE]: FrameNodeRenderer }
@@ -1584,7 +1584,7 @@ export function remove(
   }
 
   if (node.kind === 'frame') {
-    node.type[FRAME_NODE].dispose(node)
+    node.type[FRAME_NODE].dispose(node, context)
     if (domParent) removeDomRange(node._rangeStart, node._rangeEnd, domParent)
     return
   }
