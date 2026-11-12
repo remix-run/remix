@@ -2931,16 +2931,17 @@ describe('traversal scroll', () => {
     page.style.height = '5000px'
     document.body.append(page)
 
-    let nextLoad = () => Promise.resolve()
+    let nextLoad: (signal: AbortSignal) => Promise<void> = () => Promise.resolve()
     let topFrame = { src: listUrl } as FrameHandle
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
       top: topFrame,
       get: () => topFrame,
-      reloadFrame() {
-        let loaded = nextLoad()
+      reloadFrame(_frame, options) {
+        let signal = options?.signal ?? controller.signal
+        let loaded = nextLoad(signal)
         nextLoad = () => Promise.resolve()
-        return createReloadTransition(loaded.then(() => ({ signal: controller.signal })))
+        return { signal, committed: loaded, finished: loaded.then(() => ({ signal })) }
       },
     })
 
@@ -2963,8 +2964,9 @@ describe('traversal scroll', () => {
       holdNextLoad() {
         let [started, start] = withResolvers<void>()
         let [released, release] = withResolvers<void>()
-        nextLoad = () => {
+        nextLoad = (signal) => {
           start()
+          signal.addEventListener('abort', () => release(), { once: true })
           return released
         }
         return { started, release: () => release() }
@@ -3012,6 +3014,27 @@ describe('traversal scroll', () => {
 
     expect(window.location.hash).toBe('#reviews')
     expect(window.scrollY).toBe(800)
+  })
+
+  it('keeps the saved position of a page whose traversal is interrupted before rendering', async (t) => {
+    let page = setup(t)
+    window.scrollTo(0, 800)
+    await navigate(page.detailUrl)
+    window.scrollTo(0, 300)
+    await navigate(new URL('/scroll-third', page.listUrl).href)
+    window.scrollTo(0, 100)
+
+    let load = page.holdNextLoad()
+    window.history.back()
+    await load.started
+    let completed = waitForNavigationSuccess()
+    window.history.back()
+    await completed
+    expect(window.scrollY).toBe(800)
+
+    await window.navigation.forward().finished
+
+    expect(window.scrollY).toBe(300)
   })
 
   it('leaves the window alone once the visitor scrolls during a traversal', async (t) => {

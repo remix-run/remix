@@ -348,6 +348,16 @@ export function startNavigationListener(
   // the window is already there. Positions are kept by entry key, since WebKit can give the same
   // entry a new object.
   let scrollPositions = new Map<string, ScrollToOptions>()
+  let renderedEntryKey = navigation.currentEntry?.key
+  navigation.addEventListener(
+    'currententrychange',
+    () => {
+      // Hash and URL-only updates keep the rendered page. Intercepted navigations adopt their
+      // entry only once its content commits, since the history entry changes before rendering.
+      if (!needsFrameReload) renderedEntryKey = navigation.currentEntry?.key
+    },
+    { signal },
+  )
   // When the visitor last pressed a pointer, turned a wheel or pressed a key. Chromium can dispatch
   // input after the navigation it preceded, so a traversal compares times rather than order.
   let lastInputTime = 0
@@ -373,7 +383,7 @@ export function startNavigationListener(
     'navigate',
     (event) => {
       let leavingEntry = navigation.currentEntry
-      if (leavingEntry) {
+      if (leavingEntry && leavingEntry.key === renderedEntryKey) {
         let { key } = leavingEntry
         if (!scrollPositions.has(key)) {
           leavingEntry.addEventListener('dispose', () => scrollPositions.delete(key), {
@@ -480,6 +490,7 @@ export function startNavigationListener(
         })
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return
+        renderedEntryKey = navigation.currentEntry?.key
         if (navigation.currentEntry?.key === unrenderedEntryKey) unrenderedEntryKey = undefined
         if (scroll !== 'manual') {
           await traversalApplied
