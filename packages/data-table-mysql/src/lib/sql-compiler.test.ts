@@ -471,7 +471,7 @@ describe('mysql sql-compiler', () => {
       let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into `accounts` (`status`, `email`) values (?, ?) on duplicate key update `email` = ?',
-        values: ['contact@remix.run', 'enabled', 'info@remix.run'],
+        values: ['enabled', 'info@remix.run', 'contact@remix.run'],
       })
     })
 

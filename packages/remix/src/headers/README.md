@@ -69,7 +69,7 @@ headers.apply({
 })
 
 headers.get('Content-Type') // 'application/json'
-headers.get('Vary') // 'accept-encoding, accept-language'
+headers.get('Vary') // 'Accept-Encoding, Accept-Language'
 headers.getSetCookie() // ['session=abc', 'theme=dark']
 ```
 
@@ -637,7 +637,7 @@ import { Vary } from 'remix/headers'
 // Parse from headers
 let vary = Vary.from(response.headers.get('Vary'))
 
-vary.headerNames // ['accept-encoding', 'accept-language']
+vary.headerNames // ['Accept-Encoding', 'Accept-Language']
 vary.has('Accept-Encoding') // true (case-insensitive)
 vary.size // 2
 
@@ -650,6 +650,9 @@ headers.set('Vary', vary.toString())
 new Vary('Accept-Encoding, Accept-Language')
 new Vary(['Accept-Encoding', 'Accept-Language'])
 new Vary({ headerNames: ['Accept-Encoding', 'Accept-Language'] })
+
+// `*` means the response varies on everything, so it replaces other names
+new Vary('Cookie, *').toString() // '*'
 
 // Use class for type safety when setting Headers values
 // via Vary's `.toString()` method
