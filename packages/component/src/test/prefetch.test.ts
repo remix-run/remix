@@ -1522,7 +1522,7 @@ describe('anchor prefetch ownership', () => {
           context = value
           return response.promise
         },
-        frame() {
+        processFrame() {
           parsed.resolve()
         },
       })
@@ -1642,7 +1642,7 @@ describe('defaultPrefetch overrides', () => {
   it('retains idle discovery for shared anchors and cancels it when the last caller disconnects', async (t) => {
     let idle = stubIdleCallbacks(t)
     let context: PrefetchContext | undefined
-    let frame = mock.fn()
+    let processFrame = mock.fn()
     let requests: Promise<void>[] = []
     startTestPrefetching(t, (src, options) => {
       requests.push(
@@ -1651,7 +1651,7 @@ describe('defaultPrefetch overrides', () => {
             context = value
             return Promise.resolve(htmlResponse('<main>Shared page</main>'))
           },
-          frame,
+          processFrame,
         }),
       )
     })
@@ -1676,7 +1676,7 @@ describe('defaultPrefetch overrides', () => {
     expect(context?.signal.aborted).toBe(true)
     expect(idle.pending).toBe(0)
     idle.flush()
-    expect(frame).not.toHaveBeenCalled()
+    expect(processFrame).not.toHaveBeenCalled()
   })
 
   it('passes the marked link through options and both hooks when a descendant is pressed', async (t) => {
@@ -1696,7 +1696,7 @@ describe('defaultPrefetch overrides', () => {
             expect(context.element).toBe(anchor)
             return Promise.resolve(htmlResponse('<main>Page</main>'))
           },
-          frame(_prefetchReferences, context) {
+          processFrame(_prefetchReferences, context) {
             expect(context.element).toBe(anchor)
             expect(context.element?.isConnected).toBe(true)
             parsed.resolve()
@@ -1730,7 +1730,7 @@ describe('defaultPrefetch overrides', () => {
           requestContext = context
           return response.promise
         },
-        async frame(_prefetchReferences, context) {
+        async processFrame(_prefetchReferences, context) {
           parsed.resolve(context)
           await release.promise
         },
@@ -1783,7 +1783,7 @@ describe('defaultPrefetch overrides', () => {
             ),
           )
         },
-        async frame(prefetchReferences, context) {
+        async processFrame(prefetchReferences, context) {
           if (new URL(context.src).pathname === '/child') {
             parsed.resolve(context)
             await release.promise
@@ -1817,7 +1817,7 @@ describe('defaultPrefetch overrides', () => {
         expect(context.element).toBeUndefined()
         return Promise.resolve(htmlResponse('<main>Page</main>'))
       },
-      frame(_prefetchReferences, context) {
+      processFrame(_prefetchReferences, context) {
         expect(context.element).toBeUndefined()
       },
     })
@@ -1830,7 +1830,7 @@ describe('defaultPrefetch overrides', () => {
           expect(context.element).toBe(source)
           return Promise.resolve(htmlResponse('<main>Page</main>'))
         },
-        frame(_prefetchReferences, context) {
+        processFrame(_prefetchReferences, context) {
           expect(context.element).toBe(source)
         },
       },
@@ -1848,9 +1848,9 @@ describe('defaultPrefetch overrides', () => {
       value: new URL('/redirected/page', location.href).href,
     })
     let transport = mock.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => response)
-    let frame = mock.fn<NonNullable<DefaultPrefetchOverrides['frame']>>()
+    let processFrame = mock.fn<NonNullable<DefaultPrefetchOverrides['processFrame']>>()
 
-    await defaultPrefetch('/page#hash', { target: 'details' }, { fetch: transport, frame })
+    await defaultPrefetch('/page#hash', { target: 'details' }, { fetch: transport, processFrame })
 
     expect(transport).toHaveBeenCalledTimes(1)
     let [url, init] = transport.mock.calls[0].arguments
@@ -1863,8 +1863,8 @@ describe('defaultPrefetch overrides', () => {
     expect(new Headers(init?.headers).get('X-Remix-Frame')).toBe('true')
     expect(new Headers(init?.headers).get('X-Remix-Target')).toBe('details')
     expect(new Headers(init?.headers).get('X-Remix-Prefetch')).toBe('true')
-    expect(frame).toHaveBeenCalledTimes(1)
-    let context = frame.mock.calls[0].arguments[1]
+    expect(processFrame).toHaveBeenCalledTimes(1)
+    let context = processFrame.mock.calls[0].arguments[1]
     expect(context.response).toBe(response)
     expect(context.response.bodyUsed).toBe(true)
     expect(context.src).toBe(new URL('/page', location.href).href)
@@ -1902,7 +1902,7 @@ describe('defaultPrefetch overrides', () => {
           <link rel="preload" as="image" imagesrcset="   ">
           <link id="data" rel="preload" as="fetch" href="data.json">
           <template><link id="captions" rel="preload" as="track" href="captions.vtt"></template>`),
-      frame(_prefetchReferences, value) {
+      processFrame(_prefetchReferences, value) {
         context = value
       },
     })
@@ -1955,7 +1955,7 @@ describe('defaultPrefetch overrides', () => {
 
     await defaultPrefetch('/page', undefined, {
       fetch: transport,
-      frame(prefetchReferences, { src, fragment, assets, frames }) {
+      processFrame(prefetchReferences, { src, fragment, assets, frames }) {
         contexts.push(new URL(src).pathname)
         if (new URL(src).pathname !== '/page') return prefetchReferences()
         expect(frames.map((frame) => new URL(frame.src).pathname)).toEqual([
@@ -2016,7 +2016,7 @@ describe('defaultPrefetch overrides', () => {
     hints.length = 0
     await defaultPrefetch('/page', undefined, {
       fetch: transport,
-      async frame(prefetchReferences, { frames }) {
+      async processFrame(prefetchReferences, { frames }) {
         expect(frames).toEqual([
           { src: new URL('/eager', location.href).href, target: 'details', fallback: false },
           { src: new URL('/fallback', location.href).href, target: 'sidebar', fallback: true },
@@ -2030,15 +2030,15 @@ describe('defaultPrefetch overrides', () => {
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/entry.js', '/nested.css'])
   })
 
-  it('does not fall back when the frame hook skips or throws, and permits later attempts', async (t) => {
+  it('does not fall back when the processFrame hook skips or throws, and permits later attempts', async (t) => {
     startTestPrefetching(t)
     stubLinkPrefetchSupport(t, true)
     let hints = collectHints(t)
     let transport = mock.fn(async () => htmlResponse('<script src="/entry.js"></script>'))
-    await defaultPrefetch('/page', undefined, { fetch: transport, frame() {} })
+    await defaultPrefetch('/page', undefined, { fetch: transport, processFrame() {} })
     await defaultPrefetch('/page', undefined, {
       fetch: transport,
-      frame() {
+      processFrame() {
         throw new Error('Skip speculative work')
       },
     })
@@ -2060,7 +2060,7 @@ describe('defaultPrefetch overrides', () => {
     let hints = collectHints(t)
     await defaultPrefetch('/page', undefined, {
       fetch: transport,
-      frame(prefetchReferences, { assets }) {
+      processFrame(prefetchReferences, { assets }) {
         if (assets.length === 0) return
         let foreign = document.createElement('script')
         foreign.src = '/foreign.js'
@@ -2085,7 +2085,7 @@ describe('defaultPrefetch overrides', () => {
     let completed = false
     let first = defaultPrefetch('/first', undefined, {
       fetch: async () => htmlResponse('<script src="/first.js"></script>'),
-      async frame(prefetchReferences) {
+      async processFrame(prefetchReferences) {
         void prefetchReferences()
         firstParsed.resolve()
         await custom.promise
@@ -2124,7 +2124,7 @@ describe('defaultPrefetch overrides', () => {
     let origins = new Map<string, Element | undefined>()
     let overrides: DefaultPrefetchOverrides = {
       fetch: transport,
-      async frame(prefetchReferences, context) {
+      async processFrame(prefetchReferences, context) {
         let pathname = new URL(context.src).pathname
         parsed.push(pathname)
         await prefetchReferences({ frames: context.frames })
@@ -2168,7 +2168,7 @@ describe('defaultPrefetch overrides', () => {
       { signal: firstController.signal },
       {
         fetch: transport,
-        async frame(prefetchReferences, { signal }) {
+        async processFrame(prefetchReferences, { signal }) {
           parsed.resolve(signal)
           await release.promise
           await prefetchReferences()
@@ -2193,7 +2193,7 @@ describe('defaultPrefetch overrides', () => {
 
   it('lets a custom fetch handle failed responses before validation and skips failed discovery', async (t) => {
     startTestPrefetching(t)
-    let frame = mock.fn()
+    let processFrame = mock.fn()
     let failed = new Response('<script src="/error.js"></script>', {
       status: 503,
       headers: { 'Content-Type': 'text/html', 'Retry-After': '5' },
@@ -2201,14 +2201,14 @@ describe('defaultPrefetch overrides', () => {
     expect(failed.body).not.toBe(null)
     if (!failed.body) throw new Error('Expected a response body')
     let cancel = t.mock.method(failed.body, 'cancel', async () => {})
-    await defaultPrefetch('/page', undefined, { fetch: async () => failed, frame })
-    expect(frame).not.toHaveBeenCalled()
+    await defaultPrefetch('/page', undefined, { fetch: async () => failed, processFrame })
+    expect(processFrame).not.toHaveBeenCalled()
     expect(cancel).toHaveBeenCalledTimes(1)
     await defaultPrefetch('/page', undefined, {
       fetch: async () => htmlResponse('<main>Recovered</main>'),
-      frame,
+      processFrame,
     })
-    expect(frame).toHaveBeenCalledTimes(1)
+    expect(processFrame).toHaveBeenCalledTimes(1)
   })
 
   it('allows applications to handle responsive image preloads and fetch their own assets', async (t) => {
@@ -2227,7 +2227,7 @@ describe('defaultPrefetch overrides', () => {
       fetch: async () =>
         htmlResponse(`<link rel="preload" as="image" href="${small}"
         imagesrcset="${small} 1x, ${large} 2x" imagesizes="100vw" referrerpolicy="no-referrer">`),
-      async frame(prefetchReferences, { fragment, signal }) {
+      async processFrame(prefetchReferences, { fragment, signal }) {
         let source = fragment.querySelector<HTMLLinkElement>('link[rel="preload"][as="image"]')
         if (!source) throw new Error('Expected an image preload')
         let image = new Image()
@@ -2285,7 +2285,7 @@ describe('defaultPrefetch overrides', () => {
       { signal: secondController.signal },
       {
         fetch: async () => htmlResponse('<script src="/shared.js"></script>'),
-        frame(prefetchReferences) {
+        processFrame(prefetchReferences) {
           let ready = prefetchReferences()
           secondParsed.resolve()
           return ready
@@ -2322,7 +2322,7 @@ describe('defaultPrefetch overrides', () => {
       prefetch(src, options) {
         return defaultPrefetch(src, options, {
           fetch: async () => htmlResponse('<script src="/pending.js"></script>'),
-          frame(prefetchReferences) {
+          processFrame(prefetchReferences) {
             void prefetchReferences()
           },
         }).then(() => {
@@ -2357,7 +2357,7 @@ describe('defaultPrefetch overrides', () => {
     let delegated = false
     let ready = defaultPrefetch('/page', undefined, {
       fetch: async () => htmlResponse('<script src="/pending.js"></script>'),
-      async frame(prefetchReferences) {
+      async processFrame(prefetchReferences) {
         void prefetchReferences()
         await prefetchReferences()
         delegated = true

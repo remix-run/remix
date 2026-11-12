@@ -1419,7 +1419,7 @@ Responsive image preloads with nonblank `imagesrcset`, track preloads, inline sc
 <link rel="preload" as="font" href="/fonts/body.woff2" type="font/woff2" crossorigin />
 ```
 
-Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Applications can handle responsive images in the [frame hook](#customizing-prefetching).
+Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Applications can handle responsive images in the [`processFrame` hook](#customizing-prefetching).
 
 Remix discards completed HTML. Navigation fetches it through the frame resolver and browser HTTP cache, so reuse requires caching headers such as `Cache-Control: private, max-age=30`. Assets have independent cache policies and can benefit even when HTML is `no-store`. If HTML varies by frame target or prefetch status, include `X-Remix-Target` or `X-Remix-Prefetch`, respectively, in `Vary`.
 
@@ -1436,7 +1436,7 @@ run({
   loadModule,
   prefetch(src, options) {
     return defaultPrefetch(src, options, {
-      async frame(prefetchReferences, { src, response, fragment, signal }) {
+      async processFrame(prefetchReferences, { src, response, fragment, signal }) {
         let baseURL = response.url || src
         let base = fragment.querySelector('base[href]')?.getAttribute('href')
         if (base != null) {
@@ -1458,7 +1458,7 @@ run({
 
 `loadModule` and `prefetchImages` are application helpers. The image helper can create and retain `Image` instances using the declarations' source sets, sizes, CORS, and referrer settings. Resolve raw `src` and `href` attributes against the computed base URL; DOM URL properties would use the current document. This query covers the fragment itself; inspect nested template contents separately when needed.
 
-The `frame` hook runs for each parsed response. Its context contains the requested `src` and `target`, triggering `element`, cancellation `signal`, consumed `response`, inert `fragment`, original `assets` with their attributes, and same-origin nested `frames`. Remix never mounts the fragment. Custom asset loading can also use `fetch(url, { priority: 'low', signal })`; applications own its queue, deduplication, and cache policy.
+The `processFrame` hook runs for each parsed response. Its context contains the requested `src` and `target`, triggering `element`, cancellation `signal`, consumed `response`, inert `fragment`, original `assets` with their attributes, and same-origin nested `frames`. Remix never mounts the fragment. Custom asset loading can also use `fetch(url, { priority: 'low', signal })`; applications own its queue, deduplication, and cache policy.
 
 Call `prefetchReferences()` for default asset hints, or pass `{ assets: selected }` to filter them. `assets: []` skips assets. Only supported original fragment elements are accepted, including those inside templates and manually selected nonresponsive `<img src>` elements; newly created elements, responsive images, and track preloads are ignored. Nested sources require explicit `{ frames }` selection, as shown [below](#prefetching-nested-frames).
 
@@ -1479,7 +1479,7 @@ The default discovers assets in embedded nested HTML without fetching nested sou
 Within a `defaultPrefetch` override, select sources to fetch explicitly:
 
 ```ts
-frame(prefetchReferences, { frames }) {
+processFrame(prefetchReferences, { frames }) {
   return prefetchReferences({
     frames: frames.filter((frame) => frame.fallback),
   })
@@ -1544,7 +1544,7 @@ run({
 
 `loadModule`, `frameQueue`, `scoreLink`, and the fallback `resolveFrame` are application helpers. The fallback resolver handles submissions and normal frame requests. The application owns cache expiry, invalidation, and eviction. Clones preserve response metadata but can buffer and copy body chunks; draining avoids another whole-body `ArrayBuffer`, and each reader needs an unconsumed clone.
 
-Use a separate queue in `frame` for asset limits and scoring, forwarding `context.signal`. A loop is sufficient for imperative anchor scheduling:
+Use a separate queue in `processFrame` for asset limits and scoring, forwarding `context.signal`. A loop is sufficient for imperative anchor scheduling:
 
 ```ts
 import { prefetch } from 'remix/component'

@@ -93,7 +93,7 @@ export interface DefaultPrefetchOverrides {
    * @param context Parsed HTML, source elements, frame references, and cancellation context.
    * @returns Optional asynchronous custom work to finish before the prefetch completes.
    */
-  frame?(
+  processFrame?(
     prefetchReferences: (references?: PrefetchReferences) => Promise<void>,
     context: PrefetchFrameContext,
   ): void | Promise<void>
@@ -127,8 +127,8 @@ let prefetchAnchor = initialAnchorPrefetch
  * Prepared HTML requests use low priority and send `X-Remix-Prefetch: true`.
  * Overrides receive the prepared GET request and the inert parsed fragment. Native asset hints
  * never run scripts or apply styles. Pending requests are shared by source and target; the first
- * caller supplies the overrides. Nested sources are exposed to the frame hook and fetched only
- * when explicitly selected. Completed responses are discarded. Failures and cancellation
+ * caller supplies the overrides. Nested sources are exposed to the `processFrame` hook and fetched
+ * only when explicitly selected. Completed responses are discarded. Failures and cancellation
  * finish without affecting navigation, and custom work must honor the provided signal.
  *
  * @param src Same-origin frame source, resolved against the document base URL.
@@ -148,11 +148,12 @@ export function defaultPrefetch(
 /**
  * Prefetches frame content so a later navigation can reuse the response. By default this
  * fetches HTML and discovers external JavaScript, CSS, and explicit preloads. Assets use
- * `<link rel="prefetch">` hints; responsive image and track preloads require a custom `frame` hook.
+ * `<link rel="prefetch">` hints; responsive image and track preloads require a custom
+ * `processFrame` hook.
  * Responses use the browser HTTP cache; even uncacheable HTML can reveal cacheable assets. Pass
  * `prefetch` to `run()` to change this behavior, or delegate to {@link defaultPrefetch} with overrides.
- * Custom frame hooks can select nested sources to prefetch using the same strategy. Cross-origin
- * URLs, the current untargeted page, and browsers where Remix doesn't handle navigations are skipped.
+ * Custom `processFrame` hooks can select nested sources to prefetch using the same strategy.
+ * Cross-origin URLs, the current untargeted page, and browsers where Remix doesn't handle navigations are skipped.
  *
  * Anchor calls read link source and target metadata, supply the triggering element, and cancel
  * this caller when the anchor disconnects or its navigation destination or eligibility changes.
@@ -825,8 +826,8 @@ export function createDefaultPrefetch(
       }
 
       try {
-        if (overrides?.frame) {
-          await overrides.frame(prefetchReferences, {
+        if (overrides?.processFrame) {
+          await overrides.processFrame(prefetchReferences, {
             src,
             target,
             response,
