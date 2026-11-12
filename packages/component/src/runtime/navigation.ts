@@ -340,6 +340,24 @@ export function startNavigationListener(
   // leaves none, so Back returns to the page the visitor saw.
   let unrenderedEntryKey: string | undefined
   let uncommittedPushFromKey: string | undefined
+  // WebKit saves the window's position into the current history entry once the page has gone
+  // 300 ms without scrolling, and a traversal makes its destination current before its page
+  // renders. A traversal that takes longer gives the destination the position of the page being
+  // left, which `event.scroll()` then restores. So remember where the window was when each entry
+  // was left, and go back there after the browser restores. Where the browser restored correctly,
+  // the window is already there. Positions are kept by entry key, since WebKit can give the same
+  // entry a new object.
+  let scrollPositions = new Map<string, ScrollToOptions>()
+  // When the visitor last pressed a pointer, turned a wheel or pressed a key. Chromium can dispatch
+  // input after the navigation it preceded, so a traversal compares times rather than order.
+  let lastInputTime = 0
+  for (let type of ['pointerdown', 'wheel', 'keydown']) {
+    window.addEventListener(
+      type,
+      (event) => (lastInputTime = Math.max(lastInputTime, event.timeStamp)),
+      { capture: true, passive: true, signal },
+    )
+  }
 
   navigation.updateCurrentEntry({
     state: {
@@ -354,6 +372,18 @@ export function startNavigationListener(
   navigation.addEventListener(
     'navigate',
     (event) => {
+      let leavingEntry = navigation.currentEntry
+      if (leavingEntry) {
+        let { key } = leavingEntry
+        if (!scrollPositions.has(key)) {
+          leavingEntry.addEventListener('dispose', () => scrollPositions.delete(key), {
+            once: true,
+            signal,
+          })
+        }
+        scrollPositions.set(key, { left: window.scrollX, top: window.scrollY })
+      }
+
       // currententrychange can start this navigation before the previous push's handler runs.
       if (uncommittedPushFromKey !== undefined) {
         let currentEntryKey = navigation.currentEntry?.key
@@ -460,6 +490,17 @@ export function startNavigationListener(
           document.documentElement.scrollHeight
           event.scroll()
           webKitScrollResets.get(event)?.()
+          let leftAt = isTraverse ? scrollPositions.get(event.destination.key) : undefined
+          // Browsers don't restore an entry that restores scroll manually, or a position the
+          // visitor has scrolled away from. WebKit times events in whole milliseconds, so input in
+          // the millisecond the traversal started counts as the visitor's.
+          if (
+            leftAt &&
+            window.history.scrollRestoration === 'auto' &&
+            lastInputTime < event.timeStamp
+          ) {
+            window.scrollTo({ ...leftAt, behavior: 'instant' })
+          }
         }
 
         let { redirectedTo } = await reload.finished

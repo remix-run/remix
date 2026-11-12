@@ -2647,7 +2647,7 @@ describe('form navigation', () => {
   it('leaves POST submissions with a missing named target to document navigation', (t) => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
-      currentEntry: { url: window.location.href },
+      currentEntry: Object.assign(new EventTarget(), { key: 'current', url: window.location.href }),
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
         if (type === 'navigate') navigateListener = listener
@@ -2914,6 +2914,135 @@ describe('form navigation', () => {
 
     expect(intercept).not.toHaveBeenCalled()
     controller.abort()
+  })
+})
+
+// Browser tests run in an iframe, whose history entries WebKit's scroll saving never touches, so
+// these stand in for the browser's restoration. demos/frames tests the restoration in WebKit.
+describe('traversal scroll', () => {
+  function setup(t: TestContext) {
+    let originalUrl = window.location.href
+    let initialEntryKey = window.navigation.currentEntry?.key
+    let listUrl = new URL('/scroll-list', originalUrl).href
+    let detailUrl = new URL('/scroll-detail', originalUrl).href
+    window.history.replaceState(null, '', listUrl)
+
+    let page = document.createElement('div')
+    page.style.height = '5000px'
+    document.body.append(page)
+
+    let nextLoad = () => Promise.resolve()
+    let topFrame = { src: listUrl } as FrameHandle
+    let controller = new AbortController()
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
+      reloadFrame() {
+        let loaded = nextLoad()
+        nextLoad = () => Promise.resolve()
+        return createReloadTransition(loaded.then(() => ({ signal: controller.signal })))
+      },
+    })
+
+    t.after(async () => {
+      nextLoad = () => Promise.resolve()
+      if (initialEntryKey && window.navigation.currentEntry?.key !== initialEntryKey) {
+        await window.navigation.traverseTo(initialEntryKey).finished
+      }
+      controller.abort()
+      window.history.replaceState(null, '', originalUrl)
+      window.history.scrollRestoration = 'auto'
+      page.remove()
+      window.scrollTo(0, 0)
+    })
+
+    return {
+      listUrl,
+      detailUrl,
+      // The next page load starts once its navigation has, and waits until it's released.
+      holdNextLoad() {
+        let [started, start] = withResolvers<void>()
+        let [released, release] = withResolvers<void>()
+        nextLoad = () => {
+          start()
+          return released
+        }
+        return { started, release: () => release() }
+      },
+      // The browser's restoration on the next traversal leaves the window at `top`.
+      restoreNextTraversalTo(top: number) {
+        window.navigation.addEventListener(
+          'navigate',
+          (event) => {
+            let scroll = event.scroll.bind(event)
+            Object.defineProperty(event, 'scroll', {
+              value() {
+                scroll()
+                window.scrollTo({ top, behavior: 'instant' })
+              },
+            })
+          },
+          { once: true, signal: controller.signal },
+        )
+      },
+    }
+  }
+
+  it('returns the window to where the visitor left a page when the browser restores another position', async (t) => {
+    let page = setup(t)
+    window.scrollTo(0, 800)
+    await navigate(page.detailUrl)
+    window.scrollTo(0, 300)
+    // WebKit restores the position of the page being left after a slow traversal.
+    page.restoreNextTraversalTo(300)
+
+    await window.navigation.back().finished
+
+    expect(window.scrollY).toBe(800)
+  })
+
+  it('returns the window to where the visitor left a page with a fragment', async (t) => {
+    let page = setup(t)
+    await navigate(`${page.listUrl}#reviews`)
+    window.scrollTo(0, 800)
+    await navigate(page.detailUrl)
+    page.restoreNextTraversalTo(0)
+
+    await window.navigation.back().finished
+
+    expect(window.location.hash).toBe('#reviews')
+    expect(window.scrollY).toBe(800)
+  })
+
+  it('leaves the window alone once the visitor scrolls during a traversal', async (t) => {
+    let page = setup(t)
+    window.scrollTo(0, 800)
+    await navigate(page.detailUrl)
+    // Off the top, where WebKit's scroll resynchronization after the push would scroll again.
+    window.scrollTo(0, 300)
+
+    let load = page.holdNextLoad()
+    let back = window.navigation.back().finished
+    await load.started
+    window.dispatchEvent(new WheelEvent('wheel'))
+    let scrollTo = t.mock.method(window, 'scrollTo')
+    load.release()
+    await back
+
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('leaves the window alone for an entry that restores scroll manually', async (t) => {
+    let page = setup(t)
+    window.history.scrollRestoration = 'manual'
+    window.scrollTo(0, 800)
+    await navigate(page.detailUrl)
+    window.scrollTo(0, 300)
+
+    let scrollTo = t.mock.method(window, 'scrollTo')
+    await window.navigation.back().finished
+
+    expect(scrollTo).not.toHaveBeenCalled()
   })
 })
 

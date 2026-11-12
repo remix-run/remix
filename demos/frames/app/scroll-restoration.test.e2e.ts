@@ -114,6 +114,39 @@ describe('scroll restoration', () => {
       `Expected forward traversal to restore detail scroll position ${detailScrollPosition}, got ${detailRestoredPosition}`,
     )
   })
+
+  it('restores the list position after the detail page scrolls and the list loads slowly', async (t) => {
+    let server = createServerWithSlowList()
+    let page = await t.serve(await createTestServer(server.fetch))
+    let listPosition = await scrollToListEnd(page)
+    await openDetailPage(page)
+    await page.evaluate(() => window.scrollTo(0, 150))
+
+    server.slowDownList()
+    await page.goBack()
+
+    let restoredPosition = await readListScrollAfterTraversal(page)
+    assert.ok(
+      Math.abs(restoredPosition - listPosition) < 50,
+      `Expected traversal to restore ${listPosition}, got ${restoredPosition}`,
+    )
+  })
+
+  it('restores the list position when going back right after the detail page opens and the list loads slowly', async (t) => {
+    let server = createServerWithSlowList()
+    let page = await t.serve(await createTestServer(server.fetch))
+    let listPosition = await scrollToListEnd(page)
+    await openDetailPage(page)
+
+    server.slowDownList()
+    await page.goBack()
+
+    let restoredPosition = await readListScrollAfterTraversal(page)
+    assert.ok(
+      Math.abs(restoredPosition - listPosition) < 50,
+      `Expected traversal to restore ${listPosition}, got ${restoredPosition}`,
+    )
+  })
 })
 
 type Page = Awaited<ReturnType<TestContext['serve']>>
@@ -125,4 +158,42 @@ async function readScrollAfterAnchoringRestored(page: Page): Promise<number> {
   return page.evaluate(
     () => new Promise<number>((resolve) => requestAnimationFrame(() => resolve(window.scrollY))),
   )
+}
+
+// WebKit saves the window's position into the current history entry once the page has gone 300 ms
+// without scrolling, and a traversal makes its destination current before the page loads, so a
+// list that takes longer to load gets the detail page's position. That wait runs on WebKit's own
+// clock, so the server delays in real time.
+function createServerWithSlowList() {
+  let slow = false
+  return {
+    slowDownList() {
+      slow = true
+    },
+    async fetch(request: Request) {
+      if (slow && new URL(request.url).pathname === routes.scrollRestoration.href()) {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      }
+      return router.fetch(request)
+    },
+  }
+}
+
+async function scrollToListEnd(page: Page): Promise<number> {
+  await page.goto(routes.scrollRestoration.href())
+  await page.locator('html[data-frames-ready="true"]').waitFor()
+  await page.locator('#scroll-restoration-list-end').scrollIntoViewIfNeeded()
+  return page.evaluate(() => window.scrollY)
+}
+
+async function openDetailPage(page: Page) {
+  await page.getByRole('link', { name: 'Open the shorter detail page' }).click()
+  await page.getByRole('heading', { name: 'Short detail view' }).waitFor()
+  await page.waitForFunction(() => window.navigation.transition === null)
+}
+
+async function readListScrollAfterTraversal(page: Page): Promise<number> {
+  await page.getByText('List row 48', { exact: true }).waitFor()
+  await page.waitForFunction(() => window.navigation.transition === null)
+  return readScrollAfterAnchoringRestored(page)
 }

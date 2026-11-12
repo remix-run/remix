@@ -5,7 +5,7 @@ if (refs.length !== 0 && refs.length !== 2) {
   throw new Error('Usage: pnpm test:browser [base-ref head-ref]')
 }
 
-const workspaces = ['packages/component', 'packages/ui', 'demos/bookstore']
+const workspaces = ['packages/component', 'packages/ui', 'demos/bookstore', 'demos/frames']
 
 let selectedWorkspaces = workspaces
 
