@@ -480,6 +480,63 @@ describe('defaultResolveFrame commit', () => {
     expect(fixture.errors).toEqual([])
   })
 
+  it('associates refreshed lazy-frame commits with navigation while explicit reloads stay independent', async (t) => {
+    let completed = Promise.withResolvers<void>()
+    let refreshed = Promise.withResolvers<void>()
+    let signals: AbortSignal[] = []
+    let fixture = await setup(
+      t,
+      async (commitFrame, { to, signal }) => {
+        await commitFrame()
+        if (to !== '/lazy') return
+        signals.push(signal)
+        expect(window.navigation.transition).toBe(null)
+        if (signals.length === 1) completed.resolve()
+        else refreshed.resolve()
+      },
+      async (input) => {
+        if (String(input) === '/lazy') return new Response('<p>Loaded</p>')
+        return new Response(
+          await renderToString(
+            jsx('html', {
+              children: [
+                jsx('head', {}),
+                jsx('body', {
+                  children: jsx('section', {
+                    style: { position: 'fixed', top: '100000px' },
+                    children: jsx(Frame, {
+                      name: 'lazy',
+                      src: '/lazy',
+                      loading: 'lazy',
+                      fallback: jsx('p', { children: 'Waiting' }),
+                    }),
+                  }),
+                }),
+              ],
+            }),
+          ),
+        )
+      },
+    )
+    await navigate(fixture.url('first'))
+    let frame = fixture.app.frames.get('lazy')
+    expect(frame).toBeDefined()
+    await frame?.reload()
+    await completed.promise
+    expect(fixture.loads.at(-1)?.options?.transition).toBeUndefined()
+
+    await navigate(fixture.url('second'))
+    await refreshed.promise
+    let topLoad = fixture.loads.findLast((load) => load.src === fixture.url('second'))
+    expect(topLoad?.options?.transition?.navigationType).toBe('push')
+    expect(fixture.loads.at(-1)?.options?.transition).toBe(topLoad?.options?.transition)
+    expect(fixture.app.frames.get('lazy')).toBe(frame)
+    expect(signals[0]?.aborted).toBe(true)
+    expect(signals[1]?.aborted).toBe(false)
+    expect(window.location.href).toBe(fixture.url('second'))
+    expect(fixture.errors).toEqual([])
+  })
+
   it('waits for redirected navigation in client frames hydrated inside new server frames', async (t) => {
     let { html, Entry } = await serverFramePage()
     let destination = ''
