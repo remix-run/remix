@@ -62,8 +62,8 @@ export interface PrefetchFrameContext extends PrefetchContext {
   /** Inert HTML fragment, including templates; it is never mounted by Remix. */
   fragment: DocumentFragment
   /**
-   * Original script and link declarations with usable HTTP(S) sources, including inside templates.
-   * Responsive image preloads with nonempty `imagesrcset` are exposed unchanged for custom loading.
+   * Original script and link declarations supported by native prefetch hints, including inside
+   * templates. Responsive image preloads are omitted; query `fragment` for custom image loading.
    */
   assets: readonly Element[]
   /** All discovered same-origin nested frame requests, resolved against `baseURL`. */
@@ -956,13 +956,15 @@ function isAssetReference(element: Element, baseURL: string): boolean {
   }
   return (
     element instanceof HTMLLinkElement &&
+    !(
+      element.relList.contains('preload') &&
+      element.as === 'image' &&
+      element.imageSrcset.trim() !== ''
+    ) &&
     (element.relList.contains('modulepreload') ||
       element.relList.contains('stylesheet') ||
       (element.relList.contains('preload') && PRELOAD_DESTINATIONS.includes(element.as))) &&
-    (getAssetHref(element.getAttribute('href'), baseURL) !== undefined ||
-      (element.relList.contains('preload') &&
-        element.as === 'image' &&
-        element.imageSrcset.trim() !== ''))
+    getAssetHref(element.getAttribute('href'), baseURL) !== undefined
   )
 }
 
@@ -1022,20 +1024,7 @@ function discoverFrames(elements: Element[], baseURL: string): PrefetchFrameRefe
 
 function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement | undefined {
   if (element instanceof HTMLLinkElement) {
-    if (
-      element.relList.contains('preload') &&
-      element.as === 'image' &&
-      element.imageSrcset.trim() !== ''
-    ) {
-      return
-    }
-    if (
-      !element.relList.contains('modulepreload') &&
-      !element.relList.contains('stylesheet') &&
-      !(element.relList.contains('preload') && PRELOAD_DESTINATIONS.includes(element.as))
-    ) {
-      return
-    }
+    if (!isAssetReference(element, baseUrl)) return
     if (
       element.relList.contains('preload') &&
       element.media &&

@@ -1848,22 +1848,7 @@ describe('defaultPrefetch overrides', () => {
       value: new URL('/redirected/page', location.href).href,
     })
     let transport = mock.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => response)
-    let frame = mock.fn<NonNullable<DefaultPrefetchOverrides['frame']>>(
-      (_prefetchReferences, context) => {
-        expect(context.response).toBe(response)
-        expect(context.response.bodyUsed).toBe(true)
-        expect(context.src).toBe(new URL('/page', location.href).href)
-        expect(context.target).toBe('details')
-        expect(context.baseURL).toBe(new URL('/assets/', location.href).href)
-        expect(context.fragment.isConnected).toBe(false)
-        expect(context.assets).toHaveLength(2)
-        expect(context.assets[0]).toBe(context.fragment.querySelector('script[src]'))
-        let template = context.fragment.querySelector('template')
-        expect(context.assets[1]).toBe(template?.content.firstElementChild)
-        expect(context.assets[1].getAttribute('imagesrcset')).toBe('small.jpg 1x, large.jpg 2x')
-        expect(context.signal.aborted).toBe(false)
-      },
-    )
+    let frame = mock.fn<NonNullable<DefaultPrefetchOverrides['frame']>>()
 
     await defaultPrefetch('/page#hash', { target: 'details' }, { fetch: transport, frame })
 
@@ -1879,10 +1864,24 @@ describe('defaultPrefetch overrides', () => {
     expect(new Headers(init?.headers).get('X-Remix-Target')).toBe('details')
     expect(new Headers(init?.headers).get('X-Remix-Prefetch')).toBe('true')
     expect(frame).toHaveBeenCalledTimes(1)
+    let context = frame.mock.calls[0].arguments[1]
+    expect(context.response).toBe(response)
+    expect(context.response.bodyUsed).toBe(true)
+    expect(context.src).toBe(new URL('/page', location.href).href)
+    expect(context.target).toBe('details')
+    expect(context.baseURL).toBe(new URL('/assets/', location.href).href)
+    expect(context.fragment.isConnected).toBe(false)
+    expect(context.assets).toHaveLength(1)
+    expect(context.assets[0]).toBe(context.fragment.querySelector('script[src]'))
+    let template = context.fragment.querySelector('template')
+    expect(template?.content.firstElementChild?.getAttribute('imagesrcset')).toBe(
+      'small.jpg 1x, large.jpg 2x',
+    )
+    expect(context.signal.aborted).toBe(false)
     expect(document.documentElement.dataset.prefetchExecuted).toBe(undefined)
   })
 
-  it('exposes usable asset URLs and responsive source sets while leaving incomplete declarations in the fragment', async (t) => {
+  it('exposes usable asset URLs while leaving responsive and incomplete declarations in the fragment', async (t) => {
     startTestPrefetching(t)
     let context: PrefetchFrameContext | undefined
     await defaultPrefetch('/page', undefined, {
@@ -1897,6 +1896,8 @@ describe('defaultPrefetch overrides', () => {
           <link rel="stylesheet" href="http://[">
           <link id="responsive" rel="preload" as="image" imagesrcset="hero.jpg 1x, hero@2x.jpg 2x"
             imagesizes="100vw" media="not all">
+          <link id="responsive-with-fallback" rel="preload" as="image" href="hero.jpg"
+            imagesrcset="hero.jpg 1x, hero@2x.jpg 2x">
           <link id="unparsed-responsive" rel="preload" as="image" imagesrcset="http://[ 1x">
           <link rel="preload" as="image" imagesrcset="   ">
           <link id="data" rel="preload" as="fetch" href="data.json">
@@ -1907,18 +1908,16 @@ describe('defaultPrefetch overrides', () => {
     })
     if (!context) throw new Error('Expected parsed frame context')
     let { assets, fragment } = context
-    expect(assets.map((element) => element.id)).toEqual([
-      'script',
-      'style',
-      'responsive',
-      'unparsed-responsive',
-      'data',
-      'captions',
-    ])
+    expect(assets.map((element) => element.id)).toEqual(['script', 'style', 'data', 'captions'])
     expect(assets[0].getAttribute('src')).toBe('entry.js')
-    expect(assets[2].hasAttribute('href')).toBe(false)
-    expect(assets[2].getAttribute('media')).toBe('not all')
-    expect(assets[3].getAttribute('imagesrcset')).toBe('http://[ 1x')
+    expect(fragment.querySelector('#responsive')?.hasAttribute('href')).toBe(false)
+    expect(fragment.querySelector('#responsive')?.getAttribute('media')).toBe('not all')
+    expect(fragment.querySelector('#responsive-with-fallback')?.getAttribute('href')).toBe(
+      'hero.jpg',
+    )
+    expect(fragment.querySelector('#unparsed-responsive')?.getAttribute('imagesrcset')).toBe(
+      'http://[ 1x',
+    )
     expect(fragment.querySelectorAll('script[src]')).toHaveLength(5)
     expect(fragment.querySelector('link[rel="stylesheet"]:not([href])')).not.toBe(null)
   })
@@ -2226,9 +2225,9 @@ describe('defaultPrefetch overrides', () => {
       fetch: async () =>
         htmlResponse(`<link rel="preload" as="image" href="${small}"
         imagesrcset="${small} 1x, ${large} 2x" imagesizes="100vw" referrerpolicy="no-referrer">`),
-      async frame(prefetchReferences, { assets, signal }) {
-        let source = assets[0]
-        if (!(source instanceof HTMLLinkElement)) throw new Error('Expected an image preload')
+      async frame(prefetchReferences, { fragment, signal }) {
+        let source = fragment.querySelector<HTMLLinkElement>('link[rel="preload"][as="image"]')
+        if (!source) throw new Error('Expected an image preload')
         let image = new Image()
         image.fetchPriority = 'low'
         image.referrerPolicy = source.referrerPolicy
