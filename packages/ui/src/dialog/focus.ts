@@ -94,8 +94,25 @@ function createManager(doc: Document) {
   let scopes: FocusScope[] = []
   let shielded = new Map<Element, { inert: string | null; ariaHidden: string | null }>()
   let redirecting = false
-  let observer = new MutationObserver(() => {
-    updateBackground()
+  let observer = new MutationObserver((records) => {
+    // Changes inside unshielded layers, backdrops, and live regions cannot change which background
+    // nodes are shielded, so they skip the full-document rescan.
+    let focusScope = scopes.findLast((scope) => scope.options.modal)
+    let unshielded: Element[] = []
+    for (let scope of focusScope ? scopes.slice(scopes.indexOf(focusScope)) : []) {
+      unshielded.push(...getDismissableLayerBranch(scope.node))
+      let backdrop = scope.options.getBackdrop?.()
+      if (backdrop) unshielded.push(backdrop)
+    }
+    if (
+      records.some(
+        (record) =>
+          !unshielded.some((node) => contains(node, record.target)) &&
+          !isInLiveRegion(record.target),
+      )
+    ) {
+      updateBackground()
+    }
     let active = activeElement(doc)
     let scope = scopes.findLast(
       (scope) =>
@@ -284,6 +301,18 @@ function createManager(doc: Document) {
       return wasCurrent
     },
   }
+}
+
+function isInLiveRegion(node: Node | null): boolean {
+  while (node) {
+    if (node.nodeType === Node.ELEMENT_NODE && (node as Element).closest(liveRegionSelector)) {
+      return true
+    }
+    let root = node.getRootNode()
+    node =
+      root.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? ((root as ShadowRoot).host ?? null) : null
+  }
+  return false
 }
 
 function activeElement(doc: Document): Element | null {

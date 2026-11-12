@@ -154,6 +154,34 @@ describe('dialog focus scope', () => {
     expect(background.hasAttribute('aria-hidden')).toBe(false)
   })
 
+  it('rescans the document only for changes outside the dialog and live regions', async () => {
+    document.body.innerHTML = `
+      <div id="toast" role="status"></div>
+      <div id="dialog" tabindex="-1"><ul id="list"></ul></div>
+    `
+    activate(get('#dialog'))
+    let scans = 0
+    let querySelectorAll = document.body.querySelectorAll
+    document.body.querySelectorAll = function (this: HTMLElement, selectors: string) {
+      scans++
+      return querySelectorAll.call(this, selectors)
+    } as typeof querySelectorAll
+    try {
+      get('#list').append(document.createElement('li'))
+      get('#toast').textContent = 'Saved'
+      await Promise.resolve()
+      expect(scans).toBe(0)
+
+      let background = document.createElement('button')
+      document.body.append(background)
+      await Promise.resolve()
+      expect(scans).toBeGreaterThan(0)
+      expect(background.inert).toBe(true)
+    } finally {
+      delete (document.body as Partial<HTMLElement>).querySelectorAll
+    }
+  })
+
   it('resumes the parent scope after a nested scope closes', () => {
     document.body.innerHTML = `
       <button id="opener">Open</button>
