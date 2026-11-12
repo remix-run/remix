@@ -6,6 +6,9 @@ import { button, element, input, key, mount, waitFor } from '../test-helpers.ts'
 
 // The docs frame pads every demo; mounting bare would leave no room above the trigger, so
 // the tooltip would flip away from its default side.
+//
+// Tooltip popups render through a Portal and have no role, so tests find them in the body by
+// their focusable-but-untabbable popup attributes.
 describe('Tooltip example', () => {
   it('opens on keyboard focus and dismisses with Escape', async (t) => {
     let result = await mount(
@@ -15,16 +18,16 @@ describe('Tooltip example', () => {
       </div>,
     )
     let trigger = button(result.container, 'Copy link')
-    let popup = element(result.container, '[popover]')
-    assert.equal(popup.matches(':popover-open'), false)
+    let popup = element(document.body, '[tabindex="-1"][data-state]')
+    assert.equal(popup.matches('[data-open]'), false)
 
     await result.act(() => trigger.focus())
-    await waitFor(() => assert.equal(popup.matches(':popover-open'), true))
+    await waitFor(() => assert.equal(popup.matches('[data-open]'), true))
     // The tooltip is visual-only, so the trigger's label must carry the same text.
     assert.equal(popup.textContent?.trim(), trigger.getAttribute('aria-label'))
 
     await result.act(() => key(trigger, 'Escape'))
-    await waitFor(() => assert.equal(popup.matches(':popover-open'), false))
+    await waitFor(() => assert.equal(popup.matches('[data-open]'), false))
     assert.equal(document.activeElement, trigger)
   })
 
@@ -36,14 +39,14 @@ describe('Tooltip example', () => {
       </div>,
     )
     let trigger = button(result.container, 'Copy link')
-    let popup = element(result.container, '[popover]')
+    let popup = element(document.body, '[tabindex="-1"][data-state]')
     let arrow = element(popup, '[aria-hidden="true"]')
 
     await result.act(() =>
       trigger.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' })),
     )
-    assert.equal(popup.matches(':popover-open'), false)
-    await waitFor(() => assert.equal(popup.matches(':popover-open'), true))
+    assert.equal(popup.matches('[data-open]'), false)
+    await waitFor(() => assert.equal(popup.matches('[data-open]'), true))
 
     let triggerRect = trigger.getBoundingClientRect()
     let arrowRect = arrow.getBoundingClientRect()
@@ -62,7 +65,7 @@ describe('Tooltip example', () => {
     let trigger = button(result.container, 'Copy link')
     let top = input(result.container, 'input[value="top"]')
     let right = input(result.container, 'input[value="right"]')
-    let popup = element(result.container, '[popover]')
+    let popup = element(document.body, '[tabindex="-1"][data-state]')
     let arrow = element(popup, '[aria-hidden="true"]')
     assert.equal(top.checked, true)
 
@@ -70,7 +73,7 @@ describe('Tooltip example', () => {
     assert.equal(right.checked, true)
     assert.equal(top.checked, false)
     await result.act(() => trigger.focus())
-    await waitFor(() => assert.equal(popup.matches(':popover-open'), true))
+    await waitFor(() => assert.equal(popup.matches('[data-open]'), true))
     await waitFor(() => assert.equal(arrow.getAttribute('data-side'), 'right'))
 
     let triggerRect = trigger.getBoundingClientRect()

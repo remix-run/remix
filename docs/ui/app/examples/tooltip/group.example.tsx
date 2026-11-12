@@ -1,3 +1,4 @@
+import { Portal } from '@remix-run/ui/portal'
 import * as tooltip from '@remix-run/ui/tooltip'
 import { css } from 'remix/component'
 
@@ -82,39 +83,38 @@ export default function ExampleTooltipGroup() {
                   <path d={action.icon} />
                 </svg>
               </button>
-              <div
-                mix={[
-                  tooltip.popup({ placement: 'bottom', offset: 8 }),
-                  css({
-                    display: 'none',
-                    gap: '8px',
-                    alignItems: 'center',
-                    margin: 0,
-                    padding: '4px 8px',
-                    border: 0,
-                    borderRadius: '6px',
-                    background: 'light-dark(#202027, #eeeef2)',
-                    color: 'light-dark(#fff, #18181c)',
-                    font: '500 12px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-                    opacity: 0,
-                    translate: '0 -2px',
-                    transition:
-                      'opacity 120ms ease, translate 120ms ease, display 120ms allow-discrete, overlay 120ms allow-discrete',
-                    '&:popover-open': {
+              <Portal>
+                <div
+                  mix={[
+                    tooltip.popup({ placement: 'bottom', offset: 8 }),
+                    css({
+                      colorScheme: 'light dark',
                       display: 'flex',
-                      opacity: 1,
-                      translate: '0 0',
-                      '@starting-style': { opacity: 0, translate: '0 -2px' },
-                    },
-                    // Moving between triggers in a warm group swaps tooltips without fading.
-                    '&[data-instant]': { transition: 'none' },
-                    '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-                  }),
-                ]}
-              >
-                {action.label}
-                <kbd mix={css({ font: 'inherit', opacity: 0.6 })}>{action.shortcut}</kbd>
-              </div>
+                      gap: '8px',
+                      alignItems: 'center',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      background: 'light-dark(#202027, #eeeef2)',
+                      color: 'light-dark(#fff, #18181c)',
+                      font: '500 12px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+                      opacity: 0,
+                      translate: '0 -2px',
+                      transition: 'opacity 120ms ease, translate 120ms ease',
+                      '&[data-state="open"]': {
+                        opacity: 1,
+                        translate: '0 0',
+                        '@starting-style': { opacity: 0, translate: '0 -2px' },
+                      },
+                      // Moving between triggers in a warm group swaps tooltips without fading.
+                      '&[data-instant]': { transition: 'none' },
+                      '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+                    }),
+                  ]}
+                >
+                  {action.label}
+                  <kbd mix={css({ font: 'inherit', opacity: 0.6 })}>{action.shortcut}</kbd>
+                </div>
+              </Portal>
             </tooltip.Context>
           ))}
         </div>

@@ -6,6 +6,7 @@
 
 ```tsx
 import { css } from 'remix/component'
+import { Portal } from '@remix-run/ui/portal'
 import * as tooltip from '@remix-run/ui/tooltip'
 
 export function BoldButton() {
@@ -14,33 +15,34 @@ export function BoldButton() {
       <button type="button" aria-label="Bold" mix={tooltip.trigger()}>
         <BoldIcon />
       </button>
-      <div
-        mix={[
-          tooltip.popup({ placement: 'top', offset: 8 }),
-          css({
-            margin: 0,
-            padding: '4px 8px',
-            borderRadius: '6px',
-            background: '#111',
-            color: '#fff',
-          }),
-        ]}
-      >
-        Bold <kbd>⌘B</kbd>
-        <span
+      <Portal>
+        <div
           mix={[
-            tooltip.arrow(),
+            tooltip.popup({ placement: 'top', offset: 8 }),
             css({
-              width: '12px',
-              height: '6px',
+              padding: '4px 8px',
+              borderRadius: '6px',
               background: '#111',
-              clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
-              '&[data-side="top"]': { top: 'calc(100% - 1px)' },
-              '&[data-side="bottom"]': { bottom: 'calc(100% - 1px)', rotate: '180deg' },
+              color: '#fff',
             }),
           ]}
-        />
-      </div>
+        >
+          Bold <kbd>⌘B</kbd>
+          <span
+            mix={[
+              tooltip.arrow(),
+              css({
+                width: '12px',
+                height: '6px',
+                background: '#111',
+                clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
+                '&[data-side="top"]': { top: 'calc(100% - 1px)' },
+                '&[data-side="bottom"]': { bottom: 'calc(100% - 1px)', rotate: '180deg' },
+              }),
+            ]}
+          />
+        </div>
+      </Portal>
     </tooltip.Context>
   )
 }
@@ -60,7 +62,7 @@ Wrap a toolbar in `tooltip.GroupContext` so moving between triggers opens the ne
 - `Context`: scopes one tooltip. Accepts `open`, `defaultOpen`, `onOpenChange(open, reason)`, `delay` (default `600`), `closeDelay` (default `0`) and `disabled`.
 - `GroupContext`: shares `delay` and `closeDelay` with nested tooltips. After one opens, others open without delay until `timeout` (default `400`) milliseconds after the last one closes. Only one tooltip in a group is open at a time.
 - `trigger()`: connects hover, keyboard focus, blur and press to the tooltip.
-- `popup(options?)`: renders a native `popover="manual"` surface with `tabindex="-1"` and positions it with `anchor()`. Accepts all `AnchorOptions`; `placement` defaults to `'top'`.
+- `popup(options?)`: renders a fixed-position surface with `tabindex="-1"` and positions it with `anchor()`. Accepts all `AnchorOptions`; `placement` defaults to `'top'`. Sets `data-state`, and `data-open` while shown, including during finite exit animations. Render it in `Portal` where ancestors clip; it joins the shared overlay stack so it paints above, and stays inside the focus boundary of, the dialog or popover that contains its trigger.
 - `arrow(options?)`: sets the cross-axis offset (`left` for top and bottom placements, `top` for left and right) that points its host at the trigger's center, kept `padding` (default `5`) pixels from the popup's edges. Sets `data-side` to the popup's side, and `data-uncentered` when the arrow cannot reach the trigger's center. Place it on the popup edge and orient it with CSS, overlapping the popup slightly to avoid a seam.
 - `onTooltipOpenChange(handler)`: listens for the bubbling `TooltipOpenChangeEvent` dispatched from the trigger, with `open` and `reason`.
 - `TooltipOpenChangeReason`: `'trigger-hover' | 'trigger-focus' | 'trigger-press' | 'escape-key' | 'outside-press' | 'disabled' | 'group'`.

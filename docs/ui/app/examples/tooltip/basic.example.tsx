@@ -1,3 +1,4 @@
+import { Portal } from '@remix-run/ui/portal'
 import * as tooltip from '@remix-run/ui/tooltip'
 import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
@@ -55,55 +56,54 @@ export default function ExampleTooltip(
             <path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" />
           </svg>
         </button>
-        <div
-          mix={[
-            tooltip.popup({ placement: handle.props.placement, offset: 8 }),
-            css({
-              '--tooltip-bg': 'light-dark(#202027, #eeeef2)',
-              margin: 0,
-              padding: '4px 8px',
-              border: 0,
-              borderRadius: '6px',
-              background: 'var(--tooltip-bg)',
-              color: 'light-dark(#fff, #18181c)',
-              font: '500 12px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-              overflow: 'visible',
-              opacity: 0,
-              transform: 'scale(0.96)',
-              transition:
-                'opacity 120ms ease, transform 120ms ease, display 120ms allow-discrete, overlay 120ms allow-discrete',
-              '&[data-anchor-placement^="top"]': { transformOrigin: 'bottom center' },
-              '&[data-anchor-placement^="bottom"]': { transformOrigin: 'top center' },
-              '&[data-anchor-placement^="left"]': { transformOrigin: 'center right' },
-              '&[data-anchor-placement^="right"]': { transformOrigin: 'center left' },
-              '&:popover-open': {
-                opacity: 1,
-                transform: 'scale(1)',
-                '@starting-style': { opacity: 0, transform: 'scale(0.96)' },
-              },
-              '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-            }),
-          ]}
-        >
-          Copy link
-          <span
+        <Portal>
+          <div
             mix={[
-              tooltip.arrow(),
+              tooltip.popup({ placement: handle.props.placement, offset: 8 }),
               css({
-                width: '12px',
-                height: '6px',
+                '--tooltip-bg': 'light-dark(#202027, #eeeef2)',
+                colorScheme: 'light dark',
+                padding: '4px 8px',
+                borderRadius: '6px',
                 background: 'var(--tooltip-bg)',
-                clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
-                // Overlap the popup by 1px so no subpixel seam shows between the two shapes. Side
-                // arrows rotate about their center, so their 12px by 6px box shifts 3px further.
-                '&[data-side="top"]': { top: 'calc(100% - 1px)' },
-                '&[data-side="bottom"]': { bottom: 'calc(100% - 1px)', rotate: '180deg' },
-                '&[data-side="left"]': { left: 'calc(100% - 4px)', rotate: '-90deg' },
-                '&[data-side="right"]': { right: 'calc(100% - 4px)', rotate: '90deg' },
+                color: 'light-dark(#fff, #18181c)',
+                font: '500 12px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+                opacity: 0,
+                transform: 'scale(0.96)',
+                transition: 'opacity 120ms ease, transform 120ms ease',
+                '&[data-anchor-placement^="top"]': { transformOrigin: 'bottom center' },
+                '&[data-anchor-placement^="bottom"]': { transformOrigin: 'top center' },
+                '&[data-anchor-placement^="left"]': { transformOrigin: 'center right' },
+                '&[data-anchor-placement^="right"]': { transformOrigin: 'center left' },
+                '&[data-state="open"]': {
+                  opacity: 1,
+                  transform: 'scale(1)',
+                  '@starting-style': { opacity: 0, transform: 'scale(0.96)' },
+                },
+                '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
               }),
             ]}
-          />
-        </div>
+          >
+            Copy link
+            <span
+              mix={[
+                tooltip.arrow(),
+                css({
+                  width: '12px',
+                  height: '6px',
+                  background: 'var(--tooltip-bg)',
+                  clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
+                  // Overlap the popup by 1px so no subpixel seam shows between the two shapes. Side
+                  // arrows rotate about their center, so their 12px by 6px box shifts 3px further.
+                  '&[data-side="top"]': { top: 'calc(100% - 1px)' },
+                  '&[data-side="bottom"]': { bottom: 'calc(100% - 1px)', rotate: '180deg' },
+                  '&[data-side="left"]': { left: 'calc(100% - 4px)', rotate: '-90deg' },
+                  '&[data-side="right"]': { right: 'calc(100% - 4px)', rotate: '90deg' },
+                }),
+              ]}
+            />
+          </div>
+        </Portal>
       </tooltip.Context>
     </div>
   )

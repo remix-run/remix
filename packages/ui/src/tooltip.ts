@@ -11,6 +11,8 @@ import {
   type RemixNode,
 } from '@remix-run/component'
 import { anchor, type AnchorOptions } from './anchor.ts'
+import { registerDismissableLayer } from './lib/dismissable-layer.ts'
+import { finishAnimations } from './lib/finish-animations.ts'
 import { createHoverAim } from './lib/hover-aim.ts'
 
 const TOOLTIP_OPEN_CHANGE_EVENT = 'rmx:tooltip-open-change' as const
@@ -74,7 +76,9 @@ function TooltipGroupProvider(
   handle: Handle<TooltipGroupContextProps, TooltipGroupContextValue>,
 ): () => RemixNode {
   let current: TooltipGroupMember | null = null
-  let lastClosedAt = -Infinity
+  let cooling = false
+  let coolingTimer: ReturnType<typeof setTimeout> | undefined
+  handle.signal.addEventListener('abort', () => clearTimeout(coolingTimer))
 
   handle.context.set({
     get closeDelay() {
@@ -84,8 +88,7 @@ function TooltipGroupProvider(
       return handle.props.delay
     },
     get warm() {
-      let timeout = handle.props.timeout ?? DEFAULT_GROUP_TIMEOUT
-      return current !== null || performance.now() - lastClosedAt < timeout
+      return current !== null || cooling
     },
     opened(member) {
       let previous = current
@@ -97,7 +100,12 @@ function TooltipGroupProvider(
     closed(member) {
       if (current === member) {
         current = null
-        lastClosedAt = performance.now()
+        cooling = true
+        clearTimeout(coolingTimer)
+        coolingTimer = setTimeout(
+          () => (cooling = false),
+          handle.props.timeout ?? DEFAULT_GROUP_TIMEOUT,
+        )
       }
     },
   })
@@ -457,97 +465,125 @@ function positionArrow(popup: HTMLElement, arrow: TooltipArrowRef, trigger: HTML
 const popupMixin: MixinFactory<HTMLElement, [options?: TooltipPopupOptions], ElementProps> =
   createMixin<HTMLElement, [options?: TooltipPopupOptions], ElementProps>((handle) => {
     let context = handle.context.get(TooltipProvider)
+    let wasOpen = false
+    // Each open or close bumps this so an exit animation that finishes late can't hide a reopened
+    // popup.
+    let transition = 0
     let cleanupOpen = () => {}
-    let syncArrow = () => {}
+
+    function show(popup: HTMLElement, trigger: HTMLElement, anchorOptions: AnchorOptions) {
+      popup.setAttribute('data-open', '')
+      let cleanupAnchor = anchor(popup, trigger, {
+        ...anchorOptions,
+        placement: anchorOptions.placement ?? 'top',
+      })
+      // Anchoring and content changes move the popup, so the arrow follows its geometry.
+      let syncArrow = () => {
+        if (context.arrow && popup.hasAttribute('data-open')) {
+          positionArrow(popup, context.arrow, trigger)
+        }
+      }
+      let mutationObserver = new MutationObserver(syncArrow)
+      mutationObserver.observe(popup, { attributeFilter: ['style', 'data-anchor-placement'] })
+      let resizeObserver = new ResizeObserver(syncArrow)
+      resizeObserver.observe(popup)
+      syncArrow()
+
+      // The tooltip joins the shared overlay stack so it paints above its trigger's dialog or
+      // popover, stays inside that dialog's focus boundary when portaled, and takes the first
+      // Escape. Outside clicks pass through to the owner; the tooltip closes on pointerdown itself.
+      let layer = registerDismissableLayer(popup, {
+        getParent: () => trigger,
+        dismissOnEscape: () => context.open,
+        onDismiss: () => context.dismiss('escape-key'),
+        onParentClose() {
+          teardown()
+          if (context.open) {
+            context.hide(
+              trigger.contains(trigger.ownerDocument.activeElement)
+                ? 'trigger-focus'
+                : 'trigger-hover',
+            )
+          }
+        },
+        passThroughClicks: true,
+      })
+
+      let controller = new AbortController()
+      popup.ownerDocument.addEventListener(
+        'pointerdown',
+        (event) => {
+          let target = event.target
+          if (target instanceof Node && (popup.contains(target) || trigger.contains(target))) {
+            return
+          }
+          context.hide('outside-press')
+        },
+        { capture: true, signal: controller.signal },
+      )
+
+      function teardown() {
+        transition++
+        popup.removeAttribute('data-open')
+        cleanupOpen()
+      }
+
+      return () => {
+        cleanupOpen = () => {}
+        cleanupAnchor()
+        mutationObserver.disconnect()
+        resizeObserver.disconnect()
+        controller.abort()
+        layer.dispose()
+      }
+    }
 
     return (options = {}, props = options as ElementProps) => {
       let open = context.open
       let anchorOptions: AnchorOptions = options === props ? {} : options
+      let changed = open !== wasOpen
+      wasOpen = open
 
-      handle.queueTask((node) => {
-        if (open && !node.matches(':popover-open') && context.trigger) {
-          node.showPopover()
-        } else if (!open && node.matches(':popover-open')) {
-          node.hidePopover()
-        }
-      })
+      if (changed) {
+        handle.queueTask((node, signal) => {
+          let current = ++transition
+          if (open) {
+            // Reopening during an exit animation keeps the popup that is still showing.
+            if (node.hasAttribute('data-open') || !context.trigger) return
+            cleanupOpen = show(node, context.trigger, anchorOptions)
+            return
+          }
+          let finishClose = () => {
+            if (signal.aborted || current !== transition) return
+            node.removeAttribute('data-open')
+            cleanupOpen()
+          }
+          let finished = finishAnimations([node])
+          if (finished) void finished.then(finishClose)
+          else finishClose()
+        })
+      }
 
       return [
         attrs({
           'data-instant': context.instant ? '' : undefined,
           'data-state': open ? 'open' : 'closed',
-          popover: 'manual',
           tabIndex: -1,
+        }),
+        css({
+          position: 'fixed',
+          width: 'max-content',
+          zIndex: 'calc(var(--rmx-layer-base, 0) + var(--rmx-layer-order, 0))',
+          '&:not([data-open])': { display: 'none' },
         }),
         ref((node: HTMLElement, signal) => {
           context.registerPopup(node)
           signal.addEventListener('abort', () => {
+            transition++
+            node.removeAttribute('data-open')
             cleanupOpen()
             if (context.popup === node) context.registerPopup(null)
           })
-        }),
-        on('beforetoggle', (event) => {
-          let popup = event.currentTarget
-          let trigger = context.trigger
-          cleanupOpen()
-          cleanupOpen = () => {}
-          if (event.newState !== 'open' || !trigger) return
-
-          let cleanupAnchor = anchor(popup, trigger, {
-            ...anchorOptions,
-            placement: anchorOptions.placement ?? 'top',
-          })
-          // `beforetoggle` runs before the popup is displayed, so the arrow is measured once it shows
-          // and again whenever anchoring or content changes the popup's geometry.
-          syncArrow = () => {
-            if (context.arrow && popup.matches(':popover-open')) {
-              positionArrow(popup, context.arrow, trigger)
-            }
-          }
-          let mutationObserver = new MutationObserver(() => syncArrow())
-          mutationObserver.observe(popup, { attributeFilter: ['style', 'data-anchor-placement'] })
-          let resizeObserver = new ResizeObserver(() => syncArrow())
-          resizeObserver.observe(popup)
-
-          let controller = new AbortController()
-          let doc = popup.ownerDocument
-          doc.addEventListener(
-            'keydown',
-            (keyEvent) => {
-              // Escape during IME composition cancels the composition, not the tooltip.
-              if (keyEvent.key !== 'Escape' || keyEvent.isComposing || keyEvent.defaultPrevented) {
-                return
-              }
-              // An open tooltip is always the topmost layer, so it consumes this Escape. A dialog
-              // or popover underneath closes on the next one.
-              keyEvent.preventDefault()
-              keyEvent.stopPropagation()
-              context.dismiss('escape-key')
-            },
-            { capture: true, signal: controller.signal },
-          )
-          doc.addEventListener(
-            'pointerdown',
-            (pointerEvent) => {
-              let target = pointerEvent.target
-              if (target instanceof Node && (popup.contains(target) || trigger.contains(target))) {
-                return
-              }
-              context.hide('outside-press')
-            },
-            { capture: true, signal: controller.signal },
-          )
-
-          cleanupOpen = () => {
-            cleanupAnchor()
-            mutationObserver.disconnect()
-            resizeObserver.disconnect()
-            controller.abort()
-            syncArrow = () => {}
-          }
-        }),
-        on('toggle', (event) => {
-          if (event.newState === 'open') syncArrow()
         }),
         on('pointerenter', (event) => {
           if (event.pointerType !== 'touch') context.hoverStart()

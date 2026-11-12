@@ -17,6 +17,7 @@ const basic = await loadExample('tooltip/basic')
 const group = await loadExample('tooltip/group')
 
 const anatomyCode = await highlightSource(`
+  import { Portal } from '@remix-run/ui/portal'
   import * as tooltip from '@remix-run/ui/tooltip'
   import { css } from 'remix/component'
 
@@ -34,26 +35,28 @@ const anatomyCode = await highlightSource(`
     >
       <LinkIcon />
     </button>
-    <div
-      mix={[
-        tooltip.popup({ placement: 'top', offset: 8 }),
-        css({
-          '&:popover-open': {},
-          '&[data-anchor-placement^="bottom"]': {},
-          '&[data-instant]': {},
-        }),
-      ]}
-    >
-      Copy link
-      <span
+    <Portal>
+      <div
         mix={[
-          tooltip.arrow(),
+          tooltip.popup({ placement: 'top', offset: 8 }),
           css({
-            '&[data-side="top"]': {},
+            '&[data-state="open"]': {},
+            '&[data-anchor-placement^="bottom"]': {},
+            '&[data-instant]': {},
           }),
         ]}
-      />
-    </div>
+      >
+        Copy link
+        <span
+          mix={[
+            tooltip.arrow(),
+            css({
+              '&[data-side="top"]': {},
+            }),
+          ]}
+        />
+      </div>
+    </Portal>
   </tooltip.Context>
 `)
 
@@ -156,8 +159,13 @@ export default function TooltipPage(handle: Handle<PageProps>) {
       <Example id="basic" example={basic} hero />
       <Section id="anatomy" title="Anatomy">
         <p>
-          Render a trigger, a popup and an optional arrow inside one <code>Context</code>. The popup
-          is a native top-layer popover, so ancestors cannot clip it.
+          Render a trigger, a popup and an optional arrow inside one <code>Context</code>. Wrap the
+          popup in <code>Portal</code>, as with popovers, so ancestors cannot clip it, and apply
+          theme variables and typography to the popup itself. The popup joins the shared overlay
+          stack: it paints above the dialog or popover that contains its trigger and stays inside a
+          modal dialog's focus boundary. Outside clicks still reach that owner, so one click closes
+          both. Use <code>data-state</code> for motion; the popup keeps <code>data-open</code> while
+          finite exit animations finish.
         </p>
         <CodeBlock html={anatomyCode} />
       </Section>
@@ -274,8 +282,8 @@ export default function TooltipPage(handle: Handle<PageProps>) {
           <code>placement</code> defaults to <code>'top'</code>.
         </p>
         <ApiTable id="popup-attributes" label="Attribute" typeLabel="Value">
-          <ApiEntry name="popover" type="manual">
-            Controls the native top-layer surface.
+          <ApiEntry name="data-open" type="present | absent">
+            Present while the popup is shown, including during exit animations.
           </ApiEntry>
           <ApiEntry name="tabindex" type="-1">
             Lets focus rest in the popup, such as when it is clicked, without closing it.

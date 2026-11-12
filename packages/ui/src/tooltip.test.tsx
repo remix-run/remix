@@ -3,6 +3,9 @@ import { afterEach, describe, it } from '@remix-run/test'
 
 import { createRoot, on, type Handle, type RemixNode } from '@remix-run/component'
 
+import * as dialog from './dialog.ts'
+import * as popover from './popover.ts'
+import { Portal } from './portal.tsx'
 import * as tooltip from './tooltip.ts'
 import type { TooltipOpenChangeEvent, TooltipOpenChangeReason } from './tooltip.ts'
 
@@ -49,7 +52,7 @@ function press(target: EventTarget) {
 }
 
 function isOpen(popup: HTMLElement) {
-  return popup.matches(':popover-open')
+  return popup.hasAttribute('data-open')
 }
 
 function Tip(handle: Handle<{ label: string; props?: tooltip.TooltipContextProps }>) {
@@ -63,6 +66,24 @@ function Tip(handle: Handle<{ label: string; props?: tooltip.TooltipContextProps
         <span mix={tooltip.arrow()} />
       </div>
     </tooltip.Context>
+  )
+}
+
+function TipInPopover(handle: Handle<{ onHide(reason: string): void }>) {
+  return () => (
+    <popover.Context>
+      <button type="button" mix={popover.anchor({ placement: 'bottom' })}>
+        Format
+      </button>
+      <div
+        mix={popover.surface({
+          open: true,
+          onHide: (request) => handle.props.onHide(request?.reason ?? 'none'),
+        })}
+      >
+        <Tip label="bold" />
+      </div>
+    </popover.Context>
   )
 }
 
@@ -80,7 +101,7 @@ describe('tooltip', () => {
 
     expect(popup.getAttribute('role')).toBe(null)
     expect(popup.tabIndex).toBe(-1)
-    expect(popup.getAttribute('popover')).toBe('manual')
+    expect(popup.hasAttribute('popover')).toBe(false)
     expect(popup.getAttribute('data-state')).toBe('closed')
     expect(trigger.getAttribute('aria-describedby')).toBe(null)
     expect(isOpen(popup)).toBe(false)
@@ -201,24 +222,74 @@ describe('tooltip', () => {
     expect(reasons).toEqual(['trigger-focus', 'escape-key'])
   })
 
-  it('consumes Escape so layers underneath stay open', async () => {
-    let outerEscapes = 0
-    let { container, root } = renderApp(
-      <div mix={on('keydown', (event) => void (event.key === 'Escape' && outerEscapes++))}>
-        <Tip label="bold" />
-      </div>,
-    )
+  it('takes the first Escape so the popover that owns it closes on the next one', async () => {
+    let hides: string[] = []
+    let { container, root } = renderApp(<TipInPopover onHide={(reason) => hides.push(reason)} />)
     let { trigger, popup } = get(container, 'bold')
 
     trigger.focus()
     await settle(root)
+    expect(isOpen(popup)).toBe(true)
+
     key(trigger, 'Escape')
     await settle(root)
     expect(isOpen(popup)).toBe(false)
-    expect(outerEscapes).toBe(0)
+    expect(hides).toEqual([])
 
     key(trigger, 'Escape')
-    expect(outerEscapes).toBe(1)
+    await settle(root)
+    expect(hides).toEqual(['escape-key'])
+  })
+
+  it('lets an outside click close both the tooltip and the popover that owns it', async () => {
+    let hides: string[] = []
+    let { container, root } = renderApp(<TipInPopover onHide={(reason) => hides.push(reason)} />)
+    let { trigger, popup } = get(container, 'bold')
+
+    trigger.focus()
+    await settle(root)
+    expect(isOpen(popup)).toBe(true)
+
+    let outside = document.createElement('button')
+    document.body.append(outside)
+    outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' }))
+    outside.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'mouse' }))
+    outside.click()
+    await settle(root)
+    expect(isOpen(popup)).toBe(false)
+    expect(hides).toEqual(['outside-click'])
+  })
+
+  it('keeps a portaled tooltip inside a modal dialog and paints it above the dialog', async () => {
+    let { container, root } = renderApp(
+      <dialog.Context defaultOpen>
+        <div id="surface" mix={dialog.surface()}>
+          <tooltip.Context>
+            <button type="button" id="bold-trigger" mix={tooltip.trigger()}>
+              Bold
+            </button>
+            <Portal>
+              <div id="bold-popup" mix={tooltip.popup()}>
+                Bold tip
+              </div>
+            </Portal>
+          </tooltip.Context>
+        </div>
+      </dialog.Context>,
+    )
+    await settle(root)
+    let trigger = container.querySelector('#bold-trigger') as HTMLButtonElement
+    trigger.focus()
+    await settle(root)
+
+    let popup = document.querySelector('#bold-popup') as HTMLElement
+    let surface = container.querySelector('#surface') as HTMLElement
+    expect(isOpen(popup)).toBe(true)
+    expect(container.contains(popup)).toBe(false)
+    expect(popup.closest('[inert], [aria-hidden="true"]')).toBe(null)
+    expect(Number(getComputedStyle(popup).zIndex)).toBeGreaterThan(
+      Number(getComputedStyle(surface).zIndex),
+    )
   })
 
   it('ignores Escape while an IME composition is active', async () => {
