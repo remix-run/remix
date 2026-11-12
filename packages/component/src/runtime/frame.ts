@@ -911,7 +911,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
             : undefined
         let finished = continued?.finished
         if (!finished) {
-          loadState.eventController?.abort()
+          let previousEventController = loadState.eventController
+          previousEventController?.abort()
+          // Abort listeners can synchronously start a newer reload or dispose the frame.
+          if (loadState.eventController !== previousEventController) {
+            disconnect()
+            controller.abort()
+            return controller
+          }
           let eventReload =
             event.origin === 'direct'
               ? { controller, disconnect: undefined }
@@ -1028,7 +1035,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         let continued = previous.status === 'idle' ? undefined : previous
         let finished = continued?.finished
         if (!finished) {
-          loadState.eventController?.abort()
+          let previousEventController = loadState.eventController
+          previousEventController?.abort()
+          if (loadState.eventController !== previousEventController) {
+            disconnect?.()
+            previousController?.abort()
+            return
+          }
           let eventReload = createLinkedAbortController(signal)
           finished = createReloadFinished(eventReload.controller, eventReload.disconnect)
         }

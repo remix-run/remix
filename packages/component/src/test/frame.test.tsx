@@ -40,6 +40,35 @@ async function setupReloadBodyTest(t: TestContext) {
   return { app, requests }
 }
 
+async function setupInheritedReloadFinished(t: TestContext) {
+  document.body.innerHTML = '<main>Initial</main>'
+  let app = run({
+    loadModule: mock.fn(),
+    resolveFrame(src) {
+      return src === '/child' || src === '/outer' ? (
+        <p>{src}</p>
+      ) : (
+        <main>
+          <Frame name="child" src="/child" />
+        </main>
+      )
+    },
+  })
+  t.after(() => app.dispose())
+  await app.ready()
+  await app.frames.top.reload()
+  let child = app.frames.get('child')
+  invariant(child)
+  let events: FrameReloadStartEvent[] = []
+  child.addEventListener('reloadStart', (event) => events.push(event))
+  await app.frames.top.reload()
+  let event = events[0]
+  invariant(event)
+  let signal = await event.finished
+  expect(signal.aborted).toBe(false)
+  return { app, child, events, signal }
+}
+
 function getCommentMarkerId(html: string, prefix: 'rmx:f:' | 'rmx:h:'): string {
   let re = prefix === 'rmx:f:' ? /<!--\s*rmx:f:([^ ]+)\s*-->/ : /<!--\s*rmx:h:([^ ]+)\s*-->/
   let match = html.match(re)
@@ -1430,6 +1459,49 @@ describe('run', () => {
     expect((await recovery.promise).aborted).toBe(false)
     expect(order).toEqual(['error', 'complete', 'error', 'complete'])
     expect(document.querySelector('main')?.textContent).toBe('Initial child')
+  })
+
+  it('preserves a direct reload started by a finished signal’s abort listener', async (t) => {
+    let { child, events, signal } = await setupInheritedReloadFinished(t)
+    let replacement: Promise<AbortSignal> | undefined
+    signal.addEventListener(
+      'abort',
+      () => {
+        replacement = child.reload({ src: '/child' })
+      },
+      { once: true },
+    )
+
+    let outer = child.reload({ src: '/outer' })
+    invariant(replacement)
+    expect((await outer).aborted).toBe(true)
+    let replacementSignal = await replacement
+
+    expect(replacementSignal.aborted).toBe(false)
+    expect(events).toHaveLength(2)
+    expect(await events[1]!.finished).toBe(replacementSignal)
+    expect(document.querySelector('main')?.textContent).toBe('/child')
+  })
+
+  it('preserves an ancestor reload started by a finished signal’s abort listener', async (t) => {
+    let { app, events, signal } = await setupInheritedReloadFinished(t)
+    let replacement: Promise<AbortSignal> | undefined
+    signal.addEventListener(
+      'abort',
+      () => {
+        replacement = app.frames.top.reload()
+      },
+      { once: true },
+    )
+
+    let outer = app.frames.top.reload()
+    invariant(replacement)
+    expect((await outer).aborted).toBe(true)
+    expect((await replacement).aborted).toBe(false)
+
+    expect(events).toHaveLength(2)
+    expect((await events[1]!.finished).aborted).toBe(false)
+    expect(document.querySelector('main')?.textContent).toBe('/child')
   })
 
   it('replaces inherited finished when a child reloadStart listener reloads its ancestor', async (t) => {
