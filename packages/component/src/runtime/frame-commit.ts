@@ -11,11 +11,13 @@ export interface FrameCommitOptions {
 /**
  * Wraps the rendering of a resolved frame response.
  *
- * Calling `commitFrame()` starts rendering once and returns a promise for the completed update,
- * including navigation URL, scroll, and focus handling. Cancellation resolves without a stale
- * render. Rendering failures reject. Remix lets navigation continue once rendering starts, even
- * if the callback waits for an animation. Returning or throwing without calling `commitFrame()`
- * falls back to the default commit; callback errors are reported on the runtime.
+ * Calling `commitFrame()` starts rendering once. Its promise waits for rendering and any enclosing
+ * navigation, including followed redirects, scroll, and focus handling. Navigation does not wait
+ * for the callback's post-commit work.
+ *
+ * Cancellation resolves without a stale render; rendering failures reject. Returning or throwing
+ * without calling `commitFrame()` falls back to the default commit. Callback errors are reported
+ * on the runtime.
  *
  * @param commitFrame Starts the default frame commit and waits for the completed update.
  * @param options Resolved destination, response, and cancellation context for this update.
