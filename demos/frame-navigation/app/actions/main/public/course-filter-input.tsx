@@ -3,13 +3,13 @@ import { clientEntry, css, on } from 'remix/component'
 
 export const CourseFilterInput = clientEntry(
   import.meta.url,
-  function CourseFilterInput(handle: Handle<{ query: string }>) {
-    let query = handle.props.query
-    let serverQuery = query
+  function CourseFilterInput(handle: Handle<{ filter: { query: string } }>) {
+    let serverFilter = handle.props.filter
+    let query = serverFilter.query
     return () => {
-      if (handle.props.query !== serverQuery) {
-        serverQuery = handle.props.query
-        if (query.trim() !== serverQuery) query = serverQuery
+      if (handle.props.filter !== serverFilter) {
+        serverFilter = handle.props.filter
+        if (query.trim() !== serverFilter.query) query = serverFilter.query
       }
       return (
         <input
