@@ -1143,7 +1143,7 @@ To defer loading until near the viewport, provide a fallback that renders at lea
 
 Lazy loading requires `run()` in the browser, and deferred frames do not delay `app.ready()` or ancestor navigation completion. Browsers without `IntersectionObserver` load them immediately.
 
-Once loaded, the content stays mounted when it leaves the viewport. Changing `loading` to `'eager'` starts a deferred load immediately. Explicit `frame.reload()`, `frame.replace()`, and targeted navigations also take effect immediately.
+Once loaded, the content stays mounted when it leaves the viewport. Ancestor reloads refresh loaded lazy frames in the background, keeping their content visible until the new response arrives. Changing `loading` to `'eager'` starts a deferred load immediately. Explicit `frame.reload()`, `frame.replace()`, and targeted navigations also take effect immediately.
 
 ### Nested Frames
 

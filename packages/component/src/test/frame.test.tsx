@@ -189,59 +189,71 @@ function waitForIntersection(element: Element): Promise<void> {
   })
 }
 
-async function setupPreservedLazyFrame(
+type LazyFrameRendering = 'client' | 'hydrated' | 'server'
+
+async function setupLazyFrame(
   t: TestContext,
   resolveFrame: ResolveFrame,
-  options: { serverRendered?: boolean } = {},
+  options: {
+    mode?: LazyFrameRendering
+    resolvePage?: (renderPage: () => Promise<string>) => Promise<string>
+  } = {},
 ) {
   let reveal: (() => Promise<AbortSignal>) | undefined
   let version = 0
+  function renderContent(version: number, visible = true) {
+    return (
+      <section id="lazy-host" mix={css({ position: 'fixed', top: '100000px', left: 0 })}>
+        <p>{version}</p>
+        {visible ? (
+          <Frame name="lazy" src="/lazy" loading="lazy" fallback={<p id="waiting">Waiting</p>} />
+        ) : null}
+      </section>
+    )
+  }
   let Entry = clientEntry(
     '/lazy-entry.js#Entry',
     function Entry(handle: Handle<{ version: number }>) {
-      let visible = options.serverRendered ?? false
+      let visible = options.mode === 'hydrated'
       reveal = () => {
         visible = true
         return handle.update()
       }
-      return () => (
-        <section id="lazy-host" mix={css({ position: 'fixed', top: '100000px', left: 0 })}>
-          <p>{handle.props.version}</p>
-          {visible ? (
-            <Frame name="lazy" src="/lazy" loading="lazy" fallback={<p id="waiting">Waiting</p>} />
-          ) : null}
-        </section>
-      )
+      return () => renderContent(handle.props.version, visible)
     },
   )
-  let renderPage = () => renderDocumentContent(<Entry version={version++} />)
+  let renderPage = () =>
+    renderDocumentContent(
+      options.mode === 'server' ? renderContent(version++) : <Entry version={version++} />,
+    )
   document.documentElement.innerHTML = await renderPage()
   let app = run({
     loadModule: () => Entry,
-    resolveFrame(src, options) {
-      return src === '/lazy' ? resolveFrame(src, options) : renderPage()
+    resolveFrame(src, resolveOptions) {
+      return src === '/page'
+        ? (options.resolvePage?.(renderPage) ?? renderPage())
+        : resolveFrame(src, resolveOptions)
     },
   })
   t.after(() => app.dispose())
   await app.ready()
-  invariant(reveal)
-  await reveal()
+  if (options.mode !== 'server') {
+    invariant(reveal)
+    await reveal()
+  }
   let host = document.getElementById('lazy-host')
   let frame = app.frames.get('lazy')
   invariant(host && frame)
   await waitForIntersection(host)
-  return { app, frame, host }
+  return { app, frame, host, renderPage }
 }
 
-async function assertPendingLazyFrameRestart(
-  t: TestContext,
-  options: { serverRendered?: boolean } = {},
-) {
+async function assertPendingLazyFrameRestart(t: TestContext, mode: LazyFrameRendering = 'client') {
   let requests: Array<{
     signal: AbortSignal
     response: ReturnType<typeof Promise.withResolvers<string>>
   }> = []
-  let { app, host } = await setupPreservedLazyFrame(
+  let { app, host } = await setupLazyFrame(
     t,
     (_src, options) => {
       invariant(options?.signal)
@@ -249,7 +261,7 @@ async function assertPendingLazyFrameRestart(
       requests.push({ signal: options.signal, response })
       return response.promise
     },
-    options,
+    { mode },
   )
   host.style.top = '0'
   await waitForIntersection(host)
@@ -268,6 +280,116 @@ async function assertPendingLazyFrameRestart(
   requests[1]?.response.resolve('<p id="fresh-lazy-content">Fresh</p>')
   await loaded
   expect(document.getElementById('fresh-lazy-content')?.textContent).toBe('Fresh')
+}
+
+async function assertSettledLazyFrameRestart(
+  t: TestContext,
+  mode: LazyFrameRendering,
+  options: { failAncestor?: boolean } = {},
+) {
+  let requests: Array<{
+    signal: AbortSignal
+    response: ReturnType<typeof Promise.withResolvers<string>>
+  }> = []
+  let holdPage = false
+  let pageResponse = Promise.withResolvers<string>()
+  let { app, frame, host, renderPage } = await setupLazyFrame(
+    t,
+    (_src, options) => {
+      invariant(options?.signal)
+      let { signal } = options
+      let response = Promise.withResolvers<string>()
+      signal.addEventListener('abort', () => response.reject(signal.reason), { once: true })
+      requests.push({ signal, response })
+      return response.promise
+    },
+    { mode, resolvePage: (renderPage) => (holdPage ? pageResponse.promise : renderPage()) },
+  )
+  host.style.top = '0'
+  await waitForIntersection(host)
+  expect(requests.length).toBe(1)
+  await app.frames.top.reload({ src: '/page' })
+  expect(requests.length).toBe(2)
+
+  host.style.top = '100000px'
+  await waitForIntersection(host)
+  let canceled = new Promise<void>((resolve) => {
+    frame.addEventListener('reloadComplete', () => resolve(), { once: true })
+  })
+  holdPage = true
+  let reloaded = app.frames.top.reload()
+  await canceled
+  expect(requests[1]?.signal.aborted).toBe(true)
+  if (options.failAncestor) {
+    let failure = new Error('Ancestor reload failed')
+    let errors: unknown[] = []
+    app.addEventListener('error', (event) => errors.push(event.error))
+    let rejected = expect(reloaded).rejects.toThrow(failure.message)
+    pageResponse.reject(failure)
+    await rejected
+    expect(errors).toEqual([failure])
+    host.style.top = '0'
+    await waitForIntersection(host)
+  } else {
+    pageResponse.resolve(await renderPage())
+    await reloaded
+  }
+  expect(requests.length).toBe(3)
+  expect(requests[2]?.signal.aborted).toBe(false)
+  let loaded = waitForElement('#fresh-lazy-content')
+  requests[2]?.response.resolve('<p id="fresh-lazy-content">Fresh</p>')
+  await loaded
+  expect(document.getElementById('fresh-lazy-content')?.textContent).toBe('Fresh')
+}
+
+async function assertLazyReloadPreemption(
+  t: TestContext,
+  mode: LazyFrameRendering,
+  options: { ancestorReload?: boolean } = {},
+) {
+  let requests: Array<{
+    src: string
+    signal: AbortSignal
+    response: ReturnType<typeof Promise.withResolvers<string>>
+  }> = []
+  let { app, frame, host } = await setupLazyFrame(
+    t,
+    (src, options) => {
+      invariant(options?.signal)
+      let { signal } = options
+      let response = Promise.withResolvers<string>()
+      signal.addEventListener('abort', () => response.reject(signal.reason), { once: true })
+      requests.push({ src, signal, response })
+      return response.promise
+    },
+    { mode },
+  )
+  host.style.top = '0'
+  await waitForIntersection(host)
+  expect(requests.length).toBe(1)
+  if (options.ancestorReload) {
+    await app.frames.top.reload({ src: '/page' })
+    expect(requests.length).toBe(2)
+    host.style.top = '0'
+  }
+
+  let previous = requests.at(-1)
+  invariant(previous)
+  let reloaded = frame.reload({ src: '/explicit' })
+  let requestCount = requests.length
+  let explicit = requests.at(-1)
+  invariant(explicit)
+  expect(previous.signal.aborted).toBe(true)
+  expect(explicit.src).toBe('/explicit')
+  await waitForIntersection(host)
+  await waitForIntersection(host)
+  expect(requests.length).toBe(requestCount)
+  expect(explicit.signal.aborted).toBe(false)
+
+  explicit.response.resolve('<p id="explicit-lazy-content">Explicit</p>')
+  await reloaded
+  expect(document.getElementById('explicit-lazy-content')?.textContent).toBe('Explicit')
+  expect(frame.src).toBe('/explicit')
 }
 
 function createDisposableEntry(id: string, onDispose: () => void) {
@@ -5726,7 +5848,7 @@ describe('run', () => {
 
   it('pairs inherited reload events while a client-created lazy frame stays deferred', async (t) => {
     let resolveFrame = mock.fn(() => '<p>Unexpected load</p>')
-    let { app, frame } = await setupPreservedLazyFrame(t, resolveFrame)
+    let { app, frame } = await setupLazyFrame(t, resolveFrame)
     let events: string[] = []
     frame.addEventListener('reloadStart', () => events.push('start'))
     frame.addEventListener('reloadComplete', () => events.push('complete'))
@@ -5742,7 +5864,7 @@ describe('run', () => {
   })
 
   it('restarts a pending hydrated lazy frame during an ancestor reload', async (t) => {
-    await assertPendingLazyFrameRestart(t, { serverRendered: true })
+    await assertPendingLazyFrameRestart(t, 'hydrated')
   })
 
   it('updates a deferred client frame source and loads when changed to eager', async (t) => {
@@ -5937,7 +6059,7 @@ describe('run', () => {
     expect(resolveFrame).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps lazy frames deferred through ancestor reloads and preserves loaded content', async (t) => {
+  it('keeps lazy frames deferred and refreshes loaded content without blocking ancestor reloads', async (t) => {
     let fallback = <p>Waiting</p>
     let renderPage = () =>
       renderDocumentContent(
@@ -5947,11 +6069,15 @@ describe('run', () => {
       )
     document.documentElement.innerHTML = await renderPage()
     let requests: string[] = []
+    let refresh = Promise.withResolvers<string>()
     let app = run({
       loadModule: mock.fn(),
       resolveFrame(src) {
         requests.push(src)
-        return src === '/lazy' ? '<p id="lazy-content">Loaded</p>' : renderPage()
+        if (src !== '/lazy') return renderPage()
+        return requests.filter((request) => request === '/lazy').length === 1
+          ? '<p id="lazy-content">Loaded</p>'
+          : refresh.promise
       },
     })
     t.after(() => app.dispose())
@@ -5977,8 +6103,52 @@ describe('run', () => {
     await loaded
     await app.frames.top.reload()
     expect(document.getElementById('lazy-host')?.textContent).toBe('Loaded')
-    expect(requests).toEqual(['/page', '/lazy', '/page'])
+    expect(requests).toEqual(['/page', '/lazy', '/page', '/lazy'])
+    expect(events).toEqual(['start', 'complete', 'start', 'complete', 'start'])
+
+    let refreshed = new Promise<void>((resolve) => {
+      frame.addEventListener('reloadComplete', () => resolve(), { once: true })
+    })
+    refresh.resolve('<p id="refreshed-content">Refreshed</p>')
+    await refreshed
+    expect(document.getElementById('lazy-host')?.textContent).toBe('Refreshed')
     expect(events).toEqual(['start', 'complete', 'start', 'complete', 'start', 'complete'])
+  })
+
+  it('restarts a pending server-rendered lazy frame during an ancestor reload', async (t) => {
+    await assertPendingLazyFrameRestart(t, 'server')
+  })
+
+  it('restarts a settled aborted server lazy load when the next ancestor response arrives', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'server')
+  })
+
+  it('restarts a settled aborted client-created lazy load when the next ancestor response arrives', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'client')
+  })
+
+  it('restarts a settled aborted hydrated lazy load when the next ancestor response arrives', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'hydrated')
+  })
+
+  it('resumes an aborted server lazy load after the ancestor reload fails', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'server', { failAncestor: true })
+  })
+
+  it('resumes an aborted client-created lazy load after the ancestor reload fails', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'client', { failAncestor: true })
+  })
+
+  it('preempts an initial client-created lazy request with an explicit reload', async (t) => {
+    await assertLazyReloadPreemption(t, 'client')
+  })
+
+  it('keeps an explicit reload from rearming an aborted client-created lazy request', async (t) => {
+    await assertLazyReloadPreemption(t, 'client', { ancestorReload: true })
+  })
+
+  it('keeps an explicit reload from rearming an aborted hydrated lazy request', async (t) => {
+    await assertLazyReloadPreemption(t, 'hydrated', { ancestorReload: true })
   })
 
   it('reports failed server-rendered lazy frame requests once', async (t) => {
