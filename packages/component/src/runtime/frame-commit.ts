@@ -1,5 +1,7 @@
 /** Context for a custom frame commit callback. */
 export interface FrameCommitOptions {
+  /** Resolved frame destination after redirects, or the requested source when not redirected. */
+  to: string
   /** Original frame response, still unconsumed when the callback starts. */
   response: Response
   /** Aborts when this frame update is cancelled, superseded, or disposed. */
@@ -16,7 +18,7 @@ export interface FrameCommitOptions {
  * falls back to the default commit; callback errors are reported on the runtime.
  *
  * @param commitFrame Starts the default frame commit and waits for the completed update.
- * @param options Response and cancellation context for this update.
+ * @param options Resolved destination, response, and cancellation context for this update.
  * @returns Optional asynchronous work surrounding the commit, such as an animation.
  */
 export type FrameCommit = (
@@ -59,7 +61,12 @@ export async function commitFrameResponse(
   response: Response,
   commit: FrameCommit,
   render: () => Promise<void>,
-  options: { signal: AbortSignal; commitSignal: AbortSignal; onError(error: unknown): void },
+  options: {
+    to: string
+    signal: AbortSignal
+    commitSignal: AbortSignal
+    onError(error: unknown): void
+  },
 ): Promise<void> {
   let navigation = getFrameCommitNavigation(options.signal)
   let signal = AbortSignal.any([
@@ -101,7 +108,7 @@ export async function commitFrameResponse(
 
   let callback = Promise.resolve()
     .then(() => {
-      if (!signal.aborted) return commit(commitFrame, { response, signal })
+      if (!signal.aborted) return commit(commitFrame, { to: options.to, response, signal })
     })
     .catch((error) => {
       if (!signal.aborted && (!renderFailure || renderFailure.error !== error)) {

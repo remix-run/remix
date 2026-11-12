@@ -199,7 +199,7 @@ export function reloadFrameForNavigation(
 
 export type FrameContext = {
   nonce?: string
-  navigationType?: NavigationType
+  transition?: NavigationTransition
   topFrame?: FrameHandle
   getContext: (type: ElementFunction) => unknown
   errorTarget: EventTarget
@@ -226,7 +226,7 @@ export type FrameContext = {
 
 type FrameInit = {
   nonce?: string
-  navigationType?: NavigationType
+  transition?: NavigationTransition
   name?: string
   topFrame?: FrameHandle
   getContext?: (type: ElementFunction) => unknown
@@ -268,6 +268,7 @@ export type FrameInstance = {
     commit: FrameCommit,
     render: () => Promise<void>,
     signal: AbortSignal,
+    to: string,
   ) => Promise<void>
   render: (content: InternalFrameContent, options?: RenderOptions) => Promise<void>
   ready: () => Promise<void>
@@ -293,7 +294,7 @@ export type FrameInstance = {
 
 type RenderOptions = {
   nonce?: string
-  navigationType?: NavigationType
+  transition?: NavigationTransition
   documentHref?: string
   flushKind?: FlushKind
   reconciliationTracker?: ReconciliationTracker
@@ -388,7 +389,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   let context: FrameContext = {
     nonce: init.nonce,
-    navigationType: init.navigationType,
+    transition: init.transition,
     topFrame: runtime.topFrame,
     getContext: (type) => runtime.getContext?.(type),
     ...getSharedFrameRuntime(runtime),
@@ -458,7 +459,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       if (options.signal) {
         runtime.serverFrameReload = {
           signal: options.signal,
-          navigationType: options.navigationType,
+          transition: options.transition,
           reconciliationTracker: options.reconciliationTracker,
           blockingFrameTracker: options.blockingFrameTracker,
         }
@@ -510,7 +511,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let responseContext = {
       ...context,
       nonce: options.nonce,
-      navigationType: options.navigationType,
+      transition: options.transition,
       data: options.data,
       reconciliationTracker: options.reconciliationTracker,
       blockingFrameTracker: options.blockingFrameTracker,
@@ -580,7 +581,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let subFramesReady = hydrateContainer(container, context, {
       reconciliationTracker,
       nonce: context.nonce,
-      navigationType: context.navigationType,
+      transition: context.transition,
     })
 
     try {
@@ -592,7 +593,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         await watchPendingFrameTemplate(currentMarker, {
           reconciliationTracker,
           nonce: context.nonce,
-          navigationType: context.navigationType,
+          transition: context.transition,
         })
       }
 
@@ -779,11 +780,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     commit: FrameCommit,
     swap: () => Promise<void>,
     signal: AbortSignal,
+    to: string,
   ): Promise<void> {
     commitController?.abort()
     let controller = new AbortController()
     commitController = controller
     return commitFrameResponse(response, commit, swap, {
+      to,
       signal,
       commitSignal: AbortSignal.any([controller.signal, lifecycleController.signal]),
       onError: (error) => init.errorTarget.dispatchEvent(createComponentErrorEvent(error)),
@@ -843,7 +846,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         let commitStarted = false
         await render(content, {
           nonce,
-          navigationType: options?.navigationType,
+          transition: options?.transition,
           documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
           signal: controller.signal,
           reconciliationTracker,
@@ -859,7 +862,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         await reconciliationTracker.ready()
       }
       if (commit && resolution instanceof Response) {
-        await commitResponse(resolution, commit, swap, controller.signal)
+        await commitResponse(resolution, commit, swap, controller.signal, redirectedTo ?? frame.src)
       } else {
         await swap()
       }
@@ -939,7 +942,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     options: RenderOptions = {},
     onResolved?: () => void,
   ): Promise<void> {
-    let { reconciliationTracker, signal, nonce, navigationType } = options
+    let { reconciliationTracker, signal, nonce, transition } = options
     if (isRenderAborted(signal)) return
     if (pendingTemplateWatch?.markerId === marker.id) return
 
@@ -959,7 +962,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         if (isRenderAborted(signal)) return
         if (pendingTemplateWatch !== watch) return
         clearPendingFrameTemplateWatch()
-        await render(fragment, { nonce, navigationType, signal, contentStatus: 'resolved' })
+        await render(fragment, { nonce, transition, signal, contentStatus: 'resolved' })
         if (!isRenderAborted(signal)) onResolved?.()
       })
       let abort = () => {
@@ -979,7 +982,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     clearPendingFrameTemplateWatch()
     await render(template, {
       nonce,
-      navigationType,
+      transition,
       reconciliationTracker,
       signal,
       contentStatus: 'resolved',
@@ -1194,15 +1197,13 @@ function resolveClientFrame(
       runtime.resolveFrame(frameSrc, {
         signal,
         target: getFrameName(node),
-        ...(serverFrameReload?.navigationType
-          ? { navigationType: serverFrameReload.navigationType }
-          : {}),
+        ...(serverFrameReload?.transition ? { transition: serverFrameReload.transition } : {}),
       }),
     )
     .then(async (resolution) => {
       let commit = takeFrameCommit(resolution)
       if (signal.aborted) return
-      let { content, nonce } = await unwrapFrameResolution(resolution)
+      let { content, nonce, redirectedTo } = await unwrapFrameResolution(resolution)
       if (signal.aborted) return
       let swap = async () => {
         if (state.content.status === 'fallback') {
@@ -1212,7 +1213,7 @@ function resolveClientFrame(
         let nextContent = asAbortableFrameContent(content, signal)
         await instance.render(nextContent, {
           nonce,
-          navigationType: serverFrameReload?.navigationType,
+          transition: serverFrameReload?.transition,
           signal,
           reconciliationTracker: serverFrameReload?.reconciliationTracker,
           blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
@@ -1220,7 +1221,7 @@ function resolveClientFrame(
         })
       }
       if (commit && resolution instanceof Response) {
-        await instance.commitResponse(resolution, commit, swap, signal)
+        await instance.commitResponse(resolution, commit, swap, signal, redirectedTo ?? frameSrc)
       } else {
         await swap()
       }
@@ -1727,7 +1728,7 @@ function hydrateRegion(
     let nonceManager = getNonceManager()
     nonceManager.addRootResourceNonces(root, resourceNonces)
     nonceManager.addRootResponseNonce(root, context.nonce)
-    if (!signal && !context.navigationType) {
+    if (!signal && !context.transition) {
       root.render(vElement)
       return
     }
@@ -1742,7 +1743,7 @@ function hydrateRegion(
 
     frameRuntime.serverFrameReload = {
       signal: signal ?? context.lifecycleSignal,
-      navigationType: context.navigationType,
+      transition: context.transition,
       reconciliationTracker: context.reconciliationTracker,
       blockingFrameTracker: context.blockingFrameTracker,
     }
@@ -1815,7 +1816,7 @@ async function createSubFrames(
           let frameMarker: FrameMarkerData = { ...marker, id }
           let subFrame = createFrame([node, end], {
             nonce: context.nonce,
-            navigationType: context.navigationType,
+            transition: context.transition,
             src: frameMarker.src,
             marker: frameMarker,
             topFrame: context.topFrame,

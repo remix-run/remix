@@ -51,10 +51,11 @@ export type ResolveFrame = (
  */
 export interface ResolveFrameOptions {
   /**
-   * Navigation that caused this load, including loads of client frames within its response.
-   * Absent for independent frame loads and reloads.
+   * Browser transition that caused this load, including loads of client frames within its response.
+   * Absent for independent frame loads and reloads, even while another navigation is active.
+   * Describes the original navigation; redirects are reflected in the commit callback's `to`.
    */
-  navigationType?: NavigationType
+  transition?: NavigationTransition
   /** Frame name, absent for both the top-level document and unnamed `<Frame>` loads. */
   target?: string
   /** Form values submitted to the frame source for a POST reload or navigation. */
@@ -160,7 +161,7 @@ export type FrameRuntime = {
   serverFrameReload:
     | {
         signal: AbortSignal
-        navigationType?: NavigationType
+        transition?: NavigationTransition
         reconciliationTracker?: ReconciliationTracker
         blockingFrameTracker?: ReconciliationTracker
       }

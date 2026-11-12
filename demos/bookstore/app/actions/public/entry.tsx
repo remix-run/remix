@@ -19,16 +19,15 @@ export const app = run({
       fetch(url, init) {
         return fetch(url, {
           ...init,
-          cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
+          cache: options?.transition?.navigationType === 'traverse' ? 'force-cache' : 'default',
         })
       },
       async commit(commitFrame, { signal }) {
-        let navigationType = options?.navigationType
+        let transition = options?.transition
         if (
           options?.target ||
-          (navigationType !== 'push' &&
-            navigationType !== 'replace' &&
-            navigationType !== 'traverse') ||
+          !transition ||
+          transition.navigationType === 'reload' ||
           !document.startViewTransition ||
           matchMedia('(prefers-reduced-motion: reduce)').matches ||
           signal.aborted
@@ -36,13 +35,13 @@ export const app = run({
           return commitFrame()
         }
 
-        let transition = document.startViewTransition(commitFrame)
-        let skip = () => transition.skipTransition()
+        let viewTransition = document.startViewTransition(commitFrame)
+        let skip = () => viewTransition.skipTransition()
         signal.addEventListener('abort', skip, { once: true })
-        void transition.ready.catch(() => {})
+        void viewTransition.ready.catch(() => {})
 
         try {
-          await transition.finished
+          await viewTransition.finished
         } finally {
           signal.removeEventListener('abort', skip)
         }

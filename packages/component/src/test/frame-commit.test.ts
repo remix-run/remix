@@ -3,7 +3,7 @@ import { describe, it, mock } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
 
 import { defaultResolveFrame, Frame, navigate, run, spaResponse } from '../index.ts'
-import type { FrameCommit } from '../index.ts'
+import type { FrameCommit, ResolveFrameOptions } from '../index.ts'
 import { jsx } from '../jsx-runtime.ts'
 
 function page(text: string): Response {
@@ -23,6 +23,7 @@ async function setup(t: TestContext, commit: FrameCommit, fetchImpl?: typeof fet
     return page(url.searchParams.get('commit-page') ?? 'initial')
   }
   let transitions: ViewTransition[] = []
+  let loads: Array<{ src: string; options?: ResolveFrameOptions }> = []
   let nativeStart = document.startViewTransition.bind(document)
   t.mock.method(document, 'startViewTransition', (update: ViewTransitionUpdateCallback) => {
     let transition = nativeStart(update)
@@ -32,6 +33,7 @@ async function setup(t: TestContext, commit: FrameCommit, fetchImpl?: typeof fet
   let app = run({
     loadModule: mock.fn(),
     resolveFrame(src, options) {
+      loads.push({ src, options })
       return defaultResolveFrame(src, options, {
         fetch: cleaningUp ? fetchFrame : (fetchImpl ?? fetchFrame),
         commit: cleaningUp ? undefined : commit,
@@ -57,6 +59,7 @@ async function setup(t: TestContext, commit: FrameCommit, fetchImpl?: typeof fet
     app,
     errors,
     transitions,
+    loads,
     url(value: string) {
       let url = new URL(initialUrl)
       url.searchParams.set('commit-page', value)
@@ -74,6 +77,7 @@ describe('defaultResolveFrame commit', () => {
       t,
       async (commitFrame, options) => {
         expect(options.response).toBe(response)
+        expect(options.to).toBe(fixture.url('next'))
         expect(response.bodyUsed).toBe(false)
         ready.resolve()
         await release.promise
@@ -114,6 +118,67 @@ describe('defaultResolveFrame commit', () => {
     expect(fixture.errors).toEqual([])
   })
 
+  it('commits a GET form submission with its encoded destination', async (t) => {
+    let initialUrl = window.location.href
+    let completed = Promise.withResolvers<void>()
+    let destinations: string[] = []
+    let fixture = await setup(t, (commitFrame, { to }) => {
+      destinations.push(to)
+      let committed = commitFrame()
+      completed.resolve(committed)
+      return committed
+    })
+    let form = document.createElement('form')
+    form.method = 'get'
+    form.action = initialUrl
+    let input = document.createElement('input')
+    input.name = 'commit-page'
+    input.value = 'search results'
+    form.append(input)
+    document.body.append(form)
+    let destination = new URL(initialUrl)
+    destination.search = new URLSearchParams({ 'commit-page': input.value }).toString()
+
+    form.requestSubmit()
+    await completed.promise
+
+    expect(destinations).toEqual([destination.href])
+    expect(fixture.loads.map((load) => load.src)).toEqual([destination.href])
+    expect(fixture.loads[0]?.options?.transition?.navigationType).toBe('push')
+    expect(window.navigation.transition).toBe(null)
+    expect(window.location.href).toBe(destination.href)
+    expect(document.getElementById('commit-page')?.textContent).toBe(input.value)
+    expect(fixture.errors).toEqual([])
+  })
+
+  it('commits a browser reload with its reload transition', async (t) => {
+    let initialUrl = window.location.href
+    let completed = Promise.withResolvers<void>()
+    let destinations: string[] = []
+    let fixture = await setup(
+      t,
+      (commitFrame, { to }) => {
+        destinations.push(to)
+        let committed = commitFrame()
+        completed.resolve(committed)
+        return committed
+      },
+      async () => page('reloaded'),
+    )
+
+    await window.navigation.reload().finished
+    await completed.promise
+
+    expect(destinations).toEqual([initialUrl])
+    expect(fixture.loads.map((load) => load.src)).toEqual([initialUrl])
+    expect(fixture.loads[0]?.options?.transition?.navigationType).toBe('reload')
+    expect(fixture.loads[0]?.options?.transition?.from.url).toBe(initialUrl)
+    expect(window.navigation.transition).toBe(null)
+    expect(window.location.href).toBe(initialUrl)
+    expect(document.getElementById('commit-page')?.textContent).toBe('reloaded')
+    expect(fixture.errors).toEqual([])
+  })
+
   it('finishes an animated redirect after its final URL and focus are applied', async (t) => {
     let destination = ''
     let completed = Promise.withResolvers<void>()
@@ -121,9 +186,13 @@ describe('defaultResolveFrame commit', () => {
     let response = page('redirected')
     let fixture = await setup(
       t,
-      async (commitFrame, { signal, response: received }) => {
+      async (commitFrame, { signal, response: received, to }) => {
         calls++
         expect(received).toBe(response)
+        expect(to).toBe(destination)
+        expect(window.location.href).toBe(fixture.url('redirect'))
+        expect(fixture.loads[0]?.options?.transition).toBe(window.navigation.transition)
+        expect(fixture.loads[0]?.options?.transition?.navigationType).toBe('push')
         let transition = document.startViewTransition(async () => {
           await commitFrame()
           expect(window.location.href).toBe(destination)
@@ -147,6 +216,7 @@ describe('defaultResolveFrame commit', () => {
     await fixture.transitions[0]?.finished
     expect(document.getElementById('commit-page')?.textContent).toBe('redirected')
     expect(calls).toBe(1)
+    expect(fixture.loads).toHaveLength(1)
     expect(fixture.errors).toEqual([])
   })
 
@@ -166,6 +236,63 @@ describe('defaultResolveFrame commit', () => {
     expect(deferred.signal.aborted).toBe(true)
     await deferred.commitFrame()
     expect(document.getElementById('commit-page')?.textContent).toBe('latest')
+    expect(fixture.errors).toEqual([])
+  })
+
+  it('aborts a never-settling commit wrapper when Back interrupts a pending navigation', async (t) => {
+    let initialUrl = window.location.href
+    let ready = Promise.withResolvers<AbortSignal>()
+    let restored = Promise.withResolvers<void>()
+    let fixture = await setup(t, (commitFrame, { signal, to }) => {
+      if (to === fixture.url('blocked')) {
+        ready.resolve(signal)
+        // Never settles, so only cancellation can release this navigation.
+        return new Promise<void>(() => {})
+      }
+      return commitFrame().then(() => restored.resolve())
+    })
+
+    let pending = navigate(fixture.url('blocked')).catch(() => {})
+    let signal = await ready.promise
+    expect(signal.aborted).toBe(false)
+    expect(document.getElementById('commit-page')?.textContent).toBe('initial')
+
+    // WebKit can reject the traversal's finished promise even though Back renders successfully.
+    // Wait for the restored frame's commit instead.
+    void window.navigation.back().finished?.catch(() => {})
+    await pending
+    expect(signal.aborted).toBe(true)
+
+    await restored.promise
+    expect(document.getElementById('commit-page')?.textContent).toBe('initial')
+    expect(window.location.href).toBe(initialUrl)
+    expect(fixture.loads.map((load) => load.src)).toEqual([fixture.url('blocked'), initialUrl])
+    expect(fixture.errors).toEqual([])
+  })
+
+  it('provides the resolved destination for redirects carried by SPA responses', async (t) => {
+    let destination = ''
+    let completed = Promise.withResolvers<void>()
+    let fixture = await setup(
+      t,
+      async (commitFrame, { to, response }) => {
+        expect(response.url).toBe('')
+        expect(to).toBe(destination)
+        await commitFrame()
+        expect(window.location.href).toBe(destination)
+        completed.resolve()
+      },
+      async () =>
+        spaResponse.finalize(
+          spaResponse.create(jsx('main', { id: 'commit-page', children: 'redirected' })),
+          destination,
+        ),
+    )
+    destination = fixture.url('spa-destination')
+    await navigate(fixture.url('spa-redirect')).catch(() => {})
+    await completed.promise
+    expect(fixture.loads).toHaveLength(1)
+    expect(document.getElementById('commit-page')?.textContent).toBe('redirected')
     expect(fixture.errors).toEqual([])
   })
 
@@ -247,7 +374,9 @@ describe('defaultResolveFrame commit', () => {
 
   it('completes independent reloads without waiting for a browser navigation', async (t) => {
     let completed = Promise.withResolvers<void>()
-    let fixture = await setup(t, async (commitFrame) => {
+    let fixture = await setup(t, async (commitFrame, { to }) => {
+      expect(to).toBe(window.location.href)
+      expect(fixture.loads.at(-1)?.options?.transition).toBeUndefined()
       await commitFrame()
       expect(window.navigation.transition).toBe(null)
       completed.resolve()
@@ -263,8 +392,9 @@ describe('defaultResolveFrame commit', () => {
     let signals: AbortSignal[] = []
     let fixture = await setup(
       t,
-      async (commitFrame, { signal }) => {
+      async (commitFrame, { signal, to }) => {
         signals.push(signal)
+        expect(to).toBe(signals.length === 1 ? '/details' : '/updated-details')
         await commitFrame()
         if (signals.length === 1) initial.resolve()
         else reloaded.resolve()

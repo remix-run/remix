@@ -507,7 +507,7 @@ export function startNavigationListener(
         let reload = reloadFrame(frame, {
           ...submission,
           signal: event.signal,
-          navigationType: event.navigationType,
+          transition: transition ?? undefined,
         })
         await reload.committed
         if (event.signal.aborted || reload.signal.aborted) return

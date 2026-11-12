@@ -26,7 +26,7 @@ The demo shows two built-in prefetch triggers. Header navigation links use Remix
 
 The home, books, genre, search, about, contact, and registration pages use `Cache-Control: private, max-age=30` for successful GET frame requests so a navigation can reuse prefetched HTML for 30 seconds. Full document requests to those pages use `no-store`. Cacheable frame responses vary by cookie and frame headers to keep personalized and document/frame variants separate. Cart documents, frames, and fragments explicitly use `no-store`. Checkout, account, and the other auth handlers do not opt into this cache window; ordinary navigations can show cached cart counts for up to 30 seconds.
 
-The [browser entry](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/entry.tsx) supplies a custom `resolveFrame` that passes a `fetch` override to `defaultResolveFrame`, setting `cache: 'force-cache'` for `traverse` navigations. Back/Forward can reuse cached browsing HTML even after its 30-second freshness window. Other loads use the default Fetch cache mode. Traversal can therefore show older cart counts until a fresh fetch replaces the cached response; `no-store` responses still require a network request.
+The [browser entry](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/entry.tsx) supplies a custom `resolveFrame` that passes a `fetch` override to `defaultResolveFrame`, setting `cache: 'force-cache'` when `options.transition?.navigationType` is `traverse`. Back/Forward can reuse cached browsing HTML even after its 30-second freshness window. Other loads use the default Fetch cache mode. Traversal can therefore show older cart counts until a fresh fetch replaces the cached response; `no-store` responses still require a network request.
 
 ## View Transitions
 
@@ -36,7 +36,11 @@ The [browser entry](https://github.com/remix-run/remix/blob/main/demos/bookstore
 
 The [stylesheet](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/app.css) styles the view-transition pseudo-elements, including keyframes and reduced-motion rules. The shared [book transition mixins](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/book-transitions.ts) return `css()` mixins: `bookCoverTransition(book.id)` gives each card cover and its product image a matching `viewTransitionName`, while `bookTitleTransition(book.id)` does the same for the title headings. Their `viewTransitionClass` values, `book-cover` and `book-title`, keep the movement in sync without giving different books the same name. The [layout](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/layout.tsx) also uses `css()` to name the `main` element `bookstore-page` for its slide-and-fade animation.
 
-Every subframe has a name, so the override can distinguish the top frame from cart fragments. Cart-button reloads and other independent frame updates render immediately. Browsers without view transitions and visitors who prefer reduced motion also use the default commit directly.
+Names must also be unique within each captured page. If a book appears in multiple cards, assign its cover and title names only to the participating card before starting the transition; leave the other copies unnamed so the browser does not skip the animation. The destination cover and heading use the matching names for the new snapshot.
+
+The demo preloads the main product image but does not explicitly wait for it to decode. To ensure the cover is ready for the new snapshot, use an async view-transition update callback that awaits `commitFrame()` and then the destination image's `decode()`, handling decode failures. Wait only for the image needed by the animation, rather than lazy-loaded carousel images. See [the commit-hook image decoding example](https://github.com/remix-run/remix/tree/main/packages/component#wrapping-frame-commits).
+
+Every subframe has a name, so the override can distinguish the top frame from cart fragments. The presence of `options.transition` identifies navigation-driven loads, and its `navigationType` lets the demo skip browser reload animations. Cart-button reloads and other independent frame updates render immediately. Browsers without view transitions and visitors who prefer reduced motion also use the default commit directly.
 
 ## Explore the Code
 

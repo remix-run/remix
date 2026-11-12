@@ -1253,7 +1253,7 @@ run({
       fetch(url, init) {
         return fetch(url, {
           ...init,
-          cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
+          cache: options?.transition?.navigationType === 'traverse' ? 'force-cache' : 'default',
         })
       },
     })
@@ -1261,7 +1261,7 @@ run({
 })
 ```
 
-`options.navigationType` is `push`, `replace`, `traverse`, or `reload` for loads caused by a navigation. Client frames loaded while rendering that response inherit the navigation type. Independent frame loads and `frame.reload()` calls leave it undefined.
+`options.transition` is the browser's original `NavigationTransition` for loads caused by a navigation. Its `navigationType` is `push`, `replace`, `traverse`, or `reload`, and `from` identifies the history entry being left. Client frames loaded while rendering that response inherit the same transition. Independent frame loads and `frame.reload()` calls leave it undefined, even while another navigation is active.
 
 `force-cache` still needs a matching stored response and falls back to the network on a miss. The server must allow the response to be stored, with suitable `Cache-Control` and `Vary` headers. It can reuse responses past their `max-age`, so the application owns when to bypass cached responses after mutations or changes to the signed-in user.
 
@@ -1271,7 +1271,7 @@ Provide a custom `resolveFrame` without delegating when you need another body en
 
 #### Wrapping Frame Commits
 
-The `commit(commitFrame, { response, signal })` override runs after a response has been validated and before Remix renders its body. It can wrap the default commit in a same-document view transition:
+The `commit(commitFrame, { to, response, signal })` override runs after a response has been validated and before Remix renders its body. It can wrap the default commit in a same-document view transition:
 
 ```ts
 run({
@@ -1280,9 +1280,9 @@ run({
     return mod[exportName]
   },
   resolveFrame(src, options) {
+    let transition = options?.transition
     let animate =
-      !options?.target &&
-      (options?.navigationType === 'push' || options?.navigationType === 'replace')
+      !options?.target && transition !== undefined && transition.navigationType !== 'reload'
 
     return defaultResolveFrame(src, options, {
       async commit(commitFrame, { signal }) {
@@ -1295,13 +1295,13 @@ run({
           return commitFrame()
         }
 
-        let transition = document.startViewTransition(commitFrame)
-        let skip = () => transition.skipTransition()
+        let viewTransition = document.startViewTransition(commitFrame)
+        let skip = () => viewTransition.skipTransition()
         signal.addEventListener('abort', skip, { once: true })
-        void transition.ready.catch(() => {})
+        void viewTransition.ready.catch(() => {})
 
         try {
-          await transition.finished
+          await viewTransition.finished
         } finally {
           signal.removeEventListener('abort', skip)
         }
@@ -1311,13 +1311,31 @@ run({
 })
 ```
 
-This example assumes every subframe has a nonempty name, since top-frame and unnamed subframe requests both omit `target`. Add `traverse` to the predicate to animate Back/Forward. The `fetch` and `commit` overrides can be supplied together.
+This example assumes every subframe has a nonempty name, since top-frame and unnamed subframe requests both omit `target`. It animates push, replace, and Back/Forward navigations, while browser reloads and independent frame updates commit immediately. The `fetch` and `commit` overrides can be supplied together.
 
-Calling `commitFrame()` starts rendering once. Its promise resolves after the frame has rendered and, for navigation-driven loads, after the enclosing navigation finishes its URL, scroll, and focus handling. A followed redirect's replacement navigation is part of that completion. Independent frame loads and reloads wait only for their own rendering. The original `response`, including its headers and final redirect URL, is available to the callback.
+Calling `commitFrame()` starts rendering once. Its promise resolves after the frame has rendered and, for navigation-driven loads, after the enclosing navigation finishes its URL, scroll, and focus handling. A followed redirect's replacement navigation is part of that completion. Independent frame loads and reloads wait only for their own rendering.
+
+The callback receives `to`, the resolved frame destination after redirects, as well as the original `response` and its headers. Without a redirect, `to` is the requested frame source. This also works for application-managed responses whose `response.url` is empty. The original `options.transition` describes the browser navigation that started the load; a redirect followed by the frame fetch does not update that object. Use the commit callback's `to` for animation decisions based on the resolved destination, and keep using `commitFrame()` for completion across redirects.
 
 The callback may await the animation's `finished` promise: Remix continues navigation once `commitFrame()` starts rendering. Returning or throwing without calling `commitFrame()` falls back to the default commit; thrown callback errors are reported on the runtime. A callback that never settles and never calls `commitFrame()` holds the update until cancellation. Rendering failures reject `commitFrame()` and are reported through the normal runtime error path.
 
 The callback's `signal` aborts when the update is superseded or disposed, including while an animation is still running. Cancellation releases a pending `commitFrame()` and prevents a later call from rendering stale content. Return the response from `defaultResolveFrame` directly: commit callbacks are consumed with that response, and cloning or replacing it does not copy the callback.
+
+A shared element's `view-transition-name` must be unique within each captured state. The outgoing card and its destination image can use the same name, but two rendered cards on the same page cannot. If a product appears more than once, choose the participating card and assign its name before calling `startViewTransition()`, leaving the other occurrences unnamed (`view-transition-name: none`). Apply the matching name to the destination element before the update callback resolves. Duplicate names cause the browser to skip the transition; use `view-transition-class` to share animation styles across elements with different names. See [the browser's naming rules](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/view-transition-name).
+
+To wait for destination images before the new snapshot is captured, replace `document.startViewTransition(commitFrame)` in the example with an asynchronous update callback. First await `commitFrame()` so the destination DOM and final scroll position are in place, then await [`decode()`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/decode) on the images needed by the animation:
+
+```ts
+let viewTransition = document.startViewTransition(async () => {
+  await commitFrame()
+  if (signal.aborted) return
+
+  let images = document.querySelectorAll<HTMLImageElement>('img[data-view-transition-image]')
+  await Promise.allSettled(Array.from(images, (image) => image.decode()))
+})
+```
+
+Here, `data-view-transition-image` is an application-defined marker for images such as the destination's main product image. Mark only images needed for the snapshot, not lazy-loaded images elsewhere on the page. Rendering is paused while the update callback waits, and a slow image can cause the browser to skip the animation. Prefetching or preloading those images reduces the wait but does not guarantee decoding has finished. `Promise.allSettled()` lets a failed image decode leave the rest of the transition intact. Keep the abort listener and animation cleanup from the full example.
 
 The response body remains a stream. A slow body can delay the new snapshot, and the browser may skip the animation. Avoid waiting for `requestAnimationFrame` inside the update callback: rendering suppression can prevent it from running until the transition is skipped.
 

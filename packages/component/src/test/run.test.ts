@@ -1,8 +1,9 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock } from '@remix-run/test'
 
-import { defaultResolveFrame, navigate, run } from '../index.ts'
+import { defaultResolveFrame, Frame, navigate, run } from '../index.ts'
 import type { ResolveFrameOptions } from '../index.ts'
+import { jsx } from '../jsx-runtime.ts'
 
 describe('defaultResolveFrame', () => {
   afterEach(() => {
@@ -135,11 +136,11 @@ describe('defaultResolveFrame', () => {
     ).rejects.toThrow('Failed to resolve frame: 503 Service Unavailable')
   })
 
-  it('uses request-specific navigation types to customize traversal fetches', async (t) => {
+  it('uses the original transitions to customize traversal fetches', async (t) => {
     let initialUrl = window.location.href
     let initialKey = window.navigation.currentEntry?.key
     let requests: Request[] = []
-    let navigationTypes: Array<ResolveFrameOptions['navigationType']> = []
+    let transitions: Array<ResolveFrameOptions['transition']> = []
     document.body.innerHTML = '<main>Initial</main>'
     t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
       requests.push(
@@ -152,12 +153,13 @@ describe('defaultResolveFrame', () => {
     let app = run({
       loadModule: mock.fn(),
       resolveFrame(src, options) {
-        navigationTypes.push(options?.navigationType)
+        transitions.push(options?.transition)
+        if (options?.transition) expect(options.transition).toBe(window.navigation.transition)
         return defaultResolveFrame(src, options, {
           fetch: (url, init) =>
             fetch(url, {
               ...init,
-              cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
+              cache: options?.transition?.navigationType === 'traverse' ? 'force-cache' : 'default',
             }),
         })
       },
@@ -181,16 +183,64 @@ describe('defaultResolveFrame', () => {
     await navigate(destination.href, { history: 'replace' })
     await window.navigation.back().finished
     await window.navigation.forward().finished
+    await window.navigation.reload().finished
     await app.frames.top.reload()
 
-    expect(navigationTypes).toEqual(['push', 'replace', 'traverse', 'traverse', undefined])
+    expect(transitions.map((transition) => transition?.navigationType)).toEqual([
+      'push',
+      'replace',
+      'traverse',
+      'traverse',
+      'reload',
+      undefined,
+    ])
+    expect(transitions[0]?.from.url).toBe(initialUrl)
     expect(requests.map((request) => request.cache)).toEqual([
       'default',
       'default',
       'force-cache',
       'force-cache',
       'default',
+      'default',
     ])
     expect(document.querySelector('main')?.textContent).toBe('Page')
+  })
+
+  it('omits the transition from an imperative reload during another navigation', async (t) => {
+    let initialUrl = window.location.href
+    let requested = Promise.withResolvers<void>()
+    let release = Promise.withResolvers<void>()
+    let loads: Array<ResolveFrameOptions['transition']> = []
+    let app = run({
+      loadModule: mock.fn(),
+      async resolveFrame(src, options) {
+        if (src === '/details') {
+          loads.push(options?.transition)
+          return '<p>Details</p>'
+        }
+        requested.resolve()
+        await release.promise
+        return '<!doctype html><html><head></head><body>Next</body></html><!-- rmx:flush document -->'
+      },
+    })
+    t.after(() => {
+      release.resolve()
+      app.dispose()
+      window.history.replaceState(null, '', initialUrl)
+    })
+    await app.ready()
+    await app.frames.top.replace(jsx(Frame, { name: 'details', src: '/details' }))
+    let details = app.frames.get('details')
+    if (!details) throw new Error('Expected the details frame')
+
+    let destination = new URL(initialUrl)
+    destination.searchParams.set('frame-transition', 'pending')
+    let pending = navigate(destination.href, { history: 'replace' })
+    await requested.promise
+    expect(window.navigation.transition).not.toBeNull()
+    await details.reload()
+    expect(loads).toEqual([undefined, undefined])
+    release.resolve()
+    await pending
   })
 })

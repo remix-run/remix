@@ -49,6 +49,17 @@ function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestF
   })
 }
 
+function createTestTransition(): NavigationTransition {
+  let from = window.navigation.currentEntry
+  if (!from) throw new Error('Expected a current navigation entry')
+  return {
+    navigationType: 'traverse',
+    from,
+    committed: Promise.resolve(),
+    finished: Promise.resolve(),
+  }
+}
+
 describe('frames', () => {
   afterEach(() => {
     resetDocumentImportMapManager(document)
@@ -1396,14 +1407,15 @@ describe('frames', () => {
     expect(root.textContent).toBe('Reloaded')
   })
 
-  it('inherits navigation types through client frames without retaining them for reloads', async (t) => {
+  it('inherits the original transition through client frames without retaining it for reloads', async (t) => {
     let root = document.implementation.createHTMLDocument('Initial')
     let namedFrames = new NamedFrameRegistry()
-    let loads: Array<[string, ResolveFrameOptions['navigationType']]> = []
+    let transition = createTestTransition()
+    let loads: Array<[string, ResolveFrameOptions['transition']]> = []
     let frame = createTestFrame(root, {
       namedFrames,
       resolveFrame(src, options) {
-        loads.push([src, options?.navigationType])
+        loads.push([src, options?.transition])
         if (src === 'https://example.com/initial') {
           return jsx(Frame, { name: 'child', src: '/child' })
         }
@@ -1414,12 +1426,12 @@ describe('frames', () => {
     t.after(() => frame.dispose())
     await frame.ready()
 
-    await reloadFrameForNavigation(frame.handle, { navigationType: 'traverse' }).finished
+    await reloadFrameForNavigation(frame.handle, { transition }).finished
 
     expect(loads).toEqual([
-      ['https://example.com/initial', 'traverse'],
-      ['/child', 'traverse'],
-      ['/grandchild', 'traverse'],
+      ['https://example.com/initial', transition],
+      ['/child', transition],
+      ['/grandchild', transition],
     ])
     expect(root.body.textContent).toBe('Loaded')
     let child = namedFrames.get('child')
@@ -1432,7 +1444,7 @@ describe('frames', () => {
     ])
   })
 
-  it('passes navigation types to client frames hydrated inside new server frames', async (t) => {
+  it('passes the original transition to client frames hydrated inside new server frames', async (t) => {
     let renderClientFrame = false
     let Entry = clientEntry('/entry.js#Entry', function Entry() {
       return () =>
@@ -1451,13 +1463,14 @@ describe('frames', () => {
         { resolveFrame: () => renderToString(jsx(Entry, {})) },
       ),
     )
-    let loads: Array<ResolveFrameOptions['navigationType']> = []
+    let transition = createTestTransition()
+    let loads: Array<ResolveFrameOptions['transition']> = []
     let frame = createTestFrame(document, {
       loadModule: () => Entry,
       resolveFrame(src, options) {
         if (src === 'https://example.com/initial') return html
         expect(src).toBe('/client-child')
-        loads.push(options?.navigationType)
+        loads.push(options?.transition)
         return '<p id="client-child">Client content</p>'
       },
     })
@@ -1465,9 +1478,9 @@ describe('frames', () => {
     await frame.ready()
     renderClientFrame = true
 
-    await reloadFrameForNavigation(frame.handle, { navigationType: 'traverse' }).finished
+    await reloadFrameForNavigation(frame.handle, { transition }).finished
 
-    expect(loads).toEqual(['traverse'])
+    expect(loads).toEqual([transition])
     expect(document.getElementById('client-child')?.textContent).toBe('Client content')
   })
 
