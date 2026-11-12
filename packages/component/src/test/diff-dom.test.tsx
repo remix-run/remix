@@ -852,6 +852,32 @@ describe('diffNodes', () => {
       expect(current.head.contains(preload)).toBe(true)
     })
 
+    it('keeps a shifted server style matched beside a client-created preserved style', () => {
+      let html = '<style data-rmx-preserve-dom>.server{}</style>'
+      let current = parseHead('<meta name="obsolete" content="old">' + html)
+      markServerRenderedNodes(current.head.childNodes)
+      let [meta, serverStyle] = Array.from(current.head.children)
+      let clientStyle = current.createElement('style')
+      clientStyle.setAttribute('data-rmx-preserve-dom', '')
+      clientStyle.textContent = '.client{}'
+      current.head.prepend(clientStyle)
+      let mutations = recordMutations(current.head)
+
+      diffHead(current, html)
+      diffHead(current, html)
+
+      expect(Array.from(current.head.children)).toEqual([clientStyle, serverStyle])
+      expect(serverStyle.textContent).toBe('.server{}')
+      expect(clientStyle.textContent).toBe('.client{}')
+      let { added, removed } = mutations()
+      expect(added).toEqual([])
+      expect(removed).toEqual([meta])
+
+      diffHead(current, '')
+
+      expect(Array.from(current.head.children)).toEqual([clientStyle])
+    })
+
     it('does not repurpose a link to load a different href', () => {
       let current = parseHead(
         '<link rel="stylesheet" href="/a.css"><link rel="stylesheet" href="/b.css">',

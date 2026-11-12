@@ -528,11 +528,11 @@ function matchShiftedHeadUnits(diff: SiblingDiff): void {
     let identity = getUnkeyedNodeIdentity(nextUnit.node)
     if (identity === undefined) continue
     let indexes = currentIndexesByIdentity.get(identity)
-    // Client-only hosts cannot be taken over by unrelated unmarked resources.
-    let position = indexes?.findIndex(
-      (index) => isPreservedUnit(nextUnit) || !isClientPreservedUnit(currentUnits[index]),
-    )
-    if (!indexes || position === undefined || position === -1) continue
+    if (!indexes || indexes.length === 0) continue
+    // Reserve normal head matches before adopting a client-only preserved element.
+    let position = indexes.findIndex((index) => !isClientPreservedUnit(currentUnits[index]))
+    if (position === -1 && isPreservedUnit(nextUnit)) position = 0
+    if (position === -1) continue
     let currentIndex = indexes.splice(position, 1)[0]
     used[currentIndex] = true
     matchIndexForNext[i] = currentIndex
