@@ -211,9 +211,9 @@ function startViewportPrefetching(signal: AbortSignal): void {
     () => {
       clearTimeout(scrolling)
       scrolling = setTimeout(() => {
-        scrolling = undefined
-        // Intersections at the final scroll position may not have been delivered yet.
+        // Keep deferring until queued entries and exits reflect the final scroll position.
         intersect(viewport.takeRecords())
+        scrolling = undefined
         if (canPrefetchAutomatically()) {
           for (let anchor of entered) prefetchAnchor(anchor)
         }
