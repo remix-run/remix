@@ -21,7 +21,7 @@ import type {
   RowDataPacket,
 } from 'mysql2/promise'
 
-import { compileMysqlOperation } from './sql-compiler.ts'
+import { compileMysqlOperation, quoteIdentifier } from './sql-compiler.ts'
 
 type TransactionState = {
   connection: MysqlTransactionConnection
@@ -137,7 +137,7 @@ export class MysqlDatabaseDriver implements DatabaseDriver<'mysql'> {
 
     return {
       affectedRows: header.affectedRows,
-      insertId: normalizeInsertId(request.operation.kind, request.operation, header),
+      insertId: normalizeInsertId(request.operation, header),
     }
   }
 
@@ -729,11 +729,10 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
 }
 
 function normalizeInsertId(
-  kind: DataManipulationRequest['operation']['kind'],
   operation: DataManipulationRequest['operation'],
   header: MysqlQueryResultHeader,
 ): unknown {
-  if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
+  if (!isInsertOperation(operation)) {
     return undefined
   }
 
@@ -742,14 +741,6 @@ function normalizeInsertId(
   }
 
   return header.insertId
-}
-
-function quoteIdentifier(value: string): string {
-  return '`' + value.replace(/`/g, '``') + '`'
-}
-
-function isInsertOperationKind(kind: DataManipulationRequest['operation']['kind']): boolean {
-  return kind === 'insert' || kind === 'insertMany' || kind === 'upsert'
 }
 
 function isInsertOperation(
