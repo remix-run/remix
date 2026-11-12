@@ -294,8 +294,69 @@ describe('runTests timeouts and signals', () => {
     assert.equal(clearTimeoutSpy.mock.callCount(), 0)
   })
 
+  it('cancels unfinished polling before the next test without aborting the public signal', async () => {
+    let attempt = Promise.withResolvers<never>()
+    let stopped: Promise<unknown> | undefined
+    let signal: AbortSignal | undefined
+    let attempts = 0
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        tests: [
+          {
+            name: 'starts polling',
+            fn(t) {
+              signal = t.signal
+              stopped = t
+                .waitFor(
+                  () => {
+                    attempts++
+                    return attempt.promise
+                  },
+                  { interval: 0 },
+                )
+                .catch((error: unknown) => error)
+            },
+          },
+          {
+            name: 'runs after polling stops',
+            async fn() {
+              let error = await stopped
+              assert.ok(error instanceof Error)
+              assert.equal(error.name, 'AbortError')
+              assert.equal(signal?.aborted, false)
+              attempt.reject(new Error('late failure'))
+              await assert.rejects(attempt.promise, /late failure/)
+              assert.equal(attempts, 1)
+            },
+          },
+        ],
+      },
+    ])
+    assert.equal(results.passed, 2)
+    assert.equal(results.failed, 0)
+  })
+
+  it('runs test and hook watchdogs while timers are mocked', { timeout: 1000 }, async (t) => {
+    t.useFakeTimers()
+
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        afterEach: [{ timeout: 5, fn: () => new Promise(() => {}) }],
+        tests: [{ name: 'test', timeout: 5, fn: () => new Promise(() => {}) }],
+      },
+    ])
+
+    assert.equal(results.failed, 1)
+    assert.match(results.tests[0]?.error?.message ?? '', /Test timed out after 5ms/)
+    assert.match(results.tests[0]?.error?.message ?? '', /afterEach timed out after 5ms/)
+  })
+
   it('fails tests that exceed their timeout and aborts the test signal', async () => {
     let aborted = false
+    let signal: AbortSignal | undefined
+    let pollingError: unknown
 
     let results = await runWithSuites([
       {
@@ -305,6 +366,7 @@ describe('runTests timeouts and signals', () => {
             name: 'slow test',
             timeout: 5,
             fn(t) {
+              signal = t.signal
               t.signal.addEventListener(
                 'abort',
                 () => {
@@ -312,7 +374,12 @@ describe('runTests timeouts and signals', () => {
                 },
                 { once: true },
               )
-              return new Promise(() => {})
+              return t
+                .waitFor(() => new Promise<void>(() => {}))
+                .catch((error: unknown) => {
+                  pollingError = error
+                  throw error
+                })
             },
           },
         ],
@@ -325,6 +392,8 @@ describe('runTests timeouts and signals', () => {
     assert.equal(results.tests.length, 1)
     assert.equal(results.tests[0]?.status, 'failed')
     assert.match(results.tests[0]?.error?.message ?? '', /Test timed out after 5ms/)
+    assert.ok(pollingError instanceof Error)
+    assert.equal(pollingError, signal?.reason)
   })
 
   it('exposes a non-aborted signal to regular tests', async () => {
@@ -353,6 +422,9 @@ describe('runTests timeouts and signals', () => {
     let controller = new AbortController()
     let testSignalAborted = false
     let testStarted = Promise.withResolvers<void>()
+    let signal: AbortSignal | undefined
+    let pollingError: unknown
+    let attempt = Promise.withResolvers<void>()
 
     let resultsPromise = runWithSuites([
       {
@@ -362,6 +434,7 @@ describe('runTests timeouts and signals', () => {
             name: 'aborted test',
             signal: controller.signal,
             fn(t) {
+              signal = t.signal
               t.signal.addEventListener(
                 'abort',
                 () => {
@@ -370,7 +443,12 @@ describe('runTests timeouts and signals', () => {
                 { once: true },
               )
               testStarted.resolve()
-              return new Promise(() => {})
+              return t
+                .waitFor(() => attempt.promise)
+                .catch((error: unknown) => {
+                  pollingError = error
+                  throw error
+                })
             },
           },
         ],
@@ -380,11 +458,15 @@ describe('runTests timeouts and signals', () => {
     await testStarted.promise
     controller.abort(new Error('stop'))
     let results = await resultsPromise
+    attempt.resolve()
+    await attempt.promise
 
     assert.equal(testSignalAborted, true)
     assert.equal(results.passed, 0)
     assert.equal(results.failed, 1)
     assert.match(results.tests[0]?.error?.message ?? '', /Test aborted: stop/)
+    assert.ok(pollingError instanceof Error)
+    assert.equal(pollingError, signal?.reason)
   })
 
   it('reports beforeAll timeouts as failed hook results', async () => {
