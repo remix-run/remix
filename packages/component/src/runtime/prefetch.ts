@@ -18,6 +18,7 @@ export type PrefetchFrame = (src: string, options?: PrefetchOptions) => void
 type PrefetchRequest = [src: string, options?: PrefetchOptions]
 
 const INTENT_DELAY_MS = 100
+const SCROLL_SETTLE_MS = 150
 const IDLE_TIMEOUT_MS = 1000
 
 const defaultPrefetch = createDefaultPrefetch()
@@ -172,8 +173,10 @@ function startViewportPrefetching(signal: AbortSignal): void {
   if (typeof IntersectionObserver === 'undefined') return
 
   let completed = new WeakMap<HTMLAnchorElement, string>()
-  // Keep observing queued links until idle time so exits can still cancel their prefetch.
+  // Keep observing queued links until scrolling stops and idle time is available so exits
+  // can still cancel their prefetch.
   let entered = new Set<HTMLAnchorElement>()
+  let scrolling: ReturnType<typeof setTimeout> | undefined
   let cancelIdle: (() => void) | undefined
 
   function getRequest(anchor: HTMLAnchorElement): PrefetchRequest | undefined {
@@ -202,15 +205,23 @@ function startViewportPrefetching(signal: AbortSignal): void {
   }
 
   function schedule(): void {
-    if (signal.aborted || document.hidden || cancelIdle || entered.size === 0) return
+    if (
+      signal.aborted ||
+      document.hidden ||
+      scrolling !== undefined ||
+      cancelIdle ||
+      entered.size === 0
+    ) {
+      return
+    }
     cancelIdle = scheduleIdlePrefetch((deadline) => {
       try {
-        if (signal.aborted || document.hidden) return
+        if (signal.aborted || document.hidden || scrolling !== undefined) return
         intersect(viewport.takeRecords())
         if (!canPrefetchAutomatically()) entered.clear()
         let started = false
         for (let anchor of entered) {
-          if (signal.aborted || document.hidden) break
+          if (signal.aborted || document.hidden || scrolling !== undefined) break
           if (deadline.didTimeout ? started : deadline.timeRemaining() <= 0) break
           entered.delete(anchor)
           prefetchAnchor(anchor)
@@ -224,6 +235,23 @@ function startViewportPrefetching(signal: AbortSignal): void {
   }
 
   let viewport = new IntersectionObserver(intersect)
+
+  // Scroll events don't bubble, so a capturing listener also hears nested scrollers.
+  document.addEventListener(
+    'scroll',
+    () => {
+      clearTimeout(scrolling)
+      cancelIdle?.()
+      cancelIdle = undefined
+      scrolling = setTimeout(() => {
+        // Keep deferring until queued entries and exits reflect the final scroll position.
+        intersect(viewport.takeRecords())
+        scrolling = undefined
+        schedule()
+      }, SCROLL_SETTLE_MS)
+    },
+    { capture: true, passive: true, signal },
+  )
 
   document.addEventListener(
     'visibilitychange',
@@ -290,6 +318,7 @@ function startViewportPrefetching(signal: AbortSignal): void {
     'abort',
     () => {
       cancelIdle?.()
+      clearTimeout(scrolling)
       entered.clear()
       mutations.disconnect()
       viewport.disconnect()

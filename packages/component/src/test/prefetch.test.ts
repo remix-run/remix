@@ -1179,6 +1179,150 @@ describe('prefetch', () => {
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
     })
 
+    it('waits 150ms after the last nested scroll before prefetching links that entered view', (t) => {
+      let timers = t.useFakeTimers()
+      let intersections = stubViewportIntersections(t)
+      let prefetchFrame = mock.fn()
+      let anchor = createViewportLink('/products/shirt', false)
+      let scroller = document.createElement('div')
+      document.body.append(scroller)
+      startTestPrefetching(t, prefetchFrame)
+
+      scroller.dispatchEvent(new Event('scroll'))
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      timers.advance(149)
+      idle.flush()
+      expect(prefetchFrame).not.toHaveBeenCalled()
+
+      scroller.dispatchEvent(new Event('scroll'))
+      timers.advance(149)
+      idle.flush()
+      expect(prefetchFrame).not.toHaveBeenCalled()
+
+      timers.advance(1)
+      expect(prefetchFrame).not.toHaveBeenCalled()
+      idle.flush()
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    })
+
+    it('skips links that leave view before a scroll stops and prefetches them on a later entry', (t) => {
+      let timers = t.useFakeTimers()
+      let intersections = stubViewportIntersections(t)
+      let prefetchFrame = mock.fn()
+      let anchor = createViewportLink('/products/passed', false)
+      startTestPrefetching(t, prefetchFrame)
+
+      document.dispatchEvent(new Event('scroll'))
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      intersections.queue(anchor, false)
+      intersections.deliver()
+      timers.advance(150)
+      idle.flush()
+      expect(prefetchFrame).not.toHaveBeenCalled()
+
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      idle.flush()
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    })
+
+    it('uses the final queued intersection when scrolling stops before notifications arrive', (t) => {
+      let timers = t.useFakeTimers()
+      let intersections = stubViewportIntersections(t)
+      let prefetchFrame = mock.fn()
+      let passed = createViewportLink('/products/passed', false)
+      let visible = createViewportLink('/products/visible', false)
+      startTestPrefetching(t, prefetchFrame)
+
+      document.dispatchEvent(new Event('scroll'))
+      intersections.queue(passed, true)
+      intersections.queue(visible, true)
+      intersections.queue(passed, false)
+      timers.advance(150)
+      idle.flush()
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+      expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
+
+      intersections.queue(passed, true)
+      intersections.deliver()
+      idle.flush()
+      expect(prefetchFrame).toHaveBeenCalledTimes(2)
+      expect(prefetchFrame).toHaveBeenCalledWith(passed.href)
+    })
+
+    it('checks connection settings when a scroll stops and allows a later entry', (t) => {
+      let timers = t.useFakeTimers()
+      let intersections = stubViewportIntersections(t)
+      let connection = { saveData: false }
+      stubConnection(t, connection)
+      let prefetchFrame = mock.fn()
+      let anchor = createViewportLink('/products/shirt', false)
+      startTestPrefetching(t, prefetchFrame)
+
+      document.dispatchEvent(new Event('scroll'))
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      connection.saveData = true
+      timers.advance(150)
+      idle.flush()
+      expect(prefetchFrame).not.toHaveBeenCalled()
+
+      connection.saveData = false
+      intersections.queue(anchor, false)
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      idle.flush()
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    })
+
+    it('does not prefetch links waiting for a scroll to stop once disposed', (t) => {
+      let timers = t.useFakeTimers()
+      let intersections = stubViewportIntersections(t)
+      let prefetchFrame = mock.fn()
+      let controller = new AbortController()
+      t.after(() => controller.abort())
+      let anchor = createViewportLink('/products/shirt', false)
+      startPrefetching(controller.signal, prefetchFrame)
+
+      document.dispatchEvent(new Event('scroll'))
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      controller.abort()
+      timers.advance(150)
+      idle.flush()
+      expect(prefetchFrame).not.toHaveBeenCalled()
+    })
+
+    it('waits for scrolling to settle when a scroll interrupts queued idle work', (t) => {
+      let timers = t.useFakeTimers()
+      let intersections = stubViewportIntersections(t)
+      let prefetchFrame = mock.fn()
+      let anchor = createViewportLink('/products/shirt')
+      startTestPrefetching(t, prefetchFrame)
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      expect(idle.pending).toBe(1)
+
+      document.dispatchEvent(new Event('scroll'))
+      expect(idle.pending).toBe(0)
+      idle.flush({ didTimeout: true, timeRemaining: () => 0 })
+      timers.advance(149)
+      expect(prefetchFrame).not.toHaveBeenCalled()
+      expect(idle.pending).toBe(0)
+
+      timers.advance(1)
+      expect(prefetchFrame).not.toHaveBeenCalled()
+      expect(idle.pending).toBe(1)
+      idle.flush()
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    })
+
     it('stops observing existing and newly inserted links when disposed', async () => {
       let prefetchFrame = mock.fn()
       let controller = new AbortController()
