@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import * as assert from 'remix/assert'
+import type * as Component from 'remix/component'
 import { createTestServer } from 'remix/node-fetch-server/test'
 import { describe, it } from 'remix/test'
 import type { Locator, Page } from 'playwright'
@@ -258,7 +259,7 @@ describe('bookstore prefetching', () => {
     assert.equal(requests, 2)
   })
 
-  it('keeps an unfinished asset prefetch connected through frame navigation', async (t) => {
+  it('keeps an unfinished shared asset prefetch connected through frame navigation', async (t) => {
     let scriptHref = await assets.getHref(
       fileURLToPath(new URL('./actions/books/public/image-carousel.tsx', import.meta.url)),
     )
@@ -284,14 +285,37 @@ describe('bookstore prefetching', () => {
       (response) => new URL(response.url()).pathname === '/books/bbq',
     )
     await link.scrollIntoViewIfNeeded()
-    if (prefetchesScript) await started.promise
-    else await (await prefetched).finished()
+    if (prefetchesScript) {
+      await started.promise
+      let prefetchHref = await assets.getHref(
+        fileURLToPath(
+          new URL('../../../packages/component/src/runtime/prefetch.ts', import.meta.url),
+        ),
+      )
+      // Retain a caller after navigation removes the declarative trigger's anchor.
+      await page.evaluate(async (href) => {
+        let { prefetch }: Pick<typeof Component, 'prefetch'> = await import(href)
+        prefetch('/books/bbq')
+      }, prefetchHref)
+    } else {
+      await (await prefetched).finished()
+    }
     let failedAssets: string[] = []
     page.on('requestfailed', (request) => {
       if (new URL(request.url()).pathname === scriptHref) failedAssets.push(request.url())
     })
+    let anchor = await link.elementHandle()
+    assert.ok(anchor)
+    let hint = prefetchesScript
+      ? await page.locator(`head link[rel="prefetch"][href$="${scriptHref}"]`).elementHandle()
+      : null
     await link.click()
-    await page.getByRole('heading', { name: 'Ash & Smoke', exact: true }).waitFor()
+    await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
+    assert.equal(await anchor.evaluate((node) => node.isConnected), false)
+    if (prefetchesScript) {
+      assert.ok(hint)
+      assert.equal(await hint.evaluate((node) => node.isConnected), true)
+    }
     assert.equal(
       await page.locator(`head link[rel="prefetch"][href$="${scriptHref}"]`).count(),
       prefetchesScript ? 1 : 0,
