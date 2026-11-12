@@ -15,17 +15,16 @@ declare global {
   }
 }
 
-const iterationsPerWorker = 25
-const workers = 3
+const iterationsPerWorker = 50
+const workers = 4
 
 describe('frame navigation flake diagnostics', () => {
   it('filters courses after navigating to Courses', { timeout: 20 * 60_000 }, async (t) => {
-    let server = await createTestServer(router.fetch)
-
     let failures: string[] = []
     await Promise.all(
       Array.from({ length: workers }, async (_, worker) => {
         for (let iteration = 0; iteration < iterationsPerWorker; iteration++) {
+          let server = await createTestServer(router.fetch)
           let page = await t.serve(server)
           await setAuthCookie(page, server.baseUrl)
           await page.addInitScript(recordNavigation)
