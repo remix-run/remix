@@ -1,3 +1,26 @@
+import { createPropertyMock } from './mock-property.ts'
+import type { MockProperty } from './mock-property.ts'
+import {
+  getMockDescriptor,
+  registerMockDescriptor,
+  restoreMockDescriptor,
+} from './mock-restoration.ts'
+
+/**
+ * Selects an accessor for the fourth argument to `mock.method()`. Only `getter` and
+ * `setter` are supported; Node's third-argument options shorthand and `times` are not.
+ */
+export interface MockMethodOptions {
+  /** Mock the getter. Cannot be combined with `setter: true`. */
+  getter?: boolean
+  /** Mock the setter. Cannot be combined with `getter: true`. */
+  setter?: boolean
+}
+
+type MethodImplementation<method> = method extends (...args: infer args) => unknown
+  ? (...args: args) => unknown
+  : never
+
 /** Records the arguments, return value, and any thrown error for a single call. */
 export interface MockCall<Args extends unknown[] = unknown[], Result = unknown> {
   /** Arguments supplied to this call. */
@@ -55,6 +78,8 @@ export type MockFunction<T extends (...args: any[]) => any = (...args: any[]) =>
 const createObject = Object.create
 const defineProperty = Object.defineProperty
 const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor
+const getPrototypeOf = Object.getPrototypeOf
+const isArray = Array.isArray
 const isSafeInteger = Number.isSafeInteger
 const setProperty = Reflect.set
 const deleteProperty = Reflect.deleteProperty
@@ -191,31 +216,251 @@ export function replaceProperty(object: object, method: PropertyKey, value: obje
 function createMethodMock<T extends object, K extends keyof T>(
   obj: T,
   method: K,
-  impl?: T[K] extends (...args: any[]) => any ? (...args: Parameters<T[K]>) => any : never,
+  impl?: (...args: never[]) => unknown,
 ): MethodMock<Method<T, K>> {
   let original = obj[method]
   let descriptor = getOwnPropertyDescriptor(obj, method)
+  let owner = obj
+  let sourceDescriptor = descriptor
+  while (!sourceDescriptor) {
+    owner = getPrototypeOf(owner)
+    if (owner === null) break
+    sourceDescriptor = getOwnPropertyDescriptor(owner, method)
+  }
+  let getter = sourceDescriptor?.get
+  let getterDescriptor = getter && getMockDescriptor(getter)
+  let replacesMockedGetter =
+    getterDescriptor?.slot === 'get' && getterDescriptor.restoration.kind === 'accessor'
   // Initial overrides retain the existing permissive behavior, including absent methods.
   let mockFn = createMockFn((impl ?? original) as Method<T, K>)
-  if (!setProperty(obj, method, mockFn)) throw new TypeError('Unable to mock the method')
-  mockFn.mock.restore = trackRestoration(mockFn, {
+  if (replacesMockedGetter) {
+    // The mocked getter can hide the setter's backing value. Leave that value untouched.
+    defineProperty(obj, method, {
+      configurable: true,
+      enumerable: sourceDescriptor?.enumerable ?? true,
+      writable: true,
+      value: mockFn,
+    })
+  } else if (!setProperty(obj, method, mockFn)) {
+    throw new TypeError('Unable to mock the method')
+  }
+  let restoration: MethodRestoration = {
     object: obj,
     method,
     original,
     restored: false,
     restoreOriginal() {
-      if (descriptor) defineProperty(obj, method, descriptor)
-      if (!descriptor || !('value' in descriptor)) {
-        if (!setProperty(obj, method, original)) throw new TypeError('Unable to restore the method')
+      let restoredDescriptor = descriptor
+      if (descriptor || replacesMockedGetter) {
+        restoredDescriptor = restoreMockDescriptor(obj, method, descriptor)
+      }
+      if (!replacesMockedGetter && (!restoredDescriptor || !('value' in restoredDescriptor))) {
+        if (!setProperty(obj, method, original)) {
+          throw new TypeError('Unable to restore the method')
+        }
       }
     },
+  }
+  mockFn.mock.restore = trackRestoration(mockFn, restoration)
+  if (!descriptor || 'value' in descriptor || replacesMockedGetter) {
+    registerMockDescriptor(mockFn, 'value', {
+      kind: 'method',
+      object: obj,
+      propertyName: method,
+      // Legacy method restoration retains an own property for inherited methods.
+      descriptor: replacesMockedGetter
+        ? descriptor
+        : (descriptor ?? {
+            configurable: true,
+            enumerable: true,
+            writable: true,
+            value: original,
+          }),
+      isRestored: () => restoration.restored,
+    })
+  }
+  return mockFn
+}
+
+function createAccessorMock(
+  object: object,
+  methodName: PropertyKey,
+  impl: ((...args: never[]) => unknown) | undefined,
+  options: MockMethodOptions,
+): MockFunction {
+  if (object === null || (typeof object !== 'object' && typeof object !== 'function')) {
+    throw new TypeError('object must be an object or function')
+  }
+  if (typeof methodName !== 'string' && typeof methodName !== 'symbol') {
+    throw new TypeError('methodName must be a string or symbol')
+  }
+  if (impl !== undefined && typeof impl !== 'function') {
+    throw new TypeError('implementation must be a function')
+  }
+  let { getter = false } = options
+
+  let owner = object
+  let ownDescriptor = getOwnPropertyDescriptor(owner, methodName)
+  let descriptor = ownDescriptor
+  while (!descriptor) {
+    owner = getPrototypeOf(owner)
+    if (owner === null) break
+    descriptor = getOwnPropertyDescriptor(owner, methodName)
+  }
+  let original = getter ? descriptor?.get : descriptor?.set
+  if (!descriptor || typeof original !== 'function') {
+    throw new TypeError('methodName must identify a method or the selected accessor')
+  }
+
+  let mockFn = createMockFn(impl ?? original)
+  defineProperty(object, methodName, {
+    ...descriptor,
+    configurable: ownDescriptor?.configurable ?? true,
+    ...(getter ? { get: mockFn } : { set: mockFn }),
   })
+  let restored = false
+  registerMockDescriptor(mockFn, getter ? 'get' : 'set', {
+    kind: 'accessor',
+    object,
+    propertyName: methodName,
+    descriptor: ownDescriptor,
+    isRestored: () => restored,
+  })
+  mockFn.mock.restore = () => {
+    if (restored) {
+      let current = getOwnPropertyDescriptor(object, methodName)
+      let active = getter ? current?.get : current?.set
+      // A later spy's restoration may have reinstalled this already-restored mock.
+      if (active !== mockFn) return
+    }
+    restoreMockDescriptor(object, methodName, ownDescriptor)
+    restored = true
+  }
   return mockFn
 }
 
 /**
- * Utilities for creating mock functions and method spies. Mirrors the names
- * on Node.js's built-in `MockTracker` from `node:test`.
+ * Creates mock functions and spies on methods, accessors, and data properties.
+ * Available as {@link mock} and `t.mock`; test-context mocks restore automatically after the test.
+ */
+export interface MockTracker {
+  /**
+   * Creates a function that records every call.
+   * @param impl The implementation to call (defaults to a function returning `undefined`).
+   * @returns The mock function and its call context.
+   */
+  fn<implementation extends (...args: any[]) => any>(
+    impl: implementation,
+  ): MockFunction<implementation>
+  fn<implementation extends (...args: any[]) => any>(
+    impl?: implementation,
+  ): MockFunction<implementation>
+
+  /**
+   * Records getter calls while preserving the paired setter and descriptor flags.
+   * @param object The target to mock, preferably the accessor's descriptor owner.
+   * @param methodName The string or symbol key to mock.
+   * @param impl A replacement getter (defaults to the original).
+   * @param options Selects the getter with `getter: true`.
+   * @returns The mock getter function.
+   */
+  method<target extends object, key extends keyof target>(
+    object: target,
+    methodName: key,
+    impl: (() => target[key]) | undefined,
+    options: MockMethodOptions & { getter: true; setter?: false },
+  ): MockFunction<() => target[key]>
+
+  /**
+   * Records setter calls while preserving the paired getter and descriptor flags.
+   * @param object The target to mock, preferably the accessor's descriptor owner.
+   * @param methodName The string or symbol key to mock.
+   * @param impl A replacement setter (defaults to the original).
+   * @param options Selects the setter with `setter: true`.
+   * @returns The mock setter function.
+   */
+  method<target extends object, key extends keyof target>(
+    object: target,
+    methodName: key,
+    impl: ((value: target[key]) => void) | undefined,
+    options: MockMethodOptions & { setter: true; getter?: false },
+  ): MockFunction<(value: target[key]) => void>
+
+  /**
+   * Records calls to a method while preserving its descriptor flags.
+   * @param object The target to mock.
+   * @param methodName The string or symbol key to mock.
+   * @param impl A replacement implementation (defaults to the original).
+   * @param options Keeps both accessor flags false (defaults to a data method).
+   * @returns The mock method function.
+   */
+  method<target extends object, key extends keyof target>(
+    object: target,
+    methodName: key,
+    impl?: MethodImplementation<target[key]>,
+    options?: MockMethodOptions & { getter?: false; setter?: false },
+  ): MethodMock<Method<target, key>>
+
+  /**
+   * Allows permissive initial replacements for methods, including overloaded or absent methods.
+   * @param object The target to mock.
+   * @param methodName The string or symbol key to mock.
+   * @param impl A replacement implementation for the method.
+   * @param options Keeps both accessor flags false (defaults to a data method).
+   * @returns The mock method function.
+   */
+  method<target extends object, key extends keyof target>(
+    object: target,
+    methodName: key,
+    impl?: (...args: never[]) => unknown,
+    options?: MockMethodOptions & { getter?: false; setter?: false },
+  ): MethodMock<Method<target, key>>
+
+  /**
+   * Records getter calls while preserving the paired setter.
+   * @param object The target to mock, preferably the accessor's descriptor owner.
+   * @param propertyName The string or symbol key to mock.
+   * @param impl A replacement getter (defaults to the original).
+   * @returns The mock getter function.
+   */
+  getter<target extends object, key extends keyof target>(
+    object: target,
+    propertyName: key,
+    impl?: () => target[key],
+  ): MockFunction<() => target[key]>
+
+  /**
+   * Records setter calls while preserving the paired getter.
+   * @param object The target to mock, preferably the accessor's descriptor owner.
+   * @param propertyName The string or symbol key to mock.
+   * @param impl A replacement setter (defaults to the original).
+   * @returns The mock setter function.
+   */
+  setter<target extends object, key extends keyof target>(
+    object: target,
+    propertyName: key,
+    impl?: (value: target[key]) => void,
+  ): MockFunction<(value: target[key]) => void>
+
+  /**
+   * Tracks reads and writes of an existing configurable own data property.
+   * @param object A non-array object to mutate; functions are not supported.
+   * @param propertyName The string or symbol key of a configurable own data property.
+   * Use `getter()` or `setter()` for accessors.
+   * @param values An optional replacement value. Omission retains the original value;
+   * explicit `undefined` replaces it with `undefined`.
+   * @returns A {@link MockProperty} proxy exposing the context through `.mock`.
+   */
+  property<target extends object, key extends keyof target>(
+    object: target,
+    propertyName: key,
+    ...values: [value?: target[key]]
+  ): MockProperty<target, key>
+}
+
+/**
+ * A standalone {@link MockTracker} for creating mock functions and spies.
+ * Use `t.mock` inside a test for automatic restoration.
  *
  * @example
  * // Standalone mock
@@ -227,19 +472,101 @@ function createMethodMock<T extends object, K extends keyof T>(
  * const spy = mock.method(console, 'log')
  * console.log('hello')
  * assert.equal(spy.mock.calls.length, 1)
- * spy.mock.restore()
+ * spy.mock.restore?.()
  */
-export const mock = {
-  /**
-   * Creates a mock function that records every call. If `impl` is provided it
-   * is used as the underlying implementation; otherwise the mock returns
-   * `undefined`.
-   */
-  fn: createMockFn,
-  /**
-   * Replaces `obj[methodName]` with a mock and records every call. The
-   * original method is used as the implementation unless `impl` is provided.
-   * Call `mockFn.mock.restore()` to revert.
-   */
-  method: createMethodMock,
+export const mock: MockTracker = createMockTracker()
+
+export function createMockTracker(
+  onRestore: (restore: () => void) => void = () => {},
+  onLegacyRestore: (restore: () => void) => void = onRestore,
+): MockTracker {
+  function fn<implementation extends (...args: any[]) => any>(
+    impl: implementation,
+  ): MockFunction<implementation>
+  function fn<implementation extends (...args: any[]) => any>(
+    impl?: implementation,
+  ): MockFunction<implementation>
+  function fn<implementation extends (...args: any[]) => any>(
+    impl?: implementation,
+  ): MockFunction<implementation> {
+    let mockFn = createMockFn(impl)
+    onLegacyRestore(mockFn.mock.restore)
+    return mockFn
+  }
+
+  function method<target extends object, key extends keyof target>(
+    object: target,
+    methodName: key,
+    impl: (() => target[key]) | undefined,
+    options: MockMethodOptions & { getter: true; setter?: false },
+  ): MockFunction<() => target[key]>
+  function method<target extends object, key extends keyof target>(
+    object: target,
+    methodName: key,
+    impl: ((value: target[key]) => void) | undefined,
+    options: MockMethodOptions & { setter: true; getter?: false },
+  ): MockFunction<(value: target[key]) => void>
+  function method<target extends object, key extends keyof target>(
+    object: target,
+    methodName: key,
+    impl?: MethodImplementation<target[key]>,
+    options?: MockMethodOptions & { getter?: false; setter?: false },
+  ): MethodMock<Method<target, key>>
+  // Keep existing method replacements usable with any overload of the original method.
+  function method<target extends object, key extends keyof target>(
+    object: target,
+    methodName: key,
+    impl?: (...args: never[]) => unknown,
+    options?: MockMethodOptions & { getter?: false; setter?: false },
+  ): MethodMock<Method<target, key>>
+  function method<target extends object, key extends keyof target>(
+    object: target,
+    methodName: key,
+    impl?: (...args: never[]) => unknown,
+    options: MockMethodOptions = {},
+  ): MockFunction {
+    if (options === null || typeof options !== 'object' || isArray(options)) {
+      throw new TypeError('options must be an object')
+    }
+    let { getter = false, setter = false } = options
+    if (typeof getter !== 'boolean' || typeof setter !== 'boolean') {
+      throw new TypeError('getter and setter options must be booleans')
+    }
+    if (getter && setter) throw new TypeError('getter and setter cannot both be true')
+    let fn =
+      getter || setter
+        ? createAccessorMock(object, methodName, impl, options)
+        : createMethodMock(object, methodName, impl)
+    if (getter || setter) onRestore(fn.mock.restore)
+    else onLegacyRestore(fn.mock.restore)
+    return fn
+  }
+
+  return {
+    fn,
+    method,
+    getter<target extends object, key extends keyof target>(
+      object: target,
+      propertyName: key,
+      impl?: () => target[key],
+    ): MockFunction<() => target[key]> {
+      return method(object, propertyName, impl, { getter: true })
+    },
+    setter<target extends object, key extends keyof target>(
+      object: target,
+      propertyName: key,
+      impl?: (value: target[key]) => void,
+    ): MockFunction<(value: target[key]) => void> {
+      return method(object, propertyName, impl, { setter: true })
+    },
+    property<target extends object, key extends keyof target>(
+      object: target,
+      propertyName: key,
+      ...values: [value?: target[key]]
+    ): MockProperty<target, key> {
+      let { property, restore } = createPropertyMock(object, propertyName, values)
+      onRestore(restore)
+      return property
+    },
+  }
 }
