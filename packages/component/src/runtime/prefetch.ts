@@ -19,7 +19,6 @@ type PrefetchRequest = [src: string, options?: PrefetchOptions]
 
 const INTENT_DELAY_MS = 100
 const SCROLL_SETTLE_MS = 150
-const IDLE_TIMEOUT_MS = 1000
 
 const defaultPrefetch = createDefaultPrefetch()
 let prefetchFrame: PrefetchFrame = defaultPrefetch
@@ -173,10 +172,10 @@ function startViewportPrefetching(signal: AbortSignal): void {
   if (typeof IntersectionObserver === 'undefined') return
 
   let completed = new WeakMap<HTMLAnchorElement, string>()
-  // Keep observing queued links until idle time so exits can still cancel their prefetch.
+  // A scroll passes many links the visitor never looks at. Links that enter view while the page
+  // scrolls wait for it to stop and start only if they're still in view.
   let entered = new Set<HTMLAnchorElement>()
   let scrolling: ReturnType<typeof setTimeout> | undefined
-  let cancelIdle: (() => void) | undefined
 
   function getRequest(anchor: HTMLAnchorElement): PrefetchRequest | undefined {
     if (anchor.getAttribute('data-rmx-prefetch') !== 'viewport') return
@@ -195,33 +194,13 @@ function startViewportPrefetching(signal: AbortSignal): void {
 
   function intersect(entries: IntersectionObserverEntry[]): void {
     if (signal.aborted) return
+    let canPrefetch = canPrefetchAutomatically()
     for (let { target, isIntersecting } of entries) {
       if (!(target instanceof HTMLAnchorElement)) continue
       if (!isIntersecting) entered.delete(target)
-      else entered.add(target)
+      else if (scrolling !== undefined) entered.add(target)
+      else if (canPrefetch) prefetchAnchor(target)
     }
-    schedule()
-  }
-
-  function schedule(): void {
-    if (signal.aborted || scrolling !== undefined || cancelIdle || entered.size === 0) return
-    cancelIdle = scheduleIdlePrefetch((deadline) => {
-      try {
-        intersect(viewport.takeRecords())
-        if (!canPrefetchAutomatically()) entered.clear()
-        let started = false
-        for (let anchor of entered) {
-          if (signal.aborted || scrolling !== undefined) break
-          if (deadline.didTimeout ? started : deadline.timeRemaining() <= 0) break
-          entered.delete(anchor)
-          prefetchAnchor(anchor)
-          started = true
-        }
-      } finally {
-        cancelIdle = undefined
-        schedule()
-      }
-    })
   }
 
   let viewport = new IntersectionObserver(intersect)
@@ -230,14 +209,15 @@ function startViewportPrefetching(signal: AbortSignal): void {
   document.addEventListener(
     'scroll',
     () => {
-      cancelIdle?.()
-      cancelIdle = undefined
       clearTimeout(scrolling)
       scrolling = setTimeout(() => {
         // Keep deferring until queued entries and exits reflect the final scroll position.
         intersect(viewport.takeRecords())
         scrolling = undefined
-        schedule()
+        if (canPrefetchAutomatically()) {
+          for (let anchor of entered) prefetchAnchor(anchor)
+        }
+        entered.clear()
       }, SCROLL_SETTLE_MS)
     },
     { capture: true, passive: true, signal },
@@ -291,22 +271,12 @@ function startViewportPrefetching(signal: AbortSignal): void {
     'abort',
     () => {
       clearTimeout(scrolling)
-      cancelIdle?.()
       entered.clear()
       mutations.disconnect()
       viewport.disconnect()
     },
     { once: true },
   )
-}
-
-function scheduleIdlePrefetch(callback: IdleRequestCallback): () => void {
-  if (typeof requestIdleCallback === 'function') {
-    let handle = requestIdleCallback(callback, { timeout: IDLE_TIMEOUT_MS })
-    return () => cancelIdleCallback(handle)
-  }
-  let handle = setTimeout(() => callback({ didTimeout: true, timeRemaining: () => 0 }), 0)
-  return () => clearTimeout(handle)
 }
 
 function canPrefetchAutomatically(): boolean {
@@ -439,16 +409,6 @@ export function createDefaultPrefetch(
         return
       }
       let html = await response.text()
-      if (signal?.aborted) return
-      await new Promise<void>((resolve) => {
-        let cancelIdle = scheduleIdlePrefetch(finish)
-        function finish() {
-          cancelIdle()
-          signal?.removeEventListener('abort', finish)
-          resolve()
-        }
-        signal?.addEventListener('abort', finish, { once: true })
-      })
       if (signal?.aborted) return
       // Template contents stay inert, including scripts, styles, and nested frame templates.
       let template = document.createElement('template')
