@@ -92,7 +92,8 @@ describe('reporter', () => {
     )
   })
 
-  it('renders progress to stderr with live tty updates', async () => {
+  it('renders progress to stderr with live tty updates', async (t) => {
+    let timers = t.useFakeTimers()
     await withEnv({ FORCE_COLOR: '1', NO_COLOR: undefined, TERM: 'xterm-256color' }, async () =>
       withTTY(process.stderr, true, async () =>
         withCapturedWrites(process.stderr, async (writes) => {
@@ -100,20 +101,15 @@ describe('reporter', () => {
           let reporter = createCommandReporter({ statusFrameIntervalMs: 5 })
 
           reporter.status.startStep('Checking environment')
-          await wait(25)
+          timers.advance(10)
           reporter.status.succeedStep()
           reporter.status.summaryGap()
 
-          assert.equal(writes[0], '\n')
-          assert.equal(writes[1], '\r\u001B[2K\u001B[90m• Checking environment.\u001B[0m')
-          assert.ok(
-            writes.some(
-              (write) =>
-                write === '\r\u001B[2K\u001B[90m• Checking environment..\u001B[0m' ||
-                write === '\r\u001B[2K\u001B[90m• Checking environment...\u001B[0m',
-            ),
-          )
-          assert.deepEqual(writes.slice(-2), [
+          assert.deepEqual(writes, [
+            '\n',
+            '\r\u001B[2K\u001B[90m• Checking environment.\u001B[0m',
+            '\r\u001B[2K\u001B[90m• Checking environment..\u001B[0m',
+            '\r\u001B[2K\u001B[90m• Checking environment...\u001B[0m',
             '\r\u001B[2K\u001B[92m✓\u001B[0m \u001B[90mChecking environment\u001B[0m\n',
             '\n',
           ])
@@ -244,8 +240,4 @@ async function withTTY<T>(
       Object.defineProperty(stream, 'isTTY', previous)
     }
   }
-}
-
-async function wait(ms: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, ms))
 }

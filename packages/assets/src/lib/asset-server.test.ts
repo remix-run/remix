@@ -29,6 +29,7 @@ import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
 import { hashContent } from './fingerprint.ts'
 import type { ModuleLoader } from './loaders.ts'
+import { isNoEntityError } from './fs-errors.ts'
 
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
 
@@ -134,7 +135,6 @@ async function emitWatchEvent(
   let chokidarWatcher = getInternalChokidarWatcher(assetServer)
   assert.ok(chokidarWatcher)
   chokidarWatcher.emit(event, getWatchEventFilePath(filePath))
-  await new Promise((resolve) => setTimeout(resolve, 25))
 }
 
 function createTestBrowserHmrChannel(): BrowserHmrChannel {
@@ -159,15 +159,6 @@ function getWatchEventFilePath(filePath: string): string {
 
 function getBrowserHmrWatchedFilePath(filePath: string): string {
   return normalizeWindowsPath(getWatchEventFilePath(filePath))
-}
-
-function isNoEntityError(error: unknown): error is NodeJS.ErrnoException {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }
 
 async function getCompiledCodeAndSourceMap(
@@ -7288,7 +7279,6 @@ describe('asset-server', () => {
         let chokidarWatcher = getInternalChokidarWatcher(assetServer)
         assert.ok(chokidarWatcher)
         chokidarWatcher.emit('unlink', logoWatchPath)
-        await Promise.resolve()
 
         let after = await get(assetServer, '/assets/app/styles/app.css')
         assert.ok(after)
@@ -10962,6 +10952,28 @@ describe('asset-server', () => {
     assert.equal(receivedError.code, 'IMPORT_RESOLUTION_FAILED')
     assert.match(receivedError.message, /Failed to resolve import/)
     assert.match(receivedError.message, /"\.\/missing\.css"/)
+  })
+
+  it('calls onError for CSS imports that traverse through a file', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      '@import "./theme.css/dark.css";\nbody { color: red; }\n',
+    )
+    await write(dir, 'app/styles/theme.css', 'body { color: blue; }\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'IMPORT_RESOLUTION_FAILED')
+    assert.match(receivedError.message, /"\.\/theme\.css\/dark\.css"/)
   })
 
   it('calls onError for unsupported CSS url dependencies when files are not configured', async () => {

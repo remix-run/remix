@@ -102,6 +102,14 @@ describe('CacheControl.from', () => {
     assert.equal(result.public, true)
   })
 
+  it('parses directive names case-insensitively', () => {
+    let result = CacheControl.from('PUBLIC, Max-Age=60, No-Store')
+    assert.equal(result.public, true)
+    assert.equal(result.maxAge, 60)
+    assert.equal(result.noStore, true)
+    assert.equal(result.toString(), 'public, max-age=60, no-store')
+  })
+
   it('accepts init object', () => {
     let result = CacheControl.from({ maxAge: 3600, public: true })
     assert.ok(result instanceof CacheControl)

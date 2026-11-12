@@ -1,19 +1,31 @@
 import { getTableName, getTablePrimaryKey } from '@remix-run/data-table'
-import type { Predicate, SqlStatement } from '@remix-run/data-table'
-import type { DataManipulationOperation } from '@remix-run/data-table'
+import type { DataManipulationOperation, SqlStatement } from '@remix-run/data-table'
 import {
-  collectColumns as collectColumnsHelper,
-  compileOrderByDirection,
-  normalizeJoinType as normalizeJoinTypeHelper,
-  quotePath as quotePathHelper,
+  collectColumns,
+  compileFromClause,
+  compileGroupByClause,
+  compileHavingClause,
+  compileLimitOffsetClause,
+  compileOrderByClause,
+  compileReturningClause,
+  compileWhereClause,
+  quotePath,
 } from '@remix-run/data-table/sql-helpers'
+import type { SqlCompileContext } from '@remix-run/data-table/sql-helpers'
 
-type JoinClause = Extract<DataManipulationOperation, { kind: 'select' }>['joins'][number]
 type UpsertOperation = Extract<DataManipulationOperation, { kind: 'upsert' }>
-type OperationTable = Extract<DataManipulationOperation, { kind: 'select' }>['table']
+type InsertOperation = Extract<DataManipulationOperation, { kind: 'insert' | 'insertMany' }>
 
-type CompileContext = {
+type CompileContext = SqlCompileContext & {
   values: unknown[]
+}
+
+export function quoteIdentifier(value: string): string {
+  return '"' + value.replace(/"/g, '""') + '"'
+}
+
+function quote(path: string): string {
+  return quotePath(path, quoteIdentifier)
 }
 
 export function compileSqliteOperation(operation: DataManipulationOperation): SqlStatement {
@@ -24,14 +36,23 @@ export function compileSqliteOperation(operation: DataManipulationOperation): Sq
     }
   }
 
-  let context: CompileContext = { values: [] }
+  let values: unknown[] = []
+  let context: CompileContext = {
+    values,
+    quoteIdentifier,
+    bindValue(value) {
+      // SQLite has no boolean type, so bind booleans as integers.
+      values.push(typeof value === 'boolean' ? (value ? 1 : 0) : value)
+      return '?'
+    },
+  }
 
   if (operation.kind === 'select') {
     let selection = '*'
 
     if (operation.select !== '*') {
       selection = operation.select
-        .map((field) => quotePath(field.column) + ' as ' + quoteIdentifier(field.alias))
+        .map((field) => quote(field.column) + ' as ' + quoteIdentifier(field.alias))
         .join(', ')
     }
 
@@ -42,12 +63,11 @@ export function compileSqliteOperation(operation: DataManipulationOperation): Sq
         selection +
         compileFromClause(operation.table, operation.joins, context) +
         compileWhereClause(operation.where, context) +
-        compileGroupByClause(operation.groupBy) +
+        compileGroupByClause(operation.groupBy, context) +
         compileHavingClause(operation.having, context) +
-        compileOrderByClause(operation.orderBy) +
-        compileLimitClause(operation.limit, context) +
-        compileOffsetClause(operation.offset, context),
-      values: context.values,
+        compileOrderByClause(operation.orderBy, context) +
+        compileLimitOffsetClause(operation.limit, operation.offset, context),
+      values,
     }
   }
 
@@ -56,7 +76,7 @@ export function compileSqliteOperation(operation: DataManipulationOperation): Sq
       'select 1' +
       compileFromClause(operation.table, operation.joins, context) +
       compileWhereClause(operation.where, context) +
-      compileGroupByClause(operation.groupBy) +
+      compileGroupByClause(operation.groupBy, context) +
       compileHavingClause(operation.having, context)
 
     return {
@@ -67,39 +87,34 @@ export function compileSqliteOperation(operation: DataManipulationOperation): Sq
         inner +
         ') as ' +
         quoteIdentifier('__dt_count'),
-      values: context.values,
+      values,
     }
   }
 
   if (operation.kind === 'insert') {
-    return compileInsertOperation(operation.table, operation.values, operation.returning, context)
+    return compileInsertOperation(operation, [operation.values], context)
   }
 
   if (operation.kind === 'insertMany') {
-    return compileInsertManyOperation(
-      operation.table,
-      operation.values,
-      operation.returning,
-      context,
-    )
+    if (operation.values.length === 0) {
+      return { text: 'select 0 where 1 = 0', values }
+    }
+
+    return compileInsertOperation(operation, operation.values, context)
   }
 
   if (operation.kind === 'update') {
-    let columns = Object.keys(operation.changes)
-
     return {
       text:
         'update ' +
-        quotePath(getTableName(operation.table)) +
+        quote(getTableName(operation.table)) +
         ' set ' +
-        columns
-          .map(
-            (column) => quotePath(column) + ' = ' + pushValue(context, operation.changes[column]),
-          )
+        Object.keys(operation.changes)
+          .map((column) => quote(column) + ' = ' + context.bindValue(operation.changes[column]))
           .join(', ') +
         compileWhereClause(operation.where, context) +
-        compileReturningClause(operation.returning),
-      values: context.values,
+        compileReturningClause(operation.returning, context),
+      values,
     }
   }
 
@@ -107,10 +122,10 @@ export function compileSqliteOperation(operation: DataManipulationOperation): Sq
     return {
       text:
         'delete from ' +
-        quotePath(getTableName(operation.table)) +
+        quote(getTableName(operation.table)) +
         compileWhereClause(operation.where, context) +
-        compileReturningClause(operation.returning),
-      values: context.values,
+        compileReturningClause(operation.returning, context),
+      values,
     }
   }
 
@@ -122,371 +137,85 @@ export function compileSqliteOperation(operation: DataManipulationOperation): Sq
 }
 
 function compileInsertOperation(
-  table: OperationTable,
-  values: Record<string, unknown>,
-  returning: '*' | string[] | undefined,
-  context: CompileContext,
-): SqlStatement {
-  let columns = Object.keys(values)
-
-  if (columns.length === 0) {
-    return {
-      text:
-        'insert into ' +
-        quotePath(getTableName(table)) +
-        ' default values' +
-        compileReturningClause(returning),
-      values: context.values,
-    }
-  }
-
-  return {
-    text:
-      'insert into ' +
-      quotePath(getTableName(table)) +
-      ' (' +
-      columns.map((column) => quotePath(column)).join(', ') +
-      ') values (' +
-      columns.map((column) => pushValue(context, values[column])).join(', ') +
-      ')' +
-      compileReturningClause(returning),
-    values: context.values,
-  }
-}
-
-function compileInsertManyOperation(
-  table: OperationTable,
+  operation: InsertOperation,
   rows: Record<string, unknown>[],
-  returning: '*' | string[] | undefined,
   context: CompileContext,
 ): SqlStatement {
-  if (rows.length === 0) {
-    return {
-      text: 'select 0 where 1 = 0',
-      values: context.values,
-    }
-  }
-
+  let table = quote(getTableName(operation.table))
   let columns = collectColumns(rows)
 
   if (columns.length === 0) {
     return {
       text:
         'insert into ' +
-        quotePath(getTableName(table)) +
+        table +
         ' default values' +
-        compileReturningClause(returning),
+        compileReturningClause(operation.returning, context),
       values: context.values,
     }
   }
 
+  let valueSets = rows.map(
+    (row) =>
+      '(' +
+      columns
+        .map((column) =>
+          context.bindValue(Object.prototype.hasOwnProperty.call(row, column) ? row[column] : null),
+        )
+        .join(', ') +
+      ')',
+  )
+
   return {
     text:
       'insert into ' +
-      quotePath(getTableName(table)) +
+      table +
       ' (' +
-      columns.map((column) => quotePath(column)).join(', ') +
+      columns.map(quote).join(', ') +
       ') values ' +
-      rows
-        .map(
-          (row) =>
-            '(' +
-            columns
-              .map((column) => {
-                let value = Object.prototype.hasOwnProperty.call(row, column) ? row[column] : null
-                return pushValue(context, value)
-              })
-              .join(', ') +
-            ')',
-        )
-        .join(', ') +
-      compileReturningClause(returning),
+      valueSets.join(', ') +
+      compileReturningClause(operation.returning, context),
     values: context.values,
   }
 }
 
 function compileUpsertOperation(operation: UpsertOperation, context: CompileContext): SqlStatement {
   let insertColumns = Object.keys(operation.values)
-  let conflictTarget = operation.conflictTarget ?? [...getTablePrimaryKey(operation.table)]
 
   if (insertColumns.length === 0) {
     throw new Error('upsert requires at least one value')
   }
 
+  let insertPlaceholders = insertColumns.map((column) =>
+    context.bindValue(operation.values[column]),
+  )
+
+  let conflictTarget = operation.conflictTarget ?? [...getTablePrimaryKey(operation.table)]
   let updateValues = operation.update ?? operation.values
   let updateColumns = Object.keys(updateValues)
-  let insertValues = insertColumns
-    .map((column) => pushValue(context, operation.values[column]))
-    .join(', ')
 
-  let conflictClause = ''
-
-  if (updateColumns.length === 0) {
-    conflictClause =
-      ' on conflict (' +
-      conflictTarget.map((column: string) => quotePath(column)).join(', ') +
-      ') do nothing'
-  } else {
-    conflictClause =
-      ' on conflict (' +
-      conflictTarget.map((column: string) => quotePath(column)).join(', ') +
-      ') do update set ' +
-      updateColumns
-        .map((column) => quotePath(column) + ' = ' + pushValue(context, updateValues[column]))
-        .join(', ')
-  }
+  let conflictClause =
+    ' on conflict (' +
+    conflictTarget.map(quote).join(', ') +
+    ')' +
+    (updateColumns.length === 0
+      ? ' do nothing'
+      : ' do update set ' +
+        updateColumns
+          .map((column) => quote(column) + ' = ' + context.bindValue(updateValues[column]))
+          .join(', '))
 
   return {
     text:
       'insert into ' +
-      quotePath(getTableName(operation.table)) +
+      quote(getTableName(operation.table)) +
       ' (' +
-      insertColumns.map((column) => quotePath(column)).join(', ') +
+      insertColumns.map(quote).join(', ') +
       ') values (' +
-      insertValues +
+      insertPlaceholders.join(', ') +
       ')' +
       conflictClause +
-      compileReturningClause(operation.returning),
+      compileReturningClause(operation.returning, context),
     values: context.values,
   }
-}
-
-function compileFromClause(
-  table: OperationTable,
-  joins: JoinClause[],
-  context: CompileContext,
-): string {
-  let output = ' from ' + quotePath(getTableName(table))
-
-  for (let join of joins) {
-    output +=
-      ' ' +
-      normalizeJoinType(join.type) +
-      ' join ' +
-      quotePath(getTableName(join.table)) +
-      ' on ' +
-      compilePredicate(join.on, context)
-  }
-
-  return output
-}
-
-function compileWhereClause(predicates: Predicate[], context: CompileContext): string {
-  if (predicates.length === 0) {
-    return ''
-  }
-
-  return (
-    ' where ' +
-    predicates.map((predicate) => '(' + compilePredicate(predicate, context) + ')').join(' and ')
-  )
-}
-
-function compileGroupByClause(columns: string[]): string {
-  if (columns.length === 0) {
-    return ''
-  }
-
-  return ' group by ' + columns.map((column) => quotePath(column)).join(', ')
-}
-
-function compileHavingClause(predicates: Predicate[], context: CompileContext): string {
-  if (predicates.length === 0) {
-    return ''
-  }
-
-  return (
-    ' having ' +
-    predicates.map((predicate) => '(' + compilePredicate(predicate, context) + ')').join(' and ')
-  )
-}
-
-function compileOrderByClause(orderBy: { column: string; direction: 'asc' | 'desc' }[]): string {
-  if (orderBy.length === 0) {
-    return ''
-  }
-
-  return (
-    ' order by ' +
-    orderBy
-      .map((clause) => quotePath(clause.column) + ' ' + compileOrderByDirection(clause.direction))
-      .join(', ')
-  )
-}
-
-function compileLimitClause(limit: number | undefined, context: CompileContext): string {
-  if (limit === undefined) {
-    return ''
-  }
-
-  return ' limit ' + pushValue(context, limit)
-}
-
-function compileOffsetClause(offset: number | undefined, context: CompileContext): string {
-  if (offset === undefined) {
-    return ''
-  }
-
-  return ' offset ' + pushValue(context, offset)
-}
-
-function compileReturningClause(returning: '*' | string[] | undefined): string {
-  if (!returning) {
-    return ''
-  }
-
-  if (returning === '*') {
-    return ' returning *'
-  }
-
-  return ' returning ' + returning.map((column) => quotePath(column)).join(', ')
-}
-
-function compilePredicate(predicate: Predicate, context: CompileContext): string {
-  if (predicate.type === 'comparison') {
-    let column = quotePath(predicate.column)
-
-    if (predicate.operator === 'eq') {
-      if (
-        predicate.valueType === 'value' &&
-        (predicate.value === null || predicate.value === undefined)
-      ) {
-        return column + ' is null'
-      }
-
-      let comparisonValue = compileComparisonValue(predicate, context)
-      return column + ' = ' + comparisonValue
-    }
-
-    if (predicate.operator === 'ne') {
-      if (
-        predicate.valueType === 'value' &&
-        (predicate.value === null || predicate.value === undefined)
-      ) {
-        return column + ' is not null'
-      }
-
-      let comparisonValue = compileComparisonValue(predicate, context)
-      return column + ' <> ' + comparisonValue
-    }
-
-    if (predicate.operator === 'gt') {
-      let comparisonValue = compileComparisonValue(predicate, context)
-      return column + ' > ' + comparisonValue
-    }
-
-    if (predicate.operator === 'gte') {
-      let comparisonValue = compileComparisonValue(predicate, context)
-      return column + ' >= ' + comparisonValue
-    }
-
-    if (predicate.operator === 'lt') {
-      let comparisonValue = compileComparisonValue(predicate, context)
-      return column + ' < ' + comparisonValue
-    }
-
-    if (predicate.operator === 'lte') {
-      let comparisonValue = compileComparisonValue(predicate, context)
-      return column + ' <= ' + comparisonValue
-    }
-
-    if (predicate.operator === 'in' || predicate.operator === 'notIn') {
-      let values = Array.isArray(predicate.value) ? predicate.value : []
-
-      if (values.length === 0) {
-        return predicate.operator === 'in' ? '1 = 0' : '1 = 1'
-      }
-
-      let keyword = predicate.operator === 'in' ? 'in' : 'not in'
-
-      return (
-        column +
-        ' ' +
-        keyword +
-        ' (' +
-        values.map((value) => pushValue(context, value)).join(', ') +
-        ')'
-      )
-    }
-
-    if (predicate.operator === 'like') {
-      let comparisonValue = compileComparisonValue(predicate, context)
-      return column + ' like ' + comparisonValue
-    }
-
-    if (predicate.operator === 'ilike') {
-      let comparisonValue = compileComparisonValue(predicate, context)
-      return 'lower(' + column + ') like lower(' + comparisonValue + ')'
-    }
-  }
-
-  if (predicate.type === 'between') {
-    return (
-      quotePath(predicate.column) +
-      ' between ' +
-      pushValue(context, predicate.lower) +
-      ' and ' +
-      pushValue(context, predicate.upper)
-    )
-  }
-
-  if (predicate.type === 'null') {
-    return (
-      quotePath(predicate.column) + (predicate.operator === 'isNull' ? ' is null' : ' is not null')
-    )
-  }
-
-  if (predicate.type === 'logical') {
-    if (predicate.predicates.length === 0) {
-      return predicate.operator === 'and' ? '1 = 1' : '1 = 0'
-    }
-
-    let joiner = predicate.operator === 'and' ? ' and ' : ' or '
-
-    return predicate.predicates
-      .map((child) => '(' + compilePredicate(child, context) + ')')
-      .join(joiner)
-  }
-
-  throw new Error('Unsupported predicate')
-}
-
-function compileComparisonValue(
-  predicate: Extract<Predicate, { type: 'comparison' }>,
-  context: CompileContext,
-): string {
-  if (predicate.valueType === 'column') {
-    return quotePath(predicate.value)
-  }
-
-  return pushValue(context, predicate.value)
-}
-
-function normalizeJoinType(type: string): string {
-  return normalizeJoinTypeHelper(type)
-}
-
-function quoteIdentifier(value: string): string {
-  return '"' + value.replace(/"/g, '""') + '"'
-}
-
-function quotePath(path: string): string {
-  return quotePathHelper(path, quoteIdentifier)
-}
-
-function pushValue(context: CompileContext, value: unknown): string {
-  context.values.push(normalizeBoundValue(value))
-  return '?'
-}
-
-function normalizeBoundValue(value: unknown): unknown {
-  if (typeof value === 'boolean') {
-    return value ? 1 : 0
-  }
-
-  return value
-}
-
-function collectColumns(rows: Record<string, unknown>[]): string[] {
-  return collectColumnsHelper(rows)
 }

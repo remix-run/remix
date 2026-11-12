@@ -12,6 +12,7 @@ import {
   type RenderFn,
 } from './component.ts'
 import { invariant } from './invariant.ts'
+import { encodeFormDataAsSearchParams } from './form-navigation.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
@@ -346,6 +347,7 @@ type FrameLoadState = {
 type FrameLoadEvent =
   | { type: 'start'; origin: FrameLoadOrigin; signal?: AbortSignal }
   | { type: 'settle'; controller: AbortController }
+  | { type: 'release-request' }
   | { type: 'render-start' }
   | { type: 'render-complete' }
   | { type: 'defer'; load?: () => void }
@@ -558,13 +560,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       try {
         contentRoot.render(content)
         await new Promise<void>((resolve) => context.scheduler.enqueueCommitPhase([resolve]))
+        if (!isRenderAborted(options.signal)) transitionLoad({ type: 'render-complete' })
         options.onCommit?.()
       } finally {
         runtime.serverFrameReload = previousServerFrameReload
       }
 
-      if (isRenderAborted(options.signal)) return
-      transitionLoad({ type: 'render-complete' })
       return
     }
 
@@ -640,10 +641,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
 
     let subFramesReady = hydrateContainer(hydrationContainer, responseContext, options)
+    // Visible content can reload in place while its sub-frames are still settling.
+    if (!isRenderAborted(options.signal)) transitionLoad({ type: 'render-complete' })
     options.onCommit?.()
     await subFramesReady
-    if (isRenderAborted(options.signal)) return
-    transitionLoad({ type: 'render-complete' })
   }
 
   function isRenderAborted(signal?: AbortSignal): boolean {
@@ -861,6 +862,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         }
         return controller
       }
+      case 'release-request':
+        loadState.request = { status: 'idle' }
+        return
       case 'settle': {
         let { controller } = event
         completeReload(controller)
@@ -916,7 +920,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     currentMarker = marker
 
     if (isInheritedReload) {
-      startInheritedReload(signal)
+      startInheritedReload(signal, marker.status !== 'lazy')
     }
 
     return isInheritedReload
@@ -976,15 +980,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     if (formData) {
       if (method !== 'post') {
         let url = new URL(src, container.doc.baseURI)
-        let query = new URLSearchParams()
-        let normalizeNewlines = (value: string) => value.replace(/\r\n|\r|\n/g, '\r\n')
-        for (let [name, value] of formData) {
-          query.append(
-            normalizeNewlines(name),
-            normalizeNewlines(typeof value === 'string' ? value : value.name),
-          )
-        }
-        url.search = `?${query}`
+        url.search = `?${encodeFormDataAsSearchParams(formData)}`
         src = url.href
         formData = undefined
       } else {
@@ -1007,12 +1003,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   function startReloadTransition(options?: FrameNavigationOptions): FrameReloadTransition {
     let controller = startLoad('direct', options?.signal)
     let committed = Promise.withResolvers<void>()
-    let commitStarted = false
-    let finished = resolveAndRenderReload(controller, options, (ready) => {
-      if (commitStarted) return
-      commitStarted = true
-      void ready.then(committed.resolve, committed.reject)
-    })
+    let finished = resolveAndRenderReload(controller, committed, options)
 
     // Settle committed when a reload is aborted or fails before rendering any content.
     void finished.then(() => committed.resolve(), committed.reject)
@@ -1031,8 +1022,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   async function resolveAndRenderReload(
     controller: AbortController,
+    committed?: PromiseWithResolvers<void>,
     options?: FrameNavigationOptions,
-    resolveCommit?: (ready: Promise<void>) => void,
   ): Promise<FrameReloadResult> {
     let isStale = () => currentLoadController() !== controller || controller.signal.aborted
     try {
@@ -1057,7 +1048,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
           if (commitStarted) return
           commitStarted = true
           blockingFrameTracker.finalize()
-          resolveCommit?.(blockingFrameTracker.ready())
+          if (committed) {
+            void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
+          }
         },
       })
       reconciliationTracker.finalize()
@@ -1086,16 +1079,21 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     frame.dispatchEvent(new Event('reloadComplete'))
   }
 
-  function startInheritedReload(signal?: AbortSignal): void {
+  function startInheritedReload(signal?: AbortSignal, takeOverRequest = false): void {
     if (signal?.aborted) return
 
     // A reload this frame owns already reports progress, and it completes on its own schedule.
-    if (reloadState.status === 'direct' || reloadState.status === 'ancestor') {
+    if (
+      !takeOverRequest &&
+      (reloadState.status === 'direct' || reloadState.status === 'ancestor')
+    ) {
       startSubFrameInheritedReloads(getContentNodes(), signal)
       return
     }
 
     let previousStatus = reloadState.status
+    let previousController = takeOverRequest ? currentLoadController() : undefined
+    if (takeOverRequest) transitionLoad({ type: 'release-request' })
     leaveReloadState()
 
     let disconnect: (() => void) | undefined
@@ -1108,8 +1106,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
     if (previousStatus === 'idle') {
       frame.dispatchEvent(new Event('reloadStart'))
+    }
+    if (previousStatus !== 'inherited') {
       startSubFrameInheritedReloads(getContentNodes(), signal)
     }
+    // Publish inherited ownership before aborting the request it supersedes.
+    previousController?.abort()
   }
 
   function completeInheritedReload(): void {
