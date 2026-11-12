@@ -76,7 +76,7 @@ import { ESCAPED_OBJECT } from './props-serialization.ts'
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
 type FrameData = {
-  status: 'pending' | 'resolved'
+  status: 'pending' | 'resolved' | 'lazy'
   name?: string
   src: string
 }
@@ -133,8 +133,87 @@ const bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
 const frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
 const pendingClientEntryHydrations = new WeakMap<Comment, Promise<void>>()
 const frameClientEntryParents = new WeakMap<Comment, Comment>()
+let frameLoadPool:
+  | {
+      observer: IntersectionObserver
+      callbacks: Map<Element, Set<() => void>>
+      dispose: () => void
+    }
+  | undefined
 
 export const pendingPrefetchLinks = new WeakSet<Node>()
+
+function observeFrameLoad(targets: Element[], load: () => void): () => void {
+  let pool = frameLoadPool
+  if (!pool) {
+    let callbacks = new Map<Element, Set<() => void>>()
+    let resizeTimer: ReturnType<typeof setTimeout> | undefined
+
+    function createObserver(): IntersectionObserver {
+      return new IntersectionObserver(
+        (entries, observer) => {
+          if (frameLoadPool?.observer !== observer) return
+          for (let entry of entries) {
+            if (!entry.isIntersecting || !entry.target.isConnected) continue
+            for (let callback of Array.from(callbacks.get(entry.target) ?? [])) callback()
+          }
+        },
+        { root: document, rootMargin: `${window.innerHeight}px ${window.innerWidth}px` },
+      )
+    }
+
+    function resize(): void {
+      clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(() => {
+        resizeTimer = undefined
+        let current = frameLoadPool
+        if (!current || current.callbacks !== callbacks) return
+        current.observer.disconnect()
+        current.observer = createObserver()
+        for (let target of callbacks.keys()) current.observer.observe(target)
+      }, 100)
+    }
+
+    pool = {
+      observer: createObserver(),
+      callbacks,
+      dispose() {
+        clearTimeout(resizeTimer)
+        this.observer.disconnect()
+        window.removeEventListener('resize', resize)
+      },
+    }
+    frameLoadPool = pool
+    window.addEventListener('resize', resize)
+  }
+
+  let { callbacks } = pool
+  for (let target of targets) {
+    let targetCallbacks = callbacks.get(target)
+    if (!targetCallbacks) {
+      targetCallbacks = new Set()
+      callbacks.set(target, targetCallbacks)
+      pool.observer.observe(target)
+    }
+    targetCallbacks.add(load)
+  }
+
+  return () => {
+    if (frameLoadPool !== pool) return
+    for (let target of targets) {
+      let targetCallbacks = callbacks.get(target)
+      if (!targetCallbacks?.delete(load)) continue
+      if (targetCallbacks.size === 0) {
+        callbacks.delete(target)
+        pool.observer.unobserve(target)
+      }
+    }
+    if (callbacks.size === 0) {
+      pool.dispose()
+      frameLoadPool = undefined
+    }
+  }
+}
 
 function createLinkedAbortController(...signals: Array<AbortSignal | undefined>): {
   controller: AbortController
@@ -220,6 +299,7 @@ export type FrameContext = {
 type FrameInit = {
   nonce?: string
   name?: string
+  loading?: FrameProps['loading']
   topFrame?: FrameHandle
   getContext?: (type: ElementFunction) => unknown
   src: string
@@ -236,6 +316,7 @@ type FrameInit = {
   frameInstances: WeakMap<Comment, FrameInstance>
   namedFrames: NamedFrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
+  disposeFallback?: () => void
 }
 
 // Whether reloadStart has been dispatched without a matching reloadComplete, and why. Each frame
@@ -260,12 +341,18 @@ export type FrameInstance = {
   flush: () => void
   clearPendingTemplateWatch: () => void
   isDisplayingResolvedContent: () => boolean
+  hasStartedLoading: () => boolean
+  updateLoading: (loading: FrameProps['loading']) => void
+  resumeDeferredLoad: (signal: AbortSignal) => void
+  deferLoad: (load?: () => void) => void
+  startDeferredLoad: () => void
   beginClientFrameReloadForAncestorReload: (signal: AbortSignal) => {
     controller: AbortController
     complete: () => void
   }
-  cancelReload: () => void
+  startClientLoad: () => AbortController
   startInheritedReload: (signal?: AbortSignal) => void
+  completeInheritedReload: () => void
   updateMarker: (marker: FrameMarkerData, options?: RenderOptions) => Promise<void>
   renderMarkerContent: (
     marker: FrameMarkerData,
@@ -308,8 +395,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   let modulePreloader = getDocumentModulePreloader(container.doc)
   let importMapManager = getDocumentImportMapManager(container.doc)
   let currentMarker = init.marker
-  let displayedContentStatus: 'pending' | 'resolved' = init.marker?.status ?? 'resolved'
+  let loading = init.loading ?? (init.marker?.status === 'lazy' ? 'lazy' : 'eager')
+  let displayedContentStatus = init.marker?.status ?? 'pending'
+  let loadingStarted = false
   let pendingTemplateWatch: PendingTemplateWatch | undefined
+  let deferredLoad: (() => void) | undefined
+  let disconnectLoadObserver: (() => void) | undefined
   let disposed = false
   let lifecycleController = new AbortController()
 
@@ -401,6 +492,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     options: ActiveRenderOptions,
   ): Promise<void> {
     if (isRenderAborted(options.signal)) return
+    loadingStarted = true
+    cancelDeferredLoad()
 
     if (content instanceof ReadableStream) {
       let linkedAbort = createLinkedAbortController(lifecycleController.signal, options.signal)
@@ -422,6 +515,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
 
     if (isRemixNodeFrameContent(content)) {
+      init.disposeFallback?.()
       if (!contentRoot) {
         let currentNodes = getContentNodes()
         removeVirtualRoots(currentNodes)
@@ -485,6 +579,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
     if (!(await consumeClientEntryResources(source, options.documentHref, options.nonce))) return
     if (isRenderAborted(options.signal)) return
+    init.disposeFallback?.()
     adoptFrameServerStyles(createElementContainer(source), context.styleManager)
     if (source instanceof DocumentFragment) removeEmptyHeads(source)
     mergeRmxDataFrom(options.data, source)
@@ -572,6 +667,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
           reconciliationTracker,
           nonce: context.nonce,
         })
+      } else if (currentMarker?.status === 'lazy' && !reloadController && !loadingStarted) {
+        deferLoad(loadLazyFrame)
       }
 
       reconciliationTracker.finalize()
@@ -584,6 +681,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   function dispose(): void {
     if (disposed) return
     disposed = true
+    cancelDeferredLoad()
     lifecycleController.abort()
     clearRmxData(context.data)
     reloadController?.abort()
@@ -615,9 +713,17 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     flush: () => context.scheduler.dequeue(),
     clearPendingTemplateWatch: clearPendingFrameTemplateWatch,
     isDisplayingResolvedContent: () => displayedContentStatus === 'resolved',
+    hasStartedLoading: () => loadingStarted,
+    updateLoading(value) {
+      loading = value ?? 'eager'
+    },
+    resumeDeferredLoad,
+    deferLoad,
+    startDeferredLoad,
     beginClientFrameReloadForAncestorReload,
-    cancelReload,
+    startClientLoad,
     startInheritedReload,
+    completeInheritedReload,
     updateMarker,
     renderMarkerContent,
     matchesIdentity: (src, name) => !disposed && frame.src === src && frameName === name,
@@ -625,12 +731,93 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     handle: frame,
   }
 
+  function cancelDeferredLoad(): void {
+    deferredLoad = undefined
+    disconnectLoadObserver?.()
+    disconnectLoadObserver = undefined
+  }
+
+  function loadLazyFrame(signal?: AbortSignal): void {
+    // Viewport loading completes initial content; active reloads keep their lifecycle.
+    let controller =
+      !signal && reloadState.status === 'idle' && displayedContentStatus !== 'resolved'
+        ? startClientLoad()
+        : beginReload('direct', signal)
+    // Resolution reports errors before rejecting.
+    void resolveAndRenderReload(controller).catch(() => {})
+  }
+
+  function resumeDeferredLoad(signal: AbortSignal): void {
+    if (
+      signal.aborted &&
+      reloadController?.signal === signal &&
+      loading === 'lazy' &&
+      displayedContentStatus !== 'resolved'
+    ) {
+      // A targeted navigation may have changed the source since the client frame mounted.
+      deferLoad(loadLazyFrame)
+    }
+  }
+
+  function startDeferredLoad(): void {
+    let load = deferredLoad
+    cancelDeferredLoad()
+    if (isRenderAborted()) return
+    if (load) {
+      load()
+    } else if (
+      currentMarker?.status === 'lazy' &&
+      displayedContentStatus !== 'resolved' &&
+      !reloadController &&
+      !loadingStarted
+    ) {
+      loadLazyFrame()
+    }
+  }
+
+  // Omitting the callback refreshes the observed elements after a fallback update.
+  function deferLoad(load = deferredLoad): void {
+    if (!load) return
+    cancelDeferredLoad()
+    if (isRenderAborted()) return
+    let targets = container.childNodes.filter((node) => node instanceof Element)
+    if (targets.length === 0) {
+      console.warn(
+        `Frame with loading="lazy" requires a fallback that renders an element. Loading "${frame.src}" immediately.`,
+      )
+      load()
+      return
+    }
+    if (typeof IntersectionObserver === 'undefined') {
+      load()
+      return
+    }
+    deferredLoad = load
+    let unobserve = observeFrameLoad(targets, startDeferredLoad)
+    let mutations = new MutationObserver(() => {
+      let currentTargets = container.childNodes.filter((node) => node instanceof Element)
+      if (
+        currentTargets.length !== targets.length ||
+        currentTargets.some((target, index) => target !== targets[index])
+      ) {
+        deferLoad()
+      }
+    })
+    mutations.observe(container.root, { childList: true })
+    disconnectLoadObserver = () => {
+      mutations.disconnect()
+      unobserve()
+    }
+  }
+
   function setCurrentMarker(marker: FrameMarkerData, signal?: AbortSignal): boolean {
+    loading = marker.status === 'lazy' ? 'lazy' : 'eager'
+    if (marker.status !== 'lazy') cancelDeferredLoad()
     let isInheritedReload = currentMarker !== undefined && currentMarker.id !== marker.id
     currentMarker = marker
 
     if (isInheritedReload) {
-      startInheritedReload(signal)
+      startInheritedReload(signal, marker.status !== 'lazy')
     }
 
     return isInheritedReload
@@ -652,6 +839,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       )
     } else {
       clearPendingFrameTemplateWatch()
+      if (marker.status === 'lazy') {
+        if (isInheritedReload && (displayedContentStatus === 'resolved' || loadingStarted)) {
+          loadLazyFrame(options?.signal)
+        } else if (displayedContentStatus !== 'resolved' && !reloadController) {
+          deferLoad(loadLazyFrame)
+        }
+      }
       if (isInheritedReload && !options?.signal?.aborted) {
         completeInheritedReload()
       }
@@ -725,16 +919,24 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
   }
 
-  function cancelReload(): void {
-    let controller = reloadController
-    if (!controller) return
-    controller.abort()
-    completeReload(controller)
+  function startClientLoad(): AbortController {
+    loadingStarted = true
+    cancelDeferredLoad()
+    let previous = reloadController
+    let controller = new AbortController()
+    reloadController = controller
+    if (previous) {
+      previous.abort()
+      completeReload(previous)
+    }
+    return controller
   }
 
   // Starts a reload this frame owns. A reload that supersedes another one, or takes over an
   // inherited reload, continues the same reloadStart/reloadComplete pair.
   function beginReload(status: 'direct' | 'ancestor', signal?: AbortSignal): AbortController {
+    loadingStarted = true
+    cancelDeferredLoad()
     let previousStatus = reloadState.status
     reloadController?.abort()
     leaveReloadState()
@@ -762,7 +964,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   async function resolveAndRenderReload(
     controller: AbortController,
-    committed: PromiseWithResolvers<void>,
+    committed?: PromiseWithResolvers<void>,
     options?: FrameNavigationOptions,
   ): Promise<FrameReloadResult> {
     let isStale = () => reloadController !== controller || controller.signal.aborted
@@ -788,7 +990,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
           if (commitStarted) return
           commitStarted = true
           blockingFrameTracker.finalize()
-          void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
+          if (committed) {
+            void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
+          }
         },
       })
       reconciliationTracker.finalize()
@@ -803,6 +1007,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       throw error
     } finally {
       completeReload(controller)
+      resumeDeferredLoad(controller.signal)
     }
   }
 
@@ -813,16 +1018,21 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     frame.dispatchEvent(new Event('reloadComplete'))
   }
 
-  function startInheritedReload(signal?: AbortSignal): void {
+  function startInheritedReload(signal?: AbortSignal, takeOverRequest = false): void {
     if (signal?.aborted) return
 
     // A reload this frame owns already reports progress, and it completes on its own schedule.
-    if (reloadState.status === 'direct' || reloadState.status === 'ancestor') {
+    if (
+      !takeOverRequest &&
+      (reloadState.status === 'direct' || reloadState.status === 'ancestor')
+    ) {
       startSubFrameInheritedReloads(getContentNodes(), signal)
       return
     }
 
     let previousStatus = reloadState.status
+    let previousController = takeOverRequest ? reloadController : undefined
+    if (takeOverRequest) reloadController = undefined
     leaveReloadState()
 
     let disconnect: (() => void) | undefined
@@ -835,8 +1045,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
     if (previousStatus === 'idle') {
       frame.dispatchEvent(new Event('reloadStart'))
+    }
+    if (previousStatus !== 'inherited') {
       startSubFrameInheritedReloads(getContentNodes(), signal)
     }
+    // Publish inherited ownership before aborting the request it supersedes.
+    previousController?.abort()
   }
 
   function completeInheritedReload(): void {
@@ -945,6 +1159,9 @@ function diffFrame(
   let nextSrc = getFrameSrc(next)
   let currName = getFrameName(curr)
   let nextName = getFrameName(next)
+  if (curr._state.instance.isDisplayingResolvedContent()) {
+    curr._state.content = { status: 'resolved' }
+  }
 
   // If the frame hasn't resolved yet, preserve existing cancel/remount behavior
   // so pending streams from the old src cannot take over the new src.
@@ -958,6 +1175,7 @@ function diffFrame(
 
   let frameRuntime = getFrameRuntime(frame)
   let frameInstance = committed._state.instance
+  frameInstance.updateLoading(committed.props.loading)
   let serverFrameReload = frameRuntime?.serverFrameReload
 
   if (currSrc !== nextSrc) {
@@ -969,14 +1187,27 @@ function diffFrame(
       resolveClientFrame(committed, frameRuntime, serverFrameReload)
     }
   } else if (frameRuntime && frameInstance && serverFrameReload) {
-    // Reload client frames that have the same src during a render triggered by an ancestor frame reload
-    resolveClientFrame(committed, frameRuntime, serverFrameReload)
+    if (
+      committed._state.content.status === 'resolved' ||
+      committed._state.resolveController ||
+      frameInstance.hasStartedLoading() ||
+      committed.props.loading !== 'lazy'
+    ) {
+      // Reload client frames whose content is loaded or already being requested.
+      resolveClientFrame(committed, frameRuntime, serverFrameReload)
+    } else {
+      frameInstance.completeInheritedReload()
+    }
   }
 
   let { content } = committed._state
   if (content.status === 'fallback') {
     getNonceManager().inheritRootResourceNonces(content.fallbackRoot, vParent)
     content.fallbackRoot.render(committed.props.fallback ?? null)
+    if (committed.props.loading === 'lazy') frameInstance.deferLoad()
+  }
+  if (curr.props.loading === 'lazy' && next.props.loading !== 'lazy') {
+    frameInstance.startDeferredLoad()
   }
   return committed
 }
@@ -1017,7 +1248,7 @@ function insertFrame(
       cursor.current = end.nextSibling
       return commitFrameNode(node, vParent, svg, start, end, {
         instance,
-        content: { status: 'resolved' },
+        content: { status: instance.isDisplayingResolvedContent() ? 'resolved' : 'pending' },
         resolveController: undefined,
       })
     }
@@ -1036,13 +1267,23 @@ function insertFrame(
   getNonceManager().inheritRootResourceNonces(fallbackRoot, vParent)
   fallbackRoot.render(node.props.fallback ?? null)
 
-  let instance = createFrameInstance(node, start, end, runtime, getContext)
+  let instance = createFrameInstance(node, start, end, runtime, getContext, () => {
+    let state = committed._state
+    if (state.content.status === 'fallback') {
+      state.content.fallbackRoot.dispose()
+      state.content = { status: 'rendering' }
+    }
+  })
   let committed = commitFrameNode(node, vParent, svg, start, end, {
     instance,
     content: { status: 'fallback', fallbackRoot },
     resolveController: undefined,
   })
-  resolveClientFrame(committed, runtime, runtime.serverFrameReload)
+  if (node.props.loading === 'lazy') {
+    instance.deferLoad(() => resolveClientFrame(committed, runtime))
+  } else {
+    resolveClientFrame(committed, runtime, runtime.serverFrameReload)
+  }
 
   return committed
 }
@@ -1053,9 +1294,11 @@ function createFrameInstance(
   end: Comment,
   runtime: FrameRuntime,
   getContext: (type: ElementFunction) => unknown,
+  disposeFallback?: () => void,
 ): FrameInstance {
   let instance = createFrame([start, end], {
     name: getFrameName(node),
+    loading: node.props.loading,
     src: getFrameSrc(node),
     getContext,
     errorTarget: runtime.errorTarget,
@@ -1070,6 +1313,7 @@ function createFrameInstance(
     frameInstances: runtime.frameInstances,
     namedFrames: runtime.namedFrames,
     processClientEntryPreloads: runtime.processClientEntryPreloads,
+    disposeFallback,
   })
   runtime.frameInstances.set(start, instance)
   return instance
@@ -1105,10 +1349,7 @@ function resolveClientFrame(
   let reload = serverFrameReload
     ? instance.beginClientFrameReloadForAncestorReload(serverFrameReload.signal)
     : undefined
-  if (!reload) {
-    instance.cancelReload()
-  }
-  let resolveController = reload?.controller ?? new AbortController()
+  let resolveController = reload?.controller ?? instance.startClientLoad()
   state.resolveController = resolveController
   let { signal } = resolveController
   let frameCommitted = Promise.withResolvers<void>()
@@ -1124,10 +1365,6 @@ function resolveClientFrame(
       if (signal.aborted) return
       let { content, nonce } = await unwrapFrameResolution(resolution)
       if (signal.aborted) return
-      if (state.content.status === 'fallback') {
-        state.content.fallbackRoot.dispose()
-        state.content = { status: 'rendering' }
-      }
       let nextContent = asAbortableFrameContent(content, signal)
       await instance.render(nextContent, {
         nonce,
@@ -1145,7 +1382,7 @@ function resolveClientFrame(
       state.content = { status: 'resolved' }
     })
     .catch((error) => {
-      if (reload && !signal.aborted) {
+      if ((reload || node.props.loading === 'lazy') && !signal.aborted) {
         runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       }
     })
@@ -1154,6 +1391,7 @@ function resolveClientFrame(
       reload?.complete()
       if (state.resolveController === resolveController) {
         state.resolveController = undefined
+        instance.resumeDeferredLoad(signal)
       }
     })
 
