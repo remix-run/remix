@@ -597,6 +597,34 @@ describe('run', () => {
     expect(section.querySelector('p')?.textContent).toBe('Next')
   })
 
+  it('removes preserved server DOM from a frame inserted by a later response', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let html = await drainWithProtocol(
+      renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame name="details" src="/frame" />
+          </body>
+        </html>,
+        { resolveFrame: () => '<div data-rmx-preserve-dom>Server widget</div>' },
+      ),
+    )
+    let app = run({ loadModule: mock.fn(), resolveFrame: () => html })
+    t.after(() => app.dispose())
+    await app.ready()
+    await app.frames.top.reload()
+    let frame = app.frames.get('details')
+    let widget = document.querySelector('[data-rmx-preserve-dom]')
+    invariant(frame && widget)
+    html = '<p>Next</p>'
+
+    await frame.reload()
+
+    expect(widget.isConnected).toBe(false)
+    expect(document.querySelector('p')?.textContent).toBe('Next')
+  })
+
   it('retains the requested source without retaining the previous method or body', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
     let body = new FormData()

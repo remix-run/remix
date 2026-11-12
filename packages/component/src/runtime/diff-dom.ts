@@ -86,7 +86,6 @@ export function markServerRenderedNodes(nodes: Iterable<Node>): void {
 }
 
 export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
-  markServerRenderedNodes(next)
   let parent = curr[0]?.parentNode ?? context.regionParent ?? null
   invariant(parent, 'Parent node not found')
 
@@ -177,6 +176,7 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   // Different tags or type mismatch: replace
   let parent = current.parentNode
   if (parent) {
+    markServerRenderedNodes([next])
     parent.insertBefore(next, current)
     removeNode(current, parent, context)
   }
@@ -549,6 +549,8 @@ function commitSiblingUnits(diff: SiblingDiff, context: FrameContext): SiblingUn
     let matchIndex = matchIndexForNext[i]
     let nextUnit = nextUnits[i]
     if (matchIndex === -1) {
+      // Only inserted subtrees need a full snapshot, before connection can add client hosts.
+      markServerRenderedNodes(nextNodes.slice(nextUnit.startIndex, nextUnit.endIndex + 1))
       committed[i] = nextUnit
       continue
     }
@@ -966,6 +968,7 @@ function replaceCommentMarkerRange(
   let nextNodes = collectNodeRange(nextStart, nextEnd)
   let currentNodes = collectNodeRange(currentStart, currentEnd)
 
+  markServerRenderedNodes(nextNodes)
   for (let node of nextNodes) {
     parent.insertBefore(node, currentStart)
   }

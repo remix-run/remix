@@ -1442,6 +1442,41 @@ describe('diffNodes', () => {
     })
 
     describe('unmatched preserved elements', () => {
+      it('distinguishes inserted server descendants from hosts created on connection', (t) => {
+        let tagName = 'mock-preserved-host-on-connection'
+        if (!customElements.get(tagName)) {
+          customElements.define(
+            tagName,
+            class extends HTMLElement {
+              connectedCallback() {
+                let host = document.createElement('div')
+                host.setAttribute('data-rmx-preserve-dom', '')
+                host.setAttribute('data-client-host', '')
+                this.append(host)
+              }
+            },
+          )
+        }
+        let container = document.createElement('div')
+        container.innerHTML = '<main>Initial</main>'
+        document.body.append(container)
+        t.after(() => container.remove())
+        diffDom(
+          container,
+          `<${tagName}><div data-rmx-preserve-dom>Server widget</div></${tagName}>`,
+        )
+        let parent = container.firstElementChild
+        let widget = parent?.firstElementChild
+        let host = parent?.querySelector('[data-client-host]')
+        invariant(parent && widget && host)
+
+        diffDom(container, `<${tagName}></${tagName}>`)
+
+        expect(container.firstElementChild).toBe(parent)
+        expect(widget.isConnected).toBe(false)
+        expect(Array.from(parent.children)).toEqual([host])
+      })
+
       it('removes a server-inserted preserved descendant when later html omits it', () => {
         let container = document.createElement('div')
         container.innerHTML = '<main>Initial</main>'
