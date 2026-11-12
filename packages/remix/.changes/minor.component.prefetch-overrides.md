@@ -1,1 +1,1 @@
-Customize prefetching with `defaultPrefetch` from `remix/component`, and pass anchors to `prefetch()` for automatic cancellation. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/README.md#prefetching) for usage.
+Customize prefetching with `defaultPrefetch` from `remix/component`. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/README.md#prefetching) for usage.
