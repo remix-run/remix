@@ -282,6 +282,61 @@ async function assertPendingLazyFrameRestart(t: TestContext, mode: LazyFrameRend
   expect(document.getElementById('fresh-lazy-content')?.textContent).toBe('Fresh')
 }
 
+async function assertEagerSsrTakeover(t: TestContext, streaming: boolean, explicitReload = false) {
+  let loading: 'lazy' | 'eager' = 'lazy'
+  let renderPage = () =>
+    renderToStream(
+      <html>
+        <head />
+        <body>
+          <section id="lazy-host" mix={css({ position: 'fixed', top: 0, left: 0 })}>
+            <Frame
+              name="lazy"
+              src="/lazy"
+              loading={loading}
+              fallback={loading === 'lazy' || streaming ? <p>Waiting</p> : undefined}
+            />
+          </section>
+        </body>
+      </html>,
+      { resolveFrame: () => '<p id="fresh-content">Fresh</p>' },
+    )
+  document.documentElement.innerHTML = await drain(renderPage())
+  let response = Promise.withResolvers<string>()
+  let requestSignal: AbortSignal | undefined
+  let app = run({
+    loadModule: mock.fn(),
+    resolveFrame(src, options) {
+      if (src === '/page') return renderPage()
+      requestSignal = options?.signal
+      return response.promise
+    },
+  })
+  t.after(() => app.dispose())
+  await app.ready()
+  let host = document.getElementById('lazy-host')
+  let frame = app.frames.get('lazy')
+  invariant(host && frame)
+  await waitForIntersection(host)
+  invariant(requestSignal)
+  expect(requestSignal.aborted).toBe(false)
+  let events: string[] = []
+  frame.addEventListener('reloadStart', () => events.push('start'))
+  frame.addEventListener('reloadComplete', () => events.push('complete'))
+  let reloaded = explicitReload ? frame.reload() : undefined
+
+  loading = 'eager'
+  await app.frames.top.reload({ src: '/page' })
+  expect(app.frames.get('lazy')).toBe(frame)
+  expect(document.getElementById('fresh-content')?.textContent).toBe('Fresh')
+  response.resolve('<p id="stale-content">Stale</p>')
+  await reloaded
+  await waitForIntersection(host)
+  expect(host.textContent).toBe('Fresh')
+  expect(requestSignal.aborted).toBe(true)
+  expect(events).toEqual(['start', 'complete'])
+}
+
 async function assertSettledLazyFrameRestart(
   t: TestContext,
   mode: LazyFrameRendering,
@@ -6117,6 +6172,18 @@ describe('run', () => {
 
   it('restarts a pending server-rendered lazy frame during an ancestor reload', async (t) => {
     await assertPendingLazyFrameRestart(t, 'server')
+  })
+
+  it('supersedes a pending lazy request with inline eager SSR content', async (t) => {
+    await assertEagerSsrTakeover(t, false)
+  })
+
+  it('supersedes a pending lazy request with streamed eager SSR content', async (t) => {
+    await assertEagerSsrTakeover(t, true)
+  })
+
+  it('transfers an explicit lazy reload to eager SSR without duplicating reload events', async (t) => {
+    await assertEagerSsrTakeover(t, true, true)
   })
 
   it('restarts a settled aborted server lazy load when the next ancestor response arrives', async (t) => {

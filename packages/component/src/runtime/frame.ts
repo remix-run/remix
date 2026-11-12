@@ -816,7 +816,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     currentMarker = marker
 
     if (isInheritedReload) {
-      startInheritedReload(signal)
+      startInheritedReload(signal, marker.status !== 'lazy')
     }
 
     return isInheritedReload
@@ -1032,16 +1032,21 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     frame.dispatchEvent(new Event('reloadComplete'))
   }
 
-  function startInheritedReload(signal?: AbortSignal): void {
+  function startInheritedReload(signal?: AbortSignal, takeOverRequest = false): void {
     if (signal?.aborted) return
 
     // A reload this frame owns already reports progress, and it completes on its own schedule.
-    if (reloadState.status === 'direct' || reloadState.status === 'ancestor') {
+    if (
+      !takeOverRequest &&
+      (reloadState.status === 'direct' || reloadState.status === 'ancestor')
+    ) {
       startSubFrameInheritedReloads(getContentNodes(), signal)
       return
     }
 
     let previousStatus = reloadState.status
+    let previousController = takeOverRequest ? reloadController : undefined
+    if (takeOverRequest) reloadController = undefined
     leaveReloadState()
 
     let disconnect: (() => void) | undefined
@@ -1054,8 +1059,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
     if (previousStatus === 'idle') {
       frame.dispatchEvent(new Event('reloadStart'))
+    }
+    if (previousStatus !== 'inherited') {
       startSubFrameInheritedReloads(getContentNodes(), signal)
     }
+    // Publish inherited ownership before aborting the request it supersedes.
+    previousController?.abort()
   }
 
   function completeInheritedReload(): void {
