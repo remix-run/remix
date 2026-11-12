@@ -1,0 +1,3 @@
+Add `data-rmx-preserve-dom="client"` for elements whose lifetime belongs to client code, such as portal hosts in arbitrary containers. Frame reloads keep these elements connected, preserving focus, transitions, and scroll position, and exclude them from server matching even when incoming HTML has the same key. Client code removes them or changes the attribute to return them to server reconciliation. Removing their parent still removes them.
+
+Boolean and empty-string `data-rmx-preserve-dom` retain their existing behavior: matched elements keep their live attributes and children, while the server can remove them by omission or resume normal reconciliation by removing the attribute.

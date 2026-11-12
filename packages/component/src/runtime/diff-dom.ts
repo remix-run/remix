@@ -47,6 +47,7 @@ type MarkerKind = 'frame-start' | 'frame-end' | 'virtual-root-start' | 'virtual-
 type NodeSiblingUnit = {
   kind: 'node'
   node: Node
+  clientOwned: boolean
   startIndex: number
   endIndex: number
 }
@@ -72,18 +73,6 @@ type SiblingDiff = {
 }
 
 const REMIX_PRESERVE_DOM_ATTRIBUTE = 'data-rmx-preserve-dom'
-const serverRenderedElements = new WeakSet<Element>()
-
-// Capture HTML before hydration can add client-only hosts. Never rescan live
-// matched subtrees: their new descendants may belong exclusively to the client.
-export function markServerRenderedNodes(nodes: Iterable<Node>): void {
-  for (let node of nodes) {
-    if (isElement(node)) {
-      serverRenderedElements.add(node)
-    }
-    markServerRenderedNodes(node.childNodes)
-  }
-}
 
 export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
   let parent = curr[0]?.parentNode ?? context.regionParent ?? null
@@ -165,7 +154,6 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
 
   // Same element tag: update attributes then children
   if (isElement(current) && isElement(next) && current.tagName === next.tagName) {
-    serverRenderedElements.add(current)
     if (shouldPreserveDomElement(current, next)) return
     diffElementAttributes(current, next)
     if (shouldPreserveElementChildren(current, next)) return
@@ -176,7 +164,6 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   // Different tags or type mismatch: replace
   let parent = current.parentNode
   if (parent) {
-    markServerRenderedNodes([next])
     parent.insertBefore(next, current)
     removeNode(current, parent, context)
   }
@@ -213,9 +200,10 @@ export function diffElementAttributes(current: Element, next: Element): void {
 }
 
 function shouldPreserveDomElement(current: Element, next: Element): boolean {
-  if (!next.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) return false
-  if (!current.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) {
-    current.setAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE, '')
+  let mode = next.getAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)
+  if (mode === null) return false
+  if (mode === 'client' || !current.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) {
+    current.setAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE, mode === 'client' ? 'client' : '')
   }
   return true
 }
@@ -344,8 +332,8 @@ function createSiblingDiff(
   nextNodes: Node[],
   parent: ParentNode,
 ): SiblingDiff {
-  let currentUnits = parseSiblingUnits(currentNodes)
-  let nextUnits = parseSiblingUnits(nextNodes)
+  let currentUnits = parseSiblingUnits(currentNodes, 'current')
+  let nextUnits = parseSiblingUnits(nextNodes, 'next')
   return {
     parent,
     currentNodes,
@@ -364,6 +352,7 @@ function matchKeyedSiblingUnits(diff: SiblingDiff, context: FrameContext): void 
   let keyToIndex = new Map<string, number>()
 
   for (let i = 0; i < currentUnits.length; i++) {
+    if (isClientOwnedUnit(currentUnits[i])) continue
     let key = getSiblingUnitKey(currentUnits[i])
     if (key !== undefined) keyToIndex.set(key, i)
   }
@@ -403,70 +392,19 @@ function matchKeyedSiblingUnits(diff: SiblingDiff, context: FrameContext): void 
   }
 }
 
-// An unkeyed client-only host only pairs with an incoming preserved one, so an
-// unrelated incoming sibling can neither take over a client-created element nor
-// shift the pairing of the siblings around it.
-function matchClientPreservedSiblingUnits(diff: SiblingDiff): void {
-  let { currentUnits, nextUnits, used, matchIndexForNext } = diff
-  for (let i = 0; i < nextUnits.length; i++) {
-    let nextUnit = nextUnits[i]
-    if (
-      matchIndexForNext[i] !== -1 ||
-      nextUnit.kind !== 'node' ||
-      !isPreservedUnit(nextUnit) ||
-      getSiblingUnitKey(nextUnit) !== undefined
-    ) {
-      continue
-    }
-
-    let identity = getUnkeyedNodeIdentity(nextUnit.node)
-    // Let existing server elements keep their normal match before adopting a
-    // same-tag client host, even when the server is only now adding preservation.
-    if (
-      currentUnits.some(
-        (unit, index) =>
-          !used[index] &&
-          unit.kind === 'node' &&
-          isElement(unit.node) &&
-          serverRenderedElements.has(unit.node) &&
-          getSiblingUnitKey(unit) === undefined &&
-          getUnkeyedNodeIdentity(unit.node) === identity,
-      )
-    ) {
-      continue
-    }
-    // An omitted client host must not consume another preserved element's match.
-    let currentIndex = currentUnits.findIndex(
-      (unit, index) =>
-        !used[index] &&
-        unit.kind === 'node' &&
-        isClientPreservedUnit(unit) &&
-        getSiblingUnitKey(unit) === undefined &&
-        getUnkeyedNodeIdentity(unit.node) === identity,
-    )
-    if (currentIndex === -1) continue
-
-    used[currentIndex] = true
-    matchIndexForNext[i] = currentIndex
-  }
-}
-
 function matchPositionalSiblingUnits(diff: SiblingDiff): void {
-  matchClientPreservedSiblingUnits(diff)
-
   let { currentUnits, nextUnits, used, matchIndexForNext } = diff
+
   let remainingCurrentIndexes: number[] = []
   for (let i = 0; i < currentUnits.length; i++) {
-    if (!used[i] && !isClientPreservedUnit(currentUnits[i])) {
+    if (!used[i] && !isClientOwnedUnit(currentUnits[i])) {
       remainingCurrentIndexes.push(i)
     }
   }
 
   let remainingNextIndexes: number[] = []
   for (let i = 0; i < nextUnits.length; i++) {
-    if (matchIndexForNext[i] === -1) {
-      remainingNextIndexes.push(i)
-    }
+    if (matchIndexForNext[i] === -1) remainingNextIndexes.push(i)
   }
 
   let remainingLength = Math.min(remainingCurrentIndexes.length, remainingNextIndexes.length)
@@ -491,10 +429,6 @@ function matchPositionalSiblingUnits(diff: SiblingDiff): void {
     used[currentIndex] = true
     matchIndexForNext[nextIndex] = currentIndex
   }
-
-  // Server siblings have claimed their slots; remaining HTML can now adopt a
-  // same-tag client host without taking a server element's match.
-  matchClientPreservedSiblingUnits(diff)
 }
 
 // Head resources are routinely added or removed ahead of shared ones, which
@@ -506,7 +440,12 @@ function matchShiftedHeadUnits(diff: SiblingDiff): void {
   let currentIndexesByIdentity = new Map<string, number[]>()
   for (let i = 0; i < currentUnits.length; i++) {
     let currentUnit = currentUnits[i]
-    if (used[i] || currentUnit.kind !== 'node' || getSiblingUnitKey(currentUnit) !== undefined) {
+    if (
+      used[i] ||
+      currentUnit.kind !== 'node' ||
+      currentUnit.clientOwned ||
+      getSiblingUnitKey(currentUnit) !== undefined
+    ) {
       continue
     }
     let identity = getUnkeyedNodeIdentity(currentUnit.node)
@@ -527,13 +466,8 @@ function matchShiftedHeadUnits(diff: SiblingDiff): void {
     }
     let identity = getUnkeyedNodeIdentity(nextUnit.node)
     if (identity === undefined) continue
-    let indexes = currentIndexesByIdentity.get(identity)
-    if (!indexes || indexes.length === 0) continue
-    // Reserve normal head matches before adopting a client-only preserved element.
-    let position = indexes.findIndex((index) => !isClientPreservedUnit(currentUnits[index]))
-    if (position === -1 && isPreservedUnit(nextUnit)) position = 0
-    if (position === -1) continue
-    let currentIndex = indexes.splice(position, 1)[0]
+    let currentIndex = currentIndexesByIdentity.get(identity)?.shift()
+    if (currentIndex === undefined) continue
     used[currentIndex] = true
     matchIndexForNext[i] = currentIndex
   }
@@ -549,8 +483,6 @@ function commitSiblingUnits(diff: SiblingDiff, context: FrameContext): SiblingUn
     let matchIndex = matchIndexForNext[i]
     let nextUnit = nextUnits[i]
     if (matchIndex === -1) {
-      // Only inserted subtrees need a full snapshot, before connection can add client hosts.
-      markServerRenderedNodes(nextNodes.slice(nextUnit.startIndex, nextUnit.endIndex + 1))
       committed[i] = nextUnit
       continue
     }
@@ -592,12 +524,11 @@ function commitSiblingUnits(diff: SiblingDiff, context: FrameContext): SiblingUn
 }
 
 // Remove obsolete siblings before placement so they do not force surviving
-// nodes to move and lose focus. Only client-only preserved hosts survive omission;
-// elements supplied or matched by server HTML retain server-controlled lifetimes.
+// nodes to move and lose focus. Explicitly client-owned elements survive omission.
 function removeUnusedSiblingUnits(diff: SiblingDiff, context: FrameContext): void {
   let { parent, currentUnits, used } = diff
   for (let i = 0; i < currentUnits.length; i++) {
-    if (!used[i] && !isClientPreservedUnit(currentUnits[i]))
+    if (!used[i] && !isClientOwnedUnit(currentUnits[i]))
       removeSiblingUnit(currentUnits[i], parent, context)
   }
 }
@@ -618,7 +549,7 @@ function placeSiblingUnits(
   let anchor: Node | null = regionTailRef
   for (let i = currentUnits.length - 1; i >= 0 && !used[i]; i--) {
     let unit = currentUnits[i]
-    if (unit.kind === 'node' && isClientPreservedUnit(unit)) anchor = unit.node
+    if (unit.kind === 'node' && isClientOwnedUnit(unit)) anchor = unit.node
   }
 
   for (let i = committed.length - 1; i >= 0; i--) {
@@ -740,7 +671,7 @@ function getUnkeyedNodeIdentity(node: Node): string | undefined {
   }
 }
 
-function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
+function parseSiblingUnits(nodes: Node[], source: 'current' | 'next'): SiblingUnit[] {
   let units: SiblingUnit[] = []
 
   for (let i = 0; i < nodes.length; i++) {
@@ -767,7 +698,16 @@ function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
 
     invariant(!isHydrationEnd(node), 'Unexpected hydration end marker')
     invariant(!isFrameEndMarker(node), 'Unexpected frame end marker')
-    units.push({ kind: 'node', node, startIndex: i, endIndex: i })
+    units.push({
+      kind: 'node',
+      node,
+      clientOwned:
+        source === 'current' &&
+        isElement(node) &&
+        node.getAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE) === 'client',
+      startIndex: i,
+      endIndex: i,
+    })
   }
 
   return units
@@ -826,16 +766,8 @@ function removeSiblingUnit(unit: SiblingUnit, parent: ParentNode, context: Frame
   }
 }
 
-function isPreservedUnit(unit: SiblingUnit): boolean {
-  return unit.kind === 'node' && isPreservedDomElement(unit.node)
-}
-
-function isClientPreservedUnit(unit: SiblingUnit): boolean {
-  return (
-    unit.kind === 'node' &&
-    isPreservedDomElement(unit.node) &&
-    !serverRenderedElements.has(unit.node)
-  )
+function isClientOwnedUnit(unit: SiblingUnit): boolean {
+  return unit.kind === 'node' && unit.clientOwned
 }
 
 function isPreservedDomElement(node: Node): node is Element {
@@ -968,7 +900,6 @@ function replaceCommentMarkerRange(
   let nextNodes = collectNodeRange(nextStart, nextEnd)
   let currentNodes = collectNodeRange(currentStart, currentEnd)
 
-  markServerRenderedNodes(nextNodes)
   for (let node of nextNodes) {
     parent.insertBefore(node, currentStart)
   }

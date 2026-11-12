@@ -430,12 +430,37 @@ describe('run', () => {
     expect(dispose).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps an explicitly client-owned element rendered before run when server HTML omits it', async (t) => {
+    let dispose = mock.fn()
+    let Entry = createDisposableEntry('/client-owned.js#Entry', dispose)
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <div data-rmx-preserve-dom="client">
+          <Entry />
+        </div>,
+      ),
+    )
+    let app = run({ loadModule: () => Entry, resolveFrame: () => renderDocumentContent('Next') })
+    t.after(() => app.dispose())
+    await app.ready()
+    let host = document.body.firstElementChild
+    invariant(host)
+
+    await app.frames.top.reload()
+
+    expect(host.isConnected).toBe(true)
+    expect(dispose).toHaveBeenCalledTimes(0)
+    expect(document.querySelector('main')?.textContent).toBe('Next')
+    app.dispose()
+    expect(dispose).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps a client-only host created during hydration across repeated reloads', async (t) => {
     let [inserted, resolveInserted] = withResolvers<HTMLDivElement>()
     let Entry = clientEntry('/portal.js#Entry', function Entry(handle: Handle) {
       handle.queueTask(() => {
         let host = document.createElement('div')
-        host.setAttribute('data-rmx-preserve-dom', '')
+        host.setAttribute('data-rmx-preserve-dom', 'client')
         document.body.append(host)
         resolveInserted(host)
       })
@@ -480,7 +505,7 @@ describe('run', () => {
     let [main, widget] = Array.from(document.body.children)
     let entry = widget.firstElementChild
     let host = document.createElement('div')
-    host.setAttribute('data-rmx-preserve-dom', '')
+    host.setAttribute('data-rmx-preserve-dom', 'client')
     document.body.append(host)
     let records: MutationRecord[] = []
     let observer = new MutationObserver((batch) => records.push(...batch))
@@ -500,7 +525,7 @@ describe('run', () => {
   it('keeps client-created preserved elements, and their focus, when the top frame reloads', async (t) => {
     let { app } = await setupReloadBodyTest(t)
     let host = document.createElement('div')
-    host.setAttribute('data-rmx-preserve-dom', '')
+    host.setAttribute('data-rmx-preserve-dom', 'client')
     let input = document.createElement('input')
     host.append(input)
     document.body.append(host)
@@ -552,7 +577,7 @@ describe('run', () => {
     t.after(() => app.dispose())
     await app.ready()
     let host = document.createElement('div')
-    host.setAttribute('data-rmx-preserve-dom', '')
+    host.setAttribute('data-rmx-preserve-dom', 'client')
     document.body.append(host)
     let removed: Node[] = []
     let observer = new MutationObserver((batch) =>
@@ -586,7 +611,7 @@ describe('run', () => {
     let widget = section?.firstElementChild
     invariant(section && widget)
     let host = document.createElement('div')
-    host.setAttribute('data-rmx-preserve-dom', '')
+    host.setAttribute('data-rmx-preserve-dom', 'client')
     section.append(host)
     html = '<section><p>Next</p></section>'
 
@@ -5567,7 +5592,7 @@ describe('run', () => {
         let widget = container.querySelector('[data-rmx-key="widget"]')
         invariant(widget)
         let host = document.createElement('div')
-        host.setAttribute('data-rmx-preserve-dom', '')
+        host.setAttribute('data-rmx-preserve-dom', 'client')
         widget.after(host)
         resolveHydrated({ frame: handle.frame, host })
       })

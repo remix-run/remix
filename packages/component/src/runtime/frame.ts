@@ -61,7 +61,6 @@ import {
   isFrameStart,
   isHydrationEnd,
   isHydrationStart,
-  markServerRenderedNodes,
 } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
 import { css } from '../style/css-mixin.ts'
@@ -1025,8 +1024,6 @@ function insertFrame(
     if (end) {
       let instance = runtime.frameInstances.get(start)
       if (!instance) {
-        // Standalone roots can adopt server ranges without run()'s initial snapshot.
-        markServerRenderedNodes(collectNodesBetween(start, end))
         instance = createFrameInstance(node, start, end, runtime, getContext)
       } else {
         let instanceRuntime = getFrameRuntime(instance.handle)

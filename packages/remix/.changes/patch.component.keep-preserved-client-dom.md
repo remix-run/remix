@@ -1,1 +1,0 @@
-Frame reloads now retain client-only elements marked with `data-rmx-preserve-dom`, allowing portal hosts created during or after hydration to keep focus, transitions, and scroll position. Server-rendered elements remain removable by omission. A client-only host matched by later server HTML also becomes removable by omission.

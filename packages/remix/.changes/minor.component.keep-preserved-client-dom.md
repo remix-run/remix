@@ -1,0 +1,1 @@
+Use `data-rmx-preserve-dom="client"` to keep client-owned elements connected across frame reloads, including portal hosts in arbitrary containers. Client code controls their lifetime; server HTML cannot reclaim them by key. Boolean and empty-string preservation continue to use server-controlled lifetimes.
