@@ -3055,6 +3055,138 @@ describe('traversal scroll', () => {
     expect(scrollTo).not.toHaveBeenCalled()
   })
 
+  async function setupReloadingPage(t: TestContext) {
+    let originalUrl = window.location.href
+    let initialEntryKey = getCurrentNavigationEntry().key
+    let listUrl = new URL('/scroll-list', originalUrl).href
+    let detailUrl = new URL('/scroll-detail', originalUrl).href
+    let nextLoad: ((signal: AbortSignal) => Promise<void>) | undefined
+    function pageHtml(title: string) {
+      return `<html><head></head><body><main style="height: 5000px"><!-- rmx:f:content --><span>${title}</span><!-- /rmx:f --></main><script type="application/json" id="rmx-data">{"f":{"content":{"status":"resolved","name":"content","src":"/scroll-fragment"}}}</script></body></html>`
+    }
+    document.documentElement.innerHTML = pageHtml('List')
+    let app = run({
+      loadModule: mock.fn(),
+      async resolveFrame(src, options) {
+        let load = nextLoad
+        nextLoad = undefined
+        if (load) {
+          let signal = options?.signal
+          if (!signal) throw new Error('Expected a reload abort signal')
+          await load(signal)
+        }
+        let title = src === detailUrl ? 'Detail' : 'List'
+        return options?.target ? `<span>${title}</span>` : pageHtml(title)
+      },
+    })
+    t.after(async () => {
+      nextLoad = undefined
+      if (getCurrentNavigationEntry().key !== initialEntryKey) {
+        await window.navigation.traverseTo(initialEntryKey).finished
+      }
+      app.dispose()
+      document.body.textContent = ''
+      window.scrollTo(0, 0)
+    })
+    await app.ready()
+    return {
+      app,
+      listUrl,
+      detailUrl,
+      async scrollTo(top: number) {
+        if (window.scrollY === top) return
+        let scrolled = new Promise<void>((resolve) =>
+          window.addEventListener('scroll', () => resolve(), { once: true, signal: t.signal }),
+        )
+        window.scrollTo({ top, behavior: 'instant' })
+        await scrolled
+        expect(window.scrollY).toBe(top)
+      },
+      holdNextLoad() {
+        let [started, start] = withResolvers<AbortSignal>()
+        nextLoad = async (signal) => {
+          start(signal)
+          await new Promise<void>((resolve) =>
+            signal.addEventListener('abort', () => resolve(), { once: true }),
+          )
+        }
+        return started
+      },
+      failNextLoad() {
+        nextLoad = async () => {
+          throw new Error('Reload failed')
+        }
+      },
+    }
+  }
+
+  it('saves the new position after a direct frame reload takes over a traversal', async (t) => {
+    let page = await setupReloadingPage(t)
+    await page.scrollTo(100)
+    await navigate(page.detailUrl)
+
+    let started = page.holdNextLoad()
+    let back = window.navigation.back().finished
+    let navigationReloadSignal = await started
+    await page.app.frames.top.reload()
+    await back
+    expect(navigationReloadSignal.aborted).toBe(true)
+    expect(document.querySelector('main')?.textContent).toBe('List')
+    await page.scrollTo(600)
+
+    await window.navigation.forward().finished
+    let scrollTo = t.mock.method(window, 'scrollTo')
+    await window.navigation.back().finished
+
+    expect(scrollTo).toHaveBeenCalledWith({ left: 0, top: 600, behavior: 'instant' })
+    expect(window.scrollY).toBe(600)
+  })
+
+  it('saves the new position after a top frame reload takes over a targeted traversal', async (t) => {
+    let page = await setupReloadingPage(t)
+    await navigate(page.listUrl, { target: 'content' })
+    await page.scrollTo(100)
+    await navigate(page.detailUrl, { target: 'content' })
+
+    let started = page.holdNextLoad()
+    let back = window.navigation.back().finished
+    let navigationReloadSignal = await started
+    await page.app.frames.top.reload()
+    await back
+    expect(navigationReloadSignal.aborted).toBe(true)
+    expect(document.querySelector('main')?.textContent).toBe('List')
+    await page.scrollTo(600)
+
+    await window.navigation.forward().finished
+    let scrollTo = t.mock.method(window, 'scrollTo')
+    await window.navigation.back().finished
+
+    expect(scrollTo).toHaveBeenCalledWith({ left: 0, top: 600, behavior: 'instant' })
+    expect(window.scrollY).toBe(600)
+  })
+
+  it('preserves the saved position when a takeover reload fails before rendering', async (t) => {
+    let page = await setupReloadingPage(t)
+    await page.scrollTo(100)
+    await navigate(page.detailUrl)
+
+    let started = page.holdNextLoad()
+    let back = window.navigation.back().finished
+    await started
+    page.failNextLoad()
+    await expect(page.app.frames.top.reload()).rejects.toThrow('Reload failed')
+    await back
+    expect(document.querySelector('main')?.textContent).toBe('Detail')
+    await page.scrollTo(600)
+
+    await window.navigation.forward().finished
+    let scrollTo = t.mock.method(window, 'scrollTo')
+    await window.navigation.back().finished
+
+    // Chromium can apply its own restoration again after the handler finishes.
+    expect(scrollTo).toHaveBeenCalledWith({ left: 0, top: 100, behavior: 'instant' })
+  })
+
   it('leaves the window alone for an entry that restores scroll manually', async (t) => {
     let page = setup(t)
     window.history.scrollRestoration = 'manual'

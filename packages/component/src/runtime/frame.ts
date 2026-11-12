@@ -711,13 +711,18 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function startReloadTransition(options?: FrameNavigationOptions): FrameReloadTransition {
+    // A pending reload must not notify a navigation that started after it.
+    let onCommit = runtime.onReloadCommit
     let controller = startReload(options?.signal)
     let committed = Promise.withResolvers<void>()
     let commitStarted = false
     let finished = resolveAndRenderReload(controller, options, (ready) => {
       if (commitStarted) return
       commitStarted = true
-      void ready.then(committed.resolve, committed.reject)
+      void ready.then(() => {
+        if (!controller.signal.aborted) onCommit?.()
+        committed.resolve()
+      }, committed.reject)
     })
 
     // Settle committed when a reload is aborted or fails before rendering any content.

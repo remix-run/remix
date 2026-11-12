@@ -160,6 +160,7 @@ export type FrameRuntime = {
       }
     | undefined
   reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
+  onReloadCommit?: () => void
 }
 
 export type SharedFrameRuntime = Pick<

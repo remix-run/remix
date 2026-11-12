@@ -6,6 +6,7 @@ import {
 } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
 import type { FrameHandle, Handle } from './component.ts'
+import { getFrameRuntime } from './frame-runtime.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -349,6 +350,8 @@ export function startNavigationListener(
   // entry a new object.
   let scrollPositions = new Map<string, ScrollToOptions>()
   let renderedEntryKey = navigation.currentEntry?.key
+  let stopWatchingReload: (() => void) | undefined
+  signal.addEventListener('abort', () => stopWatchingReload?.(), { once: true })
   navigation.addEventListener(
     'currententrychange',
     () => {
@@ -382,6 +385,8 @@ export function startNavigationListener(
   navigation.addEventListener(
     'navigate',
     (event) => {
+      stopWatchingReload?.()
+      stopWatchingReload = undefined
       let leavingEntry = navigation.currentEntry
       if (leavingEntry && leavingEntry.key === renderedEntryKey) {
         let { key } = leavingEntry
@@ -481,9 +486,29 @@ export function startNavigationListener(
         if (event.navigationType !== 'traverse') {
           navigation.updateCurrentEntry({ state })
         }
+        if (event.signal.aborted) return
 
         topFrame.src = event.destination.url
         if (frame !== topFrame) frame.src = state.src
+        // A direct reload of the target or top frame can take over this navigation's reload.
+        // Only reloads started for this navigation may adopt its entry when they commit.
+        let runtimes = new Set([getFrameRuntime(frame), getFrameRuntime(topFrame)])
+        let watching = true
+        let onCommit = () => {
+          if (!watching) return
+          renderedEntryKey = navigation.currentEntry?.key
+          stopWatching()
+        }
+        function stopWatching() {
+          watching = false
+          for (let runtime of runtimes) {
+            if (runtime?.onReloadCommit === onCommit) runtime.onReloadCommit = undefined
+          }
+        }
+        for (let runtime of runtimes) {
+          if (runtime) runtime.onReloadCommit = onCommit
+        }
+        stopWatchingReload = stopWatching
         let reload = reloadFrame(frame, {
           ...submission,
           signal: event.signal,
