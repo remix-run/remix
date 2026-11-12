@@ -65,7 +65,7 @@ export interface DefaultPrefetchOverrides {
    * implementations remain supported; the third argument provides the initiating element.
    *
    * @param url Prepared absolute frame source URL.
-   * @param init Frame headers, GET method, priority, and cancellation signal.
+   * @param init Frame headers, `X-Remix-Prefetch: true`, GET method, low priority, and abort signal.
    * @param context Shared frame request and initiating element.
    * @returns The unconsumed response for validation and parsing.
    */
@@ -108,6 +108,7 @@ let prefetchAnchor = initialAnchorPrefetch
 /**
  * Fetches and parses frame HTML, then prefetches discovered assets.
  *
+ * Prepared HTML requests use low priority and send `X-Remix-Prefetch: true`.
  * Overrides receive the prepared GET request and the inert parsed fragment. Native asset hints
  * never run scripts or apply styles. Pending requests are shared by source and target; the first
  * caller supplies the overrides. Nested sources are exposed to the frame hook and fetched only
@@ -507,7 +508,9 @@ export function fetchFrame(
   contentType?: string,
   fetchImpl: typeof globalThis.fetch = globalThis.fetch,
 ): Promise<Response> {
-  let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
+  let headers = new Headers(init.headers)
+  headers.set('Accept', 'text/html')
+  headers.set('X-Remix-Frame', 'true')
   if (target != null) headers.set('X-Remix-Target', target)
   if (contentType) headers.set('Content-Type', contentType)
   return fetchImpl(src, { ...init, headers, mode: 'same-origin' })
@@ -594,7 +597,12 @@ export function createDefaultPrefetch(
       let response = await fetchFrame(
         src,
         target,
-        { method: 'GET', priority: 'low', signal: jobSignal },
+        {
+          method: 'GET',
+          headers: { 'X-Remix-Prefetch': 'true' },
+          priority: 'low',
+          signal: jobSignal,
+        },
         undefined,
         fetchOverride ? (_url, init) => fetchOverride(src, init ?? {}, context) : undefined,
       )

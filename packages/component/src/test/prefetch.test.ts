@@ -610,17 +610,18 @@ describe('prefetch', () => {
     await frame.reload({ src })
 
     expect(fetch).toHaveBeenCalledTimes(2)
-    for (let call of fetch.mock.calls) {
+    for (let [index, call] of fetch.mock.calls.entries()) {
       let [input, init] = call.arguments
       expect(input).toBe(src)
       let headers = new Headers(init?.headers)
       expect(headers.get('Accept')).toBe('text/html')
       expect(headers.get('X-Remix-Frame')).toBe('true')
       expect(headers.get('X-Remix-Target')).toBe('details')
+      expect(headers.get('X-Remix-Prefetch')).toBe(index === 0 ? 'true' : null)
     }
   })
 
-  it('fetches HTML with low priority and frame headers by default', async (t) => {
+  it('fetches HTML with low priority, frame headers, and a prefetch header by default', async (t) => {
     let fetch = t.mock.method(
       globalThis,
       'fetch',
@@ -641,6 +642,7 @@ describe('prefetch', () => {
     expect(init?.priority).toBe('low')
     expect(new Headers(init?.headers).get('X-Remix-Frame')).toBe('true')
     expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
+    expect(new Headers(init?.headers).get('X-Remix-Prefetch')).toBe('true')
   })
 
   describe('viewport', () => {
@@ -1309,6 +1311,7 @@ describe('defaultPrefetch overrides', () => {
     expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
     expect(new Headers(init?.headers).get('X-Remix-Frame')).toBe('true')
     expect(new Headers(init?.headers).get('X-Remix-Target')).toBe('details')
+    expect(new Headers(init?.headers).get('X-Remix-Prefetch')).toBe('true')
     expect(frame).toHaveBeenCalledTimes(1)
     expect(document.documentElement.dataset.prefetchExecuted).toBe(undefined)
   })
@@ -1373,6 +1376,9 @@ describe('defaultPrefetch overrides', () => {
     )
     expect(new Headers(transport.mock.calls[1].arguments[1]?.headers).get('X-Remix-Target')).toBe(
       'details',
+    )
+    expect(new Headers(transport.mock.calls[1].arguments[1]?.headers).get('X-Remix-Prefetch')).toBe(
+      'true',
     )
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual([
       '/resources/keep.js',

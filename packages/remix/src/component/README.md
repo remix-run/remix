@@ -1381,7 +1381,7 @@ This prevents Remix from intercepting Navigation API events. Explicit frame relo
 Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Use `data-rmx-prefetch="viewport"` to start loading when the link enters the viewport. For other triggers, such as prefetching a search result as the visitor types, call `prefetch(src, { target })` or `prefetch(anchor)` from `remix/component`. Anchor calls read the same destination metadata as declarative links and do not require a prefetch marker. Explicit options override link metadata.
 
 - Intent prefetching starts after the pointer or keyboard focus rests on the link for 100ms, or immediately when the link is pressed. Viewport prefetching happens once while the link stays mounted with the same source and target.
-- Prefetching sends the same headers as a frame navigation, including `X-Remix-Target` for named frames, so it matches the request that follows.
+- Prefetching uses low fetch priority and sends `X-Remix-Prefetch: true` alongside the frame navigation headers, including `X-Remix-Target` for named frames. Servers can recognize speculative HTML requests and return `503` under load; Remix skips unsuccessful responses.
 - Remix skips links with `data-rmx-document`, `download`, or a `target` other than `_self`, and named-frame links whose frame isn't mounted. Automatic prefetching is also skipped when the browser reports Save-Data or a `slow-2g` or `2g` connection. Imperative `prefetch()` calls ignore that check.
 
 Remix reads the prefetched HTML without running it and finds the page's JavaScript, CSS, and declared image and font preloads, including those inside nested frames. It adds `<link rel="prefetch">` hints for assets the current page doesn't already have. The hints don't run scripts, apply styles, or follow module imports. Declare important images and fonts on the destination page to include them:
@@ -1393,7 +1393,7 @@ Remix reads the prefetched HTML without running it and finds the page's JavaScri
 
 Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Remix doesn't scan `<img>` elements or CSS `@font-face` rules.
 
-The prefetched HTML itself is discarded. The navigation fetches it again through the frame resolver and the browser HTTP cache, so reusing the response requires caching headers such as `Cache-Control: private, max-age=30`. Asset hints still help when the HTML is `no-store`, because assets have their own cache policies. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary`.
+The prefetched HTML itself is discarded. The navigation fetches it again through the frame resolver and the browser HTTP cache, so reusing the response requires caching headers such as `Cache-Control: private, max-age=30`. Asset hints still help when the HTML is `no-store`, because assets have their own cache policies. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary`. Responses that vary by prefetch status should include `X-Remix-Prefetch` in `Vary`.
 
 Prefetched HTML exposes all discovered same-origin nested frame sources to a custom `frame` hook as `context.frames`. Each reference contains an absolute `src` without a hash, an optional `target` from the frame's name, and a boolean `fallback` indicating whether the frame declares fallback content. `fallback` remains true even if resolved HTML has already arrived in the containing response. This includes frames with fallback content and references inside nested templates. No additional `<Frame>` prop is needed.
 
@@ -1443,7 +1443,7 @@ run({
 
 `prefetchImages` is an application helper that creates and retains its own `Image` instances. It can preserve `srcset`, `sizes`, CORS, and referrer settings, normalize relative URLs against `baseURL`, await `decode()`, and use the app's own queue and cancellation policy. The hook can also make its own `fetch()` calls.
 
-The `fetch` override receives a prepared same-origin `GET` with frame headers, low priority, and an abort signal. Forward `init` to preserve those settings. It can wait for an application queue, retry, or return a cached response. Remix skips non-HTML and unsuccessful responses, including `503`; automatic retry and `Retry-After` handling belong to the override.
+The `fetch` override receives a prepared same-origin `GET` with frame headers, `X-Remix-Prefetch: true`, low priority, and an abort signal. Forward `init` to preserve those settings. It can wait for an application queue, retry, or return a cached response. Remix skips non-HTML and unsuccessful responses, including `503`; automatic retry and `Retry-After` handling belong to the override.
 
 Automatic triggers and `prefetch(anchor)` pass the link in `options.element`, including when an event starts on a descendant. String calls can supply `prefetch(src, { element })`; otherwise they have no triggering element. Both `fetch(url, init, context)` and the `frame` hook expose the first caller's live `context.element`. Nested requests inherit it, and later callers joining shared work do not replace it. Applications that need to aggregate triggers can record each call's element in their `run({ prefetch })` callback, before Remix deduplicates requests.
 
