@@ -1,4 +1,5 @@
 interface DescriptorRestoration {
+  kind: 'method' | 'accessor' | 'property'
   object: object
   propertyName: PropertyKey
   descriptor: PropertyDescriptor | undefined
@@ -11,7 +12,7 @@ const descriptors = new WeakMap<
   object,
   { slot: DescriptorSlot; restoration: DescriptorRestoration }
 >()
-const getDescriptor = descriptors.get.bind(descriptors)
+export const getMockDescriptor = descriptors.get.bind(descriptors)
 const setDescriptor = descriptors.set.bind(descriptors)
 const defineProperty = Object.defineProperty
 const deleteProperty = Reflect.deleteProperty
@@ -35,7 +36,7 @@ export function restoreMockDescriptor(
     for (let slot of ['value', 'get', 'set'] as const) {
       let fn = current[slot]
       if (typeof fn !== 'function') continue
-      let candidate = getDescriptor(fn)
+      let candidate = getMockDescriptor(fn)
       let restoration = candidate?.restoration
       if (
         candidate?.slot === slot &&

@@ -5,11 +5,14 @@ import { createTestContext } from '../lib/context.ts'
 describe('mock.getter and mock.setter', () => {
   it('does not reinstall a restored getter when restoring a standalone method spy', () => {
     let original = () => 1
+    let current = original
     let target = {
       get method() {
-        return original
+        return current
       },
-      set method(_value: () => number) {},
+      set method(value) {
+        current = value
+      },
     }
     let descriptor = Object.getOwnPropertyDescriptor(target, 'method')
     let getter = mock.getter(target, 'method', () => () => 2)
@@ -19,6 +22,35 @@ describe('mock.getter and mock.setter', () => {
     assert.deepEqual(Object.getOwnPropertyDescriptor(target, 'method'), descriptor)
     assert.equal(target.method, original)
     assert.equal(target.method(), 1)
+  })
+
+  it('restores a method over an inherited mocked getter without changing its backing value', async () => {
+    let original = () => 1
+    class Target {
+      #method = original
+      get method() {
+        return this.#method
+      }
+      set method(value) {
+        this.#method = value
+      }
+    }
+    let target = new Target()
+    let descriptor = Object.getOwnPropertyDescriptor(Target.prototype, 'method')
+    let { testContext, cleanup } = createTestContext()
+    testContext.mock.getter(Target.prototype, 'method', () => () => 2)
+    let method = testContext.mock.method(target, 'method', () => 3)
+    try {
+      assert.equal(target.method(), 3)
+      assert.equal(method.mock.callCount(), 1)
+      target.method = () => 4
+      assert.equal(target.method(), 4)
+    } finally {
+      await cleanup()
+    }
+    assert.equal(Object.hasOwn(target, 'method'), false)
+    assert.deepEqual(Object.getOwnPropertyDescriptor(Target.prototype, 'method'), descriptor)
+    assert.equal(target.method, original)
   })
 
   it('removes inherited accessor shadows after cleanup', async () => {

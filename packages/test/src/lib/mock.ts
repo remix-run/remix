@@ -1,6 +1,10 @@
 import { createPropertyMock } from './mock-property.ts'
 import type { MockProperty } from './mock-property.ts'
-import { registerMockDescriptor, restoreMockDescriptor } from './mock-restoration.ts'
+import {
+  getMockDescriptor,
+  registerMockDescriptor,
+  restoreMockDescriptor,
+} from './mock-restoration.ts'
 
 /**
  * Selects an accessor for the fourth argument to `mock.method()`. Only `getter` and
@@ -152,6 +156,7 @@ interface MethodRestoration {
   method: PropertyKey
   original: unknown
   descriptor: PropertyDescriptor | undefined
+  assigned: boolean
   restored: boolean
 }
 
@@ -166,28 +171,53 @@ function createMethodMock<T extends object, K extends keyof T>(
 ): MethodMock<Method<T, K>> {
   let original = obj[method]
   let descriptor = getOwnPropertyDescriptor(obj, method)
+  let owner = obj
+  let sourceDescriptor = descriptor
+  while (!sourceDescriptor) {
+    owner = getPrototypeOf(owner)
+    if (owner === null) break
+    sourceDescriptor = getOwnPropertyDescriptor(owner, method)
+  }
+  let getter = sourceDescriptor?.get
+  let getterDescriptor = getter && getMockDescriptor(getter)
+  let replacesMockedGetter =
+    getterDescriptor?.slot === 'get' && getterDescriptor.restoration.kind === 'accessor'
   // Initial overrides retain the existing permissive behavior, including absent methods.
   let mockFn = createMockFn((impl ?? original) as Method<T, K>)
-  if (!setProperty(obj, method, mockFn)) throw new TypeError('Unable to mock the method')
+  if (replacesMockedGetter) {
+    // The mocked getter can hide the setter's backing value. Leave that value untouched.
+    defineProperty(obj, method, {
+      configurable: true,
+      enumerable: sourceDescriptor?.enumerable ?? true,
+      writable: true,
+      value: mockFn,
+    })
+  } else if (!setProperty(obj, method, mockFn)) {
+    throw new TypeError('Unable to mock the method')
+  }
   let restoration: MethodRestoration = {
     object: obj,
     method,
     original,
     descriptor,
+    assigned: !replacesMockedGetter,
     restored: false,
   }
   setMethodRestoration(mockFn, restoration)
-  if (!descriptor || 'value' in descriptor) {
+  if (!descriptor || 'value' in descriptor || replacesMockedGetter) {
     registerMockDescriptor(mockFn, 'value', {
+      kind: 'method',
       object: obj,
       propertyName: method,
       // Legacy method restoration retains an own property for inherited methods.
-      descriptor: descriptor ?? {
-        configurable: true,
-        enumerable: true,
-        writable: true,
-        value: original,
-      },
+      descriptor: replacesMockedGetter
+        ? descriptor
+        : (descriptor ?? {
+            configurable: true,
+            enumerable: true,
+            writable: true,
+            value: original,
+          }),
       isRestored: () => restoration.restored,
     })
   }
@@ -200,10 +230,10 @@ function createMethodMock<T extends object, K extends keyof T>(
       target = previous
     }
     let descriptor = target.descriptor
-    if (descriptor) {
+    if (descriptor || !target.assigned) {
       descriptor = restoreMockDescriptor(obj, method, descriptor)
     }
-    if (!descriptor || !('value' in descriptor)) {
+    if (target.assigned && (!descriptor || !('value' in descriptor))) {
       if (!setProperty(obj, method, target.original)) {
         throw new TypeError('Unable to restore the method')
       }
@@ -251,6 +281,7 @@ function createAccessorMock(
   })
   let restored = false
   registerMockDescriptor(mockFn, getter ? 'get' : 'set', {
+    kind: 'accessor',
     object,
     propertyName: methodName,
     descriptor: ownDescriptor,

@@ -23,6 +23,10 @@ describe('mock.property', () => {
     let descriptor = Object.getOwnPropertyDescriptor(target, 'method')
     let property = mock.property(target, 'method', () => 2)
     let method = mock.method(target, 'method', () => 3)
+    assert.deepEqual(
+      property.mock.accesses.map(({ type }) => type),
+      ['get', 'set'],
+    )
     property.mock.restore()
     method.mock.restore()
     assert.deepEqual(Object.getOwnPropertyDescriptor(target, 'method'), descriptor)

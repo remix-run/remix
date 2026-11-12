@@ -130,6 +130,7 @@ export function createPropertyMock<target extends object, key extends keyof targ
   }
 
   let restoration = {
+    kind: 'property' as const,
     object,
     propertyName,
     descriptor,

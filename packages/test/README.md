@@ -342,7 +342,7 @@ Call indices must be safe integers at or after the next call index. `resetCalls(
 
 These controls follow the selected [Node `MockFunctionContext` APIs](https://nodejs.org/download/release/v24.3.0/docs/api/test.html#class-mockfunctioncontext). Remix keeps a live `mock.calls` array and records calls before invoking the implementation; Node returns array snapshots and records calls after it returns or throws. Inside the first invocation, Remix's `callCount()` returns `1`, while Node's returns `0`. Reentrant history inspection and override scheduling can therefore differ. Node's additional `mock.fn()` overloads and `times` options are not supported.
 
-Method spies use assignment to install replacements, including through setters. Restoring a method spy skips previously restored spies on the same property. A retained spy remains callable with its current implementation.
+Method spies use assignment to install replacements, including through setters. When layered over a getter spy, they temporarily install a data property without changing the accessor's backing value. Restoring a method spy skips previously restored spies on the same property. A retained spy remains callable with its current implementation.
 
 ##### Data properties
 
