@@ -18,6 +18,7 @@ export type PrefetchFrame = (src: string, options?: PrefetchOptions) => void
 type PrefetchRequest = [src: string, options?: PrefetchOptions]
 
 const INTENT_DELAY_MS = 100
+const IDLE_TIMEOUT_MS = 1000
 
 const defaultPrefetch = createDefaultPrefetch()
 let prefetchFrame: PrefetchFrame = defaultPrefetch
@@ -171,28 +172,79 @@ function startViewportPrefetching(signal: AbortSignal): void {
   if (typeof IntersectionObserver === 'undefined') return
 
   let completed = new WeakMap<HTMLAnchorElement, string>()
+  // Keep observing queued links until idle time so exits can still cancel their prefetch.
+  let entered = new Set<HTMLAnchorElement>()
+  let cancelIdle: (() => void) | undefined
 
   function getRequest(anchor: HTMLAnchorElement): PrefetchRequest | undefined {
     if (anchor.getAttribute('data-rmx-prefetch') !== 'viewport') return
     return getAnchorPrefetchRequest(anchor)
   }
 
-  let viewport = new IntersectionObserver((entries) => {
-    if (signal.aborted || !canPrefetchAutomatically()) return
+  function prefetchAnchor(anchor: HTMLAnchorElement): void {
+    let request = getRequest(anchor)
+    if (!request || !hasPrefetchTarget(request)) return
+    let key = JSON.stringify(request)
+    if (completed.get(anchor) === key) return
+    completed.set(anchor, key)
+    viewport.unobserve(anchor)
+    prefetchFrame(...request)
+  }
+
+  function intersect(entries: IntersectionObserverEntry[]): void {
+    if (signal.aborted) return
     for (let { target, isIntersecting } of entries) {
-      if (!isIntersecting || !(target instanceof HTMLAnchorElement)) continue
-      let request = getRequest(target)
-      if (!request || !hasPrefetchTarget(request)) continue
-      let key = JSON.stringify(request)
-      if (completed.get(target) === key) continue
-      completed.set(target, key)
-      viewport.unobserve(target)
-      prefetchFrame(...request)
+      if (!(target instanceof HTMLAnchorElement)) continue
+      if (!isIntersecting) entered.delete(target)
+      else entered.add(target)
     }
-  })
+    schedule()
+  }
+
+  function schedule(): void {
+    if (signal.aborted || document.hidden || cancelIdle || entered.size === 0) return
+    cancelIdle = scheduleIdlePrefetch((deadline) => {
+      try {
+        if (signal.aborted || document.hidden) return
+        intersect(viewport.takeRecords())
+        if (!canPrefetchAutomatically()) entered.clear()
+        let started = false
+        for (let anchor of entered) {
+          if (signal.aborted || document.hidden) break
+          if (deadline.didTimeout ? started : deadline.timeRemaining() <= 0) break
+          entered.delete(anchor)
+          prefetchAnchor(anchor)
+          started = true
+        }
+      } finally {
+        cancelIdle = undefined
+        schedule()
+      }
+    })
+  }
+
+  let viewport = new IntersectionObserver(intersect)
+
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      if (document.hidden) {
+        cancelIdle?.()
+        cancelIdle = undefined
+      } else {
+        // Layout may have changed while hidden. Reobserve queued links for fresh intersections.
+        for (let { target } of viewport.takeRecords()) {
+          if (target instanceof HTMLAnchorElement) entered.add(target)
+        }
+        for (let anchor of entered) update(anchor)
+      }
+    },
+    { signal },
+  )
 
   function update(anchor: HTMLAnchorElement): void {
     viewport.unobserve(anchor)
+    entered.delete(anchor)
     if (!anchor.isConnected) {
       completed.delete(anchor)
       return
@@ -237,11 +289,22 @@ function startViewportPrefetching(signal: AbortSignal): void {
   signal.addEventListener(
     'abort',
     () => {
+      cancelIdle?.()
+      entered.clear()
       mutations.disconnect()
       viewport.disconnect()
     },
     { once: true },
   )
+}
+
+function scheduleIdlePrefetch(callback: IdleRequestCallback): () => void {
+  if (typeof requestIdleCallback === 'function') {
+    let handle = requestIdleCallback(callback, { timeout: IDLE_TIMEOUT_MS })
+    return () => cancelIdleCallback(handle)
+  }
+  let handle = setTimeout(() => callback({ didTimeout: true, timeRemaining: () => 0 }), 0)
+  return () => clearTimeout(handle)
 }
 
 function canPrefetchAutomatically(): boolean {
@@ -374,6 +437,16 @@ export function createDefaultPrefetch(
         return
       }
       let html = await response.text()
+      if (signal?.aborted) return
+      await new Promise<void>((resolve) => {
+        let cancelIdle = scheduleIdlePrefetch(finish)
+        function finish() {
+          cancelIdle()
+          signal?.removeEventListener('abort', finish)
+          resolve()
+        }
+        signal?.addEventListener('abort', finish, { once: true })
+      })
       if (signal?.aborted) return
       // Template contents stay inert, including scripts, styles, and nested frame templates.
       let template = document.createElement('template')

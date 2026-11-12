@@ -1,0 +1,3 @@
+Viewport prefetches now start during browser idle time and yield when the idle budget runs out. Pending viewport work pauses while the document is hidden and resumes with fresh visibility and eligibility checks when it becomes visible.
+
+Default prefetching also waits for idle time before parsing downloaded HTML and discovering assets. Idle callbacks have a one-second timeout to keep busy pages making progress, and browsers without idle callbacks yield through timers. Intent and imperative triggers keep their existing timing. Pending viewport work and HTML discovery are cancelled when the runtime is disposed.
