@@ -22,6 +22,10 @@ type DismissableLayer = {
   styles: Map<HTMLElement, string>
 }
 
+/** Matches announcement regions, which stay available and interactive behind open layers. */
+export const liveRegionSelector =
+  '[aria-live]:not([aria-live="off"]), [role="alert"], [role="status"], [role="log"]'
+
 const documents = new WeakMap<Document, ReturnType<typeof createDocumentLayers>>()
 const observers = new WeakMap<Document, Set<() => void>>()
 
@@ -87,6 +91,12 @@ function eventNodes(event: Event, document: Document): Node[] {
   return event.composedPath().filter((target): target is Node => target instanceof NodeConstructor)
 }
 
+function isInLiveRegion(event: Event, document: Document): boolean {
+  return eventNodes(event, document).some(
+    (node) => node.nodeType === Node.ELEMENT_NODE && (node as Element).matches(liveRegionSelector),
+  )
+}
+
 function isInside(layer: DismissableLayer, event: Event): boolean {
   let branch = getDismissableLayerBranch(layer.node)
   return eventNodes(event, layer.node.ownerDocument).some(
@@ -129,6 +139,8 @@ function createDocumentLayers(document: Document) {
       event.button !== 0 ||
       (origin && (origin.layer !== layer || origin.inside)) ||
       isInside(layer, event) ||
+      // Toast actions and similar live-region controls must keep working while a layer is open.
+      isInLiveRegion(event, document) ||
       layer.options.dismissOnOutsideClick?.() === false
     ) {
       return

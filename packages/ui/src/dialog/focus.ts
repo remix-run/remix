@@ -1,6 +1,10 @@
 import { isFocusable, tabbable } from 'tabbable'
 import { contains } from '../lib/contains.ts'
-import { getDismissableLayerBranch, observeDismissableLayers } from '../lib/dismissable-layer.ts'
+import {
+  getDismissableLayerBranch,
+  liveRegionSelector,
+  observeDismissableLayers,
+} from '../lib/dismissable-layer.ts'
 
 type FocusScopeOptions = {
   modal: boolean | 'trap-focus'
@@ -134,13 +138,7 @@ function createManager(doc: Document) {
       }
     }
 
-    let liveRegions = roots.flatMap((root) =>
-      Array.from(
-        root.querySelectorAll(
-          '[aria-live]:not([aria-live="off"]), [role="alert"], [role="status"], [role="log"]',
-        ),
-      ),
-    )
+    let liveRegions = roots.flatMap((root) => Array.from(root.querySelectorAll(liveRegionSelector)))
 
     function background(scope: FocusScope | undefined) {
       let nodes = new Set<Element>()
