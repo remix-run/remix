@@ -94,16 +94,8 @@ export interface FrameFallbackRoot {
 
 export type FrameMountState = {
   instance: FrameInstance
-  // A client-inserted frame shows its fallback until its first resolution starts rendering, and it
-  // resolves once that render finishes. Server-rendered frames can still be awaiting streamed
-  // content or a deferred load, without owning a fallback root.
-  content:
-    | { status: 'fallback'; fallbackRoot: FrameFallbackRoot }
-    | { status: 'pending' }
-    | { status: 'rendering' }
-    | { status: 'resolved' }
-  // Aborted when a newer resolution starts or the frame is disposed.
-  resolveController?: AbortController
+  // Only client-inserted frames own a fallback root, until replacement content starts rendering.
+  fallbackRoot?: FrameFallbackRoot
 }
 
 export class NamedFrameRegistry {
