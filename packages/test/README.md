@@ -10,6 +10,7 @@ A test framework for JavaScript and TypeScript projects.
 - In-browser component testing (pair with `render` from `remix/component/test`)
 - Mock functions and method spies via `t.mock.fn` / `t.mock.method`
 - Per-test and hook timeouts with `t.signal` abort support
+- Polling assertions with `t.waitFor()`
 - Unified code coverage reporting across unit and E2E tests
 - Watch mode
 - Static CLI configuration through `remix.json`
@@ -276,6 +277,12 @@ interface TestContext {
   // Register a cleanup function to run after the test completes
   after(fn: () => void): void
 
+  // Retry assertions and return the first result that does not throw or reject
+  waitFor<result>(
+    condition: () => result | PromiseLike<result>,
+    options?: { interval?: number; timeout?: number },
+  ): Promise<Awaited<result>>
+
   // Mock tracker, mirroring the shape of Node's `t.mock` from `node:test`
   mock: {
     // Create a mock function with an optional implementation
@@ -289,8 +296,8 @@ interface TestContext {
     ): MockFunction
   }
 
-  // Replace global timer functions with controllable fakes
-  useFakeTimers(): FakeTimers
+  // Replace global timers, Date, and performance.now() with controllable fakes
+  useFakeTimers(options?: { now?: number | Date }): FakeTimers
 
   // E2E only: connect a running test server to a Playwright Page
   serve(server: { baseUrl: string; close(): Promise<void> }): Promise<Page>
@@ -386,9 +393,41 @@ beforeEach(
 )
 ```
 
+#### Polling Assertions
+
+Use `t.waitFor()` to wait for a form's save confirmation in a browser test (`*.test.browser.ts`). Rendering setup is omitted:
+
+```ts
+import * as assert from 'remix/assert'
+import { it } from 'remix/test'
+
+it('shows the saved status', async (t) => {
+  // Render your form here.
+  let submitButton = document.querySelector<HTMLButtonElement>('button[type="submit"]')
+  assert.ok(submitButton)
+  submitButton.click()
+
+  await t.waitFor(() =>
+    assert.equal(document.querySelector('[role="status"]')?.textContent, 'Saved'),
+  )
+})
+```
+
+The callback runs immediately and retries after throws or rejections, waiting `interval` milliseconds after each failure settles (default: 50). It returns the first successful result; even `false` or `undefined` ends polling, so use assertions to express what must be true.
+
+The overall `timeout` defaults to 1000 milliseconds, including pending attempts. Timeout errors retain the last assertion failure as `cause`, if any.
+
+Polling uses real timers even when fake timers are enabled. It follows [Node 24.3's `waitFor()`](https://github.com/nodejs/node/blob/v24.3.0/lib/internal/test_runner/test.js), with cancellation when its test aborts or finishes. See the [`TestContext.waitFor` reference](https://github.com/remix-run/remix/blob/main/packages/test/src/lib/context.ts) for delay validation and cancellation details.
+
 #### Fake Timers
 
-`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, etc.) with controllable fakes that are automatically restored after the test. It works in any test environment — server unit tests, browser tests, or E2E setup code.
+`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, `setImmediate`, and their clear functions), `AbortSignal.timeout()`, `Date`, and `performance.now()` with controllable fakes that are automatically restored after the test. Time only moves when the test advances the clock. It works in any test environment — server unit tests, browser tests, or E2E setup code.
+
+Calling `t.useFakeTimers()` again restores the previous clock, discards its pending timers, and starts a new clock with the supplied options. After a successful `restore()`, calling it again has no effect.
+
+Timers are restored synchronously when the test aborts, or before registered cleanup callbacks run when the test finishes. Calling `t.useFakeTimers()` after either event throws, so unfinished async work cannot install a clock in a later test. Runner timeouts keep using real timers while fake timers are active.
+
+Only one fake clock can be active in a global environment. An overlapping clock from another test context is rejected before globals change. Failed installation rolls back earlier replacements. Restoration preserves the original property descriptors and attempts every replacement even after a failure; it reports the errors, and another `restore()` call retries failed properties.
 
 ```ts
 it('debounces a callback', (t) => {
@@ -404,10 +443,27 @@ it('debounces a callback', (t) => {
 })
 ```
 
-| Method        | Description                                                                 |
-| ------------- | --------------------------------------------------------------------------- |
-| `advance(ms)` | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
-| `restore()`   | Restore the original timer functions (called automatically after each test) |
+| Method             | Description                                                                 |
+| ------------------ | --------------------------------------------------------------------------- |
+| `advance(ms)`      | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
+| `advanceAsync(ms)` | Like `advance`, but lets promise continuations settle between timer firings |
+| `restore()`        | Restore the original timer functions (called automatically after each test) |
+
+`Date.now()` and `new Date()` start at the Unix epoch (`0`), like Node's mock timers, and `performance.now()` starts at `0`. Vitest and Jest start at the real current time instead; a fixed start keeps tests from depending on when they run. Pass `now` to start the fake `Date` at a specific time. `new Date(value)`, `Date.parse()`, `Date.UTC()`, and `instanceof Date` keep working as usual.
+
+```ts
+it('expires a session after one hour', (t) => {
+  let timers = t.useFakeTimers({ now: new Date('2030-01-01T00:00:00Z') })
+  let session = createSession()
+
+  timers.advance(60 * 60 * 1000)
+  assert.equal(session.isExpired(), true)
+})
+```
+
+Immediates fire on the next advance, including `advance(0)`, and signals from `AbortSignal.timeout(ms)` abort with a `TimeoutError` once the clock reaches `ms`. Timers created before `t.useFakeTimers()` stay real, and the clear functions still cancel them. In Node, fake timers return handles that support `ref()`, `unref()`, `hasRef()`, and `refresh()`.
+
+Fake `AbortSignal.timeout(ms)` uses Node's validation in every runtime: `ms` must be a number and an integer from `0` through `4294967295`. Other types throw a `TypeError`; invalid numbers throw a `RangeError` synchronously.
 
 #### E2E
 

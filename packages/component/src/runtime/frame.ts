@@ -12,6 +12,7 @@ import {
   type RenderFn,
 } from './component.ts'
 import { invariant } from './invariant.ts'
+import { encodeFormDataAsSearchParams } from './form-navigation.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
@@ -19,16 +20,20 @@ import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import {
   createFrameRuntime,
+  disposeClientEntryBoundary,
+  getClientEntryBoundaryOwner,
   getFrameRuntime,
   getSharedFrameRuntime,
   isFrameRuntime,
-  NamedFrameRegistry,
+  setClientEntryBoundaryOwner,
+  type ClientEntryIdentity,
   type FrameMountState,
   type FrameNavigationOptions,
   type FrameReloadResult,
   type FrameReloadTransition,
   type FrameRuntime,
   type LoadModule,
+  type NamedFrameRegistry,
   type PendingClientEntries,
   type ReconciliationTracker,
   type ResolveFrame,
@@ -50,6 +55,7 @@ import {
   diffElementAttributes,
   diffNodes,
   findEndMarker,
+  getClientEntryKey,
   getFrameId,
   isCommentNode,
   isFrameEnd,
@@ -57,22 +63,14 @@ import {
   isHydrationEnd,
   isHydrationStart,
 } from './diff-dom.ts'
-import { createStyleManager, type StyleManager } from '../style/index.ts'
+import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
 import { css } from '../style/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
 import type { CSSProps } from '../style/style.ts'
 import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './spa-response.ts'
-import {
-  disposeClientEntryBoundary,
-  getClientEntryBoundaryOwner,
-  getClientEntryKey,
-  setClientEntryBoundaryOwner,
-  type ClientEntryIdentity,
-} from './client-entry-boundary.ts'
 import { getDocumentImportMapManager } from './import-map-manager.ts'
-import { parseDocument, removeNoscriptContents } from './parse-document.ts'
 import { ESCAPED_OBJECT } from './props-serialization.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
@@ -102,29 +100,19 @@ type FrameMarkerData = FrameData & {
   id: string
 }
 
-let appTopFrame: FrameInstance
-export const appNamedFrames = new NamedFrameRegistry()
+// Frames of the most recently started run() runtime, for module-level helpers that have no
+// runtime reference: targeted prefetching and updateUrl().
+let appFrames: Handle['frames'] | undefined
 
-export function setAppTopFrame(frame: FrameInstance): void {
-  appTopFrame = frame
-}
-
-export function getAppTopFrame(): FrameInstance {
-  return appTopFrame
+export function setAppFrames(frames: Handle['frames']): () => void {
+  appFrames = frames
+  return () => {
+    if (appFrames === frames) appFrames = undefined
+  }
 }
 
 export function setTopFrameSource(src: string): void {
-  if (appTopFrame) appTopFrame.handle.src = src
-}
-
-/**
- * Returns the top-level frame handle for the running application.
- *
- * @returns The top-level frame handle.
- */
-export function getTopFrame(): FrameHandle {
-  if (!appTopFrame) throw new Error('app runtime not initialized')
-  return appTopFrame.handle
+  if (appFrames) appFrames.top.src = src
 }
 
 /**
@@ -134,7 +122,7 @@ export function getTopFrame(): FrameHandle {
  * @returns The matching frame handle, or `undefined` when not found.
  */
 export function getNamedFrame(name: string): FrameHandle | undefined {
-  return appNamedFrames.get(name)
+  return appFrames?.get(name)
 }
 
 type InternalFrameContent = FrameContent | DocumentFragment
@@ -695,15 +683,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     if (formData) {
       if (method !== 'post') {
         let url = new URL(src, container.doc.baseURI)
-        let query = new URLSearchParams()
-        let normalizeNewlines = (value: string) => value.replace(/\r\n|\r|\n/g, '\r\n')
-        for (let [name, value] of formData) {
-          query.append(
-            normalizeNewlines(name),
-            normalizeNewlines(typeof value === 'string' ? value : value.name),
-          )
-        }
-        url.search = `?${query}`
+        url.search = `?${encodeFormDataAsSearchParams(formData)}`
         src = url.href
         formData = undefined
       } else {
@@ -724,23 +704,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function startReloadTransition(options?: FrameNavigationOptions): FrameReloadTransition {
-    let controller = startReload(options?.signal)
+    let controller = beginReload('direct', options?.signal)
     let committed = Promise.withResolvers<void>()
-    let commitStarted = false
-    let finished = resolveAndRenderReload(controller, options, (ready) => {
-      if (commitStarted) return
-      commitStarted = true
-      void ready.then(committed.resolve, committed.reject)
-    })
+    let finished = resolveAndRenderReload(controller, committed, options)
 
     // Settle committed when a reload is aborted or fails before rendering any content.
     void finished.then(() => committed.resolve(), committed.reject)
 
     return { signal: controller.signal, committed: committed.promise, finished }
-  }
-
-  function startReload(signal?: AbortSignal): AbortController {
-    return beginReload('direct', signal)
   }
 
   function beginClientFrameReloadForAncestorReload(signal: AbortSignal): {
@@ -791,8 +762,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   async function resolveAndRenderReload(
     controller: AbortController,
+    committed: PromiseWithResolvers<void>,
     options?: FrameNavigationOptions,
-    resolveCommit?: (ready: Promise<void>) => void,
   ): Promise<FrameReloadResult> {
     let isStale = () => reloadController !== controller || controller.signal.aborted
     try {
@@ -817,7 +788,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
           if (commitStarted) return
           commitStarted = true
           blockingFrameTracker.finalize()
-          resolveCommit?.(blockingFrameTracker.ready())
+          void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
         },
       })
       reconciliationTracker.finalize()
@@ -977,7 +948,7 @@ function diffFrame(
 
   // If the frame hasn't resolved yet, preserve existing cancel/remount behavior
   // so pending streams from the old src cannot take over the new src.
-  if (currName !== nextName || (currSrc !== nextSrc && !curr._state.resolved)) {
+  if (currName !== nextName || (currSrc !== nextSrc && curr._state.content.status !== 'resolved')) {
     let replaceAnchor = curr._rangeEnd.nextSibling ?? anchor
     remove(curr, domParent, context)
     return insertFrame(next, domParent, vParent, context, svg, replaceAnchor)
@@ -1002,9 +973,10 @@ function diffFrame(
     resolveClientFrame(committed, frameRuntime, serverFrameReload)
   }
 
-  if (!committed._state.resolved && committed._state.fallbackRoot) {
-    getNonceManager().inheritRootResourceNonces(committed._state.fallbackRoot, vParent)
-    committed._state.fallbackRoot.render(committed.props.fallback ?? null)
+  let { content } = committed._state
+  if (content.status === 'fallback') {
+    getNonceManager().inheritRootResourceNonces(content.fallbackRoot, vParent)
+    content.fallbackRoot.render(committed.props.fallback ?? null)
   }
   return committed
 }
@@ -1045,10 +1017,8 @@ function insertFrame(
       cursor.current = end.nextSibling
       return commitFrameNode(node, vParent, svg, start, end, {
         instance,
-        resolveToken: 0,
+        content: { status: 'resolved' },
         resolveController: undefined,
-        fallbackRoot: undefined,
-        resolved: true,
       })
     }
   }
@@ -1069,9 +1039,7 @@ function insertFrame(
   let instance = createFrameInstance(node, start, end, runtime, getContext)
   let committed = commitFrameNode(node, vParent, svg, start, end, {
     instance,
-    fallbackRoot,
-    resolved: false,
-    resolveToken: 0,
+    content: { status: 'fallback', fallbackRoot },
     resolveController: undefined,
   })
   resolveClientFrame(committed, runtime, runtime.serverFrameReload)
@@ -1133,8 +1101,6 @@ function resolveClientFrame(
   let state = node._state
   let instance = state.instance
 
-  let token = state.resolveToken + 1
-  state.resolveToken = token
   state.resolveController?.abort()
   let reload = serverFrameReload
     ? instance.beginClientFrameReloadForAncestorReload(serverFrameReload.signal)
@@ -1144,35 +1110,42 @@ function resolveClientFrame(
   }
   let resolveController = reload?.controller ?? new AbortController()
   state.resolveController = resolveController
-  let isStale = () => state.resolveToken !== token || resolveController.signal.aborted
+  let { signal } = resolveController
   let frameCommitted = Promise.withResolvers<void>()
 
   let resolve = Promise.resolve()
     .then(() =>
       runtime.resolveFrame(frameSrc, {
-        signal: resolveController.signal,
+        signal,
         target: getFrameName(node),
       }),
     )
     .then(async (resolution) => {
-      if (isStale()) return
+      if (signal.aborted) return
       let { content, nonce } = await unwrapFrameResolution(resolution)
-      if (isStale()) return
-      state.fallbackRoot?.dispose()
-      state.fallbackRoot = undefined
-      let nextContent = asAbortableFrameContent(content, resolveController.signal)
+      if (signal.aborted) return
+      if (state.content.status === 'fallback') {
+        state.content.fallbackRoot.dispose()
+        state.content = { status: 'rendering' }
+      }
+      let nextContent = asAbortableFrameContent(content, signal)
       await instance.render(nextContent, {
         nonce,
-        signal: resolveController.signal,
+        signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
         blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
-        onCommit: frameCommitted.resolve,
+        onCommit() {
+          // Mark resolved as soon as the content is visible so a src change that arrives while
+          // sub-frames are still settling reloads in place instead of remounting with the fallback.
+          if (!signal.aborted) state.content = { status: 'resolved' }
+          frameCommitted.resolve()
+        },
       })
-      if (isStale()) return
-      state.resolved = true
+      if (signal.aborted) return
+      state.content = { status: 'resolved' }
     })
     .catch((error) => {
-      if (reload && !isStale()) {
+      if (reload && !signal.aborted) {
         runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       }
     })
@@ -1194,11 +1167,9 @@ function resolveClientFrame(
 
 function disposeFrameResources(node: CommittedFrameNode): void {
   let state = node._state
-  state.resolveToken++
   state.resolveController?.abort()
   state.resolveController = undefined
-  state.fallbackRoot?.dispose()
-  state.fallbackRoot = undefined
+  if (state.content.status === 'fallback') state.content.fallbackRoot.dispose()
 
   state.instance.dispose()
 }
@@ -2273,5 +2244,41 @@ export function reloadCurrentDocument(doc: Document): void {
     navigation.reload({ info: documentReloadInfo })
   } else {
     doc.location.reload()
+  }
+}
+
+function parseDocument(doc: Document, content: string): HTMLElement {
+  let parsed = doc.implementation.createHTMLDocument()
+  parsed.open()
+
+  // Let the native parser find the opening html element and its attributes. The
+  // delimiters only split input chunks; the parser handles comments and quoted >.
+  let offset = 0
+  while (!parsed.documentElement && offset < content.length) {
+    let end = content.indexOf('>', offset)
+    let next = end === -1 ? content.length : end + 1
+    parsed.write(content.slice(offset, next))
+    offset = next
+  }
+
+  let root = parsed.documentElement
+  root?.remove()
+  parsed.close()
+  root ??= parsed.documentElement
+  invariant(root, 'Missing document element')
+  root.remove()
+
+  // Fragment parsing keeps scripts inert. Keep the root disconnected so styles
+  // cannot enforce CSP before their response nonces have been rewritten.
+  root.innerHTML = content
+  removeNoscriptContents(root)
+  return root
+}
+
+function removeNoscriptContents(source: ParentNode): void {
+  // Frame navigation requires scripting; fallback markup must stay inactive.
+  for (let noscript of source.querySelectorAll('noscript')) noscript.textContent = ''
+  for (let template of source.querySelectorAll('template')) {
+    removeNoscriptContents(template.content)
   }
 }

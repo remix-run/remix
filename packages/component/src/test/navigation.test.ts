@@ -1,10 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
-import {
-  navigate,
-  startNavigationListener,
-  startNavigationListenerImpl,
-} from '../runtime/navigation.ts'
+import { navigate, startNavigationListener } from '../runtime/navigation.ts'
 import type { FrameHandle } from '../runtime/component.ts'
 import type { ResolveFrameOptions } from '../runtime/frame-runtime.ts'
 import { withResolvers } from './utils.ts'
@@ -27,8 +23,8 @@ const stubFrame = {
 } as unknown as FrameHandle
 
 const stubFrames = {
-  getTopFrame: () => stubFrame,
-  getNamedFrame: () => stubFrame,
+  top: stubFrame,
+  get: () => stubFrame,
   reloadFrame: (frame: FrameHandle) =>
     createReloadTransition(frame.reload().then((signal) => ({ signal }))),
 }
@@ -89,7 +85,13 @@ function stubAnimationFrames(t: TestContext) {
   })
   return {
     pending: () => callbacks.length,
-    next: () => callbacks.shift()?.(0),
+    // Runs a frame: the callbacks queued so far, but not the ones they request.
+    next() {
+      for (let callback of callbacks.splice(0)) callback(0)
+    },
+    flush() {
+      while (callbacks.length > 0) this.next()
+    },
   }
 }
 
@@ -101,7 +103,7 @@ type StubNavigationTransition = {
 
 function startStubNavigationListener(
   t: TestContext,
-  options: Parameters<typeof startNavigationListenerImpl>[1] = stubFrames,
+  options: Parameters<typeof startNavigationListener>[1] = stubFrames,
 ): (event: Event) => StubNavigationTransition {
   let stubNavigation = Object.assign(new EventTarget(), {
     updateCurrentEntry: mock.fn(),
@@ -112,7 +114,7 @@ function startStubNavigationListener(
   stubGlobalField(t, 'navigation', stubNavigation)
 
   let controller = new AbortController()
-  startNavigationListenerImpl(controller.signal, options)
+  startNavigationListener(controller.signal, options)
   t.after(() => controller.abort())
   // Ends navigation workarounds that are still running, as the next navigation would.
   t.after(() => stubNavigation.dispatchEvent(new Event('navigate')))
@@ -142,13 +144,11 @@ function startStubNavigationListener(
       async succeed() {
         resolveFinished()
         await finished
-        await Promise.resolve()
         clearTransition()
       },
       async fail() {
         rejectFinished(new Error('Navigation failed'))
         await finished.catch(() => {})
-        await Promise.resolve()
         clearTransition()
       },
     }
@@ -193,7 +193,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', navigation)
     let controller = new AbortController()
     t.after(() => controller.abort())
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let destination = new URL('/next', document.location.href).href
     reloadDocument(document, destination)
@@ -310,7 +310,7 @@ describe('navigate', () => {
     t.after(() => controller.abort())
     let [finished, resolveFinished] = withResolvers<StubFrameReloadResult>()
     let [committed, resolveCommitted] = withResolvers<void>()
-    startNavigationListenerImpl(controller.signal, {
+    startNavigationListener(controller.signal, {
       ...stubFrames,
       reloadFrame: () => ({ signal: controller.signal, committed, finished }),
     })
@@ -332,7 +332,7 @@ describe('navigate', () => {
     let controller = new AbortController()
     t.after(() => controller.abort())
     let reload = Promise.withResolvers<StubFrameReloadResult>()
-    startNavigationListenerImpl(controller.signal, {
+    startNavigationListener(controller.signal, {
       ...stubFrames,
       reloadFrame: () => ({
         signal: controller.signal,
@@ -365,7 +365,7 @@ describe('navigate', () => {
     let controller = new AbortController()
     t.after(() => controller.abort())
     let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
-    startNavigationListenerImpl(controller.signal, {
+    startNavigationListener(controller.signal, {
       ...stubFrames,
       reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
     })
@@ -386,7 +386,7 @@ describe('navigate', () => {
     let controller = new AbortController()
     t.after(() => controller.abort())
     let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
-    startNavigationListenerImpl(controller.signal, {
+    startNavigationListener(controller.signal, {
       ...stubFrames,
       reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
     })
@@ -410,7 +410,7 @@ describe('navigate', () => {
     let controller = new AbortController()
     t.after(() => controller.abort())
     let reload = Promise.withResolvers<StubFrameReloadResult>()
-    startNavigationListenerImpl(controller.signal, {
+    startNavigationListener(controller.signal, {
       ...stubFrames,
       reloadFrame: () => ({
         signal: controller.signal,
@@ -452,7 +452,7 @@ describe('navigate', () => {
     let controller = new AbortController()
     t.after(() => controller.abort())
     let [finished, , rejectFinished] = withResolvers<StubFrameReloadResult>()
-    startNavigationListenerImpl(controller.signal, {
+    startNavigationListener(controller.signal, {
       ...stubFrames,
       reloadFrame: () => ({ signal: controller.signal, committed: Promise.resolve(), finished }),
     })
@@ -516,7 +516,7 @@ describe('navigate', () => {
     ]
     let [reloading, startReloading] = withResolvers<void>()
     let calls = 0
-    startNavigationListenerImpl(controller.signal, {
+    startNavigationListener(controller.signal, {
       ...stubFrames,
       reloadFrame() {
         let [finished] = reloads[calls++]!
@@ -625,7 +625,7 @@ describe('navigate', () => {
     let addDocumentListener = t.mock.method(document, 'addEventListener')
     let controller = new AbortController()
 
-    startNavigationListener(controller.signal)
+    startNavigationListener(controller.signal, stubFrames)
 
     expect(addDocumentListener).not.toHaveBeenCalled()
     controller.abort()
@@ -641,7 +641,7 @@ describe('navigate', () => {
     let addDocumentListener = t.mock.method(document, 'addEventListener')
     let controller = new AbortController()
 
-    startNavigationListener(controller.signal)
+    startNavigationListener(controller.signal, stubFrames)
 
     expect(addDocumentListener).not.toHaveBeenCalled()
     expect(navigation.updateCurrentEntry).not.toHaveBeenCalled()
@@ -720,11 +720,13 @@ describe('navigate', () => {
     let reloadController = new AbortController()
     let [committed, resolveCommitted] = withResolvers<void>()
     let [finished, resolveFinished] = withResolvers<StubFrameReloadResult>()
+    let [reloadStarted, startReload] = withResolvers<void>()
     let frame = { src: '' } as FrameHandle
     let dispatchNavigation = startStubNavigationListener(t, {
-      getTopFrame: () => frame,
-      getNamedFrame: () => frame,
+      top: frame,
+      get: () => frame,
       reloadFrame() {
+        startReload()
         return { signal: reloadController.signal, committed, finished }
       },
     })
@@ -741,7 +743,7 @@ describe('navigate', () => {
     )
 
     let handler = transition.runHandler()
-    await Promise.resolve()
+    await reloadStarted
     reloadController.abort()
     resolveCommitted()
     resolveFinished({ signal: reloadController.signal })
@@ -889,7 +891,6 @@ describe('navigate', () => {
 
     let transition = page.navigate()
     let handler = transition.runHandler()
-    await Promise.resolve()
     page.scroll(2400)
 
     expect(window.scrollY).toBe(2400)
@@ -1144,6 +1145,7 @@ describe('navigate', () => {
   })
 
   it('ignores legacy boolean scroll and focus settings on traverse navigations', async (t) => {
+    let animationFrames = stubAnimationFrames(t)
     let dispatchNavigation = startStubNavigationListener(t)
     let intercept = mock.fn()
     let event = Object.assign(new Event('navigate'), {
@@ -1167,6 +1169,7 @@ describe('navigate', () => {
     let transition = dispatchNavigation(event)
     await transition.runHandler()
     await transition.succeed()
+    animationFrames.flush()
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
@@ -1174,6 +1177,7 @@ describe('navigate', () => {
   })
 
   it('ignores manual scroll and focus settings on traverse navigations', async (t) => {
+    let animationFrames = stubAnimationFrames(t)
     let dispatchNavigation = startStubNavigationListener(t)
     let event = createTraverseNavigateEvent({
       target: undefined,
@@ -1189,6 +1193,7 @@ describe('navigate', () => {
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
     await transition.runHandler()
     await transition.succeed()
+    animationFrames.flush()
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
@@ -1196,6 +1201,7 @@ describe('navigate', () => {
   })
 
   it('honors legacy true settings on traverse navigations', async (t) => {
+    let animationFrames = stubAnimationFrames(t)
     let dispatchNavigation = startStubNavigationListener(t)
     let event = createTraverseNavigateEvent({
       target: undefined,
@@ -1209,6 +1215,7 @@ describe('navigate', () => {
     let transition = dispatchNavigation(event)
     await transition.runHandler()
     await transition.succeed()
+    animationFrames.flush()
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
@@ -1216,6 +1223,7 @@ describe('navigate', () => {
   })
 
   it('defaults missing reset settings when Safari reads traversal state from entries', async (t) => {
+    let animationFrames = stubAnimationFrames(t)
     let dispatchNavigation = startStubNavigationListener(t)
     stubGlobalMethod(t, 'navigation', 'entries', () => [
       { key: 'previous', getState: () => ({ target: undefined, src: '/previous', $rmx: true }) },
@@ -1226,6 +1234,7 @@ describe('navigate', () => {
     let transition = dispatchNavigation(event)
     await transition.runHandler()
     await transition.succeed()
+    animationFrames.flush()
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
@@ -1251,6 +1260,7 @@ describe('navigate', () => {
   })
 
   it('preserves legacy history state while using default reset settings for traversal redirects', async (t) => {
+    let animationFrames = stubAnimationFrames(t)
     let redirectedTo = new URL('/redirected', window.location.origin).href
     let dispatchNavigation = startStubNavigationListener(t, {
       ...stubFrames,
@@ -1273,6 +1283,7 @@ describe('navigate', () => {
     let transition = dispatchNavigation(event)
     await transition.runHandler()
     await transition.succeed()
+    animationFrames.flush()
 
     expect(navigateMock).toHaveBeenCalledWith(redirectedTo, {
       history: 'replace',
@@ -1330,16 +1341,17 @@ describe('navigate', () => {
     let [finished, resolveFinished] = withResolvers<{ signal: AbortSignal }>()
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame() {
         return { signal: eventController.signal, committed, finished }
       },
     })
 
     let animationFrames = stubAnimationFrames(t)
-    let scroll = mock.fn()
+    let [scrolled, resolveScrolled] = withResolvers<void>()
+    let scroll = mock.fn(resolveScrolled)
     let intercept = mock.fn()
     let eventController = new AbortController()
     let event = Object.assign(new Event('navigate'), {
@@ -1373,7 +1385,6 @@ describe('navigate', () => {
       let handler = interceptOptions.handler().then(() => {
         handlerSettled = true
       })
-      await Promise.resolve()
 
       expect(interceptOptions.scroll).toBe('after-transition')
       expect(handlerSettled).toBe(false)
@@ -1394,7 +1405,7 @@ describe('navigate', () => {
       expect(bodyRule.style.getPropertyPriority('overflow-anchor')).toBe('important')
 
       resolveCommitted()
-      await Promise.resolve()
+      await scrolled
 
       expect(handlerSettled).toBe(false)
       expect(scroll).toHaveBeenCalledTimes(1)
@@ -1403,19 +1414,18 @@ describe('navigate', () => {
       await handler
 
       expect(scroll).toHaveBeenCalledTimes(1)
-      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+      expect(document.adoptedStyleSheets).toContain(stylesheet)
       resolveTransitionFinished()
       await transitionFinished
-      await Promise.resolve()
       // Scroll anchoring stays disabled while the page shrinks back to its own height.
       expect(getComputedStyle(document.documentElement).minHeight).toBe(startingMinHeight)
       expect(getComputedStyle(document.documentElement).overflowAnchor).toBe('none')
       expect(getComputedStyle(document.body).overflowAnchor).toBe('none')
 
       animationFrames.next()
-      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+      expect(document.adoptedStyleSheets).toContain(stylesheet)
       animationFrames.next()
-      expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
+      expect(document.adoptedStyleSheets).not.toContain(stylesheet)
     } finally {
       eventController.abort()
       controller.abort()
@@ -1436,11 +1446,12 @@ describe('navigate', () => {
       }),
     )
     expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount + 1)
+    let stylesheet = document.adoptedStyleSheets[adoptedStyleSheetCount]
 
     await transition.runHandler()
     await transition.fail()
 
-    expect(document.adoptedStyleSheets).toHaveLength(adoptedStyleSheetCount)
+    expect(document.adoptedStyleSheets).not.toContain(stylesheet)
     expect(animationFrames.pending()).toBe(0)
   })
 
@@ -1454,7 +1465,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let anchor = document.createElement('a')
     anchor.href = '/login'
@@ -1488,7 +1499,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let anchor = document.createElement('a')
     anchor.href = 'https://example.com/login'
@@ -1637,7 +1648,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let anchor = document.createElement('a')
     anchor.href = '/report.csv'
@@ -1671,7 +1682,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let anchor = document.createElement('a')
     anchor.href = '/logo'
@@ -1712,9 +1723,9 @@ describe('navigate', () => {
     let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) =>
         createReloadTransition(reload(options).then((signal) => ({ signal }))),
     })
@@ -1755,9 +1766,9 @@ describe('navigate', () => {
     let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) =>
         createReloadTransition(reload(options).then((signal) => ({ signal }))),
     })
@@ -1800,9 +1811,9 @@ describe('navigate', () => {
     let topFrame = { src: originalUrl } as FrameHandle
     let reloadFrame = stubReloadFrameInterruptedAt(interruptedUrl.href)
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame,
     })
 
@@ -1849,9 +1860,9 @@ describe('navigate', () => {
     let topFrame = { src: originalUrl } as FrameHandle
     let reloadFrame = stubReloadFrameInterruptedAt(interruptedUrl.href)
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame,
     })
 
@@ -1887,9 +1898,9 @@ describe('navigate', () => {
     interruptingUrl.searchParams.set('frame-navigation', 'interrupting-at-commit')
     let topFrame = { src: originalUrl } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: () => createReloadTransition({ signal: new AbortController().signal }),
     })
 
@@ -1937,9 +1948,9 @@ describe('navigate', () => {
     let topFrame = { src: originalUrl } as FrameHandle
     let reloads: { src: string; aborted: boolean | undefined }[] = []
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame(frame, options) {
         reloads.push({ src: frame.src, aborted: options?.signal?.aborted })
         return createReloadTransition({ signal: new AbortController().signal })
@@ -1986,9 +1997,9 @@ describe('navigate', () => {
     let topFrame = { src: originalUrl } as FrameHandle
     let reloads: { src: string; aborted: boolean | undefined }[] = []
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame(frame, options) {
         reloads.push({ src: frame.src, aborted: options?.signal?.aborted })
         return createReloadTransition({ signal: new AbortController().signal })
@@ -2037,9 +2048,9 @@ describe('navigate', () => {
     let [secondStarted, resolveSecondStarted] = withResolvers<void>()
     let topFrame = { src: originalUrl } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame(frame, options) {
         let signal = options?.signal ?? new AbortController().signal
         if (frame.src !== firstUrl.href && frame.src !== secondUrl.href) {
@@ -2170,9 +2181,9 @@ describe('navigate', () => {
       return createReloadTransition({ signal: new AbortController().signal })
     })
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame,
     })
 
@@ -2232,9 +2243,9 @@ describe('navigate', () => {
       }),
     )
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => childFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => childFrame,
       reloadFrame,
     })
 
@@ -2275,8 +2286,8 @@ describe('frame navigation sources', () => {
       createReloadTransition({ signal: new AbortController().signal }),
     )
     let dispatch = startStubNavigationListener(t, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: (name) => (name === 'details' ? namedFrame : undefined),
+      top: topFrame,
+      get: (name) => (name === 'details' ? namedFrame : undefined),
       reloadFrame,
     })
     let anchor = document.createElement('a')
@@ -2403,9 +2414,9 @@ describe('frame navigation sources', () => {
       createReloadTransition({ signal: new AbortController().signal }),
     )
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => undefined,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => undefined,
       reloadFrame,
     })
 
@@ -2456,9 +2467,9 @@ describe('frame navigation sources', () => {
       createReloadTransition({ signal: new AbortController().signal }),
     )
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => ({ src: window.location.href }) as FrameHandle,
-      getNamedFrame: () => stubFrame,
+    startNavigationListener(controller.signal, {
+      top: { src: window.location.href } as FrameHandle,
+      get: () => stubFrame,
       reloadFrame,
     })
 
@@ -2605,9 +2616,9 @@ describe('form navigation', () => {
     }))
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2646,9 +2657,9 @@ describe('form navigation', () => {
     }))
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2692,9 +2703,9 @@ describe('form navigation', () => {
       createReloadTransition({ signal: new AbortController().signal }),
     )
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame(name) {
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get(name) {
         expect(name).toBe('account')
         return getNamedFrame()
       },
@@ -2729,9 +2740,9 @@ describe('form navigation', () => {
     let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) =>
         createReloadTransition(reload(options).then((signal) => ({ signal }))),
     })
@@ -2766,9 +2777,9 @@ describe('form navigation', () => {
     }))
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2805,9 +2816,9 @@ describe('form navigation', () => {
     let topFrame = { src: '' } as FrameHandle
     let namedFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame(name) {
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get(name) {
         expect(name).toBe('account')
         return namedFrame
       },
@@ -2872,9 +2883,9 @@ describe('form navigation', () => {
       createReloadTransition({ signal: new AbortController().signal }),
     )
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => undefined,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => undefined,
       reloadFrame,
     })
 
@@ -2903,9 +2914,9 @@ describe('form navigation', () => {
     }))
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -2947,9 +2958,9 @@ describe('form navigation', () => {
     let topFrame = { src: '' } as FrameHandle
     let namedFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame(name) {
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get(name) {
         expect(name).toBe('items')
         return namedFrame
       },
@@ -3012,9 +3023,9 @@ describe('form navigation', () => {
       return { signal: new AbortController().signal }
     })
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
+    startNavigationListener(controller.signal, {
+      top: topFrame,
+      get: () => topFrame,
       reloadFrame: (_frame, options) => createReloadTransition(reload(options)),
     })
 
@@ -3076,7 +3087,7 @@ describe('form navigation', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
     let form = document.createElement('form')
     form.setAttribute('data-rmx-document', '')
     let intercept = mock.fn()
@@ -3103,7 +3114,7 @@ describe('form navigation', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
     let form = document.createElement('form')
     form.method = 'dialog'
     let intercept = mock.fn()

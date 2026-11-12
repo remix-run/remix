@@ -4,11 +4,6 @@ type LifecycleHookName = 'beforeEach' | 'afterEach' | 'beforeAll' | 'afterAll'
 type LifecycleHookFn = () => void | Promise<void>
 type PendingMeta = boolean | string
 
-interface TestOptions {
-  timeout?: number
-  signal?: AbortSignal
-}
-
 interface HookOptions {
   timeout?: number
   signal?: AbortSignal
@@ -30,13 +25,10 @@ interface TestSuite {
   afterAll?: LifecycleHook[]
 }
 
-interface Test extends TestOptions {
+interface Test extends TestMeta {
   name: string
   fn: TestFn
   suite: TestSuite
-  only?: boolean
-  skip?: PendingMeta
-  todo?: PendingMeta
 }
 
 // Holds lifecycle hooks registered at the top level (outside any describe).
@@ -138,12 +130,32 @@ export const describe = Object.assign(describeImpl, {
 })
 
 type SuiteMeta = { skip?: PendingMeta; only?: boolean; todo?: PendingMeta }
-type TestMeta = TestOptions & {
-  skip?: PendingMeta
+
+/** Metadata passed to {@link it} or {@link test} to control how a test runs. */
+export interface TestMeta {
+  /** Skips the test, with an optional reason shown in reporter output. */
+  skip?: boolean | string
+
+  /** Focuses the test so it runs alongside other tests marked `only`. */
   only?: boolean
-  todo?: PendingMeta
+
+  /** Marks the test as planned, with an optional reason shown in reporter output. */
+  todo?: boolean | string
+
+  /** Maximum test duration in milliseconds. Omit or set to `0` for no timeout. */
+  timeout?: number
+
+  /** Aborts the test and `t.signal` when this signal aborts. */
+  signal?: AbortSignal
 }
-type TestFn = (t: TestContext) => void | Promise<void>
+
+/**
+ * Test body passed to {@link it} or {@link test}.
+ *
+ * @param t Per-test utilities for mocks, cleanup, and cancellation.
+ * @returns A promise that resolves when an asynchronous test completes, or nothing for a synchronous test.
+ */
+export type TestFn = (t: TestContext) => void | Promise<void>
 
 function registerIt(name: string, fn: TestFn, flags?: TestMeta) {
   let suite = currentSuite ?? getImplicitRootSuite()

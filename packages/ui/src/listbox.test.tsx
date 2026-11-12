@@ -166,9 +166,6 @@ function mouse(target: HTMLElement, type: 'mouseleave' | 'mousemove') {
 }
 
 async function settle(root: ReturnType<typeof createRoot>) {
-  await Promise.resolve()
-  root.flush()
-  await Promise.resolve()
   root.flush()
 }
 

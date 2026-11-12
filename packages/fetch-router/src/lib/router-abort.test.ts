@@ -3,10 +3,6 @@ import { describe, it } from '@remix-run/test'
 
 import { createRouter } from './router.ts'
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
 describe('abort signal support', () => {
   it('throws AbortError when signal is already aborted', async () => {
     let router = createRouter()
@@ -34,8 +30,6 @@ describe('abort signal support', () => {
     router.get('/', async () => {
       // Abort while handler is running
       controller.abort()
-      // Simulate some async work
-      await sleep(10)
       return new Response('Home')
     })
 
@@ -109,24 +103,24 @@ describe('abort signal support', () => {
       ],
     })
 
+    let handlerStarted = Promise.withResolvers<void>()
+
     router.get('/', async () => {
-      // Simulate some async work that gets aborted
-      await sleep(50)
+      handlerStarted.resolve()
+      await new Promise(() => {})
       return new Response('Home')
     })
 
-    // Abort while handler is running
-    setTimeout(() => controller.abort(), 10)
+    let responsePromise = router.fetch('https://remix.run', { signal: controller.signal })
 
-    await assert.rejects(
-      async () => {
-        await router.fetch('https://remix.run', { signal: controller.signal })
-      },
-      (error: any) => {
-        assert.equal(error.name, 'AbortError')
-        return true
-      },
-    )
+    // Abort while handler is running
+    await handlerStarted.promise
+    controller.abort()
+
+    await assert.rejects(responsePromise, (error: any) => {
+      assert.equal(error.name, 'AbortError')
+      return true
+    })
 
     // Middleware should have caught the error
     assert.equal(errorCaught, true)
@@ -151,7 +145,6 @@ describe('abort signal support', () => {
       middleware: [
         async () => {
           controller.abort()
-          await sleep(10)
         },
       ] as any,
     })
@@ -176,16 +169,17 @@ describe('abort signal support', () => {
 
     let router = createRouter({
       middleware: [
-        // Upstream middleware that aborts
-        async () => {
+        // Upstream middleware that aborts and then tries to continue the chain
+        (_, next) => {
           controller.abort()
-          await sleep(10)
+          return next()
         },
         // Downstream middleware that should NOT be called
-        async () => {
+        (_, next) => {
           downstreamMiddlewareCalled = true
+          return next()
         },
-      ] as any,
+      ],
     })
 
     // Handler that should NOT be called

@@ -1,13 +1,11 @@
 import {
-  getNamedFrame,
-  getTopFrame,
   isDocumentReload,
   reloadCurrentDocument,
   reloadFrameForNavigation,
   setTopFrameSource,
 } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
-import type { FrameHandle } from './component.ts'
+import type { FrameHandle, Handle } from './component.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -323,25 +321,14 @@ async function waitForUrlUpdate(updating: Promise<void>, signal?: AbortSignal): 
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.
+ * @param options Frames of the running app, and an optional reload override for tests.
  * @returns void
  */
-export function startNavigationListener(signal: AbortSignal) {
-  return startNavigationListenerImpl(signal, {
-    getTopFrame,
-    getNamedFrame,
-    reloadFrame: reloadFrameForNavigation,
-  })
-}
-
-// Internal version used by unit tests so we can inject stub frames
-export function startNavigationListenerImpl(
+export function startNavigationListener(
   signal: AbortSignal,
-  options: {
-    getTopFrame: typeof getTopFrame
-    getNamedFrame: typeof getNamedFrame
-    reloadFrame: typeof reloadFrameForNavigation
-  },
+  options: Handle['frames'] & { reloadFrame?: typeof reloadFrameForNavigation },
 ) {
+  let reloadFrame = options.reloadFrame ?? reloadFrameForNavigation
   let navigation = getInterceptableNavigation()
   if (!navigation) return
   let resolveFormNavigation = createFormNavigationResolver(signal)
@@ -403,11 +390,11 @@ export function startNavigationListenerImpl(
         return
       }
 
-      let topFrame = options.getTopFrame()
+      let topFrame = options.top
       let frame = replayedSubmission?.frame
       if (!frame) {
         if (state.target) {
-          frame = options.getNamedFrame(state.target)
+          frame = options.get(state.target)
           if (!frame) {
             fallbackToDocumentNavigation(navigation, event)
             return
@@ -419,6 +406,10 @@ export function startNavigationListenerImpl(
 
       if (!coordinator.transition(event, { type: 'accepted', replaceHistory })) return
 
+      // WebKit runs a traversal's handlers before moving its history to the destination entry, which
+      // it does later in the task that fires `navigate`. Scrolling before then restores the position
+      // of the entry being left.
+      let traversalApplied = isTraverse ? afterCurrentTask() : undefined
       let handler = async () => {
         try {
           if (!coordinator.transition(event, { type: 'handler-started' })) return
@@ -437,7 +428,7 @@ export function startNavigationListenerImpl(
             frame.src = state.src
             if (!coordinator.isCurrent(event)) return
           }
-          let reload = options.reloadFrame(frame, {
+          let reload = reloadFrame(frame, {
             ...submission,
             signal: event.signal,
           })
@@ -445,6 +436,8 @@ export function startNavigationListenerImpl(
           await reload.committed
           if (!coordinator.transition(event, { type: 'frame-committed' })) return
           if (scroll !== 'manual') {
+            await traversalApplied
+            if (!coordinator.isCurrent(event)) return
             // WebKit restores a traversal's position against the layout from before the commit, so
             // it clamps the position to the old page's height. Reading the height lays out the new
             // content first.
@@ -671,6 +664,17 @@ export function getInterceptableNavigation(): Navigation | undefined {
     return
   }
   return navigation
+}
+
+function afterCurrentTask(): Promise<void> {
+  let { port1, port2 } = new MessageChannel()
+  return new Promise((resolve) => {
+    port1.onmessage = () => {
+      port1.close()
+      resolve()
+    }
+    port2.postMessage(null)
+  })
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

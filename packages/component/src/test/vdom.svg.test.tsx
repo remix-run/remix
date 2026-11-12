@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { on } from '../index.ts'
+import { createElement, on } from '../index.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 
 describe('vnode rendering', () => {
@@ -46,6 +46,43 @@ describe('vnode rendering', () => {
       invariant(useEl instanceof SVGUseElement)
 
       expect(useEl.getAttribute('xlink:href')).toBe('#my-id')
+    })
+
+    it('renders every spelling of namespaced attributes with their qualified names', () => {
+      let attributes = [
+        ['xlink', 'href', 'Href', XLINK_NS],
+        ['xlink', 'actuate', 'Actuate', XLINK_NS],
+        ['xlink', 'arcrole', 'Arcrole', XLINK_NS],
+        ['xlink', 'role', 'Role', XLINK_NS],
+        ['xlink', 'show', 'Show', XLINK_NS],
+        ['xlink', 'title', 'Title', XLINK_NS],
+        ['xlink', 'type', 'Type', XLINK_NS],
+        ['xml', 'base', 'Base', XML_NS],
+        ['xml', 'lang', 'Lang', XML_NS],
+        ['xml', 'space', 'Space', XML_NS],
+      ]
+
+      for (let [prefix, localName, camelName, ns] of attributes) {
+        for (let name of [prefix + camelName, `${prefix}:${localName}`, `${prefix}-${localName}`]) {
+          expect(renderSvgAttribute(name)).toEqual({ name: `${prefix}:${localName}`, ns })
+        }
+      }
+    })
+
+    it('renders every spelling of xmlns:xlink without a namespace', () => {
+      for (let name of ['xmlnsXlink', 'xmlns:xlink', 'xmlns-xlink']) {
+        expect(renderSvgAttribute(name)).toEqual({ name: 'xmlns:xlink', ns: null })
+      }
+    })
+
+    it('does not namespace near-miss attribute names', () => {
+      expect(renderSvgAttribute('xlinkHREF')).toEqual({ name: 'xlink-href', ns: null })
+      expect(renderSvgAttribute('xlink:Href')).toEqual({ name: 'xlink:href', ns: null })
+      expect(renderSvgAttribute('xlinkhref')).toEqual({ name: 'xlinkhref', ns: null })
+      expect(renderSvgAttribute('xlinkLang')).toEqual({ name: 'xlink-lang', ns: null })
+      expect(renderSvgAttribute('xmlHref')).toEqual({ name: 'xml-href', ns: null })
+      expect(renderSvgAttribute('xmlnsHref')).toEqual({ name: 'xmlns-href', ns: null })
+      expect(renderSvgAttribute('xlink_href')).toEqual({ name: 'xlink-href', ns: null })
     })
 
     it('updates and removes namespaced SVG attributes', () => {
@@ -289,3 +326,14 @@ describe('vnode rendering', () => {
     })
   })
 })
+
+const XLINK_NS = 'http://www.w3.org/1999/xlink'
+const XML_NS = 'http://www.w3.org/XML/1998/namespace'
+
+function renderSvgAttribute(name: string): { name: string; ns: string | null } {
+  let container = document.createElement('div')
+  createRoot(container).render(createElement('svg', {}, createElement('use', { [name]: 'value' })))
+  let attribute = container.querySelector('use')?.attributes[0]
+  invariant(attribute)
+  return { name: attribute.name, ns: attribute.namespaceURI }
+}
