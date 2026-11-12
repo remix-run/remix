@@ -132,7 +132,7 @@ export function getPreviewTarballUrl(
 
 function getPreviewAssetName(build: PreviewBuild, packageDirName: string): string {
   return SHARED_PR_TAG.test(build.tag)
-    ? `${packageDirName}-${build.sha.slice(0, 8)}.tgz`
+    ? `${packageDirName}-${build.sha}.tgz`
     : `${packageDirName}.tgz`
 }
 
@@ -254,32 +254,38 @@ export interface PreviewAsset {
 
 function getCompletedPrPreviewBuilds(
   assets: PreviewAsset[],
-): { sha: string; asset: PreviewAsset }[] {
-  return assets
+): { sha: string; suffix: string; asset: PreviewAsset }[] {
+  let builds = assets
     .flatMap((asset) => {
       let sha = /^Complete preview build: ([a-f0-9]{40})$/.exec(asset.label ?? '')?.[1]
-      return sha &&
-        asset.name === `remix-${sha.slice(0, 8)}.tgz` &&
-        asset.state === 'uploaded' &&
-        asset.size > 0
-        ? [{ sha, asset }]
-        : []
+      if (!sha || asset.state !== 'uploaded' || asset.size <= 0) return []
+      let suffix =
+        asset.name === `remix-${sha}.tgz`
+          ? sha
+          : asset.name === `remix-${sha.slice(0, 8)}.tgz`
+            ? sha.slice(0, 8)
+            : undefined
+      return suffix ? [{ sha, suffix, asset }] : []
     })
     .toSorted(
       (a, b) =>
         Date.parse(b.asset.updated_at) - Date.parse(a.asset.updated_at) || b.asset.id - a.asset.id,
     )
+  let fullShas = new Set(
+    builds.filter((build) => build.suffix === build.sha).map((build) => build.sha),
+  )
+  return builds.filter((build) => build.suffix === build.sha || !fullShas.has(build.sha))
 }
 
 export function getExpiredPrPreviewAssets(assets: PreviewAsset[]): PreviewAsset[] {
   let retained = new Set(
     getCompletedPrPreviewBuilds(assets)
       .slice(0, 10)
-      .map((build) => build.sha.slice(0, 8)),
+      .map((build) => build.suffix),
   )
   return assets.filter((asset) => {
-    let sha = /-([a-f0-9]{8})\.tgz$/.exec(asset.name)?.[1]
-    return sha !== undefined && !retained.has(sha)
+    let suffix = /-([a-f0-9]{40}|[a-f0-9]{8})\.tgz$/.exec(asset.name)?.[1]
+    return suffix !== undefined && !retained.has(suffix)
   })
 }
 
@@ -377,7 +383,7 @@ export function publishPreview(
     throw new Error('Missing remix preview tarball')
   if (
     SHARED_PR_TAG.test(build.tag) &&
-    files.some((filename) => !filename.endsWith(`-${build.sha.slice(0, 8)}.tgz`))
+    files.some((filename) => !filename.endsWith(`-${build.sha}.tgz`))
   )
     throw new Error('Preview tarballs do not match the source SHA')
   if (build.channel === 'main') {
@@ -507,28 +513,30 @@ function publishPrPreview(
     )
   }
   let assets = github.listAssets(release)
-  let complete = getCompletedPrPreviewBuilds(assets).find(
-    (item) => item.sha.slice(0, 8) === build.sha.slice(0, 8),
+  let completed = getCompletedPrPreviewBuilds(assets)
+  let complete = completed.find((item) => item.sha === build.sha && item.suffix === build.sha)
+  let legacy = completed.find(
+    (item) => item.sha === build.sha && item.suffix === build.sha.slice(0, 8),
   )
   if (complete) {
-    if (complete.sha !== build.sha)
-      throw new Error(`Preview filename SHA collision: ${build.sha.slice(0, 8)}`)
     verifyAssets(
-      assets.filter((asset) => asset.name.endsWith(`-${build.sha.slice(0, 8)}.tgz`)),
+      assets.filter((asset) => asset.name.endsWith(`-${build.sha}.tgz`)),
       expected,
       false,
     )
     console.log(`Reusing published preview SHA: ${build.sha}`)
   } else {
     // Publishing is serialized per PR, so unmarked SHA groups are interrupted uploads.
-    for (let asset of getExpiredPrPreviewAssets(assets))
+    for (let asset of getExpiredPrPreviewAssets(assets)) {
+      if (legacy && asset.name.endsWith(`-${legacy.suffix}.tgz`)) continue
       github.delete(`releases/assets/${asset.id}`)
+    }
     assets = github.listAssets(release)
     if (assets.length + files.length > 1000) throw new Error('Preview release asset limit exceeded')
     for (let filename of files) github.upload(release, filename)
     assets = github.listAssets(release)
     verifyAssets(
-      assets.filter((asset) => asset.name.endsWith(`-${build.sha.slice(0, 8)}.tgz`)),
+      assets.filter((asset) => asset.name.endsWith(`-${build.sha}.tgz`)),
       expected,
       true,
     )
@@ -538,11 +546,17 @@ function publishPrPreview(
       label: `${PR_BUILD_COMPLETE}: ${build.sha}`,
     })
   }
+  // Keep an existing short-SHA build installable until its full-SHA replacement is complete.
+  if (legacy) {
+    for (let asset of assets.filter((asset) => asset.name.endsWith(`-${legacy.suffix}.tgz`))) {
+      github.delete(`releases/assets/${asset.id}`)
+    }
+  }
   assets = github.listAssets(release)
   for (let asset of getExpiredPrPreviewAssets(assets)) github.delete(`releases/assets/${asset.id}`)
   let retained = getCompletedPrPreviewBuilds(assets).slice(0, 10)
   let rows = retained.map(({ sha, asset }) => {
-    let url = getPreviewTarballUrl({ ...build, sha }, 'remix', github.repository)
+    let url = `https://github.com/${github.repository}/releases/download/${encodeURIComponent(build.tag)}/${asset.name}`
     return `| [${sha.slice(0, 8)}](${prUrl}/commits/${sha}) | ${asset.updated_at} | \`pnpm add "${url}"\` |`
   })
   github.api('PATCH', `releases/${release.id}`, {
