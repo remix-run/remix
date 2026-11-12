@@ -251,32 +251,13 @@ describe('defaultResolveFrame commit', () => {
     expect(fixture.errors).toEqual([])
   })
 
-  it('aborts a deferred commit and makes a late commit harmless', async (t) => {
-    let ready = Promise.withResolvers<{ signal: AbortSignal; commitFrame(): Promise<void> }>()
-    let fixture = await setup(t, (commitFrame, { signal, response }) => {
-      if (response.headers.get('X-Test-Page') === 'blocked') {
-        ready.resolve({ signal, commitFrame })
-        return new Promise<void>(() => {})
-      }
-      return commitFrame()
-    })
-    let first = navigate(fixture.url('blocked')).catch(() => {})
-    let deferred = await ready.promise
-    await navigate(fixture.url('latest'))
-    await first
-    expect(deferred.signal.aborted).toBe(true)
-    await deferred.commitFrame()
-    expect(document.getElementById('commit-page')?.textContent).toBe('latest')
-    expect(fixture.errors).toEqual([])
-  })
-
   it('aborts a never-settling commit wrapper when Back interrupts a pending navigation', async (t) => {
     let initialUrl = window.location.href
-    let ready = Promise.withResolvers<AbortSignal>()
+    let ready = Promise.withResolvers<{ signal: AbortSignal; commitFrame(): Promise<void> }>()
     let restored = Promise.withResolvers<void>()
     let fixture = await setup(t, (commitFrame, { signal, to }) => {
       if (to === fixture.url('blocked')) {
-        ready.resolve(signal)
+        ready.resolve({ signal, commitFrame })
         // Never settles, so only cancellation can release this navigation.
         return new Promise<void>(() => {})
       }
@@ -284,17 +265,18 @@ describe('defaultResolveFrame commit', () => {
     })
 
     let pending = navigate(fixture.url('blocked')).catch(() => {})
-    let signal = await ready.promise
-    expect(signal.aborted).toBe(false)
+    let deferred = await ready.promise
+    expect(deferred.signal.aborted).toBe(false)
     expect(document.getElementById('commit-page')?.textContent).toBe('initial')
 
     // WebKit can reject the traversal's finished promise even though Back renders successfully.
     // Wait for the restored frame's commit instead.
     void window.navigation.back().finished?.catch(() => {})
     await pending
-    expect(signal.aborted).toBe(true)
+    expect(deferred.signal.aborted).toBe(true)
 
     await restored.promise
+    await deferred.commitFrame()
     expect(document.getElementById('commit-page')?.textContent).toBe('initial')
     expect(window.location.href).toBe(initialUrl)
     expect(fixture.loads.map((load) => load.src)).toEqual([fixture.url('blocked'), initialUrl])
@@ -403,20 +385,6 @@ describe('defaultResolveFrame commit', () => {
     expect(document.getElementById('commit-page')?.textContent).toBe('recovered')
   })
 
-  it('completes independent reloads without waiting for a browser navigation', async (t) => {
-    let completed = Promise.withResolvers<void>()
-    let fixture = await setup(t, async (commitFrame, { to }) => {
-      expect(to).toBe(window.location.href)
-      expect(fixture.loads.at(-1)?.options?.transition).toBeUndefined()
-      await commitFrame()
-      expect(window.navigation.transition).toBe(null)
-      completed.resolve()
-    })
-    await fixture.app.frames.top.reload()
-    await completed.promise
-    expect(document.getElementById('commit-page')?.textContent).toBe('initial')
-  })
-
   it('wraps initial client-frame loads and aborts completed wrappers on reload and disposal', async (t) => {
     let initial = Promise.withResolvers<void>()
     let reloaded = Promise.withResolvers<void>()
@@ -426,7 +394,9 @@ describe('defaultResolveFrame commit', () => {
       async (commitFrame, { signal, to }) => {
         signals.push(signal)
         expect(to).toBe(signals.length === 1 ? '/details' : '/updated-details')
+        expect(fixture.loads.at(-1)?.options?.transition).toBeUndefined()
         await commitFrame()
+        expect(window.navigation.transition).toBe(null)
         if (signals.length === 1) initial.resolve()
         else reloaded.resolve()
       },
@@ -447,7 +417,7 @@ describe('defaultResolveFrame commit', () => {
     expect(fixture.errors).toEqual([])
   })
 
-  it('finishes nested blocking frame commits with their enclosing navigation', async (t) => {
+  it('inherits navigation through nested blocking commits and clears it on reload', async (t) => {
     let completed = Promise.withResolvers<void>()
     let committed = 0
     let fixture = await setup(
@@ -477,6 +447,19 @@ describe('defaultResolveFrame commit', () => {
     )
     await navigate(fixture.url('nested'))
     await completed.promise
+    let transition = fixture.loads[0]?.options?.transition
+    expect(transition?.navigationType).toBe('push')
+    expect(fixture.loads.map((load) => load.options?.transition)).toEqual([
+      transition,
+      transition,
+      transition,
+    ])
+
+    await fixture.app.frames.get('details')?.reload()
+    expect(fixture.loads.slice(3).map((load) => [load.src, load.options?.transition])).toEqual([
+      ['/details', undefined],
+      ['/nested', undefined],
+    ])
     expect(fixture.errors).toEqual([])
   })
 

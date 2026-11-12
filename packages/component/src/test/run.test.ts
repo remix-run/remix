@@ -10,23 +10,12 @@ describe('defaultResolveFrame', () => {
     document.body.replaceChildren()
   })
 
-  it('returns an unconsumed response without invoking its commit callback', async (t) => {
-    let response = new Response('<p>Ready</p>')
-    let commit = t.mock.fn()
-    let result = await defaultResolveFrame('/frame', undefined, {
-      fetch: async () => response,
-      commit,
-    })
-    expect(result).toBe(response)
-    expect(result.bodyUsed).toBe(false)
-    expect(commit.mock.calls).toHaveLength(0)
-  })
-
   it('passes the prepared frame request to a custom fetch implementation', async (t) => {
     let response = new Response('<p>Saved</p>', {
       headers: { 'Content-Security-Policy': "script-src 'nonce-response'" },
     })
     let fetchMock = t.mock.method(globalThis, 'fetch', async () => response)
+    let commit = t.mock.fn()
     let controller = new AbortController()
     let formData = new FormData()
     formData.set('name', 'Ada Lovelace')
@@ -41,21 +30,19 @@ describe('defaultResolveFrame', () => {
           return fetch(url, {
             ...init,
             cache: 'no-cache',
-            credentials: 'omit',
-            priority: 'high',
             headers,
           })
         },
+        commit,
       },
     )
 
     expect(result).toBe(response)
     expect(result.bodyUsed).toBe(false)
+    expect(commit).not.toHaveBeenCalled()
     let [src, init] = fetchMock.mock.calls[0]!.arguments
     expect(src).toBe('/account')
     expect(init?.cache).toBe('no-cache')
-    expect(init?.credentials).toBe('omit')
-    expect(init?.priority).toBe('high')
     expect(init?.method).toBe('post')
     expect(init?.signal).toBe(controller.signal)
     expect(init?.mode).toBe('same-origin')

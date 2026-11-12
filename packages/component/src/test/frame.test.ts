@@ -1444,43 +1444,6 @@ describe('frames', () => {
     expect(root.textContent).toBe('Reloaded')
   })
 
-  it('inherits the original transition through client frames without retaining it for reloads', async (t) => {
-    let root = document.implementation.createHTMLDocument('Initial')
-    let namedFrames = new NamedFrameRegistry()
-    let transition = createTestTransition()
-    let loads: Array<[string, ResolveFrameOptions['transition']]> = []
-    let frame = createTestFrame(root, {
-      namedFrames,
-      resolveFrame(src, options) {
-        loads.push([src, options?.transition])
-        if (src === 'https://example.com/initial') {
-          return jsx(Frame, { name: 'child', src: '/child' })
-        }
-        if (src === '/child') return jsx(Frame, { src: '/grandchild' })
-        return '<p>Loaded</p>'
-      },
-    })
-    t.after(() => frame.dispose())
-    await frame.ready()
-
-    await reloadFrameForNavigation(frame.handle, { transition }).finished
-
-    expect(loads).toEqual([
-      ['https://example.com/initial', transition],
-      ['/child', transition],
-      ['/grandchild', transition],
-    ])
-    expect(root.body.textContent).toBe('Loaded')
-    let child = namedFrames.get('child')
-    expect(child).toBeDefined()
-    await child?.reload()
-
-    expect(loads.slice(3)).toEqual([
-      ['/child', undefined],
-      ['/grandchild', undefined],
-    ])
-  })
-
   it('passes the current transition through new and preserved server frames', async (t) => {
     let renderClientFrame = false
     let Entry = clientEntry('/entry.js#Entry', function Entry() {
