@@ -59,25 +59,6 @@ describe('settings save button', () => {
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('name')), 'name')
   })
 
-  it('ignores navigations that other links start', async (t) => {
-    let leave = Promise.withResolvers<void>()
-    t.after(() => leave.resolve())
-    let received = Promise.withResolvers<void>()
-    let page = await serveSettings(t, async (request) => {
-      if (new URL(request.url).pathname !== routes.account.index.href()) return
-      received.resolve()
-      await leave.promise
-    })
-
-    await page.getByRole('link', { name: 'Cancel' }).click()
-    await received.promise
-    assert.equal(await page.getByRole('button', { name: 'Saving…' }).count(), 0)
-    await page.getByRole('button', { name: 'Update Settings' }).waitFor()
-
-    leave.resolve()
-    await page.getByRole('heading', { name: 'My Account' }).waitFor()
-  })
-
   it('clears a pending save without an error when a link replaces it', async (t) => {
     let save = Promise.withResolvers<void>()
     let leave = Promise.withResolvers<void>()

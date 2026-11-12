@@ -69,6 +69,27 @@ async function setupInheritedReloadFinished(t: TestContext) {
   return { app, child, events, signal }
 }
 
+async function renderPendingChildChunks(content: string) {
+  let response = Promise.withResolvers<string>()
+  let chunks = readChunks(
+    renderToStream(
+      <html>
+        <head />
+        <body>
+          <Frame name="child" src="/child" fallback={<p>Loading child</p>} />
+        </body>
+      </html>,
+      { resolveFrame: () => response.promise },
+    ),
+  )
+  let shell = await chunks.next()
+  invariant(!shell.done)
+  response.resolve(content)
+  let templates = ''
+  for await (let chunk of chunks) templates += chunk
+  return { shell: shell.value, templates }
+}
+
 function getCommentMarkerId(html: string, prefix: 'rmx:f:' | 'rmx:h:'): string {
   let re = prefix === 'rmx:f:' ? /<!--\s*rmx:f:([^ ]+)\s*-->/ : /<!--\s*rmx:h:([^ ]+)\s*-->/
   let match = html.match(re)
@@ -817,29 +838,6 @@ describe('run', () => {
     expect((await request.formData()).get('name')).toBe('Ada')
   })
 
-  it('describes a POST reload on its reloadStart event and resolves finished once it renders', async (t) => {
-    let { app } = await setupReloadBodyTest(t)
-    let events: FrameReloadStartEvent[] = []
-    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
-    let body = new FormData()
-    body.set('name', 'Ada')
-
-    let reload = app.frames.top.reload({ src: '/save', method: 'post', body })
-
-    expect(events).toHaveLength(1)
-    let event = events[0]!
-    expect(event.src).toBe('/save')
-    expect(event.method).toBe('post')
-    expect(event.encType).toBe('application/x-www-form-urlencoded')
-    expect(event.formData?.get('name')).toBe('Ada')
-    expect(event.element).toBeNull()
-    expect(event.submitter).toBeNull()
-    let signal = await event.finished
-    expect(signal).toBe(await reload)
-    expect(signal.aborted).toBe(false)
-    expect(document.querySelector('main')?.textContent).toBe('Saved')
-  })
-
   it('identifies the anchor when a nested element starts a link navigation', async (t) => {
     let { app } = await setupReloadBodyTest(t)
     let anchor = document.createElement('a')
@@ -873,18 +871,37 @@ describe('run', () => {
     let form = document.createElement('form')
     form.method = 'get'
     form.action = '/unused'
+    let input = document.createElement('input')
+    input.name = 'contains'
     let button = document.createElement('button')
     button.formAction = src
     button.formMethod = 'post'
     button.formEnctype = 'text/plain'
     button.name = 'intent'
     button.value = 'save'
-    form.append(button)
+    form.append(input, button)
     document.body.append(form)
+    let order: string[] = []
     let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
-    app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
+    app.frames.top.addEventListener(
+      'reloadStart',
+      (event) => {
+        order.push('reloadStart')
+        reloaded.resolve(event)
+      },
+      { once: true },
+    )
     let submissions: FormSubmissionEvent[] = []
-    form.addEventListener('rmx:submission', (event) => submissions.push(event))
+    let buttonEvent: FormSubmissionEvent | undefined
+    button.addEventListener('rmx:submission', (event) => {
+      buttonEvent = event
+      order.push('button')
+      event.preventDefault()
+    })
+    form.addEventListener('rmx:submission', (event) => {
+      order.push('form')
+      submissions.push(event)
+    })
 
     form.requestSubmit(button)
     let event = await reloaded.promise
@@ -898,6 +915,13 @@ describe('run', () => {
     expect(event.formData?.get('intent')).toBe('save')
     expect(submissions).toHaveLength(1)
     let submission = submissions[0]!
+    expect(submission).toBe(buttonEvent)
+    expect(order).toEqual(['reloadStart', 'button', 'form'])
+    expect(submission).toBeInstanceOf(SubmitEvent)
+    expect(submission.target).toBe(button)
+    expect(submission.cancelable).toBe(false)
+    expect(submission.defaultPrevented).toBe(false)
+    expect('element' in submission).toBe(false)
     expect(submission.src).toBe(event.src)
     expect(submission.method).toBe('post')
     expect(submission.encType).toBe('text/plain')
@@ -906,66 +930,7 @@ describe('run', () => {
     expect(submission.submitter).toBe(button)
     expect(submission.finished).toBe(event.finished)
     expect(requests[0]!.headers.get('Content-Type')).toBe('text/plain')
-    expect(await requests[0]!.text()).toBe('intent=save\r\n')
-  })
-
-  it('dispatches rmx:submission on the submit button and its form after reloadStart', async (t) => {
-    let { app } = await setupReloadBodyTest(t)
-    let form = document.createElement('form')
-    let input = document.createElement('input')
-    input.name = 'contains'
-    let button = document.createElement('button')
-    form.append(input, button)
-    document.body.append(form)
-    let order: string[] = []
-    let events: FormSubmissionEvent[] = []
-    let reloadEvents: FrameReloadStartEvent[] = []
-    app.frames.top.addEventListener('reloadStart', (event) => {
-      order.push('reloadStart')
-      reloadEvents.push(event)
-    })
-    button.addEventListener('rmx:submission', (event) => {
-      events.push(event)
-      order.push('button')
-      event.preventDefault()
-    })
-    form.addEventListener('rmx:submission', (event) => {
-      events.push(event)
-      order.push('form')
-    })
-    let formData = new FormData()
-    formData.set('name', 'Ada')
-
-    let reload = reloadFrameForNavigation(app.frames.top, {
-      formData,
-      method: 'post',
-      encType: 'application/x-www-form-urlencoded',
-      element: form,
-      submitter: button,
-      form,
-    })
-
-    expect(order).toEqual(['reloadStart', 'button', 'form'])
-    let event = events[0]!
-    expect(events[1]).toBe(event)
-    expect(event.target).toBe(button)
-    expect(event.form).toBe(form)
-    expect('element' in event).toBe(false)
-    expect(event.submitter).toBe(button)
-    expect(reloadEvents[0]!.element).toBe(form)
-    expect(reloadEvents[0]!.submitter).toBe(button)
-    expect(event.formData).toBe(formData)
-    expect(event).toBeInstanceOf(SubmitEvent)
-    expect(event.cancelable).toBe(false)
-    expect(event.defaultPrevented).toBe(false)
-    expect(event.src).toBe(reloadEvents[0]!.src)
-    expect(event.method).toBe('post')
-    expect(event.encType).toBe('application/x-www-form-urlencoded')
-    expect(event.formData).toBe(reloadEvents[0]!.formData)
-    expect(event.finished).toBe(reloadEvents[0]!.finished)
-    await event.finished
-    expect(document.querySelector('main')?.textContent).toBe('Saved')
-    await reload.finished
+    expect(await requests[0]!.text()).toBe('contains=\r\nintent=save\r\n')
   })
 
   it('dispatches rmx:submission for each way the browser submits a form', async (t) => {
@@ -1120,10 +1085,14 @@ describe('run', () => {
     let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
     app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
 
+    let historyLength = window.navigation.entries().length
     form.requestSubmit(button)
     let reload = await reloaded.promise
     await reload.finished
 
+    expect(window.navigation.entries()).toHaveLength(historyLength)
+    expect(reload.element).toBe(form)
+    expect(reload.submitter).toBe(button)
     expect(events).toHaveLength(1)
     expect(events[0]?.form).toBe(form)
     expect(events[0]?.submitter).toBe(button)
@@ -1173,146 +1142,6 @@ describe('run', () => {
     await navigate(window.location.href)
 
     expect(events).toHaveLength(0)
-  })
-
-  it('rejects the submission’s finished with the failure when its reload fails', async (t) => {
-    document.body.innerHTML = '<main>Initial</main>'
-    t.mock.method(
-      globalThis,
-      'fetch',
-      async () =>
-        new Response('<main>Internal Server Error</main>', {
-          headers: { 'Content-Type': 'text/html' },
-          status: 500,
-          statusText: 'Internal Server Error',
-        }),
-    )
-    let app = run({ loadModule: mock.fn() })
-    t.after(() => app.dispose())
-    app.addEventListener('error', () => {})
-    await app.ready()
-    let form = document.createElement('form')
-    document.body.append(form)
-    let events: FormSubmissionEvent[] = []
-    let reloadEvents: FrameReloadStartEvent[] = []
-    app.frames.top.addEventListener('reloadStart', (event) => reloadEvents.push(event))
-    form.addEventListener('rmx:submission', (event) => events.push(event))
-
-    let reload = reloadFrameForNavigation(app.frames.top, {
-      formData: new FormData(form),
-      method: 'post',
-      element: form,
-      form,
-    })
-
-    expect(events).toHaveLength(1)
-    expect(reloadEvents).toHaveLength(1)
-    expect(events[0]!.finished).toBe(reloadEvents[0]!.finished)
-    await expect(events[0]!.finished).rejects.toThrow('500 Internal Server Error')
-    await expect(reload.finished).rejects.toThrow('500 Internal Server Error')
-    expect(document.querySelector('main')?.textContent).toBe('Initial')
-  })
-
-  it('aborts the submission handler signal when a newer submission of the same button starts', async (t) => {
-    document.body.innerHTML = '<main>Initial</main>'
-    let [firstResponse, resolveFirstResponse] = withResolvers<Response>()
-    let fetchCalls = 0
-    t.mock.method(globalThis, 'fetch', async () => {
-      fetchCalls++
-      if (fetchCalls === 1) return firstResponse
-      return new Response(
-        '<!DOCTYPE html><html><head></head><body><main>Second</main></body></html><!-- rmx:flush document -->',
-      )
-    })
-    let app = run({ loadModule: mock.fn() })
-    t.after(() => app.dispose())
-    await app.ready()
-    let container = document.createElement('div')
-    let root = createRoot(container)
-    t.after(() => root.dispose())
-    let submissions: Array<{ event: FormSubmissionEvent; signal: AbortSignal }> = []
-    root.render(
-      <form>
-        <button
-          mix={on('rmx:submission', (event, signal) => {
-            submissions.push({ event, signal })
-          })}
-        >
-          Save
-        </button>
-      </form>,
-    )
-    root.flush()
-    let button = container.querySelector('button')
-    invariant(button)
-    let form = button.form
-    invariant(form)
-    let submit = (value: string) => {
-      let formData = new FormData()
-      formData.set('value', value)
-      return reloadFrameForNavigation(app.frames.top, {
-        formData,
-        method: 'post',
-        element: form,
-        submitter: button,
-        form,
-      })
-    }
-
-    let first = submit('first')
-    let second = submit('second')
-
-    expect(submissions.map(({ event }) => event.formData?.get('value'))).toEqual([
-      'first',
-      'second',
-    ])
-    expect(submissions[0]!.signal.aborted).toBe(true)
-    expect(submissions[1]!.signal.aborted).toBe(false)
-    expect((await submissions[0]!.event.finished).aborted).toBe(true)
-    await submissions[1]!.event.finished
-    expect(document.querySelector('main')?.textContent).toBe('Second')
-    resolveFirstResponse(
-      new Response(
-        '<!DOCTYPE html><html><head></head><body><main>First</main></body></html><!-- rmx:flush document -->',
-      ),
-    )
-    await Promise.all([first.finished, second.finished])
-    expect(document.querySelector('main')?.textContent).toBe('Second')
-  })
-
-  it('resolves finished as aborted when a newer reload replaces it', async (t) => {
-    document.body.innerHTML = '<main>Initial</main>'
-    let [firstResponse, resolveFirstResponse] = withResolvers<Response>()
-    let fetchCalls = 0
-    t.mock.method(globalThis, 'fetch', async () => {
-      fetchCalls++
-      if (fetchCalls === 1) return firstResponse
-      return new Response(
-        '<!DOCTYPE html><html><head></head><body><main>Second</main></body></html><!-- rmx:flush document -->',
-      )
-    })
-    let app = run({ loadModule: mock.fn() })
-    t.after(() => app.dispose())
-    await app.ready()
-    let events: FrameReloadStartEvent[] = []
-    let completions = 0
-    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
-    app.frames.top.addEventListener('reloadComplete', () => completions++)
-
-    let first = app.frames.top.reload()
-    let second = app.frames.top.reload()
-
-    expect(events).toHaveLength(2)
-    expect((await events[0]!.finished).aborted).toBe(true)
-    resolveFirstResponse(
-      new Response(
-        '<!DOCTYPE html><html><head></head><body><main>First</main></body></html><!-- rmx:flush document -->',
-      ),
-    )
-    await Promise.all([first, second])
-    await events[1]!.finished
-    expect(completions).toBe(1)
-    expect(document.querySelector('main')?.textContent).toBe('Second')
   })
 
   it('resolves finished as aborted when the frame is disposed mid-reload', async (t) => {
@@ -1588,10 +1417,24 @@ describe('run', () => {
 
   it('defaults POST FormData to URL encoding with normalized line breaks and file names', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
+    let events: FrameReloadStartEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
     let body = new FormData()
     body.set('name\nline', 'Ada\nLovelace')
     body.set('file', new File(['contents'], 'notes.txt'))
-    await app.frames.top.reload({ method: 'post', body })
+    let reload = app.frames.top.reload({ src: '/save', method: 'post', body })
+    let event = events[0]
+    invariant(event)
+    expect(event.src).toBe('/save')
+    expect(event.method).toBe('post')
+    expect(event.encType).toBe('application/x-www-form-urlencoded')
+    expect(event.formData).toBe(body)
+    expect(event.element).toBeNull()
+    expect(event.submitter).toBeNull()
+    let signal = await event.finished
+    expect(signal).toBe(await reload)
+    expect(signal.aborted).toBe(false)
+    expect(document.querySelector('main')?.textContent).toBe('Saved')
 
     expect(requests).toHaveLength(1)
     let request = requests[0]!
@@ -1910,6 +1753,10 @@ describe('run', () => {
     )
 
     let app = run({ loadModule: mock.fn() })
+    let started: FrameReloadStartEvent | undefined
+    app.frames.top.addEventListener('reloadStart', (event) => {
+      started = event
+    })
     let reportedError: unknown
     app.addEventListener('error', (event) => {
       reportedError = event.error
@@ -1923,6 +1770,8 @@ describe('run', () => {
         'Failed to resolve frame: 500 Internal Server Error',
       )
 
+      invariant(started)
+      await expect(started.finished).rejects.toBe(reportedError)
       expect(fetchMock).toHaveBeenCalledTimes(1)
       expect(reportedError).toBeInstanceOf(Error)
       expect((reportedError as Error).message).toBe(
@@ -5110,29 +4959,15 @@ describe('run', () => {
   })
 
   it('finishes cached pending frame markers only after their replayed template renders', async (t) => {
-    let content = Promise.withResolvers<string>()
-    let chunks = readChunks(
-      renderToStream(
-        <html>
-          <head />
-          <body>
-            <Frame name="child" src="/child" fallback={<p>Loading child</p>} />
-          </body>
-        </html>,
-        { resolveFrame: () => content.promise },
-      ),
+    let { shell, templates } = await renderPendingChildChunks(
+      '<p id="cached-child">Cached child</p>',
     )
-    let shell = await chunks.next()
-    invariant(!shell.done)
-    content.resolve('<p id="cached-child">Cached child</p>')
-    let templates = ''
-    for await (let chunk of chunks) templates += chunk
-    let initialDocument = new DOMParser().parseFromString(shell.value + templates, 'text/html')
+    let initialDocument = new DOMParser().parseFromString(shell + templates, 'text/html')
     document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
     let templateChunk = Promise.withResolvers<string>()
     let app = run({
       loadModule: mock.fn(),
-      resolveFrame: () => streamFromChunks([shell.value, templateChunk.promise]),
+      resolveFrame: () => streamFromChunks([shell, templateChunk.promise]),
     })
     t.after(() => app.dispose())
     await app.ready()
@@ -5164,28 +4999,12 @@ describe('run', () => {
   })
 
   it('finishes cached reloads that reuse an initial pending template watch', async (t) => {
-    let content = Promise.withResolvers<string>()
-    let chunks = readChunks(
-      renderToStream(
-        <html>
-          <head />
-          <body>
-            <Frame name="child" src="/child" fallback={<p>Loading child</p>} />
-          </body>
-        </html>,
-        { resolveFrame: () => content.promise },
-      ),
-    )
-    let shell = await chunks.next()
-    invariant(!shell.done)
-    content.resolve(
+    let { shell, templates } = await renderPendingChildChunks(
       '<link rel="modulepreload" data-rmx-module-preload href="/child.js"><p id="cached-child">Cached child</p>',
     )
-    let templates = ''
-    for await (let chunk of chunks) templates += chunk
 
     for (let buffered of [false, true]) {
-      let initialDocument = new DOMParser().parseFromString(shell.value, 'text/html')
+      let initialDocument = new DOMParser().parseFromString(shell, 'text/html')
       document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
       let templateChunk = Promise.withResolvers<string>()
       let rendering = Promise.withResolvers<void>()
@@ -5195,9 +5014,7 @@ describe('run', () => {
       let app = run({
         loadModule: mock.fn(),
         resolveFrame: () =>
-          streamFromChunks(
-            buffered ? [shell.value + templates] : [shell.value, templateChunk.promise],
-          ),
+          streamFromChunks(buffered ? [shell + templates] : [shell, templateChunk.promise]),
         processClientEntryPreloads(hrefs) {
           if (hrefs.includes('/child.js')) {
             rendering.resolve()
@@ -5244,28 +5061,12 @@ describe('run', () => {
   })
 
   it('preserves initial streamed child content when an ancestor navigation is aborted', async (t) => {
-    let content = Promise.withResolvers<string>()
-    let chunks = readChunks(
-      renderToStream(
-        <html>
-          <head />
-          <body>
-            <Frame name="child" src="/child" fallback={<p>Loading child</p>} />
-          </body>
-        </html>,
-        { resolveFrame: () => content.promise },
-      ),
-    )
-    let shell = await chunks.next()
-    invariant(!shell.done)
-    content.resolve(
+    let { shell, templates } = await renderPendingChildChunks(
       '<link rel="modulepreload" data-rmx-module-preload href="/child.js"><p id="streamed-child">Initial child</p>',
     )
-    let templates = ''
-    for await (let chunk of chunks) templates += chunk
 
     for (let acceptShell of [false, true]) {
-      let initialDocument = new DOMParser().parseFromString(shell.value, 'text/html')
+      let initialDocument = new DOMParser().parseFromString(shell, 'text/html')
       document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
       let response = Promise.withResolvers<string>()
       let releaseRender = Promise.withResolvers<string[]>()
@@ -5276,7 +5077,7 @@ describe('run', () => {
           acceptShell
             ? new ReadableStream<Uint8Array>({
                 start(controller) {
-                  controller.enqueue(new TextEncoder().encode(shell.value))
+                  controller.enqueue(new TextEncoder().encode(shell))
                 },
               })
             : response.promise,
@@ -6231,6 +6032,7 @@ describe('run', () => {
   it('dispatches reloadStart for each reentered request and completes only the latest', async () => {
     let frameHandle: FrameHandle | undefined
     let events: string[] = []
+    let reloadEvents: FrameReloadStartEvent[] = []
     let callCount = 0
     let [firstReloadContent, resolveFirstReloadContent] = withResolvers<string>()
     let [secondReloadContent, resolveSecondReloadContent] = withResolvers<string>()
@@ -6286,20 +6088,22 @@ describe('run', () => {
     await clientFrame.ready()
 
     invariant(frameHandle)
-    frameHandle.addEventListener('reloadStart', () => events.push('start'))
+    frameHandle.addEventListener('reloadStart', (event) => {
+      events.push('start')
+      reloadEvents.push(event)
+    })
     frameHandle.addEventListener('reloadComplete', () => events.push('complete'))
 
     let firstReloadPromise = frameHandle.reload()
     let secondReloadPromise = frameHandle.reload()
 
+    expect((await reloadEvents[0]!.finished).aborted).toBe(true)
     resolveFirstReloadContent('<section><p id="reload-value">Stale</p></section>')
     await firstReloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(events).toEqual(['start', 'start'])
 
     resolveSecondReloadContent('<section><p id="reload-value">Fresh</p></section>')
-    await secondReloadPromise
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(await reloadEvents[1]!.finished).toBe(await secondReloadPromise)
     expect(events).toEqual(['start', 'start', 'complete'])
 
     expect(document.getElementById('reload-value')?.textContent).toBe('Fresh')

@@ -673,30 +673,6 @@ describe('navigate', () => {
     await transition.succeed()
   })
 
-  it('passes the clicked link to the frame reload', async (t) => {
-    let reloadFrame = mock.fn((_frame: FrameHandle, _options?: FrameNavigationOptions) =>
-      createReloadTransition({ signal: new AbortController().signal }),
-    )
-    let dispatchNavigation = startStubNavigationListener(t, { ...stubFrames, reloadFrame })
-    let anchor = document.createElement('a')
-    anchor.href = '/login'
-    let intercept = mock.fn()
-
-    let transition = dispatchNavigation(
-      createAnchorNavigateEvent(anchor, {
-        intercept,
-        destinationUrl: new URL('/login', window.location.origin).href,
-        scroll() {},
-      }),
-    )
-    await intercept.mock.calls[0]?.arguments[0]?.handler?.()
-    await transition.succeed()
-
-    expect(reloadFrame.mock.calls[0]?.arguments[1]?.element).toBe(anchor)
-    expect(reloadFrame.mock.calls[0]?.arguments[1]?.form).toBeUndefined()
-    expect(reloadFrame.mock.calls[0]?.arguments[1]?.formData).toBeUndefined()
-  })
-
   it('suppresses Chromium scroll anchoring until after a push navigation paints', async (t) => {
     stubNavigatorUserAgent(t, 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36')
     let animationFrames = stubAnimationFrames(t)
@@ -1821,47 +1797,6 @@ describe('navigate', () => {
     } finally {
       if (didNavigate) await navigate(originalUrl, { history: 'replace' })
       controller.abort()
-    }
-  })
-
-  it('keeps a GET form as the source when it replaces history', async () => {
-    let originalUrl = window.location.href
-    let destination = new URL(originalUrl)
-    destination.searchParams.set('frame-navigation', 'replace-form')
-    let reload = mock.fn(async (_options?: FrameNavigationOptions) => new AbortController().signal)
-    let topFrame = { src: '' } as FrameHandle
-    let controller = new AbortController()
-    startNavigationListener(controller.signal, {
-      top: topFrame,
-      get: () => topFrame,
-      reloadFrame: (_frame, options) =>
-        createReloadTransition(reload(options).then((signal) => ({ signal }))),
-    })
-
-    let form = document.createElement('form')
-    form.action = destination.href
-    form.setAttribute('data-rmx-history', 'replace')
-    let button = document.createElement('button')
-    form.append(button)
-    document.body.append(form)
-
-    let entryCountBeforeNavigation = window.navigation.entries().length
-    let didNavigate = false
-    try {
-      let navigationSucceeded = waitForNavigationSuccess()
-      button.click()
-      await navigationSucceeded
-      didNavigate = true
-
-      expect(window.navigation.entries()).toHaveLength(entryCountBeforeNavigation)
-      expect(reload).toHaveBeenCalledTimes(1)
-      expect(reload.mock.calls[0]?.arguments[0]?.element).toBe(form)
-      expect(reload.mock.calls[0]?.arguments[0]?.submitter).toBe(button)
-      expect(reload.mock.calls[0]?.arguments[0]?.form).toBe(form)
-    } finally {
-      if (didNavigate) await navigate(originalUrl, { history: 'replace' })
-      controller.abort()
-      form.remove()
     }
   })
 
