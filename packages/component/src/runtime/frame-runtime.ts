@@ -138,6 +138,7 @@ const FRAME_RUNTIME = Symbol('FrameRuntime')
 
 export type FrameRuntime = {
   [FRAME_RUNTIME]: true
+  parent?: FrameRuntime
   canResolveFrames?: boolean
   getContext?: (type: ElementFunction) => unknown
   topFrame?: FrameHandle
@@ -209,6 +210,7 @@ export function getFrameRuntime(frame: FrameHandle): FrameRuntime | undefined {
 }
 
 export function createFrameRuntime(init: {
+  parent?: FrameRuntime
   topFrame?: FrameHandle
   getContext?: (type: ElementFunction) => unknown
   errorTarget: EventTarget
@@ -226,6 +228,7 @@ export function createFrameRuntime(init: {
 }): FrameRuntime {
   return {
     [FRAME_RUNTIME]: true,
+    parent: init.parent,
     topFrame: init.topFrame,
     getContext: init.getContext,
     ...getSharedFrameRuntime(init),

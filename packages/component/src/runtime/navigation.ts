@@ -7,6 +7,7 @@ import {
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
 import type { FrameHandle, Handle } from './component.ts'
 import { getFrameRuntime } from './frame-runtime.ts'
+import type { FrameRuntime } from './frame-runtime.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -490,9 +491,12 @@ export function startNavigationListener(
 
         topFrame.src = event.destination.url
         if (frame !== topFrame) frame.src = state.src
-        // A direct reload of the target or top frame can take over this navigation's reload.
+        // A direct reload of the target or any ancestor can take over this navigation's reload.
         // Only reloads started for this navigation may adopt its entry when they commit.
-        let runtimes = new Set([getFrameRuntime(frame), getFrameRuntime(topFrame)])
+        let runtimes = new Set<FrameRuntime>()
+        for (let runtime = getFrameRuntime(frame); runtime; runtime = runtime.parent) {
+          runtimes.add(runtime)
+        }
         let watching = true
         let onCommit = () => {
           if (!watching) return
@@ -502,11 +506,11 @@ export function startNavigationListener(
         function stopWatching() {
           watching = false
           for (let runtime of runtimes) {
-            if (runtime?.onReloadCommit === onCommit) runtime.onReloadCommit = undefined
+            if (runtime.onReloadCommit === onCommit) runtime.onReloadCommit = undefined
           }
         }
         for (let runtime of runtimes) {
-          if (runtime) runtime.onReloadCommit = onCommit
+          runtime.onReloadCommit = onCommit
         }
         stopWatchingReload = stopWatching
         let reload = reloadFrame(frame, {

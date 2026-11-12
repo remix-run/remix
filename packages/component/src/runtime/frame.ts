@@ -219,6 +219,7 @@ export type FrameContext = {
 type FrameInit = {
   nonce?: string
   name?: string
+  parent?: FrameRuntime
   topFrame?: FrameHandle
   getContext?: (type: ElementFunction) => unknown
   src: string
@@ -1032,7 +1033,10 @@ function insertFrame(
         instance = createFrameInstance(node, start, end, runtime, getContext)
       } else {
         let instanceRuntime = getFrameRuntime(instance.handle)
-        if (instanceRuntime) instanceRuntime.getContext = getContext
+        if (instanceRuntime) {
+          instanceRuntime.parent = runtime
+          instanceRuntime.getContext = getContext
+        }
       }
 
       cursor.current = end.nextSibling
@@ -1078,6 +1082,7 @@ function createFrameInstance(
   let instance = createFrame([start, end], {
     name: getFrameName(node),
     src: getFrameSrc(node),
+    parent: runtime,
     getContext,
     errorTarget: runtime.errorTarget,
     loadModule: runtime.loadModule,
@@ -1741,6 +1746,8 @@ async function createSubFrames(
       let marker = context.data.f?.[id]
 
       if (existingFrame) {
+        let runtime = getFrameRuntime(existingFrame.handle)
+        if (runtime) runtime.parent = getFrameRuntime(context.frame)
         if (marker) {
           let frameMarker: FrameMarkerData = { ...marker, id }
           tasks.push(existingFrame.updateMarker(frameMarker, options))
@@ -1754,6 +1761,7 @@ async function createSubFrames(
             nonce: context.nonce,
             src: frameMarker.src,
             marker: frameMarker,
+            parent: getFrameRuntime(context.frame),
             topFrame: context.topFrame,
             getContext: context.getContext,
             ...getSharedFrameRuntime(context),

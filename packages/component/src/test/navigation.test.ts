@@ -3,9 +3,10 @@ import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test
 import { navigate, startNavigationListener } from '../runtime/navigation.ts'
 import type { FrameHandle } from '../runtime/component.ts'
 import type { ResolveFrameOptions } from '../runtime/frame-runtime.ts'
-import { withResolvers } from './utils.ts'
-import { reloadDocument } from '../runtime/frame.ts'
+import { waitForDom, withResolvers } from './utils.ts'
+import { Frame, reloadDocument } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
+import { jsx } from '../runtime/core/vnode.ts'
 
 type StubFrameReloadResult = { signal: AbortSignal; redirectedTo?: string }
 
@@ -3055,16 +3056,20 @@ describe('traversal scroll', () => {
     expect(scrollTo).not.toHaveBeenCalled()
   })
 
-  async function setupReloadingPage(t: TestContext) {
+  async function setupReloadingPage(t: TestContext, frameCreation: 'server' | 'client' = 'server') {
     let originalUrl = window.location.href
     let initialEntryKey = getCurrentNavigationEntry().key
     let listUrl = new URL('/scroll-list', originalUrl).href
     let detailUrl = new URL('/scroll-detail', originalUrl).href
     let nextLoad: ((signal: AbortSignal) => Promise<void>) | undefined
-    function pageHtml(title: string) {
-      return `<html><head></head><body><main style="height: 5000px"><!-- rmx:f:content --><span>${title}</span><!-- /rmx:f --></main><script type="application/json" id="rmx-data">{"f":{"content":{"status":"resolved","name":"content","src":"/scroll-fragment"}}}</script></body></html>`
+    function outerHtml(title: string) {
+      return `<!-- rmx:f:content --><span>${title}</span><!-- /rmx:f --><script type="application/json" id="rmx-data">{"f":{"content":{"status":"resolved","name":"content","src":"/scroll-fragment"}}}</script>`
     }
-    document.documentElement.innerHTML = pageHtml('List')
+    function pageHtml(title: string) {
+      return `<html><head></head><body><main style="height: 5000px"><!-- rmx:f:outer -->${outerHtml(title)}<!-- /rmx:f --></main><script type="application/json" id="rmx-data">{"f":{"outer":{"status":"resolved","name":"outer","src":"/scroll-outer"}}}</script></body></html>`
+    }
+    document.documentElement.innerHTML =
+      frameCreation === 'server' ? pageHtml('List') : '<head></head><body></body>'
     let app = run({
       loadModule: mock.fn(),
       async resolveFrame(src, options) {
@@ -3076,6 +3081,11 @@ describe('traversal scroll', () => {
           await load(signal)
         }
         let title = src === detailUrl ? 'Detail' : 'List'
+        if (options?.target === 'outer') {
+          return frameCreation === 'server'
+            ? outerHtml(title)
+            : jsx(Frame, { name: 'content', src: '/scroll-fragment' })
+        }
         return options?.target ? `<span>${title}</span>` : pageHtml(title)
       },
     })
@@ -3089,6 +3099,15 @@ describe('traversal scroll', () => {
       window.scrollTo(0, 0)
     })
     await app.ready()
+    if (frameCreation === 'client') {
+      await app.frames.top.replace(
+        jsx('main', {
+          style: { height: '5000px' },
+          children: jsx(Frame, { name: 'outer', src: '/scroll-outer' }),
+        }),
+      )
+      await waitForDom(() => document.querySelector('main')?.textContent === 'List')
+    }
     return {
       app,
       listUrl,
@@ -3152,6 +3171,58 @@ describe('traversal scroll', () => {
     let back = window.navigation.back().finished
     let navigationReloadSignal = await started
     await page.app.frames.top.reload()
+    await back
+    expect(navigationReloadSignal.aborted).toBe(true)
+    expect(document.querySelector('main')?.textContent).toBe('List')
+    await page.scrollTo(600)
+
+    await window.navigation.forward().finished
+    let scrollTo = t.mock.method(window, 'scrollTo')
+    await window.navigation.back().finished
+
+    expect(scrollTo).toHaveBeenCalledWith({ left: 0, top: 600, behavior: 'instant' })
+    expect(window.scrollY).toBe(600)
+  })
+
+  it('saves the new position after an intermediate ancestor reload takes over a targeted traversal', async (t) => {
+    let page = await setupReloadingPage(t)
+    await navigate(page.listUrl, { target: 'content' })
+    await page.scrollTo(100)
+    await navigate(page.detailUrl, { target: 'content' })
+    let inner = page.app.frames.get('content')
+    let outer = page.app.frames.get('outer')
+    if (!inner || !outer) throw new Error('Expected nested named frames')
+
+    let started = page.holdNextLoad()
+    let back = window.navigation.back().finished
+    let navigationReloadSignal = await started
+    await outer.reload()
+    await back
+    expect(navigationReloadSignal.aborted).toBe(true)
+    expect(page.app.frames.get('content')).not.toBe(inner)
+    expect(document.querySelector('main')?.textContent).toBe('List')
+    await page.scrollTo(600)
+
+    await window.navigation.forward().finished
+    let scrollTo = t.mock.method(window, 'scrollTo')
+    await window.navigation.back().finished
+
+    expect(scrollTo).toHaveBeenCalledWith({ left: 0, top: 600, behavior: 'instant' })
+    expect(window.scrollY).toBe(600)
+  })
+
+  it('saves the new position after an intermediate ancestor re-resolves a client-created target', async (t) => {
+    let page = await setupReloadingPage(t, 'client')
+    await navigate(page.listUrl, { target: 'content' })
+    await page.scrollTo(100)
+    await navigate(page.detailUrl, { target: 'content' })
+    let outer = page.app.frames.get('outer')
+    if (!outer) throw new Error('Expected an intermediate ancestor frame')
+
+    let started = page.holdNextLoad()
+    let back = window.navigation.back().finished
+    let navigationReloadSignal = await started
+    await outer.reload()
     await back
     expect(navigationReloadSignal.aborted).toBe(true)
     expect(document.querySelector('main')?.textContent).toBe('List')
