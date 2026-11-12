@@ -183,7 +183,7 @@ function stubConnection(
   })
 }
 
-function stubIdleCallbacks(t?: TestContext) {
+function stubIdleCallbacks(t: TestContext) {
   let requestDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'requestIdleCallback')
   let cancelDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'cancelIdleCallback')
   let callbacks = new Map<number, IdleRequestCallback>()
@@ -214,9 +214,8 @@ function stubIdleCallbacks(t?: TestContext) {
     if (cancelDescriptor) Object.defineProperty(globalThis, 'cancelIdleCallback', cancelDescriptor)
     else Reflect.deleteProperty(globalThis, 'cancelIdleCallback')
   }
-  t?.after(restore)
+  t.after(restore)
   return {
-    restore,
     get pending() {
       return callbacks.size
     },
@@ -289,21 +288,11 @@ function htmlResponse(html: string) {
 }
 
 describe('prefetch', () => {
-  let idle: ReturnType<typeof stubIdleCallbacks>
-
-  async function readViewportIntersection(anchor: HTMLAnchorElement): Promise<boolean> {
-    let intersecting = await readIntersection(anchor)
-    idle.flush()
-    return intersecting
-  }
-
   beforeEach(() => {
-    idle = stubIdleCallbacks()
     globalThis.IntersectionObserver = TrackedIntersectionObserver
   })
 
   afterEach(() => {
-    idle.restore()
     globalThis.IntersectionObserver = NativeIntersectionObserver
     runtimeTargets.clear()
     document.body.textContent = ''
@@ -322,7 +311,7 @@ describe('prefetch', () => {
     movePointer(document.body, hovered)
     focused.focus()
     press(pressed, 'touch')
-    expect(await readViewportIntersection(visible)).toBe(true)
+    expect(await readIntersection(visible)).toBe(true)
     timers.advance(150)
 
     expect(prefetchFrame).not.toHaveBeenCalled()
@@ -338,7 +327,7 @@ describe('prefetch', () => {
       connection.effectiveType = effectiveType
       press(createIntentLink(`/products/intent-${effectiveType}`))
       let visible = createViewportLink(`/products/viewport-${effectiveType}`)
-      expect(await readViewportIntersection(visible)).toBe(true)
+      expect(await readIntersection(visible)).toBe(true)
     }
 
     expect(prefetchFrame).not.toHaveBeenCalled()
@@ -356,7 +345,7 @@ describe('prefetch', () => {
       press(pressed)
       expect(prefetchFrame).toHaveBeenCalledWith(pressed.href)
       let visible = createViewportLink(`/products/viewport-${effectiveType}`)
-      expect(await readViewportIntersection(visible)).toBe(true)
+      expect(await readIntersection(visible)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
     }
 
@@ -371,7 +360,7 @@ describe('prefetch', () => {
     let visible = createViewportLink('/products/visible')
 
     press(pressed)
-    expect(await readViewportIntersection(visible)).toBe(true)
+    expect(await readIntersection(visible)).toBe(true)
 
     expect(prefetchFrame).toHaveBeenCalledTimes(2)
     expect(prefetchFrame).toHaveBeenCalledWith(pressed.href)
@@ -403,14 +392,14 @@ describe('prefetch', () => {
     let prefetchFrame = mock.fn()
     let anchor = createViewportLink('/products/shirt')
     startTestPrefetching(t, prefetchFrame)
-    expect(await readViewportIntersection(anchor)).toBe(true)
+    expect(await readIntersection(anchor)).toBe(true)
     expect(prefetchFrame).not.toHaveBeenCalled()
 
     anchor.style.top = `${innerHeight + 100}px`
-    expect(await readViewportIntersection(anchor)).toBe(false)
+    expect(await readIntersection(anchor)).toBe(false)
     connection.effectiveType = '4g'
     anchor.style.top = '0px'
-    expect(await readViewportIntersection(anchor)).toBe(true)
+    expect(await readIntersection(anchor)).toBe(true)
     expect(prefetchFrame).toHaveBeenCalledTimes(1)
     expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
   })
@@ -791,7 +780,7 @@ describe('prefetch', () => {
   })
 
   describe('viewport', () => {
-    it('waits for initially hidden documents to become visible before scheduling work', (t) => {
+    it('waits for initially hidden documents to become visible before prefetching', (t) => {
       let setHidden = stubDocumentVisibility(t, true)
       let intersections = stubViewportIntersections(t)
       let prefetchFrame = mock.fn()
@@ -799,203 +788,81 @@ describe('prefetch', () => {
       startTestPrefetching(t, prefetchFrame)
       intersections.queue(anchor, true)
       intersections.deliver()
-
-      expect(idle.pending).toBe(0)
-      idle.flush({ didTimeout: true, timeRemaining: () => 0 })
       expect(prefetchFrame).not.toHaveBeenCalled()
 
       setHidden(false)
+      expect(prefetchFrame).not.toHaveBeenCalled()
       intersections.queue(anchor, true)
       intersections.deliver()
-      idle.flush()
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
       expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
     })
 
-    it('pauses queued viewport work and refreshes intersections when the document returns', async (t) => {
+    it('pauses links waiting for scrolling and refreshes intersections when the document returns', async (t) => {
+      let timers = t.useFakeTimers()
       let setHidden = stubDocumentVisibility(t)
       let prefetchFrame = mock.fn()
       let passed = createViewportLink('/passed')
       let download = createViewportLink('/download')
       let visible = createViewportLink('/visible')
       startTestPrefetching(t, prefetchFrame)
+      document.dispatchEvent(new Event('scroll'))
       expect(await readIntersection(passed)).toBe(true)
       expect(await readIntersection(download)).toBe(true)
       expect(await readIntersection(visible)).toBe(true)
-      expect(idle.pending).toBe(1)
+      expect(prefetchFrame).not.toHaveBeenCalled()
 
       setHidden(true)
-      expect(idle.pending).toBe(0)
-      idle.flush({ didTimeout: true, timeRemaining: () => 0 })
+      timers.advance(150)
       expect(prefetchFrame).not.toHaveBeenCalled()
       passed.style.top = `${innerHeight + 100}px`
       download.setAttribute('download', '')
 
       setHidden(false)
-      idle.flush()
       expect(prefetchFrame).not.toHaveBeenCalled()
-      expect(await readViewportIntersection(passed)).toBe(false)
-      expect(await readViewportIntersection(visible)).toBe(true)
+      expect(await readIntersection(passed)).toBe(false)
+      expect(await readIntersection(visible)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
       expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
     })
 
-    it('pauses queued viewport work with the timer fallback and never resumes after disposal', (t) => {
-      let timers = t.useFakeTimers()
-      Object.defineProperty(globalThis, 'requestIdleCallback', { value: undefined })
-      let setHidden = stubDocumentVisibility(t)
+    it('does not resume hidden viewport work after disposal', (t) => {
+      let setHidden = stubDocumentVisibility(t, true)
       let intersections = stubViewportIntersections(t)
       let prefetchFrame = mock.fn()
-      let anchor = createViewportLink('/products/shirt')
       let controller = new AbortController()
       t.after(() => controller.abort())
+      let anchor = createViewportLink('/products/shirt')
       startPrefetching(controller.signal, prefetchFrame)
       intersections.queue(anchor, true)
       intersections.deliver()
 
-      setHidden(true)
-      timers.advance(0)
-      expect(prefetchFrame).not.toHaveBeenCalled()
+      controller.abort()
       setHidden(false)
       intersections.queue(anchor, true)
       intersections.deliver()
-      timers.advance(0)
-      expect(prefetchFrame).toHaveBeenCalledTimes(1)
-
-      let pending = createViewportLink('/products/hat')
-      intersections.queue(pending, true)
-      intersections.deliver()
-      setHidden(true)
-      controller.abort()
-      setHidden(false)
-      intersections.queue(pending, true)
-      intersections.deliver()
-      timers.advance(0)
-      expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    })
-
-    it('waits for idle time and yields when the idle budget is exhausted', (t) => {
-      let intersections = stubViewportIntersections(t)
-      let prefetchFrame = mock.fn()
-      let first = createViewportLink('/first')
-      let second = createViewportLink('/second')
-      startTestPrefetching(t, prefetchFrame)
-      intersections.queue(first, true)
-      intersections.queue(second, true)
-      intersections.deliver()
-
       expect(prefetchFrame).not.toHaveBeenCalled()
-      expect(idle.pending).toBe(1)
-      expect(idle.timeout).toBe(1000)
-      idle.flush({
-        didTimeout: false,
-        timeRemaining: () => (prefetchFrame.mock.calls.length ? 0 : 5),
-      })
-      expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      expect(prefetchFrame).toHaveBeenCalledWith(first.href)
-      expect(idle.pending).toBe(1)
-
-      idle.flush()
-      expect(prefetchFrame).toHaveBeenCalledTimes(2)
-      expect(prefetchFrame).toHaveBeenCalledWith(second.href)
-      expect(idle.pending).toBe(0)
     })
 
-    it('starts one prefetch when the idle timeout expires without spare time', (t) => {
+    it('rechecks removed links and eligibility when scrolling stops', (t) => {
+      let timers = t.useFakeTimers()
       let intersections = stubViewportIntersections(t)
       let prefetchFrame = mock.fn()
-      let first = createViewportLink('/first')
-      let second = createViewportLink('/second')
-      startTestPrefetching(t, prefetchFrame)
-      intersections.queue(first, true)
-      intersections.queue(second, true)
-      intersections.deliver()
-
-      idle.flush({ didTimeout: true, timeRemaining: () => 0 })
-      expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      expect(idle.pending).toBe(1)
-      idle.flush({ didTimeout: true, timeRemaining: () => 0 })
-      expect(prefetchFrame).toHaveBeenCalledTimes(2)
-      expect(idle.pending).toBe(0)
-    })
-
-    it('rechecks queued exits, removed links, and eligibility before idle work starts', (t) => {
-      let intersections = stubViewportIntersections(t)
-      let prefetchFrame = mock.fn()
-      let passed = createViewportLink('/passed')
       let removed = createViewportLink('/removed')
       let download = createViewportLink('/download')
       let visible = createViewportLink('/visible')
       startTestPrefetching(t, prefetchFrame)
-      intersections.queue(passed, true)
+      document.dispatchEvent(new Event('scroll'))
       intersections.queue(removed, true)
       intersections.queue(download, true)
       intersections.queue(visible, true)
       intersections.deliver()
 
-      intersections.queue(passed, false)
       removed.remove()
       download.setAttribute('download', '')
-      idle.flush()
+      timers.advance(150)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
       expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
-    })
-
-    it('checks connection settings again when idle work starts', (t) => {
-      let intersections = stubViewportIntersections(t)
-      let connection = { saveData: false }
-      stubConnection(t, connection)
-      let prefetchFrame = mock.fn()
-      let anchor = createViewportLink('/products/shirt')
-      startTestPrefetching(t, prefetchFrame)
-      intersections.queue(anchor, true)
-      intersections.deliver()
-
-      connection.saveData = true
-      idle.flush()
-      expect(prefetchFrame).not.toHaveBeenCalled()
-      expect(idle.pending).toBe(0)
-
-      connection.saveData = false
-      intersections.queue(anchor, false)
-      intersections.queue(anchor, true)
-      intersections.deliver()
-      idle.flush()
-      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
-    })
-
-    it('keeps intent immediate and cancels pending idle work when disposed', (t) => {
-      let intersections = stubViewportIntersections(t)
-      let prefetchFrame = mock.fn()
-      let controller = new AbortController()
-      t.after(() => controller.abort())
-      let viewport = createViewportLink('/viewport')
-      let intent = createIntentLink('/intent')
-      startPrefetching(controller.signal, prefetchFrame)
-      intersections.queue(viewport, true)
-      intersections.deliver()
-
-      press(intent)
-      expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      expect(prefetchFrame).toHaveBeenCalledWith(intent.href)
-      controller.abort()
-      expect(idle.pending).toBe(0)
-      idle.flush()
-      expect(prefetchFrame).toHaveBeenCalledTimes(1)
-    })
-
-    it('yields through a timer when idle callbacks are unavailable', (t) => {
-      let timers = t.useFakeTimers()
-      Object.defineProperty(globalThis, 'requestIdleCallback', { value: undefined })
-      let intersections = stubViewportIntersections(t)
-      let prefetchFrame = mock.fn()
-      let anchor = createViewportLink('/products/shirt')
-      startTestPrefetching(t, prefetchFrame)
-      intersections.queue(anchor, true)
-      intersections.deliver()
-
-      expect(prefetchFrame).not.toHaveBeenCalled()
-      timers.advance(0)
-      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
     })
 
     it('prefetches initial named-frame links and observes changes to source and target', async (t) => {
@@ -1005,7 +872,7 @@ describe('prefetch', () => {
       anchor.setAttribute('data-rmx-src', '/partials/shirt#details')
       await startNamedFramePrefetching(t, prefetchFrame, anchor)
 
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partials/shirt', location.href).href, {
         target: 'details',
       })
@@ -1013,28 +880,28 @@ describe('prefetch', () => {
 
       anchor.setAttribute('data-rmx-src', '/partials/shirt#reviews')
       anchor.href = '/products/another-navigation-url'
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
 
       anchor.setAttribute('data-rmx-src', '/partials/hat')
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
       expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partials/hat', location.href).href, {
         target: 'details',
       })
 
       anchor.setAttribute('data-rmx-target', 'sidebar')
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(3)
       expect(prefetchFrame).toHaveBeenCalledWith(new URL('/partials/hat', location.href).href, {
         target: 'sidebar',
       })
 
       anchor.setAttribute('data-rmx-target', 'missing')
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(3)
       anchor.removeAttribute('data-rmx-target')
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(4)
       expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
     })
@@ -1045,13 +912,13 @@ describe('prefetch', () => {
       let offscreen = createViewportLink('/products/offscreen', false)
       startTestPrefetching(t, prefetchFrame)
 
-      expect(await readViewportIntersection(visible)).toBe(true)
-      expect(await readViewportIntersection(offscreen)).toBe(false)
+      expect(await readIntersection(visible)).toBe(true)
+      expect(await readIntersection(offscreen)).toBe(false)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
       expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
 
       offscreen.style.top = '0px'
-      expect(await readViewportIntersection(offscreen)).toBe(true)
+      expect(await readIntersection(offscreen)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
       expect(prefetchFrame).toHaveBeenCalledWith(offscreen.href)
     })
@@ -1063,16 +930,16 @@ describe('prefetch', () => {
       let added = createViewportLink('/products/added')
       subtree.append(added)
       document.body.append(subtree)
-      expect(await readViewportIntersection(added)).toBe(true)
+      expect(await readIntersection(added)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledWith(added.href)
 
       let markedLater = createIntentLink('/products/marked-later')
       markedLater.style.cssText = added.style.cssText
-      expect(await readViewportIntersection(markedLater)).toBe(true)
+      expect(await readIntersection(markedLater)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
 
       markedLater.setAttribute('data-rmx-prefetch', 'viewport')
-      expect(await readViewportIntersection(markedLater)).toBe(true)
+      expect(await readIntersection(markedLater)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
       expect(prefetchFrame).toHaveBeenCalledWith(markedLater.href)
     })
@@ -1082,25 +949,25 @@ describe('prefetch', () => {
       let prefetchFrame = mock.fn()
       let anchor = createViewportLink('/products/shirt#details')
       startTestPrefetching(t, prefetchFrame)
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
       expect(prefetchFrame).toHaveBeenCalledWith(new URL('/products/shirt', location.href).href)
 
       anchor.style.top = `${innerHeight + 100}px`
-      expect(await readViewportIntersection(anchor)).toBe(false)
+      expect(await readIntersection(anchor)).toBe(false)
       anchor.style.top = '0px'
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       press(anchor)
       anchor.focus()
       timers.advance(150)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
 
       anchor.hash = 'reviews'
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
 
       anchor.href = '/products/hat'
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
       expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
     })
@@ -1123,11 +990,11 @@ describe('prefetch', () => {
       unmarked.removeAttribute('data-rmx-prefetch')
       startTestPrefetching(t, prefetchFrame)
 
-      expect(await readViewportIntersection(download)).toBe(true)
+      expect(await readIntersection(download)).toBe(true)
       expect(prefetchFrame).not.toHaveBeenCalled()
 
       download.removeAttribute('download')
-      expect(await readViewportIntersection(download)).toBe(true)
+      expect(await readIntersection(download)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
       expect(prefetchFrame).toHaveBeenCalledWith(download.href)
     })
@@ -1137,17 +1004,17 @@ describe('prefetch', () => {
       let anchor = createViewportLink('/products/shirt')
       startTestPrefetching(t, prefetchFrame)
       anchor.remove()
-      expect(await readViewportIntersection(anchor)).toBe(false)
+      expect(await readIntersection(anchor)).toBe(false)
       expect(prefetchFrame).not.toHaveBeenCalled()
 
       document.body.append(anchor)
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
 
       anchor.remove()
-      expect(await readViewportIntersection(anchor)).toBe(false)
+      expect(await readIntersection(anchor)).toBe(false)
       document.body.append(anchor)
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
     })
 
@@ -1156,11 +1023,11 @@ describe('prefetch', () => {
       let anchor = createViewportLink('/products/shirt')
       startTestPrefetching(t, prefetchFrame)
       anchor.setAttribute('data-rmx-prefetch', 'intent')
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).not.toHaveBeenCalled()
 
       anchor.setAttribute('data-rmx-prefetch', 'viewport')
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
     })
 
@@ -1173,7 +1040,7 @@ describe('prefetch', () => {
       movePointer(document.body, anchor)
 
       anchor.setAttribute('data-rmx-prefetch', 'viewport')
-      expect(await readViewportIntersection(anchor)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
       timers.advance(150)
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
@@ -1192,17 +1059,13 @@ describe('prefetch', () => {
       intersections.queue(anchor, true)
       intersections.deliver()
       timers.advance(149)
-      idle.flush()
       expect(prefetchFrame).not.toHaveBeenCalled()
 
       scroller.dispatchEvent(new Event('scroll'))
       timers.advance(149)
-      idle.flush()
       expect(prefetchFrame).not.toHaveBeenCalled()
 
       timers.advance(1)
-      expect(prefetchFrame).not.toHaveBeenCalled()
-      idle.flush()
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
       expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
     })
@@ -1220,12 +1083,10 @@ describe('prefetch', () => {
       intersections.queue(anchor, false)
       intersections.deliver()
       timers.advance(150)
-      idle.flush()
       expect(prefetchFrame).not.toHaveBeenCalled()
 
       intersections.queue(anchor, true)
       intersections.deliver()
-      idle.flush()
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
       expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
     })
@@ -1243,13 +1104,11 @@ describe('prefetch', () => {
       intersections.queue(visible, true)
       intersections.queue(passed, false)
       timers.advance(150)
-      idle.flush()
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
       expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
 
       intersections.queue(passed, true)
       intersections.deliver()
-      idle.flush()
       expect(prefetchFrame).toHaveBeenCalledTimes(2)
       expect(prefetchFrame).toHaveBeenCalledWith(passed.href)
     })
@@ -1268,14 +1127,12 @@ describe('prefetch', () => {
       intersections.deliver()
       connection.saveData = true
       timers.advance(150)
-      idle.flush()
       expect(prefetchFrame).not.toHaveBeenCalled()
 
       connection.saveData = false
       intersections.queue(anchor, false)
       intersections.queue(anchor, true)
       intersections.deliver()
-      idle.flush()
       expect(prefetchFrame).toHaveBeenCalledTimes(1)
       expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
     })
@@ -1294,33 +1151,7 @@ describe('prefetch', () => {
       intersections.deliver()
       controller.abort()
       timers.advance(150)
-      idle.flush()
       expect(prefetchFrame).not.toHaveBeenCalled()
-    })
-
-    it('waits for scrolling to settle when a scroll interrupts queued idle work', (t) => {
-      let timers = t.useFakeTimers()
-      let intersections = stubViewportIntersections(t)
-      let prefetchFrame = mock.fn()
-      let anchor = createViewportLink('/products/shirt')
-      startTestPrefetching(t, prefetchFrame)
-      intersections.queue(anchor, true)
-      intersections.deliver()
-      expect(idle.pending).toBe(1)
-
-      document.dispatchEvent(new Event('scroll'))
-      expect(idle.pending).toBe(0)
-      idle.flush({ didTimeout: true, timeRemaining: () => 0 })
-      timers.advance(149)
-      expect(prefetchFrame).not.toHaveBeenCalled()
-      expect(idle.pending).toBe(0)
-
-      timers.advance(1)
-      expect(prefetchFrame).not.toHaveBeenCalled()
-      expect(idle.pending).toBe(1)
-      idle.flush()
-      expect(prefetchFrame).toHaveBeenCalledTimes(1)
-      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
     })
 
     it('stops observing existing and newly inserted links when disposed', async () => {
@@ -1328,13 +1159,13 @@ describe('prefetch', () => {
       let controller = new AbortController()
       let anchor = createViewportLink('/products/shirt', false)
       startPrefetching(controller.signal, prefetchFrame)
-      expect(await readViewportIntersection(anchor)).toBe(false)
+      expect(await readIntersection(anchor)).toBe(false)
       controller.abort()
 
       anchor.style.top = '0px'
       let added = createViewportLink('/products/added')
-      expect(await readViewportIntersection(anchor)).toBe(true)
-      expect(await readViewportIntersection(added)).toBe(true)
+      expect(await readIntersection(anchor)).toBe(true)
+      expect(await readIntersection(added)).toBe(true)
       expect(prefetchFrame).not.toHaveBeenCalled()
     })
 
@@ -1371,6 +1202,7 @@ describe('default frame prefetch', () => {
 
     expect(fetch).toHaveBeenCalledTimes(1)
     await idle.waitFor()
+    expect(idle.timeout).toBe(1000)
     expect(hints).toHaveLength(0)
     idle.flush()
     await ready
