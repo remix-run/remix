@@ -401,7 +401,7 @@ function matchPositionalSiblingUnitGroup(diff: SiblingDiff, preserved: boolean):
   let { currentUnits, nextUnits, used, matchIndexForNext } = diff
   let remainingCurrentIndexes: number[] = []
   for (let i = 0; i < currentUnits.length; i++) {
-    if (!used[i] && (!isPreservedUnit(currentUnits[i]) || preserved)) {
+    if (!used[i] && isPreservedUnit(currentUnits[i]) === preserved) {
       remainingCurrentIndexes.push(i)
     }
   }

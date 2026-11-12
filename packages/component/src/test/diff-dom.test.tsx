@@ -1014,6 +1014,43 @@ describe('diffNodes', () => {
       expect(div.innerHTML).toBe('<button>Client</button>')
     })
 
+    it('reuses an unkeyed preserved element after a different-tag sibling on repeated reloads', () => {
+      let container = document.createElement('div')
+      let html = '<main>Main</main><div data-rmx-preserve-dom></div>'
+      container.innerHTML = html
+      let [main, host] = Array.from(container.children)
+      let button = document.createElement('button')
+      host.append(button)
+      let mutations = recordMutations(container)
+
+      diffDom(container, html)
+
+      expect(Array.from(container.children)).toEqual([main, host])
+      expect(host.firstChild).toBe(button)
+
+      diffDom(container, html)
+
+      expect(Array.from(container.children)).toEqual([main, host])
+      expect(host.firstChild).toBe(button)
+      let { added, removed } = mutations()
+      expect(added).toEqual([])
+      expect(removed).toEqual([])
+    })
+
+    it('reuses an unkeyed preserved element after a same-tag sibling without preserving that sibling', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<div>Old</div><div data-rmx-preserve-dom><button>Client</button></div>'
+      let [sibling, host] = Array.from(container.children)
+      let button = host.firstChild
+
+      diffDom(container, '<div>New</div><div data-rmx-preserve-dom></div>')
+
+      expect(Array.from(container.children)).toEqual([sibling, host])
+      expect(sibling.textContent).toBe('New')
+      expect(sibling.hasAttribute('data-rmx-preserve-dom')).toBe(false)
+      expect(host.firstChild).toBe(button)
+    })
+
     it('preserves named attributes while reconciling other attributes and children', () => {
       let container = document.createElement('div')
       container.innerHTML =
