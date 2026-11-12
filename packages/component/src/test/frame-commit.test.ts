@@ -2,9 +2,10 @@ import { expect } from '@remix-run/assert'
 import { describe, it, mock } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
 
-import { defaultResolveFrame, Frame, navigate, run, spaResponse } from '../index.ts'
-import type { FrameCommit, ResolveFrameOptions } from '../index.ts'
+import { clientEntry, defaultResolveFrame, Frame, navigate, run, spaResponse } from '../index.ts'
+import type { FrameCommit, LoadModule, ResolveFrameOptions } from '../index.ts'
 import { jsx } from '../jsx-runtime.ts'
+import { renderToStream, renderToString } from '../server/stream.ts'
 
 function page(text: string): Response {
   return new Response(
@@ -13,7 +14,12 @@ function page(text: string): Response {
   )
 }
 
-async function setup(t: TestContext, commit: FrameCommit, fetchImpl?: typeof fetch) {
+async function setup(
+  t: TestContext,
+  commit: FrameCommit,
+  fetchImpl?: typeof fetch,
+  loadModule: LoadModule = mock.fn(),
+) {
   let initialUrl = window.location.href
   let initialKey = window.navigation.currentEntry?.key
   document.body.innerHTML = '<main id="commit-page">initial</main>'
@@ -31,7 +37,7 @@ async function setup(t: TestContext, commit: FrameCommit, fetchImpl?: typeof fet
     return transition
   })
   let app = run({
-    loadModule: mock.fn(),
+    loadModule,
     resolveFrame(src, options) {
       loads.push({ src, options })
       return defaultResolveFrame(src, options, {
@@ -66,6 +72,31 @@ async function setup(t: TestContext, commit: FrameCommit, fetchImpl?: typeof fet
       return url.href
     },
   }
+}
+
+async function serverFramePage() {
+  let hydrating = false
+  let Entry = clientEntry('/entry.js#Entry', function Entry() {
+    return () =>
+      hydrating
+        ? jsx(Frame, { name: 'client-child', src: '/client-child' })
+        : jsx('p', { children: 'Server content' })
+  })
+  let html = await new Response(
+    renderToStream(
+      jsx('html', {
+        children: [
+          jsx('head', {}),
+          jsx('body', {
+            children: jsx(Frame, { name: 'server-wrapper', src: '/server-wrapper' }),
+          }),
+        ],
+      }),
+      { resolveFrame: () => renderToString(jsx(Entry, {})) },
+    ),
+  ).text()
+  hydrating = true
+  return { html, Entry }
 }
 
 describe('defaultResolveFrame commit', () => {
@@ -446,6 +477,85 @@ describe('defaultResolveFrame commit', () => {
     )
     await navigate(fixture.url('nested'))
     await completed.promise
+    expect(fixture.errors).toEqual([])
+  })
+
+  it('waits for redirected navigation in client frames hydrated inside new server frames', async (t) => {
+    let { html, Entry } = await serverFramePage()
+    let destination = ''
+    let completed = Promise.withResolvers<void>()
+    let fixture = await setup(
+      t,
+      (commitFrame, { to, signal }) => {
+        let committed = commitFrame()
+        if (to === '/client-child') {
+          completed.resolve(
+            committed.then(() => {
+              expect(window.location.href).toBe(destination)
+              expect(window.navigation.transition).toBe(null)
+              expect(signal.aborted).toBe(false)
+              expect(document.getElementById('client-value')?.textContent).toBe('Client content')
+            }),
+          )
+        }
+        return committed
+      },
+      async (input) => {
+        if (String(input) === '/client-child') {
+          return new Response('<p id="client-value">Client content</p>')
+        }
+        let response = new Response(html)
+        Object.defineProperties(response, {
+          redirected: { value: true },
+          url: { value: destination },
+        })
+        return response
+      },
+      () => Entry,
+    )
+    destination = fixture.url('destination')
+    let completion = expect(completed.promise).resolves.toBeUndefined()
+    await navigate(fixture.url('server-frame')).catch(() => {})
+    await completion
+    expect(fixture.errors).toEqual([])
+  })
+
+  it('aborts hydrated client frame hooks before a superseding navigation renders', async (t) => {
+    let { html, Entry } = await serverFramePage()
+    let ready = Promise.withResolvers<{ signal: AbortSignal; commitFrame(): Promise<void> }>()
+    let requested = Promise.withResolvers<void>()
+    let release = Promise.withResolvers<void>()
+    let fixture = await setup(
+      t,
+      (commitFrame, { to, signal }) => {
+        if (to === '/client-child') {
+          ready.resolve({ signal, commitFrame })
+          return new Promise<void>(() => {})
+        }
+        return commitFrame()
+      },
+      async (input) => {
+        if (String(input) === '/client-child') return new Response('<p>Stale content</p>')
+        if (String(input).includes('latest')) {
+          requested.resolve()
+          await release.promise
+          return page('latest')
+        }
+        return new Response(html)
+      },
+      () => Entry,
+    )
+    let pending = navigate(fixture.url('server-frame')).catch(() => {})
+    let deferred = await ready.promise
+    let latest = navigate(fixture.url('latest'))
+    await requested.promise
+    let abortedBeforeRender = deferred.signal.aborted
+    release.resolve()
+    await latest
+    await pending
+    expect(abortedBeforeRender).toBe(true)
+    await deferred.commitFrame()
+    expect(document.getElementById('commit-page')?.textContent).toBe('latest')
     expect(fixture.errors).toEqual([])
   })
 

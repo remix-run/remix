@@ -127,6 +127,7 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
               nextContent,
               {
                 nonce: context.nonce,
+                transition: context.transition,
                 data: context.data,
                 signal: context.signal,
                 reconciliationTracker: context.reconciliationTracker,

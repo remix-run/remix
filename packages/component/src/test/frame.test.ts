@@ -1481,7 +1481,7 @@ describe('frames', () => {
     ])
   })
 
-  it('passes the original transition to client frames hydrated inside new server frames', async (t) => {
+  it('passes the current transition through new and preserved server frames', async (t) => {
     let renderClientFrame = false
     let Entry = clientEntry('/entry.js#Entry', function Entry() {
       return () =>
@@ -1494,15 +1494,20 @@ describe('frames', () => {
         jsx('html', {
           children: [
             jsx('head', {}),
-            jsx('body', { children: jsx(Frame, { src: '/server-wrapper' }) }),
+            jsx('body', {
+              children: jsx(Frame, { name: 'server-wrapper', src: '/server-wrapper' }),
+            }),
           ],
         }),
         { resolveFrame: () => renderToString(jsx(Entry, {})) },
       ),
     )
     let transition = createTestTransition()
+    let nextTransition = createTestTransition()
+    let namedFrames = new NamedFrameRegistry()
     let loads: Array<ResolveFrameOptions['transition']> = []
     let frame = createTestFrame(document, {
+      namedFrames,
       loadModule: () => Entry,
       resolveFrame(src, options) {
         if (src === 'https://example.com/initial') return html
@@ -1516,9 +1521,16 @@ describe('frames', () => {
     renderClientFrame = true
 
     await reloadFrameForNavigation(frame.handle, { transition }).finished
+    let serverFrame = namedFrames.get('server-wrapper')
+    expect(serverFrame).toBeDefined()
+    await reloadFrameForNavigation(frame.handle, { transition: nextTransition }).finished
 
-    expect(loads).toEqual([transition])
+    expect(namedFrames.get('server-wrapper')).toBe(serverFrame)
+    expect(loads).toEqual([transition, nextTransition])
     expect(document.getElementById('client-child')?.textContent).toBe('Client content')
+
+    await frame.handle.reload()
+    expect(loads).toEqual([transition, nextTransition, undefined])
   })
 
   it('submits FormData in one request and renders its response without navigation', async (t) => {

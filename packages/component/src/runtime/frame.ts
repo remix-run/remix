@@ -228,6 +228,7 @@ export type FrameContext = {
 type FrameInit = {
   nonce?: string
   transition?: NavigationTransition
+  signal?: AbortSignal
   name?: string
   topFrame?: FrameHandle
   getContext?: (type: ElementFunction) => unknown
@@ -577,24 +578,26 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let reconciliationTracker = createReconciliationTracker()
 
     if ((await initialClientEntryResources) === false) return
-    if (isRenderAborted()) return
+    if (isRenderAborted(init.signal)) return
     adoptFrameServerStyles(container, context.styleManager)
     let subFramesReady = hydrateContainer(container, context, {
       reconciliationTracker,
       nonce: context.nonce,
       transition: context.transition,
+      signal: init.signal,
     })
 
     try {
       await subFramesReady
 
-      if (isRenderAborted()) return
+      if (isRenderAborted(init.signal)) return
 
       if (currentMarker?.status === 'pending') {
         await watchPendingFrameTemplate(currentMarker, {
           reconciliationTracker,
           nonce: context.nonce,
           transition: context.transition,
+          signal: init.signal,
         })
       }
 
@@ -1806,6 +1809,7 @@ async function createSubFrames(
           let subFrame = createFrame([node, end], {
             nonce: context.nonce,
             transition: context.transition,
+            signal: options?.signal,
             src: frameMarker.src,
             marker: frameMarker,
             topFrame: context.topFrame,
