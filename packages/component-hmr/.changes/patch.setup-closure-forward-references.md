@@ -1,0 +1,1 @@
+Fix a `ReferenceError` during HMR when a component's setup creates a callback that uses a setup variable declared after it, such as an `abort` listener that calls a `let reset = () => {}` declared further down. The same code worked without HMR, so whether it broke in development depended only on the order of the setup declarations.
