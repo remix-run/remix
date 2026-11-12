@@ -103,7 +103,7 @@ async function runIteration(page: Page): Promise<string | undefined> {
   })
   page.on('requestfinished', async (request) => {
     if (request.url().includes('/assets/')) return
-    let response = await request.response()
+    let response = await request.response().catch(() => null)
     requests.push(`${stamp()} finished ${request.url()} status=${response?.status()}`)
   })
   page.on('requestfailed', (request) =>
