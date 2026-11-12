@@ -12,6 +12,7 @@ import {
   type RenderFn,
 } from './component.ts'
 import { invariant } from './invariant.ts'
+import { encodeFormDataAsSearchParams } from './form-navigation.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
@@ -682,15 +683,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     if (formData) {
       if (method !== 'post') {
         let url = new URL(src, container.doc.baseURI)
-        let query = new URLSearchParams()
-        let normalizeNewlines = (value: string) => value.replace(/\r\n|\r|\n/g, '\r\n')
-        for (let [name, value] of formData) {
-          query.append(
-            normalizeNewlines(name),
-            normalizeNewlines(typeof value === 'string' ? value : value.name),
-          )
-        }
-        url.search = `?${query}`
+        url.search = `?${encodeFormDataAsSearchParams(formData)}`
         src = url.href
         formData = undefined
       } else {
@@ -711,23 +704,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function startReloadTransition(options?: FrameNavigationOptions): FrameReloadTransition {
-    let controller = startReload(options?.signal)
+    let controller = beginReload('direct', options?.signal)
     let committed = Promise.withResolvers<void>()
-    let commitStarted = false
-    let finished = resolveAndRenderReload(controller, options, (ready) => {
-      if (commitStarted) return
-      commitStarted = true
-      void ready.then(committed.resolve, committed.reject)
-    })
+    let finished = resolveAndRenderReload(controller, committed, options)
 
     // Settle committed when a reload is aborted or fails before rendering any content.
     void finished.then(() => committed.resolve(), committed.reject)
 
     return { signal: controller.signal, committed: committed.promise, finished }
-  }
-
-  function startReload(signal?: AbortSignal): AbortController {
-    return beginReload('direct', signal)
   }
 
   function beginClientFrameReloadForAncestorReload(signal: AbortSignal): {
@@ -778,8 +762,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   async function resolveAndRenderReload(
     controller: AbortController,
+    committed: PromiseWithResolvers<void>,
     options?: FrameNavigationOptions,
-    resolveCommit?: (ready: Promise<void>) => void,
   ): Promise<FrameReloadResult> {
     let isStale = () => reloadController !== controller || controller.signal.aborted
     try {
@@ -804,7 +788,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
           if (commitStarted) return
           commitStarted = true
           blockingFrameTracker.finalize()
-          resolveCommit?.(blockingFrameTracker.ready())
+          void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
         },
       })
       reconciliationTracker.finalize()
@@ -1150,7 +1134,12 @@ function resolveClientFrame(
         signal,
         reconciliationTracker: serverFrameReload?.reconciliationTracker,
         blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
-        onCommit: frameCommitted.resolve,
+        onCommit() {
+          // Mark resolved as soon as the content is visible so a src change that arrives while
+          // sub-frames are still settling reloads in place instead of remounting with the fallback.
+          if (!signal.aborted) state.content = { status: 'resolved' }
+          frameCommitted.resolve()
+        },
       })
       if (signal.aborted) return
       state.content = { status: 'resolved' }
