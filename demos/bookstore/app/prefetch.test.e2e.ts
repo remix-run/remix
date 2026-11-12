@@ -464,7 +464,7 @@ async function isInViewport(link: Locator): Promise<boolean> {
       new Promise<boolean>((resolve) => {
         let observer = new IntersectionObserver(([entry]) => {
           observer.disconnect()
-          setTimeout(() => resolve(entry.isIntersecting), 0)
+          resolve(entry.isIntersecting)
         })
         observer.observe(anchor)
       }),
