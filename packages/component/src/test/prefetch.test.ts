@@ -237,6 +237,19 @@ function stubIdleCallbacks(t?: TestContext) {
   }
 }
 
+function stubDocumentVisibility(t: TestContext, hidden = false) {
+  let descriptor = Object.getOwnPropertyDescriptor(document, 'hidden')
+  Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden })
+  t.after(() => {
+    if (descriptor) Object.defineProperty(document, 'hidden', descriptor)
+    else Reflect.deleteProperty(document, 'hidden')
+  })
+  return function setHidden(value: boolean) {
+    hidden = value
+    document.dispatchEvent(new Event('visibilitychange'))
+  }
+}
+
 function createPrefetch(t: TestContext) {
   let controller = new AbortController()
   t.after(() => controller.abort())
@@ -778,6 +791,109 @@ describe('prefetch', () => {
   })
 
   describe('viewport', () => {
+    it('waits for initially hidden documents to become visible before scheduling work', (t) => {
+      let setHidden = stubDocumentVisibility(t, true)
+      let intersections = stubViewportIntersections(t)
+      let prefetchFrame = mock.fn()
+      let anchor = createViewportLink('/products/shirt')
+      startTestPrefetching(t, prefetchFrame)
+      intersections.queue(anchor, true)
+      intersections.deliver()
+
+      expect(idle.pending).toBe(0)
+      idle.flush({ didTimeout: true, timeRemaining: () => 0 })
+      expect(prefetchFrame).not.toHaveBeenCalled()
+
+      setHidden(false)
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      idle.flush()
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    })
+
+    it('pauses queued viewport work and refreshes intersections when the document returns', async (t) => {
+      let setHidden = stubDocumentVisibility(t)
+      let prefetchFrame = mock.fn()
+      let passed = createViewportLink('/passed')
+      let download = createViewportLink('/download')
+      let visible = createViewportLink('/visible')
+      startTestPrefetching(t, prefetchFrame)
+      expect(await readIntersection(passed)).toBe(true)
+      expect(await readIntersection(download)).toBe(true)
+      expect(await readIntersection(visible)).toBe(true)
+      expect(idle.pending).toBe(1)
+
+      setHidden(true)
+      expect(idle.pending).toBe(0)
+      idle.flush({ didTimeout: true, timeRemaining: () => 0 })
+      expect(prefetchFrame).not.toHaveBeenCalled()
+      passed.style.top = `${innerHeight + 100}px`
+      download.setAttribute('download', '')
+
+      setHidden(false)
+      idle.flush()
+      expect(prefetchFrame).not.toHaveBeenCalled()
+      expect(await readViewportIntersection(passed)).toBe(false)
+      expect(await readViewportIntersection(visible)).toBe(true)
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+      expect(prefetchFrame).toHaveBeenCalledWith(visible.href)
+    })
+
+    it('retains the scroll-settle delay when a hidden document becomes visible', (t) => {
+      let timers = t.useFakeTimers()
+      let setHidden = stubDocumentVisibility(t, true)
+      let intersections = stubViewportIntersections(t)
+      let prefetchFrame = mock.fn()
+      let anchor = createViewportLink('/products/shirt')
+      startTestPrefetching(t, prefetchFrame)
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      document.dispatchEvent(new Event('scroll'))
+      timers.advance(149)
+
+      setHidden(false)
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      expect(idle.pending).toBe(0)
+      timers.advance(1)
+      idle.flush()
+      expect(prefetchFrame).toHaveBeenCalledWith(anchor.href)
+    })
+
+    it('pauses queued viewport work with the timer fallback and never resumes after disposal', (t) => {
+      let timers = t.useFakeTimers()
+      Object.defineProperty(globalThis, 'requestIdleCallback', { value: undefined })
+      let setHidden = stubDocumentVisibility(t)
+      let intersections = stubViewportIntersections(t)
+      let prefetchFrame = mock.fn()
+      let anchor = createViewportLink('/products/shirt')
+      let controller = new AbortController()
+      t.after(() => controller.abort())
+      startPrefetching(controller.signal, prefetchFrame)
+      intersections.queue(anchor, true)
+      intersections.deliver()
+
+      setHidden(true)
+      timers.advance(0)
+      expect(prefetchFrame).not.toHaveBeenCalled()
+      setHidden(false)
+      intersections.queue(anchor, true)
+      intersections.deliver()
+      timers.advance(0)
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+
+      let pending = createViewportLink('/products/hat')
+      intersections.queue(pending, true)
+      intersections.deliver()
+      setHidden(true)
+      controller.abort()
+      setHidden(false)
+      intersections.queue(pending, true)
+      intersections.deliver()
+      timers.advance(0)
+      expect(prefetchFrame).toHaveBeenCalledTimes(1)
+    })
+
     it('waits for idle time and yields when the idle budget is exhausted', (t) => {
       let intersections = stubViewportIntersections(t)
       let prefetchFrame = mock.fn()
