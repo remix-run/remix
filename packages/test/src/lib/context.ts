@@ -3,6 +3,7 @@ import type { V8CoverageEntry } from './coverage.ts'
 import { createFakeTimers, type FakeTimers, type FakeTimersOptions } from './fake-timers.ts'
 import { mock, type MockCall, type MockContext, type MockFunction } from './mock.ts'
 import type { getPlaywrightPageOptions } from './playwright.ts'
+import { waitFor } from './wait-for.ts'
 
 /**
  * The shape `t.serve()` consumes. Matches the result of `createTestServer`
@@ -32,6 +33,30 @@ export interface TestContext {
    * times out or when a user-provided test signal aborts.
    */
   signal: AbortSignal
+
+  /**
+   * Retries an assertion until it stops throwing or rejecting, then returns its value.
+   *
+   * The first attempt starts immediately. Every successful return value, including
+   * `false` and `undefined`, stops polling. Invalid arguments throw synchronously.
+   *
+   * The deadline includes pending attempts and rejects with `Error('waitFor() timed out')`,
+   * using the last failure as `cause`, if any.
+   *
+   * Polling uses real timers and stops when the test aborts or finishes. Test aborts
+   * reject with `t.signal.reason`; normal completion cancels waits without aborting
+   * `t.signal`. Cancellation cannot stop JavaScript or cancel a callback's promise.
+   *
+   * @param condition Assertion callback invoked without arguments.
+   * @param options Finite polling delays in milliseconds, from 0 through 2147483647.
+   * @param options.interval Delay after a failed attempt settles, in milliseconds (50).
+   * @param options.timeout Overall deadline in milliseconds (1000).
+   * @returns The first successful callback result, unwrapped.
+   */
+  waitFor<result>(
+    condition: () => result | PromiseLike<result>,
+    options?: { interval?: number; timeout?: number },
+  ): Promise<Awaited<result>>
 
   /**
    * Registers a cleanup function to be called after the test completes.
@@ -110,10 +135,12 @@ export function createTestContext(options?: CreateTestContextOptions): {
   cleanup(): Promise<void>
 } {
   let cleanups: Array<() => void | Promise<void>> = []
+  let lifetime = new AbortController()
   let fakeTimers: FakeTimers | undefined
   let closed = false
   let timerErrors: unknown[] = []
   let signal = options?.signal ?? new AbortController().signal
+  let pollingSignal = AbortSignal.any([signal, lifetime.signal])
   // A dependent signal cannot be silenced by stopImmediatePropagation on t.signal.
   let timerSignal = AbortSignal.any([signal])
 
@@ -130,6 +157,9 @@ export function createTestContext(options?: CreateTestContextOptions): {
 
   let testContext: TestContext = {
     signal,
+    waitFor(condition, options) {
+      return waitFor(condition, options, pollingSignal)
+    },
     mock: {
       fn(impl) {
         let mockFn = mock.fn(impl)
@@ -204,6 +234,7 @@ export function createTestContext(options?: CreateTestContextOptions): {
   return {
     testContext,
     async cleanup() {
+      lifetime.abort()
       closeTimers()
       timerSignal.removeEventListener('abort', closeTimers)
       let errors = timerErrors.splice(0)
