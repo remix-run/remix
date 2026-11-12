@@ -203,7 +203,10 @@ function shouldPreserveDomElement(current: Element, next: Element): boolean {
   let mode = next.getAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)
   if (mode === null) return false
   if (mode === 'client' || !current.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) {
-    current.setAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE, mode === 'client' ? 'client' : '')
+    current.setAttribute(
+      REMIX_PRESERVE_DOM_ATTRIBUTE,
+      mode === 'client' || mode === 'server' ? mode : '',
+    )
   }
   return true
 }

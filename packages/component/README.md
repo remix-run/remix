@@ -1243,12 +1243,12 @@ Pass a custom `resolveFrame` to `run()` when the server requires additional head
 Use `data-rmx-preserve-dom` on the smallest element whose live DOM should belong to client code after the initial render, such as a custom element or third-party widget:
 
 ```tsx
-<pagefind-ui data-rmx-key="search" data-rmx-preserve-dom>
+<pagefind-ui data-rmx-key="search" data-rmx-preserve-dom="server">
   <button type="button">Search</button>
 </pagefind-ui>
 ```
 
-Server rendering and initial hydration still process the element and its children. On later frame reloads, a matched element with `data-rmx-preserve-dom` in the incoming HTML keeps its live attributes and children. The server controls its lifetime: omitting it removes it and disposes any client entries inside. Removing the attribute from incoming HTML resumes normal reconciliation. Use `data-rmx-key` when a server widget can move among siblings.
+The default mode is `"server"`: `data-rmx-preserve-dom`, `data-rmx-preserve-dom=""`, and `data-rmx-preserve-dom="server"` are equivalent. Server rendering and initial hydration still process the element and its children. On later frame reloads, a matched element with the attribute in incoming HTML keeps its live attributes and children. The server controls its lifetime: omitting it removes it and disposes any client entries inside. Removing the attribute from incoming HTML resumes normal reconciliation. Use `data-rmx-key` when a server widget can move among siblings.
 
 Set `data-rmx-preserve-dom="client"` when client code owns the whole element, such as a portal host appended to an arbitrary container:
 
@@ -1260,7 +1260,7 @@ document.body.append(host)
 
 - Frame reloads leave client-owned elements connected without matching them to incoming HTML, including elements with the same `data-rmx-key`. Their live attributes and children stay intact, preserving focus, transitions, and scroll position. New siblings are inserted before trailing client-owned hosts.
 - Ownership comes from the current attribute value. An element can be claimed by client code even if it was originally server-rendered. Server rendering and initial hydration still process initial content marked with `"client"`; subsequent server responses should omit that host.
-- Client code must remove the element when its owner is done. To return it to server reconciliation, remove the attribute or change its value to the empty string before the next reload. The server can then match or remove it normally.
+- Client code must remove the element when its owner is done. To return it to server reconciliation, set the value to `"server"` (or the empty string), or remove the attribute before the next reload. The server can then match or remove it normally.
 - Removing a host's parent still removes the host. Keep portal destinations under a stable parent when their content should survive frame reloads.
 
 Avoid wrapping Remix-owned UI that should keep receiving server-driven frame updates. A client entry inside either preservation mode hydrates from the initial HTML, but later frame reloads won't patch new server-rendered children or props through the preserved element. Put the client entry outside the preserved element when it needs future frame data, or put the attribute inside the client entry around only the imperative DOM.

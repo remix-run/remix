@@ -1039,6 +1039,28 @@ describe('diffNodes', () => {
       expect(div.innerHTML).toBe('<button>Client</button>')
     })
 
+    it('preserves live DOM with explicit server ownership and removes it by omission', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<div class="client"><button>Client</button></div>'
+      let widget = container.firstElementChild
+      let button = widget?.firstChild
+      invariant(widget && button)
+
+      diffDom(
+        container,
+        '<div data-rmx-preserve-dom="server" class="server"><span>Server</span></div>',
+      )
+
+      expect(container.firstElementChild).toBe(widget)
+      expect(widget.getAttribute('data-rmx-preserve-dom')).toBe('server')
+      expect(widget.className).toBe('client')
+      expect(widget.firstChild).toBe(button)
+
+      diffDom(container, '')
+
+      expect(container.childNodes.length).toBe(0)
+    })
+
     it('reuses an unkeyed preserved element after a different-tag sibling on repeated reloads', () => {
       let container = document.createElement('div')
       let html = '<main>Main</main><div data-rmx-preserve-dom></div>'
@@ -1529,7 +1551,7 @@ describe('diffNodes', () => {
           '<main>Initial</main><div data-rmx-key="host" data-rmx-preserve-dom="client">Client</div>'
         let [main, host] = Array.from(container.children)
         diffDom(container, '<main>Next</main>')
-        host.setAttribute('data-rmx-preserve-dom', '')
+        host.setAttribute('data-rmx-preserve-dom', 'server')
 
         diffDom(container, '<main>Next</main><div data-rmx-key="host">Server</div>')
 

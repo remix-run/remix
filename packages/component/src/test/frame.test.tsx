@@ -408,12 +408,12 @@ describe('run', () => {
     expect(document.getElementById('next-page')?.textContent).toBe('Next page')
   })
 
-  it('removes initially server-rendered preserved elements and disposes their client entries', async (t) => {
+  it('removes explicitly server-owned preserved elements and disposes their client entries', async (t) => {
     let dispose = mock.fn()
     let Entry = createDisposableEntry('/preserved.js#Entry', dispose)
     document.body.innerHTML = await drain(
       renderToStream(
-        <div data-rmx-preserve-dom>
+        <div data-rmx-preserve-dom="server">
           <Entry />
         </div>,
       ),

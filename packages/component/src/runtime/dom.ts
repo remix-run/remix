@@ -1562,14 +1562,15 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
    * Preserve live attributes and children during frame reconciliation.
    *
    * Server rendering and initial hydration still process this element and its children. On later
-   * frame reloads, an incoming matched element with this attribute keeps its live attributes and
-   * children so custom elements and imperative widgets can own their subtree.
+   * frame reloads, the default `"server"` mode keeps a matched element's live attributes and
+   * children when incoming HTML has this attribute. The server can remove it by omission. Boolean
+   * and empty-string values also select server ownership.
    *
    * Set to `"client"` for client ownership of the whole element. Frame reconciliation leaves it
    * in place without matching it to server HTML, even by key. Client code must remove it or change
    * this attribute to return it to server control. Removing its parent still removes the element.
    */
-  'data-rmx-preserve-dom'?: Trackable<boolean | '' | 'client' | undefined>
+  'data-rmx-preserve-dom'?: Trackable<boolean | '' | 'server' | 'client' | undefined>
 
   // RDFa Attributes
   /** The `about` HTML attribute. */
