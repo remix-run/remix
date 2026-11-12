@@ -222,6 +222,7 @@ interface RenderContext {
   authoredImportMapImports: AuthoredImportMapEntries
   authoredImportMapScopes: Map<string, AuthoredImportMapScope>
   authoredImportMapIntegrity: Map<string, string>
+  authoredModulePreloadTags: Set<string>
   managedImportMaps: ManagedImportMap[]
   frameData: Map<string, FrameData>
   clientEntryHeadResources: ClientEntryHeadResources
@@ -354,6 +355,7 @@ export function renderToStream(
     authoredImportMapImports: new Map(),
     authoredImportMapScopes: new Map(),
     authoredImportMapIntegrity: new Map(),
+    authoredModulePreloadTags: new Set(),
     managedImportMaps: [],
     frameData: new Map(),
     clientEntryHeadResources: { modulePreloadTags: new Set() },
@@ -711,6 +713,15 @@ function buildElementSegment(
         )
 
   if (SELF_CLOSING_TAGS.has(tag)) {
+    if (
+      context.insideHead &&
+      tag === 'link' &&
+      typeof processedProps.href === 'string' &&
+      typeof processedProps.rel === 'string' &&
+      processedProps.rel.toLowerCase().split(/\s+/).includes('modulepreload')
+    ) {
+      context.authoredModulePreloadTags.add(createModulePreloadTag(processedProps.href))
+    }
     output.push(`<${tag}${attrs} />`)
     return
   }
@@ -1453,7 +1464,7 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 }
 
 function finalizeHtml(root: Segment[], context: RenderContext): string {
-  let preloads = collectModulePreloadTags(context.clientEntryHeadResources, context.nonce)
+  let preloads = collectModulePreloadTags(context)
   let styles = collectStyleTags(context)
   let importMapScript = collectImportMapScript(context, context.clientEntryHeadResources)
   let nonceMeta =
@@ -1494,10 +1505,14 @@ function createModulePreloadTag(href: string): string {
   return `${MARKED_MODULE_PRELOAD_START}${escapeHtml(href)}${MODULE_PRELOAD_END}`
 }
 
-function collectModulePreloadTags(resources: ClientEntryHeadResources, nonce?: string): string {
-  return Array.from(resources.modulePreloadTags, (tag) =>
-    tag.replace(' />', () => `${renderNonceAttribute(nonce)} />`),
-  ).join('')
+function collectModulePreloadTags(context: RenderContext): string {
+  let tags: string[] = []
+  for (let tag of context.clientEntryHeadResources.modulePreloadTags) {
+    // The document already preloads this href with its own authored link.
+    if (context.authoredModulePreloadTags.has(tag)) continue
+    tags.push(tag.replace(' />', () => `${renderNonceAttribute(context.nonce)} />`))
+  }
+  return tags.join('')
 }
 
 function hoistClientEntryResourcesFromFrameHead(
