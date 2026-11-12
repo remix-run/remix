@@ -1045,7 +1045,7 @@ await app.ready()
 | `resolveFrame`               | Fetches frame content for navigations and reloads. See [Resolving Frames](#resolving-frames).                                                                                  |
 | `prefetch`                   | Replaces the default prefetch for `data-rmx-prefetch` links and `prefetch()` calls. See [Prefetching](#prefetching).                                                           |
 
-The returned runtime emits `error` events for component errors, and has these members:
+The returned runtime emits `error` events for component errors, including client entry modules that fail to load, and has these members:
 
 | Member          | Use                                                                                 |
 | --------------- | ----------------------------------------------------------------------------------- |

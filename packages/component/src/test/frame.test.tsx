@@ -5483,7 +5483,7 @@ describe('run', () => {
     root.dispose()
   })
 
-  it('logs a clear error when hydrating client entries without loadModule', async () => {
+  it('reports a clear error when hydrating client entries without loadModule', async () => {
     let Counter = clientEntry(
       '/js/counter.js#Counter',
       function Counter(handle: Handle<{ initialCount: number }>) {
@@ -5507,11 +5507,17 @@ describe('run', () => {
           resolveFrame: async () => html,
         },
       })
+      let errors: unknown[] = []
+      root.addEventListener('error', (event) => errors.push((event as ErrorEvent).error))
 
       root.render(<Frame src="/counter-frame" fallback={<p>Loading…</p>} />)
       root.flush()
       await errorLogged
 
+      expect(errors).toHaveLength(1)
+      expect(String(errors[0])).toContain(
+        'loadModule is required to hydrate client entries inside <Frame />',
+      )
       expect(consoleError).toHaveBeenCalled()
       expect(
         consoleError.mock.calls.some((call) =>
@@ -5569,6 +5575,64 @@ describe('run', () => {
     } finally {
       consoleError.mock.restore!()
     }
+  })
+
+  it('dispatches one error when a hydrating client entry module fails to load', async (t) => {
+    let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
+      return () => <button>Count</button>
+    })
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <>
+          <Counter />
+          <Counter />
+        </>,
+      ),
+    )
+    let consoleError = t.mock.method(console, 'error', () => {})
+    let loadError = new Error('Network failure')
+    let loadModule = t.mock.fn(async () => {
+      throw loadError
+    })
+
+    let app = run({ loadModule })
+    t.after(() => app.dispose())
+    let errors: unknown[] = []
+    app.addEventListener('error', (event) => errors.push(event.error))
+    await app.ready()
+
+    expect(loadModule.mock.calls).toHaveLength(1)
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toBe(loadError)
+    expect(consoleError.mock.calls).toHaveLength(1)
+  })
+
+  it('dispatches an error when a reloaded client entry module fails to load', async (t) => {
+    let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
+      return () => <button>Count</button>
+    })
+    document.body.innerHTML = '<main>Initial</main>'
+    t.mock.method(
+      globalThis,
+      'fetch',
+      async () => new Response(await renderDocumentContent(<Counter />)),
+    )
+    t.mock.method(console, 'error', () => {})
+    let loadError = new Error('Network failure')
+
+    let app = run({
+      async loadModule() {
+        throw loadError
+      },
+    })
+    t.after(() => app.dispose())
+    let errors: unknown[] = []
+    app.addEventListener('error', (event) => errors.push(event.error))
+    await app.ready()
+    await app.frames.top.reload()
+
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toBe(loadError)
   })
 
   it('reloads client-created Frame in place when src changes', async () => {
