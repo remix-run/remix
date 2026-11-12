@@ -175,4 +175,29 @@ describe('hydration', () => {
       'change agree',
     ])
   })
+
+  it('does not replay server values the browser normalized', async () => {
+    let events: string[] = []
+    let form = (
+      <form
+        mix={on('input', (event) => {
+          invariant(event.target instanceof HTMLInputElement)
+          events.push(event.target.name)
+        })}
+      >
+        <input name="color" type="color" value="#FF0000" />
+        <input name="email" type="email" value=" a@b.co " />
+        <input name="range" type="range" max="100" value="150" />
+        <input name="number" type="number" value="abc" />
+        <input name="text" value={'a\nb'} />
+      </form>
+    )
+    container.innerHTML = await renderToString(form)
+
+    let root = createRoot(container)
+    root.render(form)
+    root.flush()
+
+    expect(events).toEqual([])
+  })
 })

@@ -1111,7 +1111,13 @@ function mountHostNode(
       (dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement) &&
       dom.value !== dom.defaultValue
     ) {
-      editedBeforeHydration = 'value'
+      // Browsers sanitize some server values, such as lowercasing colors or clamping ranges, so
+      // compare against the server value as this control holds it.
+      let pristine = dom.cloneNode()
+      if (pristine instanceof HTMLInputElement || pristine instanceof HTMLTextAreaElement) {
+        pristine.value = dom.defaultValue
+        if (pristine.value !== dom.value) editedBeforeHydration = 'value'
+      }
     }
     if (editedBeforeHydration) {
       hydratedProps = { ...hydratedProps, [editedBeforeHydration]: undefined }
