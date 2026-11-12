@@ -1,12 +1,16 @@
 import { getNamedFrame, pendingPrefetchLinks } from './frame.ts'
 import { getInterceptableNavigation, getSameOriginUrl } from './navigation.ts'
 
-/** Options for prefetching frame content. */
+/** Options for a URL prefetch trigger. */
 export interface PrefetchOptions {
   /** Name of the destination frame, sent as `X-Remix-Target` by the default strategy. */
   target?: string
   /** Cancels this caller's prefetch, retaining work shared with other callers. */
   signal?: AbortSignal
+}
+
+/** Frame request options forwarded through prefetch handlers and {@link defaultPrefetch}. */
+export interface PrefetchFrameOptions extends PrefetchOptions {
   /** Triggering element for this caller; automatic triggers and anchor calls supply their link. */
   element?: Element
 }
@@ -99,15 +103,15 @@ export interface DefaultPrefetchOverrides {
  * @param src Absolute URL of the page to prefetch, without a hash.
  * @param options Destination frame, cancellation signal, and triggering element.
  */
-export type PrefetchFrame = (src: string, options?: PrefetchOptions) => void
+export type PrefetchFrame = (src: string, options?: PrefetchFrameOptions) => void
 
-type PrefetchRequest = [src: string, options?: PrefetchOptions]
+type PrefetchRequest = [src: string, options?: PrefetchFrameOptions]
 
 const INTENT_DELAY_MS = 100
 
 const initialPrefetch = createDefaultPrefetch()
 let defaultPrefetchFrame = initialPrefetch
-let prefetchFrame: (src: string, options?: PrefetchOptions) => void | Promise<void> =
+let prefetchFrame: (src: string, options?: PrefetchFrameOptions) => void | Promise<void> =
   defaultPrefetch
 const initialAnchorPrefetch = createAnchorPrefetching()
 let prefetchAnchor = initialAnchorPrefetch
@@ -129,7 +133,7 @@ let prefetchAnchor = initialAnchorPrefetch
  */
 export function defaultPrefetch(
   src: string,
-  options?: PrefetchOptions,
+  options?: PrefetchFrameOptions,
   overrides?: DefaultPrefetchOverrides,
 ): Promise<void> {
   let href = getSameOriginHref(src)
@@ -155,10 +159,10 @@ export function defaultPrefetch(
  */
 export function prefetch(href: HTMLAnchorElement, options?: PrefetchAnchorOptions): void
 /**
- * Prefetches a URL with an optional destination frame, cancellation signal, and triggering element.
+ * Prefetches a URL with an optional destination frame and cancellation signal.
  *
  * @param href URL resolved against the document base URL.
- * @param options Destination frame, cancellation signal, and triggering element.
+ * @param options Destination frame and cancellation signal.
  */
 export function prefetch(href: string, options?: PrefetchOptions): void
 /**
@@ -171,7 +175,10 @@ export function prefetch(href: string | HTMLAnchorElement, options?: PrefetchAnc
 export function prefetch(href: string | HTMLAnchorElement, options?: PrefetchOptions): void {
   let request =
     typeof href === 'string'
-      ? getPrefetchRequest(href, options)
+      ? getPrefetchRequest(
+          href,
+          options ? { target: options.target, signal: options.signal } : undefined,
+        )
       : getAnchorPrefetchRequest(href, options?.signal)
   if (request && (typeof href === 'string' || hasPrefetchTarget(request))) {
     dispatchPrefetch(request, typeof href === 'string' ? undefined : href)
@@ -543,9 +550,7 @@ function getPrefetchRequest(href: string, options?: PrefetchOptions): PrefetchRe
   let currentUrl = new URL(window.location.href)
   currentUrl.hash = ''
   if (src !== currentUrl.href)
-    return options?.signal || options?.element || options?.target !== undefined
-      ? [src, options]
-      : [src]
+    return options?.signal || options?.target !== undefined ? [src, options] : [src]
 }
 
 function getSameOriginHref(href: string): string | undefined {
@@ -586,7 +591,11 @@ interface PrefetchOwner {
 
 export function createDefaultPrefetch(
   signal?: AbortSignal,
-): (src: string, options?: PrefetchOptions, overrides?: DefaultPrefetchOverrides) => Promise<void> {
+): (
+  src: string,
+  options?: PrefetchFrameOptions,
+  overrides?: DefaultPrefetchOverrides,
+) => Promise<void> {
   let pending = new Map<string, FramePrefetchEntry>()
   let assets = new Map<string, { ready: Promise<void>; owners: Set<AbortSignal>; cancel(): void }>()
 
@@ -816,7 +825,7 @@ export function createDefaultPrefetch(
 
   return function prefetch(
     src: string,
-    options?: PrefetchOptions,
+    options?: PrefetchFrameOptions,
     overrides?: DefaultPrefetchOverrides,
   ): Promise<void> {
     let owner: PrefetchOwner = {

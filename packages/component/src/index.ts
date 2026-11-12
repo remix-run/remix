@@ -82,6 +82,7 @@ export type {
   PrefetchAnchorOptions,
   PrefetchContext,
   PrefetchFrame,
+  PrefetchFrameOptions,
   PrefetchFrameContext,
   PrefetchFrameReference,
   PrefetchOptions,

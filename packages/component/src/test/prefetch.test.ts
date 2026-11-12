@@ -7,7 +7,7 @@ import {
   prefetch,
   startPrefetching,
   type PrefetchFrame,
-  type PrefetchOptions,
+  type PrefetchFrameOptions,
 } from '../runtime/prefetch.ts'
 import { run } from '../runtime/run.ts'
 import { renderToStream } from '../server/stream.ts'
@@ -17,7 +17,7 @@ import { defaultPrefetch, type DefaultPrefetchOverrides, type PrefetchContext } 
 function expectPrefetchCall(
   callback: { mock: { calls: { arguments: unknown[] }[] } },
   src: string,
-  options?: PrefetchOptions,
+  options?: PrefetchFrameOptions,
 ): void {
   let call = callback.mock.calls.find(({ arguments: args }) => {
     let value = args[1]
@@ -1016,7 +1016,7 @@ describe('anchor prefetch ownership', () => {
 
   it('cancels changed frame destinations while retaining equivalent source metadata', async (t) => {
     let signals: AbortSignal[] = []
-    let callback = mock.fn((_src: string, options?: PrefetchOptions) => {
+    let callback = mock.fn((_src: string, options?: PrefetchFrameOptions) => {
       if (!options?.signal) throw new Error('Expected caller signal')
       signals.push(options.signal)
     })
@@ -1306,18 +1306,20 @@ describe('anchor prefetch ownership', () => {
     expect(signal.aborted).toBe(false)
   })
 
-  it('keeps string calls with an explicit element independent of DOM lifetime', async (t) => {
+  it('ignores unsupported string elements while retaining target and cancellation options', async (t) => {
     let caller = new AbortController()
     let anchor = createIntentLink('/page')
     let callback = mock.fn()
     startTestPrefetching(t, callback)
-    prefetch('/page', { element: anchor, signal: caller.signal })
+    // @ts-expect-error String triggers accept only target and signal options.
+    prefetch('/page', { target: 'details', element: anchor, signal: caller.signal })
     expect(callback).toHaveBeenCalledWith(new URL('/page', location.href).href, {
-      element: anchor,
+      target: 'details',
       signal: caller.signal,
     })
+    let changed = nextDomMutation()
     anchor.remove()
-    await new Promise<void>((resolve) => queueMicrotask(resolve))
+    await changed
     expect(caller.signal.aborted).toBe(false)
   })
 
@@ -1473,7 +1475,7 @@ describe('defaultPrefetch overrides', () => {
     await direct
   })
 
-  it('provides no implicit element for string calls and preserves explicitly supplied elements', async (t) => {
+  it('provides no implicit origin and preserves element options through defaultPrefetch', async (t) => {
     startTestPrefetching(t)
     await defaultPrefetch('/without-origin', undefined, {
       fetch(_url, _init, context) {
@@ -1485,22 +1487,19 @@ describe('defaultPrefetch overrides', () => {
       },
     })
     let source = document.createElement('button')
-    let completed = Promise.withResolvers<void>()
-    startTestPrefetching(t, (src, options) => {
-      expect(options?.element).toBe(source)
-      return defaultPrefetch(src, options, {
+    await defaultPrefetch(
+      '/with-origin',
+      { element: source },
+      {
         fetch(_url, _init, context) {
           expect(context.element).toBe(source)
           return Promise.resolve(htmlResponse('<main>Page</main>'))
         },
         frame(_prefetchReferences, context) {
           expect(context.element).toBe(source)
-          completed.resolve()
         },
-      })
-    })
-    prefetch('/with-origin', { element: source })
-    await completed.promise
+      },
+    )
   })
 
   it('prepares custom fetches and exposes original inert elements with response context', async (t) => {
