@@ -739,7 +739,10 @@ function createNavigationCoordinator(
         case 'frame-committed':
           if (operation.status !== 'awaiting-commit') return false
           operation = { ...operation, status: 'reconciling' }
-
+          // A rendered shell belongs in history even when a nested frame fails to load.
+          if (entry.status === 'unrendered' && navigation.currentEntry?.key === entry.key) {
+            entry = { status: 'unmarked' }
+          }
           return true
         case 'frame-finished':
           if (operation.status !== 'reconciling') return false

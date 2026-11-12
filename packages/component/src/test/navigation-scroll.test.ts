@@ -299,13 +299,17 @@ describe('traversal scroll', () => {
     expect(scrollCalls).toHaveBeenCalledTimes(1)
   })
 
-  it('settles a navigation when its blocking client frame fails', async (t) => {
+  it('preserves a rendered page in history when its blocking client frame fails', async (t) => {
     let page = await setupReloadingPage(t)
+    let entryCount = getCurrentNavigationEntry().index + 1
     let parentLoad = page.deferNextLoad()
     page.resolveNextWith(
       jsx('main', {
         style: { height: '5000px' },
-        children: jsx(Frame, { name: 'content', src: '/failing' }),
+        children: [
+          jsx('h1', { children: 'Rendered page' }),
+          jsx(Frame, { name: 'content', src: '/failing' }),
+        ],
       }),
     )
     let navigation = navigate(page.detailUrl)
@@ -313,9 +317,13 @@ describe('traversal scroll', () => {
     page.failNextLoad()
     parentLoad.release()
     await navigation
-    expect(document.querySelector('main')?.textContent).toBe('')
+    expect(document.querySelector('h1')?.textContent).toBe('Rendered page')
+    expect(window.navigation.entries()).toHaveLength(entryCount + 1)
     await navigate(page.listUrl)
     expect(document.querySelector('main')?.textContent).toBe('List')
+    expect(window.navigation.entries()).toHaveLength(entryCount + 2)
+    await window.navigation.back().finished
+    expect(window.location.href).toBe(page.detailUrl)
   })
 
   it('waits for a remounted blocking frame after its source changes during navigation', async (t) => {
@@ -838,6 +846,50 @@ describe('traversal scroll', () => {
     await window.navigation.back().finished
 
     expect(scrollTo).toHaveBeenCalledWith({ left: 0, top: 600, behavior: 'instant' })
+  })
+
+  it('adopts an independent client update while an older parent stream remains open', async (t) => {
+    let page = await setupReloadingPage(t, 'client')
+    let outer = page.app.frames.get('outer')
+    if (!outer) throw new Error('Expected an intermediate ancestor frame')
+    let src = '/scroll-fragment'
+    let update: (() => Promise<AbortSignal>) | undefined
+    function Content(handle: Handle) {
+      update = () => handle.update()
+      return () => jsx(Frame, { name: 'content', src })
+    }
+    await outer.replace(jsx(Content, {}))
+    await waitForDom(() => document.querySelector('main')?.textContent === 'List')
+    let closeStream = () => {}
+    let stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        closeStream = () => controller.close()
+      },
+    })
+    let streaming = outer.replace(stream)
+    try {
+      await navigate(page.listUrl, { target: 'content' })
+      await page.scrollTo(100)
+      await navigate(page.detailUrl, { target: 'content' })
+      let started = page.holdNextLoad()
+      let back = window.navigation.back().finished
+      await started
+      if (!update) throw new Error('Expected an updatable client frame')
+      src = '/replacement'
+      await update()
+      await waitForDom(() => document.querySelector('main')?.textContent === 'List')
+      await back
+      await page.scrollTo(600)
+
+      await window.navigation.forward().finished
+      let scrollTo = t.mock.method(window, 'scrollTo')
+      await window.navigation.back().finished
+
+      expect(scrollTo).toHaveBeenCalledWith({ left: 0, top: 600, behavior: 'instant' })
+    } finally {
+      closeStream()
+      await streaming
+    }
   })
 
   it('does not adopt a remounted child from an older ancestor response', async (t) => {

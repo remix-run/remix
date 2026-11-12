@@ -29,7 +29,6 @@ import {
   type ClientEntryIdentity,
   type FrameMountState,
   type FrameContentCommit,
-  type FrameRenderContext,
   type FrameNavigationOptions,
   type FrameReloadResult,
   type FrameReloadTransition,
@@ -438,7 +437,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     { commit: FrameContentCommit; settled: PromiseWithResolvers<void> }
   >()
   let blockingContent: FrameContentCommit | undefined
-  let renderContexts: FrameRenderContext[] = []
 
   async function consumeClientEntryResources(
     source: ParentNode,
@@ -549,19 +547,33 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         )
       }
     }
-    let renderContext: FrameRenderContext = {
-      contentCommit,
-      reconciliationTracker: renderOptions.reconciliationTracker,
-      blockingFrameTracker,
-    }
-    renderContexts.push(renderContext)
-    runtime.renderContext = renderContext
     try {
       await renderContent(content, renderOptions)
     } finally {
-      renderContexts.splice(renderContexts.indexOf(renderContext), 1)
-      runtime.renderContext = renderContexts.at(-1)
       if (ownsData) clearRmxData(renderOptions.data)
+    }
+  }
+
+  function withRenderContext<result>(options: ActiveRenderOptions, work: () => result): result {
+    let previousContext = runtime.renderContext
+    let previousReload = runtime.serverFrameReload
+    runtime.renderContext = {
+      contentCommit: options.contentCommit,
+      reconciliationTracker: options.reconciliationTracker,
+      blockingFrameTracker: options.blockingFrameTracker,
+    }
+    runtime.serverFrameReload = options.signal
+      ? {
+          signal: options.signal,
+          reconciliationTracker: options.reconciliationTracker,
+          blockingFrameTracker: options.blockingFrameTracker,
+        }
+      : undefined
+    try {
+      return work()
+    } finally {
+      runtime.renderContext = previousContext
+      runtime.serverFrameReload = previousReload
     }
   }
 
@@ -592,48 +604,38 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
 
     if (isRemixNodeFrameContent(content)) {
-      options.contentCommit?.mutating(frame)
-      init.disposeFallback?.()
-      if (!contentRoot) {
-        let currentNodes = getContentNodes()
-        disposeSubFrames(currentNodes, context, options.contentCommit)
-        removeVirtualRoots(currentNodes)
-        clearFrameContent()
-        if (container.root instanceof Document) {
-          contentRoot = createFrameRoot(container.doc.body, context)
-        } else {
-          invariant(Array.isArray(root), 'Expected comment-bounded frame root')
-          contentRoot = createFrameRoot(root, context)
+      withRenderContext(options, () => {
+        options.contentCommit?.mutating(frame)
+        init.disposeFallback?.()
+        if (!contentRoot) {
+          let currentNodes = getContentNodes()
+          disposeSubFrames(currentNodes, context, options.contentCommit)
+          removeVirtualRoots(currentNodes)
+          clearFrameContent()
+          if (container.root instanceof Document) {
+            contentRoot = createFrameRoot(container.doc.body, context)
+          } else {
+            invariant(Array.isArray(root), 'Expected comment-bounded frame root')
+            contentRoot = createFrameRoot(root, context)
+          }
         }
-      }
 
+        if (!isRenderAborted(options.signal)) contentRoot.render(content)
+      })
       if (isRenderAborted(options.signal)) return
-      let previousServerFrameReload = runtime.serverFrameReload
-      if (options.signal) {
-        runtime.serverFrameReload = {
-          signal: options.signal,
-          reconciliationTracker: options.reconciliationTracker,
-          blockingFrameTracker: options.blockingFrameTracker,
-        }
-      }
-
-      try {
-        contentRoot.render(content)
-        await new Promise<void>((resolve) => context.scheduler.enqueueCommitPhase([resolve]))
-        if (!isRenderAborted(options.signal))
-          transitionLoad({ type: 'render-complete', contentCommit: options.contentCommit })
-        options.onCommit?.()
-      } finally {
-        runtime.serverFrameReload = previousServerFrameReload
-      }
-
+      await new Promise<void>((resolve) => context.scheduler.enqueueCommitPhase([resolve]))
+      if (!isRenderAborted(options.signal))
+        transitionLoad({ type: 'render-complete', contentCommit: options.contentCommit })
+      options.onCommit?.()
       return
     }
 
     if (contentRoot) {
-      options.contentCommit?.mutating(frame)
-      disposeSubFrames(getContentNodes(), context, options.contentCommit)
-      contentRoot.dispose()
+      withRenderContext(options, () => {
+        options.contentCommit?.mutating(frame)
+        disposeSubFrames(getContentNodes(), context, options.contentCommit)
+        contentRoot?.dispose()
+      })
       contentRoot = undefined
     }
 
@@ -659,53 +661,56 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
     if (!(await consumeClientEntryResources(source, options.documentHref, options.nonce))) return
     if (isRenderAborted(options.signal)) return
-    init.disposeFallback?.()
-    adoptFrameServerStyles(createElementContainer(source), context.styleManager)
-    if (source instanceof DocumentFragment) removeEmptyHeads(source)
-    mergeRmxDataFrom(options.data, source)
-    let responseContext = {
-      ...context,
-      nonce: options.nonce,
-      data: options.data,
-      reconciliationTracker: options.reconciliationTracker,
-      blockingFrameTracker: options.blockingFrameTracker,
-      contentCommit: options.contentCommit,
-    }
-    let hydrationContainer = container
-    options.contentCommit?.mutating(frame)
-
-    if (source instanceof HTMLElement) {
-      let head = source.querySelector('head')
-      let body = source.querySelector('body')
-      invariant(head && body, 'Missing document head or body')
-      diffElementAttributes(container.doc.documentElement, source)
-
-      let documentContext = {
-        ...responseContext,
-        regionParent: container.doc.documentElement,
-        regionTailRef: null,
-        signal: options.signal,
+    let subFramesReady = withRenderContext(options, () => {
+      init.disposeFallback?.()
+      adoptFrameServerStyles(createElementContainer(source), context.styleManager)
+      if (source instanceof DocumentFragment) removeEmptyHeads(source)
+      mergeRmxDataFrom(options.data, source)
+      let responseContext = {
+        ...context,
+        nonce: options.nonce,
+        data: options.data,
+        reconciliationTracker: options.reconciliationTracker,
+        blockingFrameTracker: options.blockingFrameTracker,
+        contentCommit: options.contentCommit,
       }
-      diffNodes([container.doc.head], [head], {
-        ...documentContext,
-        shouldPreserveHeadNode: shouldPreserveManagedHeadNode,
-      })
-      diffNodes([container.doc.body], [body], documentContext)
+      let hydrationContainer = container
+      options.contentCommit?.mutating(frame)
 
-      hydrationContainer = createElementContainer(container.doc.body)
-      if (isRenderAborted(options.signal)) return
-    } else {
-      if (isRenderAborted(options.signal)) return
+      if (source instanceof HTMLElement) {
+        let head = source.querySelector('head')
+        let body = source.querySelector('body')
+        invariant(head && body, 'Missing document head or body')
+        diffElementAttributes(container.doc.documentElement, source)
 
-      diffNodes(container.childNodes, Array.from(source.childNodes), {
-        ...responseContext,
-        regionTailRef: container.regionTailRef,
-        regionParent: container.regionParent,
-        signal: options.signal,
-      })
-    }
+        let documentContext = {
+          ...responseContext,
+          regionParent: container.doc.documentElement,
+          regionTailRef: null,
+          signal: options.signal,
+        }
+        diffNodes([container.doc.head], [head], {
+          ...documentContext,
+          shouldPreserveHeadNode: shouldPreserveManagedHeadNode,
+        })
+        diffNodes([container.doc.body], [body], documentContext)
 
-    let subFramesReady = hydrateContainer(hydrationContainer, responseContext, options)
+        hydrationContainer = createElementContainer(container.doc.body)
+        if (isRenderAborted(options.signal)) return
+      } else {
+        if (isRenderAborted(options.signal)) return
+
+        diffNodes(container.childNodes, Array.from(source.childNodes), {
+          ...responseContext,
+          regionTailRef: container.regionTailRef,
+          regionParent: container.regionParent,
+          signal: options.signal,
+        })
+      }
+
+      return hydrateContainer(hydrationContainer, responseContext, options)
+    })
+    if (isRenderAborted(options.signal)) return
     // Visible content can reload in place while its sub-frames are still settling.
     if (!isRenderAborted(options.signal))
       transitionLoad({ type: 'render-complete', contentCommit: options.contentCommit })
