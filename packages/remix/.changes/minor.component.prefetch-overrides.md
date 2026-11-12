@@ -1,1 +1,1 @@
-Customize prefetching with `defaultPrefetch` from `remix/component`. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/README.md#prefetching) for usage.
+Customize prefetching with `defaultPrefetch` from `remix/component`, including nested frame selection by loading mode. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/README.md#prefetching) for usage.

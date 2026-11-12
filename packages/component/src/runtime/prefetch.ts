@@ -43,6 +43,8 @@ export interface PrefetchFrameReference {
   readonly src: string
   /** Destination frame name, when provided. */
   readonly target?: string
+  /** Initial frame loading mode (`eager` when unspecified). */
+  readonly loading: 'eager' | 'lazy'
   /** Whether the frame declares fallback content, even if its resolved HTML has already arrived. */
   readonly fallback: boolean
 }
@@ -1009,8 +1011,13 @@ function discoverFrames(elements: Element[], baseURL: string): PrefetchFrameRefe
         if (url.protocol !== 'http:' && url.protocol !== 'https:') continue
         let src = getSameOriginHref(url.href)
         if (src) {
-          let fallback = 'status' in frame && frame.status === 'pending'
-          frames.push(Object.freeze({ src, target, fallback }))
+          let loading: PrefetchFrameReference['loading'] =
+            'status' in frame && frame.status === 'lazy' ? 'lazy' : 'eager'
+          let fallback =
+            'fallback' in frame && typeof frame.fallback === 'boolean'
+              ? frame.fallback
+              : 'status' in frame && frame.status === 'pending'
+          frames.push(Object.freeze({ src, target, loading, fallback }))
         }
       } catch {
         // Malformed frame references do not prevent other prefetches.

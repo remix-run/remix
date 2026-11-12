@@ -1497,14 +1497,14 @@ Each caller's signal cancels only its own interest; the hooks' `context.signal` 
 
 #### Prefetching Nested Frames
 
-The default discovers assets in embedded nested HTML without fetching nested sources separately. `context.frames` exposes each discovered same-origin source as `{ src, target, fallback }`: an absolute source without a hash, optional frame name, and whether fallback content was declared. `fallback` stays true even if streamed content has already resolved.
+The default discovers assets in embedded nested HTML without fetching nested sources separately. `context.frames` exposes each discovered same-origin source as `{ src, target, loading, fallback }`: an absolute source without a hash, optional frame name, initial loading mode (`'eager'` or `'lazy'`), and whether fallback content was declared. `loading` defaults to `'eager'`. `fallback` stays true even if streamed content has already resolved.
 
 Within a `defaultPrefetch` override, select sources to fetch explicitly:
 
 ```ts
 processFrame(prefetchReferences, { frames }) {
   return prefetchReferences({
-    frames: frames.filter((frame) => frame.fallback),
+    frames: frames.filter((frame) => frame.loading === 'lazy'),
   })
 }
 ```

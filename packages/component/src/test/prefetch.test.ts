@@ -2018,9 +2018,24 @@ describe('defaultPrefetch overrides', () => {
       fetch: transport,
       async processFrame(prefetchReferences, { frames }) {
         expect(frames).toEqual([
-          { src: new URL('/eager', location.href).href, target: 'details', fallback: false },
-          { src: new URL('/fallback', location.href).href, target: 'sidebar', fallback: true },
-          { src: new URL('/nested', location.href).href, target: undefined, fallback: false },
+          {
+            src: new URL('/eager', location.href).href,
+            target: 'details',
+            loading: 'eager',
+            fallback: false,
+          },
+          {
+            src: new URL('/fallback', location.href).href,
+            target: 'sidebar',
+            loading: 'eager',
+            fallback: true,
+          },
+          {
+            src: new URL('/nested', location.href).href,
+            target: undefined,
+            loading: 'eager',
+            fallback: false,
+          },
         ])
         expect(Object.isFrozen(frames)).toBe(true)
         await prefetchReferences()
@@ -2028,6 +2043,58 @@ describe('defaultPrefetch overrides', () => {
     })
     expect(transport).toHaveBeenCalledTimes(2)
     expect(hints.map((link) => new URL(link.href).pathname)).toEqual(['/entry.js', '/nested.css'])
+  })
+
+  it('selects lazy nested frames using loading metadata and retains their fallback flags', async (t) => {
+    startTestPrefetching(t)
+    let resolved: string[] = []
+    let html = await drain(
+      renderToStream(
+        jsx('main', {
+          children: [
+            jsx(Frame, { src: '/eager', loading: 'eager' }),
+            jsx(Frame, {
+              src: '/later',
+              name: 'details',
+              loading: 'lazy',
+              fallback: jsx('p', { children: 'Loading' }),
+            }),
+            jsx(Frame, { src: '/empty', loading: 'lazy' }),
+          ],
+        }),
+        {
+          resolveFrame(src) {
+            resolved.push(src)
+            return ''
+          },
+        },
+      ),
+    )
+    expect(resolved).toEqual(['/eager'])
+    let transport = mock.fn(async (url: RequestInfo | URL) =>
+      htmlResponse(new URL(String(url)).pathname === '/page' ? html : '<main>Nested</main>'),
+    )
+    await defaultPrefetch('/page', undefined, {
+      fetch: transport,
+      processFrame(prefetchReferences, { src, frames }) {
+        if (new URL(src).pathname === '/page') {
+          expect(
+            frames.map(({ src, ...metadata }) => ({ src: new URL(src).pathname, ...metadata })),
+          ).toEqual([
+            { src: '/eager', target: undefined, loading: 'eager', fallback: false },
+            { src: '/later', target: 'details', loading: 'lazy', fallback: true },
+            { src: '/empty', target: undefined, loading: 'lazy', fallback: false },
+          ])
+        }
+        return prefetchReferences({
+          assets: [],
+          frames: frames.filter((frame) => frame.loading === 'lazy'),
+        })
+      },
+    })
+    expect(transport.mock.calls.map((call) => new URL(String(call.arguments[0])).pathname)).toEqual(
+      ['/page', '/later', '/empty'],
+    )
   })
 
   it('does not fall back when the processFrame hook skips or throws, and permits later attempts', async (t) => {
