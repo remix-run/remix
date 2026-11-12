@@ -4676,6 +4676,93 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('finishes child reloads when cached HTML reuses resolved frame markers', async (t) => {
+    let cachedHtml = await drainWithProtocol(
+      renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame name="child" src="/child" />
+          </body>
+        </html>,
+        { resolveFrame: () => '<p id="cached-child">Cached child</p>' },
+      ),
+    )
+    let initialDocument = new DOMParser().parseFromString(cachedHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let app = run({ loadModule: mock.fn(), resolveFrame: () => streamFromChunks([cachedHtml]) })
+    t.after(() => app.dispose())
+    await app.ready()
+    let child = app.frames.get('child')
+    invariant(child)
+    let events: FrameReloadStartEvent[] = []
+    let completions = 0
+    child.addEventListener('reloadStart', (event) => events.push(event))
+    child.addEventListener('reloadComplete', () => completions++)
+
+    await app.frames.top.reload()
+
+    expect(app.frames.get('child')).toBe(child)
+    expect(document.getElementById('cached-child')?.textContent).toBe('Cached child')
+    expect(events).toHaveLength(1)
+    expect(completions).toBe(1)
+    expect((await events[0]!.finished).aborted).toBe(false)
+  })
+
+  it('finishes cached pending frame markers only after their replayed template renders', async (t) => {
+    let content = Promise.withResolvers<string>()
+    let chunks = readChunks(
+      renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame name="child" src="/child" fallback={<p>Loading child</p>} />
+          </body>
+        </html>,
+        { resolveFrame: () => content.promise },
+      ),
+    )
+    let shell = await chunks.next()
+    invariant(!shell.done)
+    content.resolve('<p id="cached-child">Cached child</p>')
+    let templates = ''
+    for await (let chunk of chunks) templates += chunk
+    let initialDocument = new DOMParser().parseFromString(shell.value + templates, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let templateChunk = Promise.withResolvers<string>()
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame: () => streamFromChunks([shell.value, templateChunk.promise]),
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    let label = document.getElementById('cached-child')
+    invariant(label)
+    label.textContent = 'Client edit'
+    let child = app.frames.get('child')
+    invariant(child)
+    let events: FrameReloadStartEvent[] = []
+    let completions = 0
+    child.addEventListener('reloadStart', (event) => events.push(event))
+    child.addEventListener('reloadComplete', () => completions++)
+
+    let reload = reloadFrameForNavigation(app.frames.top)
+    await reload.committed
+    expect(events).toHaveLength(1)
+    expect(completions).toBe(0)
+    expect(document.getElementById('cached-child')?.textContent).toBe('Client edit')
+
+    templateChunk.resolve(templates)
+    await reload.finished
+    await new Promise(requestAnimationFrame)
+
+    expect(app.frames.get('child')).toBe(child)
+    expect(document.getElementById('cached-child')?.textContent).toBe('Cached child')
+    expect(events).toHaveLength(1)
+    expect(completions).toBe(1)
+    expect((await events[0]!.finished).aborted).toBe(false)
+  })
+
   it('gives child frames the initiating request and their own reload lifecycle before rmx:submission', async (t) => {
     function renderDocument(label: string) {
       return renderToStream(

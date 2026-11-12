@@ -1,1 +1,1 @@
-Keep inherited frame reloads in one lifecycle, without extra `reloadStart` events or `reloadComplete` before rendering finishes.
+Keep inherited frame reloads in one lifecycle, without extra `reloadStart` events or `reloadComplete` before rendering finishes. Replaying cached HTML with unchanged frame markers now completes descendant reloads after their content renders.

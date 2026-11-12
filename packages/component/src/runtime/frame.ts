@@ -682,7 +682,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       await watchPendingFrameTemplate(
         marker,
         options,
-        isInheritedReload
+        isInheritedReload || reloadState.status === 'inherited'
           ? () => {
               completeInheritedReload()
             }
@@ -702,7 +702,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     options?: RenderOptions,
   ): Promise<void> {
     if (isRenderAborted(options?.signal)) return
-    let isInheritedReload = setCurrentMarker(marker, options?.signal, options?.reloadOrigin)
+    // Cached HTML can reuse marker IDs within an already announced ancestor reload.
+    let isInheritedReload =
+      setCurrentMarker(marker, options?.signal, options?.reloadOrigin) ||
+      reloadState.status === 'inherited'
 
     clearPendingFrameTemplateWatch()
     await render(content, { ...options, contentStatus: 'resolved' })
