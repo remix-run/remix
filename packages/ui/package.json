@@ -74,6 +74,10 @@
       "types": "./src/toggle.ts",
       "default": "./src/toggle.ts"
     },
+    "./tooltip": {
+      "types": "./src/tooltip.ts",
+      "default": "./src/tooltip.ts"
+    },
     "./package.json": "./package.json",
     "./portal": {
       "types": "./src/portal.tsx",
@@ -129,6 +133,10 @@
       "./toggle": {
         "types": "./dist/toggle.d.ts",
         "default": "./dist/toggle.js"
+      },
+      "./tooltip": {
+        "types": "./dist/tooltip.d.ts",
+        "default": "./dist/tooltip.js"
       },
       "./package.json": "./package.json",
       "./portal": {

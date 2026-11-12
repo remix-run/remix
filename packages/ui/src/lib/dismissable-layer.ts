@@ -13,6 +13,9 @@ type DismissableLayerOptions = {
   dismissOnEscape?(): boolean
   dismissOnOutsideClick?(): boolean
   stopOutsideClickPropagation?(): boolean
+  // Transient layers such as tooltips keep their order and Escape priority, but outside clicks go
+  // to the layer below them so an open tooltip never blocks its owner's light dismissal.
+  passThroughClicks?: boolean
 }
 
 type DismissableLayer = {
@@ -115,9 +118,13 @@ function createDocumentLayers(document: Document) {
     pointerOrigin = undefined
   }
 
+  function clickLayer() {
+    return layers.findLast((layer) => !layer.options.passThroughClicks)
+  }
+
   function onPointerDown(event: PointerEvent) {
     clearPointerOrigin()
-    let layer = layers.at(-1)
+    let layer = clickLayer()
     if (layer) {
       pointerOrigin = { layer, inside: isInside(layer, event) }
     }
@@ -133,7 +140,7 @@ function createDocumentLayers(document: Document) {
   function onClick(event: MouseEvent) {
     let origin = pointerOrigin
     clearPointerOrigin()
-    let layer = layers.at(-1)
+    let layer = clickLayer()
     if (
       !layer ||
       event.button !== 0 ||

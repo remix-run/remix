@@ -83,6 +83,7 @@ function ViewOptions(handle: Handle) {
 - [`@remix-run/ui/select`](https://github.com/remix-run/remix/blob/main/packages/ui/src/select/README.md)
 - [`@remix-run/ui/tabs`](https://github.com/remix-run/remix/blob/main/packages/ui/src/tabs/README.md)
 - [`@remix-run/ui/toggle`](https://github.com/remix-run/remix/blob/main/packages/ui/src/toggle/README.md)
+- [`@remix-run/ui/tooltip`](https://github.com/remix-run/remix/blob/main/packages/ui/src/tooltip/README.md)
 
 ## Animation
 
