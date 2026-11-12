@@ -1430,7 +1430,16 @@ run({
       fetch(url, init) {
         return fetch(url, init)
       },
-      async frame(prefetchReferences, { fragment, assets, frames, baseURL, signal }) {
+      async frame(prefetchReferences, { src, response, fragment, assets, frames, signal }) {
+        let baseURL = response.url || src
+        let base = fragment.querySelector('base[href]')?.getAttribute('href')
+        if (base != null) {
+          try {
+            baseURL = new URL(base, baseURL).href
+          } catch {
+            // Retain the response URL when the base is invalid.
+          }
+        }
         let images = fragment.querySelectorAll(
           'img[data-prefetch], link[rel~="preload"][as="image"][imagesrcset]',
         )
@@ -1444,7 +1453,7 @@ run({
 })
 ```
 
-`prefetchImages` is an application helper that creates and retains its own `Image` instances. It can read `srcset` and `sizes` from images or `imagesrcset` and `imagesizes` from preload links, preserve CORS and referrer settings, normalize relative URLs against `baseURL`, await `decode()`, and use the app's own queue and cancellation policy. The hook can also make its own `fetch()` calls.
+`prefetchImages` is an application helper that creates and retains its own `Image` instances. It can read `srcset` and `sizes` from images or `imagesrcset` and `imagesizes` from preload links, preserve CORS and referrer settings, normalize relative URLs against the application's computed `baseURL`, await `decode()`, and use the app's own queue and cancellation policy. Compute that URL from `response.url || src`, accounting for the fragment's first `<base href>` as shown above. The hook can also make its own `fetch()` calls.
 
 The `fetch` override receives a prepared same-origin `GET` with frame headers, `X-Remix-Prefetch: true`, low priority, and an abort signal. Forward `init` to preserve those settings. It can wait for an application queue, retry, or return a cached response. Remix skips non-HTML and unsuccessful responses, including `503`; automatic retry and `Retry-After` handling belong to the override.
 
@@ -1454,7 +1463,7 @@ Declarative triggers and imperative anchor calls also receive an `options.signal
 
 Shared work continues while another caller needs it, so `context.element` can be disconnected or point elsewhere while `context.signal` remains active. The context's `src` and `target` still describe the original request. Use the signal to cancel queued or running work; the element remains useful for reading attributes or scoring link position. Forward `options` when delegating to `defaultPrefetch` to retain caller cancellation.
 
-The `frame` override runs independently for each successfully parsed response, including selected nested requests. Its context contains `src`, `target`, `element`, the consumed `response`, the inert `fragment`, `baseURL`, `signal`, and the original discovered `assets` and all same-origin `frames`. Asset discovery includes usable sources inside nested templates and declarations with unmatched media. Original attributes are preserved; responsive image preloads, track preloads, and incomplete declarations remain available through `fragment` and its template contents instead of `assets`. Reading URL attributes such as `src` and `href` and resolving them against `baseURL` avoids resolving them against the current document. Remix never mounts the fragment.
+The `frame` override runs independently for each successfully parsed response, including selected nested requests. Its context contains `src`, `target`, `element`, the consumed `response`, the inert `fragment`, `signal`, and the original discovered `assets` and all same-origin `frames`. Asset discovery includes usable sources inside nested templates and declarations with unmatched media. Original attributes are preserved; responsive image preloads, track preloads, and incomplete declarations remain available through `fragment` and its template contents instead of `assets`. For custom loading, read URL attributes such as `src` and `href` and resolve them against the application's computed base URL to avoid resolving them against the current document. Remix never mounts the fragment.
 
 `prefetchReferences()` delegates discovered assets. Omitted `assets` retains that default; `assets: []` skips native asset work. Omitted `frames` starts no nested-source requests. Pass `{ frames }` or a selected frame array explicitly to opt into those fetches; `frames: []` also skips them. Assets can include supported elements from the original fragment or its templates, such as a selected nonresponsive `<img src>`. Unsupported and foreign elements are ignored. Native hints don't evaluate scripts. Responsive `<link rel="preload" as="image">` declarations, responsive `<img>` elements, and track preloads require application-managed loading; passing them to `prefetchReferences()` also skips them. Nested requests use the same overrides.
 

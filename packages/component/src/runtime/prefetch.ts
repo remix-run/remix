@@ -66,10 +66,8 @@ export interface PrefetchFrameContext extends PrefetchContext {
    * templates. Responsive image and track preloads are omitted; query `fragment` for custom loading.
    */
   assets: readonly Element[]
-  /** All discovered same-origin nested frame requests, resolved against `baseURL`. */
+  /** All discovered same-origin nested frame requests, resolved against the response's base URL. */
   frames: readonly PrefetchFrameReference[]
-  /** Final response URL resolved with the first `<base href>`, when present. */
-  baseURL: string
 }
 
 /** Request and discovered-reference handling overrides for {@link defaultPrefetch}. */
@@ -835,7 +833,6 @@ export function createDefaultPrefetch(
             fragment,
             assets: discoveredAssets,
             frames,
-            baseURL,
             signal: jobSignal,
             element: context.element,
           })

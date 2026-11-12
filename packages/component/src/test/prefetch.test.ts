@@ -1869,7 +1869,7 @@ describe('defaultPrefetch overrides', () => {
     expect(context.response.bodyUsed).toBe(true)
     expect(context.src).toBe(new URL('/page', location.href).href)
     expect(context.target).toBe('details')
-    expect(context.baseURL).toBe(new URL('/assets/', location.href).href)
+    expect('baseURL' in context).toBe(false)
     expect(context.fragment.isConnected).toBe(false)
     expect(context.assets).toHaveLength(1)
     expect(context.assets[0]).toBe(context.fragment.querySelector('script[src]'))
