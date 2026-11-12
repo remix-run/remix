@@ -5528,6 +5528,91 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
+  it('removes preserved server DOM hydrated through createRoot while keeping client-only hosts', async (t) => {
+    let container = document.createElement('div')
+    document.body.append(container)
+    let dispose = mock.fn()
+    let [hydrated, resolveHydrated] = withResolvers<{ frame: FrameHandle; host: HTMLElement }>()
+    let Entry = clientEntry('/standalone-widget.js#Entry', function Entry(handle: Handle) {
+      handle.signal.addEventListener('abort', dispose)
+      handle.queueTask(() => {
+        let widget = container.querySelector('[data-rmx-key="widget"]')
+        invariant(widget)
+        let host = document.createElement('div')
+        host.setAttribute('data-rmx-preserve-dom', '')
+        widget.after(host)
+        resolveHydrated({ frame: handle.frame, host })
+      })
+      return () => <span>Widget</span>
+    })
+    container.innerHTML = await drain(
+      renderToStream(<Frame src="/standalone" />, {
+        resolveFrame: () =>
+          renderFrameContent(
+            <div data-rmx-key="widget" data-rmx-preserve-dom>
+              <Entry />
+            </div>,
+          ),
+      }),
+    )
+    let widget = container.querySelector('[data-rmx-key="widget"]')
+    invariant(widget)
+    let root = createRoot(container, {
+      frameInit: { loadModule: () => Entry, resolveFrame: () => '<p>Next</p>' },
+    })
+    t.after(() => root.dispose())
+    root.render(<Frame src="/standalone" />)
+    let { frame, host } = await hydrated
+    expect(widget.isConnected).toBe(true)
+
+    await frame.reload()
+
+    expect(widget.isConnected).toBe(false)
+    expect(dispose).toHaveBeenCalledTimes(1)
+    expect(Array.from(container.children)).toEqual([container.querySelector('p'), host])
+    expect(container.querySelector('p')?.textContent).toBe('Next')
+  })
+
+  it('removes preserved server DOM hydrated through createRangeRoot', async (t) => {
+    let container = document.createElement('div')
+    document.body.append(container)
+    let [hydrated, resolveHydrated] = withResolvers<FrameHandle>()
+    let Entry = clientEntry('/standalone-range.js#Entry', function Entry(handle: Handle) {
+      handle.queueTask(() => resolveHydrated(handle.frame))
+      return () => <span>Widget</span>
+    })
+    container.innerHTML = await drain(
+      renderToStream(<Frame src="/standalone" />, {
+        resolveFrame: () =>
+          renderFrameContent(
+            <div data-rmx-preserve-dom>
+              <Entry />
+            </div>,
+          ),
+      }),
+    )
+    let widget = container.querySelector('div')
+    invariant(widget)
+    let start = document.createComment('root-start')
+    let end = document.createComment('root-end')
+    container.prepend(start)
+    container.append(end)
+    let root = createRangeRoot([start, end], {
+      frameInit: { loadModule: () => Entry, resolveFrame: () => '<p>Next</p>' },
+    })
+    t.after(() => root.dispose())
+    root.render(<Frame src="/standalone" />)
+    let frame = await hydrated
+    expect(widget.isConnected).toBe(true)
+
+    await frame.reload()
+
+    expect(widget.isConnected).toBe(false)
+    expect(container.querySelector('p')?.textContent).toBe('Next')
+    expect(container.firstChild).toBe(start)
+    expect(container.lastChild).toBe(end)
+  })
+
   it('renders a client-created Frame with createRoot frameInit', async () => {
     let rootContainer = document.createElement('div')
     document.body.appendChild(rootContainer)

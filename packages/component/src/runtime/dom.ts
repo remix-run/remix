@@ -1566,10 +1566,11 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
    * children so custom elements and imperative widgets can own their subtree.
    *
    * Client-only marked hosts created during or after hydration survive omission while their parent
-   * survives. Elements present when `run()` starts or supplied by later HTML remain removable by
-   * server omission. Matching a client-only host to incoming HTML also gives the server control of
-   * its lifetime. Use a stable `data-rmx-key` to disambiguate hosts from same-tag server siblings;
-   * incoming HTML with that key and tag can reclaim a host with or without this attribute.
+   * survives. Elements present when `run()` starts, adopted from server frame markup by standalone
+   * roots, or supplied by later HTML remain removable by server omission. Matching a client-only
+   * host to incoming HTML also gives the server control of its lifetime. Use a stable `data-rmx-key`
+   * to disambiguate hosts from same-tag server siblings; incoming HTML with that key and tag can
+   * reclaim a host with or without this attribute.
    */
   'data-rmx-preserve-dom'?: Trackable<boolean | '' | undefined>
 
