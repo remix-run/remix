@@ -298,6 +298,7 @@ export type FrameContext = {
 type FrameInit = {
   nonce?: string
   name?: string
+  loading?: FrameProps['loading']
   topFrame?: FrameHandle
   getContext?: (type: ElementFunction) => unknown
   src: string
@@ -340,7 +341,8 @@ export type FrameInstance = {
   clearPendingTemplateWatch: () => void
   isDisplayingResolvedContent: () => boolean
   hasStartedLoading: () => boolean
-  isCurrentLoad: (signal: AbortSignal) => boolean
+  updateLoading: (loading: FrameProps['loading']) => void
+  resumeDeferredLoad: (signal: AbortSignal) => void
   deferLoad: (load?: () => void) => void
   startDeferredLoad: () => void
   beginClientFrameReloadForAncestorReload: (signal: AbortSignal) => {
@@ -392,6 +394,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   let modulePreloader = getDocumentModulePreloader(container.doc)
   let importMapManager = getDocumentImportMapManager(container.doc)
   let currentMarker = init.marker
+  let loading = init.loading ?? (init.marker?.status === 'lazy' ? 'lazy' : 'eager')
   let displayedContentStatus = init.marker?.status ?? 'pending'
   let loadingStarted = false
   let pendingTemplateWatch: PendingTemplateWatch | undefined
@@ -490,7 +493,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     if (isRenderAborted(options.signal)) return
     loadingStarted = true
     cancelDeferredLoad()
-    init.disposeFallback?.()
 
     if (content instanceof ReadableStream) {
       let linkedAbort = createLinkedAbortController(lifecycleController.signal, options.signal)
@@ -512,6 +514,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
 
     if (isRemixNodeFrameContent(content)) {
+      init.disposeFallback?.()
       if (!contentRoot) {
         let currentNodes = getContentNodes()
         removeVirtualRoots(currentNodes)
@@ -575,6 +578,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
     if (!(await consumeClientEntryResources(source, options.documentHref, options.nonce))) return
     if (isRenderAborted(options.signal)) return
+    init.disposeFallback?.()
     adoptFrameServerStyles(createElementContainer(source), context.styleManager)
     if (source instanceof DocumentFragment) removeEmptyHeads(source)
     mergeRmxDataFrom(options.data, source)
@@ -709,7 +713,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     clearPendingTemplateWatch: clearPendingFrameTemplateWatch,
     isDisplayingResolvedContent: () => displayedContentStatus === 'resolved',
     hasStartedLoading: () => loadingStarted,
-    isCurrentLoad: (signal) => reloadController?.signal === signal,
+    updateLoading(value) {
+      loading = value ?? 'eager'
+    },
+    resumeDeferredLoad,
     deferLoad,
     startDeferredLoad,
     beginClientFrameReloadForAncestorReload,
@@ -733,6 +740,18 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let controller = startReload(signal)
     // Reload reports errors before rejecting.
     void resolveAndRenderReload(controller).catch(() => {})
+  }
+
+  function resumeDeferredLoad(signal: AbortSignal): void {
+    if (
+      signal.aborted &&
+      reloadController?.signal === signal &&
+      loading === 'lazy' &&
+      displayedContentStatus !== 'resolved'
+    ) {
+      // A targeted navigation may have changed the source since the client frame mounted.
+      deferLoad(loadLazyFrame)
+    }
   }
 
   function startDeferredLoad(): void {
@@ -787,6 +806,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function setCurrentMarker(marker: FrameMarkerData, signal?: AbortSignal): boolean {
+    loading = marker.status === 'lazy' ? 'lazy' : 'eager'
     if (marker.status !== 'lazy') cancelDeferredLoad()
     let isInheritedReload = currentMarker !== undefined && currentMarker.id !== marker.id
     currentMarker = marker
@@ -997,14 +1017,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       throw error
     } finally {
       completeReload(controller)
-      if (
-        controller.signal.aborted &&
-        reloadController === controller &&
-        currentMarker?.status === 'lazy' &&
-        displayedContentStatus !== 'resolved'
-      ) {
-        deferLoad(loadLazyFrame)
-      }
+      resumeDeferredLoad(controller.signal)
     }
   }
 
@@ -1163,6 +1176,7 @@ function diffFrame(
 
   let frameRuntime = getFrameRuntime(frame)
   let frameInstance = committed._state.instance
+  frameInstance.updateLoading(committed.props.loading)
   let serverFrameReload = frameRuntime?.serverFrameReload
 
   if (currSrc !== nextSrc) {
@@ -1285,6 +1299,7 @@ function createFrameInstance(
 ): FrameInstance {
   let instance = createFrame([start, end], {
     name: getFrameName(node),
+    loading: node.props.loading,
     src: getFrameSrc(node),
     getContext,
     errorTarget: runtime.errorTarget,
@@ -1372,14 +1387,7 @@ function resolveClientFrame(
       reload?.complete()
       if (state.resolveController === resolveController) {
         state.resolveController = undefined
-        if (
-          signal.aborted &&
-          instance.isCurrentLoad(signal) &&
-          node.props.loading === 'lazy' &&
-          !instance.isDisplayingResolvedContent()
-        ) {
-          instance.deferLoad(() => resolveClientFrame(node, runtime))
-        }
+        instance.resumeDeferredLoad(signal)
       }
     })
 
