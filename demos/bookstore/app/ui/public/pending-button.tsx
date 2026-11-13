@@ -11,6 +11,7 @@ interface PendingButtonProps extends Props<'button'> {
 export function PendingButton(handle: Handle<PendingButtonProps>) {
   let saving = false
   let submissionFailed = false
+  let animatingFailure = false
 
   return () => {
     let {
@@ -46,23 +47,45 @@ export function PendingButton(handle: Handle<PendingButtonProps>) {
               saving = false
               handle.update()
             }),
+            on('animationstart', async (event, signal) => {
+              if (
+                event.target !== event.currentTarget ||
+                event.animationName !== 'pending-button-failure'
+              ) {
+                return
+              }
+              let animation = event.currentTarget
+                .getAnimations()
+                .find(
+                  (animation) =>
+                    animation instanceof CSSAnimation &&
+                    animation.animationName === event.animationName,
+                )
+              if (!animation) return
+              animatingFailure = true
+              handle.update()
+              await animation.finished.catch(() => {})
+              if (signal.aborted) return
+              animatingFailure = false
+              handle.update()
+            }),
             css({
               animation: failed ? 'pending-button-failure 400ms ease-in-out' : 'none',
               '@keyframes pending-button-failure': {
-                '0%, 100%': {
-                  transform: 'translateX(0)',
+                '0%, 100%': { transform: 'translateX(0) scale(1)' },
+                '20%, 80%': {
                   backgroundColor: '#dc2626',
                   color: '#fff',
                 },
-                '20%, 60%': { transform: 'translateX(-3px)' },
-                '40%, 80%': { transform: 'translateX(3px)' },
+                '20%, 60%': { transform: 'translateX(-3px) scale(1.04)' },
+                '40%, 80%': { transform: 'translateX(3px) scale(1.04)' },
               },
               '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
             }),
             ...mix,
           ]}
         >
-          {pending ? pendingLabel : children}
+          {pending ? pendingLabel : animatingFailure ? 'Failed!' : children}
         </button>
         {errorMessage ? (
           <span

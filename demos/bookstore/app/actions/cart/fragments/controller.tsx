@@ -12,11 +12,12 @@ import { removeCartItem, updateCart } from '../cart-api.ts'
 import { CartItems } from './public/cart-items.tsx'
 import { CartItemRemoveForm, CartItemUpdateForm } from './public/schema.ts'
 
-type CartError = { status: number; message: string; submission?: FormSubmission }
+type CartError = { status: number; message: string; bookId?: number; submission?: FormSubmission }
 
 const cartErrorSchema = s.object({
   status: s.number(),
   message: s.string(),
+  bookId: s.optional(s.number()),
   submission: s.optional(fd.submissionSchema(CartItemUpdateForm)),
 })
 
@@ -39,7 +40,7 @@ export default createController(routes.cart.fragments, {
       }
       let error = await updateCart({ db, session, ...submission.value })
 
-      return mutationResponse(context, error)
+      return mutationResponse(context, error && { ...error, bookId: submission.value.bookId })
     },
 
     async itemsRemove(context) {
@@ -54,7 +55,7 @@ export default createController(routes.cart.fragments, {
       }
       let error = await removeCartItem({ db, session, ...submission.value })
 
-      return mutationResponse(context, error)
+      return mutationResponse(context, error && { ...error, bookId: submission.value.bookId })
     },
   },
 })
@@ -109,6 +110,7 @@ function renderCartItems(
       total={total}
       canCheckout={!!user}
       error={error?.message}
+      errorBookId={error?.bookId}
       submission={error?.submission}
     />,
     responseInit,

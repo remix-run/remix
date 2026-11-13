@@ -21,6 +21,7 @@ type CartItemsProps = {
   total: number
   canCheckout: boolean
   error?: string
+  errorBookId?: number
   submission?: FormSubmission
 }
 
@@ -69,11 +70,34 @@ export const CartItems = clientEntry(
     )
 
     return () => {
-      let { items, canCheckout, error, submission, total } = handle.props
+      let { items, canCheckout, error, errorBookId, submission, total } = handle.props
       let isPending = activeReload !== undefined
       let hasQuantityError =
         submission?.errors.fields.quantity &&
         items.some((item) => item.bookId === Number(submission.values.bookId))
+      let failedBookId = failed
+        ? failedAction?.bookId
+        : (errorBookId ?? Number(submission?.values.bookId))
+      let cartError = failed ? (
+        <>
+          {failedAction?.type === 'remove'
+            ? 'Couldn’t remove this item.'
+            : 'Couldn’t update this item.'}{' '}
+          Try again, or{' '}
+          <button
+            type="button"
+            mix={on('click', (event) => {
+              event.currentTarget.closest<HTMLElement>('[role="region"]')?.focus()
+              void handle.frame.reload().catch(() => {})
+            })}
+          >
+            reload cart
+          </button>{' '}
+          to see what’s saved.
+        </>
+      ) : !isPending && error && !hasQuantityError ? (
+        error
+      ) : undefined
 
       return (
         <div
@@ -107,32 +131,6 @@ export const CartItems = clientEntry(
             }
           })}
         >
-          {failed ? (
-            <p
-              role="alert"
-              mix={css({ color: '#dc2626', textAlign: 'center', paddingBottom: '1.5rem' })}
-            >
-              Couldn’t update your cart. Try again, or{' '}
-              <button
-                type="button"
-                mix={on('click', (event) => {
-                  event.currentTarget.closest<HTMLElement>('[role="region"]')?.focus()
-                  void handle.frame.reload().catch(() => {})
-                })}
-              >
-                reload cart
-              </button>{' '}
-              to see what’s saved.
-            </p>
-          ) : !isPending && error && !hasQuantityError ? (
-            <p
-              role="alert"
-              mix={css({ color: '#dc2626', textAlign: 'center', paddingBottom: '1.5rem' })}
-            >
-              {error}
-            </p>
-          ) : null}
-
           <table>
             <thead>
               <tr>
@@ -157,9 +155,10 @@ export const CartItems = clientEntry(
                   <tr
                     key={item.bookId}
                     mix={css({
+                      position: 'relative',
                       opacity: isRemoving ? 0.6 : 1,
                       transition: 'opacity 150ms',
-                      '& td': { verticalAlign: 'top' },
+                      '& td': { verticalAlign: 'top', paddingBottom: '3rem' },
                     })}
                   >
                     <td>
@@ -169,6 +168,22 @@ export const CartItems = clientEntry(
                       >
                         {item.title}
                       </a>
+                      {cartError && failedBookId === item.bookId ? (
+                        <p
+                          role="alert"
+                          mix={css({
+                            position: 'absolute',
+                            bottom: '0.5rem',
+                            left: '0.75rem',
+                            right: '0.75rem',
+                            margin: 0,
+                            color: '#dc2626',
+                            fontSize: '0.875rem',
+                          })}
+                        >
+                          {cartError}
+                        </p>
+                      ) : null}
                     </td>
 
                     <td>${item.price.toFixed(2)}</td>
@@ -312,11 +327,17 @@ export const CartItems = clientEntry(
             </tbody>
           </table>
 
+          {cartError && !items.some((item) => item.bookId === failedBookId) ? (
+            <p role="alert" mix={css({ color: '#dc2626' })}>
+              {cartError}
+            </p>
+          ) : null}
+
           <div mix={css({ marginTop: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' })}>
             <p
               mix={css({ margin: 0, fontSize: '1.25rem', fontWeight: 'bold', marginRight: 'auto' })}
             >
-              Total: <PendingPrice amount={total} pending={isPending} />
+              <PendingPrice label="Total: " amount={total} pending={isPending} />
             </p>
 
             <a
@@ -343,16 +364,16 @@ export const CartItems = clientEntry(
   },
 )
 
-function PendingPrice(handle: Handle<{ amount: number; pending: boolean }>) {
+function PendingPrice(handle: Handle<{ amount: number; pending: boolean; label?: string }>) {
   return () => {
-    let { amount, pending } = handle.props
+    let { amount, pending, label } = handle.props
     return (
       <span
         aria-busy={pending || undefined}
         mix={css({ display: 'inline-flex', alignItems: 'center', gap: '0.35em' })}
       >
-        <span mix={css({ opacity: pending ? 0.5 : 1, transition: 'opacity 150ms' })}>
-          ${amount.toFixed(2)}
+        <span mix={css({ opacity: pending ? 0.3 : 1, transition: 'opacity 150ms' })}>
+          {label}${amount.toFixed(2)}
         </span>
         <span
           aria-hidden="true"
