@@ -4463,8 +4463,8 @@ describe('stream', () => {
       expect(html).toContain('<p>Loaded</p>')
       expect(html).not.toContain('<template')
       expect(Object.values(parseRmxDataFromHtml(html).f)).toEqual([
-        { status: 'lazy', name: 'later', src: '/lazy' },
-        { status: 'lazy', src: '/empty' },
+        { status: 'lazy', fallback: true, name: 'later', src: '/lazy' },
+        { status: 'lazy', fallback: true, src: '/empty' },
         { status: 'resolved', src: '/eager' },
       ])
     })

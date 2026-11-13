@@ -1502,31 +1502,133 @@ This prevents Remix from intercepting Navigation API events. Explicit frame relo
 
 ### Prefetching
 
-Add `data-rmx-prefetch="intent"` to a link to start loading its page when the visitor hovers, focuses, or presses it. Use `data-rmx-prefetch="viewport"` to start loading when the link enters the viewport. For other triggers, such as prefetching a search result as the visitor types, call `prefetch(src, { target })` from `remix/component`.
+Add `data-rmx-prefetch` to a link to load its destination before navigation:
 
-- Intent prefetching starts after the pointer or keyboard focus rests on the link for 100ms, or immediately when the link is pressed. Viewport prefetching happens once while the link stays mounted with the same source and target.
-- A link that enters the viewport while the page or one of its scrollers is scrolling waits until scrolling has stopped for 150ms, and is prefetched only if it's still in view, so a fast scroll doesn't prefetch every link it passes.
-- Pending viewport prefetches pause while the document is hidden and resume with fresh visibility and eligibility checks when it becomes visible. Intent and imperative triggers keep their existing timing.
-- Prefetching sends the same headers as a frame navigation, including `X-Remix-Target` for named frames, so it matches the request that follows.
-- Remix skips links with `data-rmx-document`, `download`, or a `target` other than `_self`, and named-frame links whose frame isn't mounted. Automatic prefetching is also skipped when the browser reports Save-Data or a `slow-2g` or `2g` connection. Imperative `prefetch()` calls ignore that check.
+```html
+<a href="/products/shirt" data-rmx-prefetch="intent">Shirt</a>
+<a href="/products/hat" data-rmx-prefetch="viewport">Hat</a>
+```
 
-Remix waits for browser idle time before parsing the downloaded HTML and finding the page's JavaScript, CSS, and declared image and font preloads, including those inside nested frames. It adds `<link rel="prefetch">` hints for assets the current page doesn't already have. Idle callbacks use a one-second timeout so busy pages can still make progress. Browsers without `requestIdleCallback` yield through timers instead. The hints don't run scripts, apply styles, or follow module imports. Declare important images and fonts on the destination page to include them:
+`intent` starts after 100ms of hover or focus, or immediately on press. `viewport` starts once per mounted link and destination, after scrolling has stopped for 150ms and the link is still visible. Pending viewport triggers pause while the document is hidden and recheck visibility when it returns.
+
+For application triggers, import `prefetch` from `remix/component` and call `prefetch(src, { target, signal })` or `prefetch(anchor, { signal })`. Anchor calls use the link's navigation source and frame target; they require no prefetch marker and accept no destination overrides. `prefetch()` returns `void`.
+
+Remix skips document-navigation links, downloads, targets other than `_self`, and named-frame links whose frame isn't mounted. Automatic triggers also honor Save-Data and `slow-2g` or `2g` connections; imperative calls bypass that network check.
+
+HTML requests are same-origin `GET`s with low priority, frame navigation headers, and `X-Remix-Prefetch: true`. Remix skips unsuccessful or non-HTML responses and waits for browser idle time before parsing, with a one-second timeout and a timer fallback.
+
+#### Discovered Assets
+
+Remix scans the inert HTML and nested template contents for these declarations:
+
+| Declaration in frame HTML                                                 | Generated hint (same URL)           |
+| ------------------------------------------------------------------------- | ----------------------------------- |
+| `<script src="…">`                                                        | `<link rel="prefetch" as="script">` |
+| `<link rel="modulepreload" href="…">`                                     | `<link rel="prefetch" as="script">` |
+| `<link rel="stylesheet" href="…">`                                        | `<link rel="prefetch" as="style">`  |
+| `<link rel="preload" as="script" href="…">`                               | `<link rel="prefetch" as="script">` |
+| `<link rel="preload" as="style" href="…">`                                | `<link rel="prefetch" as="style">`  |
+| `<link rel="preload" as="image" href="…">` without nonblank `imagesrcset` | `<link rel="prefetch" as="image">`  |
+| `<link rel="preload" as="font" href="…">`                                 | `<link rel="prefetch" as="font">`   |
+| `<link rel="preload" as="fetch" href="…">`                                | `<link rel="prefetch" as="fetch">`  |
+
+Declarations need a nonblank, valid HTTP(S) `src` or `href`, resolved against the response URL and its first `<base href>`. Cross-origin assets are allowed. Script types must be empty, `module`, `text/javascript`, or `application/javascript`.
+
+All generated hints set `fetchpriority="low"` and preserve applicable CORS, integrity, and referrer settings. Assets already in the current document or being prefetched are deduplicated when their URL, destination, CORS, integrity, and referrer settings match. Preloads with unmatched `media` are discovered but generate no hint; stylesheet links aren't filtered by media. Hints don't execute scripts, apply styles, or follow module imports. Pending hints survive head reconciliation and are removed on load, error, or cancellation by all owners.
+
+Responsive image preloads with nonblank `imagesrcset`, track preloads, inline scripts, and other unsupported declarations are excluded from `assets` but remain in the fragment. Remix doesn't discover ordinary images or inspect CSS and JavaScript imports. Declare important nonresponsive images and fonts explicitly:
 
 ```html
 <link rel="preload" as="image" href="/images/product-hero.jpg" />
 <link rel="preload" as="font" href="/fonts/body.woff2" type="font/woff2" crossorigin />
 ```
 
-Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Remix doesn't scan `<img>` elements or CSS `@font-face` rules.
+Include `crossorigin` on font preloads, even for same-origin URLs, to match CSS font requests. Applications can handle responsive images in the [`processFrame` hook](#customizing-prefetching).
 
-The prefetched HTML itself is discarded. The navigation fetches it again through the frame resolver and the browser HTTP cache, so reusing the response requires caching headers such as `Cache-Control: private, max-age=30`. Asset hints still help when the HTML is `no-store`, because assets have their own cache policies. Servers that return different HTML for different frame targets should include `X-Remix-Target` in `Vary`.
+Remix discards completed HTML. Navigation fetches it through the frame resolver and browser HTTP cache, so reuse requires caching headers such as `Cache-Control: private, max-age=30`. Assets have independent cache policies and can benefit even when HTML is `no-store`. If HTML varies by frame target or prefetch status, include `X-Remix-Target` or `X-Remix-Prefetch`, respectively, in `Vary`.
 
-To reuse uncacheable HTML in memory, pass `prefetch` and `resolveFrame` to `run()`. Remix still decides when and which links to prefetch. This example holds each prefetched response for the next GET request with the same source and target, using `defaultResolveFrame` for requests. The app provides `loadModule` and owns the lifetime and invalidation of any responses it keeps:
+#### Customizing Prefetching
+
+Delegate to `defaultPrefetch` from `run({ prefetch })` to keep HTML fetching and discovery while handling assets yourself:
 
 ```ts
-import { defaultResolveFrame, run } from 'remix/component'
+import { defaultPrefetch, run } from 'remix/component'
+import { loadModule } from './load-module.ts'
+import { prefetchImages } from './prefetch-images.ts'
 
-let prefetched = new Map<string, Promise<Response>>()
+run({
+  loadModule,
+  prefetch(src, options) {
+    return defaultPrefetch(src, options, {
+      async processFrame(prefetchReferences, { src, response, fragment, signal }) {
+        let baseURL = response.url || src
+        let base = fragment.querySelector('base[href]')?.getAttribute('href')
+        if (base != null) {
+          try {
+            baseURL = new URL(base, baseURL).href
+          } catch {
+            // Retain the response URL when the base is invalid.
+          }
+        }
+        let images = fragment.querySelectorAll(
+          'img[data-prefetch], link[rel~="preload"][as="image"][imagesrcset]',
+        )
+        await Promise.all([prefetchReferences(), prefetchImages(images, { baseURL, signal })])
+      },
+    })
+  },
+})
+```
+
+`loadModule` and `prefetchImages` are application helpers. The image helper can create and retain `Image` instances using the declarations' source sets, sizes, CORS, and referrer settings. Resolve raw `src` and `href` attributes against the computed base URL; DOM URL properties would use the current document. This query covers the fragment itself; inspect nested template contents separately when needed.
+
+The `processFrame` hook runs for each parsed response. Its `ProcessFrameContext` contains the requested `src` and `target`, triggering `element`, cancellation `signal`, consumed `response`, inert `fragment`, original `assets` with their attributes, and same-origin nested `frames`. Remix never mounts the fragment. Custom asset loading can also use `fetch(url, { priority: 'low', signal })`; applications own its queue, deduplication, and cache policy.
+
+Call `prefetchReferences()` for default asset hints, or pass `{ assets: selected }` to filter them. `assets: []` skips assets. Only supported original fragment elements are accepted, including those inside templates and manually selected nonresponsive `<img src>` elements; newly created elements, responsive images, and track preloads are ignored. Nested sources require explicit `{ frames }` selection, as shown [below](#prefetching-nested-frames).
+
+Returning without delegation skips native asset and nested-frame work. Call the continuation while the hook is active; after it settles or is cancelled, further calls do nothing. Repeated calls deduplicate references. `defaultPrefetch()` awaits the hook and all delegated work, even when the hook doesn't return that work's promise. Speculative failures don't affect navigation.
+
+An optional `fetch(url, init)` hook replaces HTML fetching. Forward `init` to retain the prepared request settings and return an unconsumed `Response`. The hook can queue requests, retry, or return cached responses. Automatic retries and `Retry-After` handling, including for `503` responses, belong to the application.
+
+Automatic triggers and anchor calls supply `options.element` to the `run({ prefetch })` handler; string calls have no element. Forward `options` to retain that context and caller cancellation. Pending HTML is shared by source and target, with the first caller supplying both hooks. Capture `options.element` in the fetch hook's closure; `processFrame` receives it as `context.element`. Nested requests inherit the hooks and element, but have their own URL, target, and shared signal. Read the current request's target from `new Headers(init.headers).get('X-Remix-Target')`, since it can differ from the outer `options.target`. Apps that need every trigger can record elements in the handler before deduplication.
+
+Anchor callers cancel when their link disconnects, its effective source or target changes, it becomes ineligible, or an explicit signal aborts. Removing or disabling `data-rmx-prefetch` also cancels declarative callers; imperative anchor calls don't depend on that marker. Hash-only changes, document moves, viewport exit, and switching between `intent` and `viewport` retain work.
+
+The signals have different scopes:
+
+- `options.signal` cancels one caller's interest. For anchor calls, it includes the anchor lifetime conditions above; for string calls, it is the optional caller-supplied signal.
+- The fetch hook's `init.signal` cancels the shared frame request when all callers cancel or the runtime is disposed. Remix always supplies it. Use it for fetch queues, retries, and body consumption.
+- `ProcessFrameContext.signal` is the same signal as that frame request's `init.signal`. Use it for custom asset queues and loaders.
+
+If two anchors share a request and the first disconnects, its `options.signal` aborts while `init.signal` stays active for the second caller. The captured element and `context.element` still refer to the first anchor. Honor the shared signal for shared work; the initiating element's connection state and caller signal can no longer tell you whether that work is needed.
+
+#### Prefetching Nested Frames
+
+The default discovers assets in embedded nested HTML without fetching nested sources separately. `context.frames` exposes each discovered same-origin source as `{ src, target, loading, fallback }`: an absolute source without a hash, optional frame name, initial loading mode (`'eager'` or `'lazy'`), and whether fallback content was declared. `loading` defaults to `'eager'`. `fallback` stays true even if streamed content has already resolved.
+
+Within a `defaultPrefetch` override, select sources to fetch explicitly:
+
+```ts
+processFrame(prefetchReferences, { frames }) {
+  return prefetchReferences({
+    frames: frames.filter((frame) => frame.loading === 'lazy'),
+  })
+}
+```
+
+Pass `{ frames }` to select every source. Nested requests inherit hooks, the triggering element, and cancellation, preserve named-frame headers, and avoid repeated references and cycles. Prefetching can warm a source's cache, but doesn't guarantee navigation will avoid showing fallback content; resolved HTML may already have streamed in the containing response.
+
+#### Scheduling and Retaining Frame HTML
+
+Remix has no numeric concurrency limit or batch API. Viewport triggers dispatch synchronously per intersection callback; an application queue can flush in a `queueMicrotask()` to collect and sort that callback's candidates. Later arrivals can reorder pending work.
+
+The following example uses an application queue with three slots, cancellation, and dynamic link scoring, and shares prefetched HTML with `resolveFrame`. Since `fetch()` resolves at headers, drain a response clone before releasing the slot. Keep the original response for the cache and return a separate clone for Remix's parser:
+
+```ts
+import { defaultPrefetch, defaultResolveFrame, run } from 'remix/component'
+import { loadModule, frameQueue, scoreLink } from './frame-loading.ts'
+
+let prefetched = new Map<string, Response>()
 
 function frameKey(src: string, target?: string) {
   let url = new URL(src, document.baseURI)
@@ -1537,15 +1639,57 @@ function frameKey(src: string, target?: string) {
 run({
   loadModule,
   prefetch(src, options) {
-    prefetched.set(frameKey(src, options?.target), defaultResolveFrame(src, options))
+    return defaultPrefetch(src, options, {
+      fetch(url, init) {
+        let signal = init.signal
+        if (!signal) throw new Error('Expected prefetch signal')
+        let target = new Headers(init.headers).get('X-Remix-Target') ?? undefined
+        return frameQueue.run(
+          async () => {
+            signal.throwIfAborted()
+            let response = await fetch(url, init)
+            if (
+              response.ok &&
+              response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
+            ) {
+              await response.clone().body?.pipeTo(new WritableStream(), { signal })
+              signal.throwIfAborted()
+              prefetched.set(frameKey(url, target), response)
+              return response.clone()
+            }
+            return response
+          },
+          {
+            signal,
+            score: () => (options?.element ? scoreLink(options.element) : 0),
+          },
+        )
+      },
+    })
   },
   resolveFrame(src, options) {
-    let isGet = !options?.method || options.method.toUpperCase() === 'GET'
-    let response = isGet ? prefetched.get(frameKey(src, options?.target)) : undefined
-    prefetched.clear()
-    return response ?? defaultResolveFrame(src, options)
+    return defaultResolveFrame(src, options, {
+      async fetch(url, init) {
+        let isGet = !init.method || init.method.toUpperCase() === 'GET'
+        let target = new Headers(init.headers).get('X-Remix-Target') ?? undefined
+        let cached = isGet ? prefetched.get(frameKey(url, target)) : undefined
+        return cached ? cached.clone() : fetch(url, init)
+      },
+    })
   },
 })
+```
+
+`loadModule`, `frameQueue`, and `scoreLink` are application helpers. `defaultResolveFrame` retains request encoding and response validation when serving cached HTML. The application owns cache expiry, invalidation, and eviction. Clones preserve response metadata but can buffer and copy body chunks; draining avoids another whole-body `ArrayBuffer`, and each reader needs an unconsumed clone.
+
+Use a separate queue in `processFrame` for asset limits and scoring, forwarding `context.signal`. A loop is sufficient for imperative anchor scheduling:
+
+```ts
+import { prefetch } from 'remix/component'
+
+for (let anchor of document.querySelectorAll<HTMLAnchorElement>('a[data-prefetch]')) {
+  prefetch(anchor)
+}
 ```
 
 ## Single-Page Applications
