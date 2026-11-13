@@ -268,6 +268,7 @@ export function transformComponentsForServer(
   let rewritten = new MagicString(source)
   let componentNames: string[] = []
   let sourceMapHints: SourceMapHint[] = []
+  let componentStabilizers: string[] = []
 
   for (let match of componentMatches) {
     componentNames.push(match.name)
@@ -286,6 +287,11 @@ export function transformComponentsForServer(
         options.moduleUrl,
       )}, ${JSON.stringify(match.name)}, ${implementationName});`,
     ].join('\n')
+    componentStabilizers.push(
+      `${match.name} = __remixComponentHmr__.getStableComponentForHmr(${JSON.stringify(
+        options.moduleUrl,
+      )}, ${JSON.stringify(match.name)}, ${match.name});`,
+    )
 
     sourceMapHints.push({
       generatedSnippet: bodySource,
@@ -331,6 +337,7 @@ export function transformComponentsForServer(
       `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from ${JSON.stringify(
         importSpecifiers.serverRuntimeSpecifier,
       )};`,
+      ...componentStabilizers,
       ``,
     ].join('\n'),
   )

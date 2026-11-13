@@ -635,6 +635,75 @@ describe('component-hmr e2e', { skip: isBun }, () => {
     }
   })
 
+  it('keeps provider identity after its own server module updates', async (t) => {
+    let fixture = await createNodeHmrFixture()
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      let pickerSource = [
+        'const PickerIdentity = Picker',
+        'export function Picker(handle) {',
+        '  return () => {',
+        '    handle.context.set({ id: handle.id })',
+        '    return <div>{handle.props.children}</div>',
+        '  }',
+        '}',
+        '',
+        'export function PickerTrigger(handle) {',
+        '  return () => {',
+        '    let picker = handle.context.get(PickerIdentity)',
+        '    return <span data-testid="picker-id" data-version="before">{picker?.id ?? "missing"}</span>',
+        '  }',
+        '}',
+        '',
+      ].join('\n')
+      await write(fixture.rootDir, 'app/Picker.tsx', pickerSource)
+      let serverPath = path.join(fixture.rootDir, 'server.tsx')
+      let serverSource = await fs.readFile(serverPath, 'utf-8')
+      await write(
+        fixture.rootDir,
+        'server.tsx',
+        serverSource
+          .replace(
+            "import { serverMessage } from './server-message.ts'",
+            "import { serverMessage } from './server-message.ts'\nimport { Picker, PickerTrigger } from './app/Picker.tsx'",
+          )
+          .replace(
+            '          <ClientField />',
+            '          <Picker><PickerTrigger /></Picker>\n          <ClientField />',
+          ),
+      )
+
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await serveNodeHmrFixture(t, server)
+      await openHmrPage(page, { hydrate: true })
+      await page.locator('[data-testid="picker-id"]').waitFor()
+      let initialId = await page.locator('[data-testid="picker-id"]').textContent()
+      assert.ok(initialId && initialId !== 'missing')
+
+      let frameResponsePromise = page.waitForResponse((response) => {
+        let url = new URL(response.url())
+        return url.pathname === '/' && response.request().headers().accept === 'text/html'
+      })
+      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete')
+      await write(
+        fixture.rootDir,
+        'app/Picker.tsx',
+        pickerSource.replace('data-version="before"', 'data-version="after"'),
+      )
+
+      let frameResponse = await frameResponsePromise
+      assert.equal(frameResponse.status(), 200)
+      await serverFrameReloaded
+      await page.locator('[data-testid="picker-id"][data-version="after"]').waitFor()
+      let updatedId = await page.locator('[data-testid="picker-id"]').textContent()
+      assert.ok(updatedId && updatedId !== 'missing')
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
   it('reloads the page after a node-hmr client entry export is added', async (t) => {
     let fixture = await createNodeHmrFixture()
     let server: NodeHmrTestServer | undefined
