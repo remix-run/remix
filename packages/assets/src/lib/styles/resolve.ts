@@ -1,4 +1,3 @@
-import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -12,7 +11,7 @@ import type { ModuleRecord, ModuleTracking } from '../module-store.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { EmittedStyle } from './emit.ts'
 import type { TransformedStyle } from './transform.ts'
-import { isNoEntityError } from '../fs-errors.ts'
+import { resolveRealFilePath } from '../compiler-utils.ts'
 
 type StyleRecord = ModuleRecord<TransformedStyle, ResolvedStyle, EmittedStyle>
 
@@ -148,7 +147,7 @@ export function resolveServedStyleOrThrow(
   identityPath: string
   stableUrlPathname: string
 } {
-  let identityPath = resolveExistingFilePath(filePath)
+  let identityPath = resolveRealFilePath(filePath)
   if (!identityPath) {
     throw createAssetServerCompilationError(`File not found: ${filePath}`, {
       code: 'FILE_NOT_FOUND',
@@ -209,7 +208,7 @@ function resolveImportDependency(
 
   let { hash, resolvedPath, search } = parsedUrl
   let resolvedFilePath = resolvedPath
-  let identityPath = resolveExistingFilePath(resolvedFilePath)
+  let identityPath = resolveRealFilePath(resolvedFilePath)
   if (!identityPath || !isStyleFilePath(identityPath)) {
     throw createAssetServerCompilationError(
       `Failed to resolve import "${url}" in ${importerPath}.`,
@@ -272,7 +271,7 @@ function resolveUrlDependency(
 
   let { hash, resolvedPath, search } = parsedUrl
   let resolvedFilePath = resolvedPath
-  let identityPath = resolveExistingFilePath(resolvedFilePath)
+  let identityPath = resolveRealFilePath(resolvedFilePath)
   if (!identityPath) {
     throw createAssetServerCompilationError(`Failed to resolve url("${url}") in ${importerPath}.`, {
       code: 'URL_RESOLUTION_FAILED',
@@ -317,15 +316,6 @@ function resolveUrlDependency(
     placeholder,
     requestTransform: parsedRequest.transform,
     suffix: parsedRequest.suffix,
-  }
-}
-
-function resolveExistingFilePath(filePath: string): string | null {
-  try {
-    return normalizeFilePath(fs.realpathSync(filePath))
-  } catch (error) {
-    if (isNoEntityError(error)) return null
-    throw error
   }
 }
 
