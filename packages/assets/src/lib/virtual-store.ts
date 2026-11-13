@@ -8,6 +8,7 @@ import {
   resolveFilePath,
 } from './paths.ts'
 import { resolveMountFileRoot } from './routes.ts'
+import { isNoEntityError } from './fs-errors.ts'
 
 const modulesStateFileName = '.modules.yaml'
 const virtualStoreBasePath = '/__@remix/virtual-store'
@@ -99,7 +100,7 @@ function readModulesState(filePath: string): string | null {
   try {
     return fs.readFileSync(filePath, 'utf-8')
   } catch (error) {
-    if (isPathNotFoundError(error)) return null
+    if (isNoEntityError(error)) return null
     throw error
   }
 }
@@ -109,16 +110,7 @@ function realpathDirectory(filePath: string): string | null {
     let realPath = fs.realpathSync(filePath)
     return fs.statSync(realPath).isDirectory() ? normalizeFilePath(realPath) : null
   } catch (error) {
-    if (isPathNotFoundError(error)) return null
+    if (isNoEntityError(error)) return null
     throw error
   }
-}
-
-function isPathNotFoundError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }

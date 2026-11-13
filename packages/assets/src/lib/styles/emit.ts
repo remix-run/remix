@@ -4,16 +4,14 @@ import {
   createAssetServerCompilationError,
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
-import { formatFingerprintedPathname, hashContent } from '../fingerprint.ts'
+import {
+  createEmittedAsset,
+  formatFingerprintedPathname,
+  type EmittedAsset,
+} from '../fingerprint.ts'
 import { composeSourceMaps } from '../source-maps.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
 import type { ResolvedStyle } from './resolve.ts'
-
-export type EmittedAsset = {
-  content: string
-  etag: string
-  fingerprint: string
-}
 
 export type EmittedStyle = {
   code: EmittedAsset
@@ -191,15 +189,6 @@ async function getServedFileUrl(
     }
 
     throw error
-  }
-}
-
-async function createEmittedAsset(content: string): Promise<EmittedAsset> {
-  let fingerprint = await hashContent(content)
-  return {
-    content,
-    etag: `W/"${fingerprint}"`,
-    fingerprint,
   }
 }
 

@@ -1,20 +1,14 @@
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { IfNoneMatch } from '@remix-run/headers/if-none-match'
 import { getTsconfig } from 'get-tsconfig'
 
 import { createAssetServerCompilationError } from '../compilation-error.ts'
 import { createFileMatcher } from '../file-matcher.ts'
-import {
-  formatFingerprintedPathname,
-  getFingerprintRequestCacheControl,
-  parseFingerprintSuffix,
-} from '../fingerprint.ts'
+import { formatFingerprintedPathname } from '../fingerprint.ts'
 import { emitResolvedModule } from './emit.ts'
 import { createBarrelFileImportOptimizer } from './optimize-barrel-file-imports.ts'
-import { normalizeFilePath, resolveFilePath } from '../paths.ts'
+import { normalizeFilePath, resolveInputFilePath } from '../paths.ts'
 import {
   resolveModule,
   resolverExtensionAlias,
@@ -38,8 +32,18 @@ import { createTsconfigTransformOptionsResolver, transformModule } from './trans
 import type { ResolveModuleResult, TransformArgs, TransformedModule } from './transform.ts'
 import { ResolverFactory } from 'oxc-resolver'
 import type { NapiResolveOptions } from 'oxc-resolver'
-import type { EmittedAsset, EmittedModule } from './emit.ts'
-import { isNoEntityError } from '../fs-errors.ts'
+import type { EmittedModule } from './emit.ts'
+import type { EmittedAsset } from '../fingerprint.ts'
+import {
+  appendTimestampQuery,
+  getCacheKey,
+  getEmittedAssetForRequest,
+  getFileSnapshot,
+  getNotModifiedResult,
+  isFresh,
+  mapWithConcurrency,
+  resolveRealFilePath,
+} from '../compiler-utils.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 type ScriptStore = ModuleStore<TransformedModule, ResolvedModule, EmittedModule>
@@ -101,19 +105,11 @@ type ScriptCompiler = {
   resolveSpecifierFromRoot(specifier: string): Promise<ResolvedScriptSpecifier>
   classifyHmrFileEvent(filePath: string, event: ModuleWatchEvent): Promise<ScriptHmrUpdate[]>
   invalidateFileEvent(filePath: string, event: ModuleWatchEvent): void
-  parseRequestPathname(pathname: string): ParsedRequestPathname | null
 }
 
 type ResolvedScriptSpecifier = {
   href: string
   identityPath: string
-}
-
-type ParsedRequestPathname = {
-  cacheControl: string
-  filePath: string
-  isSourceMapRequest: boolean
-  requestedFingerprint: string | null
 }
 
 export type ScriptHmrUpdate =
@@ -192,7 +188,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     isWatchIgnored,
     minify: resolvedOptions.minify,
     loaders: resolvedOptions.loaders,
-    resolveActualPath,
+    resolveActualPath: resolveRealFilePath,
     routes: resolvedOptions.routes,
     sourceMapSourcePaths: resolvedOptions.sourceMapSourcePaths,
     sourceMaps: resolvedOptions.sourceMaps ?? null,
@@ -213,7 +209,9 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
   return {
     async getScript(filePath, getOptions) {
-      let resolvedModule = resolveServedScriptOrThrow(resolveInputFilePath(filePath))
+      let resolvedModule = resolveServedScriptOrThrow(
+        resolveInputFilePath(resolvedOptions.rootDir, filePath),
+      )
       let record = scriptStore.get(resolvedModule.identityPath)
       let notModified = getNotModifiedScript(record, getOptions)
       if (notModified) return notModified
@@ -332,7 +330,9 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     },
 
     async getHref(filePath) {
-      let resolvedModule = resolveServedScriptOrThrow(resolveInputFilePath(filePath))
+      let resolvedModule = resolveServedScriptOrThrow(
+        resolveInputFilePath(resolvedOptions.rootDir, filePath),
+      )
       return getCurrentServedUrl(resolvedModule.identityPath)
     },
 
@@ -401,33 +401,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     invalidateFileEvent(filePath, event) {
       invalidateScriptFileEvent(normalizeFilePath(filePath), event)
     },
-
-    parseRequestPathname(pathname) {
-      let parsedPathname = parseServedPathname(pathname)
-      let filePath = resolvedOptions.routes.resolveUrlPathname(parsedPathname.stablePathname)
-      if (!filePath) return null
-      if (resolvedOptions.fingerprintAssets && parsedPathname.requestedFingerprint === null)
-        return null
-
-      return {
-        cacheControl: getFingerprintRequestCacheControl(parsedPathname.requestedFingerprint),
-        filePath,
-        isSourceMapRequest: parsedPathname.isSourceMapRequest,
-        requestedFingerprint: parsedPathname.requestedFingerprint,
-      }
-    },
-  }
-
-  function resolveInputFilePath(filePath: string): string {
-    if (filePath.startsWith('file://')) {
-      return normalizeFilePath(fileURLToPath(new URL(filePath)))
-    }
-
-    if (filePath.includes('://')) {
-      throw new TypeError(`Expected a file path or file:// URL, received "${filePath}"`)
-    }
-
-    return resolveFilePath(resolvedOptions.rootDir, filePath)
   }
 
   function invalidateScriptFileEvent(normalizedFilePath: string, event: ModuleWatchEvent): void {
@@ -526,7 +499,9 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     let seen = new Set<string>()
 
     for (let nextPath of Array.isArray(filePath) ? filePath : [filePath]) {
-      let resolvedModule = resolveServedScriptOrThrow(resolveInputFilePath(nextPath))
+      let resolvedModule = resolveServedScriptOrThrow(
+        resolveInputFilePath(resolvedOptions.rootDir, nextPath),
+      )
       if (seen.has(resolvedModule.identityPath)) continue
       seen.add(resolvedModule.identityPath)
       resolvedEntries.push(resolvedModule.identityPath)
@@ -544,7 +519,12 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     }
 
     if (scriptStore.isEmittedFresh(record)) {
-      let current = getNotModifiedResult(record.emitted, options)
+      let current =
+        record.emitted &&
+        getNotModifiedResult(
+          getEmittedAssetForRequest(record.emitted, options.isSourceMapRequest),
+          options,
+        )
       if (current) return current
     }
 
@@ -552,7 +532,12 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       return null
     }
 
-    return getNotModifiedResult(record.staleEmitted, options)
+    return record.staleEmitted
+      ? getNotModifiedResult(
+          getEmittedAssetForRequest(record.staleEmitted, options.isSourceMapRequest),
+          options,
+        )
+      : null
   }
 
   async function getOrCreateResolvedScripts(records: ScriptRecord[]): Promise<ResolvedModule[]> {
@@ -564,7 +549,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   async function getOrCreateResolvedScript(record: ScriptRecord): Promise<ResolvedModule> {
     if (record.resolved && scriptStore.isResolvedFresh(record)) return record.resolved
 
-    let cacheKey = getRecordCacheKey(record)
+    let cacheKey = getCacheKey(record.identityPath, record.invalidationVersion)
     let existing = resolveInFlightByCacheKey.get(cacheKey)
     if (existing) return existing
 
@@ -650,7 +635,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       return record.emitted
     }
 
-    let cacheKey = getRecordCacheKey(record)
+    let cacheKey = getCacheKey(record.identityPath, record.invalidationVersion)
     let existing = emitInFlightByCacheKey.get(cacheKey)
     if (existing) return existing
 
@@ -764,14 +749,14 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   async function getCurrentServedUrl(identityPath: string): Promise<string> {
     let servedUrl = await getServedUrl(identityPath)
     let timestamp = getHmrImportTimestamp(identityPath)
-    return timestamp === null ? servedUrl : addTimestampQuery(servedUrl, timestamp)
+    return timestamp === null ? servedUrl : appendTimestampQuery(servedUrl, timestamp)
   }
 
   function getImportSpecifier(identityPath: string, originalSpecifier?: string): string {
     let timestamp = getHmrImportTimestamp(identityPath)
     if (timestamp !== null) {
       // HMR and fingerprinting are mutually exclusive, so updated imports use stable paths.
-      return addTimestampQuery(getStableUrl(identityPath), timestamp)
+      return appendTimestampQuery(getStableUrl(identityPath), timestamp)
     }
     return originalSpecifier ?? getStableUrl(identityPath)
   }
@@ -912,10 +897,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   }
 }
 
-function addTimestampQuery(pathname: string, timestamp: number): string {
-  return `${pathname}${pathname.includes('?') ? '&' : '?'}t=${timestamp}`
-}
-
 function resolveImportMapUrlSpecifier(specifier: string, importerUrlPathname: string): string {
   return new URL(specifier, `http://localhost${importerUrlPathname}`).pathname
 }
@@ -937,38 +918,6 @@ function dedupeHmrBoundaries(boundaries: ScriptHmrBoundary[]): ScriptHmrBoundary
   }
 
   return result
-}
-
-function getRecordCacheKey(record: ScriptRecord): string {
-  return `${record.identityPath}\0${record.invalidationVersion}`
-}
-
-function isFresh(record: ScriptRecord, version: number): boolean {
-  return record.invalidationVersion === version
-}
-
-function getNotModifiedResult(
-  emittedModule: EmittedModule | undefined,
-  options: ScriptGetOptions,
-): ScriptGetResult | null {
-  if (!emittedModule || options.ifNoneMatch === null) return null
-
-  let asset = getEmittedAssetForRequest(emittedModule, options.isSourceMapRequest)
-  if (!asset) return null
-
-  if (options.requestedFingerprint !== null && asset.fingerprint !== options.requestedFingerprint) {
-    return null
-  }
-
-  if (!IfNoneMatch.from(options.ifNoneMatch).matches(asset.etag)) return null
-  return { type: 'not-modified', etag: asset.etag }
-}
-
-function getEmittedAssetForRequest(
-  emittedModule: EmittedModule,
-  isSourceMapRequest: boolean,
-): EmittedAsset | null {
-  return isSourceMapRequest ? emittedModule.sourceMap : emittedModule.code
 }
 
 function createModuleSnapshot(filePaths: readonly string[]): ModuleSnapshot | null {
@@ -993,57 +942,6 @@ function isModuleSnapshotFresh(snapshot: ModuleSnapshot): boolean {
   return true
 }
 
-function getFileSnapshot(filePath: string): FileSnapshot | null {
-  try {
-    let stats = fs.statSync(filePath, { bigint: true })
-    if (!stats.isFile()) return null
-    return {
-      mtimeNs: stats.mtimeNs,
-      size: stats.size,
-    }
-  } catch (error) {
-    if (isNoEntityError(error)) return null
-    throw error
-  }
-}
-
-function parseServedPathname(pathname: string): {
-  isSourceMapRequest: boolean
-  requestedFingerprint: string | null
-  stablePathname: string
-} {
-  let isSourceMapRequest = pathname.endsWith('.map')
-  let pathWithoutMap = isSourceMapRequest ? pathname.slice(0, -4) : pathname
-  let fingerprint = parseFingerprintSuffix(pathWithoutMap)
-
-  return {
-    isSourceMapRequest,
-    requestedFingerprint: fingerprint.requestedFingerprint,
-    stablePathname: fingerprint.pathname,
-  }
-}
-
-async function mapWithConcurrency<item, result>(
-  items: item[],
-  concurrency: number,
-  mapper: (item: item, index: number) => Promise<result>,
-): Promise<result[]> {
-  if (items.length === 0) return []
-
-  let results = new Array<result>(items.length)
-  let nextIndex = 0
-
-  async function worker() {
-    while (nextIndex < items.length) {
-      let index = nextIndex++
-      results[index] = await mapper(items[index], index)
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => worker()))
-  return results
-}
-
 function toScriptCompileResult(emittedModule: EmittedModule): ScriptCompileResult {
   return {
     code: emittedModule.code,
@@ -1065,14 +963,8 @@ function shouldClearResolverCacheForFileEvent(filePath: string, event: ModuleWat
 }
 
 function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
-  let resolvedPath: string
-
-  try {
-    resolvedPath = normalizeFilePath(fs.realpathSync(normalizeFilePath(absolutePath)))
-  } catch (error) {
-    if (isNoEntityError(error)) return null
-    throw error
-  }
+  let resolvedPath = resolveRealFilePath(normalizeFilePath(absolutePath))
+  if (resolvedPath === null) return null
 
   if (!supportedScriptExtensionSet.has(path.extname(resolvedPath).toLowerCase())) {
     return null
@@ -1082,52 +974,4 @@ function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
     identityPath: resolvedPath,
     resolvedPath,
   }
-}
-
-function resolveActualPath(identityPath: string): string | null {
-  try {
-    return normalizeFilePath(fs.realpathSync(identityPath))
-  } catch (error) {
-    if (isNoEntityError(error)) return null
-    throw error
-  }
-}
-
-export function createResponseForScript(
-  result: ScriptCompileResult,
-  options: {
-    cacheControl: string
-    ifNoneMatch: string | null
-    isSourceMapRequest: boolean
-    method: string
-  },
-): Response {
-  let body: string | null
-  let etag: string
-  let contentType: string
-
-  if (options.isSourceMapRequest) {
-    if (!result.sourceMap) {
-      return new Response('Not found', { status: 404 })
-    }
-    body = options.method === 'HEAD' ? null : result.sourceMap.content
-    etag = result.sourceMap.etag
-    contentType = 'application/json; charset=utf-8'
-  } else {
-    body = options.method === 'HEAD' ? null : result.code.content
-    etag = result.code.etag
-    contentType = 'application/javascript; charset=utf-8'
-  }
-
-  if (IfNoneMatch.from(options.ifNoneMatch).matches(etag)) {
-    return new Response(null, { status: 304, headers: { ETag: etag } })
-  }
-
-  return new Response(body, {
-    headers: {
-      'Cache-Control': options.cacheControl,
-      'Content-Type': contentType,
-      ETag: etag,
-    },
-  })
 }

@@ -3,6 +3,7 @@ import * as path from 'node:path'
 import { createFileMatcher } from './file-matcher.ts'
 import { isInjectedPackageFilePath } from './injected-packages.ts'
 import { normalizeFilePath } from './paths.ts'
+import { isNoEntityError } from './fs-errors.ts'
 
 /** Access-policy result for an inspected asset file. */
 export interface AssetAccessDetails {
@@ -361,7 +362,7 @@ function hasPackageManagerRootFile(directory: string): boolean {
       let stat = fs.statSync(path.join(directory, fileName))
       if (stat.isFile()) return true
     } catch (error) {
-      if (isPathNotFoundError(error)) continue
+      if (isNoEntityError(error)) continue
       throw error
     }
   }
@@ -391,7 +392,7 @@ function resolvePackageJsonPath(directory: string, packageName: string): string 
   try {
     return normalizeFilePath(fs.realpathSync(packagePath))
   } catch (error) {
-    if (isPathNotFoundError(error)) return null
+    if (isNoEntityError(error)) return null
     throw error
   }
 }
@@ -402,7 +403,7 @@ function readPackageJson(packageJsonPath: string): PackageJson {
   try {
     packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as unknown
   } catch (error) {
-    if (isPathNotFoundError(error)) return {}
+    if (isNoEntityError(error)) return {}
     throw error
   }
 
@@ -445,16 +446,5 @@ function isValidPackageName(packageName: string): boolean {
 
   return packageNameParts.every(
     (part) => part.length > 0 && part !== '.' && part !== '..' && packageNamePartPattern.test(part),
-  )
-}
-
-function isPathNotFoundError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
   )
 }
