@@ -4,6 +4,7 @@ import { createFileMatcher } from './file-matcher.ts'
 import { isInjectedPackageFilePath } from './injected-packages.ts'
 import { normalizeFilePath } from './paths.ts'
 import { isNoEntityError } from './fs-errors.ts'
+import { resolveRealFilePath } from './compiler-utils.ts'
 
 /** Access-policy result for an inspected asset file. */
 export interface AssetAccessDetails {
@@ -389,12 +390,7 @@ function resolvePackageJsonPath(directory: string, packageName: string): string 
       ? path.join(directory, packageName, 'package.json')
       : path.join(directory, 'node_modules', packageName, 'package.json')
 
-  try {
-    return normalizeFilePath(fs.realpathSync(packagePath))
-  } catch (error) {
-    if (isNoEntityError(error)) return null
-    throw error
-  }
+  return resolveRealFilePath(packagePath)
 }
 
 function readPackageJson(packageJsonPath: string): PackageJson {

@@ -4,11 +4,8 @@ import {
   createAssetServerCompilationError,
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
-import {
-  createEmittedAsset,
-  formatFingerprintedPathname,
-  type EmittedAsset,
-} from '../fingerprint.ts'
+import { createEmittedAsset, formatFingerprintedPathname } from '../fingerprint.ts'
+import type { EmittedAsset } from '../fingerprint.ts'
 import type { ResolvedModule } from './resolve.ts'
 import { composeSourceMaps, replaceSourceMapMappings } from '../source-maps.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'

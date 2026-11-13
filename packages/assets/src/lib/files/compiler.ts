@@ -1,4 +1,3 @@
-import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { IfNoneMatch } from '@remix-run/headers/if-none-match'
@@ -9,7 +8,7 @@ import {
 } from '../compilation-error.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
 import { formatFingerprintedPathname, hashContent } from '../fingerprint.ts'
-import { normalizeFilePath, resolveInputFilePath } from '../paths.ts'
+import { resolveInputFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { AssetFileTransformResult, ResolvedAssetRequestTransformMap } from './config.ts'
 import { parseAssetTransformInvocations } from './config.ts'
@@ -277,10 +276,11 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
         : await createSourceFile(body, record.identityPath)
 
       if (record.invalidationVersion === startedVersion && !record.metadata) {
+        let snapshot = getFileSnapshot(record.identityPath)
         sourceFileStore.set(
           record.identityPath,
           toEmittedFileMetadata(sourceFile),
-          toFileSnapshot(record.identityPath),
+          snapshot && { filePath: record.identityPath, ...snapshot },
         )
       }
 
@@ -586,11 +586,6 @@ function toEmittedFileMetadata(emittedFile: EmittedFile): EmittedFileMetadata {
     extension: emittedFile.extension,
     fingerprint: emittedFile.fingerprint,
   }
-}
-
-function toFileSnapshot(filePath: string): FileSnapshot | null {
-  let snapshot = getFileSnapshot(filePath)
-  return snapshot && { filePath, ...snapshot }
 }
 
 function isFileSnapshotFresh(snapshot: FileSnapshot): boolean {
