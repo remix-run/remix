@@ -157,7 +157,7 @@ During server rendering, setup and render run, but `handle.update()` throws and 
 | `handle.update()`        | Schedules a render. Returns a promise that resolves with an [`AbortSignal`](#abort-signals) after the update commits.                    |
 | `handle.queueTask(task)` | Runs `task` after the next commit, passing it an [`AbortSignal`](#abort-signals). See [Queued Tasks](#queued-tasks).                     |
 | `handle.signal`          | Aborted when the component is removed. Use it to clean up work started in setup.                                                         |
-| `handle.id`              | A stable ID for the instance, for `for`, `aria-controls`, and similar attributes.                                                        |
+| `handle.id`              | A stable ID for the instance, for `for`, `aria-controls`, and similar attributes. It stays the same when a client entry hydrates.        |
 | `handle.context`         | Provides values to descendants and reads values from ancestors. See [Context](#context).                                                 |
 | `handle.frame`           | The [frame](#frame-handles) that contains the component. Call `handle.frame.reload()` to fetch its content again.                        |
 | `handle.frames`          | `handle.frames.top` is the root frame, and `handle.frames.get(name)` finds a mounted frame by name. See [Frame Handles](#frame-handles). |

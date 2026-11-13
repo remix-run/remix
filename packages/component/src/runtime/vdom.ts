@@ -21,6 +21,7 @@ import {
   type ReconcileContext,
   type RootVNode,
 } from './reconcile.ts'
+import { createIdScope } from './core/id-scope.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 import type { ElementFunction } from './element-function.ts'
@@ -80,7 +81,10 @@ export type VirtualRootOptions = {
 
 export { createScheduler, type Scheduler }
 
-function getHydrationComponentIdFromRangeStart(start: Node | undefined): string | undefined {
+// Roots without a server-rendered client entry marker get a client-only prefix.
+let rootIdCounter = 0
+
+function getHydrationIdFromRangeStart(start: Node | undefined): string | undefined {
   if (!(start instanceof Comment)) return undefined
   let marker = start.data.trim()
   if (!marker.startsWith('rmx:h:')) return undefined
@@ -156,6 +160,7 @@ function createVirtualRoot(
     scheduler,
     styles,
     rootTarget: eventTarget,
+    idScope: createIdScope(getHydrationIdFromRangeStart(rangeStart) ?? `c${++rootIdCounter}`),
   }
 
   let isErrorForwardingAttached = false
@@ -189,7 +194,6 @@ function createVirtualRoot(
         _getContext: options.getContext,
         _rangeStart: rangeStart,
         _rangeEnd: rangeEnd,
-        _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(rangeStart),
       }
       scheduler.enqueueWork([
         () => {

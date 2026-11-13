@@ -25,6 +25,8 @@ import {
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
 import { composeMixedProps, isMixinDescriptor } from '../runtime/core/mix.ts'
+import { createIdScope, type IdScope } from '../runtime/core/id-scope.ts'
+import { isOnMixinDescriptor } from '../runtime/mixins/on-mixin.ts'
 import { getSelectValues } from '../runtime/core/props.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/stylesheet.ts'
 import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
@@ -228,8 +230,7 @@ interface RenderContext {
   blockingFrameTails: ReadableStream<Uint8Array>[]
   signal: AbortSignal
   flushKind: FlushKind
-  serverIdScope: string
-  serverIdCounter: number
+  idScope: IdScope
   nonce?: string
 }
 
@@ -360,8 +361,7 @@ export function renderToStream(
     blockingFrameTails: [],
     signal: renderAbortController.signal,
     flushKind: 'fragment',
-    serverIdScope: crypto.randomUUID().slice(0, 8),
-    serverIdCounter: 0,
+    idScope: createIdScope(randomId('s')),
     nonce: options?.nonce,
   }
 
@@ -481,11 +481,6 @@ function getResolveFrameContext(frameState: SsrFrameState, nonce?: string): Reso
 
 function randomId(prefix: string): string {
   return prefix + crypto.randomUUID().slice(0, 8)
-}
-
-function createServerComponentId(context: RenderContext): string {
-  context.serverIdCounter++
-  return `s${context.serverIdScope}-${context.serverIdCounter}`
 }
 
 async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<ResolvedFrameHtml> {
@@ -609,7 +604,7 @@ function buildSegment(
           type,
           props,
           context,
-          createServerComponentId(context),
+          context.idScope.createComponentId(),
           frameState,
           output,
         )
@@ -980,6 +975,11 @@ function resolveSsrMixedProps(
 ): ElementProps {
   let mix = initialProps.mix
   if (!mix) return initialProps
+  // Like the client, give every host with non-`on` mixins an ID, even if all of them are
+  // browser-only, so later IDs match after hydration.
+  let id = (Array.isArray(mix) ? mix : [mix]).every(isOnMixinDescriptor)
+    ? undefined
+    : context.idScope.createMixinId()
   if (Array.isArray(mix)) {
     let hasServerMixin = false
     for (let descriptor of mix) {
@@ -995,7 +995,9 @@ function resolveSsrMixedProps(
 
   return composeMixedProps(hostType, initialProps, (descriptor, _index, mixinProps) => {
     if (isBrowserOnlyMixinDescriptor(descriptor)) return undefined
-    let runner = resolveSsrMixinRunner(hostType, descriptor, context, frameState)
+    // `on` is browser-only, so a descriptor that reaches here belongs to a host with an ID.
+    invariant(id, 'Expected mixin host ID')
+    let runner = resolveSsrMixinRunner(hostType, descriptor, context, frameState, id)
     if (!runner) return undefined
     // Unlike the client runtime, a throwing mixin is isolated here so a
     // single bad mixin cannot take down the whole stream.
@@ -1013,10 +1015,11 @@ function resolveSsrMixinRunner(
   descriptor: { type?: unknown; args?: readonly unknown[] },
   context: RenderContext,
   frameState: SsrFrameState,
+  id: string,
 ): ((...args: unknown[]) => unknown) | null {
   if (typeof descriptor.type !== 'function') return null
   try {
-    let handle = createSsrMixinHandle(hostType, descriptor, context, frameState)
+    let handle = createSsrMixinHandle(hostType, descriptor, context, frameState, id)
     let runner = descriptor.type(handle, hostType)
     if (typeof runner !== 'function') return null
     return runner
@@ -1031,6 +1034,7 @@ function createSsrMixinHandle(
   _descriptor: { type?: unknown },
   context: RenderContext,
   frameState: SsrFrameState,
+  id: string,
 ) {
   // Context lookups read the shared render context, so capture the parent before it moves on.
   let parentVNode = context.parentVNode
@@ -1044,7 +1048,7 @@ function createSsrMixinHandle(
   element.__rmxMixinElementType = hostType
 
   return {
-    id: 'ssr-mixin',
+    id,
     context: {
       get(providerType: ElementType | symbol) {
         if (typeof providerType !== 'function') {
@@ -1265,7 +1269,18 @@ function buildEntrySegment(
 ): void {
   let instanceId = randomId('h')
   output.push(`<!-- rmx:h:${instanceId} -->`)
-  buildComponentSegment(type, props, context, instanceId, frameState, output)
+  // The client hydrates each entry as its own root, so its descendants get IDs scoped to the entry.
+  let outerIdScope = context.idScope
+  context.idScope = createIdScope(instanceId)
+  buildComponentSegment(
+    type,
+    props,
+    context,
+    context.idScope.createComponentId(),
+    frameState,
+    output,
+  )
+  context.idScope = outerIdScope
 
   // Store hydration data in context for aggregation
   let replacer = createHydrationPropsReplacer(context, frameState)

@@ -294,6 +294,7 @@ export type MixinRuntimeBinding<target = unknown> = {
   target: target
   frame: FrameHandle
   scheduler: Scheduler
+  createMixinId(): string
   enqueueUpdate(done: (signal: AbortSignal) => void): void
 }
 
@@ -304,6 +305,7 @@ type ResolveMixedPropsInput = {
   getContext?: MixinContext['get']
   props: ElementProps
   state?: MixinRuntimeState
+  createId(): string
 }
 
 type ResolveMixedPropsOutput = {
@@ -332,8 +334,6 @@ type PersistedMixinRemoval = {
   controller: AbortController
   done: Promise<void>
 }
-
-let mixinHandleId = 0
 
 /**
  * Options for creating a mixin factory.
@@ -382,7 +382,7 @@ export function createMixin<
 }
 
 export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPropsOutput {
-  let state = input.state ?? createMixinRuntimeState()
+  let state = input.state ?? createMixinRuntimeState(input.createId())
   let hostType = input.hostType
   state.handle ??= new MixinHandleImpl(
     state,
@@ -510,9 +510,9 @@ export function cancelPendingMixinRemoval(
   state.lifecycle = { status: 'active' }
 }
 
-function createMixinRuntimeState(): MixinRuntimeState {
+function createMixinRuntimeState(id: string): MixinRuntimeState {
   return {
-    id: `m${++mixinHandleId}`,
+    id,
     lifecycle: { status: 'active' },
     runners: [],
   }
