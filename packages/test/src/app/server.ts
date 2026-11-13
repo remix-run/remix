@@ -301,7 +301,13 @@ function resolveSpecifier(spec: string, importerFile: string, rootDir: string): 
     resolvedPath = path.resolve(path.dirname(importerFile), spec)
   } else {
     try {
-      let resolutionResult = browserResolver.resolveFileSync(importerFile, spec)
+      // Resolve injected Oxc helpers from the runner, using the browser's ESM conditions.
+      let resolutionResult = browserResolver.resolveFileSync(
+        spec.startsWith('@oxc-project/runtime/helpers/')
+          ? fileURLToPath(import.meta.url)
+          : importerFile,
+        spec,
+      )
       if (!resolutionResult.path) return null
       resolvedPath = resolutionResult.path
     } catch {

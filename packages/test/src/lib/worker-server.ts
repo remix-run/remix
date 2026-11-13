@@ -20,7 +20,7 @@ export async function runServerTestFile(value: unknown): Promise<TestResults> {
     workerData = parseServerTestWorkerData(value)
 
     // When coverage is enabled in Node, we use a coverage-friendly TypeScript loader with
-    // an un-minified esbuild transform so V8 coverage byte offsets align with readable
+    // an un-minified Oxc transform so V8 coverage byte offsets align with readable
     // source lines.
     if (workerData.coverage && !IS_BUN) {
       // Ensure we load the right file whether we're running in the monorepo (TS) or
