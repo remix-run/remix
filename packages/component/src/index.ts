@@ -1,7 +1,9 @@
 /// <reference types="dom-navigation" preserve="true" />
 
 // -- Roots --
-export { run } from './runtime/run.ts'
+export { defaultResolveFrame, run } from './runtime/run.ts'
+export type { DefaultResolveFrameOverrides } from './runtime/run.ts'
+export type { FrameCommit, FrameCommitContext } from './runtime/frame-commit.ts'
 export type { AppRuntime, AppRuntimeEventMap, RunInit } from './runtime/run.ts'
 export type { ComponentErrorEvent, FrameReloadStartEvent } from './runtime/component.ts'
 export type { FormSubmissionEvent } from './runtime/form-navigation.ts'
@@ -77,5 +79,14 @@ export type { CSSMixinDescriptor } from './style/css-mixin.ts'
 // -- Navigation --
 export { navigate, updateUrl } from './runtime/navigation.ts'
 export type { NavigationOptions, UpdateUrlOptions } from './runtime/navigation.ts'
-export { prefetch } from './runtime/prefetch.ts'
-export type { PrefetchFrame, PrefetchOptions } from './runtime/prefetch.ts'
+export { defaultPrefetch, prefetch } from './runtime/prefetch.ts'
+export type {
+  DefaultPrefetchOverrides,
+  PrefetchAnchorOptions,
+  PrefetchFrame,
+  PrefetchFrameOptions,
+  ProcessFrameContext,
+  PrefetchFrameReference,
+  PrefetchOptions,
+  PrefetchReferences,
+} from './runtime/prefetch.ts'

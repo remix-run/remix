@@ -714,7 +714,7 @@ describe('run', () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       let [src, init] = fetchMock.mock.calls[0]!.arguments
-      expect(src).toBe('/account')
+      expect(src).toBe(new URL('/account', window.location.href).href)
       expect(init?.body).toBe(formData)
       let headers = new Headers(init?.headers)
       expect(headers.get('Accept')).toBe('text/html')
@@ -737,7 +737,7 @@ describe('run', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     let [src, init] = fetchMock.mock.calls[0]!.arguments
-    expect(src).toBe('/frame')
+    expect(src).toBe(new URL('/frame', window.location.href).href)
     expect(init?.mode).toBe('same-origin')
     let headers = new Headers(init?.headers)
     expect(headers.get('Accept')).toBe('text/html')
@@ -754,7 +754,7 @@ describe('run', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     let [src, init] = fetchMock.mock.calls[0]!.arguments
-    expect(src).toBe('/frame')
+    expect(src).toBe(new URL('/frame', window.location.href).href)
     expect(init?.mode).toBe('same-origin')
     let headers = new Headers(init?.headers)
     expect(headers.get('Accept')).toBe('text/html')
@@ -779,7 +779,7 @@ describe('run', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     let [src, init] = fetchMock.mock.calls[0]!.arguments
-    expect(src).toBe('/next')
+    expect(src).toBe(new URL('/next', window.location.href).href)
     expect(init?.mode).toBe('same-origin')
     let headers = new Headers(init?.headers)
     expect(headers.get('Accept')).toBe('text/html')
@@ -1315,18 +1315,18 @@ describe('run', () => {
     expect(requests).toHaveLength(1)
     let request = requests[0]!
     let expectedUrl = new URL(
-      '/search?name=Ada+Lovelace&name=Grace&file=notes.txt#results',
+      '/search?name=Ada+Lovelace&name=Grace&file=notes.txt',
       document.baseURI,
     ).href
     expect(events).toHaveLength(1)
-    expect(events[0]!.src).toBe(expectedUrl)
+    expect(events[0]!.src).toBe(`${expectedUrl}#results`)
     expect(events[0]!.method).toBe('get')
     expect(events[0]!.encType).toBeNull()
     expect(events[0]!.formData).toBeNull()
     expect(request.url).toBe(expectedUrl)
     expect(request.method).toBe('GET')
     expect(request.body).toBeNull()
-    expect(app.frames.top.src).toBe(expectedUrl)
+    expect(app.frames.top.src).toBe(`${expectedUrl}#results`)
     expect(document.body.textContent).toBe('Saved')
   })
 
@@ -1433,7 +1433,7 @@ describe('run', () => {
     expect(signal.aborted).toBe(false)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     let [src, init] = fetchMock.mock.calls[0]!.arguments
-    expect(src).toBe('/account/save')
+    expect(src).toBe(new URL('/account/save', window.location.href).href)
     expect(init?.method).toBe('post')
     expect(init?.body).toBeInstanceOf(URLSearchParams)
     expect(String(init?.body)).toBe('name=Ada+Lovelace')
@@ -1482,7 +1482,7 @@ describe('run', () => {
 
     try {
       await app.frames.top.reload()
-      expect(fetchMock.mock.calls[0]?.arguments[0]).toBe('details')
+      expect(fetchMock.mock.calls[0]?.arguments[0]).toBe('https://frames.example/partials/details')
       expect(fetchMock.mock.calls[0]?.arguments[1]?.mode).toBe('same-origin')
     } finally {
       app.dispose()

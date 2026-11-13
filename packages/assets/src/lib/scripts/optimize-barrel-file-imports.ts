@@ -78,9 +78,34 @@ export function createBarrelFileImportOptimizer(): (
     graph: ReadonlyMap<string, ResolvedModule>,
   ): Map<string, ResolvedModule> {
     let sideEffectsCache = new Map<string, SideEffects>()
-    let rewrittenGraph = new Map<string, ResolvedModule>()
+    let rewrittenGraph = new Map(graph)
+    let modules: ResolvedModule[] = []
+    let visited = new Set<string>()
 
-    for (let module of graph.values()) {
+    for (let root of graph.values()) {
+      let pending = [{ module: root, expanded: false }]
+      while (pending.length > 0) {
+        let current = pending.pop()
+        if (!current) continue
+        let { module, expanded } = current
+        if (expanded) {
+          modules.push(module)
+          continue
+        }
+        if (visited.has(module.identityPath)) continue
+        visited.add(module.identityPath)
+        pending.push({ module, expanded: true })
+        for (let depPath of module.staticDeps.toReversed()) {
+          let dependency = graph.get(depPath)
+          if (dependency) pending.push({ module: dependency, expanded: false })
+        }
+      }
+    }
+
+    // Rewrite dependencies first so retained modules reflect their emitted requests. Cycle and
+    // side-effect checks still use the source graph. A rewritten import cannot be in the importer's
+    // static cycle, so its targets and their rewritten dependencies have already been processed.
+    for (let module of modules) {
       let analysis = getExportAnalysis(module, analysisCache)
       let importRewrites: ImportRewrite[] = []
       let replacedImports = new Set<ResolvedImport>()
@@ -138,6 +163,7 @@ export function createBarrelFileImportOptimizer(): (
           importedModule.identityPath,
           targetPaths,
           graph,
+          rewrittenGraph,
         )
 
         let [firstDeclaration, ...remainingDeclarations] = group.declarations
@@ -268,8 +294,9 @@ function getReplacementImportPaths(
   barrelFilePath: string,
   targetPaths: readonly string[],
   graph: ReadonlyMap<string, ResolvedModule>,
+  rewrittenGraph: ReadonlyMap<string, ResolvedModule>,
 ): string[] {
-  let retained = getStaticallyReachableModules(targetPaths, graph)
+  let retained = getStaticallyReachableModules(targetPaths, rewrittenGraph)
   let replacementImports: string[] = []
   let requested = new Set<string>()
   let evaluated = new Set<string>()
@@ -280,7 +307,7 @@ function getReplacementImportPaths(
     while (queue.length > 0) {
       let currentPath = queue.pop()
       if (!currentPath || evaluated.has(currentPath)) continue
-      let module = graph.get(currentPath)
+      let module = rewrittenGraph.get(currentPath)
       if (!module) continue
       evaluated.add(currentPath)
       queue.push(...module.staticDeps)

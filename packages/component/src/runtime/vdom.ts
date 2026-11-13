@@ -22,6 +22,7 @@ import {
   type RootVNode,
 } from './reconcile.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
+import { getHydrationId, isHydrationStart } from './stream-protocol.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 import type { ElementFunction } from './element-function.ts'
 
@@ -79,14 +80,6 @@ export type VirtualRootOptions = {
 }
 
 export { createScheduler, type Scheduler }
-
-function getHydrationComponentIdFromRangeStart(start: Node | undefined): string | undefined {
-  if (!(start instanceof Comment)) return undefined
-  let marker = start.data.trim()
-  if (!marker.startsWith('rmx:h:')) return undefined
-  let id = marker.slice('rmx:h:'.length)
-  return id.length > 0 ? id : undefined
-}
 
 /**
  * Creates a virtual root bounded by two DOM nodes.
@@ -189,7 +182,9 @@ function createVirtualRoot(
         _getContext: options.getContext,
         _rangeStart: rangeStart,
         _rangeEnd: rangeEnd,
-        _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(rangeStart),
+        _pendingHydrationComponentId: isHydrationStart(rangeStart)
+          ? getHydrationId(rangeStart)
+          : undefined,
       }
       scheduler.enqueueWork([
         () => {
