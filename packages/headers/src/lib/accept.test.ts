@@ -79,6 +79,19 @@ describe('Accept', () => {
     assert.equal(header.getWeight('image/jpeg'), 0)
   })
 
+  it('uses the most specific matching range for weights', () => {
+    let header = new Accept('text/html;q=0, */*')
+    assert.equal(header.getWeight('text/html'), 0)
+    assert.equal(header.accepts('text/html'), false)
+    assert.equal(header.getWeight('application/json'), 1)
+
+    header = new Accept('*/*;q=0.8, text/*;q=0.5, text/html;q=0.1')
+    assert.equal(header.getWeight('text/html'), 0.1)
+    assert.equal(header.getWeight('text/plain'), 0.5)
+    assert.equal(header.getWeight('image/png'), 0.8)
+    assert.equal(header.getPreferred(['text/html', 'text/plain', 'image/png']), 'image/png')
+  })
+
   it('gets the preferred media type', () => {
     let header = new Accept('text/html,text/*;q=0.9,application/json;q=0.8')
     assert.equal(header.getPreferred(['text/html', 'application/json']), 'text/html')

@@ -79,6 +79,19 @@ describe('Accept-Language', () => {
     assert.equal(header.getWeight('fi'), 0)
   })
 
+  it('uses the most specific matching range for weights', () => {
+    let header = new AcceptLanguage('en-US;q=0, *')
+    assert.equal(header.getWeight('en-US'), 0)
+    assert.equal(header.accepts('en-US'), false)
+    assert.equal(header.getWeight('en-GB'), 1)
+
+    header = new AcceptLanguage('*;q=0.8, en;q=0.5, en-US;q=0.1')
+    assert.equal(header.getWeight('en-US'), 0.1)
+    assert.equal(header.getWeight('en-GB'), 0.5)
+    assert.equal(header.getWeight('fr'), 0.8)
+    assert.equal(header.getPreferred(['en-US', 'en-GB', 'fr']), 'fr')
+  })
+
   it('gets the preferred language', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9')
     assert.equal(header.getPreferred(['en-GB', 'en-US']), 'en-US')

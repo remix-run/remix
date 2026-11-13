@@ -539,6 +539,20 @@ describe('compressResponse()', () => {
     assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
   })
 
+  it('respects explicit rejection with q=0 when a wildcard accepts everything else', async () => {
+    let request = new Request('https://remix.run', {
+      // Client refuses gzip but accepts any other encoding
+      headers: { 'Accept-Encoding': 'gzip;q=0, *' },
+    })
+    let response = new Response('Hello, World!')
+
+    let compressed = await compressResponse(response, request, {
+      encodings: ['gzip', 'br'],
+    })
+
+    assert.equal(compressed.headers.get('Content-Encoding'), 'br')
+  })
+
   it('respects wildcard rejection with q=0', async () => {
     let request = new Request('https://remix.run', {
       // Only accepts gzip explicitly, rejects all others including identity with *;q=0
