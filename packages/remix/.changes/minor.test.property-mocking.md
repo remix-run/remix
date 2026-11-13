@@ -1,1 +1,0 @@
-Added mocking support for data properties, getters, and setters in `remix/test` (`t.mock.property()`, `t.mock.getter()`, and `t.mock.setter()`), with automatic restoration after test cleanup. Exported `MockTracker` as the shared type for standalone and test-context mocks.

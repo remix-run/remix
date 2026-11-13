@@ -1,1 +1,0 @@
-Enhance the frame `reloadStart` event with `src`, `method`, `encType`, `formData`, `element`, `submitter`, and `finished` fields for pending and optimistic UI. See [following a reload](https://github.com/remix-run/remix/tree/main/packages/component#following-a-reload) for details.

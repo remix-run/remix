@@ -1,1 +1,0 @@
-Fix `compressResponse()` returning `406 Not Acceptable` when the client lists only encodings the server does not support, such as `Accept-Encoding: gzip` with `encodings: ['br']`. An unlisted `identity` encoding is acceptable, so the response is now sent uncompressed. Responses are still rejected when the client refuses `identity` with `identity;q=0` or `*;q=0`.

@@ -2,6 +2,27 @@
 
 This is the changelog for [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table). It follows [semantic versioning](https://semver.org/).
 
+## v1.1.0
+
+### Minor Changes
+
+- Add shared SQL clause compilers to `@remix-run/data-table/sql-helpers` so adapters no longer need their own copies of predicate and clause compilation. `compilePredicate()`, `compileFromClause()`, `compileWhereClause()`, `compileHavingClause()`, `compileGroupByClause()`, `compileOrderByClause()`, `compileLimitOffsetClause()`, and `compileReturningClause()` take a `SqlCompileContext` that supplies the dialect's `quoteIdentifier()`, a `bindValue()` hook that records a value and returns its placeholder, and an optional `ilike` mode (`'ilike'` for native support, `'lower-like'` by default). ([#12276](https://github.com/remix-run/remix/pull/12276))
+
+  ```ts
+  import { compileWhereClause } from 'remix/data-table/sql-helpers'
+
+  let values: unknown[] = []
+  let where = compileWhereClause(operation.where, {
+    quoteIdentifier: (name) => '"' + name.replace(/"/g, '""') + '"',
+    bindValue(value) {
+      values.push(value)
+      return '$' + values.length
+    },
+  })
+  ```
+
+  The `JoinClause`, `JoinType`, and `ReturningSelection` types used by these helpers are now exported from `@remix-run/data-table`.
+
 ## v1.0.0
 
 ### Major Changes

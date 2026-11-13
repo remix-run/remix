@@ -2,6 +2,15 @@
 
 This is the changelog for [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Fix upserts with a separate `update` object binding values in the wrong order. Compiled statements bound the `on duplicate key update` values before the inserted values, so an upsert such as `upsert({ status: 'enabled', email: 'info@remix.run' }, { update: { email: 'contact@remix.run' } })` wrote the update value into the first inserted column. Inserted values are now bound first, matching their placeholders. ([#12276](https://github.com/remix-run/remix/pull/12276))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@1.1.0`](https://github.com/remix-run/remix/releases/tag/data-table@1.1.0)
+
 ## v1.0.0
 
 ### Major Changes

@@ -1,1 +1,0 @@
-Fix barrel file import optimisation downloading unused modules in nested import graphs. Imports added to preserve execution order could bring back an entire barrel that a nested import had already been optimised to bypass. These imports now request only the implementation modules needed to preserve that order.
