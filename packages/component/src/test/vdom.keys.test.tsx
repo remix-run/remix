@@ -307,14 +307,17 @@ describe('vnode rendering (keys)', () => {
   })
 
   describe('keyed insertions', () => {
+    function Empty(_handle: Handle<{ value: string }>) {
+      return () => null
+    }
+
+    // The value 'empty' renders a keyed component with no DOM
     function List(handle: Handle<{ values: string[] }>) {
       return () => (
         <ul>
-          {handle.props.values.map((value) => (
-            <li key={value} data-id={value}>
-              {value}
-            </li>
-          ))}
+          {handle.props.values.map((value) =>
+            value === 'empty' ? <Empty key={value} value={value} /> : <li key={value}>{value}</li>,
+          )}
         </ul>
       )
     }
@@ -367,37 +370,14 @@ describe('vnode rendering (keys)', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
-      function Empty(_handle: Handle<{ value: string }>) {
-        return () => null
-      }
-
-      function Items(handle: Handle<{ values: string[] }>) {
-        return () => (
-          <ul>
-            {handle.props.values.map((value) =>
-              value === 'empty' ? (
-                <Empty key={value} value={value} />
-              ) : (
-                <li key={value}>{value}</li>
-              ),
-            )}
-          </ul>
-        )
-      }
-
-      root.render(<Items values={['a', 'b', 'empty', 'c']} />)
+      root.render(<List values={['a', 'b', 'empty', 'c']} />)
       let list = container.querySelector('ul')
       invariant(list)
 
-      let observer = new MutationObserver(() => {})
-      observer.observe(list, { childList: true })
       // b moves to the end, x is new and the stable child after it renders no DOM
-      root.render(<Items values={['a', 'x', 'empty', 'c', 'b']} />)
-      let records = observer.takeRecords()
-      observer.disconnect()
-
+      let counts = renderAndCountInsertions(root, list, ['a', 'x', 'empty', 'c', 'b'])
       expect(list.textContent).toBe('axcb')
-      expect(records.reduce((count, record) => count + record.addedNodes.length, 0)).toBe(2)
+      expect(counts).toEqual({ added: 2, removed: 1 })
     })
   })
 
