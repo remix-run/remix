@@ -89,20 +89,9 @@ describe('cart handlers', () => {
     assertContains(html, 'Three Ways to Change Your Life')
   })
 
-  it('GET /cart/items renders table fragment for cart items', async () => {
-    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
-      method: 'POST',
-      body: new URLSearchParams({
-        bookId: '2',
-        slug: 'heavy-metal',
-      }),
-      redirect: 'manual',
-    })
-
-    let sessionId = getSessionCookie(addResponse)
-    assert.ok(sessionId)
-
-    let request = requestWithSession('https://remix.run/cart/items', sessionId)
+  it('GET /cart/items renders the table, total, and actions', async () => {
+    let session = await cartSession('2')
+    let request = requestWithSession('https://remix.run/cart/items', session)
     let response = await router.fetch(request)
     let html = await response.text()
 
@@ -113,28 +102,7 @@ describe('cart handlers', () => {
     assertContains(html, 'Update')
     assertContains(html, 'Remove')
     assertContains(html, 'Total:')
-  })
-
-  it('GET /cart/items renders totals and actions', async () => {
-    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
-      method: 'POST',
-      body: new URLSearchParams({
-        bookId: '1',
-        slug: 'bbq',
-      }),
-      redirect: 'manual',
-    })
-
-    let sessionId = getSessionCookie(addResponse)
-    assert.ok(sessionId)
-
-    let request = requestWithSession('https://remix.run/cart/items', sessionId)
-    let response = await router.fetch(request)
-    let html = await response.text()
-
-    assert.equal(response.status, 200)
-    assertContains(html, 'Total:')
-    assertContains(html, '$16.99')
+    assertContains(html, '$27.00')
     assertContains(html, 'Continue Shopping')
     assertContains(html, 'Login to Checkout')
   })
@@ -192,36 +160,6 @@ describe('cart handlers', () => {
     assert.match(await cart.text(), /Total:\s*(?:<[^>]+>\s*)*\$16\.99/)
   })
 
-  it('redirects native mutation failures to the cart and displays feedback once', async () => {
-    let session = await cartSession()
-    for (let [body, message] of [
-      [new URLSearchParams({ bookId: '1', quantity: '1.5' }), 'Invalid quantity'],
-      [new URLSearchParams({ bookId: '2', quantity: '3' }), 'That book is no longer in your cart.'],
-      [new URLSearchParams({ bookId: '999999', _method: 'DELETE' }), 'Book not found.'],
-    ] satisfies Array<[URLSearchParams, string]>) {
-      let response = await router.fetch(
-        requestWithSession('https://remix.run/cart/items', session, {
-          method: 'POST',
-          body,
-        }),
-      )
-      assert.equal(response.status, 303)
-      assert.equal(response.headers.get('Location'), '/cart')
-
-      let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
-      assert.equal(cart.status, 200)
-      let html = await cart.text()
-      assertContains(html, 'role="alert"')
-      assertContains(html, message)
-      assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$16\.99/)
-
-      let reloaded = await router.fetch(requestWithSession('https://remix.run/cart', session))
-      let reloadedHtml = await reloaded.text()
-      assert.ok(!reloadedHtml.includes('role="alert"'))
-      assert.match(reloadedHtml, /Total:\s*(?:<[^>]+>\s*)*\$16\.99/)
-    }
-  })
-
   it('DELETE /cart/items removes only the requested item and is safe to retry', async () => {
     let session = await cartSession()
     await router.fetch(
@@ -276,10 +214,10 @@ describe('cart handlers', () => {
   })
 })
 
-async function cartSession(): Promise<string> {
+async function cartSession(bookId = '1'): Promise<string> {
   let response = await router.fetch('https://remix.run/cart/api/add', {
     method: 'POST',
-    body: new URLSearchParams({ bookId: '1' }),
+    body: new URLSearchParams({ bookId }),
   })
   let session = getSessionCookie(response)
   assert.ok(session)

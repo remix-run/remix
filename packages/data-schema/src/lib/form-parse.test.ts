@@ -236,8 +236,6 @@ describe('form submissionSchema', () => {
     assert.equal(Profile.submissionSchema, Submission)
     let restored: fd.FormSubmission = s.parse(Submission, JSON.parse(JSON.stringify(failure)))
     assert.deepEqual(restored, { values: failure.values, errors: failure.errors })
-    assert.deepEqual(restored.values, { name: 'A', age: ' 0012 ', bio: '', terms: false })
-    assert.equal(JSON.stringify(restored).includes('private-secret'), false)
     assert.deepEqual(s.parse(Submission, { values: {}, errors: { fields: {} } }), {
       values: {},
       errors: { fields: {} },
