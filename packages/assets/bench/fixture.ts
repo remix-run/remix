@@ -14,7 +14,8 @@ export interface BenchFixture {
   entryPoint: string
   entryPointUrl: string
   assetServer: Pick<AssetServerOptions, 'allowFiles' | 'allowPackages' | 'basePath' | 'mounts'>
-  expectedEntryUrlSubstrings: string[]
+  expectedEntryImportMapUrlSubstrings: string[]
+  expectedEntrySourceSubstrings: string[]
   expectedPreloadUrlSubstrings: string[]
   stats: BenchFixtureStat[]
 }
@@ -51,16 +52,22 @@ async function readBasicFixture(): Promise<BenchFixture> {
     packagesRoot,
     entryPointFile: 'app/entry.tsx',
     entryPointUrl: '/assets/app/entry.tsx',
-    expectedEntryUrlSubstrings: [
+    expectedEntryImportMapUrlSubstrings: [
       '/assets/app/summary.@',
       '/assets/bench-packages/shared/strings.@',
       '/assets/bench-packages/ui/panel.@',
-      '/assets/packages/ui/',
+      '/assets/packages/component/',
+    ],
+    expectedEntrySourceSubstrings: [
+      '@remix-run/component',
+      '#packages/shared/strings.ts',
+      '@bench/ui/panel.tsx',
+      './summary.ts',
     ],
     expectedPreloadUrlSubstrings: [
       '/assets/bench-packages/shared/strings.@',
       '/assets/bench-packages/ui/panel.@',
-      '/assets/packages/ui/',
+      '/assets/packages/component/',
     ],
     createStats: async () => [
       { label: 'app', value: await countSourceModules(projectRoot) },
@@ -83,10 +90,11 @@ async function readDeepGraphFixture(): Promise<BenchFixture> {
     packagesRoot,
     entryPointFile: 'app/package-entry.tsx',
     entryPointUrl: '/assets/app/package-entry.tsx',
-    expectedEntryUrlSubstrings: [],
+    expectedEntryImportMapUrlSubstrings: [],
+    expectedEntrySourceSubstrings: [],
     expectedPreloadUrlSubstrings: [
       '/assets/bench-packages/ui/',
-      '/assets/packages/ui/',
+      '/assets/packages/component/',
       '/assets/node_modules/%40remix-run/__mock-package/',
       '/assets/node_modules/%40remix-run/__mock-ui/',
       '/assets/node_modules/%40remix-run/__mock-utils/',
@@ -109,14 +117,15 @@ interface CreateBenchFixtureOptions {
   packagesRoot: string
   entryPointFile: string
   entryPointUrl: string
-  expectedEntryUrlSubstrings: string[]
+  expectedEntryImportMapUrlSubstrings: string[]
+  expectedEntrySourceSubstrings: string[]
   expectedPreloadUrlSubstrings: string[]
   createStats(): Promise<BenchFixtureStat[]>
 }
 
 async function createBenchFixture(options: CreateBenchFixtureOptions): Promise<BenchFixture> {
   let repoRoot = path.resolve(import.meta.dirname, '../../..')
-  let repoPackagesRoot = path.join(repoRoot, 'packages')
+  let repoComponentRoot = path.join(repoRoot, 'packages/component')
   let entryPoint = path.join(options.projectRoot, options.entryPointFile)
   let nodeModulesRoot = path.join(path.dirname(options.projectRoot), 'node_modules')
 
@@ -125,18 +134,19 @@ async function createBenchFixture(options: CreateBenchFixtureOptions): Promise<B
     label: options.label,
     entryPoint,
     assetServer: {
-      allowFiles: [path.join(options.projectRoot, 'app'), options.packagesRoot, repoPackagesRoot],
+      allowFiles: [path.join(options.projectRoot, 'app'), options.packagesRoot, repoComponentRoot],
       allowPackages: options.id === 'deep-graph' ? ['@remix-run/__mock-package'] : undefined,
       basePath: '/assets',
       mounts: {
         app: createFileRoot(repoRoot, path.join(options.projectRoot, 'app')),
         'bench-packages': createFileRoot(repoRoot, options.packagesRoot),
         node_modules: createFileRoot(repoRoot, nodeModulesRoot),
-        packages: createFileRoot(repoRoot, repoPackagesRoot),
+        'packages/component': createFileRoot(repoRoot, repoComponentRoot),
       },
     },
     entryPointUrl: options.entryPointUrl,
-    expectedEntryUrlSubstrings: options.expectedEntryUrlSubstrings,
+    expectedEntryImportMapUrlSubstrings: options.expectedEntryImportMapUrlSubstrings,
+    expectedEntrySourceSubstrings: options.expectedEntrySourceSubstrings,
     expectedPreloadUrlSubstrings: options.expectedPreloadUrlSubstrings,
     stats: await options.createStats(),
   }

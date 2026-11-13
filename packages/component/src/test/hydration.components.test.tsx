@@ -1,0 +1,626 @@
+import { expect } from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it } from '@remix-run/test'
+import type { Handle, RemixNode } from '../runtime/component.ts'
+import { createRoot } from '../runtime/vdom.ts'
+import { renderToString } from '../server/stream.ts'
+import { clientEntry } from '../runtime/client-entries.ts'
+import { invariant } from '../runtime/invariant.ts'
+import { on, ref, unsafeHTML } from '../index.ts'
+
+describe('hydration', () => {
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    // The test runner's page starts with its own <title>, so every test needs an empty head.
+    document.head.replaceChildren()
+    container = document.createElement('div')
+    document.body.appendChild(container)
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  describe('component edge cases', () => {
+    it('hydrates component that returns null', async () => {
+      function NullComponent() {
+        return () => null
+      }
+
+      let html = await renderToString(
+        <div>
+          <NullComponent />
+          <span>After</span>
+        </div>,
+      )
+      container.innerHTML = html
+
+      let existingSpan = container.querySelector('span')
+      invariant(existingSpan)
+
+      let root = createRoot(container)
+      root.render(
+        <div>
+          <NullComponent />
+          <span>After</span>
+        </div>,
+      )
+      root.flush()
+
+      expect(container.querySelector('span')).toBe(existingSpan)
+      expect(existingSpan.textContent).toBe('After')
+    })
+
+    it('hydrates component that returns fragment', async () => {
+      function FragmentComponent() {
+        return () => (
+          <>
+            <span>First</span>
+            <span>Second</span>
+          </>
+        )
+      }
+
+      let html = await renderToString(
+        <div>
+          <FragmentComponent />
+        </div>,
+      )
+      container.innerHTML = html
+
+      let spans = container.querySelectorAll('span')
+      expect(spans).toHaveLength(2)
+
+      let root = createRoot(container)
+      root.render(
+        <div>
+          <FragmentComponent />
+        </div>,
+      )
+      root.flush()
+
+      let hydratedSpans = container.querySelectorAll('span')
+      expect(hydratedSpans[0]).toBe(spans[0])
+      expect(hydratedSpans[1]).toBe(spans[1])
+    })
+
+    it('hydrates nested hydration boundaries', async () => {
+      let Outer = clientEntry(
+        '/outer.js#Outer',
+        function Outer(handle: Handle<{ children?: any }>) {
+          return () => <div className="outer">{handle.props.children}</div>
+        },
+      )
+
+      let Inner = clientEntry('/inner.js#Inner', function Inner() {
+        return () => <span className="inner">Inner content</span>
+      })
+
+      let html = await renderToString(
+        <Outer>
+          <Inner />
+        </Outer>,
+      )
+      container.innerHTML = html
+
+      // Should have hydration comment markers
+      expect(html).toContain('<!-- rmx:h:')
+      expect(html).toContain('<!-- /rmx:h -->')
+
+      let existingOuter = container.querySelector('.outer')
+      let existingInner = container.querySelector('.inner')
+      invariant(existingOuter && existingInner)
+
+      // For this test, we use createRoot which should handle the comment markers
+      let root = createRoot(container)
+      root.render(
+        <Outer>
+          <Inner />
+        </Outer>,
+      )
+      root.flush()
+
+      // Both should be adopted
+      expect(container.querySelector('.outer')).toBe(existingOuter)
+      expect(container.querySelector('.inner')).toBe(existingInner)
+    })
+
+    it('hydrates component with state preservation', async () => {
+      function Counter(handle: Handle<{ initialCount: number }>) {
+        let count = handle.props.initialCount
+        return () => (
+          <button
+            mix={[
+              on('click', () => {
+                count++
+                handle.update()
+              }),
+            ]}
+          >
+            Count: {count}
+          </button>
+        )
+      }
+
+      let html = await renderToString(<Counter initialCount={5} />)
+      container.innerHTML = html
+
+      let existingButton = container.querySelector('button')
+      invariant(existingButton)
+      expect(existingButton.textContent).toBe('Count: 5')
+
+      let root = createRoot(container)
+      root.render(<Counter initialCount={5} />)
+      root.flush()
+
+      // Button should be adopted
+      expect(container.querySelector('button')).toBe(existingButton)
+
+      // Clicking should work
+      existingButton.click()
+      root.flush()
+
+      expect(existingButton.textContent).toBe('Count: 6')
+    })
+
+    it('hydrates null elements without breaking sibling ordering when they become renderable', async () => {
+      let secondElement: RemixNode = null
+      let capturedUpdate = () => {}
+      let NullChanging = clientEntry('/with-null.js#WithNull', function WithNull(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        return () => (
+          <div>
+            <span>First</span>
+            {secondElement}
+            <span>Second</span>
+          </div>
+        )
+      })
+
+      let html = await renderToString(<NullChanging />)
+      container.innerHTML = html
+
+      let existingSpans = container.querySelectorAll('span')
+      expect(existingSpans).toHaveLength(2)
+      invariant(existingSpans[0] && existingSpans[1])
+      expect(existingSpans[0].textContent).toBe('First')
+      expect(existingSpans[1].textContent).toBe('Second')
+
+      let root = createRoot(container)
+      root.render(<NullChanging />)
+      root.flush()
+
+      let hydratedSpans = container.querySelectorAll('span')
+      expect(hydratedSpans).toHaveLength(2)
+      expect(hydratedSpans[0]).toBe(existingSpans[0])
+      expect(hydratedSpans[1]).toBe(existingSpans[1])
+
+      secondElement = <span>after First</span>
+      capturedUpdate()
+      root.flush()
+
+      let updatedSpans = container.querySelectorAll('span')
+      expect(updatedSpans).toHaveLength(3)
+      expect(updatedSpans[0]).toBe(existingSpans[0])
+      expect(updatedSpans[1].textContent).toBe('after First')
+      expect(updatedSpans[2]).toBe(existingSpans[1])
+    })
+  })
+
+  describe('additional scenarios', () => {
+    it('hydrates context across component boundaries', async () => {
+      function Provider(handle: Handle<{ children?: any }, { value: string }>) {
+        handle.context.set({ value: 'from context' })
+        return () => <div className="provider">{handle.props.children}</div>
+      }
+
+      function Consumer(handle: Handle) {
+        let ctx = handle.context.get(Provider)
+        return () => <span className="consumer">{ctx?.value ?? 'no context'}</span>
+      }
+
+      let html = await renderToString(
+        <Provider>
+          <Consumer />
+        </Provider>,
+      )
+      container.innerHTML = html
+
+      let existingProvider = container.querySelector('.provider')
+      let existingConsumer = container.querySelector('.consumer')
+      invariant(existingProvider && existingConsumer)
+      expect(existingConsumer.textContent).toBe('from context')
+
+      let root = createRoot(container)
+      root.render(
+        <Provider>
+          <Consumer />
+        </Provider>,
+      )
+      root.flush()
+
+      expect(container.querySelector('.provider')).toBe(existingProvider)
+      expect(container.querySelector('.consumer')).toBe(existingConsumer)
+      expect(existingConsumer.textContent).toBe('from context')
+    })
+
+    it('hydrates SVG elements with case-sensitive tags', async () => {
+      let html = await renderToString(
+        <svg>
+          <defs>
+            <linearGradient id="grad1">
+              <stop offset="0%" stopColor="red" />
+              <stop offset="100%" stopColor="blue" />
+            </linearGradient>
+          </defs>
+          <rect fill="url(#grad1)" width="100" height="100" />
+        </svg>,
+      )
+      container.innerHTML = html
+
+      let existingSvg = container.querySelector('svg')
+      let existingGradient = container.querySelector('linearGradient')
+      let existingRect = container.querySelector('rect')
+      invariant(existingSvg && existingGradient && existingRect)
+
+      let root = createRoot(container)
+      root.render(
+        <svg>
+          <defs>
+            <linearGradient id="grad1">
+              <stop offset="0%" stopColor="red" />
+              <stop offset="100%" stopColor="blue" />
+            </linearGradient>
+          </defs>
+          <rect fill="url(#grad1)" width="100" height="100" />
+        </svg>,
+      )
+      root.flush()
+
+      expect(container.querySelector('svg')).toBe(existingSvg)
+      expect(container.querySelector('linearGradient')).toBe(existingGradient)
+      expect(container.querySelector('rect')).toBe(existingRect)
+    })
+
+    it('hydrates innerHTML prop', async () => {
+      let html = await renderToString(<div innerHTML={unsafeHTML('<span>Raw HTML</span>')} />)
+      container.innerHTML = html
+
+      let existingDiv = container.querySelector('div')
+      invariant(existingDiv)
+      expect(existingDiv.innerHTML).toBe('<span>Raw HTML</span>')
+
+      let root = createRoot(container)
+      root.render(<div innerHTML={unsafeHTML('<span>Raw HTML</span>')} />)
+      root.flush()
+
+      expect(container.querySelector('div')).toBe(existingDiv)
+      expect(existingDiv.innerHTML).toBe('<span>Raw HTML</span>')
+    })
+
+    it('hydrates style prop as object', async () => {
+      let html = await renderToString(
+        <div style={{ color: 'red', backgroundColor: 'blue', padding: '10px' }}>Styled</div>,
+      )
+      container.innerHTML = html
+
+      let existingDiv = container.querySelector('div')
+      invariant(existingDiv)
+
+      let root = createRoot(container)
+      root.render(
+        <div style={{ color: 'red', backgroundColor: 'blue', padding: '10px' }}>Styled</div>,
+      )
+      root.flush()
+
+      expect(container.querySelector('div')).toBe(existingDiv)
+      // Style should be applied
+      expect(existingDiv.style.color).toBe('red')
+      expect(existingDiv.style.backgroundColor).toBe('blue')
+    })
+
+    it('hydrates, updates, and removes unitless inline styles', async () => {
+      let layout = {
+        display: '-webkit-box',
+        webkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+        whiteSpace: 'pre-line',
+        lineHeight: '10px',
+      }
+      let styles = {
+        ...layout,
+        webkitLineClamp: 4,
+        flex: 2,
+        marginTop: 8,
+        animation: 2,
+        borderImage: 3,
+        webkitMaskBoxImageWidth: 2,
+        shapeImageThreshold: 0.25,
+      }
+      let text = 'One\nTwo\nThree\nFour\nFive'
+      container.innerHTML = await renderToString(<div style={styles}>{text}</div>)
+
+      let div = container.querySelector('div')
+      invariant(div)
+      expect(div.style.webkitLineClamp).toBe('4')
+      expect(div.style.flexGrow).toBe('2')
+      expect(div.style.marginTop).toBe('8px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('2')
+      expect(getComputedStyle(div).borderImageSlice).toBe('3')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
+      expect(div.getBoundingClientRect().height).toBe(40)
+
+      let root = createRoot(container)
+      root.render(<div style={styles}>{text}</div>)
+      root.flush()
+
+      expect(container.querySelector('div')).toBe(div)
+      expect(div.style.webkitLineClamp).toBe('4')
+      expect(div.style.flexGrow).toBe('2')
+      expect(div.style.marginTop).toBe('8px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('2')
+      expect(getComputedStyle(div).borderImageSlice).toBe('3')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
+      expect(div.getBoundingClientRect().height).toBe(40)
+
+      root.render(
+        <div
+          style={{
+            ...styles,
+            webkitLineClamp: 2,
+            flex: 3,
+            marginTop: 12,
+            animation: 3,
+            borderImage: 4,
+            webkitMaskBoxImageWidth: 3,
+            shapeImageThreshold: 0.75,
+          }}
+        >
+          {text}
+        </div>,
+      )
+      root.flush()
+
+      expect(div.style.webkitLineClamp).toBe('2')
+      expect(div.style.flexGrow).toBe('3')
+      expect(div.style.marginTop).toBe('12px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('3')
+      expect(getComputedStyle(div).borderImageSlice).toBe('4')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('3')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0.75')
+      expect(div.getBoundingClientRect().height).toBe(20)
+
+      root.render(
+        <div style={{ ...layout, webkitLineClamp: undefined, flex: null, marginTop: NaN }}>
+          {text}
+        </div>,
+      )
+      root.flush()
+
+      expect(div.style.webkitLineClamp).toBe('')
+      expect(div.style.flex).toBe('')
+      expect(div.style.marginTop).toBe('')
+      expect(getComputedStyle(div).animationIterationCount).toBe('1')
+      expect(getComputedStyle(div).borderImageSlice).toBe('100%')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('auto')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0')
+      expect(div.getBoundingClientRect().height).toBe(50)
+      root.dispose()
+    })
+
+    it('keeps inline custom property names distinct through hydration, updates, and removal', async () => {
+      let styles = {
+        '--gapSize': 8,
+        '--gap-size': 12,
+        marginTop: 'calc(var(--gapSize, 0) * 1px)',
+        paddingTop: 'calc(var(--gap-size, 0) * 1px)',
+      }
+      container.innerHTML = await renderToString(<div style={styles}>Styled</div>)
+
+      let div = container.querySelector('div')
+      invariant(div)
+      expect(getComputedStyle(div).marginTop).toBe('8px')
+      expect(getComputedStyle(div).paddingTop).toBe('12px')
+
+      let root = createRoot(container)
+      root.render(<div style={styles}>Styled</div>)
+      root.flush()
+
+      expect(container.querySelector('div')).toBe(div)
+      expect(getComputedStyle(div).marginTop).toBe('8px')
+      expect(getComputedStyle(div).paddingTop).toBe('12px')
+
+      root.render(<div style={{ ...styles, '--gapSize': 16 }}>Styled</div>)
+      root.flush()
+
+      expect(getComputedStyle(div).marginTop).toBe('16px')
+      expect(getComputedStyle(div).paddingTop).toBe('12px')
+
+      root.render(<div style={{ ...styles, '--gapSize': undefined }}>Styled</div>)
+      root.flush()
+
+      expect(getComputedStyle(div).marginTop).toBe('0px')
+      expect(getComputedStyle(div).paddingTop).toBe('12px')
+      root.dispose()
+    })
+
+    it('calls ref callback after hydration', async () => {
+      let connectedNode: HTMLDivElement | null = null
+
+      function WithConnect() {
+        return () => (
+          <div
+            mix={[
+              ref((node) => {
+                connectedNode = node as HTMLDivElement
+              }),
+            ]}
+          >
+            Connected
+          </div>
+        )
+      }
+
+      let html = await renderToString(<WithConnect />)
+      container.innerHTML = html
+
+      let existingDiv = container.querySelector('div')
+      invariant(existingDiv)
+
+      let root = createRoot(container)
+      root.render(<WithConnect />)
+      root.flush()
+
+      // Ref should be called with the adopted node
+      expect(connectedNode).toBe(existingDiv)
+    })
+
+    it('attaches event handlers during hydration', async () => {
+      let clicked = false
+
+      function Clickable() {
+        return () => (
+          <button
+            mix={[
+              on('click', () => {
+                clicked = true
+              }),
+            ]}
+          >
+            Click me
+          </button>
+        )
+      }
+
+      let html = await renderToString(<Clickable />)
+      container.innerHTML = html
+
+      let existingButton = container.querySelector('button')
+      invariant(existingButton)
+
+      let root = createRoot(container)
+      root.render(<Clickable />)
+      root.flush()
+
+      // Button should be adopted
+      expect(container.querySelector('button')).toBe(existingButton)
+
+      // Event should work
+      existingButton.click()
+      expect(clicked).toBe(true)
+    })
+
+    it('hydrates keyed elements', async () => {
+      let items = [
+        { id: 'a', text: 'Item A' },
+        { id: 'b', text: 'Item B' },
+        { id: 'c', text: 'Item C' },
+      ]
+
+      let html = await renderToString(
+        <ul>
+          {items.map((item) => (
+            <li key={item.id}>{item.text}</li>
+          ))}
+        </ul>,
+      )
+      container.innerHTML = html
+
+      let existingItems = container.querySelectorAll('li')
+      expect(existingItems).toHaveLength(3)
+
+      let root = createRoot(container)
+      root.render(
+        <ul>
+          {items.map((item) => (
+            <li key={item.id}>{item.text}</li>
+          ))}
+        </ul>,
+      )
+      root.flush()
+
+      let hydratedItems = container.querySelectorAll('li')
+      expect(hydratedItems[0]).toBe(existingItems[0])
+      expect(hydratedItems[1]).toBe(existingItems[1])
+      expect(hydratedItems[2]).toBe(existingItems[2])
+    })
+
+    it('hydrates deeply nested elements', async () => {
+      let html = await renderToString(
+        <div className="level-1">
+          <div className="level-2">
+            <div className="level-3">
+              <div className="level-4">
+                <span>Deep content</span>
+              </div>
+            </div>
+          </div>
+        </div>,
+      )
+      container.innerHTML = html
+
+      let level1 = container.querySelector('.level-1')
+      let level2 = container.querySelector('.level-2')
+      let level3 = container.querySelector('.level-3')
+      let level4 = container.querySelector('.level-4')
+      let span = container.querySelector('span')
+      invariant(level1 && level2 && level3 && level4 && span)
+
+      let root = createRoot(container)
+      root.render(
+        <div className="level-1">
+          <div className="level-2">
+            <div className="level-3">
+              <div className="level-4">
+                <span>Deep content</span>
+              </div>
+            </div>
+          </div>
+        </div>,
+      )
+      root.flush()
+
+      // All levels should be adopted
+      expect(container.querySelector('.level-1')).toBe(level1)
+      expect(container.querySelector('.level-2')).toBe(level2)
+      expect(container.querySelector('.level-3')).toBe(level3)
+      expect(container.querySelector('.level-4')).toBe(level4)
+      expect(container.querySelector('span')).toBe(span)
+    })
+
+    it('hydrates head-like elements in place', () => {
+      container.innerHTML =
+        '<title>Hydrated title</title>' +
+        '<meta name="description" content="Hydrated description" />' +
+        '<script type="application/ld+json">{"@type":"Thing","name":"Hydrated"}</script>' +
+        '<div id="content">Body content</div>'
+
+      let existingTitle = container.querySelector('title')
+      let existingMeta = container.querySelector('meta[name="description"]')
+      let existingLdJson = container.querySelector('script[type="application/ld+json"]')
+      let existingContent = container.querySelector('#content')
+      invariant(existingTitle && existingMeta && existingLdJson && existingContent)
+
+      let root = createRoot(container)
+      root.render(
+        <>
+          <title>Hydrated title</title>
+          <meta name="description" content="Hydrated description" />
+          <script type="application/ld+json">{'{"@type":"Thing","name":"Hydrated"}'}</script>
+          <div id="content">Body content</div>
+        </>,
+      )
+      root.flush()
+
+      expect(container.querySelector('title')).toBe(existingTitle)
+      expect(container.querySelector('meta[name="description"]')).toBe(existingMeta)
+      expect(container.querySelector('script[type="application/ld+json"]')).toBe(existingLdJson)
+      expect(container.querySelector('#content')).toBe(existingContent)
+      expect(document.head.querySelector('title')).toBeNull()
+      expect(document.head.querySelector('meta[name="description"]')).toBeNull()
+      expect(document.head.querySelector('script[type="application/ld+json"]')).toBeNull()
+    })
+  })
+})

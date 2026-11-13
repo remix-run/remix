@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
 
 import type { Order } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
@@ -81,7 +81,11 @@ export function AdminOrderShowPage(
         </div>
 
         <p mix={css({ marginTop: '1.5rem' })}>
-          <a href={routes.admin.orders.index.href()} class="btn btn-secondary">
+          <a
+            data-rmx-prefetch="intent"
+            href={routes.admin.orders.index.href()}
+            class="btn btn-secondary"
+          >
             Back to Orders
           </a>
         </p>

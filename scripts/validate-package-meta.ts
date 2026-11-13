@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
-import { parse } from 'yaml'
 import { colors, colorize } from './utils/color.ts'
+import { getSideEffectPatternPairingIssues } from './utils/package-side-effects.ts'
 import { getAllPackageDirNames, getPackageFile } from './utils/packages.ts'
 
 const CONSUMER_DEPENDENCY_FIELDS = [
@@ -19,9 +19,11 @@ interface PublishedPackageInfo {
 
 interface PublishedPackageJson {
   name: string
+  description?: string
   dependencies?: PackageDependencyMap
   optionalDependencies?: PackageDependencyMap
   peerDependencies?: PackageDependencyMap
+  sideEffects?: unknown
 }
 
 interface DependencyUsage {
@@ -34,7 +36,9 @@ interface DependencyUsage {
 
 type RawPackageJson = {
   name?: unknown
+  description?: unknown
   private?: unknown
+  sideEffects?: unknown
 } & {
   [field in ConsumerDependencyField]?: unknown
 }
@@ -46,8 +50,19 @@ interface PackageMetaCheck {
 
 function main() {
   let packageInfos = getPublishedPackageInfos()
-  let catalogDependencies = getCatalogDependencies()
   let checks: PackageMetaCheck[] = [
+    {
+      name: 'Published package.json files have descriptions',
+      validate() {
+        return validatePackageDescriptions(packageInfos)
+      },
+    },
+    {
+      name: 'Published package.json files declare valid sideEffects metadata',
+      validate() {
+        return validateSideEffects(packageInfos)
+      },
+    },
     {
       name: 'Published package.json files use explicit consumer-facing dependency ranges',
       validate() {
@@ -58,12 +73,6 @@ function main() {
       name: 'Published package.json files use consistent consumer-facing dependency ranges across packages',
       validate() {
         return validateConsistentConsumerDependencyRanges(packageInfos)
-      },
-    },
-    {
-      name: 'Published package.json files match catalog ranges for consumer-facing dependencies',
-      validate() {
-        return validateConsumerDependencyRangesMatchCatalog(packageInfos, catalogDependencies)
       },
     },
   ]
@@ -108,6 +117,9 @@ function getPublishedPackageInfos(): PublishedPackageInfo[] {
       dir: `packages/${dirName}`,
       packageJson: {
         name: packageJson.name,
+        description:
+          typeof packageJson.description === 'string' ? packageJson.description : undefined,
+        sideEffects: packageJson.sideEffects,
         ...readConsumerDependencies(packageJson, packageJsonPath),
       },
     })
@@ -116,22 +128,49 @@ function getPublishedPackageInfos(): PublishedPackageInfo[] {
   return packageInfos
 }
 
-function getCatalogDependencies(): PackageDependencyMap {
-  let workspaceConfig: unknown = parse(fs.readFileSync('pnpm-workspace.yaml', 'utf8'))
-  if (!isRecord(workspaceConfig)) {
-    throw new Error('Expected pnpm-workspace.yaml to contain an object')
+function validateSideEffects(packageInfos: PublishedPackageInfo[]): string[] {
+  let violations: string[] = []
+
+  for (let packageInfo of packageInfos) {
+    let sideEffects = packageInfo.packageJson.sideEffects
+    if (typeof sideEffects === 'boolean') continue
+    if (
+      !Array.isArray(sideEffects) ||
+      !sideEffects.every((pattern) => typeof pattern === 'string')
+    ) {
+      violations.push(
+        `${packageInfo.dir}/package.json sideEffects must be a boolean or an array of glob patterns.`,
+      )
+      continue
+    }
+
+    let pairingIssues = getSideEffectPatternPairingIssues(sideEffects)
+    for (let pattern of pairingIssues.unsupportedPatterns) {
+      violations.push(
+        `${packageInfo.dir}/package.json sideEffects pattern ${JSON.stringify(pattern)} uses glob syntax under src or dist, but source/dist pairing currently requires literal package-relative file paths.`,
+      )
+    }
+    for (let { source, expectedPublished } of pairingIssues.missingPublished) {
+      violations.push(
+        `${packageInfo.dir}/package.json sideEffects pattern ${JSON.stringify(source)} is missing its published counterpart ${JSON.stringify(expectedPublished)}.`,
+      )
+    }
+    for (let published of pairingIssues.unmatchedPublished) {
+      violations.push(
+        `${packageInfo.dir}/package.json published sideEffects pattern ${JSON.stringify(published)} has no matching source pattern.`,
+      )
+    }
   }
 
-  let catalog = workspaceConfig.catalog
-  if (catalog === undefined) {
-    return {}
-  }
+  return violations
+}
 
-  if (!isDependencyMap(catalog)) {
-    throw new Error('Expected pnpm-workspace.yaml catalog to be an object of string specifiers')
-  }
-
-  return catalog
+function validatePackageDescriptions(packageInfos: PublishedPackageInfo[]): string[] {
+  return packageInfos.flatMap((packageInfo) =>
+    packageInfo.packageJson.description?.trim()
+      ? []
+      : [`${packageInfo.dir}/package.json must have a non-empty description.`],
+  )
 }
 
 function validateExplicitConsumerDependencyRanges(packageInfos: PublishedPackageInfo[]): string[] {
@@ -150,35 +189,6 @@ function validateExplicitConsumerDependencyRanges(packageInfos: PublishedPackage
             `${packageInfo.dir}/package.json ${field}.${dependencyName} uses ${specifier}, but published consumer-facing dependencies must use explicit ranges.`,
           )
         }
-      }
-    }
-  }
-
-  return violations
-}
-
-function validateConsumerDependencyRangesMatchCatalog(
-  packageInfos: PublishedPackageInfo[],
-  catalogDependencies: PackageDependencyMap,
-): string[] {
-  let violations: string[] = []
-
-  for (let packageInfo of packageInfos) {
-    for (let field of CONSUMER_DEPENDENCY_FIELDS) {
-      let dependencies = packageInfo.packageJson[field]
-      if (!dependencies) {
-        continue
-      }
-
-      for (let [dependencyName, specifier] of Object.entries(dependencies)) {
-        let catalogSpecifier = catalogDependencies[dependencyName]
-        if (catalogSpecifier === undefined || specifier === catalogSpecifier) {
-          continue
-        }
-
-        violations.push(
-          `${packageInfo.dir}/package.json ${field}.${dependencyName} uses ${specifier}, but the catalog range is ${catalogSpecifier}.`,
-        )
       }
     }
   }

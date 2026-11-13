@@ -1,11 +1,37 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 export function Profile() {
   return () => (
     <section>
-      <h2 mix={titleStyle}>Profile</h2>
-      <p mix={descriptionStyle}>Update personal details shown to instructors and classmates.</p>
-      <dl mix={detailsStyle}>
+      <h2
+        mix={css({
+          margin: 0,
+          fontSize: '1.5rem',
+          color: '#0f172a',
+        })}
+      >
+        Profile
+      </h2>
+      <p
+        mix={css({
+          marginTop: '0.6rem',
+          color: '#475569',
+        })}
+      >
+        Update personal details shown to instructors and classmates.
+      </p>
+      <dl
+        mix={css({
+          marginTop: '1rem',
+          border: '1px solid #e2e8f0',
+          borderRadius: '14px',
+          backgroundColor: '#ffffff',
+          padding: '1rem',
+          display: 'grid',
+          gridTemplateColumns: '180px 1fr',
+          rowGap: '0.6rem',
+        })}
+      >
         <dt mix={termStyle}>Display name</dt>
         <dd mix={valueStyle}>Riley Student</dd>
         <dt mix={termStyle}>Timezone</dt>
@@ -14,28 +40,6 @@ export function Profile() {
     </section>
   )
 }
-
-const titleStyle = css({
-  margin: 0,
-  fontSize: '1.5rem',
-  color: '#0f172a',
-})
-
-const descriptionStyle = css({
-  marginTop: '0.6rem',
-  color: '#475569',
-})
-
-const detailsStyle = css({
-  marginTop: '1rem',
-  border: '1px solid #e2e8f0',
-  borderRadius: '14px',
-  backgroundColor: '#ffffff',
-  padding: '1rem',
-  display: 'grid',
-  gridTemplateColumns: '180px 1fr',
-  rowGap: '0.6rem',
-})
 
 const termStyle = css({
   color: '#64748b',

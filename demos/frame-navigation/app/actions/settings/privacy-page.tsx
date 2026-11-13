@@ -1,13 +1,37 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 export function Privacy() {
   return () => (
     <section>
-      <h2 mix={titleStyle}>Privacy</h2>
-      <p mix={descriptionStyle}>
+      <h2
+        mix={css({
+          margin: 0,
+          fontSize: '1.5rem',
+          color: '#0f172a',
+        })}
+      >
+        Privacy
+      </h2>
+      <p
+        mix={css({
+          marginTop: '0.6rem',
+          color: '#475569',
+          lineHeight: 1.7,
+        })}
+      >
         Control what activity and profile details are visible to classmates and collaborators.
       </p>
-      <div mix={cardStyle}>
+      <div
+        mix={css({
+          marginTop: '1rem',
+          border: '1px solid #e2e8f0',
+          borderRadius: '14px',
+          backgroundColor: '#ffffff',
+          padding: '0.85rem 1rem',
+          display: 'grid',
+          gap: '0.7rem',
+        })}
+      >
         <p mix={rowStyle}>
           <span>Show course progress to classmates</span>
           <strong>Off</strong>
@@ -24,28 +48,6 @@ export function Privacy() {
     </section>
   )
 }
-
-const titleStyle = css({
-  margin: 0,
-  fontSize: '1.5rem',
-  color: '#0f172a',
-})
-
-const descriptionStyle = css({
-  marginTop: '0.6rem',
-  color: '#475569',
-  lineHeight: 1.7,
-})
-
-const cardStyle = css({
-  marginTop: '1rem',
-  border: '1px solid #e2e8f0',
-  borderRadius: '14px',
-  backgroundColor: '#ffffff',
-  padding: '0.85rem 1rem',
-  display: 'grid',
-  gap: '0.7rem',
-})
 
 const rowStyle = css({
   margin: 0,

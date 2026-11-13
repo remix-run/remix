@@ -12,6 +12,7 @@ import type {
 } from '../driver.ts'
 import { DataTableQueryError } from '../errors.ts'
 import type { ReturningInput, WriteResult, WriteRowResult, WriteRowsResult } from '../database.ts'
+import type { Predicate } from '../operators.ts'
 import { normalizeWhereInput } from '../operators.ts'
 import type { AnyQuery, QueryExecutionResult, QueryState } from '../query.ts'
 import { cloneQueryState, querySnapshot } from '../query.ts'
@@ -387,6 +388,8 @@ async function executeUpdate(
     throw new DataTableQueryError('update() requires at least one change')
   }
 
+  assertWhereIsNotStructurallyUnconditional(state.where, 'update')
+
   let result: DataManipulationResult
 
   if (hasScopedWriteModifiers(state)) {
@@ -453,6 +456,7 @@ async function executeDelete(
 ): Promise<WriteResult | WriteRowsResult<Record<string, unknown>>> {
   let returning = options?.returning
   assertReturningCapability(database.capabilities, 'delete', returning)
+  assertWhereIsNotStructurallyUnconditional(state.where, 'delete')
   let tableName = getTableName(table)
   let deleteContext = {
     tableName,
@@ -518,6 +522,37 @@ async function executeDelete(
     insertId: result.insertId,
     rows: applyAfterReadHooksToRows(table, normalizeRows(result.rows)),
   }
+}
+
+function assertWhereIsNotStructurallyUnconditional(
+  where: Predicate[],
+  operation: 'update' | 'delete',
+): void {
+  if (where.length > 0 && where.every(isStructurallyUnconditional)) {
+    throw new DataTableQueryError(
+      operation + '() does not allow a structurally unconditional where clause',
+    )
+  }
+}
+
+function isStructurallyUnconditional(predicate: Predicate): boolean {
+  if (predicate.type === 'comparison') {
+    return (
+      predicate.operator === 'notIn' &&
+      Array.isArray(predicate.value) &&
+      predicate.value.length === 0
+    )
+  }
+
+  if (predicate.type !== 'logical') {
+    return false
+  }
+
+  if (predicate.operator === 'and') {
+    return predicate.predicates.every(isStructurallyUnconditional)
+  }
+
+  return predicate.predicates.some(isStructurallyUnconditional)
 }
 
 async function executeUpsert(

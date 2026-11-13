@@ -33,6 +33,15 @@ describe('parseRawHeaders', () => {
     assert.equal(headers.get('Cache-Control'), 'no-cache')
   })
 
+  it('ignores lines rejected by the Headers API', () => {
+    let headers = parseRawHeaders(
+      'Content-Type: text/html\r\nbad name: ignored\r\nX-Invalid: value\0ignored\r\nCache-Control: no-cache',
+    )
+    assert.equal(headers.get('Content-Type'), 'text/html')
+    assert.equal(headers.get('X-Invalid'), null)
+    assert.equal(headers.get('Cache-Control'), 'no-cache')
+  })
+
   it('returns empty Headers for empty string', () => {
     let headers = parseRawHeaders('')
     assert.equal([...headers].length, 0)

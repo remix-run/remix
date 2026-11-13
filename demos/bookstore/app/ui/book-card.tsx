@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { Frame, css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { Frame, css } from 'remix/component'
 
 import type { Book } from '../data/schema.ts'
 import { routes } from '../routes.ts'
@@ -21,7 +21,11 @@ export function BookCard(handle: Handle<BookCardProps>) {
           <p class="author">by {book.author}</p>
           <p class="price">${book.price.toFixed(2)}</p>
           <div mix={css({ display: 'flex', gap: '0.5rem', alignItems: 'center' })}>
-            <a href={routes.books.show.href({ slug: book.slug })} class="btn">
+            <a
+              href={routes.books.show.href({ slug: book.slug })}
+              data-rmx-prefetch="viewport"
+              class="btn"
+            >
               View Details
             </a>
 

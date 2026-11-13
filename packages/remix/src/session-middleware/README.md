@@ -1,0 +1,119 @@
+# session-middleware
+
+Session middleware for Remix using signed cookies. It loads session state from incoming requests, exposes it as `context.session` (or `context.get(Session)`), and persists updates automatically.
+
+## Features
+
+- **Session Lifecycle Handling** - Reads and saves session state per request
+- **Context Integration** - Exposes `context.session` (or `context.get(Session)`)
+- **Secure Cookie Support** - Designed for signed session cookies
+
+## Installation
+
+```sh
+npm i remix
+```
+
+## Usage
+
+```ts
+import { createRouter } from 'remix/router'
+import { createCookie } from 'remix/cookie'
+import { createCookieSessionStorage } from 'remix/session-storage/cookie'
+import { session } from 'remix/middleware/session'
+
+let sessionCookie = createCookie('__session', {
+  secrets: ['s3cr3t'], // session cookies must be signed!
+  secure: true,
+  sameSite: 'lax',
+})
+
+let sessionStorage = createCookieSessionStorage()
+
+let router = createRouter({
+  middleware: [session(sessionCookie, sessionStorage)],
+})
+
+router.get('/', (context) => {
+  context.session.set('count', Number(context.session.get('count') ?? 0) + 1)
+  return new Response(`Count: ${context.session.get('count')}`)
+})
+```
+
+The middleware:
+
+- Reads the session from the cookie on incoming requests
+- Makes it available as `context.session` (or `context.get(Session)`)
+- Automatically saves session changes and sets the cookie on responses
+
+Use `context.session` (or `context.get(Session)`) for normal session reads and writes.
+
+Note: The session cookie must be signed for security. This prevents tampering with the session data on the client.
+Session cookies are HTTP-only by default. When `secure` is not configured, the middleware adds `Secure` for HTTPS request URLs and omits it for HTTP, including local development. Explicit `secure: true` and `secure: false` take precedence. If a proxy terminates HTTPS, configure the server to expose the original HTTPS request URL or set `secure: true` explicitly.
+
+### Session Lifetime
+
+Configure `maxAge` (seconds) or `expires` (a `Date`) on the session cookie to limit how long the middleware accepts it. The middleware stores the expiration alongside the storage value inside the signed cookie and checks it before loading session data. This applies to cookie, memory, filesystem, Redis, Memcache, and custom storage backends.
+
+`maxAge` takes precedence over `expires` and starts again whenever a session update emits a new cookie. Reads alone do not renew it. `expires` is a fixed deadline. Without either option, the middleware adds no lifetime limit; configured backend TTLs still apply independently.
+
+Cookies issued by older versions do not contain expiration metadata. When a lifetime is configured, those cookies start a new session after upgrading. Keep the middleware responsible for reading and writing these cookies; the storage backend continues to receive its original opaque value. This check does not remove abandoned backend records. Configure a backend TTL or your own cleanup policy when records also need to be removed from storage.
+
+### Login/Logout Flow
+
+A basic login/logout flow could look like this:
+
+```ts
+import { html } from 'remix/html-template'
+import { createHtmlResponse } from 'remix/response/html'
+import { redirect } from 'remix/response/redirect'
+
+router.get('/login', ({ session }) => {
+  let error = session.get('error')
+  return createHtmlResponse(html`
+    <html>
+      <body>
+        <h1>Login</h1>
+        ${typeof error === 'string' ? html`<div class="error">${error}</div>` : null}
+        <form method="POST" action="/login">
+          <input type="text" name="username" placeholder="Username" />
+          <input type="password" name="password" placeholder="Password" />
+          <button type="submit">Login</button>
+        </form>
+      </body>
+    </html>
+  `)
+})
+
+router.post('/login', ({ get, session }) => {
+  let formData = get(FormData)
+  let username = formData.get('username')
+  let password = formData.get('password')
+
+  let user = authenticateUser(username, password)
+  if (!user) {
+    session.flash('error', 'Invalid username or password')
+    return redirect('/login')
+  }
+
+  session.regenerateId()
+  session.set('userId', user.id)
+
+  return redirect('/dashboard')
+})
+
+router.post('/logout', ({ session }) => {
+  session.destroy()
+  return redirect('/')
+})
+```
+
+## Related Packages
+
+- [`fetch-router`](../fetch-router/README.md) - Router for the web Fetch API
+- [`session`](../session/README.md) - Session management and storage
+- [`cookie`](../cookie/README.md) - Cookie parsing and serialization
+
+## License
+
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

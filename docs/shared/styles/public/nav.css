@@ -1,0 +1,51 @@
+.docs-nav-heading {
+  padding-inline: var(--docs-nav-item-inset);
+  color: var(--docs-sidebar-heading);
+  font-weight: var(--rmx-font-weight-semibold);
+}
+
+/* The site name and version at the top of each sidebar, e.g. "Remix UI v0.12.1". */
+.docs-nav-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  height: var(--docs-nav-item-height);
+  margin: 0 0 8px;
+  font-size: var(--docs-font-size-ui);
+  line-height: var(--docs-nav-item-height);
+}
+
+.docs-nav-version {
+  color: var(--rmx-color-text-secondary);
+  font-size: var(--docs-font-size-label);
+  font-weight: var(--rmx-font-weight-normal);
+}
+
+.docs-nav-item {
+  display: flex;
+  align-items: center;
+  padding-inline: var(--docs-nav-item-inset);
+  border-radius: var(--rmx-radius-md);
+  color: var(--docs-sidebar-link);
+  text-decoration: none;
+}
+
+/* Mobile menus don't animate. */
+@media (width >= 900px) {
+  .docs-nav-item {
+    transition:
+      color 150ms ease-in-out,
+      background-color 150ms ease-in-out;
+  }
+}
+
+a.docs-nav-item:hover {
+  color: var(--docs-sidebar-link-hover);
+  background: var(--docs-nav-hover-background);
+}
+
+a.docs-nav-item[aria-current] {
+  color: var(--rmx-color-text-primary);
+  background: var(--docs-nav-selected-background);
+  font-weight: var(--rmx-font-weight-medium);
+}

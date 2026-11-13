@@ -1,0 +1,1 @@
+Fix CSS `@import` resolution failing with a raw `ENOTDIR` error when an import path passes through a file, such as `@import "./theme.css/dark.css"`. These imports now report `IMPORT_RESOLUTION_FAILED`, matching script imports and other missing CSS imports.

@@ -85,6 +85,15 @@ describe('sqlite sql-compiler', () => {
       })
     })
 
+    it('compile distinct selection', async () => {
+      await db.query(accounts).distinct().all()
+      let compiled = compileSqliteOperation(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select distinct * from "accounts"',
+        values: [],
+      })
+    })
+
     it('compile selected', async () => {
       await db
         .query(accounts)
@@ -399,6 +408,27 @@ describe('sqlite sql-compiler', () => {
       })
     })
 
+    it('compile ordering', async () => {
+      await db.query(accounts).orderBy('email', 'asc').orderBy('id', 'desc').all()
+      let compiled = compileSqliteOperation(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from "accounts" order by "email" ASC, "id" DESC',
+        values: [],
+      })
+    })
+
+    it('reject invalid order by directions', async () => {
+      await db
+        .query(accounts)
+        .orderBy('id', 'ascending' as 'asc')
+        .all()
+
+      assert.throws(() => compileSqliteOperation(statements[0]), {
+        name: 'TypeError',
+        message: 'Invalid order by direction: expected "asc" or "desc"',
+      })
+    })
+
     it('compile with normalized boolean - true', async () => {
       await db.query(accounts).where({ deleted: true }).all()
       let compiled = compileSqliteOperation(statements[0])
@@ -498,6 +528,18 @@ describe('sqlite sql-compiler', () => {
       })
     })
 
+    it('compile for many with null for columns missing from a row', () => {
+      let compiled = compileSqliteOperation({
+        kind: 'insertMany',
+        table: accounts,
+        values: [{ id: 1, email: 'info@remix.run' }, { id: 2 }],
+      })
+      assert.deepEqual(compiled, {
+        text: 'insert into "accounts" ("id", "email") values (?, ?), (?, ?)',
+        values: [1, 'info@remix.run', 2, null],
+      })
+    })
+
     it('compile for many with default values', () => {
       let compiled = compileSqliteOperation({
         kind: 'insertMany',
@@ -557,6 +599,18 @@ describe('sqlite sql-compiler', () => {
   })
 
   describe('upsert statement', () => {
+    it('compile with the primary key as the default conflict target', () => {
+      let compiled = compileSqliteOperation({
+        kind: 'upsert',
+        table: accounts,
+        values: { id: 1, email: 'info@remix.run' },
+      })
+      assert.deepEqual(compiled, {
+        text: 'insert into "accounts" ("id", "email") values (?, ?) on conflict ("id") do update set "id" = ?, "email" = ?',
+        values: [1, 'info@remix.run', 1, 'info@remix.run'],
+      })
+    })
+
     it('should throw without value', async () => {
       await db.query(accounts).upsert(
         {},
@@ -583,7 +637,7 @@ describe('sqlite sql-compiler', () => {
       let compiled = compileSqliteOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into "accounts" ("status", "email") values (?, ?) on conflict ("id") do update set "email" = ?',
-        values: ['contact@remix.run', 'enabled', 'info@remix.run'],
+        values: ['enabled', 'info@remix.run', 'contact@remix.run'],
       })
     })
 

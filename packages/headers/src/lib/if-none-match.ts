@@ -1,5 +1,5 @@
 import { type HeaderValue } from './header-value.ts'
-import { quoteEtag } from './utils.ts'
+import { quoteEtag, splitList } from './utils.ts'
 
 /**
  * Initializer for an `If-None-Match` header value.
@@ -43,11 +43,23 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
   /**
    * Checks if this header matches the given entity tag.
    *
+   * Uses weak comparison, so matching strong and weak entity tags are equivalent.
+   *
    * @param tag The entity tag to check for
    * @returns `true` if the tag is present in the header (or the header contains a wildcard), `false` otherwise
    */
   matches(tag: string): boolean {
-    return this.has(tag) || this.tags.includes('*')
+    // If-None-Match requires weak comparison, ignoring the W/ marker:
+    // https://httpwg.org/specs/rfc9110.html#field.if-none-match
+    let normalizedTag = quoteEtag(tag)
+    let opaqueTag = normalizedTag.startsWith('W/') ? normalizedTag.slice(2) : normalizedTag
+
+    return (
+      this.tags.includes('*') ||
+      this.tags.some((headerTag) =>
+        headerTag.startsWith('W/') ? headerTag.slice(2) === opaqueTag : headerTag === opaqueTag,
+      )
+    )
   }
 
   /**
@@ -70,7 +82,7 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
 
     if (value !== null) {
       if (typeof value === 'string') {
-        header.tags.push(...value.split(/\s*,\s*/).map(quoteEtag))
+        header.tags.push(...splitList(value).map(quoteEtag))
       } else if (Array.isArray(value)) {
         header.tags.push(...value.map(quoteEtag))
       } else {

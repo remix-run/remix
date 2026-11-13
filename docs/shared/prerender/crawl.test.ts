@@ -203,6 +203,18 @@ describe('crawl(router)', () => {
     assert.deepEqual(visited, ['/blog/', '/blog/post-1'])
   })
 
+  it('removes query strings and fragments from crawled paths', async () => {
+    let router = createRouter()
+    router.get('/', () => html('<a href="/about?tab=api#details">About</a>'))
+    router.get('/about', () => html('<html></html>'))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router)) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited, ['/', '/about'])
+  })
+
   it('throws on non-2xx responses', async () => {
     let router = createRouter()
     router.get('/', () => new Response('Not Found', { status: 404, statusText: 'Not Found' }))
@@ -216,26 +228,51 @@ describe('crawl(router)', () => {
     )
   })
 
-  it('fetches pages concurrently when concurrency > 1', async () => {
+  it('writes static redirect pages and visits same-site destinations', async () => {
     let router = createRouter()
-    let inflight = 0
-    let maxInflight = 0
+    router.get(
+      '/old',
+      () =>
+        new Response(null, {
+          status: 308,
+          headers: { Location: '/new?from=old&mode=fast' },
+        }),
+    )
+    router.get('/new', () => html('<html><body>New</body></html>'))
 
-    function slowHtml(content: string): Promise<Response> {
-      inflight++
-      maxInflight = Math.max(maxInflight, inflight)
-      return new Promise((resolve) =>
-        setTimeout(() => {
-          inflight--
-          resolve(html(content))
-        }, 20),
-      )
+    let results: { pathname: string; filepath: string; body: string }[] = []
+    for await (let { pathname, filepath, response } of crawl(router, { paths: ['/old'] })) {
+      results.push({ pathname, filepath, body: await response.text() })
     }
 
-    router.get('/', () => slowHtml('<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a>'))
-    router.get('/a', () => slowHtml('<html></html>'))
-    router.get('/b', () => slowHtml('<html></html>'))
-    router.get('/c', () => slowHtml('<html></html>'))
+    assert.equal(results[0]?.pathname, '/old')
+    assert.equal(results[0]?.filepath, '/old/index.html')
+    assert.match(
+      results[0]?.body ?? '',
+      /http-equiv="refresh" content="0; url=\/new\?from=old&amp;mode=fast"/,
+    )
+    assert.deepEqual(
+      results.map((result) => result.pathname),
+      ['/old', '/new'],
+    )
+  })
+
+  it('fetches pages concurrently when concurrency > 1', async () => {
+    let router = createRouter()
+    let held: (() => void)[] = []
+
+    // Hold each child page until all three are in flight at once. A crawler that fetched them one
+    // at a time would never release the first one.
+    function heldHtml(content: string): Promise<Response> {
+      let response = new Promise<Response>((resolve) => held.push(() => resolve(html(content))))
+      if (held.length === 3) held.splice(0).forEach((release) => release())
+      return response
+    }
+
+    router.get('/', () => html('<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a>'))
+    router.get('/a', () => heldHtml('<html></html>'))
+    router.get('/b', () => heldHtml('<html></html>'))
+    router.get('/c', () => heldHtml('<html></html>'))
 
     let visited: string[] = []
     for await (let { pathname } of crawl(router, { concurrency: 3 })) {
@@ -243,7 +280,6 @@ describe('crawl(router)', () => {
     }
 
     assert.deepEqual(visited.toSorted(), ['/', '/a', '/b', '/c'])
-    assert.ok(maxInflight > 1, `expected concurrent requests, got max inflight: ${maxInflight}`)
   })
 
   it('does not visit the same path twice', async () => {
@@ -323,45 +359,6 @@ describe('crawl(router)', () => {
 
     let visited: string[] = []
     for await (let { pathname } of crawl(router)) {
-      visited.push(pathname)
-    }
-    assert.deepEqual(visited, ['/'])
-  })
-
-  it('follows links on matching pages when page-level nofollow is ignored', async () => {
-    let router = createRouter()
-    router.get('/v1.2.3/', () =>
-      html(`
-        <meta name="robots" content="noindex, nofollow">
-        <a href="/v1.2.3/about">About</a>
-      `),
-    )
-    router.get('/v1.2.3/about', () => html('<html></html>'))
-
-    let visited: string[] = []
-    for await (let { pathname } of crawl(router, {
-      paths: ['/v1.2.3/'],
-      ignorePageNofollow: (pathname) => pathname.startsWith('/v1.2.3/'),
-    })) {
-      visited.push(pathname)
-    }
-    assert.deepEqual(visited, ['/v1.2.3/', '/v1.2.3/about'])
-  })
-
-  it('still honors page-level nofollow when ignorePageNofollow does not match', async () => {
-    let router = createRouter()
-    router.get('/', () =>
-      html(`
-        <meta name="robots" content="noindex, nofollow">
-        <a href="/about">About</a>
-      `),
-    )
-    router.get('/about', () => html('<html></html>'))
-
-    let visited: string[] = []
-    for await (let { pathname } of crawl(router, {
-      ignorePageNofollow: (pathname) => pathname.startsWith('/v1.2.3/'),
-    })) {
       visited.push(pathname)
     }
     assert.deepEqual(visited, ['/'])

@@ -1,8 +1,8 @@
 # spa
 
 Client-rendered application routing for Remix. It connects a standard fetch router to the browser
-UI runtime without exposing the response carrier used to associate route responses with Remix
-nodes.
+component runtime without exposing the response carrier used to associate route responses with
+Remix nodes.
 
 ## Features
 
@@ -81,7 +81,7 @@ const router = createRouter({
   routing, controllers, and middleware context
 - [`render-middleware`](https://github.com/remix-run/remix/tree/main/packages/render-middleware) -
   Request-scoped renderer middleware
-- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Remix components, frames, and
+- [`component`](https://github.com/remix-run/remix/tree/main/packages/component) - Remix components, frames, and
   browser runtime
 
 ## Related Work
@@ -89,7 +89,7 @@ const router = createRouter({
 - [Fetch standard](https://fetch.spec.whatwg.org/) - The request and response model preserved by SPA
   routers
 - [Navigation API](https://wicg.github.io/navigation-api/) - Browser navigation lifecycle used by
-  the Remix UI runtime
+  the Remix component runtime
 
 ## License
 

@@ -7,9 +7,12 @@
     "@remix-run/assert": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
+    "@types/picomatch": "^4.0.3",
     "@types/semver": "^7.5.8",
-    "typescript": "catalog:",
+    "picomatch": "^4.0.4",
+    "remix-docs-shared": "workspace:*",
     "semver": "^7.6.3",
+    "typescript": "catalog:",
     "yaml": "^2.9.0"
   },
   "scripts": {

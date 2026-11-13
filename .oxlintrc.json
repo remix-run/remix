@@ -13,11 +13,15 @@
   "env": {
     "builtin": true
   },
+  // `plugins` replaces oxlint's defaults (typescript, unicorn, oxc), so this lists them plus `import`.
+  // `import` must be enabled here for oxlint to resolve modules for `import/no-cycle`. Categories stay
+  // off, so this adds no rules.
+  "plugins": ["typescript", "unicorn", "oxc", "import"],
   "ignorePatterns": [
     "**/*.d.ts",
     "**/dist/**",
     "docs/api/**",
-    "packages/ui/docs/**",
+    "packages/component/docs/**",
     "**/demos/bookstore/public/assets/**",
     "**/demos/sse/public/assets/**",
     "**/coverage/**",
@@ -86,6 +90,12 @@
       }
     },
     {
+      "files": ["packages/component/src/**/*.{ts,tsx}"],
+      "rules": {
+        "import/no-cycle": "error"
+      }
+    },
+    {
       "files": ["**/*.{ts,tsx,js,jsx}"],
       "jsPlugins": [
         "./scripts/oxlint-plugins/prefer-let-locals-plugin.ts",
@@ -118,7 +128,7 @@
       }
     },
     {
-      "files": ["packages/ui/**/demos/*.demo.tsx"],
+      "files": ["packages/component/**/demos/*.demo.tsx", "packages/ui/**/demos/*.demo.tsx"],
       "plugins": ["jsdoc"],
       "rules": {
         "arrow-body-style": "off",

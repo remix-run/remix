@@ -2,9 +2,11 @@ import { RoutePattern } from '@remix-run/route-pattern'
 import { joinPatterns } from '@remix-run/route-pattern/join'
 import {
   createMultiMatcher,
+  type Match,
   type MatchParams,
   type MultiMatcher,
 } from '@remix-run/route-pattern/match'
+import * as Specificity from '@remix-run/route-pattern/specificity'
 
 import { type AnyMiddleware, type MiddlewareContext, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
@@ -13,12 +15,13 @@ import {
   RequestContext,
   type requestContextTypes,
 } from './request-context.ts'
-import type { RequestMethod } from './request-methods.ts'
+import { RequestMethods, type RequestMethod } from './request-methods.ts'
 import { type RouteMap, Route } from './route-map.ts'
 import {
   type RequestHandler,
   type Action,
   type Controller,
+  type ControllerActionMiddleware,
   isRequestHandler,
   isActionObject,
   isController,
@@ -104,11 +107,12 @@ export type MapHandler<
   target extends MapTarget,
   context extends AnyContext = RequestContext,
   middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  actionMiddleware = target extends RouteMap ? ControllerActionMiddleware<target> : never,
 > =
   target extends string ? Action<target, context, middleware> :
   target extends RoutePattern<infer pattern extends string> ? Action<RoutePattern<pattern>, context, middleware> :
   target extends Route<any, any> ? Action<target, context, middleware> :
-  target extends RouteMap ? Controller<target, context, middleware> :
+  target extends RouteMap ? Controller<target, context, middleware, actionMiddleware> :
   never
 
 declare const routeBuilderContext: unique symbol
@@ -144,9 +148,10 @@ export interface RouteBuilder<context extends AnyContext = RequestContext> {
     target extends MapTarget,
     handlerContext extends AnyContext = context,
     const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+    const actionMiddleware = target extends RouteMap ? ControllerActionMiddleware<target> : never,
   >(
     target: target,
-    handler: MapHandler<target, handlerContext, middleware> &
+    handler: MapHandler<target, handlerContext, middleware, actionMiddleware> &
       ContextCompatibility<context, handlerContext, middleware>,
   ): void
   /**
@@ -247,6 +252,30 @@ function noMatchHandler({ url }: RequestContext): Response {
   return new Response(`Not Found: ${url.pathname}`, { status: 404 })
 }
 
+function noMethodMatchHandler(
+  { method }: RequestContext,
+  allowedMethods: RequestMethod[],
+): Response {
+  return new Response(`Method Not Allowed: ${method}`, {
+    status: 405,
+    headers: { Allow: allowedMethods.join(', ') },
+  })
+}
+
+function headResponse(response: Response): Response {
+  if (response.body === null) {
+    return response
+  }
+
+  response.body.cancel().catch(() => {})
+
+  return new Response(null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  })
+}
+
 function normalizeMiddleware(
   middleware: readonly AnyMiddleware[] | undefined,
 ): AnyMiddleware[] | undefined {
@@ -343,34 +372,82 @@ export function createRouter<
   let matcher = options?.matcher ?? createMultiMatcher<MatchData>()
   let routerMiddleware = normalizeMiddleware(options?.middleware)
 
+  // Contexts whose HEAD request was served by a GET route
+  let headFallbackContexts = new WeakSet<RequestContext>()
+
   async function dispatchRouter(context: RequestContext): Promise<Response> {
     let dispatch = () => dispatchMatches(context)
+    let response = routerMiddleware
+      ? await runMiddleware(routerMiddleware, context, dispatch)
+      : await dispatch()
 
-    if (routerMiddleware) {
-      return runMiddleware(routerMiddleware, context, dispatch)
-    }
-
-    return dispatch()
+    // Strip the body after router middleware so it sees the same response as for GET
+    return headFallbackContexts.has(context) ? headResponse(response) : response
   }
 
   async function dispatchMatches(context: RequestContext): Promise<Response> {
+    // The most specific GET match that may serve a HEAD request when no HEAD (or ANY) route
+    // matches with the same specificity
+    let headFallback: Match<string, MatchData> | null = null
+    let allowedMethods: Set<RequestMethod> | null = null
+
     for (let match of matcher.matchAll(context.url)) {
+      // Once a GET fallback is found, only an equally specific HEAD/ANY match may still win;
+      // anything less specific means the fallback is the best match for this HEAD request
+      if (headFallback !== null && !Specificity.equal(match, headFallback)) {
+        break
+      }
+
       let route = match.data
 
       if (route.method !== context.method && route.method !== 'ANY') {
+        if (context.method === 'HEAD' && route.method === 'GET') {
+          headFallback ??= match
+        } else {
+          allowedMethods ??= new Set()
+          allowedMethods.add(route.method)
+        }
+
         continue
       }
 
-      context.params = { ...context.params, ...match.params }
+      return dispatchMatch(match, context)
+    }
 
-      if (route.middleware) {
-        return runMiddleware(route.middleware, context, route.handler)
-      }
+    if (headFallback !== null) {
+      headFallbackContexts.add(context)
+      return dispatchMatch(headFallback, context)
+    }
 
-      return raceRequestAbort(Promise.resolve(route.handler(context)), context.request)
+    if (allowedMethods !== null) {
+      let methods = allowedMethods
+      // GET routes also serve HEAD requests, so advertise HEAD whenever GET is allowed
+      let allow = RequestMethods.filter(
+        (method) => methods.has(method) || (method === 'HEAD' && methods.has('GET')),
+      )
+
+      return raceRequestAbort(
+        Promise.resolve(noMethodMatchHandler(context, allow)),
+        context.request,
+      )
     }
 
     return raceRequestAbort(Promise.resolve(defaultHandler(context)), context.request)
+  }
+
+  function dispatchMatch(
+    match: Match<string, MatchData>,
+    context: RequestContext,
+  ): Promise<Response> {
+    let route = match.data
+
+    context.params = { ...context.params, ...match.params }
+
+    if (route.middleware) {
+      return runMiddleware(route.middleware, context, route.handler)
+    }
+
+    return raceRequestAbort(Promise.resolve(route.handler(context)), context.request)
   }
 
   function registerRoute(
@@ -518,7 +595,8 @@ export function createRouter<
 
   let router: Router<RouterContext> = {
     ...rootBuilder,
-    fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+    fetch(input: string | URL | Request, ...args: [init?: RequestInit]): Promise<Response> {
+      let [init] = args
       let context = createRequestContext(input, init)
       context.router = router
 

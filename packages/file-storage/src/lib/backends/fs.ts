@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
-import * as fsp from 'node:fs/promises'
+import fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { openLazyFile, writeFile } from '@remix-run/fs'
+import { openLazyFile } from '@remix-run/fs'
 import type { LazyFile } from '@remix-run/lazy-file'
 
 import type {
@@ -15,13 +15,27 @@ import type {
 /**
  * Creates a {@link FileStorage} that is backed by a filesystem directory using `node:fs`.
  *
- * Important: No attempt is made to avoid overwriting existing files, so the directory used should
- * be a new directory solely dedicated to this storage object.
+ * Use a directory dedicated to this backend and managed by the application, with consistent
+ * filesystem user, groups, and directory inheritance rules across restarts and deployments.
+ * Existing storage directories can be reused; storing a file under an existing key replaces
+ * that entry.
  *
- * Note: Keys have no correlation to file names on disk, so they may be any string including
- * characters that are not valid in file names. Additionally, individual `File` names have no
- * correlation to names of files on disk, so multiple files with the same name may be stored in the
- * same storage object.
+ * Writes stage complete content and metadata before replacing their existing files with two
+ * atomic renames. Upload failures during staging preserve the previous entry. If the content
+ * rename succeeds but the metadata rename fails, or the process stops between them, new content
+ * remains with old metadata (or no metadata for a new key). A rejected write may have changed
+ * the content. The storage format remains compatible with older versions.
+ *
+ * Requires a filesystem that supports atomic rename and permission to create, rename, and remove
+ * files in the storage subdirectories. Existing POSIX read/write/execute mode bits are preserved;
+ * owner, group, and ACLs follow the filesystem's rules for newly created files. Custom per-file
+ * ownership and ACL changes are not preserved. Callers must coordinate overlapping operations,
+ * including consumption of returned lazy files. Temporary cleanup is best-effort, and power-loss
+ * durability is not guaranteed.
+ *
+ * Keys are hashed to determine paths on disk, so they may contain characters that are not valid
+ * in filenames. A file's name and other metadata do not affect its storage path; files with the
+ * same name can be stored under different keys.
  *
  * @param directory The directory where files are stored
  * @returns A new {@link FileStorage} backed by a filesystem directory
@@ -56,30 +70,63 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
     }
   }
 
-  async function putFile(key: string, file: FileLike): Promise<LazyFile> {
+  async function putFile(
+    key: string,
+    file: FileLike,
+  ): Promise<{ filePath: string; meta: FileMetadata }> {
     let { directory, filePath, metaPath } = await getPaths(key)
 
-    // Ensure directory exists
     await fsp.mkdir(directory, { recursive: true })
 
-    await writeFile(filePath, file)
+    let metaMode = await readFileMode(metaPath)
+    let dataMode = (await readFileMode(filePath)) ?? metaMode
+    let uploadId = crypto.randomUUID()
+    let tempDataPath = `${filePath}.${uploadId}.upload`
+    let tempMetaPath = `${metaPath}.${uploadId}.upload`
+    let dataHandle = await fsp.open(tempDataPath, 'wx', dataMode)
+    let tempMetadataCreated = false
 
-    let meta: FileMetadata = {
-      key,
-      lastModified: file.lastModified,
-      name: file.name,
-      size: file.size,
-      type: file.type,
+    try {
+      let meta: FileMetadata
+      try {
+        // Preserve the previous mode even when the process umask has changed.
+        if (dataMode !== undefined) await dataHandle.chmod(dataMode)
+        for await (let chunk of file.stream()) {
+          await dataHandle.writeFile(chunk)
+        }
+        // Streaming uploads may not expose their metadata until their content has been consumed.
+        meta = {
+          key,
+          lastModified: file.lastModified,
+          name: file.name,
+          size: (await dataHandle.stat()).size,
+          type: file.type,
+        }
+      } finally {
+        await dataHandle.close()
+      }
+
+      let metaHandle = await fsp.open(tempMetaPath, 'wx', metaMode)
+      tempMetadataCreated = true
+      try {
+        if (metaMode !== undefined) await metaHandle.chmod(metaMode)
+        await metaHandle.writeFile(JSON.stringify(meta))
+      } finally {
+        await metaHandle.close()
+      }
+
+      // Both files are complete before publication, but the two renames are not a transaction.
+      await fsp.rename(tempDataPath, filePath)
+      await fsp.rename(tempMetaPath, metaPath)
+
+      return { filePath, meta }
+    } finally {
+      // Cleanup must not mask a write error or turn a successful publication into a failure.
+      await fsp.rm(tempDataPath, { force: true }).catch(() => {})
+      if (tempMetadataCreated) {
+        await fsp.rm(tempMetaPath, { force: true }).catch(() => {})
+      }
     }
-    await fsp.writeFile(metaPath, JSON.stringify(meta))
-
-    let metaData = await readMetadata(metaPath)
-
-    return openLazyFile(filePath, {
-      lastModified: metaData.lastModified,
-      name: metaData.name,
-      type: metaData.type,
-    })
   }
 
   return {
@@ -158,8 +205,13 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
         files,
       }
     },
-    put(key: string, file: FileLike): Promise<LazyFile> {
-      return putFile(key, file)
+    async put(key: string, file: FileLike): Promise<LazyFile> {
+      let { filePath, meta } = await putFile(key, file)
+      return openLazyFile(filePath, {
+        lastModified: meta.lastModified,
+        name: meta.name,
+        type: meta.type,
+      })
     },
     async remove(key: string): Promise<void> {
       let { directory, filePath, metaPath } = await getPaths(key)
@@ -181,6 +233,15 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
     async set(key: string, file: FileLike): Promise<void> {
       await putFile(key, file)
     },
+  }
+}
+
+async function readFileMode(filePath: string): Promise<number | undefined> {
+  try {
+    return (await fsp.stat(filePath)).mode & 0o777
+  } catch (error) {
+    if (isNoEntityError(error)) return undefined
+    throw error
   }
 }
 

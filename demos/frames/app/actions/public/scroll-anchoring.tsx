@@ -1,4 +1,4 @@
-import { clientEntry, Frame, css, on, type Handle } from 'remix/ui'
+import { clientEntry, Frame, css, on, type Handle } from 'remix/component'
 
 import { routes } from '../../routes.ts'
 import { leadStyle, mutedStyle, panelStyle, sectionHeadingStyle } from '../../ui/public/styles.ts'

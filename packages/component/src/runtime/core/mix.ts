@@ -1,0 +1,169 @@
+import type { ElementProps } from './vnode.ts'
+import { isRemixElement } from './vnode.ts'
+
+// Stop mixins that return themselves from expanding forever.
+const MAX_MIX_DESCRIPTORS = 1024
+
+interface MixDescriptor {
+  type: (...args: any[]) => unknown
+  args: readonly unknown[]
+}
+
+type MixDescriptorRunner = (
+  descriptor: MixDescriptor,
+  index: number,
+  mixinProps: ElementProps,
+) => unknown
+
+/**
+ * Composes an element's `mix` descriptors into its final props.
+ *
+ * @param hostType Host element tag name the mixins are composed for.
+ * @param props Original element props, including `mix`.
+ * @param runDescriptor Runs each mixin using the caller's state and error handling.
+ * @returns The composed props.
+ */
+export function composeMixedProps(
+  hostType: string,
+  props: ElementProps,
+  runDescriptor: MixDescriptorRunner,
+): ElementProps {
+  let descriptors = resolveMixDescriptors(props)
+  let composedProps = withoutMix(props)
+  let mixinProps: ElementProps | undefined
+
+  for (let index = 0; index < descriptors.length && index < MAX_MIX_DESCRIPTORS; index++) {
+    mixinProps ??= withoutMixinContentProps(composedProps)
+    let result = runDescriptor(descriptors[index], index, mixinProps)
+    if (!result) continue
+    if (isMixinElementFunction(result)) continue
+
+    let returnedDescriptors = resolveReturnedMixDescriptors(result)
+    if (returnedDescriptors) {
+      for (let returned of returnedDescriptors) descriptors.push(returned)
+      continue
+    }
+
+    if (!isRemixElement(result)) {
+      console.error(new Error('mixins must return a remix element'))
+      continue
+    }
+
+    let resultType =
+      typeof result.type === 'string'
+        ? result.type
+        : isMixinElementFunction(result.type)
+          ? result.type.__rmxMixinElementType
+          : null
+    if (resultType !== hostType) {
+      console.error(new Error('mixins must return an element with the same host type'))
+      continue
+    }
+
+    let nextProps = sanitizeReturnedMixinProps(result.props)
+    for (let nested of resolveMixDescriptors(nextProps)) descriptors.push(nested)
+    composedProps = { ...composedProps, ...withoutMix(nextProps) }
+    mixinProps = undefined
+  }
+
+  let nextMix = props.mix
+  // A mixin can retain its input props. Do not add `mix` to that same object.
+  if (nextMix !== undefined && composedProps === mixinProps) {
+    return { ...composedProps, mix: nextMix }
+  }
+  if (nextMix !== undefined) composedProps.mix = nextMix
+  return composedProps
+}
+
+// JSX creation flattens nested mix arrays before composition.
+function resolveMixDescriptors(props: ElementProps): MixDescriptor[] {
+  let mix = props.mix
+  if (!mix) return []
+  if (Array.isArray(mix)) {
+    if (mix.length === 0) return []
+    return mix.filter(Boolean) as MixDescriptor[]
+  }
+  return [mix] as MixDescriptor[]
+}
+
+function withoutMix(props: ElementProps): ElementProps {
+  if (!('mix' in props)) return props
+  let { mix: _mix, ...output } = props
+  return output
+}
+
+function withoutMixinContentProps(props: ElementProps): ElementProps {
+  if (!hasMixinContentProps(props)) return props
+  let {
+    children: _children,
+    innerHTML: _innerHTML,
+    srcDoc: _srcDoc,
+    srcdoc: _srcdoc,
+    outerHTML: _outerHTML,
+    ...output
+  } = props
+  return output
+}
+
+function sanitizeReturnedMixinProps(props: ElementProps): ElementProps {
+  if (!hasMixinContentProps(props)) return props
+  console.error(new Error('mixins must not return children or raw HTML props'))
+  return withoutMixinContentProps(props)
+}
+
+function hasMixinContentProps(props: ElementProps): boolean {
+  return (
+    'children' in props ||
+    'innerHTML' in props ||
+    'srcDoc' in props ||
+    'srcdoc' in props ||
+    'outerHTML' in props
+  )
+}
+
+export function isMixinDescriptor(value: unknown): value is MixDescriptor {
+  if (!value || typeof value !== 'object' || isRemixElement(value)) {
+    return false
+  }
+
+  let descriptor = value as { type?: unknown; args?: unknown }
+  return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
+}
+
+export function isMixinElementFunction(
+  value: unknown,
+): value is ((...args: unknown[]) => unknown) & { __rmxMixinElementType: string } {
+  if (typeof value !== 'function') return false
+  return '__rmxMixinElementType' in value
+}
+
+function resolveReturnedMixDescriptors(value: unknown): MixDescriptor[] | null {
+  let descriptors: MixDescriptor[] = []
+  if (!collectReturnedMixDescriptors(value, descriptors)) {
+    return null
+  }
+
+  return descriptors
+}
+
+function collectReturnedMixDescriptors(value: unknown, output: MixDescriptor[]): boolean {
+  if (!value) {
+    return true
+  }
+
+  if (Array.isArray(value)) {
+    for (let item of value) {
+      if (!collectReturnedMixDescriptors(item, output)) {
+        return false
+      }
+    }
+    return true
+  }
+
+  if (!isMixinDescriptor(value)) {
+    return false
+  }
+
+  output.push(value)
+  return true
+}

@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/ui'
+import type { Handle } from 'remix/component'
 
 import { StateSearchPage } from './public/state-search-page.tsx'
 import { routes } from '../routes.ts'

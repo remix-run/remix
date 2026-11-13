@@ -145,12 +145,12 @@ describe('compileRoutes', () => {
     ])
 
     assert.equal(
-      routes.resolveUrlPathname('/assets/npm/%40remix-run/ui/jsx-runtime.ts'),
-      '/repo/project/node_modules/@remix-run/ui/jsx-runtime.ts',
+      routes.resolveUrlPathname('/assets/npm/%40remix-run/component/jsx-runtime.ts'),
+      '/repo/project/node_modules/@remix-run/component/jsx-runtime.ts',
     )
     assert.equal(
-      routes.toUrlPathname('/repo/project/node_modules/@remix-run/ui/jsx-runtime.ts'),
-      '/assets/npm/%40remix-run/ui/jsx-runtime.ts',
+      routes.toUrlPathname('/repo/project/node_modules/@remix-run/component/jsx-runtime.ts'),
+      '/assets/npm/%40remix-run/component/jsx-runtime.ts',
     )
   })
 

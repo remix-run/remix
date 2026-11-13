@@ -42,7 +42,13 @@ import {
   getPackagePath,
 } from './utils/packages.ts'
 import { readJson, fileExists } from './utils/fs.ts'
-import { createPublishPlan, getReleaseNotes, isPackageVersionPublished } from './utils/publish.ts'
+import {
+  createPublishPlan,
+  fetchDocsReleaseTags,
+  getDocsReleaseTag,
+  getReleaseNotes,
+  isPackageVersionPublished,
+} from './utils/publish.ts'
 
 const rootDir = getRootDir()
 
@@ -256,14 +262,11 @@ function isShallowRepository(): boolean {
 }
 
 function ensureGitHistoryForVersionLookup() {
-  if (isShallowRepository()) {
-    console.log('\nRepository is shallow, fetching full history for release tag anchoring...')
-    logAndExec('git fetch --unshallow --tags origin')
-    return
-  }
+  if (!isShallowRepository()) return
 
-  console.log('\nFetching tags from origin...')
-  logAndExec('git fetch --tags origin')
+  console.log('\nRepository is shallow, fetching source history for release tag anchoring...')
+  let sha = logAndExec('git', ['rev-parse', 'HEAD'], true)
+  logAndExec('git', ['fetch', '--no-tags', '--unshallow', 'origin', sha])
 }
 
 function resolveTagPlans(packages: PublishedPackage[]): TagPlan[] {
@@ -577,8 +580,8 @@ async function main() {
 
   // Configure git
   console.log('\nConfiguring git...')
-  logAndExec('git config user.name "Remix Run Bot"')
-  logAndExec('git config user.email "hello@remix.run"')
+  logAndExec('git', ['config', 'user.name', 'Remix Run Bot'])
+  logAndExec('git', ['config', 'user.email', 'hello@remix.run'])
 
   // Create tags (skip if already exist)
   console.log(`\nCreating tag${tagPlans.length === 1 ? '' : 's'} for published packages...`)
@@ -652,6 +655,20 @@ async function main() {
     }
     console.error('\nYou may need to create these releases manually.')
     process.exit(1)
+  }
+
+  if (process.env.GITHUB_OUTPUT) {
+    let docsCandidates = getLocalPackages().map((pkg) => ({
+      packageName: pkg.npmName,
+      version: pkg.localVersion,
+      tag: getGitTag(pkg.npmName, pkg.localVersion),
+    }))
+    console.log('\nFetching active release tags for docs deployment...')
+    fetchDocsReleaseTags(docsCandidates)
+    let docsTag = getDocsReleaseTag(docsCandidates)
+    if (docsTag !== undefined) {
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `tag=${docsTag}\n`)
+    }
   }
 
   console.log('\n✅ Done.')

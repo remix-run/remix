@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/remix/schema/remix.json",
+  "assets": {
+    "rootDir": "../..",
+    "basePath": "/assets",
+    "mounts": {
+      "app": "demos/i18n/app",
+      "npm": "node_modules",
+      "packages": "packages"
+    },
+    "allowFiles": ["demos/i18n/app/routes.ts", "demos/i18n/app/**/public/**"],
+    "allowPackages": ["i18next", "remix"],
+    "denyFiles": ["demos/i18n/app/**/*.test.*"]
+  }
+}

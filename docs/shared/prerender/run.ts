@@ -16,6 +16,8 @@ export interface PrerenderOptions {
   paths?: string[]
   crawlOptions?: Omit<CrawlOptions, 'paths'>
   pagefindSiteDir?: string
+  // The site's asset folder, where Pagefind writes its bundle. Defaults to `assets`.
+  assetsDir?: string
   onFinally?: () => void | Promise<void>
 }
 
@@ -23,7 +25,15 @@ export async function prerender<context extends RequestContext<any, any>>(
   router: Router<context>,
   options: PrerenderOptions,
 ): Promise<void> {
-  let { outputDir, publicDirs = [], paths, crawlOptions, pagefindSiteDir, onFinally } = options
+  let {
+    outputDir,
+    publicDirs = [],
+    paths,
+    crawlOptions,
+    pagefindSiteDir,
+    assetsDir = 'assets',
+    onFinally,
+  } = options
 
   try {
     for (let publicDir of publicDirs) {
@@ -38,22 +48,22 @@ export async function prerender<context extends RequestContext<any, any>>(
     }
 
     if (pagefindSiteDir != null) {
-      await runPagefind(pagefindSiteDir)
+      await runPagefind(pagefindSiteDir, assetsDir)
     }
   } finally {
     await onFinally?.()
   }
 }
 
-async function runPagefind(siteDir: string): Promise<void> {
+async function runPagefind(siteDir: string, assetsDir: string): Promise<void> {
   let pagefindArgs = [
     'exec',
     'pagefind',
     '--site',
     siteDir,
     '--output-subdir',
-    path.join(siteDir, 'assets', 'pagefind'),
+    path.join(siteDir, assetsDir, 'pagefind'),
   ]
   console.log(`Running Pagefind:\n  pnpm ${pagefindArgs.join(' ')}`)
-  await execFile('pnpm', pagefindArgs)
+  await execFile('pnpm', pagefindArgs, { shell: process.platform === 'win32' })
 }

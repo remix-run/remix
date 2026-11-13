@@ -1,6 +1,5 @@
-import { runE2ETestFile } from './worker-e2e-file.ts'
 import type { TestResults } from './reporters/results.ts'
-import { runServerTestFile } from './worker-server.ts'
+import { isRecord, runServerTestFile } from './worker-server.ts'
 import { createFailedResults } from './worker-results.ts'
 
 const workerData = await readWorkerData()
@@ -45,9 +44,12 @@ async function runWorkerProcessFile(value: unknown): Promise<TestResults | undef
       throw new Error('Invalid test worker process data')
     }
 
-    return value.type === 'e2e'
-      ? await runE2ETestFile(value, sendResults)
-      : await runServerTestFile(value)
+    if (value.type === 'e2e') {
+      let { runE2ETestFile } = await import('./worker-e2e-file.ts')
+      return await runE2ETestFile(value, sendResults)
+    }
+
+    return await runServerTestFile(value)
   } catch (error) {
     return createFailedResults(error)
   }
@@ -62,8 +64,4 @@ async function sendResults(results: TestResults): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     send(results, undefined, undefined, (error) => (error ? reject(error) : resolve()))
   })
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }

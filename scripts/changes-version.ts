@@ -18,7 +18,7 @@ import {
 import { colors, colorize } from './utils/color.ts'
 import { getPackageFile, getPackagePath } from './utils/packages.ts'
 import { readJson, writeJson, readFile, writeFile } from './utils/fs.ts'
-import { logAndExec } from './utils/process.ts'
+import { formatCommand, logAndExec } from './utils/process.ts'
 
 /**
  * Updates package.json version
@@ -144,19 +144,19 @@ function main() {
     let commitMessage = generateCommitMessage(releases)
     console.log(`git add .`)
     console.log()
-    console.log(`git commit -m "${commitMessage}"`)
+    console.log(formatCommand('git', ['commit', '-m', commitMessage]))
     console.log('```')
     console.log()
   } else {
     // Stage all changes
     console.log('Staging changes...')
-    logAndExec('git add .')
+    logAndExec('git', ['add', '.'])
     console.log()
 
     // Create commit
     let commitMessage = generateCommitMessage(releases)
     console.log('Creating commit...')
-    logAndExec(`git commit -m "${commitMessage}"`)
+    logAndExec('git', ['commit', '-m', commitMessage])
     console.log()
 
     // Success message (skip in CI since the workflow handles the rest)

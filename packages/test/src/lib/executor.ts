@@ -3,6 +3,10 @@ import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
 import type { SerializedOnlyPattern } from './config.ts'
 
+// Test code may replace global timers before hooks or subsequent deadlines run.
+const realSetTimeout = globalThis.setTimeout.bind(globalThis)
+const realClearTimeout = globalThis.clearTimeout.bind(globalThis)
+
 type PendingMeta = boolean | string
 
 interface RunnableOptions {
@@ -148,6 +152,7 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
       }
       let testError: unknown
       let afterEachError: unknown
+      let cleanupError: Error | undefined
       let testFailed = false
       let afterEachFailed = false
 
@@ -173,7 +178,11 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
         testFailed = true
         testError = error
       } finally {
-        await cleanup()
+        try {
+          await cleanup()
+        } catch (error) {
+          cleanupError = createHookFailure('cleanup', error)
+        }
         if (suite.afterEach) {
           try {
             await runLifecycleHooks('afterEach', suite.afterEach, undefined, undefined, true)
@@ -183,10 +192,11 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
           }
         }
 
-        if (testFailed || afterEachFailed) {
+        if (testFailed || cleanupError || afterEachFailed) {
           result.status = 'failed'
           result.error = createTestError(
             testFailed ? testError : undefined,
+            cleanupError,
             afterEachFailed ? createHookFailure('afterEach', afterEachError) : undefined,
           )
           results.failed++
@@ -351,7 +361,7 @@ async function runRunnable(
   let timeoutPromise =
     timeout && timeout > 0
       ? new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => {
+          timeoutId = realSetTimeout(() => {
             let error = createTimeoutError(label, timeout)
             reject(error)
             abortController?.abort(error)
@@ -366,7 +376,7 @@ async function runRunnable(
       ...(timeoutPromise ? [timeoutPromise] : []),
     ])
   } finally {
-    if (timeoutId) clearTimeout(timeoutId)
+    if (timeoutId !== undefined) realClearTimeout(timeoutId)
     for (let cleanup of abortCleanups) cleanup()
   }
 }
@@ -407,23 +417,35 @@ function createHookFailure(hookName: string, error: unknown): Error {
 
 function createTestError(
   primaryError: unknown,
-  secondaryError: Error | undefined = undefined,
+  ...secondaryErrors: Array<Error | undefined>
 ): TestResult['error'] {
   let message = primaryError !== undefined ? getErrorMessage(primaryError) : undefined
-  let stack = primaryError instanceof Error ? primaryError.stack : undefined
+  let stack = getErrorStack(primaryError)
 
-  if (secondaryError) {
+  for (let secondaryError of secondaryErrors) {
+    if (!secondaryError) continue
     message = message ? `${message}\n${secondaryError.message}` : secondaryError.message
-    stack =
-      stack && secondaryError.stack
-        ? `${stack}\n${secondaryError.stack}`
-        : (stack ?? secondaryError.stack)
+    let secondaryStack = getErrorStack(secondaryError)
+    stack = stack && secondaryStack ? `${stack}\n\n${secondaryStack}` : (stack ?? secondaryStack)
   }
 
   return {
     message: message ?? 'Test failed',
     stack,
   }
+}
+
+function getErrorStack(error: unknown, seen = new Set<Error>()): string | undefined {
+  if (!(error instanceof Error) || seen.has(error)) return undefined
+  seen.add(error)
+
+  let stack = error.stack
+  let causes = error instanceof AggregateError ? [error.cause, ...error.errors] : [error.cause]
+  for (let cause of causes) {
+    let causeStack = getErrorStack(cause, seen)
+    if (causeStack) stack = stack ? `${stack}\n\n${causeStack}` : causeStack
+  }
+  return stack
 }
 
 function getErrorMessage(error: unknown): string {

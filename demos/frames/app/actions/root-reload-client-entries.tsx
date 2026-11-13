@@ -1,5 +1,5 @@
 import { createAction } from 'remix/router'
-import { css, type Handle } from 'remix/ui'
+import { css, type Handle } from 'remix/component'
 
 import {
   PersistentRootReloadEntry,
@@ -96,9 +96,5 @@ function RootReloadClientEntriesPage(handle: Handle<RootReloadClientEntriesPageP
 }
 
 function delay(ms: number) {
-  if (process.env.NODE_ENV === 'test') {
-    ms = 10
-  }
-
   return new Promise((resolve) => setTimeout(resolve, ms))
 }

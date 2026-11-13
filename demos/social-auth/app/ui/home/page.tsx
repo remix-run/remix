@@ -1,4 +1,4 @@
-import type { Handle } from 'remix/ui'
+import type { Handle } from 'remix/component'
 
 import type { ExternalProviderLink } from '../../utils/external-auth.ts'
 import { AuthCard } from '../auth-card.tsx'

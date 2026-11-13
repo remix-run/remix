@@ -3,11 +3,18 @@ import { describe, it } from '@remix-run/test'
 
 import {
   type FileUploadHandler,
+  type FileUpload,
   FormDataParseError,
   MaxFilesExceededError,
   parseFormData,
 } from './form-data.ts'
-import { MultipartParseError, MaxPartsExceededError, MaxTotalSizeExceededError } from '../index.ts'
+import {
+  MultipartParseError,
+  MaxFileSizeExceededError,
+  MaxHeaderSizeExceededError,
+  MaxPartsExceededError,
+  MaxTotalSizeExceededError,
+} from '../index.ts'
 
 // Native File normalizes some MIME types differently across runtimes (for example
 // Bun adds charset for text types and rewrites application/javascript), so derive
@@ -17,6 +24,159 @@ function normalizeFileType(type: string): string {
 }
 
 describe('parseFormData', () => {
+  it('reports the uploaded media type independently of the filename extension', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/form-data; boundary=ExampleBoundary' },
+      body: [
+        '--ExampleBoundary',
+        'Content-Disposition: form-data; name="file"; filename="example.txt"',
+        'Content-Type: Text/HTML; charset=UTF-8',
+        '',
+        '<p>Example</p>',
+        '--ExampleBoundary--',
+      ].join('\r\n'),
+    })
+
+    let formData = await parseFormData(request)
+    let file = formData.get('file')
+    assert.ok(file instanceof File)
+    assert.equal(file.name, 'example.txt')
+    assert.equal(file.type, normalizeFileType('Text/HTML'))
+    assert.equal(await file.text(), '<p>Example</p>')
+  })
+
+  function createMixedCaseMultipartRequest(): Request {
+    return new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'Multipart/Form-Data; boundary="ExampleBoundary"' },
+      body: [
+        '--ExampleBoundary',
+        'Content-Disposition: form-data; name="text"',
+        '',
+        'hello',
+        '--ExampleBoundary',
+        'Content-Disposition: form-data; name="file"; filename="example.txt"',
+        'Content-Type: text/plain',
+        '',
+        'world',
+        '--ExampleBoundary--',
+      ].join('\r\n'),
+    })
+  }
+
+  it('calls the upload handler for mixed-case multipart media types', async () => {
+    let formData = await parseFormData(createMixedCaseMultipartRequest(), async (upload) => {
+      assert.equal(upload.name, 'example.txt')
+      return `stored: ${await upload.text()}`
+    })
+
+    assert.equal(formData.get('text'), 'hello')
+    assert.equal(formData.get('file'), 'stored: world')
+  })
+
+  it('enforces maxFiles for mixed-case multipart media types', async () => {
+    await assert.rejects(
+      () => parseFormData(createMixedCaseMultipartRequest(), { maxFiles: 0 }),
+      MaxFilesExceededError,
+    )
+  })
+
+  it('enforces maxFileSize for mixed-case multipart media types', async () => {
+    await assert.rejects(
+      () => parseFormData(createMixedCaseMultipartRequest(), { maxFileSize: 1 }),
+      MaxFileSizeExceededError,
+    )
+  })
+
+  it('enforces maxHeaderSize for mixed-case multipart media types', async () => {
+    await assert.rejects(
+      () => parseFormData(createMixedCaseMultipartRequest(), { maxHeaderSize: 1 }),
+      MaxHeaderSizeExceededError,
+    )
+  })
+
+  it('enforces maxParts for mixed-case multipart media types', async () => {
+    await assert.rejects(
+      () => parseFormData(createMixedCaseMultipartRequest(), { maxParts: 1 }),
+      MaxPartsExceededError,
+    )
+  })
+
+  it('enforces maxTotalSize for mixed-case multipart media types', async () => {
+    await assert.rejects(
+      () => parseFormData(createMixedCaseMultipartRequest(), { maxTotalSize: 1 }),
+      MaxTotalSizeExceededError,
+    )
+  })
+
+  it('enforces maxParts for mixed-case urlencoded media types', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'Application/X-Www-Form-Urlencoded; charset=UTF-8' },
+      body: 'tag=red&tag=green',
+    })
+
+    await assert.rejects(() => parseFormData(request, { maxParts: 1 }), MaxPartsExceededError)
+  })
+
+  it('enforces maxTotalSize for mixed-case urlencoded media types', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'APPLICATION/X-WWW-FORM-URLENCODED' },
+      body: 'tag=red',
+    })
+
+    await assert.rejects(
+      () => parseFormData(request, { maxTotalSize: 1 }),
+      MaxTotalSizeExceededError,
+    )
+  })
+
+  it('preserves repeated fields for mixed-case urlencoded media types', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'Application/X-Www-Form-Urlencoded; charset=UTF-8' },
+      body: 'tag=red&tag=green',
+    })
+
+    let formData = await parseFormData(request, { maxParts: 2 })
+    assert.deepEqual(formData.getAll('tag'), ['red', 'green'])
+  })
+
+  it('does not parse media types that only start with the urlencoded media type', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded-extra' },
+      body: 'tag=red&tag=green',
+    })
+
+    await assert.rejects(
+      () => parseFormData(request, { maxParts: 1, maxTotalSize: 7 }),
+      FormDataParseError,
+    )
+    assert.equal(request.bodyUsed, false)
+  })
+
+  it('rejects unsupported media types even if the native parser accepts them', async () => {
+    let request = new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded-extra' },
+      body: 'tag=red&tag=green',
+    })
+    request.formData = async function () {
+      let formData = new FormData()
+      formData.append('tag', 'red')
+      formData.append('tag', 'green')
+      return formData
+    }
+
+    await assert.rejects(
+      () => parseFormData(request, { maxParts: 1, maxTotalSize: 7 }),
+      FormDataParseError,
+    )
+  })
+
   it('parses a application/x-www-form-urlencoded request', async () => {
     let request = new Request('https://remix.run', {
       method: 'POST',
@@ -465,5 +625,83 @@ describe('parseFormData', () => {
     let file = formData.get('file')
     assert.ok(file instanceof File)
     assert.equal(file.name, '%2Fetc%2Fpasswd')
+  })
+})
+
+describe('FileUpload', () => {
+  function createUploadRequest(content: Uint8Array): Request {
+    let encoder = new TextEncoder()
+    return new Request('https://remix.run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/form-data; boundary=----BOUNDARY' },
+      body: new Blob([
+        encoder.encode(
+          [
+            '------BOUNDARY',
+            'Content-Disposition: form-data; name="file"; filename="example.bin"',
+            'Content-Type: application/octet-stream',
+            '',
+            '',
+          ].join('\r\n'),
+        ),
+        content as Uint8Array<ArrayBuffer>,
+        encoder.encode('\r\n------BOUNDARY--\r\n'),
+      ]),
+    })
+  }
+
+  // Some runtimes (Bun) store a plain File in FormData, so use the upload the handler receives.
+  async function parseUpload(content: Uint8Array): Promise<FileUpload> {
+    let upload: FileUpload | undefined
+    await parseFormData(createUploadRequest(content), { maxFileSize: 1024 * 1024 }, (file) => {
+      upload = file
+    })
+    assert.ok(upload)
+    return upload
+  }
+
+  function createContent(size: number): Uint8Array {
+    let content = new Uint8Array(size)
+    for (let index = 0; index < size; index++) content[index] = index % 251
+    return content
+  }
+
+  it('streams the full contents of a file larger than one chunk', async () => {
+    let content = createContent(200 * 1024 + 7)
+    let file = await parseUpload(content)
+
+    let chunks: Uint8Array[] = []
+    for await (let chunk of file.stream()) chunks.push(chunk)
+
+    assert.ok(chunks.length > 1)
+    assert.deepEqual(new Uint8Array(await new Blob(chunks as BlobPart[]).arrayBuffer()), content)
+  })
+
+  it('streams an empty file', async () => {
+    let file = await parseUpload(new Uint8Array(0))
+
+    let chunks: Uint8Array[] = []
+    for await (let chunk of file.stream()) chunks.push(chunk)
+
+    assert.equal(file.size, 0)
+    assert.deepEqual(chunks, [])
+  })
+
+  it('supports reading the stream into a caller-provided buffer', async () => {
+    let content = createContent(100 * 1024)
+    let file = await parseUpload(content)
+
+    let reader = file.stream().getReader({ mode: 'byob' })
+    let received = new Uint8Array(content.length)
+    let offset = 0
+    while (true) {
+      let { done, value } = await reader.read(new Uint8Array(16 * 1024))
+      if (done || value == null) break
+      received.set(value, offset)
+      offset += value.byteLength
+    }
+
+    assert.equal(offset, content.length)
+    assert.deepEqual(received, content)
   })
 })

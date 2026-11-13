@@ -73,6 +73,83 @@ describe('db command', () => {
     }
   })
 
+  it('migrates and rolls back zero-padded sequential prefixes', async () => {
+    let projectDir = await createDatabaseProject()
+
+    try {
+      await fs.rename(
+        path.join(projectDir, 'db/migrations/20260715120000_create_first'),
+        path.join(projectDir, 'db/migrations/0001_create_first'),
+      )
+      await fs.rename(
+        path.join(projectDir, 'db/migrations/20260715130000_create_second'),
+        path.join(projectDir, 'db/migrations/0002_create_second'),
+      )
+
+      let migrate = await captureOutput(() =>
+        runRemix(['db', 'migrate', '--to', '0001'], { cwd: projectDir }),
+      )
+      assert.equal(migrate.exitCode, 0, migrate.stderr)
+      assert.equal(migrate.stdout, 'applied 0001_create_first\n')
+      let tables = readTableNames(projectDir)
+      assert.ok(tables.includes('first_table'))
+      assert.equal(tables.includes('second_table'), false)
+
+      let rollback = await captureOutput(() =>
+        runRemix(['db', 'rollback', '--to', '0001_create_first'], { cwd: projectDir }),
+      )
+      assert.equal(rollback.exitCode, 0, rollback.stderr)
+      assert.equal(rollback.stdout, 'reverted 0001_create_first\n')
+      assert.equal(readTableNames(projectDir).includes('first_table'), false)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects mixed prefix widths before applying migrations', async () => {
+    let projectDir = await createDatabaseProject()
+
+    try {
+      await fs.rename(
+        path.join(projectDir, 'db/migrations/20260715120000_create_first'),
+        path.join(projectDir, 'db/migrations/0001_create_first'),
+      )
+
+      let result = await captureOutput(() => runRemix(['db', 'migrate'], { cwd: projectDir }))
+      assert.equal(result.exitCode, 1)
+      assert.match(result.stderr, /All migration prefixes must have the same number of digits/)
+      assert.equal(readTableNames(projectDir).includes('first_table'), false)
+      assert.equal(readTableNames(projectDir).includes('second_table'), false)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects prefixes longer than 64 digits before applying migrations', async () => {
+    let projectDir = await createDatabaseProject()
+
+    try {
+      await fs.rename(
+        path.join(projectDir, 'db/migrations/20260715120000_create_first'),
+        path.join(projectDir, 'db/migrations', '1'.repeat(65) + '_create_first'),
+      )
+      await fs.rename(
+        path.join(projectDir, 'db/migrations/20260715130000_create_second'),
+        path.join(projectDir, 'db/migrations', '2'.repeat(65) + '_create_second'),
+      )
+
+      let result = await captureOutput(() => runRemix(['db', 'migrate'], { cwd: projectDir }))
+      assert.equal(result.exitCode, 1)
+      assert.match(result.stderr, /Expected format <digits>_<name> with 1 to 64 digits/)
+      let tables = readTableNames(projectDir)
+      assert.equal(tables.includes('first_table'), false)
+      assert.equal(tables.includes('second_table'), false)
+      assert.equal(tables.includes('data_table_migrations'), false)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('applies a targeted migration', async () => {
     let projectDir = await createDatabaseProject()
 

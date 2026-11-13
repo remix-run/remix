@@ -156,6 +156,16 @@ describe('SetCookie', () => {
     assert.equal(header.toString(), 'test=value; Expires=Thu, 22 Oct 2015 07:28:00 GMT')
   })
 
+  it('accepts and normalizes lowercase SameSite values', () => {
+    let header = new SetCookie({ name: 'test', value: 'value', sameSite: 'lax' })
+    assert.equal(header.sameSite, 'Lax')
+    assert.equal(header.toString(), 'test=value; SameSite=Lax')
+
+    header = new SetCookie({ name: 'test', value: 'value', sameSite: 'strict' })
+    assert.equal(header.sameSite, 'Strict')
+    assert.equal(header.toString(), 'test=value; SameSite=Strict')
+  })
+
   it('handles SameSite attribute case-insensitively', () => {
     let header = new SetCookie('test=value; SameSite=lax')
     assert.equal(header.sameSite, 'Lax')
@@ -165,6 +175,17 @@ describe('SetCookie', () => {
 
     header = new SetCookie('test=value; SameSite=NoNe')
     assert.equal(header.sameSite, 'None')
+  })
+
+  it('ignores invalid SameSite values', () => {
+    let header = new SetCookie('test=value; SameSite=nonesense')
+    assert.equal(header.sameSite, undefined)
+
+    header = new SetCookie('test=value; SameSite=strictly')
+    assert.equal(header.sameSite, undefined)
+
+    header = new SetCookie('test=value; SameSite=laxness')
+    assert.equal(header.sameSite, undefined)
   })
 
   it('handles cookies with empty value', () => {

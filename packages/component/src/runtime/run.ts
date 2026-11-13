@@ -1,0 +1,192 @@
+import { getNonceManager } from './nonce.ts'
+import { createFrame, setAppFrames } from './frame.ts'
+import { createScheduler } from './vdom.ts'
+import { createStyleManager } from '../style/stylesheet.ts'
+import type { ComponentErrorEvent, Handle } from './component.ts'
+import {
+  NamedFrameRegistry,
+  type LoadModule,
+  type ResolveFrame,
+  type ResolveFrameOptions,
+} from './frame-runtime.ts'
+import { startNavigationListener } from './navigation.ts'
+import { encodeFormDataAsSearchParams, normalizeFormLineBreaks } from './form-navigation.ts'
+import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
+import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
+import type { ProcessClientEntryPreloads } from './module-preloader.ts'
+
+/**
+ * Options for starting the client runtime with {@link run}.
+ */
+export interface RunInit {
+  /**
+   * Loads the named browser module export for a hydrated `clientEntry()`.
+   *
+   * Implementations usually call dynamic `import(moduleUrl)` and return
+   * `mod[exportName]`.
+   */
+  loadModule: LoadModule
+
+  /**
+   * Resolves browser-loaded frame content, including top-frame navigation and reloads.
+   *
+   * Defaults to fetching the frame source as HTML with the submitted form data, method, encoding,
+   * and abort signal. All requests send `X-Remix-Frame: true`, plus `X-Remix-Target` when named.
+   * The default resolver only fetches from the document origin, including
+   * redirects, but does not sanitize the returned HTML. Custom resolvers own their request,
+   * redirect, and content trust policies. Preserve the Response's `Content-Security-Policy` and
+   * `Content-Security-Policy-Report-Only` headers to translate matching resource nonces to the active
+   * document nonce when the policy identifies a single shared nonce for script and style elements.
+   * The report-only header is used only when the enforcing header is absent.
+   */
+  resolveFrame?: ResolveFrame
+
+  /** Processes module preloads discovered in late client entry responses before activation. */
+  processClientEntryPreloads?: ProcessClientEntryPreloads
+
+  /**
+   * Starts loading a page for `data-rmx-prefetch` links and `prefetch()` calls, replacing the
+   * default HTML fetch and asset prefetch hints. Use it with `resolveFrame` to reuse uncacheable HTML,
+   * for example to hold the response in memory until the next navigation to that URL and target.
+   * Named-frame links pass their target and use `data-rmx-src` as the source when specified.
+   */
+  prefetch?: PrefetchFrame
+}
+
+/**
+ * Events emitted by the application runtime.
+ */
+export type AppRuntimeEventMap = {
+  error: ComponentErrorEvent
+}
+
+/**
+ * Client runtime returned by {@link run}.
+ */
+export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
+  /** Access top-level and named frames in the application runtime. */
+  frames: Handle['frames']
+  /** Resolves after the current document finishes hydrating. */
+  ready(): Promise<void>
+  /** Flushes any queued component updates synchronously. */
+  flush(): void
+  /** Stops runtime listeners and disposes the top-level frame. */
+  dispose(): void
+}
+
+function getRequestBody(options?: ResolveFrameOptions): {
+  body?: BodyInit
+  encType?: string
+} {
+  let formData = options?.formData
+  if (!formData) return {}
+  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return {}
+
+  let encType = options?.encType?.toLowerCase()
+
+  if (encType === 'multipart/form-data') return { body: formData }
+
+  if (encType === 'text/plain') {
+    let body = ''
+    for (let [name, value] of formData) {
+      name = normalizeFormLineBreaks(name)
+      value = normalizeFormLineBreaks(typeof value === 'string' ? value : value.name)
+      body += `${name}=${value}\r\n`
+    }
+    return { body: new Blob([body], { type: 'text/plain' }), encType: 'text/plain' }
+  }
+
+  return {
+    body: encodeFormDataAsSearchParams(formData),
+    encType: 'application/x-www-form-urlencoded',
+  }
+}
+
+async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
+  let { body, encType } = getRequestBody(options)
+  let response = await fetchFrame(
+    src,
+    options?.target,
+    { body, method: options?.method, signal: options?.signal },
+    encType,
+  )
+
+  let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
+  if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
+    throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
+  }
+
+  return response
+}
+
+/**
+ * Starts the client-side Remix component runtime for the current document.
+ *
+ * @param init Runtime options for loading modules and customizing frame resolution.
+ * @returns The running application runtime.
+ */
+export function run(init: RunInit): AppRuntime {
+  getNonceManager()
+  let styleManager = createStyleManager()
+  let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
+  let scheduler = createScheduler(document, errorTarget, styleManager)
+
+  let resolveFrame = init.resolveFrame ?? defaultResolveFrame
+  let namedFrames = new NamedFrameRegistry()
+
+  let topFrame = createFrame(document, {
+    src: document.location.href,
+    errorTarget,
+    loadModule: init.loadModule,
+    resolveFrame,
+    pendingClientEntries: new Map(),
+    scheduler,
+    styleManager,
+    data: {},
+    moduleCache: new Map(),
+    moduleLoads: new Map(),
+    frameInstances: new WeakMap(),
+    namedFrames,
+    processClientEntryPreloads: init.processClientEntryPreloads,
+  })
+
+  let appController = new AbortController()
+  let frames: Handle['frames'] = {
+    top: topFrame.handle,
+    get(name) {
+      return namedFrames.get(name)
+    },
+  }
+  let clearAppFrames = setAppFrames(frames)
+  if (window.navigation) {
+    window.navigation.addEventListener(
+      'currententrychange',
+      (event) => {
+        if (event.navigationType === 'traverse') frames.top.src = window.location.href
+      },
+      { signal: appController.signal },
+    )
+  } else {
+    window.addEventListener('popstate', () => (frames.top.src = window.location.href), {
+      signal: appController.signal,
+    })
+  }
+  startNavigationListener(appController.signal, frames)
+  startPrefetching(appController.signal, init.prefetch)
+  let readyPromise = topFrame.ready().catch((error) => {
+    errorTarget.dispatchEvent(createComponentErrorEvent(error))
+    throw error
+  })
+
+  return Object.assign(errorTarget, {
+    frames,
+    ready: () => readyPromise,
+    flush: () => topFrame.flush(),
+    dispose: () => {
+      appController.abort()
+      topFrame.dispose()
+      styleManager.dispose()
+      clearAppFrames()
+    },
+  })
+}

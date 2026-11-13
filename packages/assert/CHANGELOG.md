@@ -1,3 +1,15 @@
+## v1.0.0
+
+### Major Changes
+
+- First stable release.
+
+## v0.3.1
+
+### Patch Changes
+
+- Declare package modules as side-effect-free.
+
 ## v0.3.0
 
 ### Minor Changes

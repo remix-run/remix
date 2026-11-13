@@ -1,19 +1,13 @@
-import { clientEntry, css, on, type Handle, type SerializableProps } from 'remix/ui'
+import { clientEntry, css, on, type Handle } from 'remix/component'
 
 const FADE_MS = 180
 const HOLD_MS = 1200
 
-type CopyState = 'idle' | 'copied' | 'failed' | 'resetting'
-
-interface PromptButtonProps extends SerializableProps {
-  text: string
-}
-
 // This component hydrates independently; the rest of the page stays static HTML.
 export const PromptButton = clientEntry(
   import.meta.url,
-  function PromptButton(handle: Handle<PromptButtonProps>) {
-    let state: CopyState = 'idle'
+  function PromptButton(handle: Handle<{ text: string }>) {
+    let state: 'idle' | 'copied' | 'failed' | 'resetting' = 'idle'
 
     return () => {
       let promptLabel = `\u201C${handle.props.text}\u201D`
@@ -29,7 +23,6 @@ export const PromptButton = clientEntry(
         <button
           type="button"
           mix={[
-            buttonStyle,
             on('click', async (_event, signal) => {
               try {
                 await navigator.clipboard.writeText(handle.props.text)
@@ -61,6 +54,27 @@ export const PromptButton = clientEntry(
               state = 'idle'
               await handle.update()
             }),
+            css({
+              appearance: 'none',
+              font: 'inherit',
+              textAlign: 'left',
+              cursor: 'pointer',
+              width: '100%',
+              display: 'flex',
+              gap: '16px',
+              alignItems: 'center',
+              padding: '16px',
+              border: 0,
+              borderRadius: '12px',
+              color: 'var(--text-primary)',
+              background: 'transparent',
+              transition: 'background-color 150ms ease, color 150ms ease',
+              '&:hover, &:focus-visible': {
+                background: 'var(--surface-4)',
+                color: 'var(--brand-blue)',
+                outline: 'none',
+              },
+            }),
           ]}
           style={
             active
@@ -71,13 +85,45 @@ export const PromptButton = clientEntry(
               : undefined
           }
         >
-          <span aria-hidden="true" mix={iconSlotStyle}>
+          <span
+            aria-hidden="true"
+            mix={css({
+              flex: '0 0 24px',
+              width: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              '& svg': {
+                width: '20px',
+                height: '20px',
+                display: 'block',
+                transform: 'rotate(180deg)',
+              },
+            })}
+          >
             <CopyIcon />
           </span>
-          <span mix={labelSlotStyle} style={{ opacity: state === 'resetting' ? 0 : 1 }}>
+          <span
+            mix={css({
+              alignItems: 'center',
+              display: 'flex',
+              fontSize: '14px',
+              flex: '1 1 0',
+              lineHeight: 1.5,
+              minWidth: 0,
+              position: 'relative',
+              transition: `opacity ${FADE_MS}ms ease`,
+            })}
+            style={{ opacity: state === 'resetting' ? 0 : 1 }}
+          >
             <span
               aria-hidden={state === 'idle' ? true : undefined}
-              mix={statusLabelStyle}
+              mix={css({
+                alignItems: 'center',
+                display: 'flex',
+                inset: 0,
+                position: 'absolute',
+              })}
               style={{ visibility: state === 'idle' ? 'hidden' : 'visible' }}
             >
               {label}
@@ -95,7 +141,7 @@ export const PromptButton = clientEntry(
   },
 )
 
-export function CopyIcon() {
+function CopyIcon() {
   return () => (
     <svg viewBox="0 0 14 16.5" fill="none">
       <path
@@ -111,57 +157,3 @@ export function CopyIcon() {
 function wait(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms))
 }
-
-const buttonStyle = css({
-  appearance: 'none',
-  font: 'inherit',
-  textAlign: 'left',
-  cursor: 'pointer',
-  width: '100%',
-  display: 'flex',
-  gap: '16px',
-  alignItems: 'center',
-  padding: '16px',
-  border: 0,
-  borderRadius: '12px',
-  color: 'var(--text-primary)',
-  background: 'transparent',
-  transition: 'background-color 150ms ease, color 150ms ease',
-  '&:hover, &:focus-visible': {
-    background: 'var(--surface-4)',
-    color: 'var(--brand-blue)',
-    outline: 'none',
-  },
-})
-
-const labelSlotStyle = css({
-  alignItems: 'center',
-  display: 'flex',
-  fontSize: '14px',
-  flex: '1 1 0',
-  lineHeight: 1.5,
-  minWidth: 0,
-  position: 'relative',
-  transition: 'opacity 180ms ease',
-})
-
-const statusLabelStyle = css({
-  alignItems: 'center',
-  display: 'flex',
-  inset: 0,
-  position: 'absolute',
-})
-
-const iconSlotStyle = css({
-  flex: '0 0 24px',
-  width: '24px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  '& svg': {
-    width: '20px',
-    height: '20px',
-    display: 'block',
-    transform: 'rotate(180deg)',
-  },
-})

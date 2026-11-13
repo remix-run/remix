@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
 
 import type { Book } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
@@ -56,10 +56,15 @@ export function AdminBookShowPage(handle: Handle<{ book: Book }>) {
           </p>
 
           <div mix={css({ marginTop: '2rem' })}>
-            <a href={routes.admin.books.edit.href({ bookId: book.id })} class="btn">
+            <a
+              data-rmx-prefetch="intent"
+              href={routes.admin.books.edit.href({ bookId: book.id })}
+              class="btn"
+            >
               Edit
             </a>
             <a
+              data-rmx-prefetch="intent"
               href={routes.admin.books.index.href()}
               class="btn btn-secondary"
               mix={css({ marginLeft: '0.5rem' })}

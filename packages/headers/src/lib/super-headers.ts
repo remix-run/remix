@@ -613,7 +613,10 @@ export class SuperHeaders extends Headers {
 
   #getNumberHeaderValue(descriptor: NumberHeaderDescriptor): number | null {
     let value = Headers.prototype.get.call(this, descriptor.name)
-    return value === null ? null : parseInt(value, 10)
+    if (value === null) return null
+
+    let number = parseInt(value, 10)
+    return Number.isNaN(number) ? null : number
   }
 
   #setNumberHeaderValue(descriptor: NumberHeaderDescriptor, value: unknown): void {

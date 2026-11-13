@@ -1,0 +1,105 @@
+# fetch-proxy
+
+HTTP proxy utilities built on the web [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API). Use `fetch-proxy` to create `fetch` handlers that forward requests to target servers while optionally rewriting headers and cookies.
+
+## Features
+
+- **Web Standards** - Built on the standard [JavaScript Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
+- **Cookie Rewriting** - Supports rewriting `Set-Cookie` headers received from target server
+- **Forwarding Headers** - Supports `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Forwarded-Port` headers
+- **Encoding Headers** - Strips stale encoding and framing headers from proxied responses
+- **Custom Fetch** - Supports custom `fetch` implementations
+
+## Installation
+
+```sh
+npm i remix
+```
+
+## Usage
+
+```ts
+import { createFetchProxy } from 'remix/fetch-proxy'
+
+// Create a proxy that sends all requests through to remix.run
+let proxy = createFetchProxy('https://remix.run')
+
+// This fetch handler is probably running as part of your server somewhere...
+function handleFetch(request: Request): Promise<Response> {
+  return proxy(request)
+}
+
+// Test it out by manually throwing a Request at it
+let response = await handleFetch(new Request('https://shopify.com'))
+
+let text = await response.text()
+let title = text.match(/<title>([^<]+)<\/title>/)[1]
+assert(title.includes('Remix'))
+```
+
+## Forwarding Headers
+
+Set `xForwardedHeaders: true` to set `X-Forwarded-Proto`, `X-Forwarded-Host`, and
+`X-Forwarded-Port` from the incoming request URL. When enabled, the proxy removes the `Forwarded`
+header and replaces any existing values for these three headers so the target receives a single set
+of URL metadata from the current proxy request.
+
+```ts
+let proxy = createFetchProxy('https://remix.run', {
+  xForwardedHeaders: true,
+})
+```
+
+The proxy also removes `X-Forwarded-For` when this option is enabled. Fetch requests do not expose the client's connection address, so the proxy cannot generate a replacement value. An upstream using `node-fetch-server` with `trustProxy: true` will fall back to the proxy's connection address.
+
+When `xForwardedHeaders` is disabled (the default), existing forwarding headers are passed through unless listed in `Connection`. If the target trusts these headers, the caller must supply them from a trusted source.
+
+## Redirects
+
+Unlike a client-side `fetch`, the proxy returns upstream redirects instead of following them by default. This lets the client receive the redirect status, `Location`, and headers such as `Set-Cookie`.
+
+Every `Request` uses `'follow'` by default, even when the caller did not choose a redirect mode. The proxy treats that implicit default as `'manual'`, meaning it returns the redirect to the client. Input requests using `'manual'` or `'error'` retain those modes.
+
+To follow redirects inside the proxy:
+
+```ts
+let proxy = createFetchProxy('https://remix.run', {
+  redirect: 'follow',
+})
+```
+
+A defined per-call `init.redirect` overrides the proxy option.
+
+## Encoding and Framing Headers
+
+Since proxying is done via `fetch` rather than raw HTTP messages, some encoding and framing headers need to be removed.
+
+The incoming `Accept-Encoding` request header describes the final client, so it is not forwarded to the target server.
+
+Connection-specific request headers, including any fields named by `Connection`, are removed before forwarding. Incoming `Content-Length` and `Transfer-Encoding` are also removed so the outgoing `fetch` determines framing for the streamed body. This applies to custom `fetch` functions as well.
+
+Since `fetch` can decompress upstream responses and does not expose raw HTTP transfer framing, `fetch-proxy` strips response headers that may no longer describe the returned body: `Content-Encoding`, related `Content-Length`, and `Transfer-Encoding`.
+
+To support serving compressed responses to the final client, you'll need to compress the response after the proxy returns it, e.g. with the [`compressResponse` helper from `remix/response`](../response/README.md#compress-responses):
+
+```ts
+import { createFetchProxy } from 'remix/fetch-proxy'
+import { compressResponse } from 'remix/response/compress'
+
+let proxy = createFetchProxy('https://remix.run')
+
+async function handleFetch(request: Request): Promise<Response> {
+  let response = await proxy(request)
+
+  return compressResponse(response, request)
+}
+```
+
+## Related Packages
+
+- [`node-fetch-server`](../node-fetch-server/README.md) - Build HTTP servers for Node.js using the web fetch API
+- [`response`](../response/README.md) - Create, transform, and compress Fetch API responses
+
+## License
+
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

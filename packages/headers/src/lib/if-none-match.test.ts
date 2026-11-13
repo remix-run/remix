@@ -79,7 +79,9 @@ describe('IfNoneMatch', () => {
 
     let header2 = new IfNoneMatch('W/"67ab43", "54ed21"')
     assert.ok(header2.matches('W/"67ab43"'))
+    assert.ok(header2.matches('"67ab43"'))
     assert.ok(header2.matches('"54ed21"'))
+    assert.ok(header2.matches('W/"54ed21"'))
     assert.ok(!header2.matches('"7892dd"'))
 
     let header3 = new IfNoneMatch('*')
@@ -94,6 +96,18 @@ describe('IfNoneMatch', () => {
 })
 
 describe('IfNoneMatch.from', () => {
+  it('preserves outer whitespace and empty list entries', () => {
+    let header = IfNoneMatch.from(' first \t,\t W/"second" , , * , last ')
+
+    assert.deepEqual(header.tags, ['" first"', 'W/"second"', '""', '*', '"last "'])
+    assert.deepEqual(IfNoneMatch.from('').tags, ['""'])
+    assert.deepEqual(IfNoneMatch.from(' \t ').tags, ['" \t "'])
+    assert.deepEqual(IfNoneMatch.from(' ,\t, ').tags, ['""', '""', '""'])
+
+    let tag = `"first${' '.repeat(100)}last"`
+    assert.deepEqual(IfNoneMatch.from(`W/"other",${tag}`).tags, ['W/"other"', tag])
+  })
+
   it('parses a string value', () => {
     let result = IfNoneMatch.from('"abc", "def"')
     assert.ok(result instanceof IfNoneMatch)

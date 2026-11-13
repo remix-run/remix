@@ -30,6 +30,40 @@ function appendUtf8Charset(type: string): string {
 }
 
 describe('createFileResponse()', () => {
+  it('includes nosniff for full, partial, conditional, and error responses', async () => {
+    let file = new File(['hello'], 'example.bin', {
+      type: 'application/octet-stream',
+      lastModified: 1000000,
+    })
+    let cases: { init?: RequestInit; status: number }[] = [
+      { status: 200 },
+      { init: { method: 'HEAD' }, status: 200 },
+      { init: { headers: { Range: 'bytes=0-1' } }, status: 206 },
+      { init: { headers: { 'If-None-Match': 'W/"5-1000000"' } }, status: 304 },
+      { init: { headers: { 'If-Match': '"other"' } }, status: 412 },
+      { init: { headers: { Range: 'bytes=10-20' } }, status: 416 },
+      { init: { headers: { Range: 'bytes=invalid' } }, status: 400 },
+    ]
+
+    for (let { init, status } of cases) {
+      let response = await createFileResponse(file, new Request('https://example.com/file', init), {
+        acceptRanges: true,
+      })
+      assert.equal(response.status, status)
+      assert.equal(response.headers.get('X-Content-Type-Options'), 'nosniff')
+      await response.body?.cancel()
+    }
+  })
+
+  it('preserves HTML content types for inline file responses', async () => {
+    let file = new File(['<p>Example</p>'], 'example.html', { type: 'text/html' })
+    let response = await createFileResponse(file, new Request('https://example.com/file'))
+
+    assert.equal(response.headers.get('Content-Type'), appendUtf8Charset(file.type))
+    assert.equal(response.headers.get('Content-Disposition'), null)
+    assert.equal(await response.text(), '<p>Example</p>')
+  })
+
   it('serves a file', async () => {
     let fileType = normalizeFileType('text/plain')
     let mockFile = new File(['Hello, World!'], 'test.txt', { type: fileType })
@@ -745,6 +779,20 @@ describe('createFileResponse()', () => {
       assert.equal(response.headers.get('Content-Length'), '5')
     })
 
+    it('recognizes byte range units case-insensitively', async () => {
+      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4', {
+        headers: { Range: 'ByTeS=0-9' },
+      })
+
+      let response = await createFileResponse(mockFile, request)
+
+      assert.equal(response.status, 206)
+      assert.equal(await response.text(), '0123456789')
+      assert.equal(response.headers.get('Content-Range'), 'bytes 0-9/10')
+      assert.equal(response.headers.get('Content-Length'), '10')
+    })
+
     it('handles range with only start', async () => {
       let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
       let request = new Request('http://localhost/video.mp4', {
@@ -812,6 +860,71 @@ describe('createFileResponse()', () => {
       assert.equal(response.headers.get('Content-Range'), null)
       assert.equal(response.headers.get('Content-Length'), '10')
       assert.equal(await response.text(), '')
+    })
+
+    it('returns 416 (Range Not Satisfiable) for a zero-length suffix range', async () => {
+      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4', {
+        headers: { Range: 'bytes=-0' },
+      })
+
+      let response = await createFileResponse(mockFile, request)
+
+      assert.equal(response.status, 416)
+      assert.equal(response.headers.get('Content-Range'), 'bytes */10')
+    })
+
+    it('ignores a suffix range on an empty file', async () => {
+      let mockFile = new File([], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4', {
+        headers: { Range: 'bytes=-1' },
+      })
+
+      let response = await createFileResponse(mockFile, request)
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '')
+      assert.equal(response.headers.get('Content-Range'), null)
+    })
+
+    it('ignores unknown range units with byte-like ranges', async () => {
+      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4', {
+        headers: { Range: 'items=0-4' },
+      })
+
+      let response = await createFileResponse(mockFile, request)
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '0123456789')
+      assert.equal(response.headers.get('Content-Range'), null)
+      assert.equal(response.headers.get('Content-Length'), '10')
+    })
+
+    it('ignores unknown token range units', async () => {
+      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4', {
+        headers: { Range: 'custom-unit=0-4' },
+      })
+
+      let response = await createFileResponse(mockFile, request)
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '0123456789')
+      assert.equal(response.headers.get('Content-Range'), null)
+    })
+
+    it('ignores unknown range units with an empty range set', async () => {
+      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4', {
+        headers: { Range: 'items=' },
+      })
+
+      let response = await createFileResponse(mockFile, request)
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), '0123456789')
+      assert.equal(response.headers.get('Content-Range'), null)
     })
 
     it('returns 416 (Range Not Satisfiable) for unsatisfiable range', async () => {
@@ -1161,6 +1274,22 @@ describe('createFileResponse()', () => {
       assert.equal(response.status, 200)
       assert.equal(await response.text(), '0123456789')
       assert.equal(response.headers.get('Content-Range'), null)
+    })
+
+    it('returns partial content when If-Range is empty', async () => {
+      let mockFile = new File(['0123456789'], 'video.mp4', { type: 'video/mp4' })
+      let request = new Request('http://localhost/video.mp4', {
+        headers: {
+          Range: 'bytes=0-4',
+          'If-Range': '',
+        },
+      })
+
+      let response = await createFileResponse(mockFile, request)
+
+      assert.equal(response.status, 206)
+      assert.equal(await response.text(), '01234')
+      assert.equal(response.headers.get('Content-Range'), 'bytes 0-4/10')
     })
 
     it('returns full file when If-Range is malformed', async () => {

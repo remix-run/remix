@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/remix/schema/remix.json",
+  "assets": {
+    "rootDir": "../..",
+    "basePath": "/assets",
+    "mounts": {
+      "app": "demos/lazy-frames/app",
+      "npm": "node_modules",
+      "packages": "packages"
+    },
+    "allowFiles": ["demos/lazy-frames/app/routes.ts", "demos/lazy-frames/app/**/public/**"],
+    "allowPackages": ["remix"],
+    "denyFiles": ["demos/lazy-frames/app/**/*.test.*"]
+  }
+}

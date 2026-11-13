@@ -1,5 +1,20 @@
 import { SetCookie } from '@remix-run/headers/set-cookie'
 
+// Original hop-by-hop list: https://www.rfc-editor.org/rfc/rfc2616.html#section-13.5.1
+// Current forwarding rules, including legacy Proxy-Connection:
+// https://www.rfc-editor.org/rfc/rfc9110.html#section-7.6.1
+const hopByHopRequestHeaders = [
+  'Connection',
+  'Keep-Alive',
+  'Proxy-Authenticate',
+  'Proxy-Authorization',
+  'Proxy-Connection',
+  'TE',
+  'Trailer',
+  'Transfer-Encoding',
+  'Upgrade',
+]
+
 /**
  * Options for {@link createFetchProxy}.
  */
@@ -10,6 +25,14 @@ export interface FetchProxyOptions {
    * @default globalThis.fetch
    */
   fetch?: typeof globalThis.fetch
+  /**
+   * Controls upstream redirect handling. When omitted, the proxy changes the Fetch default of
+   * `follow` to `manual` so redirects reach the client. Input requests using `manual` or `error`
+   * retain those modes. A defined per-call `init.redirect` overrides this option.
+   *
+   * @default 'manual'
+   */
+  redirect?: RequestRedirect
   /**
    * Set `false` to prevent the `Domain` attribute of `Set-Cookie` headers from being rewritten. By
    * default the domain will be rewritten to the domain of the incoming request.
@@ -25,8 +48,11 @@ export interface FetchProxyOptions {
    */
   rewriteCookiePath?: boolean
   /**
-   * Set `true` to add `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Forwarded-Port`
-   * headers to the proxied request.
+   * Set `true` to set `X-Forwarded-Proto`, `X-Forwarded-Host`, and `X-Forwarded-Port`
+   * headers on the proxied request from the incoming request URL. Existing values are replaced,
+   * and the `Forwarded` and `X-Forwarded-For` headers are removed. The client address is not
+   * available on a Fetch request. When disabled, existing forwarding headers are passed through
+   * unless listed in `Connection`.
    *
    * @default false
    */
@@ -51,12 +77,16 @@ export interface FetchProxy {
 /**
  * Creates a `fetch` function that forwards requests to another server.
  *
+ * Removes connection-specific request headers and incoming `Content-Length` so the outgoing
+ * fetch can determine framing for the forwarded body.
+ *
  * @param target The URL of the server to proxy requests to
  * @param options Options to customize the behavior of the proxy
  * @returns A fetch function that forwards requests to the target server
  */
 export function createFetchProxy(target: string | URL, options?: FetchProxyOptions): FetchProxy {
   let localFetch = options?.fetch ?? globalThis.fetch
+  let redirect = options?.redirect
   let rewriteCookieDomain = options?.rewriteCookieDomain ?? true
   let rewriteCookiePath = options?.rewriteCookiePath ?? true
   let xForwardedHeaders = options?.xForwardedHeaders ?? false
@@ -77,12 +107,22 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
     }
 
     let proxyHeaders = new Headers(request.headers)
+    for (let name of (proxyHeaders.get('Connection') ?? '').split(',')) {
+      let headerName = name.trim()
+      if (headerName !== '') proxyHeaders.delete(headerName)
+    }
+    for (let name of hopByHopRequestHeaders) {
+      proxyHeaders.delete(name)
+    }
     proxyHeaders.delete('Host')
     proxyHeaders.delete('Accept-Encoding')
+    proxyHeaders.delete('Content-Length')
     if (xForwardedHeaders) {
-      proxyHeaders.append('X-Forwarded-Proto', url.protocol.replace(/:$/, ''))
-      proxyHeaders.append('X-Forwarded-Host', url.host)
-      proxyHeaders.append('X-Forwarded-Port', getForwardedPort(url))
+      proxyHeaders.delete('Forwarded')
+      proxyHeaders.delete('X-Forwarded-For')
+      proxyHeaders.set('X-Forwarded-Proto', url.protocol.replace(/:$/, ''))
+      proxyHeaders.set('X-Forwarded-Host', url.host)
+      proxyHeaders.set('X-Forwarded-Port', getForwardedPort(url))
     }
 
     let proxyInit: RequestInit = {
@@ -92,11 +132,12 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
       integrity: request.integrity,
       keepalive: request.keepalive,
       mode: request.mode,
-      redirect: request.redirect,
       referrer: request.referrer,
       referrerPolicy: request.referrerPolicy,
       signal: request.signal,
       ...init,
+      redirect:
+        init?.redirect ?? redirect ?? (request.redirect === 'follow' ? 'manual' : request.redirect),
       headers: proxyHeaders,
     }
     if (request.method !== 'GET' && request.method !== 'HEAD') {

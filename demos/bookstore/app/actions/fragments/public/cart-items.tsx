@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { css, clientEntry, on } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css, clientEntry, on } from 'remix/component'
 
 import { routes } from '../../../routes.ts'
 
@@ -85,7 +85,12 @@ export const CartItems = clientEntry(
                 return (
                   <tr key={item.bookId}>
                     <td>
-                      <a href={routes.books.show.href({ slug: item.slug })}>{item.title}</a>
+                      <a
+                        data-rmx-prefetch="intent"
+                        href={routes.books.show.href({ slug: item.slug })}
+                      >
+                        {item.title}
+                      </a>
                     </td>
 
                     <td>${item.price.toFixed(2)}</td>
@@ -181,12 +186,16 @@ export const CartItems = clientEntry(
               Total: {totalLabel}
             </p>
 
-            <a href={routes.books.index.href()} class="btn btn-secondary">
+            <a
+              data-rmx-prefetch="intent"
+              href={routes.books.index.href()}
+              class="btn btn-secondary"
+            >
               Continue Shopping
             </a>
 
             {canCheckout ? (
-              <a href={routes.checkout.index.href()} class="btn">
+              <a data-rmx-prefetch="intent" href={routes.checkout.index.href()} class="btn">
                 Proceed to Checkout
               </a>
             ) : (

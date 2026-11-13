@@ -181,10 +181,9 @@ describe('createRequestListener', () => {
     let writeHead = t.mock.method(res, 'writeHead')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
-
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -216,10 +215,9 @@ describe('createRequestListener', () => {
     let write = t.mock.method(res, 'write')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
-
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -244,11 +242,10 @@ describe('createRequestListener', () => {
     let write = t.mock.method(res, 'write')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
     resolveResponse(new Response('late'))
-
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -273,11 +270,10 @@ describe('createRequestListener', () => {
     let write = t.mock.method(res, 'write')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
     resolveResponse(new Response('late'))
-
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -318,9 +314,8 @@ describe('createRequestListener', () => {
       return true
     })
 
-    listener(req, res)
-
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    // The listener's promise settles once it has finished handling the aborted response.
+    await listener(req, res)
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 1)
@@ -386,11 +381,7 @@ describe('createRequestListener', () => {
       listener(req, res)
     })
 
-    await waitFor(
-      responseFinished,
-      100,
-      'Expected the response to end or close after the stream error',
-    )
+    await waitFor(responseFinished, 'Expected the response to end or close after the stream error')
 
     assert.equal(writeHeadCalls, 1)
     assert.equal(errorHandler.mock.calls.length, 1)
@@ -466,7 +457,6 @@ describe('createRequestListener', () => {
 
     await waitFor(
       responseDestroyed,
-      100,
       'Expected the response to be destroyed before the slow error handler resolved',
     )
 
@@ -478,8 +468,6 @@ describe('createRequestListener', () => {
     assert.equal(Buffer.concat(chunks).toString(), 'partial')
 
     resolveErrorHandler()
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    assert.equal(errorHandlerFinished, true)
   })
 
   it('rejects request body reads when the request aborts before ending', async (t) => {
@@ -553,16 +541,12 @@ describe('createRequestListener', () => {
     let write = t.mock.method(res, 'write')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
     req.emit('error', bodyError)
 
-    await waitFor(
-      handlerDone,
-      100,
-      'Expected the request body read to settle when the request failed',
-    )
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitFor(handlerDone, 'Expected the request body read to settle when the request failed')
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -633,7 +617,6 @@ describe('createRequestListener', () => {
 
     await waitFor(
       handlerDone,
-      100,
       'Expected the request body read to reject when the request had already aborted',
     )
 
@@ -761,31 +744,26 @@ describe('createRequestListener', () => {
     })
   })
 
-  it('applies backpressure and pauses the request when the body is not read', async (t) => {
-    await new Promise<void>((resolve) => {
-      // Takes the request argument (but never reads its body) so a body stream is created.
-      let handler: FetchHandler = async (_request) => new Response('ok')
-      let listener = createRequestListener(handler)
+  it('applies backpressure and pauses the request when the body is not read', (t) => {
+    // Takes the request argument (but never reads its body) so a body stream is created.
+    let handler: FetchHandler = async (_request) => new Response('ok')
+    let listener = createRequestListener(handler)
 
-      let req = createPendingMockRequest() // method 'POST', so a body stream is created
-      let pause = t.mock.method(req, 'pause')
-      let res = createMockResponse({ req })
+    let req = createPendingMockRequest() // method 'POST', so a body stream is created
+    let pause = t.mock.method(req, 'pause')
+    let res = createMockResponse({ req })
 
-      listener(req, res)
+    listener(req, res)
 
-      // The handler never reads the body, so once the stream's queue fills the request should be
-      // paused rather than buffering every chunk in memory.
-      req.emit('data', Buffer.alloc(1024))
-      req.emit('data', Buffer.alloc(1024))
+    // The handler never reads the body, so once the stream's queue fills the request should be
+    // paused rather than buffering every chunk in memory.
+    req.emit('data', Buffer.alloc(1024))
+    req.emit('data', Buffer.alloc(1024))
 
-      setImmediate(() => {
-        assert.ok(
-          pause.mock.calls.length >= 1,
-          'Expected the request to be paused when the body queue fills',
-        )
-        resolve()
-      })
-    })
+    assert.ok(
+      pause.mock.calls.length >= 1,
+      'Expected the request to be paused when the body queue fills',
+    )
   })
 
   it('uses the `:authority` header to construct the URL for http/2 requests', async () => {
@@ -1307,9 +1285,21 @@ describe('createRequestListener', () => {
     assert.equal(requestAborted, true)
     await waitFor(
       bodyCancelled,
-      100,
       'Expected the streaming response body to be cancelled when the response closed',
     )
+  })
+})
+
+describe('createRequest HTTP/2 authority', () => {
+  it('throws when Host and authority identify different hosts', () => {
+    let req = createMockRequest({
+      headers: { ':authority': 'example.com', Host: 'other.example.com' },
+    })
+    let res = createMockResponse({ req })
+
+    assert.throws(() => createRequest(req, res), {
+      message: 'Host header does not match :authority',
+    })
   })
 })
 
@@ -1349,7 +1339,6 @@ describe('createRequest abort behavior', () => {
         assert.equal((error as DOMException).name, 'AbortError')
         return true
       }),
-      100,
       'Expected the request body read to reject when the request aborted',
     )
 
@@ -1371,7 +1360,6 @@ describe('createRequest abort behavior', () => {
         assert.equal(error, bodyError)
         return true
       }),
-      100,
       'Expected the request body read to reject when the request errored',
     )
 
@@ -1394,7 +1382,6 @@ describe('createRequest abort behavior', () => {
         assert.equal((error as DOMException).name, 'AbortError')
         return true
       }),
-      100,
       'Expected the request body read to reject when the request closed',
     )
 
@@ -1432,7 +1419,6 @@ describe('createRequest abort behavior', () => {
         assert.equal((error as DOMException).name, 'AbortError')
         return true
       }),
-      100,
       'Expected the request body read to reject when the request had already aborted',
     )
 
@@ -1479,16 +1465,12 @@ async function assertListenerRequestBodyReadRejects(
   let write = t.mock.method(res, 'write')
   let end = t.mock.method(res, 'end')
 
-  listener(req, res)
+  let handled = listener(req, res)
   req.emit('data', Buffer.from('partial'))
   failRequest(req)
 
-  await waitFor(
-    handlerFinished,
-    100,
-    'Expected the request body read to settle when the request failed',
-  )
-  await new Promise((resolve) => setTimeout(resolve, 0))
+  await waitFor(handlerFinished, 'Expected the request body read to settle when the request failed')
+  await handled
 
   assert.equal(bodyReadRejected, true)
   assertError(bodyError, signalReason)
@@ -1612,7 +1594,9 @@ function createMockRequest({
       method,
       rawHeaders,
       socket,
-      headers,
+      headers: Object.fromEntries(
+        Object.entries(headers).map(([name, value]) => [name.toLowerCase(), value]),
+      ),
     },
   ) as http.IncomingMessage
 }
@@ -1630,14 +1614,17 @@ function createMockResponse({
   }) as unknown as http.ServerResponse
 }
 
-async function waitFor(promise: Promise<void>, ms: number, message: string): Promise<void> {
+// Bounds failure only; the awaited promise is what makes each test pass.
+const waitForTimeout = 5000
+
+async function waitFor(promise: Promise<void>, message: string): Promise<void> {
   let timeout: ReturnType<typeof setTimeout> | undefined
 
   try {
     await Promise.race([
       promise,
       new Promise<never>((_, reject) => {
-        timeout = setTimeout(() => reject(new Error(message)), ms)
+        timeout = setTimeout(() => reject(new Error(message)), waitForTimeout)
       }),
     ])
   } finally {

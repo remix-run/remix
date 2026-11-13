@@ -1,0 +1,348 @@
+import { expect } from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it } from '@remix-run/test'
+import { createRoot } from '../runtime/vdom.ts'
+import { defaultStyleManager } from '../runtime/reconcile.ts'
+import { renderToString } from '../server/stream.ts'
+import { invariant } from '../runtime/invariant.ts'
+import { css } from '../index.ts'
+
+describe('hydration', () => {
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    container = document.createElement('div')
+    document.body.appendChild(container)
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  describe('css mixin hydration', () => {
+    afterEach(() => {
+      // Reset the global style manager state between tests
+      defaultStyleManager.dispose()
+    })
+
+    it('hydrates element with css mixin and adopts server style', async () => {
+      let html = await renderToString(<div mix={[css({ color: 'red' })]}>Hello</div>)
+
+      // Inject server styles into document.head and append body content
+      container.innerHTML = html
+
+      let existingDiv = container.querySelector('div')
+      invariant(existingDiv)
+      let originalClass = existingDiv.className
+      expect(originalClass).toMatch(/rmxc-/)
+
+      let root = createRoot(container)
+      root.render(<div mix={[css({ color: 'red' })]}>Hello</div>)
+      root.flush()
+
+      // Element should be adopted (same DOM node)
+      expect(container.querySelector('div')).toBe(existingDiv)
+      expect(existingDiv.className).toBe(originalClass)
+      // Style should apply
+      expect(getComputedStyle(existingDiv).color).toBe('rgb(255, 0, 0)')
+    })
+
+    it('updates css mixin after hydration', async () => {
+      let html = await renderToString(<div mix={[css({ color: 'red' })]}>Hello</div>)
+      container.innerHTML = html
+
+      let existingDiv = container.querySelector('div')
+      invariant(existingDiv)
+
+      let root = createRoot(container)
+      root.render(<div mix={[css({ color: 'red' })]}>Hello</div>)
+      root.flush()
+
+      expect(getComputedStyle(existingDiv).color).toBe('rgb(255, 0, 0)')
+
+      // Update to different css mixin
+      root.render(<div mix={[css({ color: 'blue' })]}>Hello</div>)
+      root.flush()
+
+      expect(getComputedStyle(existingDiv).color).toBe('rgb(0, 0, 255)')
+      expect(existingDiv.className).toMatch(/rmxc-/)
+    })
+
+    it('hydrates, updates, and removes unitless generated styles', async () => {
+      let layout = {
+        display: '-webkit-box',
+        webkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+        whiteSpace: 'pre-line',
+        lineHeight: '10px',
+      }
+      let styles = {
+        ...layout,
+        webkitLineClamp: 4,
+        flex: 2,
+        marginTop: 8,
+        animation: 2,
+        borderImage: 3,
+        webkitMaskBoxImageWidth: 2,
+        shapeImageThreshold: 0.25,
+      }
+      let text = 'One\nTwo\nThree\nFour\nFive'
+      container.innerHTML = await renderToString(<div mix={[css(styles)]}>{text}</div>)
+
+      let div = container.querySelector('div')
+      invariant(div)
+      expect(getComputedStyle(div).webkitLineClamp).toBe('4')
+      expect(getComputedStyle(div).flexGrow).toBe('2')
+      expect(getComputedStyle(div).marginTop).toBe('8px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('2')
+      expect(getComputedStyle(div).borderImageSlice).toBe('3')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
+      expect(div.getBoundingClientRect().height).toBe(40)
+
+      let root = createRoot(container)
+      root.render(<div mix={[css(styles)]}>{text}</div>)
+      root.flush()
+
+      expect(container.querySelector('div')).toBe(div)
+      expect(getComputedStyle(div).webkitLineClamp).toBe('4')
+      expect(getComputedStyle(div).flexGrow).toBe('2')
+      expect(getComputedStyle(div).marginTop).toBe('8px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('2')
+      expect(getComputedStyle(div).borderImageSlice).toBe('3')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
+      expect(div.getBoundingClientRect().height).toBe(40)
+
+      root.render(
+        <div
+          mix={[
+            css({
+              ...styles,
+              webkitLineClamp: 2,
+              flex: 3,
+              marginTop: 12,
+              animation: 3,
+              borderImage: 4,
+              webkitMaskBoxImageWidth: 3,
+              shapeImageThreshold: 0.75,
+            }),
+          ]}
+        >
+          {text}
+        </div>,
+      )
+      root.flush()
+
+      expect(getComputedStyle(div).webkitLineClamp).toBe('2')
+      expect(getComputedStyle(div).flexGrow).toBe('3')
+      expect(getComputedStyle(div).marginTop).toBe('12px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('3')
+      expect(getComputedStyle(div).borderImageSlice).toBe('4')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('3')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0.75')
+      expect(div.getBoundingClientRect().height).toBe(20)
+
+      root.render(
+        <div mix={[css({ ...layout, webkitLineClamp: undefined, flex: null, marginTop: NaN })]}>
+          {text}
+        </div>,
+      )
+      root.flush()
+
+      expect(getComputedStyle(div).webkitLineClamp).toBe('none')
+      expect(getComputedStyle(div).flexGrow).toBe('0')
+      expect(getComputedStyle(div).marginTop).toBe('0px')
+      expect(getComputedStyle(div).animationIterationCount).toBe('1')
+      expect(getComputedStyle(div).borderImageSlice).toBe('100%')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('auto')
+      expect(getComputedStyle(div).shapeImageThreshold).toBe('0')
+      expect(div.getBoundingClientRect().height).toBe(50)
+      root.dispose()
+    })
+
+    it('keeps generated custom property names distinct through hydration, updates, and removal', async () => {
+      let styles = {
+        '--gapSize': 8,
+        '--gap-size': 12,
+        marginTop: 'calc(var(--gapSize, 0) * 1px)',
+        paddingTop: 'calc(var(--gap-size, 0) * 1px)',
+      }
+      container.innerHTML = await renderToString(<div mix={[css(styles)]}>Styled</div>)
+
+      let div = container.querySelector('div')
+      invariant(div)
+      expect(getComputedStyle(div).marginTop).toBe('8px')
+      expect(getComputedStyle(div).paddingTop).toBe('12px')
+
+      let root = createRoot(container)
+      root.render(<div mix={[css(styles)]}>Styled</div>)
+      root.flush()
+
+      expect(container.querySelector('div')).toBe(div)
+      expect(getComputedStyle(div).marginTop).toBe('8px')
+      expect(getComputedStyle(div).paddingTop).toBe('12px')
+
+      root.render(<div mix={[css({ ...styles, '--gapSize': 16 })]}>Styled</div>)
+      root.flush()
+
+      expect(getComputedStyle(div).marginTop).toBe('16px')
+      expect(getComputedStyle(div).paddingTop).toBe('12px')
+
+      root.render(<div mix={[css({ ...styles, '--gapSize': undefined })]}>Styled</div>)
+      root.flush()
+
+      expect(getComputedStyle(div).marginTop).toBe('0px')
+      expect(getComputedStyle(div).paddingTop).toBe('12px')
+      root.dispose()
+    })
+
+    it('hydrates css mixin combined with className', async () => {
+      let html = await renderToString(
+        <div className="my-class" mix={[css({ color: 'green' })]}>
+          Hello
+        </div>,
+      )
+      container.innerHTML = html
+
+      let existingDiv = container.querySelector('div')
+      invariant(existingDiv)
+      expect(existingDiv.className).toContain('my-class')
+      expect(existingDiv.className).toMatch(/rmxc-/)
+
+      let root = createRoot(container)
+      root.render(
+        <div className="my-class" mix={[css({ color: 'green' })]}>
+          Hello
+        </div>,
+      )
+      root.flush()
+
+      // Element should be adopted
+      expect(container.querySelector('div')).toBe(existingDiv)
+      expect(existingDiv.className).toContain('my-class')
+      expect(existingDiv.className).toMatch(/rmxc-/)
+      expect(getComputedStyle(existingDiv).color).toBe('rgb(0, 128, 0)')
+    })
+
+    it('multiple elements with same css mixin share style during hydration', async () => {
+      let html = await renderToString(
+        <div>
+          <span mix={[css({ color: 'purple' })]}>First</span>
+          <span mix={[css({ color: 'purple' })]}>Second</span>
+        </div>,
+      )
+      container.innerHTML = html
+
+      let spans = container.querySelectorAll('span')
+      expect(spans).toHaveLength(2)
+
+      let firstClassName = spans[0].className
+      let secondClassName = spans[1].className
+      expect(firstClassName).toBe(secondClassName)
+      expect(firstClassName).toMatch(/rmxc-/)
+
+      let root = createRoot(container)
+      root.render(
+        <div>
+          <span mix={[css({ color: 'purple' })]}>First</span>
+          <span mix={[css({ color: 'purple' })]}>Second</span>
+        </div>,
+      )
+      root.flush()
+
+      // Both spans should be adopted
+      let hydratedSpans = container.querySelectorAll('span')
+      expect(hydratedSpans[0]).toBe(spans[0])
+      expect(hydratedSpans[1]).toBe(spans[1])
+
+      expect(hydratedSpans[0].className).toBe(firstClassName)
+      expect(hydratedSpans[1].className).toBe(firstClassName)
+
+      // Style should apply to both
+      expect(getComputedStyle(hydratedSpans[0]).color).toBe('rgb(128, 0, 128)')
+      expect(getComputedStyle(hydratedSpans[1]).color).toBe('rgb(128, 0, 128)')
+    })
+
+    it('handles element unmount with css mixin after hydration', async () => {
+      let html = await renderToString(
+        <div>
+          <span mix={[css({ color: 'orange' })]}>Will unmount</span>
+        </div>,
+      )
+      container.innerHTML = html
+
+      let root = createRoot(container)
+      root.render(
+        <div>
+          <span mix={[css({ color: 'orange' })]}>Will unmount</span>
+        </div>,
+      )
+      root.flush()
+
+      expect(container.querySelector('span')).not.toBe(null)
+
+      // Remove the span
+      root.render(<div />)
+      root.flush()
+
+      // Span should be gone
+      expect(container.querySelector('span')).toBe(null)
+    })
+
+    it('keeps an earlier island styled when a second island is created before the first renders', async () => {
+      // Two independently hydrated islands on one page. Creating the root for
+      // the second island must not release the server styles adopted for the
+      // first island — hydration adoption is additive, not a replacement of
+      // the whole document's styles.
+      let island1 = await renderToString(<div mix={[css({ color: 'rgb(120, 30, 40)' })]}>One</div>)
+      let island2 = await renderToString(<div mix={[css({ color: 'rgb(50, 60, 70)' })]}>Two</div>)
+
+      let container2 = document.createElement('div')
+      document.body.appendChild(container2)
+      container.innerHTML = island1
+      container2.innerHTML = island2
+
+      let root1 = createRoot(container)
+      let root2 = createRoot(container2)
+
+      let div1 = container.querySelector('div')
+      let div2 = container2.querySelector('div')
+      invariant(div1)
+      invariant(div2)
+
+      // Neither island has rendered yet — the SSR markup must stay styled.
+      expect(getComputedStyle(div1).color).toBe('rgb(120, 30, 40)')
+      expect(getComputedStyle(div2).color).toBe('rgb(50, 60, 70)')
+
+      root1.render(<div mix={[css({ color: 'rgb(120, 30, 40)' })]}>One</div>)
+      root1.flush()
+      root2.render(<div mix={[css({ color: 'rgb(50, 60, 70)' })]}>Two</div>)
+      root2.flush()
+
+      expect(getComputedStyle(div1).color).toBe('rgb(120, 30, 40)')
+      expect(getComputedStyle(div2).color).toBe('rgb(50, 60, 70)')
+
+      root1.dispose()
+      root2.dispose()
+    })
+
+    it('adds css mixin during hydration when server had none', async () => {
+      let html = await renderToString(<div>Hello</div>)
+      container.innerHTML = html
+
+      let existingDiv = container.querySelector('div')
+      invariant(existingDiv)
+      expect(existingDiv.className).toBe('')
+
+      // Client adds css mixin
+      let root = createRoot(container)
+      root.render(<div mix={[css({ color: 'cyan' })]}>Hello</div>)
+      root.flush()
+
+      // Element should be adopted and css applied
+      expect(container.querySelector('div')).toBe(existingDiv)
+      expect(existingDiv.className).toMatch(/rmxc-/)
+      expect(getComputedStyle(existingDiv).color).toBe('rgb(0, 255, 255)')
+    })
+  })
+})

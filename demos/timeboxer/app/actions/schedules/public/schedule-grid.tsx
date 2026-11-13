@@ -1,14 +1,6 @@
-import {
-  clientEntry,
-  createMixin,
-  css,
-  on,
-  ref,
-  type Handle,
-  type SerializableValue,
-} from 'remix/ui'
-import { animateLayout, spring } from 'remix/ui/animation'
-import button from 'remix/ui/button'
+import { clientEntry, createMixin, css, on, ref, type Handle } from 'remix/component'
+import { animateLayout, spring } from '@remix-run/ui/animation'
+import { button } from '../../../ui/public/button.ts'
 import { theme } from '../../../ui/public/design.ts'
 
 import {
@@ -21,13 +13,8 @@ import {
   type ScheduleLayoutResult,
 } from './schedule-layout.ts'
 
-type GridBlockDocument = ScheduleLayoutBlock & {
-  [key: string]: SerializableValue
-}
-
 export type GridScheduleDocument = {
-  [key: string]: SerializableValue
-  blocks: GridBlockDocument[]
+  blocks: ScheduleLayoutBlock[]
   id: number
   name: string
   revision: number
@@ -36,7 +23,7 @@ export type GridScheduleDocument = {
 
 type GridInputId = string
 
-type DraftBlock = GridBlockDocument & {
+type DraftBlock = ScheduleLayoutBlock & {
   id: string
 }
 
@@ -70,7 +57,7 @@ type ResizeState = {
   grid: GridMeasurement
   moved: boolean
   offsetY: number
-  originalBlock: GridBlockDocument
+  originalBlock: ScheduleLayoutBlock
   originalBlocks: ScheduleLayoutBlock[]
   pointerId: number
   startY: number
@@ -87,7 +74,7 @@ type HorizontalResizeState = {
   idPrefix: string
   moved: boolean
   offsetX: number
-  originalBlock: GridBlockDocument
+  originalBlock: ScheduleLayoutBlock
   originalBlocks: ScheduleLayoutBlock[]
   pointerId: number
   startX: number
@@ -179,7 +166,7 @@ export const ScheduleGrid = clientEntry(
         })
       }
 
-      let visibleBlocks = (preview?.blocks ?? schedule.blocks) as GridBlockDocument[]
+      let visibleBlocks = preview?.blocks ?? schedule.blocks
       let activeDragState = dragState?.active === true ? dragState : null
       let dragGhostBlocks = activeDragState
         ? visibleBlocks.filter((block) => activeDragState.blockIds.includes(block.id))
@@ -192,22 +179,90 @@ export const ScheduleGrid = clientEntry(
           data-schedule-resizing={
             resizeState ? 'vertical' : horizontalResizeState ? 'horizontal' : undefined
           }
-          mix={weekScheduleStyle}
+          mix={css({
+            display: 'grid',
+            gridTemplateRows: '56px 32px minmax(0, 1fr)',
+            height: '100%',
+            minHeight: 0,
+            overflow: 'hidden',
+            '&[data-schedule-dragging="true"], &[data-schedule-dragging="true"] *': {
+              cursor: 'grabbing !important',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+            },
+            '&[data-schedule-dragging="true"] .resize-handle': {
+              opacity: '0 !important',
+              pointerEvents: 'none',
+            },
+            '&[data-schedule-resizing="vertical"], &[data-schedule-resizing="vertical"] *': {
+              cursor: 'ns-resize !important',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+            },
+            '&[data-schedule-resizing="horizontal"], &[data-schedule-resizing="horizontal"] *': {
+              cursor: 'ew-resize !important',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+            },
+          })}
         >
-          <div mix={calendarHeaderStyle}>
+          <div
+            mix={css({
+              alignItems: 'center',
+              display: 'grid',
+              gridTemplateColumns: '1fr auto 1fr',
+              gap: theme.space.sm,
+              padding: `0 ${theme.space.md}`,
+            })}
+          >
             <div aria-hidden="true" />
-            <div mix={calendarTitleStyle}>{schedule.name}</div>
-            <div mix={calendarActionsStyle}>
+            <div
+              mix={css({
+                color: theme.colors.text.primary,
+                fontSize: theme.fontSize.xl,
+                fontWeight: theme.fontWeight.bold,
+                justifyContent: 'center',
+                letterSpacing: theme.letterSpacing.tight,
+              })}
+            >
+              {schedule.name}
+            </div>
+            <div
+              mix={css({
+                alignItems: 'center',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: theme.space.sm,
+                justifySelf: 'end',
+              })}
+            >
               <a download href={handle.props.downloadIcsHref} mix={button()}>
                 Download ICS
               </a>
             </div>
           </div>
 
-          <div mix={dayHeaderGridStyle}>
+          <div
+            mix={css({
+              alignItems: 'end',
+              borderBottom: `1px solid ${theme.colors.border.strong}`,
+              display: 'grid',
+              gridTemplateColumns: `${gridLabelWidth}px repeat(7, minmax(88px, 1fr))`,
+              paddingRight: '10px',
+            })}
+          >
             <div aria-hidden="true" />
             {weekDays.map((day) => (
-              <div key={day} mix={dayHeaderStyle}>
+              <div
+                key={day}
+                mix={css({
+                  color: theme.colors.text.primary,
+                  fontSize: theme.fontSize.xs,
+                  fontWeight: theme.fontWeight.medium,
+                  padding: `2px ${theme.space.xs}`,
+                  textAlign: 'center',
+                })}
+              >
                 {day}
               </div>
             ))}
@@ -215,36 +270,68 @@ export const ScheduleGrid = clientEntry(
 
           <div
             mix={[
-              timeGridScrollerStyle,
               ref((node, signal) => {
                 scrollerElement = node
                 signal.addEventListener('abort', () => {
                   if (scrollerElement === node) scrollerElement = null
                 })
               }),
+              css({
+                minHeight: 0,
+                overflowY: 'auto',
+              }),
             ]}
           >
             <div
               mix={[
-                timeGridStyle,
                 ref((node, signal) => {
                   gridElement = node
                   signal.addEventListener('abort', () => {
                     if (gridElement === node) gridElement = null
                   })
                 }),
+                css({
+                  minWidth: '760px',
+                  position: 'relative',
+                }),
               ]}
             >
-              <div mix={timeRowsStyle}>
+              <div
+                mix={css({
+                  position: 'relative',
+                })}
+              >
                 <div aria-hidden="true" mix={timeRowStyle}>
                   <div />
                   {weekDays.map((day) => (
-                    <div key={`spacer-${day}`} mix={spacerTimeCellStyle} />
+                    <div
+                      key={`spacer-${day}`}
+                      mix={css({
+                        borderLeft: `1px dashed ${theme.colors.border.default}`,
+                        minHeight: `${gridRowHeight}px`,
+                      })}
+                    />
                   ))}
                 </div>
                 {timeSlots.map((time) => (
                   <div key={time} mix={timeRowStyle}>
-                    <div mix={[timeLabelStyle, isHourSlot(time) ? hourTimeLabelStyle : undefined]}>
+                    <div
+                      mix={[
+                        css({
+                          color: theme.colors.text.secondary,
+                          fontSize: '0.6875rem',
+                          padding: `0 ${theme.space.xs} 0 0`,
+                          textAlign: 'right',
+                          transform: 'translateY(-0.7em)',
+                        }),
+                        isHourSlot(time)
+                          ? css({
+                              color: theme.colors.text.primary,
+                              fontWeight: theme.fontWeight.semibold,
+                            })
+                          : undefined,
+                      ]}
+                    >
                       {time}
                     </div>
                     {weekDays.map((day) => (
@@ -252,7 +339,6 @@ export const ScheduleGrid = clientEntry(
                         aria-label={`${day} ${time}`}
                         key={`${day}-${time}`}
                         mix={[
-                          timeCellStyle,
                           on('pointerdown', (event) => {
                             if (event.button === 0 && clearBlockFocusOrSelection()) {
                               suppressDraftClickUntil = performance.now() + 250
@@ -263,15 +349,39 @@ export const ScheduleGrid = clientEntry(
                             if (clearBlockFocusOrSelection()) return
                             startDraft(day, time)
                           }),
-                          isHourSlot(time) ? hourTimeCellStyle : undefined,
-                          isHalfHourSlot(time) ? halfHourTimeCellStyle : undefined,
+                          css({
+                            borderLeft: `1px dashed ${theme.colors.border.default}`,
+                            borderTop: `1px dashed ${theme.colors.border.default}`,
+                            minHeight: `${gridRowHeight}px`,
+                          }),
+                          isHourSlot(time)
+                            ? css({
+                                borderTop: `1px solid ${theme.colors.border.strong}`,
+                              })
+                            : undefined,
+                          isHalfHourSlot(time)
+                            ? css({
+                                borderTop: `1px dotted ${theme.colors.border.strong}`,
+                              })
+                            : undefined,
                         ]}
                       />
                     ))}
                   </div>
                 ))}
               </div>
-              <div aria-label="Scheduled blocks" mix={blockLayerStyle}>
+              <div
+                aria-label="Scheduled blocks"
+                mix={css({
+                  display: 'grid',
+                  gridTemplateColumns: `${gridLabelWidth}px repeat(7, minmax(88px, 1fr))`,
+                  gridAutoRows: `${gridRowHeight}px`,
+                  inset: 0,
+                  pointerEvents: 'none',
+                  position: 'absolute',
+                  zIndex: 1,
+                })}
+              >
                 {dragGhostBlocks.map((block) => (
                   <ScheduleBlockGhost block={block} key={`drop-ghost-${block.id}`} />
                 ))}
@@ -332,7 +442,7 @@ export const ScheduleGrid = clientEntry(
       handle.update()
     }
 
-    function commitBlock(block: GridBlockDocument) {
+    function commitBlock(block: ScheduleLayoutBlock) {
       let name = block.name.trim()
 
       if (!name) {
@@ -346,7 +456,7 @@ export const ScheduleGrid = clientEntry(
       saveSchedule()
     }
 
-    function deleteBlock(block: GridBlockDocument) {
+    function deleteBlock(block: ScheduleLayoutBlock) {
       if (draftBlock?.id === block.id) {
         cancelDraft()
         return
@@ -356,7 +466,7 @@ export const ScheduleGrid = clientEntry(
       let deleteIdSet = new Set(deleteIds)
       let nextBlocks = schedule.blocks
       for (let blockId of deleteIds) {
-        nextBlocks = previewDeleteBlock(nextBlocks, blockId).blocks as GridBlockDocument[]
+        nextBlocks = previewDeleteBlock(nextBlocks, blockId).blocks
       }
 
       schedule.blocks = nextBlocks
@@ -368,7 +478,7 @@ export const ScheduleGrid = clientEntry(
       saveSchedule()
     }
 
-    function startDrag(block: GridBlockDocument, event: PointerEvent) {
+    function startDrag(block: ScheduleLayoutBlock, event: PointerEvent) {
       if (
         draftBlock ||
         activeGesture ||
@@ -466,7 +576,7 @@ export const ScheduleGrid = clientEntry(
 
       if (finalPreview) {
         event.preventDefault()
-        schedule.blocks = finalPreview.blocks as GridBlockDocument[]
+        schedule.blocks = finalPreview.blocks
         selectedBlockIds = new Set(draggedBlockIds)
         preview = null
         saveSchedule()
@@ -483,7 +593,7 @@ export const ScheduleGrid = clientEntry(
       handle.update()
     }
 
-    function selectBlock(block: GridBlockDocument, event: MouseEvent) {
+    function selectBlock(block: ScheduleLayoutBlock, event: MouseEvent) {
       if (draftBlock || activeGesture) return
       if (!event.shiftKey && performance.now() < suppressSelectionClickUntil) return
 
@@ -498,7 +608,7 @@ export const ScheduleGrid = clientEntry(
       handle.update()
     }
 
-    function focusBlock(block: GridBlockDocument) {
+    function focusBlock(block: ScheduleLayoutBlock) {
       if (draftBlock || activeGesture) return
       if (selectedBlockIds.size === 1 && selectedBlockIds.has(block.id)) return
       if (selectedBlockIds.size > 1 && selectedBlockIds.has(block.id)) return
@@ -508,7 +618,7 @@ export const ScheduleGrid = clientEntry(
       handle.update()
     }
 
-    function prepareBlockPointerDown(block: GridBlockDocument, event: PointerEvent) {
+    function prepareBlockPointerDown(block: ScheduleLayoutBlock, event: PointerEvent) {
       if (draftBlock || activeGesture || event.shiftKey) {
         return
       }
@@ -554,7 +664,7 @@ export const ScheduleGrid = clientEntry(
       return true
     }
 
-    function startResize(block: GridBlockDocument, edge: ResizeEdge, event: PointerEvent) {
+    function startResize(block: ScheduleLayoutBlock, edge: ResizeEdge, event: PointerEvent) {
       if (
         (draftBlock && draftBlock.id !== block.id) ||
         dragState ||
@@ -617,7 +727,7 @@ export const ScheduleGrid = clientEntry(
 
       if (finalPreview) {
         event.preventDefault()
-        schedule.blocks = finalPreview.blocks as GridBlockDocument[]
+        schedule.blocks = finalPreview.blocks
         preview = null
         saveSchedule()
         handle.update()
@@ -634,7 +744,7 @@ export const ScheduleGrid = clientEntry(
     }
 
     function startHorizontalResize(
-      block: GridBlockDocument,
+      block: ScheduleLayoutBlock,
       edge: HorizontalResizeEdge,
       event: PointerEvent,
     ) {
@@ -715,7 +825,7 @@ export const ScheduleGrid = clientEntry(
 
       if (finalPreview) {
         event.preventDefault()
-        schedule.blocks = finalPreview.blocks as GridBlockDocument[]
+        schedule.blocks = finalPreview.blocks
         preview = null
         saveSchedule()
         handle.update()
@@ -869,7 +979,7 @@ const blockDragVisual = createMixin<HTMLElement>((handle) => {
 
 function ScheduleBlockGhost(
   handle: Handle<{
-    block: GridBlockDocument
+    block: ScheduleLayoutBlock
   }>,
 ) {
   return () => {
@@ -878,7 +988,14 @@ function ScheduleBlockGhost(
     return (
       <div
         aria-hidden="true"
-        mix={blockGhostGridItemStyle}
+        mix={css({
+          display: 'grid',
+          minHeight: 0,
+          minWidth: 0,
+          pointerEvents: 'none',
+          position: 'relative',
+          zIndex: 1,
+        })}
         style={{
           gridColumn: block.dayOfWeek + 2,
           gridRow: `${startMinuteToSlotIndex(block.startMinute) + 2} / span ${durationToSlotSpan(
@@ -887,7 +1004,15 @@ function ScheduleBlockGhost(
           )}`,
         }}
       >
-        <div mix={blockGhostBoxStyle} />
+        <div
+          mix={css({
+            backgroundColor: 'rgb(209 213 219 / 0.72)',
+            border: `2px dashed ${theme.colors.text.secondary}`,
+            borderRadius: theme.radius,
+            margin: '2px 4px',
+            opacity: 0.5,
+          })}
+        />
       </div>
     )
   }
@@ -897,7 +1022,7 @@ function ScheduleBlock(
   handle: Handle<{
     activeHorizontalResizeEdge?: HorizontalResizeEdge
     activeResizeEdge?: ResizeEdge
-    block: GridBlockDocument
+    block: ScheduleLayoutBlock
     isDragging: boolean
     isDraft: boolean
     isHorizontalResizing: boolean
@@ -906,18 +1031,18 @@ function ScheduleBlock(
     shouldAnimateLayout: boolean
     onCancelDraft: () => void
     onClearSelection: () => void
-    onCommit: (block: GridBlockDocument) => void
-    onDelete: (block: GridBlockDocument) => void
-    onDragStart: (block: GridBlockDocument, event: PointerEvent) => void
-    onFocus: (block: GridBlockDocument) => void
+    onCommit: (block: ScheduleLayoutBlock) => void
+    onDelete: (block: ScheduleLayoutBlock) => void
+    onDragStart: (block: ScheduleLayoutBlock, event: PointerEvent) => void
+    onFocus: (block: ScheduleLayoutBlock) => void
     onHorizontalResizeStart: (
-      block: GridBlockDocument,
+      block: ScheduleLayoutBlock,
       edge: HorizontalResizeEdge,
       event: PointerEvent,
     ) => void
-    onPointerDown: (block: GridBlockDocument, event: PointerEvent) => void
-    onResizeStart: (block: GridBlockDocument, edge: ResizeEdge, event: PointerEvent) => void
-    onSelect: (block: GridBlockDocument, event: MouseEvent) => void
+    onPointerDown: (block: ScheduleLayoutBlock, event: PointerEvent) => void
+    onResizeStart: (block: ScheduleLayoutBlock, edge: ResizeEdge, event: PointerEvent) => void
+    onSelect: (block: ScheduleLayoutBlock, event: MouseEvent) => void
   }>,
 ) {
   let block = handle.props.block
@@ -944,8 +1069,17 @@ function ScheduleBlock(
         data-dragging={handle.props.isDragging ? 'true' : undefined}
         key={block.id}
         mix={[
-          blockGridItemStyle,
           animateLayout(handle.props.shouldAnimateLayout ? scheduleBlockLayoutAnimation : false),
+          css({
+            display: 'grid',
+            minHeight: 0,
+            minWidth: 0,
+            pointerEvents: 'none',
+            position: 'relative',
+            '&[data-dragging="true"]': {
+              zIndex: 2,
+            },
+          }),
         ]}
         style={{
           gridColumn: block.dayOfWeek + 2,
@@ -966,8 +1100,6 @@ function ScheduleBlock(
           data-schedule-block-id={block.id}
           data-selected={handle.props.isSelected ? 'true' : undefined}
           mix={[
-            blockBoxStyle,
-            draggingBlockBoxStyle,
             blockDragVisual(),
             ref((node) => {
               blockElement = node
@@ -1029,6 +1161,59 @@ function ScheduleBlock(
               }
               handle.props.onDragStart(block, event)
             }),
+            css({
+              alignItems: 'center',
+              backgroundColor: theme.surface.lvl1,
+              border: `1px solid ${theme.colors.border.default}`,
+              borderRadius: theme.radius,
+              boxShadow: '0 1px 1px rgb(0 0 0 / 0.05)',
+              color: '#111111',
+              cursor: 'grab',
+              display: 'flex',
+              fontSize: theme.fontSize.xs,
+              fontWeight: theme.fontWeight.medium,
+              justifyContent: 'center',
+              margin: '2px 4px',
+              overflow: 'hidden',
+              padding: theme.space.xs,
+              pointerEvents: 'auto',
+              position: 'relative',
+              textAlign: 'center',
+              touchAction: 'none',
+              transition: 'background-color 120ms ease, border-color 120ms ease',
+              userSelect: 'none',
+              '&:not([data-dragging="true"])': {
+                transition:
+                  'background-color 120ms ease, border-color 120ms ease, translate 120ms ease',
+              },
+              '&:hover .resize-handle': {
+                opacity: 1,
+              },
+              '&[data-resizing="true"] .resize-handle': {
+                opacity: 1,
+              },
+              '&[data-editing="true"]': {
+                cursor: 'text',
+              },
+              '&:focus, &[data-selected="true"]': {
+                borderColor: theme.colors.focusRing,
+                outline: `2px solid ${theme.colors.focusRing}`,
+                outlineOffset: 0,
+              },
+            }),
+            css({
+              '&[data-dragging="true"]': {
+                backgroundColor: theme.surface.lvl2,
+                borderColor: theme.colors.focusRing,
+                cursor: 'grabbing',
+                outline: `2px solid ${theme.colors.focusRing}`,
+                outlineOffset: 0,
+                zIndex: 2,
+                '& .resize-handle': {
+                  opacity: 0,
+                },
+              },
+            }),
           ]}
           tabIndex={0}
           style={{
@@ -1039,7 +1224,6 @@ function ScheduleBlock(
             aria-label={handle.props.isDraft ? 'New block name' : `${label} name`}
             data-editable={isEditing ? 'true' : undefined}
             mix={[
-              blockInputStyle,
               ref((node) => {
                 inputElement = node
                 if (handle.props.isDraft) node.focus({ preventScroll: true })
@@ -1068,6 +1252,31 @@ function ScheduleBlock(
               }),
               on('blur', () => {
                 if (state === 'editing') finishEditing()
+              }),
+              css({
+                backgroundColor: 'transparent',
+                border: 0,
+                boxSizing: 'border-box',
+                color: 'inherit',
+                cursor: 'inherit',
+                font: 'inherit',
+                fontWeight: 'inherit',
+                height: '100%',
+                inset: 0,
+                lineHeight: 1.2,
+                outline: 0,
+                padding: theme.space.xs,
+                pointerEvents: 'none',
+                position: 'absolute',
+                textAlign: 'center',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                width: '100%',
+                '&[data-editable="true"]': {
+                  pointerEvents: 'auto',
+                  userSelect: 'text',
+                  WebkitUserSelect: 'text',
+                },
               }),
             ]}
             defaultValue={name}
@@ -1156,10 +1365,10 @@ function ScheduleBlock(
 
 function ResizeHandle(
   handle: Handle<{
-    block: GridBlockDocument
+    block: ScheduleLayoutBlock
     edge: ResizeEdge
     isActive: boolean
-    onResizeStart: (block: GridBlockDocument, edge: ResizeEdge, event: PointerEvent) => void
+    onResizeStart: (block: ScheduleLayoutBlock, edge: ResizeEdge, event: PointerEvent) => void
   }>,
 ) {
   return () => (
@@ -1168,13 +1377,47 @@ function ResizeHandle(
       class="resize-handle"
       data-active-resize-handle={handle.props.isActive ? 'true' : undefined}
       mix={[
-        resizeHandleStyle,
-        handle.props.edge === 'start' ? startResizeHandleStyle : endResizeHandleStyle,
         on('pointerdown', (event) => {
           event.preventDefault()
           event.stopPropagation()
           handle.props.onResizeStart(handle.props.block, handle.props.edge, event)
         }),
+        css({
+          cursor: 'ns-resize',
+          height: '12px',
+          left: theme.space.xs,
+          opacity: 0,
+          position: 'absolute',
+          right: theme.space.xs,
+          touchAction: 'none',
+          zIndex: 3,
+          '&::before': {
+            backgroundColor: theme.colors.focusRing,
+            borderRadius: '999px',
+            content: '""',
+            height: '3px',
+            left: '50%',
+            position: 'absolute',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '28px',
+          },
+          '&:hover': {
+            opacity: 1,
+          },
+          '&[data-active-resize-handle="true"]': {
+            opacity: 1,
+          },
+        }),
+        handle.props.edge === 'start'
+          ? css({
+              top: 0,
+              transform: 'translateY(-4px)',
+            })
+          : css({
+              bottom: 0,
+              transform: 'translateY(4px)',
+            }),
       ]}
     />
   )
@@ -1182,11 +1425,11 @@ function ResizeHandle(
 
 function HorizontalResizeHandle(
   handle: Handle<{
-    block: GridBlockDocument
+    block: ScheduleLayoutBlock
     edge: HorizontalResizeEdge
     isActive: boolean
     onResizeStart: (
-      block: GridBlockDocument,
+      block: ScheduleLayoutBlock,
       edge: HorizontalResizeEdge,
       event: PointerEvent,
     ) => void
@@ -1198,13 +1441,47 @@ function HorizontalResizeHandle(
       class="resize-handle"
       data-active-resize-handle={handle.props.isActive ? 'true' : undefined}
       mix={[
-        horizontalResizeHandleStyle,
-        handle.props.edge === 'dayStart' ? dayStartResizeHandleStyle : dayEndResizeHandleStyle,
         on('pointerdown', (event) => {
           event.preventDefault()
           event.stopPropagation()
           handle.props.onResizeStart(handle.props.block, handle.props.edge, event)
         }),
+        css({
+          bottom: theme.space.sm,
+          cursor: 'ew-resize',
+          opacity: 0,
+          position: 'absolute',
+          top: theme.space.sm,
+          touchAction: 'none',
+          width: '12px',
+          zIndex: 3,
+          '&::before': {
+            backgroundColor: theme.colors.focusRing,
+            borderRadius: '999px',
+            content: '""',
+            height: '20px',
+            left: '50%',
+            position: 'absolute',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '3px',
+          },
+          '&:hover': {
+            opacity: 1,
+          },
+          '&[data-active-resize-handle="true"]': {
+            opacity: 1,
+          },
+        }),
+        handle.props.edge === 'dayStart'
+          ? css({
+              left: 0,
+              transform: 'translateX(-4px)',
+            })
+          : css({
+              right: 0,
+              transform: 'translateX(4px)',
+            }),
       ]}
     />
   )
@@ -1358,12 +1635,12 @@ function horizontalResizeBlockId(state: HorizontalResizeState, dayOfWeek: number
     : `${state.idPrefix}-${dayOfWeek}`
 }
 
-function copyBlock(block: GridBlockDocument): GridBlockDocument {
+function copyBlock(block: ScheduleLayoutBlock): ScheduleLayoutBlock {
   return { ...block }
 }
 
 function adjacentSelection(
-  blocks: GridBlockDocument[],
+  blocks: ScheduleLayoutBlock[],
   anchorId: GridInputId,
   targetId: GridInputId,
 ) {
@@ -1439,7 +1716,7 @@ function durationToSlotSpan(startMinute: number, endMinute: number) {
   return Math.max(1, Math.round((endMinute - startMinute) / slotMinutes))
 }
 
-function blockBackgroundColor(block: GridBlockDocument) {
+function blockBackgroundColor(block: ScheduleLayoutBlock) {
   let hue = hashString(block.name.trim().toLowerCase() || String(block.id)) % 360
   return `hsl(${hue} 78% 88%)`
 }
@@ -1472,315 +1749,8 @@ const scheduleBlockLayoutAnimation = {
   ...spring('snappy'),
 }
 
-const weekScheduleStyle = css({
-  display: 'grid',
-  gridTemplateRows: '56px 32px minmax(0, 1fr)',
-  height: '100%',
-  minHeight: 0,
-  overflow: 'hidden',
-  '&[data-schedule-dragging="true"], &[data-schedule-dragging="true"] *': {
-    cursor: 'grabbing !important',
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
-  },
-  '&[data-schedule-dragging="true"] .resize-handle': {
-    opacity: '0 !important',
-    pointerEvents: 'none',
-  },
-  '&[data-schedule-resizing="vertical"], &[data-schedule-resizing="vertical"] *': {
-    cursor: 'ns-resize !important',
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
-  },
-  '&[data-schedule-resizing="horizontal"], &[data-schedule-resizing="horizontal"] *': {
-    cursor: 'ew-resize !important',
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
-  },
-})
-
-const calendarHeaderStyle = css({
-  alignItems: 'center',
-  display: 'grid',
-  gridTemplateColumns: '1fr auto 1fr',
-  gap: theme.space.sm,
-  padding: `0 ${theme.space.md}`,
-})
-
-const calendarTitleStyle = css({
-  color: theme.colors.text.primary,
-  fontSize: theme.fontSize.xl,
-  fontWeight: theme.fontWeight.bold,
-  justifyContent: 'center',
-  letterSpacing: theme.letterSpacing.tight,
-})
-
-const calendarActionsStyle = css({
-  alignItems: 'center',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: theme.space.sm,
-  justifySelf: 'end',
-})
-
-const dayHeaderGridStyle = css({
-  alignItems: 'end',
-  borderBottom: `1px solid ${theme.colors.border.strong}`,
-  display: 'grid',
-  gridTemplateColumns: `${gridLabelWidth}px repeat(7, minmax(88px, 1fr))`,
-  paddingRight: '10px',
-})
-
-const dayHeaderStyle = css({
-  color: theme.colors.text.primary,
-  fontSize: theme.fontSize.xs,
-  fontWeight: theme.fontWeight.medium,
-  padding: `2px ${theme.space.xs}`,
-  textAlign: 'center',
-})
-
-const timeGridScrollerStyle = css({
-  minHeight: 0,
-  overflowY: 'auto',
-})
-
-const timeGridStyle = css({
-  minWidth: '760px',
-  position: 'relative',
-})
-
-const timeRowsStyle = css({
-  position: 'relative',
-})
-
 const timeRowStyle = css({
   display: 'grid',
   gridTemplateColumns: `${gridLabelWidth}px repeat(7, minmax(88px, 1fr))`,
   minHeight: `${gridRowHeight}px`,
-})
-
-const timeLabelStyle = css({
-  color: theme.colors.text.secondary,
-  fontSize: '0.6875rem',
-  padding: `0 ${theme.space.xs} 0 0`,
-  textAlign: 'right',
-  transform: 'translateY(-0.7em)',
-})
-
-const hourTimeLabelStyle = css({
-  color: theme.colors.text.primary,
-  fontWeight: theme.fontWeight.semibold,
-})
-
-const timeCellStyle = css({
-  borderLeft: `1px dashed ${theme.colors.border.default}`,
-  borderTop: `1px dashed ${theme.colors.border.default}`,
-  minHeight: `${gridRowHeight}px`,
-})
-
-const hourTimeCellStyle = css({
-  borderTop: `1px solid ${theme.colors.border.strong}`,
-})
-
-const halfHourTimeCellStyle = css({
-  borderTop: `1px dotted ${theme.colors.border.strong}`,
-})
-
-const spacerTimeCellStyle = css({
-  borderLeft: `1px dashed ${theme.colors.border.default}`,
-  minHeight: `${gridRowHeight}px`,
-})
-
-const blockLayerStyle = css({
-  display: 'grid',
-  gridTemplateColumns: `${gridLabelWidth}px repeat(7, minmax(88px, 1fr))`,
-  gridAutoRows: `${gridRowHeight}px`,
-  inset: 0,
-  pointerEvents: 'none',
-  position: 'absolute',
-  zIndex: 1,
-})
-
-const blockGridItemStyle = css({
-  display: 'grid',
-  minHeight: 0,
-  minWidth: 0,
-  pointerEvents: 'none',
-  position: 'relative',
-  '&[data-dragging="true"]': {
-    zIndex: 2,
-  },
-})
-
-const blockGhostGridItemStyle = css({
-  display: 'grid',
-  minHeight: 0,
-  minWidth: 0,
-  pointerEvents: 'none',
-  position: 'relative',
-  zIndex: 1,
-})
-
-const blockGhostBoxStyle = css({
-  backgroundColor: 'rgb(209 213 219 / 0.72)',
-  border: `2px dashed ${theme.colors.text.secondary}`,
-  borderRadius: theme.radius,
-  margin: '2px 4px',
-  opacity: 0.5,
-})
-
-const blockBoxStyle = css({
-  alignItems: 'center',
-  backgroundColor: theme.surface.lvl1,
-  border: `1px solid ${theme.colors.border.default}`,
-  borderRadius: theme.radius,
-  boxShadow: '0 1px 1px rgb(0 0 0 / 0.05)',
-  color: '#111111',
-  cursor: 'grab',
-  display: 'flex',
-  fontSize: theme.fontSize.xs,
-  fontWeight: theme.fontWeight.medium,
-  justifyContent: 'center',
-  margin: '2px 4px',
-  overflow: 'hidden',
-  padding: theme.space.xs,
-  pointerEvents: 'auto',
-  position: 'relative',
-  textAlign: 'center',
-  touchAction: 'none',
-  transition: 'background-color 120ms ease, border-color 120ms ease',
-  userSelect: 'none',
-  '&:not([data-dragging="true"])': {
-    transition: 'background-color 120ms ease, border-color 120ms ease, translate 120ms ease',
-  },
-  '&:hover .resize-handle': {
-    opacity: 1,
-  },
-  '&[data-resizing="true"] .resize-handle': {
-    opacity: 1,
-  },
-  '&[data-editing="true"]': {
-    cursor: 'text',
-  },
-  '&:focus, &[data-selected="true"]': {
-    borderColor: theme.colors.focusRing,
-    outline: `2px solid ${theme.colors.focusRing}`,
-    outlineOffset: 0,
-  },
-})
-
-const draggingBlockBoxStyle = css({
-  '&[data-dragging="true"]': {
-    backgroundColor: theme.surface.lvl2,
-    borderColor: theme.colors.focusRing,
-    cursor: 'grabbing',
-    outline: `2px solid ${theme.colors.focusRing}`,
-    outlineOffset: 0,
-    zIndex: 2,
-    '& .resize-handle': {
-      opacity: 0,
-    },
-  },
-})
-
-const resizeHandleStyle = css({
-  cursor: 'ns-resize',
-  height: '12px',
-  left: theme.space.xs,
-  opacity: 0,
-  position: 'absolute',
-  right: theme.space.xs,
-  touchAction: 'none',
-  zIndex: 3,
-  '&::before': {
-    backgroundColor: theme.colors.focusRing,
-    borderRadius: '999px',
-    content: '""',
-    height: '3px',
-    left: '50%',
-    position: 'absolute',
-    top: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: '28px',
-  },
-  '&:hover': {
-    opacity: 1,
-  },
-  '&[data-active-resize-handle="true"]': {
-    opacity: 1,
-  },
-})
-
-const startResizeHandleStyle = css({
-  top: 0,
-  transform: 'translateY(-4px)',
-})
-
-const endResizeHandleStyle = css({
-  bottom: 0,
-  transform: 'translateY(4px)',
-})
-
-const horizontalResizeHandleStyle = css({
-  bottom: theme.space.sm,
-  cursor: 'ew-resize',
-  opacity: 0,
-  position: 'absolute',
-  top: theme.space.sm,
-  touchAction: 'none',
-  width: '12px',
-  zIndex: 3,
-  '&::before': {
-    backgroundColor: theme.colors.focusRing,
-    borderRadius: '999px',
-    content: '""',
-    height: '20px',
-    left: '50%',
-    position: 'absolute',
-    top: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: '3px',
-  },
-  '&:hover': {
-    opacity: 1,
-  },
-  '&[data-active-resize-handle="true"]': {
-    opacity: 1,
-  },
-})
-
-const dayStartResizeHandleStyle = css({
-  left: 0,
-  transform: 'translateX(-4px)',
-})
-
-const dayEndResizeHandleStyle = css({
-  right: 0,
-  transform: 'translateX(4px)',
-})
-
-const blockInputStyle = css({
-  backgroundColor: 'transparent',
-  border: 0,
-  boxSizing: 'border-box',
-  color: 'inherit',
-  cursor: 'inherit',
-  font: 'inherit',
-  fontWeight: 'inherit',
-  height: '100%',
-  inset: 0,
-  lineHeight: 1.2,
-  outline: 0,
-  padding: theme.space.xs,
-  pointerEvents: 'none',
-  position: 'absolute',
-  textAlign: 'center',
-  userSelect: 'none',
-  WebkitUserSelect: 'none',
-  width: '100%',
-  '&[data-editable="true"]': {
-    pointerEvents: 'auto',
-    userSelect: 'text',
-    WebkitUserSelect: 'text',
-  },
 })

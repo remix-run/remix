@@ -1,7 +1,12 @@
 import type { AssetServer } from '@remix-run/assets'
+import { CspNonce, getCspNonce, inheritCspNonce } from '@remix-run/csp-middleware'
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 import { createHtmlResponse } from '@remix-run/response/html'
-import { renderToStream, type ResolveFrameContext } from '@remix-run/ui/server'
+import {
+  renderToStream,
+  type ImportMapData,
+  type ResolveFrameContext,
+} from '@remix-run/component/server'
 
 import { renderWith, type Renderer } from './render.ts'
 
@@ -11,6 +16,11 @@ type RemixNode = Parameters<typeof renderToStream>[0]
 const FRAME_HEADER = 'X-Remix-Frame'
 const FRAME_TARGET_HEADER = 'X-Remix-Target'
 const TOP_FRAME_SRC_HEADER = 'X-Remix-Top-Frame-Src'
+// Internal subrequests report errors through the enclosing render.
+// Browser frame requests use the same headers, so identify internal requests by object identity.
+const internalFrameRequests = new WeakSet<Request>()
+// Keyed by body so responses rebuilt with `new Response(response.body, response)` keep waiting.
+const pendingShells = new WeakMap<ReadableStream<Uint8Array>, Promise<void>>()
 const MAX_FRAME_REDIRECTS = 20
 const FRAME_REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 const FRAME_REQUEST_HEADERS_TO_REMOVE = [
@@ -43,19 +53,19 @@ const CROSS_ORIGIN_FRAME_HEADERS = [
   FRAME_TARGET_HEADER,
 ] as const
 
-/** Options for the standard Remix UI renderer. */
+/** Options for the standard Remix component renderer. */
 export interface RenderOptions {
-  /** Asset server used to turn source-based client entry IDs into browser module and preload URLs. */
-  assets?: Pick<AssetServer, 'getHref' | 'getPreloads'>
+  /** Asset server used to turn source-based client entry IDs into browser module metadata. */
+  assets?: Pick<AssetServer, 'getScriptEntry'>
   /** Error hook invoked when server rendering fails. */
   onError?: (error: unknown) => void
 }
 
-/** Renders a Remix UI node as an HTML response. */
+/** Renders a Remix component node as an HTML response. */
 export type RenderFunction = (node: RemixNode, init?: ResponseInit) => Response
 
 /**
- * Adds the standard Remix UI renderer to request context.
+ * Adds the standard Remix component renderer to request context.
  *
  * @param options Rendering integration options.
  * @returns Middleware that installs `context.render(node, init)` for the current request.
@@ -63,26 +73,71 @@ export type RenderFunction = (node: RemixNode, init?: ResponseInit) => Response
 export function render(
   options: RenderOptions = {},
 ): Middleware<{ key: typeof Renderer; value: RenderFunction; property: 'render' }> {
-  return renderWith((context) => {
+  let installRenderer = renderWith((context) => {
     let request = context.request
     let topFrameSrc = getTopFrameSrc(request)
-    let onError = request.headers.get(FRAME_HEADER) === 'true' ? () => {} : options.onError
+    let onError = internalFrameRequests.has(request) ? () => {} : options.onError
+    let nonce = getCspNonce(context)
+    // Child routes may render without installing CSP middleware themselves.
+    if (nonce !== undefined) context.set(CspNonce, nonce)
 
     return function render(node: RemixNode, init?: ResponseInit): Response {
-      let stream = renderToStream(node, {
-        frameSrc: request.url,
-        topFrameSrc,
-        signal: request.signal,
-        onError,
-        resolveFrame: (src, target, frameContext) =>
-          resolveFrame(context, src, target, frameContext),
-        resolveClientEntry: (entryId, component) =>
-          resolveClientEntry(options.assets, entryId, component),
-      })
-
-      return createHtmlResponse(stream, init)
+      let { stream, shell } = trackShell(
+        renderToStream(node, {
+          frameSrc: request.url,
+          topFrameSrc,
+          signal: request.signal,
+          onError,
+          nonce: getCspNonce(context),
+          resolveFrame: (src, target, frameContext) =>
+            resolveFrame(context, src, target, frameContext),
+          resolveClientEntry: (entryId, component) =>
+            resolveClientEntry(options.assets, entryId, component),
+        }),
+      )
+      let response = createHtmlResponse(stream, init)
+      if (response.body != null) pendingShells.set(response.body, shell)
+      return response
     }
   })
+
+  return async (context, next) => {
+    let response = await installRenderer(context, next)
+    // Wait for the shell so render errors reject the request before the status is sent.
+    if (response.body != null) await pendingShells.get(response.body)
+    return response
+  }
+}
+
+// The first chunk from renderToStream() contains the whole shell, so shell render errors
+// reject the first read. Content streamed after it can no longer change the response status.
+function trackShell(source: ReadableStream<Uint8Array>): {
+  stream: ReadableStream<Uint8Array>
+  shell: Promise<void>
+} {
+  let reader = source.getReader()
+  let firstRead: Promise<ReadableStreamReadResult<Uint8Array>> | undefined = reader.read()
+  let shell = firstRead.then(() => {})
+  // Responses that never reach the middleware still error through their body.
+  shell.catch(() => {})
+
+  let stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      let read = firstRead ?? reader.read()
+      firstRead = undefined
+      let result = await read
+      if (result.done) {
+        controller.close()
+      } else {
+        controller.enqueue(result.value)
+      }
+    },
+    cancel(reason) {
+      return reader.cancel(reason)
+    },
+  })
+
+  return { stream, shell }
 }
 
 function getTopFrameSrc(request: Request): string {
@@ -100,7 +155,7 @@ async function resolveFrame(
   let topFrameSrc = frameContext?.topFrameSrc ?? getTopFrameSrc(context.request)
   let frameUrl = new URL(src, currentFrameSrc)
   let headers = createFrameRequestHeaders(context.headers, target, topFrameSrc)
-  let response = await followFrameRedirects(context, frameUrl, headers)
+  let response = await followFrameRedirects(context, frameUrl, headers, frameContext?.nonce)
 
   if (!isHtmlResponse(response)) {
     throw new Error('Frame response must be HTML')
@@ -148,6 +203,7 @@ async function followFrameRedirects(
   context: RenderRequestContext,
   initialUrl: URL,
   headers: Headers,
+  nonce: string | undefined,
 ): Promise<Response> {
   let url = initialUrl
 
@@ -156,13 +212,14 @@ async function followFrameRedirects(
       headers = createCrossOriginFrameHeaders(headers)
     }
 
-    let response = await context.router.fetch(
-      new Request(url, {
-        method: 'GET',
-        headers,
-        signal: context.request.signal,
-      }),
-    )
+    let request = new Request(url, {
+      method: 'GET',
+      headers,
+      signal: context.request.signal,
+    })
+    internalFrameRequests.add(request)
+    if (nonce !== undefined) inheritCspNonce(request, nonce)
+    let response = await context.router.fetch(request)
     let location = response.headers.get('Location')
 
     if (location == null || !FRAME_REDIRECT_STATUSES.has(response.status)) {
@@ -191,10 +248,10 @@ function createCrossOriginFrameHeaders(headers: Headers): Headers {
 }
 
 async function resolveClientEntry(
-  assets: Pick<AssetServer, 'getHref' | 'getPreloads'> | undefined,
+  assets: Pick<AssetServer, 'getScriptEntry'> | undefined,
   entryId: string,
   component: { readonly name: string },
-): Promise<{ href: string; exportName: string; preloads?: string[] }> {
+): Promise<{ href: string; importMap?: ImportMapData; exportName: string; preloads?: string[] }> {
   let hashIndex = entryId.lastIndexOf('#')
   let sourceId = hashIndex === -1 ? entryId : entryId.slice(0, hashIndex)
   let explicitExportName = hashIndex === -1 ? '' : entryId.slice(hashIndex + 1)
@@ -208,12 +265,9 @@ async function resolveClientEntry(
     }
     if (!exportName) throw createMissingExportNameError(entryId, true)
 
-    let [href, preloads] = await Promise.all([
-      assets.getHref(sourceId),
-      assets.getPreloads(sourceId),
-    ])
+    let { href, importMap, preloads } = await assets.getScriptEntry(sourceId)
 
-    return { href, exportName, preloads }
+    return { href, importMap, exportName, preloads }
   }
 
   if (!exportName) throw createMissingExportNameError(entryId, assets != null)

@@ -1,5 +1,5 @@
-import { css, type Handle, type RemixNode } from 'remix/ui'
-import button from 'remix/ui/button'
+import { css, type Handle, type RemixNode } from 'remix/component'
+import { button } from '../../ui/public/button.ts'
 import { theme } from '../../ui/public/design.ts'
 
 import { routes } from '../../routes.ts'
@@ -138,10 +138,27 @@ function AuthForm(handle: Handle<AuthFormProps>) {
     let { action, csrfToken, error, errors, submitLabel } = handle.props
 
     return (
-      <form action={action} method="post" mix={formStyle}>
+      <form
+        action={action}
+        method="post"
+        mix={css({
+          display: 'grid',
+          gap: theme.space.md,
+        })}
+      >
         <input type="hidden" name="_csrf" value={csrfToken} />
         {error ? (
-          <p role="alert" mix={errorStyle}>
+          <p
+            role="alert"
+            mix={css({
+              backgroundColor: theme.colors.danger,
+              border: `1px solid ${theme.colors.danger}`,
+              borderRadius: theme.radius,
+              color: 'rgb(255 255 255 / 0.92)',
+              margin: 0,
+              padding: theme.space.md,
+            })}
+          >
             {error}
           </p>
         ) : null}
@@ -245,11 +262,6 @@ const bodyStyle = css({
   margin: `${theme.space.sm} 0 ${theme.space.lg}`,
 })
 
-const formStyle = css({
-  display: 'grid',
-  gap: theme.space.md,
-})
-
 const fieldStyle = css({
   color: theme.colors.text.secondary,
   display: 'grid',
@@ -271,15 +283,6 @@ const inputStyle = css({
     outline: `2px solid ${theme.colors.focusRing}`,
     outlineOffset: '2px',
   },
-})
-
-const errorStyle = css({
-  backgroundColor: theme.colors.danger,
-  border: `1px solid ${theme.colors.danger}`,
-  borderRadius: theme.radius,
-  color: 'rgb(255 255 255 / 0.92)',
-  margin: 0,
-  padding: theme.space.md,
 })
 
 const fieldErrorStyle = css({

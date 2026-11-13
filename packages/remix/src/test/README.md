@@ -1,0 +1,668 @@
+# test
+
+A test framework for JavaScript and TypeScript projects.
+
+## Features
+
+- `describe`/`it` test structure with `before`/`after`/`beforeEach`/`afterEach` hooks
+- Server-side unit testing
+- Playwright E2E testing via `t.serve`
+- In-browser component testing (pair with `render` from `remix/component/test`)
+- Mock functions, methods, accessors, and data properties via `t.mock`
+- Per-test and hook timeouts with `t.signal` abort support
+- Polling assertions with `t.waitFor()`
+- Unified code coverage reporting across unit and E2E tests
+- Watch mode
+- Static CLI configuration through `remix.json`
+
+## Installation
+
+```sh
+npm i remix
+```
+
+## Usage
+
+Write test files that import from `remix/test`:
+
+```ts
+import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
+
+describe('My Test Suite', () => {
+  it('tests a function', () => {
+    let result = something()
+    assert.equal(result, 42)
+  })
+})
+```
+
+Run tests with the CLI:
+
+```sh
+remix test
+```
+
+By default, `remix test` discovers all files matching `**/*.test{,.browser,.e2e}.{ts,tsx}`. Pass a partial filename to select matching test files:
+
+```sh
+remix test frame
+remix test frame router
+```
+
+Simple names expand to test globs: `frame` becomes `**/*frame*.test*.{ts,tsx}`, selecting files such as `src/frame.test.ts` and `src/frame.css.test.tsx` while ignoring source files such as `src/frame.ts`. Arguments containing glob syntax, a path separator, or a `.ts` or `.tsx` file extension pass through unchanged.
+
+You can also pass file paths and explicit globs:
+
+```sh
+remix test "src/**/*.test.ts"
+remix test "src/**/*.test.ts" "tests/**/*.test.tsx"
+remix test src/frame.test.ts
+```
+
+You can combine simple names, file paths, and globs; matching files run once. The `--glob.*` flags are repeatable. Positional arguments, including expanded names, override configured test globs and `--glob.test`. Exclusions still apply. Use an explicit glob for custom naming conventions such as `*.spec.ts`.
+
+### Config File
+
+Create an optional `remix.json` at the root of your project. It is parsed as JSONC, so comments and
+trailing commas are allowed:
+
+```jsonc
+{
+  "$schema": "./node_modules/remix/schema/remix.json",
+  "test": {
+    "files": ["**/*.test{,.browser,.e2e}.{ts,tsx}"],
+    "browserFiles": ["**/*.test.browser.{ts,tsx}"],
+    "e2eFiles": ["**/*.test.e2e.{ts,tsx}"],
+    "exclude": ["node_modules/**", "dist/**"],
+    "type": ["server", "browser", "e2e"],
+    "only": ["/checkout/i"],
+
+    "concurrency": 2,
+    "pool": "forks",
+    "setup": "./test/setup.ts",
+    "watch": false,
+
+    "playwright": {
+      "echo": false,
+      "open": false,
+      "configFile": "./playwright.config.ts",
+      "projects": ["chromium", "firefox"],
+    },
+
+    "reporter": "spec",
+    "quiet": false,
+
+    "coverage": {
+      "enabled": true,
+      "dir": ".coverage",
+      "include": ["src/**"],
+      "exclude": ["src/**/*.test.ts"],
+      "statements": 80,
+      "lines": 80,
+      "branches": 80,
+      "functions": 80,
+    },
+  },
+}
+```
+
+Every field is optional. Relative paths and globs resolve from the directory containing the config
+file. Explicit CLI flags and positional globs take precedence. Repeatable flags replace configured
+arrays, and nested Playwright and coverage values merge by field.
+
+`remix-test.config.ts` and `remix-test.config.js` are no longer discovered. Move their static values
+under `remix.json#test`. Move inline Playwright configuration into `playwright.config.ts` and point
+`playwright.configFile` at it. Use slash-delimited strings for regular expressions, and use CLI flags
+or package scripts for environment-specific overrides.
+
+### CLI Options
+
+Use the global `--config` flag to select another Remix config file. The flag path resolves from the
+current working directory:
+
+```sh
+remix test --config ./config/remix.ci.json
+```
+
+You may specify any test setting as a CLI flag. Boolean settings have negative forms so configured
+`true` values can be disabled explicitly:
+
+| Flag                        | Short |
+| --------------------------- | ----- |
+| `--browser.echo`            |       |
+| `--no-browser.echo`         |       |
+| `--browser.open`            |       |
+| `--no-browser.open`         |       |
+| `--concurrency <n>`         | `-c`  |
+| `--coverage`                |       |
+| `--no-coverage`             |       |
+| `--coverage.dir <path>`     |       |
+| `--coverage.include`        |       |
+| `--coverage.exclude`        |       |
+| `--coverage.statements`     |       |
+| `--coverage.lines`          |       |
+| `--coverage.branches`       |       |
+| `--coverage.functions`      |       |
+| `--glob.test`               |       |
+| `--glob.browser`            |       |
+| `--glob.e2e`                |       |
+| `--glob.exclude`            |       |
+| `--playwrightConfig <path>` |       |
+| `--only <pattern>`          |       |
+| `--pool <forks\|threads>`   |       |
+| `--project <name>`          | `-p`  |
+| `--quiet`                   | `-q`  |
+| `--no-quiet`                |       |
+| `--reporter <name>`         | `-r`  |
+| `--setup <path>`            | `-s`  |
+| `--type <name>`             | `-t`  |
+| `--watch`                   | `-w`  |
+| `--no-watch`                |       |
+
+The standalone `remix-test` executable is no longer installed. Update scripts to use the main Remix CLI:
+
+```diff
+- "test": "remix-test --type server"
++ "test": "remix test --type server"
+```
+
+### Focusing Tests
+
+Use `.only` to focus a suite or test while developing:
+
+```ts
+describe.only('Cart routes', () => {
+  it('loads cart items', () => {})
+})
+
+describe('Checkout routes', () => {
+  it.only('redirects anonymous users', () => {})
+})
+```
+
+Use `--only <pattern>` to focus tests from the CLI without editing source. Plain patterns are case-insensitive JavaScript regular expressions matched against suite names and full test names:
+
+```sh
+remix test --only 'Cart routes'
+remix test --only 'Checkout routes > redirects anonymous users'
+remix test --only '/anonymous users$/'
+```
+
+Slash-delimited CLI and `remix.json` patterns preserve their flags, so `/pattern/` is case-sensitive and `/pattern/i` is case-insensitive. Plain string patterns are case-insensitive. Programmatic callers may also pass `RegExp` values.
+
+Full test names join nested `describe` names and the test name with `>`. For example, `describe('Cart routes', () => describe('loader', () => it('loads cart items', ...)))` has the full test name `Cart routes > loader > loads cart items`.
+
+### Setup
+
+The `setup` option points to a module that can export `globalSetup` and/or `globalTeardown` functions, called once before and after the entire test run respectively:
+
+```ts
+// ./test/setup.ts
+export async function globalSetup() {
+  await db.migrate()
+}
+
+export async function globalTeardown() {
+  await db.close()
+}
+```
+
+## API
+
+### Test framework
+
+```ts
+import { beforeAll, afterAll, beforeEach, afterEach, describe, it } from 'remix/test'
+
+beforeAll(() => {})
+afterAll(() => {})
+
+describe('My Test Suite', () => {
+  beforeEach(() => {})
+  afterEach(() => {})
+
+  it('tests something', () => {})
+  it('skips with a reason', { skip: 'requires API credentials' }, () => {})
+  it('tracks planned work', { todo: 'add retry coverage' }, () => {})
+  it('fails if it takes too long', { timeout: 5_000 }, async (t) => {
+    await fetchSomething({ signal: t.signal })
+  })
+  it('tests something else', () => {})
+})
+```
+
+`suite` and `test` are aliases for `describe` and `it`.
+
+```ts
+import { suite, test } from 'remix/test'
+
+suite('My Test Suite', () => {
+  test('tests something', () => {})
+})
+```
+
+### Programmatic runner
+
+`remix/test/cli` exports `runRemixTest()` for tools that want to run the test runner without exiting the current process:
+
+```ts
+import { runRemixTest } from 'remix/test/cli'
+
+let exitCode = await runRemixTest({
+  concurrency: 1,
+  cwd: process.cwd(),
+  glob: { test: 'src/**/*.test.ts' },
+  type: ['server'],
+})
+```
+
+The programmatic runner accepts structured options only; it does not discover or load configuration
+files. Programmatic callers may pass richer values such as an inline Playwright config or `RegExp`
+test-name filters. The main Remix CLI owns `remix.json` loading and passes the resolved options to the
+runner.
+
+`runRemixTest()` does not read `process.argv` or terminate the process; it returns the runner exit code. The main `remix` executable owns argument parsing and passes the final code to `process.exit()` so open workers, browsers, or project handles cannot keep the CLI alive. `@remix-run/test` does not install a standalone executable.
+
+### Test Context
+
+Each test callback receives a `TestContext` (`t`) as its first argument with helpful test utilities.
+
+```ts
+// from 'remix/test'
+interface TestContext {
+  // Aborts when the test times out or when the user-provided test signal aborts
+  signal: AbortSignal
+
+  // Register a cleanup function to run after the test completes
+  after(fn: () => void): void
+
+  // Retry assertions and return the first result that does not throw or reject
+  waitFor<result>(
+    condition: () => result | PromiseLike<result>,
+    options?: { interval?: number; timeout?: number },
+  ): Promise<Awaited<result>>
+
+  // Mock functions, methods, accessors, and data properties
+  mock: MockTracker // import type { MockTracker } from 'remix/test'
+
+  // Replace global timers, Date, and performance.now() with controllable fakes
+  useFakeTimers(options?: { now?: number | Date }): FakeTimers
+
+  // E2E only: connect a running test server to a Playwright Page
+  serve(server: { baseUrl: string; close(): Promise<void> }): Promise<Page>
+}
+```
+
+#### Mocks and Spies
+
+Use `t.mock` to create mocks and spies through the [MockTracker API](https://docs.remix.run/api/test/interface/MockTracker/). Function and method mock restoration runs in registration order with `t.after()` callbacks. Accessor and property mocks restore in reverse installation order after those callbacks, even when a test or cleanup callback throws.
+
+```ts
+it('mocks and spies', (t) => {
+  // Create a mock function
+  let fn = t.mock.fn((x: number) => x * 2)
+  fn(3)
+  fn.mock.calls[0].result // 6
+
+  // Mock an existing method
+  let spy = t.mock.method(console, 'warn')
+  console.warn('test')
+  spy.mock.calls.length // 1
+  // spy is restored automatically when the test ends
+})
+```
+
+Both `t.mock` and the standalone `mock` export provide these controls on each mock function or method spy's `.mock` property:
+
+| Method                                            | Behavior                                                                                                                                                    |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mockImplementation(implementation)`              | Changes the default implementation, preserving pending overrides.                                                                                           |
+| `mockImplementationOnce(implementation, onCall?)` | Uses an implementation for one zero-based call index; defaults to the next call. Replaces any override already registered at that index.                    |
+| `resetCalls()`                                    | Clears call history and resets call indices, preserving implementations and pending overrides.                                                              |
+| `callCount()`                                     | Returns `mock.calls.length`, including invocations still executing.                                                                                         |
+| `restore()`                                       | Restores a method's original value and any own descriptor, or a standalone mock's original default implementation. Preserves history and pending overrides. |
+
+```ts
+import { it } from 'remix/test'
+
+it('changes a mock implementation', (t) => {
+  let price = t.mock.fn((quantity: number) => quantity * 10)
+  price.mock.mockImplementation((quantity) => quantity * 12)
+  price.mock.mockImplementationOnce((quantity) => quantity * 8, 1)
+
+  price(2) // 24
+  price(2) // 16
+  price(2) // 24
+  price.mock.callCount() // 3
+
+  price.mock.resetCalls()
+  price.mock.callCount() // 0
+  price.mock.restore()
+  price(2) // 20
+})
+```
+
+Replacement controls preserve the original function's types, including generic signatures and overloads. Method spies keep their permissive call and history types and initial implementation argument.
+
+Call indices must be safe integers at or after the next call index. `resetCalls()` replaces the history array, so pending override indices count from zero again; consumed overrides stay consumed.
+
+These controls follow the selected [Node `MockFunctionContext` APIs](https://nodejs.org/download/release/v24.3.0/docs/api/test.html#class-mockfunctioncontext). Remix keeps a live `mock.calls` array and records calls before invoking the implementation; Node returns array snapshots and records calls after it returns or throws. Inside the first invocation, Remix's `callCount()` returns `1`, while Node's returns `0`. Reentrant history inspection and override scheduling can therefore differ. Node's additional `mock.fn()` overloads and `times` options are not supported.
+
+Method spies use assignment to install replacements, including through setters. When layered over a getter spy, they temporarily install a data property without changing the accessor's backing value. Restoring a method spy skips previously restored spies on the same property. A retained spy remains callable with its current implementation.
+
+##### Data properties
+
+Use `t.mock.property()` to override a data property and track reads and writes on the original object:
+
+```ts
+import * as assert from 'remix/assert'
+import { it } from 'remix/test'
+
+it('overrides a feature setting for one read', (t) => {
+  let settings = { enabled: true }
+  let property = t.mock.property(settings, 'enabled', false)
+
+  assert.equal(settings.enabled, false)
+  property.mock.mockImplementationOnce(true)
+  assert.equal(settings.enabled, true)
+  assert.equal(settings.enabled, false)
+  assert.equal(property.mock.accessCount(), 3)
+})
+```
+
+The returned proxy exposes the property context through `.mock`. The property must be a configurable own data property on a non-array object; functions are not supported. Omitting the replacement value retains the original, while explicitly passing `undefined` replaces it with `undefined`.
+
+| Property context member                    | Behavior                                         |
+| ------------------------------------------ | ------------------------------------------------ |
+| `accesses`                                 | Returns a snapshot of recorded reads and writes. |
+| `accessCount()`                            | Counts recorded accesses.                        |
+| `mockImplementation(value)`                | Writes a new value and records the write.        |
+| `mockImplementationOnce(value, onAccess?)` | Overrides one access, defaulting to the next.    |
+| `resetAccesses()`                          | Clears history and restarts access indices.      |
+| `restore()`                                | Restores the original descriptor and value.      |
+
+A one-access override affects a read or a write. If a write consumes it, the override becomes the stored value. See the [property context reference](https://docs.remix.run/api/test/interface/MockPropertyContext/) for scheduling, read-only properties, and history resets.
+
+Reading `.mock` on the proxy returns the context even if the target has a field with that name. Read the original field on the original object. See the [proxy reference](https://docs.remix.run/api/test/type/MockProperty/) for descriptor restrictions.
+
+##### Getters and setters
+
+Use `t.mock.getter()` or `t.mock.setter()` to replace an accessor while preserving its paired setter or getter. Omitting the implementation spies on the original accessor with its receiver.
+
+For browser properties, target the prototype that owns the descriptor. In a browser test (`*.test.browser.ts`):
+
+```ts
+import * as assert from 'remix/assert'
+import { it } from 'remix/test'
+
+it('reads the offline browser state', (t) => {
+  let getter = t.mock.getter(Navigator.prototype, 'onLine', () => false)
+  assert.equal(navigator.onLine, false)
+  assert.equal(getter.mock.calls.length, 1)
+})
+```
+
+The equivalent method forms pass `{ getter: true }` or `{ setter: true }` as the fourth argument to `t.mock.method()`; they cannot be combined. Pass `undefined` as the third argument to keep the original implementation.
+
+These APIs use [Node 24.3's property and accessor API names](https://nodejs.org/download/release/v24.3.0/docs/api/test.html#class-mocktracker). Remix restricts `property()` to own data properties so it can restore their descriptors. Node's third-argument options shorthand and `times` option are not supported, and error codes and access stacks vary by runtime.
+
+For environment variables in server tests, assign `process.env` directly: Node rejects the accessor descriptor used by `property()`. This partial example registers restoration before assigning `TZ`:
+
+```ts
+import { it } from 'remix/test'
+
+it('uses UTC', (t) => {
+  let original = process.env.TZ
+  t.after(() => {
+    if (original === undefined) delete process.env.TZ
+    else process.env.TZ = original
+  })
+  process.env.TZ = 'UTC'
+  // Exercise code that reads process.env.TZ
+})
+```
+
+#### Cleanup
+
+You can register local test cleanup logic with `t.after()`:
+
+```ts
+it('cleanup', (t) => {
+  let conn = db.connect()
+  t.after(() => conn.close())
+  // ...
+})
+```
+
+Cleanup continues after a callback fails, reporting errors with their original stack traces alongside any test body or `afterEach` failure.
+
+#### Timeouts and Signals
+
+Pass `{ timeout: ms }` to `it()` or after any lifecycle hook callback to fail that work if it takes too long. Timed-out tests abort `t.signal`, so async code that accepts an `AbortSignal` can cancel promptly.
+
+```ts
+it('loads data', { timeout: 5_000 }, async (t) => {
+  let response = await fetch('/api/data', { signal: t.signal })
+  assert.equal(response.status, 200)
+})
+
+beforeEach(
+  async () => {
+    await resetDatabase()
+  },
+  { timeout: 1_000 },
+)
+```
+
+#### Polling Assertions
+
+Use `t.waitFor()` to wait for a form's save confirmation in a browser test (`*.test.browser.ts`). Rendering setup is omitted:
+
+```ts
+import * as assert from 'remix/assert'
+import { it } from 'remix/test'
+
+it('shows the saved status', async (t) => {
+  // Render your form here.
+  let submitButton = document.querySelector<HTMLButtonElement>('button[type="submit"]')
+  assert.ok(submitButton)
+  submitButton.click()
+
+  await t.waitFor(() =>
+    assert.equal(document.querySelector('[role="status"]')?.textContent, 'Saved'),
+  )
+})
+```
+
+The callback runs immediately and retries after throws or rejections, waiting `interval` milliseconds after each failure settles (default: 50). It returns the first successful result; even `false` or `undefined` ends polling, so use assertions to express what must be true.
+
+The overall `timeout` defaults to 1000 milliseconds, including pending attempts. Timeout errors retain the last assertion failure as `cause`, if any.
+
+Polling uses real timers even when fake timers are enabled. It follows [Node 24.3's `waitFor()`](https://github.com/nodejs/node/blob/v24.3.0/lib/internal/test_runner/test.js), with cancellation when its test aborts or finishes. See the [`TestContext.waitFor` reference](https://github.com/remix-run/remix/blob/main/packages/test/src/lib/context.ts) for delay validation and cancellation details.
+
+#### Fake Timers
+
+`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, `setImmediate`, and their clear functions), `AbortSignal.timeout()`, `Date`, and `performance.now()` with controllable fakes that are automatically restored after the test. Time only moves when the test advances the clock. It works in any test environment — server unit tests, browser tests, or E2E setup code.
+
+Calling `t.useFakeTimers()` again restores the previous clock, discards its pending timers, and starts a new clock with the supplied options. After a successful `restore()`, calling it again has no effect.
+
+Timers are restored synchronously when the test aborts, or before registered cleanup callbacks run when the test finishes. Calling `t.useFakeTimers()` after either event throws, so unfinished async work cannot install a clock in a later test. Runner timeouts keep using real timers while fake timers are active.
+
+Only one fake clock can be active in a global environment. An overlapping clock from another test context is rejected before globals change. Failed installation rolls back earlier replacements. Restoration preserves the original property descriptors and attempts every replacement even after a failure; it reports the errors, and another `restore()` call retries failed properties.
+
+```ts
+it('debounces a callback', (t) => {
+  let timers = t.useFakeTimers()
+  let calls = 0
+  let debounced = debounce(() => calls++, 300)
+
+  debounced()
+  timers.advance(299)
+  assert.equal(calls, 0)
+  timers.advance(1)
+  assert.equal(calls, 1)
+})
+```
+
+| Method             | Description                                                                 |
+| ------------------ | --------------------------------------------------------------------------- |
+| `advance(ms)`      | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
+| `advanceAsync(ms)` | Like `advance`, but lets promise continuations settle between timer firings |
+| `restore()`        | Restore the original timer functions (called automatically after each test) |
+
+`Date.now()` and `new Date()` start at the Unix epoch (`0`), like Node's mock timers, and `performance.now()` starts at `0`. Vitest and Jest start at the real current time instead; a fixed start keeps tests from depending on when they run. Pass `now` to start the fake `Date` at a specific time. `new Date(value)`, `Date.parse()`, `Date.UTC()`, and `instanceof Date` keep working as usual.
+
+```ts
+it('expires a session after one hour', (t) => {
+  let timers = t.useFakeTimers({ now: new Date('2030-01-01T00:00:00Z') })
+  let session = createSession()
+
+  timers.advance(60 * 60 * 1000)
+  assert.equal(session.isExpired(), true)
+})
+```
+
+Immediates fire on the next advance, including `advance(0)`, and signals from `AbortSignal.timeout(ms)` abort with a `TimeoutError` once the clock reaches `ms`. Timers created before `t.useFakeTimers()` stay real, and the clear functions still cancel them. In Node, fake timers return handles that support `ref()`, `unref()`, `hasRef()`, and `refresh()`.
+
+Fake `AbortSignal.timeout(ms)` uses Node's validation in every runtime: `ms` must be a number and an integer from `0` through `4294967295`. Other types throw a `TypeError`; invalid numbers throw a `RangeError` synchronously.
+
+#### E2E
+
+In E2E test files, `t.serve()` connects a running test server to a Playwright `Page`. See [E2E Testing](#e2e-testing) for details.
+
+```ts
+import { createTestServer } from 'remix/node-fetch-server/test'
+
+it('navigates to home', async (t) => {
+  let router = createRouter()
+  let server = await createTestServer(router.fetch)
+  let page = await t.serve(server)
+  await page.goto('/')
+})
+```
+
+### Standalone mocks (module scope)
+
+The standalone `mock` import exposes the same methods as `t.mock`. Restore function, method, and accessor mocks manually with `spy.mock.restore()`, or data properties with `property.mock.restore()`:
+
+```ts
+import { mock } from 'remix/test'
+
+let spy = mock.method(console, 'log')
+// ...
+spy.mock.restore()
+```
+
+### Browser Testing
+
+Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each in-browser test suite runs in an isolated `iframe` so it has access to its own `document` instance.
+
+#### `render()`
+
+`render`, exported from `remix/component/test`, mounts a component into the DOM and returns a `RenderResult`:
+
+```ts
+import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
+import { render } from 'remix/component/test'
+import { Counter } from './counter.tsx'
+
+describe('Counter', () => {
+  it('increments on click', async (t) => {
+    let { $, act, cleanup } = render(<Counter />)
+    t.after(cleanup)
+
+    assert.equal($('[data-count]')?.textContent, '0')
+    await act(() => $('[data-action="increment"]')?.click())
+    assert.equal($('[data-count]')?.textContent, '1')
+  })
+})
+```
+
+`RenderResult` provides:
+
+| Property/Method | Description                                                             |
+| --------------- | ----------------------------------------------------------------------- |
+| `container`     | The `HTMLElement` the component is mounted into                         |
+| `root`          | The Remix `VirtualRoot` the component is rendered in                    |
+| `$(selector)`   | Alias for `container.querySelector()`                                   |
+| `$$(selector)`  | Alias for `container.querySelectorAll()`                                |
+| `act(fn)`       | Runs `fn` and flushes pending component updates                         |
+| `cleanup()`     | Unmounts and removes the container (pass to `t.after` for auto-cleanup) |
+
+### E2E Testing
+
+End-to-end (E2E) tests use [Playwright](https://playwright.dev) and are discovered by the `**/*.test.e2e.{ts,tsx}` glob pattern (configurable via `glob.e2e`). They use the same `describe`/`it` API as unit tests.
+
+E2E tests receive `t.serve()` on the test context, which accepts a running test server and returns a Playwright [`Page`](https://playwright.dev/docs/api/class-page) whose `baseURL` points at that server. The server and page are automatically closed after each test.
+
+```ts
+import * as assert from 'remix/assert'
+import { createTestServer } from 'remix/node-fetch-server/test'
+import { describe, it } from 'remix/test'
+import { createRouter } from './router.ts'
+
+describe('checkout', () => {
+  it('adds an item to the cart', async (t) => {
+    let router = createRouter()
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
+
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Add to Cart' }).click()
+    await page.getByRole('link', { name: 'Cart' }).click()
+    await page.getByRole('heading', { name: 'Shopping Cart' }).waitFor()
+
+    assert.equal(await page.locator('[data-test-cart-quantity]').innerText(), 1)
+  })
+})
+```
+
+Configure Playwright's browsers, timeouts, viewport, and other executable settings in
+`playwright.config.ts`:
+
+```ts
+import { defineConfig } from 'playwright/test'
+
+export default defineConfig({
+  projects: [
+    { name: 'chromium', use: { browserName: 'chromium' } },
+    { name: 'firefox', use: { browserName: 'firefox' } },
+    { name: 'webkit', use: { browserName: 'webkit' } },
+  ],
+  use: {
+    navigationTimeout: 5_000,
+    actionTimeout: 5_000,
+  },
+})
+```
+
+Reference it from `remix.json` when it is not at the default location:
+
+```jsonc
+{
+  "test": {
+    "playwright": {
+      "configFile": "./playwright.config.ts",
+    },
+  },
+}
+```
+
+Set `test.playwright.open` to `true`, or pass `--browser.open`, to keep the browser open after tests
+finish—useful for debugging failures.
+
+## Related Packages
+
+- [`assert`](../assert/README.md) provides assertions that work in server and browser tests.
+- [`component`](../component/README.md) provides the `remix/component/test` browser rendering utilities.
+
+## Related Work
+
+- [Playwright](https://playwright.dev) provides the browser automation used by browser and E2E tests.
+- [Node.js test runner](https://nodejs.org/api/test.html) provides prior art for the test framework API and reporting model.
+
+## License
+
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

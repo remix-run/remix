@@ -1,5 +1,5 @@
-import { clientEntry, css, navigate, on, type Handle } from 'remix/ui'
-import button from 'remix/ui/button'
+import { clientEntry, css, navigate, on, type Handle } from 'remix/component'
+import { button } from '../../../ui/public/button.ts'
 import { theme } from '../../../ui/public/design.ts'
 
 import { NewScheduleActionComponent } from './new-schedule-action.tsx'
@@ -41,25 +41,83 @@ export const ScheduleSidebar = clientEntry(
       }
 
       return (
-        <aside aria-label="Schedules" mix={sidebarStyle}>
-          <div mix={sidebarHeaderStyle}>
-            <a href="/" mix={appTitleStyle}>
+        <aside
+          aria-label="Schedules"
+          mix={css({
+            backgroundColor: theme.surface.lvl0,
+            borderRight: `1px solid ${theme.colors.border.strong}`,
+            display: 'grid',
+            gridTemplateRows: '56px 32px minmax(0, 1fr)',
+            minHeight: 0,
+          })}
+        >
+          <div
+            mix={css({
+              alignItems: 'center',
+              display: 'flex',
+              gap: theme.space.sm,
+              justifyContent: 'space-between',
+              padding: `${theme.space.sm} ${theme.space.md}`,
+            })}
+          >
+            <a
+              href="/"
+              mix={css({
+                color: theme.colors.text.primary,
+                fontSize: theme.fontSize.xl,
+                fontWeight: theme.fontWeight.bold,
+                letterSpacing: theme.letterSpacing.tight,
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              })}
+            >
               Timeboxer
             </a>
-            <form action={handle.props.logoutHref} method="post" mix={logoutFormStyle}>
+            <form
+              action={handle.props.logoutHref}
+              method="post"
+              mix={css({
+                margin: 0,
+              })}
+            >
               <input type="hidden" name="_csrf" value={handle.props.csrfToken} />
-              <button type="submit" mix={[button(), logoutButtonStyle]}>
+              <button
+                type="submit"
+                mix={[
+                  button(),
+                  css({
+                    color: theme.colors.text.secondary,
+                  }),
+                ]}
+              >
                 Logout
               </button>
             </form>
           </div>
 
-          <div mix={newScheduleRegionStyle}>
+          <div
+            mix={css({
+              minHeight: 0,
+              paddingInline: theme.space.md,
+            })}
+          >
             <NewScheduleActionComponent csrfToken={handle.props.csrfToken} />
           </div>
 
-          <div mix={scheduleScrollerStyle}>
-            <nav aria-label="Schedule list" mix={scheduleListStyle}>
+          <div
+            mix={css({
+              minHeight: 0,
+              overflowY: 'auto',
+              padding: `${theme.space.xl} ${theme.space.lg}`,
+            })}
+          >
+            <nav
+              aria-label="Schedule list"
+              mix={css({
+                display: 'grid',
+                gap: theme.space.sm,
+              })}
+            >
               {handle.props.schedules.map((schedule) =>
                 deletedScheduleIds.has(schedule.id)
                   ? null
@@ -151,26 +209,109 @@ function scheduleSidebarRow({
   let errorId = `delete-schedule-${schedule.id}-error`
 
   return (
-    <div key={schedule.id} mix={scheduleItemStyle}>
+    <div
+      key={schedule.id}
+      mix={css({
+        display: 'grid',
+        gap: theme.space.xs,
+      })}
+    >
       <a
         aria-current={active ? 'page' : undefined}
         data-active={active ? 'true' : undefined}
         data-deleting={deleting ? 'true' : undefined}
         href={schedule.href}
-        mix={scheduleLinkStyle}
+        mix={css({
+          alignItems: 'center',
+          borderRadius: theme.radius,
+          color: theme.colors.text.primary,
+          display: 'grid',
+          gap: theme.space.xs,
+          gridTemplateColumns: 'minmax(0, 1fr) auto',
+          minWidth: 0,
+          padding: `${theme.space.xs} ${theme.space.xs} ${theme.space.xs} ${theme.space.sm}`,
+          textDecoration: 'none',
+          '& > button': {
+            opacity: 0,
+            pointerEvents: 'none',
+          },
+          '&:hover': {
+            backgroundColor: theme.surface.lvl2,
+          },
+          '&:hover > button': {
+            opacity: 1,
+            pointerEvents: 'auto',
+          },
+          '&:focus-within': {
+            backgroundColor: theme.surface.lvl2,
+          },
+          '&:focus-within > button': {
+            opacity: 1,
+            pointerEvents: 'auto',
+          },
+          "&[data-active='true']": {
+            backgroundColor: theme.surface.lvl2,
+          },
+          '&:focus-visible': {
+            outline: `2px solid ${theme.colors.focusRing}`,
+            outlineOffset: '2px',
+          },
+          "&[data-active='true'] > span": {
+            fontWeight: theme.fontWeight.medium,
+          },
+          "&[data-deleting='true']": {
+            opacity: 0.75,
+          },
+          "&[data-deleting='true'] > button": {
+            opacity: 1,
+            pointerEvents: 'auto',
+          },
+        })}
       >
-        <span mix={scheduleNameStyle}>{schedule.name}</span>
+        <span
+          mix={css({
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          })}
+        >
+          {schedule.name}
+        </span>
         <button
           aria-describedby={errorMessage ? errorId : undefined}
           aria-label={`Delete ${schedule.name}`}
           disabled={deleting}
           type="button"
           mix={[
-            deleteButtonStyle,
             on('click', (event) => {
               event.preventDefault()
               event.stopPropagation()
               onDelete()
+            }),
+            css({
+              alignItems: 'center',
+              backgroundColor: 'transparent',
+              border: 0,
+              borderRadius: '4px',
+              color: theme.colors.text.secondary,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              height: '1.5rem',
+              justifyContent: 'center',
+              margin: 0,
+              padding: 0,
+              width: '1.5rem',
+              '&:hover': {
+                color: theme.colors.danger,
+              },
+              '&:focus-visible': {
+                outline: `2px solid ${theme.colors.focusRing}`,
+                outlineOffset: '2px',
+              },
+              '&:disabled': {
+                cursor: 'default',
+              },
             }),
           ]}
         >
@@ -178,7 +319,15 @@ function scheduleSidebarRow({
         </button>
       </a>
       {errorMessage ? (
-        <small id={errorId} role="alert" mix={deleteErrorStyle}>
+        <small
+          id={errorId}
+          role="alert"
+          mix={css({
+            color: theme.colors.danger,
+            fontSize: theme.fontSize.xs,
+            gridColumn: '1 / -1',
+          })}
+        >
           {errorMessage}
         </small>
       ) : null}
@@ -202,7 +351,24 @@ function xIcon() {
 
 function spinnerIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 16 16" mix={[iconStyle, spinnerStyle]}>
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      mix={[
+        iconStyle,
+        css({
+          animation: 'timebox-sidebar-spin 700ms linear infinite',
+          '@keyframes timebox-sidebar-spin': {
+            from: {
+              transform: 'rotate(0deg)',
+            },
+            to: {
+              transform: 'rotate(360deg)',
+            },
+          },
+        }),
+      ]}
+    >
       <circle
         cx="8"
         cy="8"
@@ -241,159 +407,8 @@ async function deleteScheduleErrorMessage(response: Response) {
   return 'Could not delete schedule. Please try again.'
 }
 
-const sidebarStyle = css({
-  backgroundColor: theme.surface.lvl0,
-  borderRight: `1px solid ${theme.colors.border.strong}`,
-  display: 'grid',
-  gridTemplateRows: '56px 32px minmax(0, 1fr)',
-  minHeight: 0,
-})
-
-const sidebarHeaderStyle = css({
-  alignItems: 'center',
-  display: 'flex',
-  gap: theme.space.sm,
-  justifyContent: 'space-between',
-  padding: `${theme.space.sm} ${theme.space.md}`,
-})
-
-const appTitleStyle = css({
-  color: theme.colors.text.primary,
-  fontSize: theme.fontSize.xl,
-  fontWeight: theme.fontWeight.bold,
-  letterSpacing: theme.letterSpacing.tight,
-  textDecoration: 'none',
-  whiteSpace: 'nowrap',
-})
-
-const logoutFormStyle = css({
-  margin: 0,
-})
-
-const logoutButtonStyle = css({
-  color: theme.colors.text.secondary,
-})
-
-const scheduleScrollerStyle = css({
-  minHeight: 0,
-  overflowY: 'auto',
-  padding: `${theme.space.xl} ${theme.space.lg}`,
-})
-
-const scheduleListStyle = css({
-  display: 'grid',
-  gap: theme.space.sm,
-})
-
-const newScheduleRegionStyle = css({
-  minHeight: 0,
-  paddingInline: theme.space.md,
-})
-
-const scheduleItemStyle = css({
-  display: 'grid',
-  gap: theme.space.xs,
-})
-
-const scheduleLinkStyle = css({
-  alignItems: 'center',
-  borderRadius: theme.radius,
-  color: theme.colors.text.primary,
-  display: 'grid',
-  gap: theme.space.xs,
-  gridTemplateColumns: 'minmax(0, 1fr) auto',
-  minWidth: 0,
-  padding: `${theme.space.xs} ${theme.space.xs} ${theme.space.xs} ${theme.space.sm}`,
-  textDecoration: 'none',
-  '& > button': {
-    opacity: 0,
-    pointerEvents: 'none',
-  },
-  '&:hover': {
-    backgroundColor: theme.surface.lvl2,
-  },
-  '&:hover > button': {
-    opacity: 1,
-    pointerEvents: 'auto',
-  },
-  '&:focus-within': {
-    backgroundColor: theme.surface.lvl2,
-  },
-  '&:focus-within > button': {
-    opacity: 1,
-    pointerEvents: 'auto',
-  },
-  "&[data-active='true']": {
-    backgroundColor: theme.surface.lvl2,
-  },
-  '&:focus-visible': {
-    outline: `2px solid ${theme.colors.focusRing}`,
-    outlineOffset: '2px',
-  },
-  "&[data-active='true'] > span": {
-    fontWeight: theme.fontWeight.medium,
-  },
-  "&[data-deleting='true']": {
-    opacity: 0.75,
-  },
-  "&[data-deleting='true'] > button": {
-    opacity: 1,
-    pointerEvents: 'auto',
-  },
-})
-
-const scheduleNameStyle = css({
-  minWidth: 0,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-})
-
-const deleteButtonStyle = css({
-  alignItems: 'center',
-  backgroundColor: 'transparent',
-  border: 0,
-  borderRadius: '4px',
-  color: theme.colors.text.secondary,
-  cursor: 'pointer',
-  display: 'inline-flex',
-  height: '1.5rem',
-  justifyContent: 'center',
-  margin: 0,
-  padding: 0,
-  width: '1.5rem',
-  '&:hover': {
-    color: theme.colors.danger,
-  },
-  '&:focus-visible': {
-    outline: `2px solid ${theme.colors.focusRing}`,
-    outlineOffset: '2px',
-  },
-  '&:disabled': {
-    cursor: 'default',
-  },
-})
-
 const iconStyle = css({
   display: 'block',
   height: '1rem',
   width: '1rem',
-})
-
-const spinnerStyle = css({
-  animation: 'timebox-sidebar-spin 700ms linear infinite',
-  '@keyframes timebox-sidebar-spin': {
-    from: {
-      transform: 'rotate(0deg)',
-    },
-    to: {
-      transform: 'rotate(360deg)',
-    },
-  },
-})
-
-const deleteErrorStyle = css({
-  color: theme.colors.danger,
-  fontSize: theme.fontSize.xs,
-  gridColumn: '1 / -1',
 })

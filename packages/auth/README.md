@@ -147,6 +147,8 @@ router.get(routes.app.dashboard, {
 
 Starting from the same `session()`, `auth()`, and `createSessionAuthScheme()` setup as the credentials example above, you can add a Google login flow like this. The provider is created once at module scope, and the routes compose `startExternalAuth()`, `finishExternalAuth()`, and `completeAuth()` directly.
 
+`returnTo` accepts local paths beginning with `/`, including queries and fragments. The auth helpers normalize the path and omit targets that resolve to another origin or normalize to an authority reference beginning with `//`. `finishExternalAuth()` also validates targets from existing transactions.
+
 ```ts
 import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/middleware/auth'
 import {
@@ -365,6 +367,8 @@ Default scopes for OAuth providers that don't use OIDC discovery:
 - X: `tweet.read users.read`
 
 Pass `scopes` if you need a different set for a provider.
+
+GitHub uses the email returned in the profile when present. Otherwise, it selects a verified address from the email API, preferring the primary address, and leaves the email `null` or absent if none are verified. The provider account identity remains the GitHub user ID in `result.account.providerAccountId`.
 
 ## Custom Auth Providers
 

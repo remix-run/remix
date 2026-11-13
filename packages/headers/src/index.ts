@@ -4,6 +4,8 @@ export { type AcceptLanguageInit, AcceptLanguage } from './lib/accept-language.t
 export { type CacheControlInit, CacheControl } from './lib/cache-control.ts'
 export { type ContentDispositionInit, ContentDisposition } from './lib/content-disposition.ts'
 export { type ContentRangeInit, ContentRange } from './lib/content-range.ts'
+export { ContentSecurityPolicy } from './lib/content-security-policy.ts'
+export type { ContentSecurityPolicyInit } from './lib/content-security-policy.ts'
 export { type ContentTypeInit, ContentType } from './lib/content-type.ts'
 export { type CookieInit, Cookie } from './lib/cookie.ts'
 export { type IfMatchInit, IfMatch } from './lib/if-match.ts'

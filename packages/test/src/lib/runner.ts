@@ -11,7 +11,7 @@ import {
   type CoverageMap,
   type V8CoverageEntry,
 } from './coverage.ts'
-import { type PlaywrightUseOpts } from './playwright.ts'
+import type { PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { Counts, TestResults } from './reporters/results.ts'
 

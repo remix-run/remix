@@ -1,8 +1,17 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createRouter, type MiddlewareContext } from '@remix-run/fetch-router'
-import { clientEntry, createElement, css, Frame, type Handle, type RemixNode } from '@remix-run/ui'
+import { createRouter, type Middleware, type MiddlewareContext } from '@remix-run/fetch-router'
+import { csp, getCspNonce } from '@remix-run/csp-middleware'
+import { jsx } from '@remix-run/component/jsx-runtime'
+import {
+  clientEntry,
+  createElement,
+  css,
+  Frame,
+  type Handle,
+  type RemixNode,
+} from '@remix-run/component'
 
 import { render } from '../index.ts'
 
@@ -14,7 +23,7 @@ type IsEqual<left, right> =
 function expectTypeEquality<_check extends true>() {}
 
 describe('render', () => {
-  it('adds a typed Remix UI renderer to request context', async () => {
+  it('adds a typed Remix component renderer to request context', async () => {
     let middleware = render()
     type AppContext = MiddlewareContext<[typeof middleware]>
     let router = createRouter<AppContext>({ middleware: [middleware] })
@@ -36,6 +45,154 @@ describe('render', () => {
     assert.equal(response.headers.get('Content-Type'), 'text/html; charset=UTF-8')
     assert.equal(response.headers.get('X-Test'), 'render')
     assert.match(await response.text(), /^<!DOCTYPE html><h1>Hello<\/h1>/)
+  })
+
+  it('makes the inherited nonce available to children outside the CSP middleware scope', async () => {
+    let childNonce: string | undefined
+    let router = createRouter({ middleware: [render()] as const })
+    router.get('/', {
+      middleware: [
+        csp({
+          policy({ nonce }) {
+            return { scriptSrc: [`'nonce-${nonce}'`] }
+          },
+        }),
+      ],
+      handler: (context) => context.render(createElement(Frame, { src: '/redirect' })),
+    })
+    router.get('/redirect', () => Response.redirect('https://remix.run/child'))
+    router.get('/child', (context) => {
+      childNonce = getCspNonce(context)
+      return context.render(
+        jsx('script', { nonce: childNonce, children: 'globalThis.child = true' }),
+      )
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+    assert.ok(childNonce)
+    assert.equal(
+      response.headers.get('Content-Security-Policy'),
+      `script-src 'nonce-${childNonce}'`,
+    )
+    assert.ok(html.includes(`<script nonce="${childNonce}">`))
+
+    let independent = await router.fetch('https://remix.run/child')
+    let independentHtml = await independent.text()
+    assert.equal(childNonce, undefined)
+    assert.equal(independent.headers.get('Content-Security-Policy'), null)
+    assert.doesNotMatch(independentHtml, /nonce=/)
+  })
+
+  it('shares the document nonce with frame resources and isolates independent frame requests', async () => {
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy({ nonce }) {
+            return { scriptSrc: [`'nonce-${nonce}'`], styleSrc: [`'nonce-${nonce}'`] }
+          },
+        }),
+        render({
+          assets: {
+            async getScriptEntry() {
+              return {
+                href: '/assets/island.js',
+                importMap: { imports: { island: '/assets/island.js' } },
+                preloads: ['/assets/island.js'],
+              }
+            },
+          },
+        }),
+      ] as const,
+    })
+    let Island = clientEntry('file:///app/island.ts#Island', function Island() {
+      return () => createElement('p', { mix: css({ color: 'red' }) }, 'Island')
+    })
+    router.get('/', (context) =>
+      context.render(
+        createElement(
+          'html',
+          {},
+          createElement('head'),
+          createElement('body', {}, createElement(Frame, { src: '/child' })),
+        ),
+      ),
+    )
+    router.get('/child', (context) => context.render(createElement(Island)))
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+    let nonce = response.headers.get('Content-Security-Policy')?.match(/'nonce-([^']+)'/)?.[1]
+    assert.ok(nonce)
+
+    assert.equal(
+      response.headers.get('Content-Security-Policy'),
+      `script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'`,
+    )
+    let styles = html.match(/<style\b[^>]*>/g) ?? []
+    assert.equal(styles.length, 1)
+    assert.ok(styles.every((tag) => tag.includes(`nonce="${nonce}"`)))
+    assert.ok(html.includes(`<script data-rmx-import-map type="importmap" nonce="${nonce}">`))
+    assert.ok(
+      html.includes(
+        `<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" nonce="${nonce}" />`,
+      ),
+    )
+    let frameResponse = await router.fetch('https://remix.run/child', {
+      headers: { 'X-Remix-Frame': 'true' },
+    })
+    let frameHtml = await frameResponse.text()
+    let frameStyles = frameHtml.match(/<style\b[^>]*>/g) ?? []
+    let frameNonce = frameResponse.headers
+      .get('Content-Security-Policy')
+      ?.match(/'nonce-([^']+)'/)?.[1]
+    assert.ok(frameNonce)
+    assert.notEqual(frameNonce, nonce)
+
+    assert.equal(frameStyles.length, 1)
+    assert.ok(frameStyles.every((style) => style.includes(`nonce="${frameNonce}"`)))
+    assert.ok(!frameHtml.includes(`nonce="${nonce}"`))
+  })
+
+  it('propagates the document nonce through redirects to non-blocking frames', async () => {
+    let router = createRouter({
+      middleware: [
+        csp({
+          policy({ nonce }) {
+            return { styleSrc: [`'nonce-${nonce}'`] }
+          },
+        }),
+        render(),
+      ] as const,
+    })
+    router.get('/', (context) =>
+      context.render(
+        createElement(Frame, { src: '/redirect', fallback: createElement('p', {}, 'Loading') }),
+      ),
+    )
+    router.get('/redirect', () => Response.redirect('https://remix.run/child'))
+    router.get('/child', (context) =>
+      context.render(
+        createElement(
+          'section',
+          {},
+          createElement('p', { mix: css({ color: 'red' }) }, 'Child'),
+          jsx('script', { nonce: getCspNonce(context), children: 'globalThis.child = true' }),
+        ),
+      ),
+    )
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+    let nonce = response.headers.get('Content-Security-Policy')?.match(/'nonce-([^']+)'/)?.[1]
+    assert.ok(nonce)
+
+    assert.match(html, /<p>Loading<\/p>/)
+    assert.match(html, /<template\b[^>]*>[\s\S]*?<style data-rmx-style=/)
+    let styles = html.match(/<style\b[^>]*>/g) ?? []
+    assert.equal(styles.length, 1)
+    assert.ok(styles.every((tag) => tag.includes(`nonce="${nonce}"`)))
+    assert.ok(html.includes(`<script nonce="${nonce}">globalThis.child = true</script>`))
   })
 
   it('resolves nested and targeted frames through the current router', async () => {
@@ -184,9 +341,7 @@ describe('render', () => {
     router.get('/', (context) => context.render(createElement(Frame, { src: '/text' })))
     router.get('/text', () => new Response('Not UI'))
 
-    let response = await router.fetch('https://remix.run/')
-
-    await assert.rejects(response.text(), /Frame response must be HTML/)
+    await assert.rejects(router.fetch('https://remix.run/'), /Frame response must be HTML/)
     assert.equal(errors.length, 1)
   })
 
@@ -206,9 +361,10 @@ describe('render', () => {
         }),
     )
 
-    let response = await router.fetch('https://remix.run/')
-
-    await assert.rejects(response.text(), /Failed to resolve frame: 404 Not Found/)
+    await assert.rejects(
+      router.fetch('https://remix.run/'),
+      /Failed to resolve frame: 404 Not Found/,
+    )
     assert.equal(errors.length, 1)
   })
 
@@ -240,7 +396,10 @@ describe('render', () => {
     assert.match(slot?.[1] ?? '', /<h2>Blocking content<\/h2>/)
     assert.ok(html.indexOf('Blocking content') < html.indexOf('<p>after</p>'))
     // The non-blocking frame body streams as a template chunk
-    assert.match(html, /<template id="f[^"]+">[\s\S]*?Async content[\s\S]*?<\/template>/)
+    assert.match(
+      html,
+      /<template id="f[^"]+">[\s\S]*?Async content[\s\S]*?<!--rmx:template-end--><\/template>/,
+    )
     // The frame responses' own doctypes are stripped from the outer document
     assert.doesNotMatch(html.slice('<!DOCTYPE html>'.length), /<!DOCTYPE html>/i)
   })
@@ -248,15 +407,14 @@ describe('render', () => {
   it('resolves source client entries through the asset server', async () => {
     let errors: unknown[] = []
     let resolvedEntries: string[] = []
-    let preloadedEntries: string[] = []
     let assets = {
-      async getHref(source: string) {
+      async getScriptEntry(source: string) {
         resolvedEntries.push(source)
-        return '/assets/counter-123.js'
-      },
-      async getPreloads(source: string | readonly string[]) {
-        preloadedEntries.push(...(typeof source === 'string' ? [source] : source))
-        return ['/assets/shared-456.js']
+        return {
+          href: '/assets/counter-123.js',
+          importMap: { imports: { package: '/assets/package-789.js' } },
+          preloads: ['/assets/shared-456.js'],
+        }
       },
     }
     let middleware = render({ assets, onError: (error) => errors.push(error) })
@@ -295,8 +453,11 @@ describe('render', () => {
     let html = await response.text()
 
     assert.deepEqual(resolvedEntries, ['file:///app/counter.ts', 'file:///app/named-entry.ts'])
-    assert.deepEqual(preloadedEntries, ['file:///app/counter.ts', 'file:///app/named-entry.ts'])
     assert.match(html, /\/assets\/counter-123\.js/)
+    assert.match(
+      html,
+      /<script data-rmx-import-map type="importmap">\{"imports":\{"package":"\/assets\/package-789\.js"\}\}<\/script>/,
+    )
     assert.match(
       html,
       /<link data-rmx-module-preload rel="modulepreload" href="\/assets\/shared-456\.js" \/>/,
@@ -306,9 +467,8 @@ describe('render', () => {
     assert.match(html, /\/public\/widget\.js/)
     assert.match(html, /https:\/\/cdn\.example\/widget\.js/)
 
-    let missingExportResponse = await router.fetch('https://remix.run/missing-export')
     await assert.rejects(
-      missingExportResponse.text(),
+      router.fetch('https://remix.run/missing-export'),
       /entry ID \(e\.g\., import\.meta\.url \+ "#ExportName"\)/,
     )
     assert.equal(errors.length, 1)
@@ -340,30 +500,21 @@ describe('render', () => {
     assert.match(html, /\/assets\/public\.js/)
     assert.match(html, /"exportName":"PublicEntry"/)
 
-    let missingPublicExportResponse = await router.fetch('https://remix.run/missing-public-export')
     await assert.rejects(
-      missingPublicExportResponse.text(),
+      router.fetch('https://remix.run/missing-public-export'),
       /entry ID \(e\.g\., "\/js\/module\.js#ExportName"\)/,
     )
     assert.doesNotMatch(String(errors[0]), /import\.meta\.url/)
 
-    let sourceResponse = await router.fetch('https://remix.run/source')
     await assert.rejects(
-      sourceResponse.text(),
+      router.fetch('https://remix.run/source'),
       /file: source entry ID without an asset server.*render\(\{ assets \}\)/,
     )
     assert.doesNotMatch(String(errors[1]), /Users\/alice/)
   })
 
-  it('emits generated styles and reports rendering errors', async () => {
-    let errors: unknown[] = []
-    let middleware = render({ onError: (error) => errors.push(error) })
-    let router = createRouter({ middleware: [middleware] as const })
-    let renderError = new Error('Broken component')
-
-    function Broken() {
-      throw renderError
-    }
+  it('emits generated styles', async () => {
+    let router = createRouter({ middleware: [render()] as const })
 
     router.get('/styles', (context) =>
       context.render(
@@ -375,15 +526,163 @@ describe('render', () => {
         ),
       ),
     )
-    router.get('/error', (context) => context.render(createElement(Broken)))
 
     let styleResponse = await router.fetch('https://remix.run/styles')
     let styleHtml = await styleResponse.text()
     assert.match(styleHtml, /<style\b/)
     assert.match(styleHtml, /color: red/)
+  })
 
-    let errorResponse = await router.fetch('https://remix.run/error')
-    await errorResponse.text().catch(() => '')
+  it('rejects the request when a component throws while rendering the shell', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken component')
+
+    function Broken() {
+      return () => {
+        throw renderError
+      }
+    }
+
+    router.get('/', (context) => context.render(createElement('main', {}, createElement(Broken))))
+
+    await assert.rejects(router.fetch('https://remix.run/'), renderError)
+    assert.deepEqual(errors, [renderError])
+  })
+
+  it('rejects the request when inner middleware rebuilds a response whose shell fails', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken component')
+
+    function Broken() {
+      return () => {
+        throw renderError
+      }
+    }
+
+    let rebuildResponse: Middleware = async (_context, next) => {
+      let response = await next()
+      return new Response(response.body, response)
+    }
+
+    router.get('/', {
+      middleware: [rebuildResponse],
+      handler: (context) => context.render(createElement('main', {}, createElement(Broken))),
+    })
+
+    await assert.rejects(router.fetch('https://remix.run/'), renderError)
+    assert.deepEqual(errors, [renderError])
+  })
+
+  it('rejects HEAD requests when the shell fails', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken component')
+
+    function Broken() {
+      return () => {
+        throw renderError
+      }
+    }
+
+    router.get('/', (context) => context.render(createElement(Broken)))
+
+    await assert.rejects(router.fetch('https://remix.run/', { method: 'HEAD' }), renderError)
+    assert.deepEqual(errors, [renderError])
+  })
+
+  it('reports shell errors without rejecting when inner middleware replaces the body', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken component')
+
+    function Broken() {
+      return () => {
+        throw renderError
+      }
+    }
+
+    let replaceBody: Middleware = async (_context, next) => {
+      let response = await next()
+      await response.body?.cancel()
+      return new Response('Replaced', response)
+    }
+
+    router.get('/', {
+      middleware: [replaceBody],
+      handler: (context) => context.render(createElement(Broken)),
+    })
+
+    let unhandledRejections: unknown[] = []
+    let onUnhandledRejection = (reason: unknown) => unhandledRejections.push(reason)
+    process.on('unhandledRejection', onUnhandledRejection)
+
+    try {
+      let response = await router.fetch('https://remix.run/')
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      assert.equal(await response.text(), 'Replaced')
+      assert.deepEqual(errors, [renderError])
+      assert.deepEqual(unhandledRejections, [])
+    } finally {
+      process.off('unhandledRejection', onUnhandledRejection)
+    }
+  })
+
+  it('returns the shell before non-blocking frame content resolves', async () => {
+    let router = createRouter({ middleware: [render()] as const })
+    let releaseFrame: (() => void) | undefined
+    let frameReleased = new Promise<void>((resolve) => {
+      releaseFrame = resolve
+    })
+
+    router.get('/', (context) =>
+      context.render(
+        createElement(Frame, { src: '/pending', fallback: createElement('p', {}, 'Loading') }),
+      ),
+    )
+    router.get('/pending', async (context) => {
+      await frameReleased
+      return context.render(createElement('p', {}, 'Loaded'))
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    assert.equal(response.status, 200)
+
+    releaseFrame?.()
+    let html = await response.text()
+    assert.match(html, /<p>Loading<\/p>/)
+    assert.match(html, /Loaded/)
+  })
+
+  it('keeps the shell response when streamed frame content throws', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken frame component')
+
+    function Broken() {
+      return () => {
+        throw renderError
+      }
+    }
+
+    router.get('/', (context) =>
+      context.render(
+        createElement(Frame, { src: '/broken', fallback: createElement('p', {}, 'Loading') }),
+      ),
+    )
+    router.get('/broken', (context) => context.render(createElement(Broken)))
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 200)
+    assert.match(await response.text(), /<p>Loading<\/p>/)
     assert.deepEqual(errors, [renderError])
   })
 
@@ -415,10 +714,10 @@ describe('render', () => {
     })
 
     let controller = new AbortController()
-    let response = await router.fetch(
-      new Request('https://remix.run/', { signal: controller.signal }),
-    )
-    let body = response.text().catch(() => '')
+    let body = router
+      .fetch(new Request('https://remix.run/', { signal: controller.signal }))
+      .then((response) => response.text())
+      .catch(() => '')
 
     await frameStarted
     controller.abort(new Error('Request cancelled'))
@@ -456,10 +755,10 @@ describe('render', () => {
     )
 
     let controller = new AbortController()
-    let response = await router.fetch(
-      new Request('https://remix.run/', { signal: controller.signal }),
-    )
-    let body = response.text().catch(() => '')
+    let body = router
+      .fetch(new Request('https://remix.run/', { signal: controller.signal }))
+      .then((response) => response.text())
+      .catch(() => '')
     let reason = new Error('Request cancelled')
 
     await frameStreamStarted
@@ -467,6 +766,76 @@ describe('render', () => {
 
     assert.equal(await frameStreamCancelled, reason)
     await body
+  })
+
+  it('reports rendering errors for browser-initiated frame requests', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+    let renderError = new Error('Broken frame component')
+
+    function Broken() {
+      throw renderError
+    }
+
+    router.get('/frame', (context) => context.render(createElement(Broken)))
+
+    await assert.rejects(
+      router.fetch('https://remix.run/frame', {
+        headers: { 'X-Remix-Frame': 'true', 'X-Remix-Target': 'details' },
+      }),
+      /Broken frame component/,
+    )
+
+    assert.deepEqual(errors, [renderError])
+  })
+
+  it('uses default error reporting for browser-initiated frame requests', async (t) => {
+    let reportError = t.mock.method(console, 'error', () => {})
+    let router = createRouter({ middleware: [render()] as const })
+    let renderError = new Error('Broken frame component')
+
+    function Broken() {
+      throw renderError
+    }
+
+    router.get('/frame', (context) => context.render(createElement(Broken)))
+
+    await assert.rejects(
+      router.fetch('https://remix.run/frame', { headers: { 'X-Remix-Frame': 'true' } }),
+      /Broken frame component/,
+    )
+
+    assert.equal(reportError.mock.calls.length, 1)
+    assert.deepEqual(reportError.mock.calls[0].arguments, [renderError])
+  })
+
+  it('reports redirected nested errors once for browser-initiated frame requests', async () => {
+    let errors: unknown[] = []
+    let childErrors: unknown[] = []
+    let router = createRouter({
+      middleware: [render({ onError: (error) => errors.push(error) })] as const,
+    })
+    let renderError = new Error('Broken child component')
+
+    function Broken() {
+      throw renderError
+    }
+
+    router.get('/', (context) => context.render(createElement(Frame, { src: '/redirect' })))
+    router.get('/redirect', () => Response.redirect('https://remix.run/child'))
+    router.get('/child', {
+      middleware: [render({ onError: (error) => childErrors.push(error) })],
+      handler: (context) => context.render(createElement(Broken)),
+    })
+
+    await assert.rejects(
+      router.fetch('https://remix.run/', { headers: { 'X-Remix-Frame': 'true' } }),
+      /Broken child component/,
+    )
+
+    assert.deepEqual(errors, [renderError])
+    assert.deepEqual(childErrors, [])
   })
 
   it('reports nested frame render errors once', async () => {
@@ -482,9 +851,7 @@ describe('render', () => {
     router.get('/', (context) => context.render(createElement(Frame, { src: '/child' })))
     router.get('/child', (context) => context.render(createElement(Broken)))
 
-    let response = await router.fetch('https://remix.run/')
-    await response.text().catch(() => '')
-
+    await assert.rejects(router.fetch('https://remix.run/'), renderError)
     assert.deepEqual(errors, [renderError])
   })
 })

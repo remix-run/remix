@@ -7,7 +7,7 @@ import { describe, it } from 'remix/test'
 import { discoverPublicModuleHrefs } from './public-modules.ts'
 
 describe('discoverPublicModuleHrefs()', () => {
-  it('discovers modules inside colocated public directories with their preloads', async () => {
+  it('discovers modules inside colocated public directories with their preloads and local import map targets', async () => {
     let tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-docs-public-modules-'))
 
     try {
@@ -16,7 +16,7 @@ describe('discoverPublicModuleHrefs()', () => {
       await Promise.all([
         writeFile(path.join(appDir, 'actions', 'public', 'entry.ts')),
         writeFile(path.join(appDir, 'actions', 'public', 'entry.test.ts')),
-        writeFile(path.join(appDir, 'actions', 'public', 'dev-refresh.ts')),
+        writeFile(path.join(appDir, 'actions', 'public', 'preview.dev.ts')),
         writeFile(path.join(appDir, 'actions', 'private.ts')),
         writeFile(path.join(sharedDir, 'ui', 'public', 'shell.tsx')),
       ])
@@ -30,6 +30,21 @@ describe('discoverPublicModuleHrefs()', () => {
             let filePaths = typeof filePath === 'string' ? [filePath] : filePath
             return filePaths.map((filePath) => `/preloads/${path.basename(filePath)}.js`)
           },
+          async getImportMap(filePath) {
+            let filePaths = typeof filePath === 'string' ? [filePath] : filePath
+            let basename = path.basename(filePaths[0] ?? '')
+            return {
+              imports: {
+                [`/assets/${basename}`]: `/imports/${basename}.js`,
+                external: 'https://cdn.example.com/external.js',
+              },
+              scopes: {
+                '/assets/': {
+                  dependency: `/scopes/${basename}.js`,
+                },
+              },
+            }
+          },
         },
         [appDir, sharedDir],
       )
@@ -37,8 +52,12 @@ describe('discoverPublicModuleHrefs()', () => {
       assert.deepEqual(hrefs, [
         '/assets/entry.ts',
         '/assets/shell.tsx',
+        '/imports/entry.ts.js',
+        '/imports/shell.tsx.js',
         '/preloads/entry.ts.js',
         '/preloads/shell.tsx.js',
+        '/scopes/entry.ts.js',
+        '/scopes/shell.tsx.js',
       ])
     } finally {
       await fs.rm(tempDir, { recursive: true, force: true })

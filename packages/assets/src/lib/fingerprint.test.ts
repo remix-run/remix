@@ -1,12 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import {
-  formatFingerprintedPathname,
-  generateFingerprint,
-  hashContent,
-  parseFingerprintSuffix,
-} from './fingerprint.ts'
+import { formatFingerprintedPathname, hashContent, parseFingerprintSuffix } from './fingerprint.ts'
 
 describe('hashContent', () => {
   it('accepts byte content', async () => {
@@ -15,46 +10,28 @@ describe('hashContent', () => {
 
     assert.notEqual(hashA, hashB)
   })
-})
 
-describe('generateFingerprint', () => {
-  it('changes when the buildId changes', async () => {
-    let fingerprintA = await generateFingerprint({
-      buildId: 'build-a',
-      content: 'export const value = 1',
-    })
-    let fingerprintB = await generateFingerprint({
-      buildId: 'build-b',
-      content: 'export const value = 1',
-    })
+  it('hashes only the bytes within a view', async () => {
+    let bytes = new TextEncoder().encode('before hello after')
+    let view = bytes.subarray(7, 12)
 
-    assert.notEqual(fingerprintA, fingerprintB)
+    assert.equal(await hashContent(view), await hashContent('hello'))
+    assert.equal(await hashContent(Buffer.from(bytes).subarray(7, 12)), await hashContent('hello'))
   })
 
-  it('uses an unambiguous serialization format', async () => {
-    let fingerprintA = await generateFingerprint({
-      buildId: 'b\0c',
-      content: 'a',
-    })
-    let fingerprintB = await generateFingerprint({
-      buildId: 'c',
-      content: 'a\0b',
-    })
+  it('accepts views backed by shared memory', async () => {
+    let bytes = new Uint8Array(new SharedArrayBuffer(18))
+    bytes.set(new TextEncoder().encode('before hello after'))
 
-    assert.notEqual(fingerprintA, fingerprintB)
+    assert.equal(await hashContent(bytes.subarray(7, 12)), await hashContent('hello'))
   })
 
-  it('accepts byte content', async () => {
-    let fingerprintA = await generateFingerprint({
-      buildId: 'build-a',
-      content: Uint8Array.from([0, 1, 2, 3]),
-    })
-    let fingerprintB = await generateFingerprint({
-      buildId: 'build-a',
-      content: Uint8Array.from([0, 1, 2, 4]),
-    })
+  it('snapshots the input before returning', async () => {
+    let bytes = new TextEncoder().encode('hello')
+    let hash = hashContent(bytes)
+    bytes.fill(0)
 
-    assert.notEqual(fingerprintA, fingerprintB)
+    assert.equal(await hash, await hashContent('hello'))
   })
 })
 

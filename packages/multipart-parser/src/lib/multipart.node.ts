@@ -1,5 +1,6 @@
 import type * as http from 'node:http'
 import { Readable } from 'node:stream'
+import { ContentType } from '@remix-run/headers/content-type'
 
 import type { ParseMultipartOptions, MultipartParserOptions, MultipartPart } from './multipart.ts'
 import {
@@ -53,8 +54,8 @@ export async function* parseMultipartStream(
  * @returns `true` if the request is a multipart request, `false` otherwise
  */
 export function isMultipartRequest(req: http.IncomingMessage): boolean {
-  let contentType = req.headers['content-type']
-  return contentType != null && /^multipart\//i.test(contentType)
+  let mediaType = ContentType.from(req.headers['content-type'] ?? null).mediaType?.toLowerCase()
+  return mediaType?.startsWith('multipart/') ?? false
 }
 
 /**

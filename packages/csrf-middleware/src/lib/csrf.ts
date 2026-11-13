@@ -83,7 +83,7 @@ export interface CsrfOptions {
   headerNames?: readonly string[]
 
   /**
-   * Methods that do not require CSRF validation.
+   * Original request methods that do not require CSRF validation.
    *
    * @default ['GET', 'HEAD', 'OPTIONS']
    */
@@ -105,6 +105,7 @@ export interface CsrfOptions {
 
   /**
    * Custom function for extracting the submitted token.
+   * Replaces the default header and form field lookup.
    */
   value?: CsrfTokenResolver
 
@@ -118,6 +119,7 @@ export interface CsrfOptions {
  * Session-backed CSRF protection middleware.
  *
  * This middleware requires the session middleware to run before it.
+ * By default, submitted tokens are read from request headers and parsed form fields only.
  *
  * @param options CSRF options
  * @returns CSRF middleware
@@ -136,7 +138,7 @@ export function csrf(options: CsrfOptions = {}): Middleware {
 
     let expectedToken = getCsrfToken(context, tokenKey)
 
-    if (isSafeMethod(context.method, safeMethods)) {
+    if (isSafeMethod(context.request.method.toUpperCase(), safeMethods)) {
       return next()
     }
 
@@ -260,13 +262,7 @@ async function resolveSubmittedToken(
     }
   }
 
-  let queryValue = context.url.searchParams.get(fieldName)
-  if (queryValue == null) {
-    return null
-  }
-
-  let trimmedQueryValue = queryValue.trim()
-  return trimmedQueryValue === '' ? null : trimmedQueryValue
+  return null
 }
 
 async function validateRequestOrigin(

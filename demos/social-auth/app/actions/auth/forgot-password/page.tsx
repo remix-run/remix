@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
 
 import { EmailIcon } from '../../../ui/icons.tsx'
 import { TextField } from '../../../ui/form-field.tsx'

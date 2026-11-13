@@ -1,7 +1,5 @@
-import { createMixin } from '../runtime/mixins/mixin.ts'
-import type { ElementProps } from '../runtime/jsx.ts'
-import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { createMixin } from '@remix-run/component'
+import type { ElementProps, MixinDescriptor } from '@remix-run/component'
 
 type AnimateTiming = {
   duration: number
@@ -15,7 +13,12 @@ type AnimateStyleProps = {
   [property: string]: unknown
 }
 
-export type AnimateMixinConfig = AnimateTiming & AnimateStyleProps
+/** Style values and shared timing for entrance and exit animations. */
+export type AnimateMixinConfig = AnimateTiming &
+  AnimateStyleProps & {
+    /** Per-property overrides inherit the shared timing and compositing settings. */
+    transition?: Record<string, Partial<Omit<AnimateTiming, 'initial'>> | undefined>
+  }
 
 type AnimationConfig = true | false | null | undefined | AnimateMixinConfig
 
@@ -32,8 +35,24 @@ const DEFAULT_EXIT: AnimateMixinConfig = {
 }
 
 type AnimationState = {
-  animation: Animation
+  animations: Animation[]
   properties: string[]
+}
+
+type ExitAnimationPlayback = AnimationState & {
+  immediateAnimations: Animation[]
+  finished: Promise<unknown>
+}
+
+// Exit cleanup remains active while the node is retained, even after playback finishes.
+type ExitAnimationLifecycle =
+  | { status: 'active' }
+  | { status: 'cancelled'; reclaimKeyframe?: Keyframe }
+
+type PendingExitAnimation = ExitAnimationPlayback & {
+  lifecycle: ExitAnimationLifecycle
+  cancel(reclaimKeyframe?: Keyframe): void
+  waitForFinish(signal: AbortSignal): Promise<void>
 }
 
 const animatingNodes = new WeakMap<Element, AnimationState>()
@@ -47,7 +66,8 @@ function extractStyleProps(config: AnimateMixinConfig): Keyframe {
       key === 'easing' ||
       key === 'delay' ||
       key === 'composite' ||
-      key === 'initial'
+      key === 'initial' ||
+      key === 'transition'
     ) {
       continue
     }
@@ -81,10 +101,7 @@ function resolveExitConfig(config: AnimationConfig): AnimateMixinConfig | null {
   return config
 }
 
-function createAnimationOptions(
-  config: AnimateMixinConfig,
-  fill: FillMode,
-): KeyframeAnimationOptions {
+function createAnimationOptions(config: AnimateTiming, fill: FillMode): KeyframeAnimationOptions {
   return {
     duration: config.duration,
     delay: config.delay,
@@ -124,31 +141,274 @@ function writeInlineStyle(style: CSSStyleDeclaration, property: string, value: s
   style.setProperty(cssProperty, value)
 }
 
-function trackAnimation(node: Element, animation: Animation, keyframes: Keyframe[]) {
-  let properties = collectAnimatedProperties(keyframes)
-  animatingNodes.set(node, { animation, properties })
-  animation.finished
-    .catch(() => {})
-    .finally(() => {
-      let current = animatingNodes.get(node)
-      if (current?.animation !== animation) return
-      animatingNodes.delete(node)
-    })
+function readComputedKeyframe(node: Element, properties: string[]): Keyframe {
+  let computed = getComputedStyle(node)
+  let keyframe: Keyframe = {}
+  for (let property of properties) {
+    keyframe[property as keyof Keyframe] = computed.getPropertyValue(toCssPropertyName(property))
+  }
+  return keyframe
 }
 
-function waitForAnimationOrAbort(animation: Animation, signal: AbortSignal): Promise<void> {
+function propertyTiming(config: AnimateMixinConfig, property: string): AnimateTiming {
+  let override = config.transition?.[property]
+  return {
+    duration: override?.duration ?? config.duration,
+    easing: override?.easing ?? config.easing ?? 'linear',
+    delay: override?.delay ?? config.delay ?? 0,
+    composite: override?.composite ?? config.composite ?? 'replace',
+  }
+}
+
+type AnimationGroup = {
+  timing: AnimateTiming
+  properties: string[]
+}
+
+function groupAnimationProperties(
+  config: AnimateMixinConfig,
+  properties: string[],
+): AnimationGroup[] {
+  if (!config.transition) return [{ timing: config, properties }]
+  let groups = new Map<string, AnimationGroup>()
+  for (let property of properties) {
+    let timing = propertyTiming(config, property)
+    let key = JSON.stringify([timing.duration, timing.delay, timing.easing, timing.composite])
+    let group = groups.get(key)
+    if (group) {
+      group.properties.push(property)
+    } else {
+      groups.set(key, { timing, properties: [property] })
+    }
+  }
+  return groups.size > 0 ? [...groups.values()] : [{ timing: config, properties: [] }]
+}
+
+function selectKeyframeProperties(keyframe: Keyframe, properties: string[]): Keyframe {
+  let result: Keyframe = {
+    offset: keyframe.offset,
+    easing: keyframe.easing,
+    composite: keyframe.composite,
+  }
+  for (let property of properties) {
+    let value = keyframe[property as keyof Keyframe]
+    if (value !== undefined) result[property as keyof Keyframe] = value
+  }
+  return result
+}
+
+function createAnimations(
+  node: Element,
+  keyframes: Keyframe[],
+  groups: AnimationGroup[],
+  fill: FillMode,
+  propertyCount: number,
+): Animation[] {
+  let animations: Animation[] = []
+  try {
+    for (let group of groups) {
+      let groupKeyframes =
+        group.properties.length === propertyCount
+          ? keyframes
+          : keyframes.map((frame) => selectKeyframeProperties(frame, group.properties))
+      let options = createAnimationOptions(group.timing, fill)
+      animations.push(node.animate(groupKeyframes, options))
+    }
+  } catch (error) {
+    for (let animation of animations) animation.cancel()
+    throw error
+  }
+  return animations
+}
+
+function trackAnimations(
+  node: Element,
+  animations: Animation[],
+  properties: string[],
+): AnimationState {
+  let state = { animations, properties }
+  animatingNodes.set(node, state)
+  void Promise.allSettled(animations.map((animation) => animation.finished)).then(() => {
+    if (animatingNodes.get(node) === state) animatingNodes.delete(node)
+  })
+  return state
+}
+
+function startAnimation(
+  node: Element,
+  keyframes: Keyframe[],
+  config: AnimateMixinConfig,
+  fill: FillMode,
+): AnimationState {
+  let properties = collectAnimatedProperties(keyframes)
+  let groups = groupAnimationProperties(config, properties)
+  let animations = createAnimations(node, keyframes, groups, fill, properties.length)
+  return trackAnimations(node, animations, properties)
+}
+
+function startExitAnimation(node: Element, config: AnimateMixinConfig): ExitAnimationPlayback {
+  let keyframes = buildExitKeyframes(config)
+  let properties = collectAnimatedProperties(keyframes)
+  let groups = groupAnimationProperties(config, properties)
+  let immediateGroups: AnimationGroup[] = []
+  let animatedGroups: AnimationGroup[] = []
+  for (let group of groups) {
+    if (
+      group.properties.length > 0 &&
+      group.timing.duration === 0 &&
+      (group.timing.delay ?? 0) <= 0
+    ) {
+      immediateGroups.push(group)
+    } else {
+      animatedGroups.push(group)
+    }
+  }
+  let immediateAnimations: Animation[] = []
+  let animationState: AnimationState | undefined
+  try {
+    immediateAnimations = createAnimations(
+      node,
+      [keyframes[1]],
+      immediateGroups,
+      'forwards',
+      properties.length,
+    )
+    // Update layout before commit measurements without mutating authored inline styles.
+    for (let animation of immediateAnimations) animation.finish()
+
+    let trackedAnimation = animatingNodes.get(node)
+    if (
+      trackedAnimation &&
+      trackedAnimation.animations.some((animation) => animation.playState === 'running')
+    ) {
+      animationState = trackedAnimation
+      for (let animation of trackedAnimation.animations) animation.reverse()
+    } else if (animatedGroups.length > 0) {
+      let animations = createAnimations(
+        node,
+        keyframes,
+        animatedGroups,
+        'forwards',
+        properties.length,
+      )
+      let animatedProperties = animatedGroups.flatMap((group) => group.properties)
+      animationState = trackAnimations(node, animations, animatedProperties)
+    }
+  } catch (error) {
+    for (let animation of immediateAnimations) animation.cancel()
+    for (let animation of animationState?.animations ?? []) animation.cancel()
+    throw error
+  }
+  // Cancellation replaces Animation.finished, so capture it before other removal listeners run.
+  let animations = [...(animationState?.animations ?? []), ...immediateAnimations]
+  let finished = Promise.allSettled(animations.map((animation) => animation.finished))
+  return {
+    animations: animationState?.animations ?? [],
+    properties: animationState?.properties ?? [],
+    immediateAnimations,
+    finished,
+  }
+}
+
+function waitForFinishOrAbort(finished: Promise<unknown>, signal: AbortSignal): Promise<void> {
   if (signal.aborted) return Promise.resolve()
   return new Promise((resolve) => {
-    let settled = false
     let settle = () => {
-      if (settled) return
-      settled = true
       signal.removeEventListener('abort', settle)
       resolve()
     }
     signal.addEventListener('abort', settle, { once: true })
-    void animation.finished.catch(() => {}).finally(settle)
+    void finished.then(settle, settle)
   })
+}
+
+function createPendingExitAnimation(
+  node: Element,
+  config: AnimateMixinConfig,
+): PendingExitAnimation {
+  let wasConnected = node.isConnected
+  let playback = startExitAnimation(node, config)
+  let retentionSignal: AbortSignal | undefined
+  let pendingExit: PendingExitAnimation = {
+    ...playback,
+    lifecycle: { status: 'active' },
+    cancel(reclaimKeyframe) {
+      if (pendingExit.lifecycle.status === 'cancelled') return
+      pendingExit.lifecycle = { status: 'cancelled', reclaimKeyframe }
+      retentionSignal?.removeEventListener('abort', abortExit)
+      for (let animation of playback.animations) animation.cancel()
+      for (let animation of playback.immediateAnimations) animation.cancel()
+    },
+    async waitForFinish(signal) {
+      retentionSignal = signal
+      if (signal.aborted || (wasConnected && !node.isConnected)) {
+        pendingExit.cancel()
+        return
+      }
+      // Retention can be aborted after playback while another mixin still retains the node.
+      signal.addEventListener('abort', abortExit, { once: true })
+      await waitForFinishOrAbort(playback.finished, signal)
+    },
+  }
+  let abortExit = () => {
+    for (let animation of playback.immediateAnimations) animation.cancel()
+    if (playback.animations.length === 0) return
+
+    // Interrupted shared animations still use commitStyles during reclamation.
+    if (!config.transition) return
+    let finished = playback.animations.every((animation) => animation.playState === 'finished')
+    if (finished) return
+    pendingExit.cancel(readComputedKeyframe(node, playback.properties))
+  }
+  return pendingExit
+}
+
+function prepareReclaimedElement(
+  node: Element,
+  pendingExit: PendingExitAnimation | undefined,
+): Keyframe | undefined {
+  try {
+    if (pendingExit) {
+      for (let animation of pendingExit.immediateAnimations) animation.cancel()
+      let lifecycle = pendingExit.lifecycle
+      if (lifecycle.status === 'cancelled' && lifecycle.reclaimKeyframe) {
+        return lifecycle.reclaimKeyframe
+      }
+    }
+
+    let trackedAnimation = animatingNodes.get(node)
+    if (!trackedAnimation) return
+    let running = trackedAnimation.animations.some((animation) => animation.playState === 'running')
+    if (!running) return
+
+    // WAAPI can throw InvalidStateError here if the target is transiently non-rendered
+    // during reclaim; we still have computed-style fallback below for retargeting.
+    for (let animation of trackedAnimation.animations) {
+      try {
+        animation.commitStyles()
+      } catch {}
+    }
+    if (pendingExit) {
+      pendingExit.cancel()
+    } else {
+      for (let animation of trackedAnimation.animations) animation.cancel()
+    }
+
+    let style = (node as HTMLElement).style
+    let computed = getComputedStyle(node)
+    let startingKeyframe: Keyframe = {}
+    for (let property of trackedAnimation.properties) {
+      let cssProperty = toCssPropertyName(property)
+      let value = readInlineStyle(style, property) || computed.getPropertyValue(cssProperty)
+      if (value !== '') {
+        startingKeyframe[property as keyof Keyframe] = value
+      }
+      writeInlineStyle(style, property, '')
+    }
+    return startingKeyframe
+  } finally {
+    pendingExit?.cancel()
+  }
 }
 
 function shouldSkipInitialEntrance(
@@ -174,7 +434,7 @@ const animateEntranceMixin = createMixin<Element, [config: AnimationConfig], Ele
     handle.addEventListener('insert', (event) => {
       let node = event.node
       let current = animatingNodes.get(node)
-      if (current && current.animation.playState === 'running') {
+      if (current && current.animations.some((animation) => animation.playState === 'running')) {
         return
       }
 
@@ -182,9 +442,7 @@ const animateEntranceMixin = createMixin<Element, [config: AnimationConfig], Ele
       if (!config) return
       if (shouldSkipInitialEntrance(event, config)) return
       let keyframes = buildEnterKeyframes(config)
-      let options = createAnimationOptions(config, 'backwards')
-      let animation = (node as HTMLElement).animate(keyframes, options)
-      trackAnimation(node, animation, keyframes)
+      startAnimation(node, keyframes, config, 'backwards')
     })
 
     return (config) => {
@@ -192,72 +450,62 @@ const animateEntranceMixin = createMixin<Element, [config: AnimationConfig], Ele
       return handle.element
     }
   },
+  { ssr: false },
 )
 
-const animateExitMixin = createMixin<Element, [config: AnimationConfig], ElementProps>((handle) => {
-  let currentConfig: AnimationConfig = true
-  let node: Element | null = null
+const animateExitMixin = createMixin<Element, [config: AnimationConfig], ElementProps>(
+  (handle) => {
+    let currentConfig: AnimationConfig = true
+    let node: Element | null = null
+    let pendingExit: PendingExitAnimation | undefined
 
-  handle.addEventListener('insert', (event) => {
-    node = event.node
-  })
+    handle.addEventListener('insert', (event) => {
+      node = event.node
+    })
 
-  handle.addEventListener('reclaimed', (event) => {
-    node = event.node
-    let current = animatingNodes.get(event.node)
-    if (current && current.animation.playState === 'running') {
-      // WAAPI can throw InvalidStateError here if the target is transiently non-rendered
-      // during reclaim; we still have computed-style fallback below for retargeting.
-      try {
-        current.animation.commitStyles()
-      } catch {}
-      current.animation.cancel()
-
-      let style = (event.node as HTMLElement).style
-      let computed = getComputedStyle(event.node as Element)
-      let from: Keyframe = {}
-      for (let property of current.properties) {
-        let cssProperty = toCssPropertyName(property)
-        let value = readInlineStyle(style, property) || computed.getPropertyValue(cssProperty)
-        if (value !== '') {
-          from[property as keyof Keyframe] = value
-        }
-        writeInlineStyle(style, property, '')
-      }
+    handle.addEventListener('reclaimed', (event) => {
+      node = event.node
+      let startingKeyframe = prepareReclaimedElement(node, pendingExit)
+      pendingExit = undefined
+      if (!startingKeyframe) return
 
       let enterConfig = resolveEnterConfig(currentConfig) ?? DEFAULT_ENTER
-      let keyframes: Keyframe[] = [from, {}]
-      let options = createAnimationOptions(enterConfig, 'none')
-      let animation = (event.node as HTMLElement).animate(keyframes, options)
-      trackAnimation(event.node, animation, keyframes)
-    }
-  })
+      let keyframes: Keyframe[] = [startingKeyframe, {}]
+      startAnimation(node, keyframes, enterConfig, 'none')
+    })
 
-  handle.addEventListener('beforeRemove', (event) => {
-    let config = resolveExitConfig(currentConfig)
-    if (!config) return
-    event.persistNode(async (signal) => {
-      invariant(node)
-      let current = animatingNodes.get(node)
-      if (current && current.animation.playState === 'running') {
-        current.animation.reverse()
-        await waitForAnimationOrAbort(current.animation, signal)
+    handle.addEventListener('beforeRemove', (event) => {
+      let config = resolveExitConfig(currentConfig)
+      if (!config || !node) return
+      // Teardown can request removal again before the previous exit is reclaimed.
+      pendingExit?.cancel()
+      let exit: PendingExitAnimation
+      try {
+        exit = createPendingExitAnimation(node, config)
+      } catch (error) {
+        // Preserve persistence callback error handling when native animation setup fails.
+        event.persistNode(() => {
+          throw error
+        })
         return
       }
 
-      let keyframes = buildExitKeyframes(config)
-      let options = createAnimationOptions(config, 'forwards')
-      let animation = (node as HTMLElement).animate(keyframes, options)
-      trackAnimation(node, animation, keyframes)
-      await waitForAnimationOrAbort(animation, signal)
+      pendingExit = exit
+      event.persistNode((signal) => exit.waitForFinish(signal))
     })
-  })
 
-  return (config) => {
-    currentConfig = config
-    return handle.element
-  }
-})
+    handle.addEventListener('remove', () => {
+      pendingExit?.cancel()
+      pendingExit = undefined
+    })
+
+    return (config) => {
+      currentConfig = config
+      return handle.element
+    }
+  },
+  { ssr: false },
+)
 
 /**
  * Animates an element when it is inserted into the DOM.

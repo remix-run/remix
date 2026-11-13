@@ -1,4 +1,4 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 const accentColor = '#b9c6ff'
 const mutedColor = '#9aa8e8'

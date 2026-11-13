@@ -1,7 +1,5 @@
-import { createMixin } from '../runtime/mixins/mixin.ts'
-import type { ElementProps } from '../runtime/jsx.ts'
-import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
-import type { LayoutAnimationConfig } from '../runtime/dom.ts'
+import { createMixin } from '@remix-run/component'
+import type { ElementProps, LayoutAnimationConfig, MixinDescriptor } from '@remix-run/component'
 
 type LayoutConfig = true | false | null | undefined | LayoutAnimationConfig
 
@@ -138,124 +136,127 @@ function measureAnimationTargetBox(
   return box
 }
 
-const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], ElementProps>((handle) => {
-  let snapshot: Box | null = null
-  let currentConfig: LayoutConfig = true
-  let animation: Animation | null = null
-  let animationTarget: Box | null = null
-  let animationEndTime = 0
+const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], ElementProps>(
+  (handle) => {
+    let snapshot: Box | null = null
+    let currentConfig: LayoutConfig = true
+    let animation: Animation | null = null
+    let animationTarget: Box | null = null
+    let animationEndTime = 0
 
-  let clearActiveAnimationState = () => {
-    animation = null
-    animationTarget = null
-    animationEndTime = 0
-  }
-
-  let clearLayoutState = () => {
-    clearActiveAnimationState()
-    snapshot = null
-  }
-
-  let clearProjectionStyles = (node: HTMLElement) => {
-    node.style.transform = ''
-    node.style.transformOrigin = ''
-  }
-
-  handle.addEventListener('beforeUpdate', (event) => {
-    let layoutConfig = resolveLayoutConfig(currentConfig)
-    if (!layoutConfig) return
-    let htmlNode = event.node as HTMLElement
-    // Capture the live on-screen position so the next animation can pick up
-    // where this one was interrupted if this update changes the target box.
-    if (animation && animation.playState === 'running') {
-      snapshot = rectToBox(htmlNode.getBoundingClientRect())
-    } else {
-      snapshot = measureNaturalBox(htmlNode)
+    let clearActiveAnimationState = () => {
+      animation = null
+      animationTarget = null
+      animationEndTime = 0
     }
-  })
 
-  handle.addEventListener('commit', (event) => {
-    let layoutConfig = resolveLayoutConfig(currentConfig)
-    let htmlNode = event.node as HTMLElement
-    let runningAnimation = animation?.playState === 'running' ? animation : null
-    let latest: Box | null = null
+    let clearLayoutState = () => {
+      clearActiveAnimationState()
+      snapshot = null
+    }
 
-    if (runningAnimation && animationTarget && layoutConfig) {
-      latest = measureAnimationTargetBox(htmlNode, runningAnimation, animationEndTime)
-      if (isTargetBoxSame(latest, animationTarget, layoutConfig)) {
+    let clearProjectionStyles = (node: HTMLElement) => {
+      node.style.transform = ''
+      node.style.transformOrigin = ''
+    }
+
+    handle.addEventListener('beforeUpdate', (event) => {
+      let layoutConfig = resolveLayoutConfig(currentConfig)
+      if (!layoutConfig) return
+      let htmlNode = event.node as HTMLElement
+      // Capture the live on-screen position so the next animation can pick up
+      // where this one was interrupted if this update changes the target box.
+      if (animation && animation.playState === 'running') {
+        snapshot = rectToBox(htmlNode.getBoundingClientRect())
+      } else {
+        snapshot = measureNaturalBox(htmlNode)
+      }
+    })
+
+    handle.addEventListener('commit', (event) => {
+      let layoutConfig = resolveLayoutConfig(currentConfig)
+      let htmlNode = event.node as HTMLElement
+      let runningAnimation = animation?.playState === 'running' ? animation : null
+      let latest: Box | null = null
+
+      if (runningAnimation && animationTarget && layoutConfig) {
+        latest = measureAnimationTargetBox(htmlNode, runningAnimation, animationEndTime)
+        if (isTargetBoxSame(latest, animationTarget, layoutConfig)) {
+          snapshot = null
+          return
+        }
+      }
+
+      // Defensive cleanup for cases where beforeUpdate didn't run (e.g. the
+      // mixin was just attached, layoutConfig was disabled this render, or an
+      // in-flight animation needs to retarget to a new final box).
+      animation?.cancel()
+      clearActiveAnimationState()
+      clearProjectionStyles(htmlNode)
+      latest ??= measureNaturalBox(htmlNode)
+
+      if (!layoutConfig) {
+        clearLayoutState()
+        return
+      }
+
+      if (!snapshot) {
         snapshot = null
         return
       }
-    }
 
-    // Defensive cleanup for cases where beforeUpdate didn't run (e.g. the
-    // mixin was just attached, layoutConfig was disabled this render, or an
-    // in-flight animation needs to retarget to a new final box).
-    animation?.cancel()
-    clearActiveAnimationState()
-    clearProjectionStyles(htmlNode)
-    latest ??= measureNaturalBox(htmlNode)
+      let targetDelta = createDelta()
+      calcBoxDelta(targetDelta, latest, snapshot, layoutConfig)
 
-    if (!layoutConfig) {
+      if (isVisualDeltaZero(targetDelta, layoutConfig)) {
+        snapshot = null
+        return
+      }
+
+      let invert = buildProjectionTransform(targetDelta, layoutConfig)
+      let origin = buildTransformOrigin(targetDelta)
+      htmlNode.style.transform = invert
+      htmlNode.style.transformOrigin = origin
+
+      let duration = layoutConfig.duration ?? DEFAULT_DURATION
+      let easing = layoutConfig.easing ?? DEFAULT_EASING
+      let active = htmlNode.animate(
+        [
+          { transform: invert, transformOrigin: origin },
+          { transform: 'none', transformOrigin: origin },
+        ],
+        { duration, easing, fill: 'forwards' },
+      )
+      animation = active
+      animationTarget = latest
+      animationEndTime = duration
+      snapshot = null
+      active.finished
+        .then(() => {
+          if (animation !== active) return
+          // Cancel even though the animation finished naturally. A fill:forwards
+          // animation in 'finished' state remains an effective animation on
+          // transform, which makes commitStyles() throw on the next interrupted
+          // animation because more than one effect targets the same property.
+          active.cancel()
+          clearProjectionStyles(htmlNode)
+          clearLayoutState()
+        })
+        .catch(() => {})
+    })
+
+    handle.addEventListener('remove', () => {
+      animation?.cancel()
       clearLayoutState()
-      return
+    })
+
+    return (config = true) => {
+      currentConfig = config
+      return handle.element
     }
-
-    if (!snapshot) {
-      snapshot = null
-      return
-    }
-
-    let targetDelta = createDelta()
-    calcBoxDelta(targetDelta, latest, snapshot, layoutConfig)
-
-    if (isVisualDeltaZero(targetDelta, layoutConfig)) {
-      snapshot = null
-      return
-    }
-
-    let invert = buildProjectionTransform(targetDelta, layoutConfig)
-    let origin = buildTransformOrigin(targetDelta)
-    htmlNode.style.transform = invert
-    htmlNode.style.transformOrigin = origin
-
-    let duration = layoutConfig.duration ?? DEFAULT_DURATION
-    let easing = layoutConfig.easing ?? DEFAULT_EASING
-    let active = htmlNode.animate(
-      [
-        { transform: invert, transformOrigin: origin },
-        { transform: 'none', transformOrigin: origin },
-      ],
-      { duration, easing, fill: 'forwards' },
-    )
-    animation = active
-    animationTarget = latest
-    animationEndTime = duration
-    snapshot = null
-    active.finished
-      .then(() => {
-        if (animation !== active) return
-        // Cancel even though the animation finished naturally. A fill:forwards
-        // animation in 'finished' state remains an effective animation on
-        // transform, which makes commitStyles() throw on the next interrupted
-        // animation because more than one effect targets the same property.
-        active.cancel()
-        clearProjectionStyles(htmlNode)
-        clearLayoutState()
-      })
-      .catch(() => {})
-  })
-
-  handle.addEventListener('remove', () => {
-    animation?.cancel()
-    clearLayoutState()
-  })
-
-  return (config = true) => {
-    currentConfig = config
-    return handle.element
-  }
-})
+  },
+  { ssr: false },
+)
 
 /**
  * Animates layout changes for an element using FLIP-style transforms.

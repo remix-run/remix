@@ -108,6 +108,89 @@ describe('ContentType', () => {
 })
 
 describe('ContentType.from', () => {
+  it('treats a semicolon after an unquoted backslash as a parameter separator', () => {
+    let result = ContentType.from(String.raw`multipart/form-data; note=foo\; boundary=abc`)
+
+    assert.equal(result.boundary, 'abc')
+  })
+
+  it('accepts a boundary with an unterminated quote', () => {
+    let result = ContentType.from('multipart/form-data; boundary="abc')
+
+    assert.equal(result.boundary, 'abc')
+  })
+
+  it('does not read parameters inside an unterminated quoted value', () => {
+    let result = ContentType.from('multipart/form-data; note="value; boundary=abc; charset=utf-8')
+
+    assert.equal(result.boundary, undefined)
+    assert.equal(result.charset, undefined)
+  })
+
+  it('keeps a boundary before an unterminated quoted value', () => {
+    let result = ContentType.from('multipart/form-data; boundary=abc; note="value')
+
+    assert.equal(result.boundary, 'abc')
+  })
+
+  it('preserves quoted boundary whitespace while ignoring surrounding header whitespace', () => {
+    assert.equal(ContentType.from('multipart/form-data; boundary=" abc " ').boundary, ' abc ')
+    assert.equal(ContentType.from('multipart/form-data; boundary=" abc ').boundary, ' abc')
+  })
+
+  it('matches boundary parameter names case-insensitively while preserving the value', () => {
+    let result = ContentType.from('Multipart/Form-Data; BOUNDARY="MixedCaseBoundary"')
+
+    assert.equal(result.mediaType, 'Multipart/Form-Data')
+    assert.equal(result.boundary, 'MixedCaseBoundary')
+  })
+
+  it('matches charset parameter names case-insensitively while preserving the value', () => {
+    let result = ContentType.from('Text/HTML; CharSet="UTF-8"')
+
+    assert.equal(result.mediaType, 'Text/HTML')
+    assert.equal(result.charset, 'UTF-8')
+  })
+
+  it('keeps the first boundary when the parameter is repeated', () => {
+    let result = ContentType.from('multipart/form-data; boundary=first; boundary=second')
+
+    assert.equal(result.boundary, 'first')
+  })
+
+  it('keeps the first charset when the parameter is repeated', () => {
+    let result = ContentType.from('text/html; charset=utf-8; charset=iso-8859-1')
+
+    assert.equal(result.charset, 'utf-8')
+  })
+
+  it('recognizes duplicate parameters with different casing', () => {
+    let result = ContentType.from(
+      'multipart/form-data; BOUNDARY=First; boundary=Second; CharSet=UTF-8; CHARSET=ISO-8859-1',
+    )
+
+    assert.equal(result.boundary, 'First')
+    assert.equal(result.charset, 'UTF-8')
+  })
+
+  it('keeps empty quoted values when parameters are repeated', () => {
+    let result = ContentType.from(
+      'multipart/form-data; boundary=""; boundary=second; charset=""; charset=utf-8',
+    )
+
+    assert.equal(result.boundary, '')
+    assert.equal(result.charset, '')
+  })
+
+  it('ignores parameters without values when selecting the first value', () => {
+    let result = ContentType.from(
+      'multipart/form-data; boundary; boundary=first; boundary; charset; charset=utf-8; charset',
+    )
+
+    assert.equal(result.boundary, 'first')
+    assert.equal(result.charset, 'utf-8')
+  })
+
   it('parses a string value', () => {
     let result = ContentType.from('text/html; charset=utf-8')
     assert.ok(result instanceof ContentType)

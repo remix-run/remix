@@ -1,6 +1,11 @@
 import { type HeaderValue } from './header-value.ts'
 import { parseHttpDate, removeMilliseconds } from './utils.ts'
-import { quoteEtag } from './utils.ts'
+
+function isStrongEntityTag(value: string): boolean {
+  // Strong ETags use the quoted opaque-tag grammar without the W/ prefix.
+  // https://www.rfc-editor.org/rfc/rfc9110.html#section-8.8.3
+  return /^"[\x21\x23-\x7e\x80-\xff]*"$/.test(value)
+}
 
 /**
  * The value of an `If-Range` HTTP header.
@@ -9,7 +14,7 @@ import { quoteEtag } from './utils.ts'
  *
  * [MDN `If-Range` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Range)
  *
- * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc7233#section-3.2)
+ * [HTTP Semantics Specification](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.5)
  */
 export class IfRange implements HeaderValue {
   /**
@@ -26,12 +31,13 @@ export class IfRange implements HeaderValue {
    *
    * This method always returns `true` if the `If-Range` header is not present,
    * meaning the range request should proceed unconditionally.
+   * Empty values also return `true` for compatibility. Other malformed values return `false`.
    *
    * The `If-Range` header can contain either:
    * - An HTTP date (RFC 7231 IMF-fixdate format)
    * - An entity tag (ETag)
    *
-   * When comparing ETags, only strong entity tags are matched as per RFC 7233.
+   * When comparing ETags, only quoted strong entity tags are matched as per RFC 9110.
    * Weak entity tags (prefixed with `W/`) are never considered a match.
    *
    * @param resource The current resource state to compare against
@@ -55,23 +61,20 @@ export class IfRange implements HeaderValue {
       return true
     }
 
-    // Try parsing as HTTP date first
-    let dateTimestamp = parseHttpDate(this.value)
-    if (dateTimestamp !== null && resource.lastModified != null) {
-      return removeMilliseconds(dateTimestamp) === removeMilliseconds(resource.lastModified)
+    // Evaluate tags and dates separately, using strong ETag or exact date comparison.
+    // https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.5
+    if (isStrongEntityTag(this.value)) {
+      return (
+        resource.etag != null && isStrongEntityTag(resource.etag) && this.value === resource.etag
+      )
     }
 
-    // Otherwise treat as ETag
-    if (resource.etag != null) {
-      let normalizedTag = quoteEtag(this.value)
-      let normalizedResourceTag = quoteEtag(resource.etag)
-
-      // Weak tags never match in If-Range (strong comparison only, per RFC 7233)
-      if (normalizedTag.startsWith('W/') || normalizedResourceTag.startsWith('W/')) {
-        return false
-      }
-
-      return normalizedTag === normalizedResourceTag
+    let dateTimestamp = parseHttpDate(this.value)
+    if (dateTimestamp !== null) {
+      return (
+        resource.lastModified != null &&
+        removeMilliseconds(dateTimestamp) === removeMilliseconds(resource.lastModified)
+      )
     }
 
     return false

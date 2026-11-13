@@ -11,6 +11,7 @@ import { routes } from './routes.ts'
 declare global {
   interface Window {
     __frameNavigationTestDocument?: string
+    __scrollAfterNavigationShift?: number
   }
 }
 
@@ -60,6 +61,54 @@ describe('frame navigation', () => {
     await assertDocumentPreserved(page, documentMarker)
   })
 
+  it('prevents scroll anchoring while navigation layout settles', async (t) => {
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
+    await page.setViewportSize({ width: 800, height: 400 })
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(routes.main.index.href())
+    await waitForNavigationRuntime(page)
+    await page.evaluate(() => {
+      window.navigation.addEventListener(
+        'navigate',
+        (event) => {
+          if (!event.canIntercept) return
+          event.intercept({
+            async handler() {
+              let nextFrame = () =>
+                new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+              while (!document.querySelector('#courses-heading')) await nextFrame()
+              await nextFrame()
+              // Chromium does not select an anchor at the exact scroll boundary. Moving one pixel
+              // exposes reconciliation-driven anchoring without moving the destination visibly.
+              window.scrollTo(0, 1)
+              await nextFrame()
+
+              let spacer = document.createElement('div')
+              spacer.style.height = '400px'
+              document.body.prepend(spacer)
+              await nextFrame()
+              await nextFrame()
+              window.__scrollAfterNavigationShift = window.scrollY
+              spacer.remove()
+            },
+          })
+        },
+        { once: true },
+      )
+    })
+
+    await page.getByRole('link', { name: 'Courses', exact: true }).click()
+    await page.waitForFunction(() => window.__scrollAfterNavigationShift !== undefined)
+
+    let scrollPosition = await page.evaluate(() => window.__scrollAfterNavigationShift)
+    assert.equal(
+      scrollPosition,
+      1,
+      `Expected navigation layout changes to preserve scroll position 1, got ${scrollPosition}`,
+    )
+  })
+
   it('replaces history when filtering courses', async (t) => {
     let server = await createTestServer(router.fetch)
     let page = await t.serve(server)
@@ -82,6 +131,221 @@ describe('frame navigation', () => {
     await page.goBack()
     await page.getByRole('heading', { name: 'Learning dashboard' }).waitFor()
 
+    assert.equal(new URL(page.url()).pathname, routes.main.index.href())
+    await assertDocumentPreserved(page, documentMarker)
+  })
+
+  it('retains a pending course query when the filter is submitted before results arrive', async (t) => {
+    let requested = Promise.withResolvers<void>()
+    let response = Promise.withResolvers<void>()
+    let firstSearch = true
+    let server = await createTestServer(async (request) => {
+      let url = new URL(request.url)
+      if (
+        firstSearch &&
+        url.pathname === routes.main.courses.href() &&
+        url.searchParams.get('q') === 'accessibility'
+      ) {
+        firstSearch = false
+        requested.resolve()
+        await response.promise
+      }
+      return router.fetch(request)
+    })
+    let page = await t.serve(server)
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(routes.main.index.href())
+    await waitForNavigationRuntime(page)
+    await page.getByRole('link', { name: 'Courses', exact: true }).click()
+    await page.locator('#courses-heading').waitFor()
+    await page.waitForFunction(() => window.navigation.transition === null)
+
+    try {
+      let search = page.getByLabel('Filter courses')
+      await search.fill('accessibility')
+      await requested.promise
+      assert.equal(await search.inputValue(), 'accessibility')
+
+      await page.getByRole('button', { name: 'Filter', exact: true }).click()
+      await page.getByText('1 course matching “accessibility”', { exact: true }).waitFor()
+      await page.waitForFunction(() => window.navigation.transition === null)
+      assert.equal(new URL(page.url()).searchParams.get('q'), 'accessibility')
+      assert.equal(await search.inputValue(), 'accessibility')
+
+      await page.getByRole('link', { name: 'Clear', exact: true }).click()
+      await page.getByText('4 courses', { exact: true }).waitFor()
+      await page.waitForFunction(() => window.navigation.transition === null)
+      assert.equal(await search.inputValue(), '')
+    } finally {
+      response.resolve()
+    }
+  })
+
+  it('retains spaces between course search terms when normalized results arrive', async (t) => {
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(routes.main.courses.href())
+    await waitForNavigationRuntime(page)
+    await page.locator('#courses-heading').waitFor()
+    await page.waitForFunction(() => window.navigation.transition === null)
+
+    let search = page.getByLabel('Filter courses')
+    await search.fill('web ')
+    await page.getByText('2 courses matching “web”', { exact: true }).waitFor()
+    await page.waitForFunction(() => window.navigation.transition === null)
+    assert.equal(await search.inputValue(), 'web ')
+
+    await page.keyboard.press('a')
+    await page.getByText('1 course matching “web a”', { exact: true }).waitFor()
+    await page.waitForFunction(() => window.navigation.transition === null)
+    assert.equal(await search.inputValue(), 'web a')
+    assert.equal(new URL(page.url()).searchParams.get('q'), 'web a')
+  })
+
+  it('restores a committed course query when traversing to the same query during a search', async (t) => {
+    let requested = Promise.withResolvers<void>()
+    let response = Promise.withResolvers<void>()
+    let server = await createTestServer(async (request) => {
+      let url = new URL(request.url)
+      if (url.pathname === routes.main.courses.href() && url.searchParams.get('q') === 'web a') {
+        requested.resolve()
+        await response.promise
+      }
+      return router.fetch(request)
+    })
+    let page = await t.serve(server)
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(`${routes.main.courses.href()}?q=web`)
+    await waitForNavigationRuntime(page)
+    await page.locator('#courses-heading').waitFor()
+    await page.waitForFunction(() => window.navigation.transition === null)
+
+    try {
+      let search = page.getByLabel('Filter courses')
+      let filterRequest = page.waitForRequest((request) => {
+        let url = new URL(request.url())
+        return url.pathname === routes.main.courses.href() && url.searchParams.get('q') === 'web'
+      })
+      await page.getByRole('button', { name: 'Filter', exact: true }).click()
+      await filterRequest
+      await page.waitForFunction(() => window.navigation.transition === null)
+      await page.getByRole('link', { name: 'Clear', exact: true }).click()
+      await page.getByText('4 courses', { exact: true }).waitFor()
+      await page.waitForFunction(() => window.navigation.transition === null)
+      await search.fill('web')
+      await page.getByText('2 courses matching “web”', { exact: true }).waitFor()
+      await page.waitForFunction(() => window.navigation.transition === null)
+
+      await search.fill('web a')
+      await requested.promise
+      await page.goBack()
+      await page.waitForFunction(() => window.navigation.transition === null)
+      await page.getByText('2 courses matching “web”', { exact: true }).waitFor()
+      assert.equal(new URL(page.url()).searchParams.get('q'), 'web')
+      assert.equal(await search.inputValue(), 'web')
+    } finally {
+      response.resolve()
+    }
+  })
+
+  it('retains search focus while filtering courses with replace navigations as you type', async (t) => {
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
+    await setAuthCookie(page, server.baseUrl)
+    await page.goto(routes.main.index.href())
+    await waitForNavigationRuntime(page)
+    let documentMarker = await markDocument(page)
+
+    await page.getByRole('link', { name: 'Courses', exact: true }).click()
+    await page.locator('#courses-heading').waitFor()
+    await page.waitForFunction(() => window.navigation.transition === null)
+
+    let search = page.getByLabel('Filter courses')
+    let results = page.locator('ul[aria-labelledby="course-results"] li')
+    assert.equal(await results.count(), 4)
+    let history = await page.evaluate(() => ({
+      length: window.navigation.entries().length,
+      index: window.navigation.currentEntry?.index,
+    }))
+    await search.focus()
+
+    let searches = [
+      {
+        key: 'a',
+        query: 'a',
+        courses: [
+          'Applied Statistics for Engineers',
+          'Web Accessibility Foundations',
+          'Data Visualization for the Web',
+        ],
+      },
+      { key: 'p', query: 'ap', courses: ['Applied Statistics for Engineers'] },
+      { key: 'p', query: 'app', courses: ['Applied Statistics for Engineers'] },
+      { key: 'z', query: 'appz', courses: [] },
+      { key: 'Backspace', query: 'app', courses: ['Applied Statistics for Engineers'] },
+      { key: 'Backspace', query: 'ap', courses: ['Applied Statistics for Engineers'] },
+      {
+        key: 'Backspace',
+        query: 'a',
+        courses: [
+          'Applied Statistics for Engineers',
+          'Web Accessibility Foundations',
+          'Data Visualization for the Web',
+        ],
+      },
+      {
+        key: 'Backspace',
+        query: '',
+        courses: [
+          'Introduction to Product Design',
+          'Applied Statistics for Engineers',
+          'Web Accessibility Foundations',
+          'Data Visualization for the Web',
+        ],
+      },
+    ]
+
+    for (let { key, query, courses } of searches) {
+      let request = page.waitForRequest(
+        (request) =>
+          request.method() === 'GET' &&
+          new URL(request.url()).pathname === routes.main.courses.href() &&
+          new URL(request.url()).searchParams.get('q') === query,
+      )
+      // Keyboard input must use the existing focus; locator typing would refocus a blurred input.
+      await page.keyboard.press(key)
+      await request
+      await page
+        .getByText(
+          query
+            ? `${courses.length} ${courses.length === 1 ? 'course' : 'courses'} matching “${query}”`
+            : `${courses.length} courses`,
+          { exact: true },
+        )
+        .waitFor()
+      await page.waitForFunction(() => window.navigation.transition === null)
+
+      assert.equal(
+        await search.evaluate((input) => input === document.activeElement),
+        true,
+        `Expected the search input to retain focus after filtering for "${query}"`,
+      )
+      assert.equal(await search.inputValue(), query)
+      assert.deepEqual(await results.allTextContents(), courses)
+      assert.equal(new URL(page.url()).searchParams.get('q'), query)
+      assert.deepEqual(
+        await page.evaluate(() => ({
+          length: window.navigation.entries().length,
+          index: window.navigation.currentEntry?.index,
+        })),
+        history,
+      )
+      await assertDocumentPreserved(page, documentMarker)
+    }
+
+    await page.goBack()
+    await page.getByRole('heading', { name: 'Learning dashboard' }).waitFor()
     assert.equal(new URL(page.url()).pathname, routes.main.index.href())
     await assertDocumentPreserved(page, documentMarker)
   })

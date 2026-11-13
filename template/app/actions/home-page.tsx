@@ -1,16 +1,24 @@
 // Delete this file and put your own home page in app/actions/controller.tsx
-import type { Handle, RemixNode } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/component'
+import { css } from 'remix/component'
 
 import { Document } from './document.tsx'
 import { PromptButton } from './public/prompt-button.tsx'
 
-const FONT_STACK =
-  "'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
-
 export function HomePage() {
   return () => (
-    <Document head={<HomeHead />}>
+    <Document
+      head={
+        <>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
+          />
+        </>
+      }
+    >
       <main
         mix={css({
           // Light-mode design tokens (default).
@@ -34,7 +42,8 @@ export function HomePage() {
           minHeight: '100vh',
           background: 'var(--surface-0)',
           color: 'var(--text-primary)',
-          fontFamily: FONT_STACK,
+          fontFamily:
+            "'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
           fontSize: '14px',
           lineHeight: 1.5,
           WebkitFontSmoothing: 'antialiased',
@@ -54,290 +63,191 @@ export function HomePage() {
             gap: '72px',
           })}
         >
-          <Masthead />
-          <Columns />
-          <Footer />
+          <section
+            aria-label="Welcome"
+            mix={css({
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '36px',
+              width: '100%',
+            })}
+          >
+            <p
+              mix={css({
+                margin: 0,
+                fontWeight: 700,
+                fontSize: '14px',
+                lineHeight: 1.33,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                color: 'var(--text-primary)',
+                textAlign: 'center',
+              })}
+            >
+              Welcome to
+            </p>
+            <RemixWordmarkHero />
+          </section>
+
+          <section
+            aria-label="Getting started"
+            mix={css({
+              display: 'flex',
+              gap: '16px',
+              alignItems: 'stretch',
+              justifyContent: 'center',
+              width: 'auto',
+              '@media (max-width: 720px)': {
+                flexDirection: 'column',
+                width: '100%',
+              },
+            })}
+          >
+            <div mix={[cardStyle, css({ flex: '0 0 auto' })]}>
+              <h2 mix={cardHeaderStyle}>Get started</h2>
+              <ul
+                mix={css({
+                  listStyle: 'none',
+                  margin: 0,
+                  padding: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'stretch',
+                  width: '100%',
+                })}
+              >
+                <li>
+                  <CardLink href="https://docs.remix.run" icon={<AtomIcon />} label="Remix Docs" />
+                </li>
+                <li>
+                  <CardLink
+                    href="https://discord.gg/xwx7mMzVkA"
+                    icon={<DiscordFaceIcon />}
+                    label="Join Discord"
+                  />
+                </li>
+              </ul>
+            </div>
+
+            <div
+              mix={[
+                cardStyle,
+                css({
+                  width: '540px',
+                  justifyContent: 'center',
+                  '@media (max-width: 720px)': { width: '100%' },
+                }),
+              ]}
+            >
+              <h2 mix={cardHeaderStyle}>Coding with AI?</h2>
+              <div
+                mix={css({
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'stretch',
+                })}
+              >
+                <p
+                  mix={css({
+                    margin: 0,
+                    padding: '0 16px 16px',
+                    fontSize: '14px',
+                    lineHeight: 1.67,
+                    color: 'var(--text-primary)',
+                  })}
+                >
+                  Navigate to this project folder using your preferred AI-powered tool, and try
+                  copying any of these prompts into the agent chat:
+                </p>
+                <PromptButton text="I want to build a simple headless Shopify store, what does Remix have available to help scaffold this?" />
+                <PromptButton text="Add a sqlite database with a users table and scaffold a signup flow" />
+                <PromptButton text="Make a copy to clipboard component that confirms to the user it was copied then resets after a few seconds" />
+                <PromptButton text="Add compression middleware" />
+              </div>
+            </div>
+          </section>
+
+          <footer
+            mix={css({
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+            })}
+          >
+            <div
+              mix={css({
+                display: 'flex',
+                gap: '24px',
+                alignItems: 'center',
+                justifyContent: 'center',
+              })}
+            >
+              <FooterWordmark />
+              <nav
+                aria-label="Remix social links"
+                mix={css({
+                  display: 'flex',
+                  gap: '16px',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  color: 'var(--text-tertiary)',
+                  '& a': {
+                    width: '20px',
+                    height: '20px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'inherit',
+                    transition: 'color 150ms ease',
+                  },
+                  '& a:hover, & a:focus-visible': {
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                  },
+                  '& svg': { width: '100%', height: '100%', display: 'block' },
+                })}
+              >
+                <a href="https://github.com/remix-run/remix" aria-label="GitHub">
+                  <GitHubIcon />
+                </a>
+                <a href="https://x.com/remix_run" aria-label="X">
+                  <XIcon />
+                </a>
+                <a href="https://www.youtube.com/@Remix-Run" aria-label="YouTube">
+                  <YouTubeIcon />
+                </a>
+                <a href="https://discord.gg/xwx7mMzVkA" aria-label="Discord">
+                  <DiscordIcon />
+                </a>
+              </nav>
+            </div>
+            <div
+              mix={css({
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                fontSize: '10px',
+                lineHeight: 1.6,
+                letterSpacing: '0.05em',
+                color: 'var(--text-tertiary)',
+                textAlign: 'center',
+                '& p': { margin: 0, whiteSpace: 'nowrap' },
+              })}
+            >
+              <p>DOCS AND EXAMPLES LICENSED UNDER MIT</p>
+              <p>&copy;2026 SHOPIFY, INC.</p>
+            </div>
+          </footer>
         </div>
       </main>
     </Document>
-  )
-}
-
-function HomeHead() {
-  return () => (
-    <>
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
-      />
-    </>
-  )
-}
-
-function Masthead() {
-  return () => (
-    <section
-      aria-label="Welcome"
-      mix={css({
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '36px',
-        width: '100%',
-      })}
-    >
-      <p
-        mix={css({
-          margin: 0,
-          fontWeight: 700,
-          fontSize: '14px',
-          lineHeight: 1.33,
-          textTransform: 'uppercase',
-          letterSpacing: '0.1em',
-          color: 'var(--text-primary)',
-          textAlign: 'center',
-        })}
-      >
-        Welcome to
-      </p>
-      <RemixWordmarkHero />
-    </section>
-  )
-}
-
-function Columns() {
-  return () => (
-    <section
-      aria-label="Getting started"
-      mix={css({
-        display: 'flex',
-        gap: '16px',
-        alignItems: 'stretch',
-        justifyContent: 'center',
-        width: 'auto',
-        '@media (max-width: 720px)': {
-          flexDirection: 'column',
-          width: '100%',
-        },
-      })}
-    >
-      <GetStartedCard />
-      <CodingWithAiCard />
-    </section>
-  )
-}
-
-function GetStartedCard() {
-  return () => (
-    <div mix={[cardStyle, css({ flex: '0 0 auto' })]}>
-      <h2 mix={cardHeaderStyle}>Get started</h2>
-      <ul
-        mix={css({
-          listStyle: 'none',
-          margin: 0,
-          padding: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'stretch',
-          width: '100%',
-        })}
-      >
-        <li>
-          <CardLink href="https://api.remix.run" icon={<AtomIcon />} label="Remix API" />
-        </li>
-        <li>
-          <CardLink
-            href="https://discord.gg/xwx7mMzVkA"
-            icon={<DiscordFaceIcon />}
-            label="Join Discord"
-          />
-        </li>
-      </ul>
-    </div>
-  )
-}
-
-function CodingWithAiCard() {
-  return () => (
-    <div
-      mix={[
-        cardStyle,
-        css({
-          width: '540px',
-          justifyContent: 'center',
-          '@media (max-width: 720px)': { width: '100%' },
-        }),
-      ]}
-    >
-      <h2 mix={cardHeaderStyle}>Coding with AI?</h2>
-      <div
-        mix={css({
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'stretch',
-        })}
-      >
-        <p
-          mix={css({
-            margin: 0,
-            padding: '0 16px 16px',
-            fontSize: '14px',
-            lineHeight: 1.67,
-            color: 'var(--text-primary)',
-          })}
-        >
-          Navigate to this project folder using your preferred AI-powered tool, and try copying any
-          of these prompts into the agent chat:
-        </p>
-        <PromptButton text="I want to build a simple headless Shopify store, what does Remix have available to help scaffold this?" />
-        <PromptButton text="Add a sqlite database with a users table and scaffold a signup flow" />
-        <PromptButton text="Make a copy to clipboard component that confirms to the user it was copied then resets after a few seconds" />
-        <PromptButton text="Add a page with a remix/ui/select component and remix/ui/button variants" />
-        <PromptButton text="Add compression middleware" />
-      </div>
-    </div>
-  )
-}
-
-function CardLink(handle: Handle<{ href: string; icon: RemixNode; label: string }>) {
-  return () => {
-    let { href, icon, label } = handle.props
-
-    return (
-      <a
-        href={href}
-        mix={css({
-          display: 'flex',
-          gap: '16px',
-          alignItems: 'center',
-          padding: '16px',
-          borderRadius: '12px',
-          color: 'var(--text-primary)',
-          textDecoration: 'none',
-          background: 'transparent',
-          transition: 'background-color 150ms ease, color 150ms ease',
-          '&:hover, &:focus-visible': {
-            background: 'var(--surface-4)',
-            color: 'var(--brand-blue)',
-            outline: 'none',
-          },
-        })}
-      >
-        <IconSlot>{icon}</IconSlot>
-        <span mix={css({ fontSize: '14px', lineHeight: 1.5, whiteSpace: 'nowrap' })}>{label}</span>
-      </a>
-    )
-  }
-}
-
-function IconSlot(handle: Handle<{ children: RemixNode; rotated?: boolean }>) {
-  return () => {
-    let { children, rotated = false } = handle.props
-
-    return (
-      <span
-        aria-hidden="true"
-        mix={css({
-          flex: '0 0 24px',
-          width: '24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: rotated ? 'center' : 'flex-start',
-          '& svg': {
-            width: '20px',
-            height: '20px',
-            display: 'block',
-            ...(rotated ? { transform: 'rotate(180deg)' } : {}),
-          },
-        })}
-      >
-        {children}
-      </span>
-    )
-  }
-}
-
-function Footer() {
-  return () => (
-    <footer
-      mix={css({
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '10px',
-      })}
-    >
-      <div
-        mix={css({
-          display: 'flex',
-          gap: '24px',
-          alignItems: 'center',
-          justifyContent: 'center',
-        })}
-      >
-        <FooterWordmark />
-        <nav
-          aria-label="Remix social links"
-          mix={css({
-            display: 'flex',
-            gap: '16px',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            color: 'var(--text-tertiary)',
-            '& a': {
-              width: '20px',
-              height: '20px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'inherit',
-              transition: 'color 150ms ease',
-            },
-            '& a:hover, & a:focus-visible': {
-              color: 'var(--text-primary)',
-              outline: 'none',
-            },
-            '& svg': { width: '100%', height: '100%', display: 'block' },
-          })}
-        >
-          <a href="https://github.com/remix-run/remix" aria-label="GitHub">
-            <GitHubIcon />
-          </a>
-          <a href="https://x.com/remix_run" aria-label="X">
-            <XIcon />
-          </a>
-          <a href="https://www.youtube.com/@Remix-Run" aria-label="YouTube">
-            <YouTubeIcon />
-          </a>
-          <a href="https://discord.gg/xwx7mMzVkA" aria-label="Discord">
-            <DiscordIcon />
-          </a>
-        </nav>
-      </div>
-      <div
-        mix={css({
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '12px',
-          fontSize: '10px',
-          lineHeight: 1.6,
-          letterSpacing: '0.05em',
-          color: 'var(--text-tertiary)',
-          textAlign: 'center',
-          '& p': { margin: 0, whiteSpace: 'nowrap' },
-        })}
-      >
-        <p>DOCS AND EXAMPLES LICENSED UNDER MIT</p>
-        <p>&copy;2026 SHOPIFY, INC.</p>
-      </div>
-    </footer>
   )
 }
 
@@ -364,6 +274,53 @@ const cardHeaderStyle = css({
   letterSpacing: '0.1em',
   color: 'var(--text-primary)',
 })
+
+function CardLink(handle: Handle<{ href: string; icon: RemixNode; label: string }>) {
+  return () => {
+    let { href, icon, label } = handle.props
+
+    return (
+      <a
+        href={href}
+        mix={css({
+          display: 'flex',
+          gap: '16px',
+          alignItems: 'center',
+          padding: '16px',
+          borderRadius: '12px',
+          color: 'var(--text-primary)',
+          textDecoration: 'none',
+          background: 'transparent',
+          transition: 'background-color 150ms ease, color 150ms ease',
+          '&:hover, &:focus-visible': {
+            background: 'var(--surface-4)',
+            color: 'var(--brand-blue)',
+            outline: 'none',
+          },
+        })}
+      >
+        <span
+          aria-hidden="true"
+          mix={css({
+            flex: '0 0 24px',
+            width: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            '& svg': {
+              width: '20px',
+              height: '20px',
+              display: 'block',
+            },
+          })}
+        >
+          {icon}
+        </span>
+        <span mix={css({ fontSize: '14px', lineHeight: 1.5, whiteSpace: 'nowrap' })}>{label}</span>
+      </a>
+    )
+  }
+}
 
 // ----- SVG icons -----
 // Inline so the page is fully self-contained with no external icon assets.
@@ -442,7 +399,7 @@ function DiscordIcon() {
 
 function FooterWordmark() {
   // Same wordmark used for both light and dark mode; the text paths use
-  // currentColor so they inherit `--text-primary` from <body>.
+  // currentColor so they follow `--text-primary`.
   return () => (
     <span
       role="img"
@@ -469,8 +426,8 @@ function FooterWordmark() {
 
 function RemixWordmarkHero() {
   // Single SVG used for both themes: bracket characters keep their decorative
-  // colors; the "REMIX" letterforms use currentColor so they inherit
-  // `--text-primary` from <body> (light or dark).
+  // colors; the "REMIX" letterforms use currentColor so they follow
+  // `--text-primary` (light or dark).
   return () => (
     <svg
       role="img"

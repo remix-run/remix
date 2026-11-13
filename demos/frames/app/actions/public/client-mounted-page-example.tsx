@@ -1,4 +1,4 @@
-import { clientEntry, Frame, css, on, type Handle } from 'remix/ui'
+import { clientEntry, Frame, css, on, type Handle } from 'remix/component'
 import { routes } from '../../routes.ts'
 
 export const ClientMountedPageExample = clientEntry(
@@ -33,6 +33,10 @@ export const ClientMountedPageExample = clientEntry(
           <button
             type="button"
             mix={[
+              on('click', () => {
+                showFrame = !showFrame
+                handle.update()
+              }),
               css({
                 padding: '6px 10px',
                 borderRadius: 10,
@@ -41,10 +45,6 @@ export const ClientMountedPageExample = clientEntry(
                 color: '#e9eefc',
                 cursor: 'pointer',
                 '&:hover': { background: 'rgba(255,255,255,0.10)' },
-              }),
-              on('click', () => {
-                showFrame = !showFrame
-                handle.update()
               }),
             ]}
           >

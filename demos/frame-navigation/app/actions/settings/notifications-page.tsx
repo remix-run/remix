@@ -1,14 +1,37 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 export function Notifications() {
   return () => (
     <section>
-      <h2 mix={titleStyle}>Notifications</h2>
-      <p mix={descriptionStyle}>
+      <h2
+        mix={css({
+          margin: 0,
+          fontSize: '1.5rem',
+          color: '#0f172a',
+        })}
+      >
+        Notifications
+      </h2>
+      <p
+        mix={css({
+          marginTop: '0.6rem',
+          color: '#475569',
+          lineHeight: 1.7,
+          maxWidth: '70ch',
+        })}
+      >
         Choose how and when you are notified about assignment deadlines, grade releases, and course
         announcements.
       </p>
-      <ul mix={listStyle}>
+      <ul
+        mix={css({
+          listStyle: 'none',
+          margin: '1rem 0 0',
+          padding: 0,
+          display: 'grid',
+          gap: '0.55rem',
+        })}
+      >
         <li mix={rowStyle}>
           <span>Assignment due reminders</span>
           <strong>Enabled</strong>
@@ -25,27 +48,6 @@ export function Notifications() {
     </section>
   )
 }
-
-const titleStyle = css({
-  margin: 0,
-  fontSize: '1.5rem',
-  color: '#0f172a',
-})
-
-const descriptionStyle = css({
-  marginTop: '0.6rem',
-  color: '#475569',
-  lineHeight: 1.7,
-  maxWidth: '70ch',
-})
-
-const listStyle = css({
-  listStyle: 'none',
-  margin: '1rem 0 0',
-  padding: 0,
-  display: 'grid',
-  gap: '0.55rem',
-})
 
 const rowStyle = css({
   border: '1px solid #e2e8f0',

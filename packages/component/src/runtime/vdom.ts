@@ -1,0 +1,275 @@
+import { getNonceManager } from './nonce.ts'
+import type { ComponentErrorEvent, FrameHandle } from './component.ts'
+import {
+  createComponentErrorEvent,
+  createFrameHandle,
+  getComponentError,
+  TypedEventTarget,
+} from './component.ts'
+import { invariant } from './invariant.ts'
+import type { RemixNode } from './core/vnode.ts'
+import { createFrameRuntime, NamedFrameRegistry, type ResolveFrame } from './frame-runtime.ts'
+import { createScheduler, type Scheduler } from './scheduler.ts'
+import {
+  defaultStyleManager,
+  diffVNodes,
+  restoreAncestorSelect,
+  remove as removeVNode,
+  ROOT_VNODE,
+  toVNode,
+  type CommittedVNode,
+  type ReconcileContext,
+  type RootVNode,
+} from './reconcile.ts'
+import { registerRoot, unregisterRoot } from './refresh.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
+import type { ElementFunction } from './element-function.ts'
+
+/**
+ * Events emitted by virtual roots.
+ */
+export type VirtualRootEventMap = {
+  /** A component render or queued task failed. */
+  error: ComponentErrorEvent
+}
+
+/**
+ * Root controller returned by {@link createRoot} and {@link createRangeRoot}.
+ */
+export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
+  /**
+   * Renders a tree, reusing existing DOM and component instances where possible.
+   * The first render hydrates existing container or range content.
+   *
+   * @param element Tree to render, or `null` to remove the current tree.
+   */
+  render: (element: RemixNode) => void
+  /** Renders the most recently supplied tree again, or does nothing before the first render. */
+  reconcile: () => void
+  /**
+   * Removes the rendered tree and releases root listeners and component resources.
+   * Host removal can remain pending while mixin teardown callbacks finish.
+   */
+  dispose: () => void
+  /** Synchronously drains pending DOM work and tasks without waiting for asynchronous work. */
+  flush: () => void
+}
+
+/**
+ * Options for creating a virtual DOM root with {@link createRoot} or {@link createRangeRoot}.
+ */
+export type VirtualRootOptions = {
+  /** Existing frame runtime to share with this root instead of creating one from `frameInit`. */
+  frame?: FrameHandle
+  /** Resolves context from outside this root when no matching provider exists inside it. */
+  getContext?: (type: ElementFunction) => unknown
+  /** Scheduler to share with related roots (defaults to a new scheduler). */
+  scheduler?: Scheduler
+  /** Style manager used to adopt server styles and manage generated CSS. */
+  styleManager?: StyleManager
+  /** Frame resolution for standalone roots that render `<Frame>` without calling `run()`. */
+  frameInit?: {
+    /** Source URL for the root's frame context (defaults to `'/'`). */
+    src?: string
+    /** Resolves content for frames rendered inside this root. */
+    resolveFrame: ResolveFrame
+    /** Loads client entries encountered in resolved frame content. */
+    loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
+  }
+}
+
+export { createScheduler, type Scheduler }
+
+function getHydrationComponentIdFromRangeStart(start: Node | undefined): string | undefined {
+  if (!(start instanceof Comment)) return undefined
+  let marker = start.data.trim()
+  if (!marker.startsWith('rmx:h:')) return undefined
+  let id = marker.slice('rmx:h:'.length)
+  return id.length > 0 ? id : undefined
+}
+
+/**
+ * Creates a virtual root bounded by two DOM nodes.
+ *
+ * @param boundaries Start and end nodes sharing a parent. Only the content between them is owned.
+ * @param options Root configuration.
+ * @returns A virtual root controller.
+ */
+export function createRangeRoot(
+  boundaries: [Node, Node],
+  options: VirtualRootOptions = {},
+): VirtualRoot {
+  let [start, end] = boundaries
+  let container = end.parentNode
+  invariant(container, 'Expected parent node')
+  invariant(start.parentNode === container, 'Boundaries must share parent')
+  return createVirtualRoot(container, start.nextSibling, options, start, end)
+}
+
+/**
+ * Creates a virtual root for a host container element.
+ *
+ * @param container Host element to render into.
+ * @param options Root configuration.
+ * @returns A virtual root controller.
+ */
+export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
+  let styles = options.styleManager ?? defaultStyleManager
+  if (container.innerHTML.trim() !== '') {
+    // Adopt additively: multiple roots hydrating separate islands may share
+    // the default style manager, and adopting a later island must not release
+    // the server styles an earlier island still depends on.
+    styles.adoptServerStyles(container)
+  }
+  let hydrationStart = container.innerHTML.trim() !== '' ? container.firstChild : null
+  return createVirtualRoot(container, hydrationStart, options)
+}
+
+function createVirtualRoot(
+  parent: ParentNode,
+  hydrationStart: Node | null,
+  options: VirtualRootOptions,
+  rangeStart?: Node,
+  rangeEnd?: Node,
+): VirtualRoot {
+  let nonceManager = getNonceManager()
+  let vroot: CommittedVNode | null = null
+  let currentElement: RemixNode | undefined
+  let styles = options.styleManager ?? defaultStyleManager
+  let hydrationCursor = hydrationStart
+
+  let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
+  let scheduler =
+    options.scheduler ?? createScheduler(parent.ownerDocument ?? document, eventTarget, styles)
+  let frameStub =
+    options.frame ??
+    createRootFrameHandle({
+      src: options.frameInit?.src,
+      resolveFrame: options.frameInit?.resolveFrame,
+      loadModule: options.frameInit?.loadModule,
+      errorTarget: eventTarget,
+      scheduler,
+      styleManager: styles,
+    })
+  let context: ReconcileContext = {
+    frame: frameStub,
+    scheduler,
+    styles,
+    rootTarget: eventTarget,
+  }
+
+  let isErrorForwardingAttached = false
+  function forwardDomError(event: Event) {
+    eventTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
+  }
+  function attachDomErrorForwarding() {
+    if (isErrorForwardingAttached) return
+    parent.addEventListener('error', forwardDomError)
+    isErrorForwardingAttached = true
+  }
+  function detachDomErrorForwarding() {
+    if (!isErrorForwardingAttached) return
+    parent.removeEventListener('error', forwardDomError)
+    isErrorForwardingAttached = false
+  }
+  attachDomErrorForwarding()
+
+  let root = Object.assign(eventTarget, {
+    render(element: RemixNode) {
+      attachDomErrorForwarding()
+      currentElement = element
+
+      let vnode = toVNode(element)
+      let vParent: RootVNode = {
+        kind: 'root',
+        type: ROOT_VNODE,
+        _children: [],
+        _svg: false,
+        _resourceNonces: nonceManager.getRootResourceNonces(root),
+        _getContext: options.getContext,
+        _rangeStart: rangeStart,
+        _rangeEnd: rangeEnd,
+        _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(rangeStart),
+      }
+      scheduler.enqueueWork([
+        () => {
+          let cursor = hydrationCursor === null ? undefined : { current: hydrationCursor }
+          let committed = diffVNodes(vroot, vnode, parent, vParent, context, rangeEnd, cursor)
+          vParent._children = [committed]
+          vroot = committed
+          hydrationCursor = null
+          restoreAncestorSelect(parent)
+        },
+      ])
+      scheduler.dequeue()
+    },
+
+    reconcile() {
+      if (currentElement === undefined) return
+      root.render(currentElement)
+    },
+
+    dispose() {
+      detachDomErrorForwarding()
+      unregisterRoot(root)
+      currentElement = undefined
+
+      if (!vroot) return
+      let current = vroot
+      vroot = null
+      scheduler.enqueueWork([
+        () => {
+          removeVNode(current, parent, context)
+          restoreAncestorSelect(parent)
+        },
+      ])
+      scheduler.dequeue()
+    },
+
+    flush() {
+      scheduler.dequeue()
+    },
+  })
+
+  registerRoot(root)
+  return root
+}
+
+function createRootFrameHandle(init: {
+  src?: string
+  resolveFrame?: ResolveFrame
+  loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
+  errorTarget: EventTarget
+  scheduler: Scheduler
+  styleManager: StyleManager
+}): FrameHandle {
+  let resolveFrame =
+    init.resolveFrame ??
+    (() => {
+      throw new Error(
+        'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
+      )
+    })
+
+  let runtime = createFrameRuntime({
+    topFrame: undefined,
+    loadModule:
+      init.loadModule ??
+      (() => {
+        throw new Error('loadModule is required to hydrate client entries inside <Frame />')
+      }),
+    resolveFrame,
+    errorTarget: init.errorTarget,
+    pendingClientEntries: new Map(),
+    scheduler: init.scheduler,
+    styleManager: init.styleManager,
+    moduleCache: new Map(),
+    moduleLoads: new Map(),
+    frameInstances: new WeakMap(),
+    namedFrames: new NamedFrameRegistry(),
+  })
+  runtime.canResolveFrames = !!init.resolveFrame
+  let frame = createFrameHandle({ src: init.src ?? '/', $runtime: runtime })
+  runtime.topFrame = frame
+  return frame
+}

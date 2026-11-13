@@ -41,6 +41,22 @@ function createMockCompressor(impl: {
   return Object.assign(emitter, impl) as MockCompressor
 }
 
+// Resolves when the compress loop releases its lock on the stream, i.e. once the loop has exited.
+function observeReaderRelease(stream: ReadableStream): Promise<void> {
+  let released = Promise.withResolvers<void>()
+  let getReader = stream.getReader.bind(stream)
+  stream.getReader = function () {
+    let reader = getReader()
+    let releaseLock = reader.releaseLock.bind(reader)
+    reader.releaseLock = () => {
+      releaseLock()
+      released.resolve()
+    }
+    return reader
+  }
+  return released.promise
+}
+
 describe('compressResponse()', () => {
   it('compresses response with gzip when client accepts it', async () => {
     let request = new Request('https://remix.run', {
@@ -135,6 +151,40 @@ describe('compressResponse()', () => {
 
     assert.ok(vary.has('Cookie'))
     assert.ok(vary.has('Accept-Encoding'))
+  })
+
+  it('keeps the spelling of existing Vary values when adding Accept-Encoding', async () => {
+    let request = new Request('https://remix.run', {
+      headers: { 'Accept-Encoding': 'gzip' },
+    })
+    let response = new Response('Hello, World!', {
+      headers: {
+        'Content-Type': 'text/html',
+        Vary: 'Cookie',
+      },
+    })
+
+    let compressed = await compressResponse(response, request, { threshold: 0 })
+
+    assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
+    assert.equal(compressed.headers.get('Vary'), 'Cookie, Accept-Encoding')
+  })
+
+  it('keeps Vary: * when adding Accept-Encoding', async () => {
+    let request = new Request('https://remix.run', {
+      headers: { 'Accept-Encoding': 'gzip' },
+    })
+    let response = new Response('Hello, World!', {
+      headers: {
+        'Content-Type': 'text/html',
+        Vary: '*',
+      },
+    })
+
+    let compressed = await compressResponse(response, request, { threshold: 0 })
+
+    assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
+    assert.equal(compressed.headers.get('Vary'), '*')
   })
 
   it('does not duplicate Accept-Encoding in Vary header', async () => {
@@ -736,11 +786,9 @@ describe('compressResponse()', () => {
     assert.equal(compressed.body, null)
   })
 
-  describe('Server-Sent Events', () => {
-    it('applies flush defaults while preserving custom compression options', () => {
+  describe('Streaming response types', () => {
+    it('applies flush defaults to SSE while preserving custom compression options', () => {
       let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/event-stream' }), {
-        // Provide custom options without flush. compressResponse() should
-        // automatically apply flush for SSE.
         zlib: {
           level: 9,
         },
@@ -757,7 +805,36 @@ describe('compressResponse()', () => {
       assert.equal(options.brotli?.flush, constants.BROTLI_OPERATION_FLUSH)
     })
 
-    it('preserves explicit flush options', () => {
+    it('applies HTML flush defaults unless explicitly configured', () => {
+      let headers = new Headers({ 'Content-Type': 'text/html; charset=UTF-8' })
+      let defaults = createCompressionOptions(headers, {})
+
+      assert.equal(defaults.zlib?.flush, constants.Z_SYNC_FLUSH)
+      assert.equal(defaults.brotli?.flush, constants.BROTLI_OPERATION_FLUSH)
+
+      let configured = createCompressionOptions(headers, {
+        zlib: { flush: constants.Z_FULL_FLUSH },
+        brotli: { flush: constants.BROTLI_OPERATION_PROCESS },
+      })
+
+      assert.equal(configured.zlib?.flush, constants.Z_FULL_FLUSH)
+      assert.equal(configured.brotli?.flush, constants.BROTLI_OPERATION_PROCESS)
+    })
+
+    it('matches streaming media types case-insensitively', () => {
+      let html = createCompressionOptions(
+        new Headers({ 'Content-Type': 'Text/HTML; charset=UTF-8' }),
+        {},
+      )
+      let sse = createCompressionOptions(new Headers({ 'Content-Type': 'TEXT/Event-Stream' }), {})
+
+      assert.equal(html.zlib?.flush, constants.Z_SYNC_FLUSH)
+      assert.equal(html.brotli?.flush, constants.BROTLI_OPERATION_FLUSH)
+      assert.equal(sse.zlib?.flush, constants.Z_SYNC_FLUSH)
+      assert.equal(sse.brotli?.flush, constants.BROTLI_OPERATION_FLUSH)
+    })
+
+    it('preserves explicit SSE flush options', () => {
       let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/event-stream' }), {
         zlib: {
           flush: constants.Z_FULL_FLUSH,
@@ -771,7 +848,7 @@ describe('compressResponse()', () => {
       assert.equal(options.brotli?.flush, constants.BROTLI_OPERATION_PROCESS)
     })
 
-    it('does not apply flush defaults for non-SSE responses', () => {
+    it('does not apply flush defaults to other response types', () => {
       let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/plain' }), {
         zlib: {
           level: 9,
@@ -984,6 +1061,94 @@ describe('compressResponse()', () => {
       let decompressed = decompressStream(compressed.body!, encoding)
       return await streamToString(decompressed)
     }
+
+    async function readChunkWithTimeout(
+      reader: ReadableStreamDefaultReader<Uint8Array>,
+      message: string,
+    ): Promise<ReadableStreamReadResult<Uint8Array>> {
+      let timeout: ReturnType<typeof setTimeout> | undefined
+
+      try {
+        return await Promise.race([
+          reader.read(),
+          new Promise<never>((_, reject) => {
+            timeout = setTimeout(() => reject(new Error(message)), 1000)
+          }),
+        ])
+      } finally {
+        if (timeout != null) clearTimeout(timeout)
+      }
+    }
+
+    async function assertHtmlStreamsBeforeCompletion(encoding: Encoding): Promise<void> {
+      let initialHtml = '<!DOCTYPE html><main>Initial content</main>'
+      let frameHtml = '<template>Deferred frame</template>'
+      let releaseFrame = () => {}
+      let source = new ReadableStream<Uint8Array>({
+        start(controller) {
+          let released = false
+          controller.enqueue(new TextEncoder().encode(initialHtml))
+          releaseFrame = () => {
+            if (released) return
+            released = true
+            controller.enqueue(new TextEncoder().encode(frameHtml))
+            controller.close()
+          }
+        },
+      })
+      let request = new Request('https://remix.run', {
+        headers: { 'Accept-Encoding': encoding },
+      })
+      let response = new Response(source, {
+        headers: { 'Content-Type': 'text/html; charset=UTF-8' },
+      })
+      let compressed = await compressResponse(response, request, { encodings: [encoding] })
+      let compressedBody = compressed.body
+      assert.ok(compressedBody)
+      let decompressed = decompressStream(compressedBody, encoding)
+      let reader = decompressed.getReader()
+      let decoder = new TextDecoder()
+      let html = ''
+
+      try {
+        while (html.length < initialHtml.length) {
+          let result = await readChunkWithTimeout(
+            reader,
+            `Initial HTML was buffered by ${encoding} compression`,
+          )
+          assert.ok(!result.done, 'Compressed stream should contain the initial HTML')
+          html += decoder.decode(result.value, { stream: true })
+        }
+
+        assert.equal(html, initialHtml)
+        releaseFrame()
+
+        while (true) {
+          let result = await reader.read()
+          if (result.done) break
+          html += decoder.decode(result.value, { stream: true })
+        }
+        html += decoder.decode()
+
+        assert.equal(html, initialHtml + frameHtml)
+      } finally {
+        releaseFrame()
+      }
+    }
+
+    describe('HTML streaming', () => {
+      it('flushes the initial HTML through Brotli before the source completes', async () => {
+        await assertHtmlStreamsBeforeCompletion('br')
+      })
+
+      it('flushes the initial HTML through gzip before the source completes', async () => {
+        await assertHtmlStreamsBeforeCompletion('gzip')
+      })
+
+      it('flushes the initial HTML through deflate before the source completes', async () => {
+        await assertHtmlStreamsBeforeCompletion('deflate')
+      })
+    })
 
     describe('correctness (round-trip compression)', () => {
       it('handles binary data byte-perfectly', async () => {
@@ -1206,11 +1371,12 @@ describe('compressResponse()', () => {
 
       let streamCancelled = false
       let cancelReason: string | undefined
+      let pulled = Promise.withResolvers<void>()
 
       let stream = new ReadableStream({
         async pull(controller) {
           controller.enqueue(new TextEncoder().encode('chunk\n'.repeat(100)))
-          await new Promise((resolve) => setTimeout(resolve, 10))
+          pulled.resolve()
         },
         cancel(reason) {
           streamCancelled = true
@@ -1229,13 +1395,10 @@ describe('compressResponse()', () => {
       reader.read()
 
       // Wait for streaming to start
-      await new Promise((resolve) => setTimeout(resolve, 30))
+      await pulled.promise
 
-      // Cancel the output stream
+      // Cancel the output stream; this resolves once the source stream's cancel() has run
       await reader.cancel('User cancelled')
-
-      // Wait for cancellation to propagate
-      await new Promise((resolve) => setTimeout(resolve, 100))
 
       // Verify source stream was cancelled
       assert.equal(streamCancelled, true, 'Source stream should be cancelled')
@@ -1287,9 +1450,6 @@ describe('compressResponse()', () => {
           },
         )
 
-        // Wait for any pending microtasks
-        await Promise.resolve()
-
         // Should not have received the data chunk emitted after error
         assert.equal(chunks.length, 0, 'Should not receive data chunks after error')
         assert.equal(errorEmitted, true, 'Error should have been emitted')
@@ -1298,11 +1458,13 @@ describe('compressResponse()', () => {
       it('ignores data events emitted after cancellation', async () => {
         let dataAfterCancel = false
         let lastChunk: Buffer
+        let writeStarted = Promise.withResolvers<void>()
 
         let mockCompressor = createMockCompressor({
           write: (chunk) => {
             // Store the chunk for later emission
             lastChunk = chunk
+            writeStarted.resolve()
             // Signal backpressure but never call callback or emit drain
             // This will cause the write to hang
             return false
@@ -1331,15 +1493,12 @@ describe('compressResponse()', () => {
         })
 
         // Cancel while blocked
-        await Promise.resolve()
+        await writeStarted.promise
         await reader.cancel()
 
         await readPromise.catch(() => {
           // May error or not, doesn't matter
         })
-
-        // Wait for any pending microtasks
-        await Promise.resolve()
 
         assert.equal(chunks.length, 0, 'Should not receive data chunks after cancel')
         assert.equal(dataAfterCancel, true, 'Data should have been emitted by mock')
@@ -1443,10 +1602,13 @@ describe('compressResponse()', () => {
 
       it('handles cancel while waiting for drain', async () => {
         let destroyed = false
+        let writeStarted = Promise.withResolvers<void>()
         let mockCompressor = createMockCompressor({
-          write: () =>
+          write: () => {
+            writeStarted.resolve()
             // Never call callback or emit drain, forcing the wait
-            false,
+            return false
+          },
           end: () => {},
           destroy: () => {
             destroyed = true
@@ -1466,8 +1628,8 @@ describe('compressResponse()', () => {
         // Start reading (will get stuck waiting for drain)
         let readPromise = reader.read()
 
-        // Cancel after a short delay
-        await Promise.resolve()
+        // Cancel once the write is blocked waiting for drain
+        await writeStarted.promise
         await reader.cancel('User cancelled')
 
         // Wait for the read to complete
@@ -1481,13 +1643,14 @@ describe('compressResponse()', () => {
       it('handles error emitted while waiting for drain and stops loop', async () => {
         let writeCount = 0
         let mockCompressor = createMockCompressor({
-          write: () => {
+          write: (_chunk, callback) => {
             // Real zlib compressors continue to accept writes after error
             writeCount++
             if (writeCount === 1) {
-              // Emit error on next microtask (callback won't be called)
+              // Emit error, then complete the write so the loop can run again
               setImmediate(() => {
                 mockCompressor.emit('error', new Error('Compressor failed'))
+                callback?.()
               })
             }
             return false // Always signal backpressure
@@ -1501,6 +1664,7 @@ describe('compressResponse()', () => {
             controller.enqueue(new TextEncoder().encode('chunk'))
           },
         })
+        let loopExited = observeReaderRelease(stream)
 
         let compressed = compressStream(stream, mockCompressor as any)
         let reader = compressed.getReader()
@@ -1515,14 +1679,10 @@ describe('compressResponse()', () => {
           },
         )
 
-        // Wait for any pending microtasks
-        await Promise.resolve()
-
-        let finalWriteCount = writeCount
-
+        await loopExited
         assert.equal(
           writeCount,
-          finalWriteCount,
+          1,
           `Should only write once before error stops loop (got ${writeCount})`,
         )
       })
@@ -1534,9 +1694,10 @@ describe('compressResponse()', () => {
             // Real zlib compressors continue to accept writes after error
             writeCount++
             if (writeCount === 2) {
-              // Emit error on next microtask (callback won't be called)
+              // Emit error, then complete the write so the loop can run again
               setImmediate(() => {
                 mockCompressor.emit('error', new Error('Compressor failed mid-stream'))
+                callback?.()
               })
               return false // Signal backpressure to create an await point
             }
@@ -1552,6 +1713,7 @@ describe('compressResponse()', () => {
             controller.enqueue(new TextEncoder().encode('chunk'))
           },
         })
+        let loopExited = observeReaderRelease(stream)
 
         let compressed = compressStream(stream, mockCompressor as any)
         let reader = compressed.getReader()
@@ -1569,14 +1731,10 @@ describe('compressResponse()', () => {
           },
         )
 
-        // Wait for any pending microtasks
-        await Promise.resolve()
-
-        let finalWriteCount = writeCount
-
+        await loopExited
         assert.equal(
           writeCount,
-          finalWriteCount,
+          2,
           `Should only write twice before error stops loop (got ${writeCount})`,
         )
       })
@@ -1584,14 +1742,16 @@ describe('compressResponse()', () => {
       it('stops calling reader.read() after error', async () => {
         let writeCount = 0
         let mockCompressor = createMockCompressor({
-          write: () => {
+          write: (_chunk, callback) => {
             writeCount++
             if (writeCount === 1) {
+              // Emit error, then complete the write so the loop can run again
               setImmediate(() => {
                 mockCompressor.emit('error', new Error('Compressor failed'))
+                callback?.()
               })
             }
-            return false // Backpressure (callback won't be called)
+            return false // Backpressure
           },
           end: () => {},
           destroy: () => {},
@@ -1602,6 +1762,8 @@ describe('compressResponse()', () => {
             controller.enqueue(new TextEncoder().encode('chunk'))
           },
         })
+
+        let loopExited = observeReaderRelease(stream)
 
         // Monkey patch stream.getReader to count reader.read() calls
         let readCount = 0
@@ -1628,9 +1790,7 @@ describe('compressResponse()', () => {
           },
         )
 
-        // Wait for any pending microtasks
-        await Promise.resolve()
-
+        await loopExited
         assert.equal(
           readCount,
           1,
@@ -1640,8 +1800,10 @@ describe('compressResponse()', () => {
       })
 
       it('propagates reader.cancel() errors', async () => {
+        let writeStarted = Promise.withResolvers<void>()
         let mockCompressor = createMockCompressor({
           write: (_chunk, callback) => {
+            writeStarted.resolve()
             if (callback) setImmediate(callback)
             return true
           },
@@ -1665,8 +1827,8 @@ describe('compressResponse()', () => {
         // Start reading (will be in progress)
         let readPromise = reader.read()
 
-        // Wait a bit for processing to start
-        await new Promise((resolve) => setTimeout(resolve, 10))
+        // Wait for processing to start
+        await writeStarted.promise
 
         // Cancel should propagate the error
         await assert.rejects(
@@ -1721,6 +1883,7 @@ describe('compressResponse()', () => {
 
       it('prevents duplicate error reporting if destroy() also emits error', async () => {
         let errorEmitCount = 0
+        let destroyErrorEmitted = Promise.withResolvers<void>()
         let mockCompressor = createMockCompressor({
           write: (_chunk, callback) => {
             // Call callback with error immediately
@@ -1735,6 +1898,7 @@ describe('compressResponse()', () => {
               setImmediate(() => {
                 errorEmitCount++
                 mockCompressor.emit('error', error)
+                destroyErrorEmitted.resolve()
               })
             }
           },
@@ -1759,8 +1923,8 @@ describe('compressResponse()', () => {
           },
         )
 
-        // Wait for any pending error emissions
-        await new Promise((resolve) => setImmediate(resolve))
+        // Wait for destroy() to emit its error
+        await destroyErrorEmitted.promise
 
         // Error event should have been emitted but ignored (duplicate)
         assert.equal(errorEmitCount, 1, 'Error event should have been emitted by destroy()')

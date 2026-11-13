@@ -1,5 +1,5 @@
-import type { Handle, RemixNode } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/component'
+import { css } from 'remix/component'
 import { theme } from './public/design.ts'
 
 import { routes } from '../routes.ts'
@@ -16,12 +16,40 @@ export function Layout(handle: Handle<LayoutProps>) {
 
     return (
       <Document title={title}>
-        <header mix={headerStyle}>
-          <nav mix={navStyle}>
-            <a href={routes.home.index.href()} mix={brandStyle}>
+        <header
+          mix={css({
+            borderBottom: `1px solid ${theme.colors.border.subtle}`,
+            backgroundColor: theme.surface.lvl0,
+          })}
+        >
+          <nav
+            mix={css({
+              alignItems: 'center',
+              display: 'flex',
+              justifyContent: 'space-between',
+              margin: '0 auto',
+              maxWidth: '960px',
+              minHeight: '64px',
+              padding: `0 ${theme.space.xl}`,
+            })}
+          >
+            <a
+              href={routes.home.index.href()}
+              mix={css({
+                color: theme.colors.text.primary,
+                fontSize: theme.fontSize.md,
+                fontWeight: theme.fontWeight.semibold,
+                textDecoration: 'none',
+              })}
+            >
               Timeboxer
             </a>
-            <div mix={navLinksStyle}>
+            <div
+              mix={css({
+                display: 'flex',
+                gap: theme.space.md,
+              })}
+            >
               <a href={routes.home.index.href()} mix={navLinkStyle}>
                 Home
               </a>
@@ -36,33 +64,6 @@ export function Layout(handle: Handle<LayoutProps>) {
     )
   }
 }
-
-const headerStyle = css({
-  borderBottom: `1px solid ${theme.colors.border.subtle}`,
-  backgroundColor: theme.surface.lvl0,
-})
-
-const navStyle = css({
-  alignItems: 'center',
-  display: 'flex',
-  justifyContent: 'space-between',
-  margin: '0 auto',
-  maxWidth: '960px',
-  minHeight: '64px',
-  padding: `0 ${theme.space.xl}`,
-})
-
-const brandStyle = css({
-  color: theme.colors.text.primary,
-  fontSize: theme.fontSize.md,
-  fontWeight: theme.fontWeight.semibold,
-  textDecoration: 'none',
-})
-
-const navLinksStyle = css({
-  display: 'flex',
-  gap: theme.space.md,
-})
 
 const navLinkStyle = css({
   color: theme.colors.text.secondary,

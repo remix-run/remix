@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/render-middleware",
-  "version": "0.2.0",
-  "description": "Conventional Remix UI and custom request-scoped render middleware",
+  "version": "1.1.0",
+  "description": "Conventional Remix component and custom request-scoped render middleware",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -15,9 +15,11 @@
     "README.md",
     "dist",
     "src",
-    "!src/**/*.test.ts"
+    "!src/**/*.test.ts",
+    "!src/**/*.test.e2e.ts"
   ],
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
@@ -36,13 +38,16 @@
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "@remix-run/node-fetch-server": "workspace:^",
+    "@remix-run/multiple-import-maps-polyfill": "workspace:^"
   },
   "dependencies": {
     "@remix-run/assets": "workspace:^",
+    "@remix-run/component": "workspace:^",
     "@remix-run/fetch-router": "workspace:^",
     "@remix-run/response": "workspace:^",
-    "@remix-run/ui": "workspace:^"
+    "@remix-run/csp-middleware": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

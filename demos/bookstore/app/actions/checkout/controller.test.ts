@@ -1,5 +1,5 @@
 import * as assert from 'remix/assert'
-import { describe, it } from 'remix/test'
+import { afterEach, beforeEach, describe, it, mock } from 'remix/test'
 
 import {
   assertContains,
@@ -8,10 +8,17 @@ import {
   loginAsCustomer,
   requestWithSession,
 } from '../../../test/helpers.ts'
+import { latency } from '../cart/api/controller.tsx'
 
 const router = await createTestRouter()
 
 describe('checkout handlers', () => {
+  let latencyMock: ReturnType<typeof mock.method>
+  beforeEach(() => {
+    latencyMock = mock.method(latency, 'wait', async () => {})
+  })
+  afterEach(() => latencyMock.mock.restore())
+
   it('GET /checkout redirects when not authenticated', async () => {
     let response = await router.fetch('https://remix.run/checkout')
 
@@ -65,5 +72,29 @@ describe('checkout handlers', () => {
     assert.equal(orderDetailsResponse.status, 200)
     let orderDetailsHtml = await orderDetailsResponse.text()
     assertContains(orderDetailsHtml, 'Ash &amp; Smoke')
+  })
+
+  it('POST /checkout returns shipping errors without clearing the cart', async () => {
+    let sessionCookie = await loginAsCustomer(router)
+    let addResponse = await router.fetch(
+      requestWithSession('https://remix.run/cart/api/add', sessionCookie, {
+        method: 'POST',
+        body: new URLSearchParams({ bookId: '1', slug: 'bbq' }),
+      }),
+    )
+    sessionCookie = getSessionCookie(addResponse) ?? sessionCookie
+
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/checkout', sessionCookie, {
+        method: 'POST',
+        body: new URLSearchParams({ street: '123 Test St', city: '', state: 'TS', zip: '12345' }),
+      }),
+    )
+
+    assert.equal(response.status, 400)
+    let html = await response.text()
+    assertContains(html, 'value="123 Test St"')
+    assertContains(html, 'aria-invalid="true"')
+    assertContains(html, 'Ash &amp; Smoke')
   })
 })

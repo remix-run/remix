@@ -1,4 +1,4 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 import { routes } from '../routes.ts'
 import { Layout } from '../ui/layout.tsx'
@@ -44,10 +44,11 @@ export function AboutPage() {
         </p>
 
         <p mix={css({ marginTop: '2rem' })}>
-          <a href={routes.books.index.href()} class="btn">
+          <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
             Explore Books
           </a>
           <a
+            data-rmx-prefetch="intent"
             href={routes.auth.register.index.href()}
             class="btn btn-secondary"
             mix={css({ marginLeft: '1rem' })}

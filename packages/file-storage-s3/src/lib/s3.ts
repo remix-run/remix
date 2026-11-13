@@ -10,6 +10,9 @@ import type {
 
 const CONTENTS_PATTERN = /<Contents>([\s\S]*?)<\/Contents>/g
 
+const minPartSize = 5 * 1024 * 1024
+const defaultPartSize = 8 * 1024 * 1024
+
 type ListedObject = {
   key: string
   lastModified: number
@@ -53,6 +56,12 @@ export interface S3FileStorageOptions {
    * Optional fetch implementation.
    */
   fetch?: typeof globalThis.fetch
+  /**
+   * Size in bytes of each part when a file is larger than one part and is sent with a multipart
+   * upload. At most two parts are held in memory per upload. Must be at least 5 MiB, the S3
+   * minimum. Defaults to 8 MiB.
+   */
+  partSize?: number
 }
 
 /**
@@ -61,12 +70,20 @@ export interface S3FileStorageOptions {
  * This works with AWS S3 and S3-compatible providers (for example MinIO or LocalStack) by
  * overriding the `endpoint` option.
  *
+ * `set()` streams files to S3. Files larger than `partSize` are sent with a multipart upload, so
+ * only about two parts are held in memory at a time. `put()` uses the same upload path but keeps the
+ * whole file in memory, because it returns a `File` with the stored contents.
+ *
  * @param options Configuration for the S3 backend
  * @returns A `FileStorage` implementation backed by S3
  */
 export function createS3FileStorage(options: S3FileStorageOptions): FileStorage<File> {
   let endpoint = new URL(options.endpoint ?? `https://s3.${options.region}.amazonaws.com`)
   let forcePathStyle = options.forcePathStyle ?? options.endpoint != null
+  let partSize = options.partSize ?? defaultPartSize
+  if (!Number.isInteger(partSize) || partSize < minPartSize) {
+    throw new RangeError(`partSize must be an integer of at least ${minPartSize} bytes`)
+  }
 
   let aws = new AwsClient({
     accessKeyId: options.accessKeyId,
@@ -94,8 +111,14 @@ export function createS3FileStorage(options: S3FileStorageOptions): FileStorage<
     return createObjectUrl(endpoint, options.bucket, forcePathStyle, key)
   }
 
-  async function putFile(key: string, file: FileLike): Promise<File> {
-    let body = await file.arrayBuffer()
+  // Streams the file to S3 and resolves with its parts when `keepChunks` is true. Files that fit in
+  // one part are sent with a single `PUT`. Larger files use a multipart upload, which holds at most
+  // two parts in memory.
+  async function uploadFile(
+    key: string,
+    file: FileLike,
+    keepChunks: boolean,
+  ): Promise<Uint8Array<ArrayBuffer>[]> {
     let headers = new Headers()
 
     if (file.type !== '') {
@@ -105,14 +128,153 @@ export function createS3FileStorage(options: S3FileStorageOptions): FileStorage<
     headers.set('X-Amz-Meta-File-Name', encodeMetadataValue(file.name))
     headers.set('X-Amz-Meta-File-Last-Modified', String(file.lastModified))
 
-    let response = await s3Fetch(getObjectUrl(key), {
-      method: 'PUT',
-      headers,
+    let kept: Uint8Array<ArrayBuffer>[] = []
+    // Streaming sources, like a file upload read straight from a request, can have the shape of a
+    // `File` without being a `Blob`, so they can only be read with `stream()`.
+    let source: Pick<File, 'stream'> = file
+    let parts =
+      file instanceof Blob ? sliceParts(file, partSize) : readParts(source.stream(), partSize)
+    let first = await parts.next()
+    let firstPart = first.done ? new Uint8Array(0) : first.value
+    if (keepChunks) kept.push(firstPart)
+
+    let second = first.done ? first : await parts.next()
+    if (second.done) {
+      let response = await s3Fetch(getObjectUrl(key), { method: 'PUT', headers, body: firstPart })
+      await assertOk(response, `PUT "${key}"`)
+      return kept
+    }
+
+    let uploadId: string
+    try {
+      uploadId = await createMultipartUpload(key, headers)
+    } catch (error) {
+      await parts.return()
+      throw error
+    }
+
+    let etags: string[] = []
+    let pending: Promise<string> | undefined
+
+    try {
+      let partNumber = 0
+      let part = firstPart
+      let lookahead: IteratorResult<Uint8Array<ArrayBuffer>, void> | undefined = second
+
+      // Start uploading each part, wait for the previous part to finish, then read the next one, so
+      // at most two parts are in memory at a time.
+      while (true) {
+        let upload = uploadPart(key, uploadId, ++partNumber, part)
+        // Awaited later; this keeps a failure from being reported as unhandled in the meantime
+        upload.catch(() => {})
+        if (pending) etags.push(await pending)
+        pending = upload
+
+        let next = lookahead ?? (await parts.next())
+        lookahead = undefined
+        if (next.done) break
+
+        part = next.value
+        if (keepChunks) kept.push(part)
+      }
+
+      etags.push(await pending)
+      pending = undefined
+
+      await completeMultipartUpload(key, uploadId, etags)
+    } catch (error) {
+      await pending?.catch(() => {})
+      await parts.return()
+      await abortMultipartUpload(key, uploadId)
+      throw error
+    }
+
+    return kept
+  }
+
+  async function createMultipartUpload(key: string, headers: Headers): Promise<string> {
+    let url = getObjectUrl(key)
+    url.searchParams.set('uploads', '')
+
+    let response = await s3Fetch(url, { method: 'POST', headers })
+    await assertOk(response, `CreateMultipartUpload "${key}"`)
+
+    let uploadId = readXmlTag(await response.text(), 'UploadId')
+    if (uploadId == null || uploadId === '') {
+      throw new Error(`S3 request failed for CreateMultipartUpload "${key}": missing UploadId`)
+    }
+
+    return uploadId
+  }
+
+  async function uploadPart(
+    key: string,
+    uploadId: string,
+    partNumber: number,
+    body: Uint8Array<ArrayBuffer>,
+  ): Promise<string> {
+    let url = getObjectUrl(key)
+    url.searchParams.set('partNumber', String(partNumber))
+    url.searchParams.set('uploadId', uploadId)
+
+    let response = await s3Fetch(url, { method: 'PUT', body })
+    await assertOk(response, `UploadPart ${partNumber} "${key}"`)
+
+    let etag = response.headers.get('ETag')
+    if (etag == null) {
+      throw new Error(`S3 request failed for UploadPart ${partNumber} "${key}": missing ETag`)
+    }
+
+    return etag
+  }
+
+  async function completeMultipartUpload(
+    key: string,
+    uploadId: string,
+    etags: string[],
+  ): Promise<void> {
+    let url = getObjectUrl(key)
+    url.searchParams.set('uploadId', uploadId)
+
+    let body = [
+      '<CompleteMultipartUpload>',
+      ...etags.map(
+        (etag, index) =>
+          `<Part><PartNumber>${index + 1}</PartNumber><ETag>${escapeXml(etag)}</ETag></Part>`,
+      ),
+      '</CompleteMultipartUpload>',
+    ].join('')
+
+    let response = await s3Fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/xml' },
       body,
     })
-    await assertOk(response, `PUT "${key}"`)
+    await assertOk(response, `CompleteMultipartUpload "${key}"`)
 
-    return new File([body], file.name, {
+    // S3 can report a failed completion with a 200 response and an error document.
+    let xml = await response.text()
+    if (xml.includes('<Error>')) {
+      let message = readXmlTag(xml, 'Message') ?? readXmlTag(xml, 'Code') ?? 'unknown error'
+      throw new Error(`S3 request failed for CompleteMultipartUpload "${key}": ${message}`)
+    }
+  }
+
+  async function abortMultipartUpload(key: string, uploadId: string): Promise<void> {
+    let url = getObjectUrl(key)
+    url.searchParams.set('uploadId', uploadId)
+
+    try {
+      await s3Fetch(url, { method: 'DELETE' })
+    } catch {
+      // Keep the original error. Incomplete uploads can also be cleaned up by a bucket lifecycle rule.
+    }
+  }
+
+  async function putFile(key: string, file: FileLike): Promise<File> {
+    let chunks = await uploadFile(key, file, true)
+
+    return new File(chunks, file.name, {
       lastModified: file.lastModified,
       type: file.type,
     })
@@ -237,9 +399,73 @@ export function createS3FileStorage(options: S3FileStorageOptions): FileStorage<
       await assertOk(response, `DELETE "${key}"`)
     },
     async set(key: string, file: FileLike): Promise<void> {
-      await putFile(key, file)
+      await uploadFile(key, file, false)
     },
   }
+}
+
+// Reads a `Blob` in parts with `slice()`. Node.js before 24.20.0 and 26.6.0 keeps every chunk read
+// through `Blob#stream()` in memory for the life of the process
+// (https://github.com/nodejs/node/issues/63574), which would leak every file stored this way.
+// Remove this workaround and read every file with `readParts(file.stream())` once our minimum
+// supported Node.js version is >=24.20.0.
+async function* sliceParts(
+  blob: Blob,
+  partSize: number,
+): AsyncGenerator<Uint8Array<ArrayBuffer>, void, undefined> {
+  for (let offset = 0; offset < blob.size; offset += partSize) {
+    yield new Uint8Array(await blob.slice(offset, offset + partSize).arrayBuffer())
+  }
+}
+
+// Splits a stream into parts of exactly `partSize` bytes, except the last one. Some S3-compatible
+// providers, like Cloudflare R2, require every part but the last to be the same size.
+async function* readParts(
+  stream: ReadableStream<Uint8Array>,
+  partSize: number,
+): AsyncGenerator<Uint8Array<ArrayBuffer>, void, undefined> {
+  let reader = stream.getReader()
+  let part = new Uint8Array(partSize)
+  let offset = 0
+  let done = false
+
+  try {
+    while (true) {
+      let result = await reader.read()
+      if (result.done) {
+        done = true
+        break
+      }
+
+      let chunk = result.value
+      while (chunk.length > 0) {
+        let length = Math.min(chunk.length, partSize - offset)
+        part.set(chunk.subarray(0, length), offset)
+        offset += length
+        chunk = chunk.subarray(length)
+
+        if (offset === partSize) {
+          yield part
+          part = new Uint8Array(partSize)
+          offset = 0
+        }
+      }
+    }
+
+    if (offset > 0) yield part.subarray(0, offset)
+  } finally {
+    // Cancel the source when the upload stops early, so it can discard the rest of its content
+    if (!done) await reader.cancel().catch(() => {})
+  }
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
 }
 
 function createBucketUrl(endpoint: URL, bucket: string, forcePathStyle: boolean): URL {
@@ -269,9 +495,19 @@ function createObjectUrl(endpoint: URL, bucket: string, forcePathStyle: boolean,
 }
 
 function encodeS3Key(key: string): string {
+  if (key === '') {
+    throw new TypeError('Invalid S3 object key: keys must not be empty')
+  }
+
   return key
     .split('/')
-    .map((segment) => encodeURIComponent(segment))
+    .map((segment) => {
+      if (segment === '.' || segment === '..') {
+        throw new TypeError('Invalid S3 object key: period-only path segments are not supported')
+      }
+
+      return encodeURIComponent(segment)
+    })
     .join('/')
 }
 

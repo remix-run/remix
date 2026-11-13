@@ -1,3 +1,5 @@
+import * as cp from 'node:child_process'
+import { getLocalTagTarget } from './git.ts'
 import type { ChangelogEntry } from './changes.ts'
 
 export interface PublishCandidate {
@@ -26,6 +28,65 @@ interface GetReleaseNotesOptions {
   entries: ChangelogEntry[]
   targetVersion: string
   isVersionPublished(version: string): Promise<boolean>
+}
+
+export function fetchDocsReleaseTags(packages: PublishCandidate[], cwd?: string): void {
+  let refs = new Set(packages.map((pkg) => `refs/tags/${pkg.tag}`))
+  if (refs.size === 0) return
+
+  let remoteTags = cp.execFileSync('git', ['ls-remote', '--refs', '--tags', 'origin', ...refs], {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  let refspecs = remoteTags
+    .trim()
+    .split('\n')
+    .map((line) => line.split('\t')[1])
+    .filter((ref) => refs.has(ref))
+    .map((ref) => `${ref}:${ref}`)
+  if (refspecs.length === 0) return
+
+  cp.execFileSync('git', ['fetch', '--no-tags', 'origin', ...refspecs], {
+    cwd,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+}
+
+export function getDocsReleaseTag(packages: PublishCandidate[], cwd?: string): string | undefined {
+  let latestRelease: { pkg: PublishCandidate; targetCommit: string } | undefined
+
+  // Include completed releases from the current checkout. On a retry, only an
+  // older release may still need repair, but docs should use the newest snapshot.
+  for (let pkg of packages) {
+    let targetCommit = getLocalTagTarget(pkg.tag, cwd)
+    if (targetCommit === null) {
+      continue
+    }
+
+    if (latestRelease === undefined) {
+      latestRelease = { pkg, targetCommit }
+      continue
+    }
+
+    if (targetCommit === latestRelease.targetCommit) {
+      if (pkg.packageName === 'remix') {
+        latestRelease = { pkg, targetCommit }
+      }
+      continue
+    }
+
+    let commonAncestor = cp.execFileSync(
+      'git',
+      ['merge-base', latestRelease.targetCommit, targetCommit],
+      { cwd, encoding: 'utf8' },
+    )
+    if (commonAncestor.trim() === latestRelease.targetCommit) {
+      latestRelease = { pkg, targetCommit }
+    }
+  }
+
+  return latestRelease?.pkg.tag
 }
 
 export async function isPackageVersionPublished(

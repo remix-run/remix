@@ -9,6 +9,7 @@
   },
   "include": ["src"],
   "exclude": [
+    "src/demos",
     "src/**/*.demo.ts",
     "src/**/*.demo.tsx",
     "src/**/*.test.ts",

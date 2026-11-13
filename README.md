@@ -55,6 +55,8 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [auth](packages/auth): Browser login, OAuth, and OIDC helpers for Remix
 - [auth-middleware](packages/auth-middleware): Pluggable authentication middleware for Remix
 - [cli](packages/cli): Command-line interface for Remix
+- [component](packages/component): Component runtime with server rendering and browser hydration
+- [component-hmr](packages/component-hmr): Hot module replacement runtime and transforms for Remix components
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
 - [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
 - [cop-middleware](packages/cop-middleware): Middleware for tokenless cross-origin protection in Fetch API servers
@@ -93,33 +95,38 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [tar-parser](packages/tar-parser): A fast, efficient parser for tar streams in any JavaScript environment
 - [terminal](packages/terminal): Terminal output utilities for JavaScript libraries and CLIs
 - [test](packages/test): A test framework for JavaScript and TypeScript projects
-- [ui](packages/ui): View layer with reconciler, component model, and first-party UI components
-- [ui-hmr](packages/ui-hmr): Hot module replacement runtime and transforms for Remix UI components
+- [ui](packages/ui): Headless, accessible UI primitives and animation utilities for Remix components
 
 ## Installation
 
-To try the current Remix beta, install the `next` dist-tag:
+Install Remix:
 
 ```sh
-npm install remix@next
+npm i remix
 ```
 
-To create a new Remix app with the CLI, use `npx remix@next new`:
+To create a new Remix app with the CLI, use `npx remix new`:
 
 ```sh
-npx remix@next new my-remix-app
+npx remix new my-remix-app
 ```
 
-If you want to play around with the bleeding edge, we also build the latest `main` branch into a `preview/main` branch which can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
+To try a PR preview, use the installation command posted on the PR. To install the [latest `main` build](https://github.com/remix-run/previews/releases/latest):
 
 ```sh
-pnpm install "remix-run/remix#preview/main&path:packages/remix"
+pnpm add "$(curl -fsSL https://github.com/remix-run/previews/releases/latest/download/remix.url)"
 ```
 
-Or, just install a single package:
+This resolves to the build's SHA-specific tarball URL, so your lockfile stays pinned. Run it again to update.
 
-```
-pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
+To install an individual package, use its tarball URL from the same release. The release notes link to the full source commit.
+
+Each PR has one release containing its latest 10 successful SHA builds, with a separate install URL for each SHA. Older SHA builds are deleted as new builds finish. Closing or merging a PR deletes its preview releases and tags. Main previews have a separate release per SHA and are kept for seven days, with the newest successful build always retained. Reopening a PR triggers a new preview build. Experimental previews expire after 30 days. Installs using deleted builds need a newer preview URL and an updated lockfile.
+
+If your pnpm version blocks transitive Git or tarball dependencies, add this to your `pnpm-workspace.yaml`:
+
+```yaml
+blockExoticSubdeps: false
 ```
 
 ## Agent Skills For Building Apps

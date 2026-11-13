@@ -9,6 +9,7 @@ import { session as sessionMiddleware } from '@remix-run/session-middleware'
 import { finishExternalAuth } from '../finish-external-auth.ts'
 import { startExternalAuth } from '../start-external-auth.ts'
 import { createRequest, mockFetch } from '../test-utils.ts'
+import type { GitHubAuthProfile, GitHubAuthProviderEmail } from './github.ts'
 import { createGitHubAuthProvider } from './github.ts'
 
 describe('github provider', () => {
@@ -69,6 +70,16 @@ describe('github provider', () => {
       if (url === 'https://api.github.com/user/emails') {
         return Response.json([
           {
+            email: 'unverified@example.com',
+            primary: false,
+            verified: false,
+          },
+          {
+            email: 'secondary@example.com',
+            primary: false,
+            verified: true,
+          },
+          {
             email: 'mj@example.com',
             primary: true,
             verified: true,
@@ -127,6 +138,44 @@ describe('github provider', () => {
     } finally {
       restoreFetch()
     }
+  })
+
+  it('uses a verified secondary email when the primary email is unverified', async () => {
+    let response = await finishGitHubLogin({ id: 123, login: 'mjackson', email: null }, [
+      { email: 'primary@example.com', primary: true, verified: false },
+      { email: 'secondary@example.com', primary: false, verified: true },
+      { email: 'another@example.com', primary: false, verified: true },
+    ])
+    let body = await response.json()
+
+    assert.equal(response.status, 200)
+    assert.equal(body.profile.email, 'secondary@example.com')
+    assert.deepEqual(body.account, { provider: 'github', providerAccountId: '123' })
+  })
+
+  it('keeps a null profile email when no GitHub email addresses are verified', async () => {
+    let profile = { id: 123, login: 'mjackson', email: null }
+    let response = await finishGitHubLogin(profile, [
+      { email: 'primary@example.com', primary: true, verified: false },
+      { email: 'secondary@example.com', primary: false, verified: false },
+    ])
+    let body = await response.json()
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(body.profile, profile)
+    assert.deepEqual(body.account, { provider: 'github', providerAccountId: '123' })
+  })
+
+  it('keeps an omitted profile email when no GitHub email addresses are verified', async () => {
+    let profile = { id: 123, login: 'mjackson' }
+    let response = await finishGitHubLogin(profile, [
+      { email: 'secondary@example.com', primary: false, verified: false },
+    ])
+    let body = await response.json()
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(body.profile, profile)
+    assert.deepEqual(body.account, { provider: 'github', providerAccountId: '123' })
   })
 
   it('uses the primary profile email without calling the GitHub email API', async () => {
@@ -328,3 +377,62 @@ describe('github provider', () => {
     }
   })
 })
+
+async function finishGitHubLogin(
+  profile: GitHubAuthProfile,
+  emails: GitHubAuthProviderEmail[],
+): Promise<Response> {
+  let restoreFetch = mockFetch(async (input) => {
+    let url =
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+    if (url === 'https://github.com/login/oauth/access_token') {
+      return Response.json({
+        access_token: 'github-token',
+        token_type: 'bearer',
+        scope: 'read:user,user:email',
+      })
+    }
+
+    if (url === 'https://api.github.com/user') {
+      return Response.json(profile)
+    }
+
+    if (url === 'https://api.github.com/user/emails') {
+      return Response.json(emails)
+    }
+
+    throw new Error(`Unexpected fetch: ${url}`)
+  })
+
+  try {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createMemorySessionStorage()
+    let provider = createGitHubAuthProvider({
+      clientId: 'github-client-id',
+      clientSecret: 'github-client-secret',
+      redirectUri: 'https://app.example.com/auth/github/callback',
+    })
+    let router = createRouter({ middleware: [sessionMiddleware(cookie, storage)] })
+
+    router.get('/login/github', (context) => startExternalAuth(provider, context))
+    router.get('/auth/github/callback', async (context) => {
+      let { result } = await finishExternalAuth(provider, context)
+      return Response.json(result)
+    })
+
+    let loginResponse = await router.fetch('https://app.example.com/login/github')
+    let location = loginResponse.headers.get('Location')
+    assert.ok(location)
+    let state = new URL(location).searchParams.get('state')
+
+    return await router.fetch(
+      createRequest(
+        `https://app.example.com/auth/github/callback?code=github-code&state=${state}`,
+        loginResponse,
+      ),
+    )
+  } finally {
+    restoreFetch()
+  }
+}

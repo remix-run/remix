@@ -2,10 +2,10 @@
 
 `anchor` positions a floating element against an anchor element or viewport coordinates and keeps it constrained to the viewport. Use it for custom floating surfaces that need placement, flipping, offsets, and optional relative alignment.
 
-## Primitive Usage
+## Usage
 
 ```tsx
-import { anchor } from 'remix/ui/anchor'
+import { anchor } from '@remix-run/ui/anchor'
 
 let trigger = document.querySelector<HTMLButtonElement>('[data-trigger]')
 let panel = document.querySelector<HTMLElement>('[data-panel]')
@@ -24,7 +24,7 @@ if (trigger && panel) {
 Use the returned cleanup function with the lifecycle that owns the floating element. For native popovers, position on open and clean up on close.
 
 ```tsx
-import { anchor } from 'remix/ui/anchor'
+import { anchor } from '@remix-run/ui/anchor'
 
 let cleanupAnchor = () => {}
 
@@ -58,14 +58,16 @@ let cleanup = anchor(popover, { x: event.clientX, y: event.clientY }, { placemen
 Keep presentation app-owned when the anchored element is rendered by your component:
 
 ```tsx
-import { anchor } from 'remix/ui/anchor'
-import { on, ref, type Handle } from 'remix/ui'
-import { panelStyle } from './floating.styles'
+import { on, ref, type Handle } from 'remix/component'
+import { anchor } from '@remix-run/ui/anchor'
+import { panelStyle } from './floating.styles.ts'
 
 export function AnchoredPanel(handle: Handle) {
   let cleanup = () => {}
   let trigger: HTMLElement | null = null
   let panel: HTMLElement | null = null
+
+  handle.signal.addEventListener('abort', () => cleanup(), { once: true })
 
   function position() {
     cleanup()
@@ -76,13 +78,10 @@ export function AnchoredPanel(handle: Handle) {
 
   return () => (
     <>
-      <button
-        mix={[ref((node) => (trigger = node as HTMLElement)), on('click', position)]}
-        type="button"
-      >
+      <button mix={[ref((node) => (trigger = node)), on('click', position)]} type="button">
         Open
       </button>
-      <div data-panel mix={[panelStyle, ref((node) => (panel = node as HTMLElement))]}>
+      <div data-panel mix={[panelStyle, ref((node) => (panel = node))]}>
         Panel
       </div>
     </>
@@ -90,7 +89,7 @@ export function AnchoredPanel(handle: Handle) {
 }
 ```
 
-## `remix/ui/anchor`
+## `@remix-run/ui/anchor`
 
 - `anchor(floatingElement, anchorTarget, options)`: positions `floatingElement` against an element or coordinate target, starts animation-frame polling for geometry changes, and returns a cleanup function.
 - `AnchorOptions`: placement, inset, relative alignment, and offset options.
@@ -193,4 +192,4 @@ anchor(listbox, trigger, {
 - `offset`, `offsetX`, and `offsetY` may be numbers or functions that receive the floating element.
 - `relativeTo` lets a surface align to an inner element, which is useful for selected options inside popovers.
 - `anchor` polls on animation frames for anchor target or floating geometry changes and repositions when either changes.
-- The returned cleanup function cancels animation-frame polling.
+- The returned cleanup function cancels animation-frame polling and removes scroll and resize listeners. It leaves the last inline styles and `data-anchor-placement` attribute in place.

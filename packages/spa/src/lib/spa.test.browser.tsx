@@ -1,8 +1,8 @@
 import { expect } from '@remix-run/assert'
 import { createContextKey, createRouter, type Middleware } from '@remix-run/fetch-router'
 import { afterEach, describe, it, mock } from '@remix-run/test'
-import { on, type Handle } from '@remix-run/ui'
-import { spaResponse } from '@remix-run/ui'
+import { on, type Handle } from '@remix-run/component'
+import { spaResponse } from '@remix-run/component'
 
 import { render, run, type Router } from './spa.ts'
 
@@ -22,6 +22,56 @@ function greeting(value: string): Middleware<{
 describe('render', () => {
   afterEach(() => {
     document.body.textContent = ''
+  })
+
+  it('defaults POST FormData to URL encoding without navigating', async (t) => {
+    let initialUrl = window.location.href
+    let router = createRouter({ middleware: [render()] })
+    router.get(new URL(initialUrl).pathname, ({ render }) => render(<p>Initial</p>))
+    router.post('/save', async ({ request, render }) => {
+      expect(request.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
+      return render(<p>{(await request.formData()).get('name')?.toString()}</p>)
+    })
+    let app = run(router)
+    t.after(() => app.dispose())
+    await app.ready()
+    let body = new FormData()
+    body.set('name', 'Ada')
+
+    await app.frames.top.reload({
+      src: '/save',
+      method: 'post',
+      body,
+    })
+
+    expect(document.body.textContent).toBe('Ada')
+    expect(app.frames.top.src).toBe('/save')
+    expect(window.location.href).toBe(initialUrl)
+  })
+
+  it('reloads GET form values in the source query without navigating', async (t) => {
+    let initialUrl = window.location.href
+    let router = createRouter({ middleware: [render()] })
+    router.get(new URL(initialUrl).pathname, ({ render }) => render(<p>Initial</p>))
+    router.get('/search', ({ request, render }) => {
+      expect(request.body).toBeNull()
+      expect(new URL(request.url).search).toBe('?name=Ada+Lovelace&name=Grace')
+      return render(<p>Found</p>)
+    })
+    let app = run(router)
+    t.after(() => app.dispose())
+    await app.ready()
+    let body = new FormData()
+    body.append('name', 'Ada Lovelace')
+    body.append('name', 'Grace')
+
+    await app.frames.top.reload({ src: '/search?old=1', body })
+
+    expect(document.body.textContent).toBe('Found')
+    expect(app.frames.top.src).toBe(
+      new URL('/search?name=Ada+Lovelace&name=Grace', initialUrl).href,
+    )
+    expect(window.location.href).toBe(initialUrl)
   })
 
   it('adds a request-aware node renderer to an ordinary router context', async (t) => {
@@ -109,8 +159,8 @@ describe('run', () => {
   })
 
   it('renders an interactive fallback while the initial route loads', async (t) => {
-    let [routeResponse, resolveRouteResponse] = withResolvers<Response>()
-    let [requestStarted, resolveRequestStarted] = withResolvers<void>()
+    let routeResponse = Promise.withResolvers<Response>()
+    let requestStarted = Promise.withResolvers<void>()
     let sawReloadStart = false
     let fallbackAtRequest: string | undefined
     let reloadStartedAtRequest = false
@@ -144,8 +194,8 @@ describe('run', () => {
     let fetch = mock.fn(async () => {
       fallbackAtRequest = document.querySelector('button')?.textContent ?? undefined
       reloadStartedAtRequest = sawReloadStart
-      resolveRequestStarted()
-      return await routeResponse
+      requestStarted.resolve()
+      return await routeResponse.promise
     })
     let app = run({ fetch }, { fallback: <Fallback /> })
 
@@ -154,7 +204,7 @@ describe('run', () => {
     let readyPromise = app.ready().then(() => {
       ready = true
     })
-    await requestStarted
+    await requestStarted.promise
 
     expect(ready).toBe(false)
     expect(fallbackAtRequest).toBe('Loading: 0')
@@ -164,7 +214,7 @@ describe('run', () => {
     app.flush()
     expect(button?.textContent).toBe('Loading: 1')
 
-    resolveRouteResponse(spaResponse.create(<h1>Ready</h1>))
+    routeResponse.resolve(spaResponse.create(<h1>Ready</h1>))
     await readyPromise
 
     expect(ready).toBe(true)
@@ -173,7 +223,7 @@ describe('run', () => {
   })
 
   it('encodes text/plain form submissions with normalized line breaks', async (t) => {
-    let [submittedRequest, resolveSubmittedRequest] = withResolvers<Request>()
+    let submittedRequest = Promise.withResolvers<Request>()
     let requestCount = 0
     let router: Router = {
       async fetch(input, init) {
@@ -190,7 +240,7 @@ describe('run', () => {
           )
         }
 
-        resolveSubmittedRequest(request)
+        submittedRequest.resolve(request)
         return spaResponse.create(<h1>Submitted</h1>)
       },
     }
@@ -204,9 +254,41 @@ describe('run', () => {
     if (!form) throw new Error('Expected a form')
     form.requestSubmit()
 
-    let request = await submittedRequest
+    let request = await submittedRequest.promise
     expect(request.headers.get('Content-Type')).toBe('text/plain')
     expect(await request.text()).toBe('note=first\r\nsecond\r\ncity=Paris\r\n')
+  })
+
+  it('drops the body and its content type when a POST reload redirects to GET', async (t) => {
+    let initialUrl = window.location.href
+    let requests: Request[] = []
+    let router: Router = {
+      async fetch(input, init) {
+        let request = input instanceof Request ? input : new Request(input, init)
+        if (new URL(request.url).pathname === '/save') {
+          requests.push(request)
+          return new Response(null, { status: 303, headers: { Location: '/saved' } })
+        }
+        if (new URL(request.url).pathname === '/saved') requests.push(request)
+        return spaResponse.create(<p>Saved</p>)
+      },
+    }
+    let app = run(router)
+    t.after(() => app.dispose())
+    await app.ready()
+
+    let body = new FormData()
+    body.set('name', 'Ada')
+    await app.frames.top.reload({ src: '/save', method: 'post', body })
+
+    expect(requests.map((request) => request.method)).toEqual(['POST', 'GET'])
+    expect(requests[0]!.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
+    expect(await requests[0]!.text()).toBe('name=Ada')
+    expect(requests[1]!.headers.get('Content-Type')).toBeNull()
+    expect(requests[1]!.body).toBeNull()
+    expect(document.body.textContent).toBe('Saved')
+    expect(app.frames.top.src).toBe('/save')
+    expect(window.location.href).toBe(initialUrl)
   })
 
   it('follows same-origin redirects and applies Fetch redirect method semantics', async (t) => {
@@ -243,11 +325,3 @@ describe('run', () => {
     expect(document.querySelector('h1')?.textContent).toBe('Redirected')
   })
 })
-
-function withResolvers<value>(): [Promise<value>, (value: value) => void] {
-  let resolve: (value: value) => void = () => {}
-  let promise = new Promise<value>((promiseResolve) => {
-    resolve = promiseResolve
-  })
-  return [promise, resolve]
-}

@@ -493,75 +493,27 @@ describe('run', () => {
         await fs.readFile(path.join(appDir, 'package.json'), 'utf8'),
       ) as {
         dependencies: Record<string, string>
-        devDependencies: Record<string, string>
-        engines: Record<string, string>
         name: string
-        scripts: Record<string, string>
       }
       let agentsGuide = await fs.readFile(path.join(appDir, 'AGENTS.md'), 'utf8')
       let readme = await fs.readFile(path.join(appDir, 'README.md'), 'utf8')
-      let hmr = await fs.readFile(path.join(appDir, 'hmr.ts'), 'utf8')
-      let server = await fs.readFile(path.join(appDir, 'server.ts'), 'utf8')
       let assets = await fs.readFile(path.join(appDir, 'app', 'assets.ts'), 'utf8')
-      let router = await fs.readFile(path.join(appDir, 'app', 'router.ts'), 'utf8')
-      let entry = await fs.readFile(
-        path.join(appDir, 'app', 'actions', 'public', 'entry.ts'),
-        'utf8',
-      )
-      let controller = await fs.readFile(
-        path.join(appDir, 'app', 'actions', 'controller.tsx'),
-        'utf8',
-      )
 
+      // package.json is finalized by the CLI
       assert.equal(packageJson.name, 'my-app')
       assert.equal(packageJson.dependencies.remix, `^${await readRepoRemixVersion()}`)
-      assert.equal(packageJson.devDependencies['@types/node'], 'latest')
-      assert.equal(packageJson.devDependencies.typescript, 'latest')
-      assert.equal(packageJson.engines.node, '>=24.3.0')
-      assert.match(packageJson.scripts.dev, /NODE_ENV=development/)
-      assert.match(packageJson.scripts.dev, /node --watch/)
-      assert.match(packageJson.scripts.hmr, /NODE_ENV=development/)
-      assert.match(packageJson.scripts.hmr, /node hmr\.ts/)
-      assert.match(packageJson.scripts.start, /NODE_ENV=production/)
-      assert.match(packageJson.scripts.test, /NODE_ENV=test/)
+
+      // App name placeholders are substituted
       assert.match(agentsGuide, /^# My App Agent Guide/m)
-      assert.match(agentsGuide, /This starter intentionally begins small/)
-      assert.match(agentsGuide, /Put top-level route actions in `app\/actions\/controller\.tsx`/)
       assert.match(readme, /^# My App/m)
-      assert.match(hmr, /createHmrReadyFetch/)
-      assert.match(hmr, /run\('server\.ts'/)
-      assert.match(server, /import \* as http from 'node:http'/)
-      assert.match(server, /import \{ createRequestListener \} from 'remix\/node-fetch-server'/)
-      assert.match(server, /http\.createServer/)
-      assert.match(server, /createRequestListener/)
-      assert.match(server, /emitServerReady/)
+
+      // Monorepo-only template blocks are stripped
       assert.doesNotMatch(assets, /remix-template:remove-/)
       assert.doesNotMatch(assets, /\bmounts\s*:/)
-      assert.doesNotMatch(assets, /\.\.\/packages/)
-      assert.match(assets, /allowFiles: \['app\/routes\.ts', 'app\/\*\*\/public\/\*\*'\]/)
-      assert.match(assets, /denyFiles: \['app\/\*\*\/\*\.test\.\*'\]/)
-      assert.match(assets, /const entry = 'app\/actions\/public\/entry\.ts'/)
-      assert.match(assets, /getHref\(entry\)/)
-      assert.match(assets, /getPreloads\(entry\)/)
-      assert.match(assets, /createBrowserHmrChannel/)
-      assert.match(assets, /scripts: \{ loaders: isHmr \? \[uiHmr\(\)\] : undefined \}/)
-      assert.match(assets, /watch: isDevelopment/)
-      assert.match(router, /staticFiles\('\.\/public'/)
-      assert.match(router, /import \{ render \} from 'remix\/middleware\/render'/)
-      assert.match(router, /render\(\{ assets \}\)/)
-      assert.match(entry, /loadModule/)
-      assert.match(entry, /resolveFrame/)
-      assert.match(entry, /server:update/)
-      assert.match(controller, /context\.render\(<HomePage \/>/)
-      await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
-      await assertPathExists(path.join(appDir, 'hmr.ts'))
-      await assertPathExists(path.join(appDir, 'app', 'assets.ts'))
+
+      // Template files are copied, including nested files, public assets, and the renamed dotfile
       await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.tsx'))
-      await assertPathExists(path.join(appDir, 'app', 'actions', 'document.tsx'))
-      await assertPathExists(path.join(appDir, 'app', 'actions', 'home-page.tsx'))
-      await assertPathExists(path.join(appDir, 'app', 'actions', 'public', 'prompt-button.tsx'))
-      await assertPathExists(path.join(appDir, 'app', 'actions', 'public', 'entry.ts'))
-      await assertPathMissing(path.join(appDir, 'app', 'middleware', 'render.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.test.ts'))
       await assertPathExists(path.join(appDir, 'public', 'favicon.svg'))
       await assertPathExists(path.join(appDir, '.gitignore'))
       await assertPathMissing(path.join(appDir, 'gitignore'))

@@ -50,7 +50,7 @@ const invoices = table({
 })
 
 describe('comparison predicates', () => {
-  it('treats qualified string values as column references', () => {
+  it('treats qualified string values as scalar values', () => {
     let predicate = eq('accounts.id', 'projects.account_id')
 
     assert.deepEqual(predicate, {
@@ -58,7 +58,28 @@ describe('comparison predicates', () => {
       operator: 'eq',
       column: 'accounts.id',
       value: 'projects.account_id',
-      valueType: 'column',
+      valueType: 'value',
+    })
+
+    assert.deepEqual(ne('accounts.id', 'projects.account_id'), {
+      ...predicate,
+      operator: 'ne',
+    })
+    assert.deepEqual(gt('accounts.id', 'projects.account_id'), {
+      ...predicate,
+      operator: 'gt',
+    })
+    assert.deepEqual(gte('accounts.id', 'projects.account_id'), {
+      ...predicate,
+      operator: 'gte',
+    })
+    assert.deepEqual(lt('accounts.id', 'projects.account_id'), {
+      ...predicate,
+      operator: 'lt',
+    })
+    assert.deepEqual(lte('accounts.id', 'projects.account_id'), {
+      ...predicate,
+      operator: 'lte',
     })
   })
 
@@ -271,7 +292,7 @@ describe('logical predicates', () => {
 
   it('collects columns across nested predicates', () => {
     let predicate = and(
-      eq('accounts.id', 'projects.account_id'),
+      eq(accounts.id, projects.account_id),
       or(
         between('accounts.id', 1, 5),
         and(isNull('projects.deleted_at'), notNull('accounts.email')),

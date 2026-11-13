@@ -1,9 +1,10 @@
 import { createAssetServer } from 'remix/assets'
-import { uiHmr } from 'remix/ui-hmr/assets'
+import { componentHmr } from 'remix/component-hmr/assets'
 
 const rootDir = process.cwd()
 const nodeEnv = process.env.NODE_ENV ?? 'development'
 const isDevelopment = nodeEnv === 'development'
+const isProduction = nodeEnv === 'production'
 const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
 
 export const assets = createAssetServer({
@@ -12,7 +13,7 @@ export const assets = createAssetServer({
   /* remix-template:remove-start This is only needed inside the Remix monorepo. */
   mounts: {
     app: 'app',
-    npm: 'node_modules',
+    npm: '../node_modules',
     packages: '../packages',
   },
   /* remix-template:remove-end */
@@ -21,14 +22,17 @@ export const assets = createAssetServer({
   denyFiles: ['app/**/*.test.*'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
+  fingerprint: isProduction,
   watch: isDevelopment,
   hmr: isHmr
-    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+    ? {
+        channel: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
+        moduleImporter: 'remix/multiple-import-maps-polyfill',
+      }
     : undefined,
-  scripts: { loaders: isHmr ? [uiHmr()] : undefined },
+  scripts: { loaders: isHmr ? [componentHmr()] : undefined },
 })
 
 const entry = 'app/actions/public/entry.ts'
 
-export const entryHref = await assets.getHref(entry)
-export const entryPreloads = await assets.getPreloads(entry)
+export const scriptEntry = await assets.getScriptEntry(entry)

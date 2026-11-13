@@ -1,5 +1,5 @@
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from 'remix/component'
+import { css } from 'remix/component'
 
 import type { Book } from '../data/schema.ts'
 import { routes } from '../routes.ts'
@@ -25,7 +25,7 @@ export function HomePage(handle: Handle<HomePageProps>) {
             and more.
           </p>
           <p>
-            <a href={routes.books.index.href()} class="btn">
+            <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
               Browse Books
             </a>
           </p>

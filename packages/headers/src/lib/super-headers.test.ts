@@ -92,7 +92,7 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('Content-Type'), 'application/json; charset=utf-8')
     assert.equal(headers.get('Cookie'), 'session=abc; theme=dark')
     assert.deepEqual(headers.getSetCookie(), ['session=abc', 'theme=dark'])
-    assert.equal(headers.get('Vary'), 'accept-encoding, accept-language')
+    assert.equal(headers.get('Vary'), 'Accept-Encoding, Accept-Language')
   })
 
   it('applies raw header values with header-specific semantics', () => {
@@ -126,7 +126,7 @@ describe('SuperHeaders', () => {
       '</style.css>; rel=preload, </script.js>; rel=preload, </image.png>; rel=preload',
     )
     assert.deepEqual(headers.getSetCookie(), ['session=abc', 'theme=dark', 'locale=en'])
-    assert.equal(headers.get('Vary'), 'accept-encoding, accept-language, user-agent')
+    assert.equal(headers.get('Vary'), 'Accept-Encoding, Accept-Language, User-Agent')
     assert.equal(headers.get('X-Test'), 'new')
   })
 
@@ -294,6 +294,28 @@ describe('SuperHeaders', () => {
     assert.equal(getResponseHeaders(headers).get('Content-Type'), 'text/html; charset=utf-8')
   })
 
+  it('syncs If-Range value mutations to native storage', () => {
+    let headers = new SuperHeaders()
+    headers.ifRange.value = '"abc"'
+
+    assert.equal(headers.get('If-Range'), '"abc"')
+    assert.ok(headers.ifRange.matches({ etag: '"abc"' }))
+
+    let ifRange = headers.ifRange
+    ifRange.value = ''
+
+    assert.equal(headers.get('If-Range'), null)
+    assert.ok(ifRange.matches({}))
+    assert.ok(headers.ifRange.matches({}))
+  })
+
+  it('matches an explicitly empty If-Range header unconditionally', () => {
+    let headers = new SuperHeaders({ 'If-Range': '' })
+
+    assert.equal(headers.get('If-Range'), '')
+    assert.ok(headers.ifRange.matches({}))
+  })
+
   it('syncs typed mutator methods to native storage', () => {
     let headers = new SuperHeaders()
 
@@ -306,7 +328,7 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('Accept'), 'text/html,application/json;q=0.8')
     assert.equal(headers.get('Cookie'), 'theme=dark; theme=light')
     assert.deepEqual(headers.cookie.getAll('theme'), ['dark', 'light'])
-    assert.equal(headers.get('Vary'), 'accept-encoding')
+    assert.equal(headers.get('Vary'), 'Accept-Encoding')
     assert.equal(getResponseHeaders(headers).get('Accept'), 'text/html,application/json;q=0.8')
 
     headers.accept.delete('text/html')
@@ -435,6 +457,25 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('X-Forwarded-For'), '203.0.113.7, 70.41.3.18')
     assert.equal(headers.get('X-Forwarded-Host'), 'example.com')
     assert.equal(headers.get('X-Forwarded-Proto'), 'https')
+  })
+
+  it('returns null for numeric header values with no integer prefix', () => {
+    let headers = new SuperHeaders({
+      'Access-Control-Max-Age': 'invalid',
+      Age: 'invalid',
+      'Content-Length': 'invalid',
+      'Max-Forwards': 'invalid',
+      'Upgrade-Insecure-Requests': 'invalid',
+    })
+
+    assert.equal(headers.accessControlMaxAge, null)
+    assert.equal(headers.age, null)
+    assert.equal(headers.contentLength, null)
+    assert.equal(headers.maxForwards, null)
+    assert.equal(headers.upgradeInsecureRequests, null)
+
+    headers.set('Content-Length', '12bytes')
+    assert.equal(headers.contentLength, 12)
   })
 
   it('preserves native iteration and raw stringification utilities', () => {

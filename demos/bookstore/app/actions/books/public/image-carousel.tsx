@@ -1,4 +1,4 @@
-import { css, type Handle, clientEntry, on } from 'remix/ui'
+import { css, type Handle, clientEntry, on } from 'remix/component'
 
 export const ImageCarousel = clientEntry(
   import.meta.url,
@@ -40,10 +40,8 @@ export const ImageCarousel = clientEntry(
               width: '100%',
               transition: 'transform 350ms cubic-bezier(0.22, 1, 0.36, 1)',
               willChange: 'transform',
-            })}
-            style={{
               transform: `translateX(-${index * 100}%)`,
-            }}
+            })}
           >
             {handle.props.images.map((src, i) => (
               <div
@@ -57,6 +55,7 @@ export const ImageCarousel = clientEntry(
                 <img
                   src={src}
                   alt={`Image ${i + 1} of ${total}`}
+                  loading={i === 0 ? 'eager' : 'lazy'}
                   mix={css({
                     width: '100%',
                     height: '100%',

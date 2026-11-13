@@ -1,4 +1,4 @@
-import { Frame, css } from 'remix/ui'
+import { Frame, css } from 'remix/component'
 
 import { ClientFrameExample } from '../ui/public/client-frame-example.tsx'
 import { Counter } from '../ui/public/counter.tsx'
@@ -18,7 +18,7 @@ export function HomePage() {
       <h1 mix={css({ margin: 0, letterSpacing: '-0.02em' })}>Full-stack Frames</h1>
       <p mix={css({ marginTop: 8, color: '#b9c6ff' })}>
         Server routes are handled by <code>remix/router</code>; UI is streamed with{' '}
-        <code>remix/ui</code> Frames and client entries.
+        <code>remix/component</code> Frames and client entries.
       </p>
       <p mix={css({ marginTop: 0, marginBottom: 16 })}>
         <a href={routes.time.href()} mix={linkStyle}>

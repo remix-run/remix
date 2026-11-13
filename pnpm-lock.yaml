@@ -12,9 +12,6 @@ catalogs:
     '@types/node':
       specifier: ^24.6.0
       version: 24.10.4
-    '@typescript/native-preview':
-      specifier: 7.0.0-dev.20260707.2
-      version: 7.0.0-dev.20260707.2
     github-slugger:
       specifier: 2.0.0
       version: 2.0.0
@@ -25,14 +22,19 @@ catalogs:
       specifier: 1.5.2
       version: 1.5.2
     playwright:
-      specifier: ^1.60.0
-      version: 1.60.0
+      specifier: ^1.63.0
+      version: 1.63.0
     shiki:
       specifier: 4.4.1
       version: 4.4.1
     typescript:
       specifier: ^7.0.2
       version: 7.0.2
+
+patchedDependencies:
+  playwright-core@1.63.0:
+    hash: 9de972030ab106a5cb051ec55fefe7492089a14fd422a48a61aa0dca4e66f5bb
+    path: patches/playwright-core@1.63.0.patch
 
 importers:
 
@@ -59,6 +61,10 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
+    devDependencies:
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
 
   demos/assets:
     dependencies:
@@ -78,6 +84,9 @@ importers:
 
   demos/bookstore:
     dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
@@ -90,12 +99,34 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
 
   demos/frame-navigation:
+    dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  demos/frames:
     dependencies:
       remix:
         specifier: workspace:*
@@ -107,14 +138,30 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      playwright:
-        specifier: 'catalog:'
-        version: 1.60.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
 
-  demos/frames:
+  demos/i18n:
+    dependencies:
+      i18next:
+        specifier: ^26.4.1
+        version: 26.4.1(typescript@7.0.2)
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  demos/lazy-frames:
     dependencies:
       remix:
         specifier: workspace:*
@@ -157,7 +204,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -183,6 +230,9 @@ importers:
 
   demos/timeboxer:
     dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
@@ -190,6 +240,34 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  demos/ui:
+    dependencies:
+      '@remix-run/component':
+        specifier: workspace:*
+        version: link:../../packages/component
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.12
+      node-html-parser:
+        specifier: ^7.0.2
+        version: 7.1.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -212,77 +290,6 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
-
-  docs/api:
-    dependencies:
-      oxfmt:
-        specifier: 'catalog:'
-        version: 0.51.0
-      remix:
-        specifier: workspace:*
-        version: link:../../packages/remix
-      remix-docs-shared:
-        specifier: workspace:*
-        version: link:../shared
-      semver:
-        specifier: 7.7.4
-        version: 7.7.4
-    devDependencies:
-      '@types/dom-navigation':
-        specifier: 1.0.7
-        version: 1.0.7
-      '@types/hast':
-        specifier: 'catalog:'
-        version: 3.0.5
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      '@types/semver':
-        specifier: 7.5.8
-        version: 7.5.8
-      pagefind:
-        specifier: 'catalog:'
-        version: 1.5.2
-      shiki:
-        specifier: 'catalog:'
-        version: 4.4.1
-      typedoc:
-        specifier: 0.28.19
-        version: 0.28.19(typescript@6.0.3)
-      typescript:
-        specifier: 6.0.3
-        version: 6.0.3
-
-  docs/guides:
-    dependencies:
-      mdast-util-directive:
-        specifier: 3.1.0
-        version: 3.1.0
-      remix:
-        specifier: workspace:^
-        version: link:../../packages/remix
-      remix-docs-shared:
-        specifier: workspace:*
-        version: link:../shared
-      shiki:
-        specifier: 'catalog:'
-        version: 4.4.1
-      unist-util-visit:
-        specifier: 5.1.0
-        version: 5.1.0
-    devDependencies:
-      '@types/mdast':
-        specifier: 4.0.4
-        version: 4.0.4
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      pagefind:
-        specifier: 'catalog:'
-        version: 1.5.2
-      typescript:
-        specifier: 6.0.3
-        version: 6.0.3
 
   docs/shared:
     dependencies:
@@ -352,6 +359,80 @@ importers:
         specifier: 4.0.15
         version: 4.0.15(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
 
+  docs/site:
+    dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
+      mdast-util-directive:
+        specifier: 3.1.0
+        version: 3.1.0
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+      remix-docs-shared:
+        specifier: workspace:*
+        version: link:../shared
+      shiki:
+        specifier: 'catalog:'
+        version: 4.4.1
+      unist-util-visit:
+        specifier: 5.1.0
+        version: 5.1.0
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: 1.0.7
+        version: 1.0.7
+      '@types/hast':
+        specifier: 'catalog:'
+        version: 3.0.5
+      '@types/mdast':
+        specifier: 4.0.4
+        version: 4.0.4
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.51.0
+      pagefind:
+        specifier: 'catalog:'
+        version: 1.5.2
+      typedoc:
+        specifier: 0.28.19
+        version: 0.28.19(typescript@6.0.3)
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+
+  docs/ui:
+    dependencies:
+      '@remix-run/component':
+        specifier: workspace:^
+        version: link:../../packages/component
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.51.0
+      remix:
+        specifier: workspace:^
+        version: link:../../packages/remix
+      remix-docs-shared:
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      pagefind:
+        specifier: 'catalog:'
+        version: 1.5.2
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+
   packages/assert:
     devDependencies:
       '@types/node':
@@ -379,8 +460,8 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
       es-module-lexer:
-        specifier: ^2.0.0
-        version: 2.0.0
+        specifier: ^2.3.0
+        version: 2.3.2
       get-tsconfig:
         specifier: ^4.13.6
         version: 4.13.6
@@ -400,8 +481,8 @@ importers:
         specifier: ^11.19.1
         version: 11.19.1
       oxc-transform:
-        specifier: ^0.130.0
-        version: 0.130.0
+        specifier: ^0.158.0
+        version: 0.158.0
       picomatch:
         specifier: ^4.0.4
         version: 4.0.4
@@ -412,6 +493,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/component':
+        specifier: workspace:*
+        version: link:../component
       '@remix-run/node-hmr':
         specifier: workspace:^
         version: link:../node-hmr
@@ -421,15 +505,15 @@ importers:
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
-      '@remix-run/ui':
-        specifier: workspace:*
-        version: link:../ui
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
       '@types/picomatch':
         specifier: ^4.0.3
         version: 4.0.3
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -439,9 +523,9 @@ importers:
       '@remix-run/assets':
         specifier: workspace:*
         version: link:..
-      '@remix-run/ui':
+      '@remix-run/component':
         specifier: workspace:*
-        version: link:../../ui
+        version: link:../../component
     devDependencies:
       '@types/dom-navigation':
         specifier: ^1.0.7
@@ -672,6 +756,170 @@ importers:
         specifier: workspace:*
         version: link:../../../../remix
 
+  packages/component:
+    dependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  packages/component-hmr:
+    dependencies:
+      magic-string:
+        specifier: ^0.30.21
+        version: 0.30.21
+      oxc-parser:
+        specifier: ^0.121.0
+        version: 0.121.0
+      source-map-js:
+        specifier: ^1.2.1
+        version: 1.2.1
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/assets':
+        specifier: workspace:^
+        version: link:../assets
+      '@remix-run/component':
+        specifier: workspace:^
+        version: link:../component
+      '@remix-run/fetch-proxy':
+        specifier: workspace:*
+        version: link:../fetch-proxy
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../node-fetch-server
+      '@remix-run/node-hmr':
+        specifier: workspace:^
+        version: link:../node-hmr
+      '@remix-run/node-tsx':
+        specifier: workspace:^
+        version: link:../node-tsx
+      '@remix-run/response':
+        specifier: workspace:^
+        version: link:../response
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      chokidar:
+        specifier: ^5.0.0
+        version: 5.0.0
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  packages/component/bench:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../../fetch-router
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../../node-fetch-server
+      '@remix-run/static-middleware':
+        specifier: workspace:*
+        version: link:../../static-middleware
+      remix:
+        specifier: workspace:*
+        version: link:../../remix
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      playwright:
+        specifier: ^1.49.1
+        version: 1.60.0
+
+  packages/component/bench/frameworks/preact:
+    dependencies:
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.7
+      preact:
+        specifier: ^10.29.1
+        version: 10.29.1
+
+  packages/component/bench/frameworks/preact-signals:
+    dependencies:
+      '@preact/signals':
+        specifier: ^2.0.4
+        version: 2.5.1(preact@10.29.1)
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.7
+      preact:
+        specifier: ^10.29.1
+        version: 10.29.1
+
+  packages/component/bench/frameworks/react:
+    dependencies:
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.7
+      react:
+        specifier: ^19.2.1
+        version: 19.2.3
+      react-dom:
+        specifier: ^19.2.1
+        version: 19.2.3(react@19.2.3)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.7
+        version: 19.2.7
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.7)
+
+  packages/component/bench/frameworks/remix:
+    dependencies:
+      '@remix-run/component':
+        specifier: workspace:^
+        version: link:../../..
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.7
+
+  packages/component/bench/frameworks/solid:
+    dependencies:
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.7
+      solid-js:
+        specifier: ^1.9.12
+        version: 1.9.12
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      esbuild-plugin-solid:
+        specifier: ^0.6.0
+        version: 0.6.0(esbuild@0.27.7)(solid-js@1.9.12)
+
   packages/compression-middleware:
     dependencies:
       '@remix-run/fetch-router':
@@ -725,6 +973,12 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/form-data-middleware':
+        specifier: workspace:*
+        version: link:../form-data-middleware
+      '@remix-run/method-override-middleware':
+        specifier: workspace:*
+        version: link:../method-override-middleware
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
@@ -757,6 +1011,28 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
+  packages/csp-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
   packages/csrf-middleware:
     dependencies:
       '@remix-run/fetch-router':
@@ -775,6 +1051,9 @@ importers:
       '@remix-run/form-data-middleware':
         specifier: workspace:*
         version: link:../form-data-middleware
+      '@remix-run/method-override-middleware':
+        specifier: workspace:*
+        version: link:../method-override-middleware
       '@remix-run/session-middleware':
         specifier: workspace:*
         version: link:../session-middleware
@@ -800,6 +1079,25 @@ importers:
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  packages/data-schema/bench:
+    dependencies:
+      '@remix-run/data-schema':
+        specifier: workspace:*
+        version: link:..
+      valibot:
+        specifier: 1.4.2
+        version: 1.4.2(typescript@7.0.2)
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -897,6 +1195,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../node-fetch-server
       '@remix-run/response':
         specifier: workspace:*
         version: link:../response
@@ -1104,6 +1405,9 @@ importers:
       '@remix-run/form-data-parser':
         specifier: workspace:^
         version: link:../form-data-parser
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
@@ -1120,6 +1424,9 @@ importers:
 
   packages/form-data-parser:
     dependencies:
+      '@remix-run/headers':
+        specifier: workspace:^
+        version: link:../headers
       '@remix-run/multipart-parser':
         specifier: workspace:^
         version: link:../multipart-parser
@@ -1406,6 +1713,31 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
+  packages/multiple-import-maps-polyfill:
+    dependencies:
+      es-module-lexer:
+        specifier: ^2.3.0
+        version: 2.3.2
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../node-fetch-server
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
   packages/node-fetch-server:
     devDependencies:
       '@types/node':
@@ -1478,8 +1810,8 @@ importers:
         specifier: ^4.13.6
         version: 4.13.6
       oxc-transform:
-        specifier: ^0.130.0
-        version: 0.130.0
+        specifier: ^0.158.0
+        version: 0.158.0
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1508,6 +1840,12 @@ importers:
       '@remix-run/cli':
         specifier: workspace:^
         version: link:../cli
+      '@remix-run/component':
+        specifier: workspace:^
+        version: link:../component
+      '@remix-run/component-hmr':
+        specifier: workspace:^
+        version: link:../component-hmr
       '@remix-run/compression-middleware':
         specifier: workspace:^
         version: link:../compression-middleware
@@ -1520,6 +1858,9 @@ importers:
       '@remix-run/cors-middleware':
         specifier: workspace:^
         version: link:../cors-middleware
+      '@remix-run/csp-middleware':
+        specifier: workspace:^
+        version: link:../csp-middleware
       '@remix-run/csrf-middleware':
         specifier: workspace:^
         version: link:../csrf-middleware
@@ -1580,6 +1921,9 @@ importers:
       '@remix-run/multipart-parser':
         specifier: workspace:^
         version: link:../multipart-parser
+      '@remix-run/multiple-import-maps-polyfill':
+        specifier: workspace:^
+        version: link:../multiple-import-maps-polyfill
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:../node-fetch-server
@@ -1625,12 +1969,6 @@ importers:
       '@remix-run/test':
         specifier: workspace:^
         version: link:../test
-      '@remix-run/ui':
-        specifier: workspace:^
-        version: link:../ui
-      '@remix-run/ui-hmr':
-        specifier: workspace:^
-        version: link:../ui-hmr
       mysql2:
         specifier: ^3.15.3
         version: 3.16.3
@@ -1639,7 +1977,7 @@ importers:
         version: 8.18.0
       playwright:
         specifier: ^1.60.0
-        version: 1.60.0
+        version: 1.63.0
       redis:
         specifier: ^5.10.0
         version: 5.11.0
@@ -1659,19 +1997,28 @@ importers:
       '@remix-run/assets':
         specifier: workspace:^
         version: link:../assets
+      '@remix-run/component':
+        specifier: workspace:^
+        version: link:../component
+      '@remix-run/csp-middleware':
+        specifier: workspace:^
+        version: link:../csp-middleware
       '@remix-run/fetch-router':
         specifier: workspace:^
         version: link:../fetch-router
       '@remix-run/response':
         specifier: workspace:^
         version: link:../response
-      '@remix-run/ui':
-        specifier: workspace:^
-        version: link:../ui
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/multiple-import-maps-polyfill':
+        specifier: workspace:^
+        version: link:../multiple-import-maps-polyfill
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../node-fetch-server
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
@@ -1839,15 +2186,15 @@ importers:
 
   packages/spa:
     dependencies:
+      '@remix-run/component':
+        specifier: workspace:^
+        version: link:../component
       '@remix-run/fetch-router':
         specifier: workspace:^
         version: link:../fetch-router
       '@remix-run/render-middleware':
         specifier: workspace:^
         version: link:../render-middleware
-      '@remix-run/ui':
-        specifier: workspace:^
-        version: link:../ui
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:^
@@ -1898,9 +2245,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20260707.2
+        version: 7.0.2
 
   packages/tar-parser:
     devDependencies:
@@ -1966,8 +2313,8 @@ importers:
         specifier: workspace:^
         version: link:../terminal
       es-module-lexer:
-        specifier: ^2.0.0
-        version: 2.0.0
+        specifier: ^2.3.0
+        version: 2.3.2
       get-tsconfig:
         specifier: ^4.13.6
         version: 4.13.6
@@ -1987,8 +2334,8 @@ importers:
         specifier: ^11.19.1
         version: 11.19.1
       oxc-transform:
-        specifier: ^0.130.0
-        version: 0.130.0
+        specifier: ^0.158.0
+        version: 0.158.0
       source-map-js:
         specifier: ^1.2.1
         version: 1.2.1
@@ -2025,16 +2372,19 @@ importers:
         version: 6.0.1
       playwright:
         specifier: 'catalog:'
-        version: 1.60.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
 
   packages/ui:
     dependencies:
-      '@types/dom-navigation':
-        specifier: ^1.0.7
-        version: 1.0.7
+      '@remix-run/component':
+        specifier: workspace:^
+        version: link:../component
+      '@remix-run/data-schema':
+        specifier: workspace:*
+        version: link:../data-schema
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
@@ -2042,173 +2392,15 @@ importers:
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      playwright:
-        specifier: 'catalog:'
-        version: 1.60.0
-      typescript:
-        specifier: 'catalog:'
-        version: 7.0.2
-
-  packages/ui-hmr:
-    dependencies:
-      magic-string:
-        specifier: ^0.30.21
-        version: 0.30.21
-      oxc-parser:
-        specifier: ^0.121.0
-        version: 0.121.0
-      source-map-js:
-        specifier: ^1.2.1
-        version: 1.2.1
-    devDependencies:
-      '@remix-run/assert':
-        specifier: workspace:*
-        version: link:../assert
-      '@remix-run/assets':
-        specifier: workspace:^
-        version: link:../assets
-      '@remix-run/fetch-proxy':
-        specifier: workspace:*
-        version: link:../fetch-proxy
-      '@remix-run/node-fetch-server':
-        specifier: workspace:*
-        version: link:../node-fetch-server
-      '@remix-run/node-hmr':
-        specifier: workspace:^
-        version: link:../node-hmr
-      '@remix-run/node-tsx':
-        specifier: workspace:^
-        version: link:../node-tsx
-      '@remix-run/test':
-        specifier: workspace:*
-        version: link:../test
-      '@remix-run/ui':
-        specifier: workspace:*
-        version: link:../ui
       '@types/dom-navigation':
         specifier: ^1.0.7
         version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      chokidar:
-        specifier: ^5.0.0
-        version: 5.0.0
-      typescript:
-        specifier: 'catalog:'
-        version: 7.0.2
-
-  packages/ui/bench:
-    dependencies:
-      '@remix-run/fetch-router':
-        specifier: workspace:*
-        version: link:../../fetch-router
-      '@remix-run/node-fetch-server':
-        specifier: workspace:*
-        version: link:../../node-fetch-server
-      '@remix-run/static-middleware':
-        specifier: workspace:*
-        version: link:../../static-middleware
-      remix:
-        specifier: workspace:*
-        version: link:../../remix
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
       playwright:
-        specifier: ^1.49.1
-        version: 1.60.0
-
-  packages/ui/bench/frameworks/preact:
-    dependencies:
-      esbuild:
-        specifier: ^0.27.1
-        version: 0.27.1
-      preact:
-        specifier: ^10.29.1
-        version: 10.29.1
-
-  packages/ui/bench/frameworks/preact-signals:
-    dependencies:
-      '@preact/signals':
-        specifier: ^2.0.4
-        version: 2.5.1(preact@10.29.1)
-      esbuild:
-        specifier: ^0.27.1
-        version: 0.27.1
-      preact:
-        specifier: ^10.29.1
-        version: 10.29.1
-
-  packages/ui/bench/frameworks/react:
-    dependencies:
-      esbuild:
-        specifier: ^0.27.1
-        version: 0.27.1
-      react:
-        specifier: ^19.2.1
-        version: 19.2.3
-      react-dom:
-        specifier: ^19.2.1
-        version: 19.2.3(react@19.2.3)
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.7
-        version: 19.2.7
-      '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.7)
-
-  packages/ui/bench/frameworks/remix:
-    dependencies:
-      '@remix-run/ui':
-        specifier: workspace:^
-        version: link:../../..
-      esbuild:
-        specifier: ^0.27.1
-        version: 0.27.1
-
-  packages/ui/bench/frameworks/solid:
-    dependencies:
-      esbuild:
-        specifier: ^0.27.1
-        version: 0.27.1
-      solid-js:
-        specifier: ^1.9.12
-        version: 1.9.12
-    devDependencies:
-      '@types/node':
         specifier: 'catalog:'
-        version: 24.10.4
-      esbuild-plugin-solid:
-        specifier: ^0.6.0
-        version: 0.6.0(esbuild@0.27.1)(solid-js@1.9.12)
-
-  packages/ui/demo:
-    dependencies:
-      '@remix-run/ui':
-        specifier: workspace:*
-        version: link:..
-      remix:
-        specifier: workspace:*
-        version: link:../../remix
-    devDependencies:
-      '@types/dom-navigation':
-        specifier: ^1.0.7
-        version: 1.0.7
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      esbuild:
-        specifier: ^0.25.10
-        version: 0.25.12
-      node-html-parser:
-        specifier: ^7.0.2
-        version: 7.1.0
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -2227,9 +2419,18 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
+      '@types/picomatch':
+        specifier: ^4.0.3
+        version: 4.0.3
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
+      picomatch:
+        specifier: ^4.0.4
+        version: 4.0.4
+      remix-docs-shared:
+        specifier: workspace:*
+        version: link:../docs/shared
       semver:
         specifier: ^7.6.3
         version: 7.6.3
@@ -2453,14 +2654,8 @@ packages:
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
     engines: {node: '>=12'}
 
-  '@emnapi/core@1.10.0':
-    resolution: {integrity: sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==}
-
   '@emnapi/core@1.9.1':
     resolution: {integrity: sha512-mukuNALVsoix/w1BJwFzwXBN/dHeejQtuVzcDsfOEsdpCumXb/E9j8w11h5S54tT1xhifGfbbSm/ICrObRb3KA==}
-
-  '@emnapi/runtime@1.10.0':
-    resolution: {integrity: sha512-ewvYlk86xUoGI0zQRNq/mC+16R1QeDlKQy21Ki3oSYXNgLb45GV1P6A0M+/s6nyCuNDqe5VpaY84BzXGwVbwFA==}
 
   '@emnapi/runtime@1.9.1':
     resolution: {integrity: sha512-VYi5+ZVLhpgK4hQ0TAjiQiZ6ol0oe4mBx7mVv7IflsiEp0OWoVsp/+f9Vc1hOhE0TtkORVrI1GvzyreqpgWtkA==}
@@ -2468,17 +2663,8 @@ packages:
   '@emnapi/wasi-threads@1.2.0':
     resolution: {integrity: sha512-N10dEJNSsUx41Z6pZsXU8FjPjpBEplgH24sfkmITrBED1/U2Esum9F3lfLrMjKHHjmi557zQn7kR9R+XWXu5Rg==}
 
-  '@emnapi/wasi-threads@1.2.1':
-    resolution: {integrity: sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w==}
-
   '@esbuild/aix-ppc64@0.25.12':
     resolution: {integrity: sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==}
-    engines: {node: '>=18'}
-    cpu: [ppc64]
-    os: [aix]
-
-  '@esbuild/aix-ppc64@0.27.1':
-    resolution: {integrity: sha512-HHB50pdsBX6k47S4u5g/CaLjqS3qwaOVE5ILsq64jyzgMhLuCuZ8rGzM9yhsAjfjkbgUPMzZEPa7DAp7yz6vuA==}
     engines: {node: '>=18'}
     cpu: [ppc64]
     os: [aix]
@@ -2501,12 +2687,6 @@ packages:
     cpu: [arm64]
     os: [android]
 
-  '@esbuild/android-arm64@0.27.1':
-    resolution: {integrity: sha512-45fuKmAJpxnQWixOGCrS+ro4Uvb4Re9+UTieUY2f8AEc+t7d4AaZ6eUJ3Hva7dtrxAAWHtlEFsXFMAgNnGU9uQ==}
-    engines: {node: '>=18'}
-    cpu: [arm64]
-    os: [android]
-
   '@esbuild/android-arm64@0.27.3':
     resolution: {integrity: sha512-YdghPYUmj/FX2SYKJ0OZxf+iaKgMsKHVPF1MAq/P8WirnSpCStzKJFjOjzsW0QQ7oIAiccHdcqjbHmJxRb/dmg==}
     engines: {node: '>=18'}
@@ -2521,12 +2701,6 @@ packages:
 
   '@esbuild/android-arm@0.25.12':
     resolution: {integrity: sha512-VJ+sKvNA/GE7Ccacc9Cha7bpS8nyzVv0jdVgwNDaR4gDMC/2TTRc33Ip8qrNYUcpkOHUT5OZ0bUcNNVZQ9RLlg==}
-    engines: {node: '>=18'}
-    cpu: [arm]
-    os: [android]
-
-  '@esbuild/android-arm@0.27.1':
-    resolution: {integrity: sha512-kFqa6/UcaTbGm/NncN9kzVOODjhZW8e+FRdSeypWe6j33gzclHtwlANs26JrupOntlcWmB0u8+8HZo8s7thHvg==}
     engines: {node: '>=18'}
     cpu: [arm]
     os: [android]
@@ -2549,12 +2723,6 @@ packages:
     cpu: [x64]
     os: [android]
 
-  '@esbuild/android-x64@0.27.1':
-    resolution: {integrity: sha512-LBEpOz0BsgMEeHgenf5aqmn/lLNTFXVfoWMUox8CtWWYK9X4jmQzWjoGoNb8lmAYml/tQ/Ysvm8q7szu7BoxRQ==}
-    engines: {node: '>=18'}
-    cpu: [x64]
-    os: [android]
-
   '@esbuild/android-x64@0.27.3':
     resolution: {integrity: sha512-IN/0BNTkHtk8lkOM8JWAYFg4ORxBkZQf9zXiEOfERX/CzxW3Vg1ewAhU7QSWQpVIzTW+b8Xy+lGzdYXV6UZObQ==}
     engines: {node: '>=18'}
@@ -2569,12 +2737,6 @@ packages:
 
   '@esbuild/darwin-arm64@0.25.12':
     resolution: {integrity: sha512-N3zl+lxHCifgIlcMUP5016ESkeQjLj/959RxxNYIthIg+CQHInujFuXeWbWMgnTo4cp5XVHqFPmpyu9J65C1Yg==}
-    engines: {node: '>=18'}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@esbuild/darwin-arm64@0.27.1':
-    resolution: {integrity: sha512-veg7fL8eMSCVKL7IW4pxb54QERtedFDfY/ASrumK/SbFsXnRazxY4YykN/THYqFnFwJ0aVjiUrVG2PwcdAEqQQ==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [darwin]
@@ -2597,12 +2759,6 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@esbuild/darwin-x64@0.27.1':
-    resolution: {integrity: sha512-+3ELd+nTzhfWb07Vol7EZ+5PTbJ/u74nC6iv4/lwIU99Ip5uuY6QoIf0Hn4m2HoV0qcnRivN3KSqc+FyCHjoVQ==}
-    engines: {node: '>=18'}
-    cpu: [x64]
-    os: [darwin]
-
   '@esbuild/darwin-x64@0.27.3':
     resolution: {integrity: sha512-vHk/hA7/1AckjGzRqi6wbo+jaShzRowYip6rt6q7VYEDX4LEy1pZfDpdxCBnGtl+A5zq8iXDcyuxwtv3hNtHFg==}
     engines: {node: '>=18'}
@@ -2617,12 +2773,6 @@ packages:
 
   '@esbuild/freebsd-arm64@0.25.12':
     resolution: {integrity: sha512-gA0Bx759+7Jve03K1S0vkOu5Lg/85dou3EseOGUes8flVOGxbhDDh/iZaoek11Y8mtyKPGF3vP8XhnkDEAmzeg==}
-    engines: {node: '>=18'}
-    cpu: [arm64]
-    os: [freebsd]
-
-  '@esbuild/freebsd-arm64@0.27.1':
-    resolution: {integrity: sha512-/8Rfgns4XD9XOSXlzUDepG8PX+AVWHliYlUkFI3K3GB6tqbdjYqdhcb4BKRd7C0BhZSoaCxhv8kTcBrcZWP+xg==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [freebsd]
@@ -2645,12 +2795,6 @@ packages:
     cpu: [x64]
     os: [freebsd]
 
-  '@esbuild/freebsd-x64@0.27.1':
-    resolution: {integrity: sha512-GITpD8dK9C+r+5yRT/UKVT36h/DQLOHdwGVwwoHidlnA168oD3uxA878XloXebK4Ul3gDBBIvEdL7go9gCUFzQ==}
-    engines: {node: '>=18'}
-    cpu: [x64]
-    os: [freebsd]
-
   '@esbuild/freebsd-x64@0.27.3':
     resolution: {integrity: sha512-dDk0X87T7mI6U3K9VjWtHOXqwAMJBNN2r7bejDsc+j03SEjtD9HrOl8gVFByeM0aJksoUuUVU9TBaZa2rgj0oA==}
     engines: {node: '>=18'}
@@ -2665,12 +2809,6 @@ packages:
 
   '@esbuild/linux-arm64@0.25.12':
     resolution: {integrity: sha512-8bwX7a8FghIgrupcxb4aUmYDLp8pX06rGh5HqDT7bB+8Rdells6mHvrFHHW2JAOPZUbnjUpKTLg6ECyzvas2AQ==}
-    engines: {node: '>=18'}
-    cpu: [arm64]
-    os: [linux]
-
-  '@esbuild/linux-arm64@0.27.1':
-    resolution: {integrity: sha512-W9//kCrh/6in9rWIBdKaMtuTTzNj6jSeG/haWBADqLLa9P8O5YSRDzgD5y9QBok4AYlzS6ARHifAb75V6G670Q==}
     engines: {node: '>=18'}
     cpu: [arm64]
     os: [linux]
@@ -2693,12 +2831,6 @@ packages:
     cpu: [arm]
     os: [linux]
 
-  '@esbuild/linux-arm@0.27.1':
-    resolution: {integrity: sha512-ieMID0JRZY/ZeCrsFQ3Y3NlHNCqIhTprJfDgSB3/lv5jJZ8FX3hqPyXWhe+gvS5ARMBJ242PM+VNz/ctNj//eA==}
-    engines: {node: '>=18'}
-    cpu: [arm]
-    os: [linux]
-
   '@esbuild/linux-arm@0.27.3':
     resolution: {integrity: sha512-s6nPv2QkSupJwLYyfS+gwdirm0ukyTFNl3KTgZEAiJDd+iHZcbTPPcWCcRYH+WlNbwChgH2QkE9NSlNrMT8Gfw==}
     engines: {node: '>=18'}
@@ -2713,12 +2845,6 @@ packages:
 
   '@esbuild/linux-ia32@0.25.12':
     resolution: {integrity: sha512-0y9KrdVnbMM2/vG8KfU0byhUN+EFCny9+8g202gYqSSVMonbsCfLjUO+rCci7pM0WBEtz+oK/PIwHkzxkyharA==}
-    engines: {node: '>=18'}
-    cpu: [ia32]
-    os: [linux]
-
-  '@esbuild/linux-ia32@0.27.1':
-    resolution: {integrity: sha512-VIUV4z8GD8rtSVMfAj1aXFahsi/+tcoXXNYmXgzISL+KB381vbSTNdeZHHHIYqFyXcoEhu9n5cT+05tRv13rlw==}
     engines: {node: '>=18'}
     cpu: [ia32]
     os: [linux]
@@ -2741,12 +2867,6 @@ packages:
     cpu: [loong64]
     os: [linux]
 
-  '@esbuild/linux-loong64@0.27.1':
-    resolution: {integrity: sha512-l4rfiiJRN7sTNI//ff65zJ9z8U+k6zcCg0LALU5iEWzY+a1mVZ8iWC1k5EsNKThZ7XCQ6YWtsZ8EWYm7r1UEsg==}
-    engines: {node: '>=18'}
-    cpu: [loong64]
-    os: [linux]
-
   '@esbuild/linux-loong64@0.27.3':
     resolution: {integrity: sha512-WO60Sn8ly3gtzhyjATDgieJNet/KqsDlX5nRC5Y3oTFcS1l0KWba+SEa9Ja1GfDqSF1z6hif/SkpQJbL63cgOA==}
     engines: {node: '>=18'}
@@ -2761,12 +2881,6 @@ packages:
 
   '@esbuild/linux-mips64el@0.25.12':
     resolution: {integrity: sha512-iyRrM1Pzy9GFMDLsXn1iHUm18nhKnNMWscjmp4+hpafcZjrr2WbT//d20xaGljXDBYHqRcl8HnxbX6uaA/eGVw==}
-    engines: {node: '>=18'}
-    cpu: [mips64el]
-    os: [linux]
-
-  '@esbuild/linux-mips64el@0.27.1':
-    resolution: {integrity: sha512-U0bEuAOLvO/DWFdygTHWY8C067FXz+UbzKgxYhXC0fDieFa0kDIra1FAhsAARRJbvEyso8aAqvPdNxzWuStBnA==}
     engines: {node: '>=18'}
     cpu: [mips64el]
     os: [linux]
@@ -2789,12 +2903,6 @@ packages:
     cpu: [ppc64]
     os: [linux]
 
-  '@esbuild/linux-ppc64@0.27.1':
-    resolution: {integrity: sha512-NzdQ/Xwu6vPSf/GkdmRNsOfIeSGnh7muundsWItmBsVpMoNPVpM61qNzAVY3pZ1glzzAxLR40UyYM23eaDDbYQ==}
-    engines: {node: '>=18'}
-    cpu: [ppc64]
-    os: [linux]
-
   '@esbuild/linux-ppc64@0.27.3':
     resolution: {integrity: sha512-eizBnTeBefojtDb9nSh4vvVQ3V9Qf9Df01PfawPcRzJH4gFSgrObw+LveUyDoKU3kxi5+9RJTCWlj4FjYXVPEA==}
     engines: {node: '>=18'}
@@ -2809,12 +2917,6 @@ packages:
 
   '@esbuild/linux-riscv64@0.25.12':
     resolution: {integrity: sha512-Zr7KR4hgKUpWAwb1f3o5ygT04MzqVrGEGXGLnj15YQDJErYu/BGg+wmFlIDOdJp0PmB0lLvxFIOXZgFRrdjR0w==}
-    engines: {node: '>=18'}
-    cpu: [riscv64]
-    os: [linux]
-
-  '@esbuild/linux-riscv64@0.27.1':
-    resolution: {integrity: sha512-7zlw8p3IApcsN7mFw0O1Z1PyEk6PlKMu18roImfl3iQHTnr/yAfYv6s4hXPidbDoI2Q0pW+5xeoM4eTCC0UdrQ==}
     engines: {node: '>=18'}
     cpu: [riscv64]
     os: [linux]
@@ -2837,12 +2939,6 @@ packages:
     cpu: [s390x]
     os: [linux]
 
-  '@esbuild/linux-s390x@0.27.1':
-    resolution: {integrity: sha512-cGj5wli+G+nkVQdZo3+7FDKC25Uh4ZVwOAK6A06Hsvgr8WqBBuOy/1s+PUEd/6Je+vjfm6stX0kmib5b/O2Ykw==}
-    engines: {node: '>=18'}
-    cpu: [s390x]
-    os: [linux]
-
   '@esbuild/linux-s390x@0.27.3':
     resolution: {integrity: sha512-pBHUx9LzXWBc7MFIEEL0yD/ZVtNgLytvx60gES28GcWMqil8ElCYR4kvbV2BDqsHOvVDRrOxGySBM9Fcv744hw==}
     engines: {node: '>=18'}
@@ -2857,12 +2953,6 @@ packages:
 
   '@esbuild/linux-x64@0.25.12':
     resolution: {integrity: sha512-uqZMTLr/zR/ed4jIGnwSLkaHmPjOjJvnm6TVVitAa08SLS9Z0VM8wIRx7gWbJB5/J54YuIMInDquWyYvQLZkgw==}
-    engines: {node: '>=18'}
-    cpu: [x64]
-    os: [linux]
-
-  '@esbuild/linux-x64@0.27.1':
-    resolution: {integrity: sha512-z3H/HYI9MM0HTv3hQZ81f+AKb+yEoCRlUby1F80vbQ5XdzEMyY/9iNlAmhqiBKw4MJXwfgsh7ERGEOhrM1niMA==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [linux]
@@ -2885,12 +2975,6 @@ packages:
     cpu: [arm64]
     os: [netbsd]
 
-  '@esbuild/netbsd-arm64@0.27.1':
-    resolution: {integrity: sha512-wzC24DxAvk8Em01YmVXyjl96Mr+ecTPyOuADAvjGg+fyBpGmxmcr2E5ttf7Im8D0sXZihpxzO1isus8MdjMCXQ==}
-    engines: {node: '>=18'}
-    cpu: [arm64]
-    os: [netbsd]
-
   '@esbuild/netbsd-arm64@0.27.3':
     resolution: {integrity: sha512-sDpk0RgmTCR/5HguIZa9n9u+HVKf40fbEUt+iTzSnCaGvY9kFP0YKBWZtJaraonFnqef5SlJ8/TiPAxzyS+UoA==}
     engines: {node: '>=18'}
@@ -2905,12 +2989,6 @@ packages:
 
   '@esbuild/netbsd-x64@0.25.12':
     resolution: {integrity: sha512-Ld5pTlzPy3YwGec4OuHh1aCVCRvOXdH8DgRjfDy/oumVovmuSzWfnSJg+VtakB9Cm0gxNO9BzWkj6mtO1FMXkQ==}
-    engines: {node: '>=18'}
-    cpu: [x64]
-    os: [netbsd]
-
-  '@esbuild/netbsd-x64@0.27.1':
-    resolution: {integrity: sha512-1YQ8ybGi2yIXswu6eNzJsrYIGFpnlzEWRl6iR5gMgmsrR0FcNoV1m9k9sc3PuP5rUBLshOZylc9nqSgymI+TYg==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [netbsd]
@@ -2933,12 +3011,6 @@ packages:
     cpu: [arm64]
     os: [openbsd]
 
-  '@esbuild/openbsd-arm64@0.27.1':
-    resolution: {integrity: sha512-5Z+DzLCrq5wmU7RDaMDe2DVXMRm2tTDvX2KU14JJVBN2CT/qov7XVix85QoJqHltpvAOZUAc3ndU56HSMWrv8g==}
-    engines: {node: '>=18'}
-    cpu: [arm64]
-    os: [openbsd]
-
   '@esbuild/openbsd-arm64@0.27.3':
     resolution: {integrity: sha512-AIcMP77AvirGbRl/UZFTq5hjXK+2wC7qFRGoHSDrZ5v5b8DK/GYpXW3CPRL53NkvDqb9D+alBiC/dV0Fb7eJcw==}
     engines: {node: '>=18'}
@@ -2953,12 +3025,6 @@ packages:
 
   '@esbuild/openbsd-x64@0.25.12':
     resolution: {integrity: sha512-MZyXUkZHjQxUvzK7rN8DJ3SRmrVrke8ZyRusHlP+kuwqTcfWLyqMOE3sScPPyeIXN/mDJIfGXvcMqCgYKekoQw==}
-    engines: {node: '>=18'}
-    cpu: [x64]
-    os: [openbsd]
-
-  '@esbuild/openbsd-x64@0.27.1':
-    resolution: {integrity: sha512-Q73ENzIdPF5jap4wqLtsfh8YbYSZ8Q0wnxplOlZUOyZy7B4ZKW8DXGWgTCZmF8VWD7Tciwv5F4NsRf6vYlZtqg==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [openbsd]
@@ -2981,12 +3047,6 @@ packages:
     cpu: [arm64]
     os: [openharmony]
 
-  '@esbuild/openharmony-arm64@0.27.1':
-    resolution: {integrity: sha512-ajbHrGM/XiK+sXM0JzEbJAen+0E+JMQZ2l4RR4VFwvV9JEERx+oxtgkpoKv1SevhjavK2z2ReHk32pjzktWbGg==}
-    engines: {node: '>=18'}
-    cpu: [arm64]
-    os: [openharmony]
-
   '@esbuild/openharmony-arm64@0.27.3':
     resolution: {integrity: sha512-NinAEgr/etERPTsZJ7aEZQvvg/A6IsZG/LgZy+81wON2huV7SrK3e63dU0XhyZP4RKGyTm7aOgmQk0bGp0fy2g==}
     engines: {node: '>=18'}
@@ -3001,12 +3061,6 @@ packages:
 
   '@esbuild/sunos-x64@0.25.12':
     resolution: {integrity: sha512-3wGSCDyuTHQUzt0nV7bocDy72r2lI33QL3gkDNGkod22EsYl04sMf0qLb8luNKTOmgF/eDEDP5BFNwoBKH441w==}
-    engines: {node: '>=18'}
-    cpu: [x64]
-    os: [sunos]
-
-  '@esbuild/sunos-x64@0.27.1':
-    resolution: {integrity: sha512-IPUW+y4VIjuDVn+OMzHc5FV4GubIwPnsz6ubkvN8cuhEqH81NovB53IUlrlBkPMEPxvNnf79MGBoz8rZ2iW8HA==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [sunos]
@@ -3029,12 +3083,6 @@ packages:
     cpu: [arm64]
     os: [win32]
 
-  '@esbuild/win32-arm64@0.27.1':
-    resolution: {integrity: sha512-RIVRWiljWA6CdVu8zkWcRmGP7iRRIIwvhDKem8UMBjPql2TXM5PkDVvvrzMtj1V+WFPB4K7zkIGM7VzRtFkjdg==}
-    engines: {node: '>=18'}
-    cpu: [arm64]
-    os: [win32]
-
   '@esbuild/win32-arm64@0.27.3':
     resolution: {integrity: sha512-B2t59lWWYrbRDw/tjiWOuzSsFh1Y/E95ofKz7rIVYSQkUYBjfSgf6oeYPNWHToFRr2zx52JKApIcAS/D5TUBnA==}
     engines: {node: '>=18'}
@@ -3053,12 +3101,6 @@ packages:
     cpu: [ia32]
     os: [win32]
 
-  '@esbuild/win32-ia32@0.27.1':
-    resolution: {integrity: sha512-2BR5M8CPbptC1AK5JbJT1fWrHLvejwZidKx3UMSF0ecHMa+smhi16drIrCEggkgviBwLYd5nwrFLSl5Kho96RQ==}
-    engines: {node: '>=18'}
-    cpu: [ia32]
-    os: [win32]
-
   '@esbuild/win32-ia32@0.27.3':
     resolution: {integrity: sha512-QLKSFeXNS8+tHW7tZpMtjlNb7HKau0QDpwm49u0vUp9y1WOF+PEzkU84y9GqYaAVW8aH8f3GcBck26jh54cX4Q==}
     engines: {node: '>=18'}
@@ -3073,12 +3115,6 @@ packages:
 
   '@esbuild/win32-x64@0.25.12':
     resolution: {integrity: sha512-alJC0uCZpTFrSL0CCDjcgleBXPnCrEAhTBILpeAp7M/OFgoqtAetfBzX0xM00MUsVVPpVjlPuMbREqnZCXaTnA==}
-    engines: {node: '>=18'}
-    cpu: [x64]
-    os: [win32]
-
-  '@esbuild/win32-x64@0.27.1':
-    resolution: {integrity: sha512-d5X6RMYv6taIymSk8JBP+nxv8DQAMY6A51GPgusqLdK9wBz5wWIXy1KjTck6HnjE9hqJzJRdk+1p/t5soSbCtw==}
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
@@ -3279,13 +3315,6 @@ packages:
 
   '@napi-rs/wasm-runtime@1.1.1':
     resolution: {integrity: sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A==}
-
-  '@napi-rs/wasm-runtime@1.2.3':
-    resolution: {integrity: sha512-UMduMbqO5s5zF2NkNacMT/yK5Y5QiKvWr2+50bzIIxFDwVJ2h49b+oyjaCGPhJxd2/gC2x39EHv/gHVuu36x2Q==}
-    engines: {node: ^20.19.0 || ^22.13.0 || >=23.5.0}
-    peerDependencies:
-      '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
-      '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
 
   '@octokit/endpoint@10.1.4':
     resolution: {integrity: sha512-OlYOlZIsfEVZm5HCSR8aSg02T2lbUWOsCQoPKfTXJwDzcHQBrVBGdGXb89dv2Kw2ToZaRtudp8O3ZIYoaOjKlA==}
@@ -3674,129 +3703,124 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@oxc-transform/binding-android-arm-eabi@0.130.0':
-    resolution: {integrity: sha512-Q7oWxsbwgqWe+RoM32WsBIZhJdgp4aASeoTnd+zmmJyNvSA0E5n3por1v54qR2UCO5IzksqUa9jwCHHxuwhk7w==}
+  '@oxc-transform/binding-android-arm-eabi@0.158.0':
+    resolution: {integrity: sha512-TUBwLmfBgoD2KlYlqeiajavHn64GPOZw7UNvUMN2TVch9o87AHUUUIFVAdHipkZnIGJW7EXbpS/zC/rS/taEXQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm]
     os: [android]
 
-  '@oxc-transform/binding-android-arm64@0.130.0':
-    resolution: {integrity: sha512-EpCyRi5LlCMAwb6YMByGNHl09m9rcxmFyHTWVcKqrq6wab+wx9yM0PAeiMAfezWIvZ4AIp/pi2blbyJg/YqxJw==}
+  '@oxc-transform/binding-android-arm64@0.158.0':
+    resolution: {integrity: sha512-bVlAwj8xUhhCHrlsOSUtwNz+WiWoO3YjtywvUN+X0wxkbzESVaHs/5Myh6eCwhSQC7EBe1hb1JW91AtXM9huEw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [android]
 
-  '@oxc-transform/binding-darwin-arm64@0.130.0':
-    resolution: {integrity: sha512-EvflmULQ/kQW4rIGvwrdDa6DnYZpsceJ2r0zFmDY+hdAxBA9wXGTJfgGJYOW+KltyhW1ybDbOUfCgLtmUa0YhA==}
+  '@oxc-transform/binding-darwin-arm64@0.158.0':
+    resolution: {integrity: sha512-2YVfdhu3xhuN6W4jCUuQ0po7+sZEHDm/BRDuwl1ohGg/0uc2hVmdz0ECux8yPGTrEyBzk1umnh1zjlNj0o8r1A==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [darwin]
 
-  '@oxc-transform/binding-darwin-x64@0.130.0':
-    resolution: {integrity: sha512-ZydJiyA6Zdo5exmll//tq3gqGayoRfPTNQBo8weWXhsqzWDEK0VN9wSiRZM4yH4yKS1pY9so890y02CmHaWQVw==}
+  '@oxc-transform/binding-darwin-x64@0.158.0':
+    resolution: {integrity: sha512-3muQhBK20O7n6/SZAbzk8qpPTlYjJgY2tvzz7l+M8NrxJputaei/cVAbaMskT9a3bUMy//0S7tkbC0jLa8SU/w==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [darwin]
 
-  '@oxc-transform/binding-freebsd-x64@0.130.0':
-    resolution: {integrity: sha512-IS3obxLpndsp9A56XMrzex+EYTp9vHdZLxTmYtHXak+wrz76TA9a1RGUdaD3b8b/n6ysljenKhjjnZKR+WGJKQ==}
+  '@oxc-transform/binding-freebsd-x64@0.158.0':
+    resolution: {integrity: sha512-7sDIXf8jFXMy7v8Xa7UPy5uYW2i653Fr1LtpTkDVd+ZaTDwe4YMbmYs+4WTNf6l0Jm9c8OAJYtbKmC923SIVsQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [freebsd]
 
-  '@oxc-transform/binding-linux-arm-gnueabihf@0.130.0':
-    resolution: {integrity: sha512-FNsObnYcYR90VaMoSYdBr7SmsN7Mh/lHChy+BlXesjwfJxID7W4BGsSjB+MNY/6eZvemf89m3fluApCdPbYisA==}
+  '@oxc-transform/binding-linux-arm-gnueabihf@0.158.0':
+    resolution: {integrity: sha512-2O6jQVPipXMI+s3vkD9GNS/fCLgb4tAMJhwbp1HSvAYkLWiGi9NzyNc2m/SZUhfyIZFCQEdijrlzr+GdQP8gwA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm]
     os: [linux]
 
-  '@oxc-transform/binding-linux-arm-musleabihf@0.130.0':
-    resolution: {integrity: sha512-Z3OSbDihlNs1Gl15IDi3WKfDmpYjNWTrsc0ir2Uv5CBwjJDqnYtQRxZq8JvxoW+Lq5lFEuJQcEPv0U+MWj9pGw==}
+  '@oxc-transform/binding-linux-arm-musleabihf@0.158.0':
+    resolution: {integrity: sha512-qmXhfIbGzQvBnWS9b0JzxU/X6MSD9WJX/n0uMA9BtM41w4FV5JW+J8X5V95ynmyH3zHK7PVyF2rt2gZzQZmxyw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm]
     os: [linux]
 
-  '@oxc-transform/binding-linux-arm64-gnu@0.130.0':
-    resolution: {integrity: sha512-pNVtyv3ndNaHltOKD2bLObE3vSKP89R9+bv7magLKOEnhSwbuFulsYLyc4v7S7YoVhRzmVT4sbVjaSHrWAFt1g==}
+  '@oxc-transform/binding-linux-arm64-gnu@0.158.0':
+    resolution: {integrity: sha512-P+RzamkgKwCHualNSfJECuQEzhiJvp+TtMDSfz64Pv5to/Jo1YwrFHG7yQQW0Bi/ogS52tB3FTpS48pFZIf1Tg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@oxc-transform/binding-linux-arm64-musl@0.130.0':
-    resolution: {integrity: sha512-0sh+YTAYzpMIvK9NmNsCJTXIw8ydy9pd2v3/P0n5DWdQ12+bEZn06XVvFuf5rBbAaS8qqII7bh+2psEHALyM+g==}
+  '@oxc-transform/binding-linux-arm64-musl@0.158.0':
+    resolution: {integrity: sha512-thXTdeEIzoGFlcXwy8cyOQPN50ESOKh3oQRXIhQ0p0Uv8qAOCJKP7W6PyOL1tUG6bojzK/mExeXrywHSazzTRw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@oxc-transform/binding-linux-ppc64-gnu@0.130.0':
-    resolution: {integrity: sha512-gjSO4c68TpH3ybJ2p6lJyZWNOJGfOdSyKd9ZYzFbvSrT5weHir8NV2rSixEwbsmFVd2kQA+aHX5teJkEacLnYQ==}
+  '@oxc-transform/binding-linux-ppc64-gnu@0.158.0':
+    resolution: {integrity: sha512-KtB9LeoIjWsp1XUxBBnPpyvdSHFlvz2NsrYo/qI1CiV/OGteonpwjiefjRgZJXjCwjXr5gCsmjhfwJcUTm23Og==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ppc64]
     os: [linux]
     libc: [glibc]
 
-  '@oxc-transform/binding-linux-riscv64-gnu@0.130.0':
-    resolution: {integrity: sha512-2Fn5JjMPPT2VMrzXQ8M8CcNlNj2Le1EZKbHGKZ8Rue4O9jeCoIx1mF7edySUWPqm3Vq2Oc6Jd/zAaSc9khKgkw==}
+  '@oxc-transform/binding-linux-riscv64-gnu@0.158.0':
+    resolution: {integrity: sha512-W55jszyeaJXopbCA5l9uJCb88x7wKF0oIDHAg1dR88rtrAw6dmiuYfPkdZ84cyXg8P/v+XVr9rkVlkYlbkfIsw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [riscv64]
     os: [linux]
     libc: [glibc]
 
-  '@oxc-transform/binding-linux-riscv64-musl@0.130.0':
-    resolution: {integrity: sha512-WiSrGyJiiEX3ZdCqRRFsXLMiwu/g4sDM7FhNf0NhpHpCFMfHNa8AlpZ4grSatUaNmkFZBiEhebIJWBKY+VrnHg==}
+  '@oxc-transform/binding-linux-riscv64-musl@0.158.0':
+    resolution: {integrity: sha512-5FyU9wNk61DpDVn5ng6wMFyqbm76gOZQDfRNrbWQgOtXc6R3f6cV3j/GMq28p0qYk6VKI2h7M8B1nAmlZzMSAg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [riscv64]
     os: [linux]
     libc: [musl]
 
-  '@oxc-transform/binding-linux-s390x-gnu@0.130.0':
-    resolution: {integrity: sha512-JbD7CqHRLpNFAfruMEkfYZNdzisgU925Do9GnXdrUc5RjFJ7iKFttNvH3eS93U93bRMEosY5Gbun41BbphjDFg==}
+  '@oxc-transform/binding-linux-s390x-gnu@0.158.0':
+    resolution: {integrity: sha512-qntXPrX0g1JZy0VlHlt+66Pd1SRKJBHiEc53Ke+LgxGvM9A5OXVYUdiEhQmmGFCzgQXrGCpgLaGif1ZHUtpykg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [s390x]
     os: [linux]
     libc: [glibc]
 
-  '@oxc-transform/binding-linux-x64-gnu@0.130.0':
-    resolution: {integrity: sha512-/a7ODMlKZdXy449GP91vx8oFgmuoDd08lKr/YnbKnGx9iyUiRsTEEJRqSM6j0EKk6FLJlJYY/pTB3ze6aJf/Rw==}
+  '@oxc-transform/binding-linux-x64-gnu@0.158.0':
+    resolution: {integrity: sha512-s60b0VyQ6sPZCaHF7uAyEmd4iH1NSdjCyEiN2fPKWuak0JObS1HLpFoXp8TlB15Qn9jcH6tF1gJ9x4Jbc5mRMQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@oxc-transform/binding-linux-x64-musl@0.130.0':
-    resolution: {integrity: sha512-V8e0WDssMwhDl4bGUeemSvMjBR1rAVGiwmkxKXURizRp+PX+jJnZ2fsDYSCIgiC1jrYMZRms6pvmaqdj75VY2A==}
+  '@oxc-transform/binding-linux-x64-musl@0.158.0':
+    resolution: {integrity: sha512-jbC4zZkWAZL4GPLzDyZJmghvr/fwhgvEDiSNG5XWKgm0Rmd4SkZSoJ50+Oh9wxBUTcSG69gbBe5SajRV/JioHQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@oxc-transform/binding-openharmony-arm64@0.130.0':
-    resolution: {integrity: sha512-z1zcYYwgDGfC6QuRyM6+s1IN1mzjCAwU/SVXJXMvmDVa4s6LYoFAFHNdIaAerH5HaRhwwB4ZzTW4IUV9p5LyYQ==}
+  '@oxc-transform/binding-openharmony-arm64@0.158.0':
+    resolution: {integrity: sha512-Enlb11rHHv3hVO4vWxCrQiK2AKb9SIMoLqkrqaTUJkmO0xcP1vUt9L4vwWvAYVHHx9PZIkyQd3xF7uVXK+3BRA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [openharmony]
 
-  '@oxc-transform/binding-wasm32-wasi@0.130.0':
-    resolution: {integrity: sha512-+Ts6uzZKxVH5bjuvp2yiOvV3RkF3/MAPCL/4r4UludAawcyhiq7f0zyyhtuM/uMJBYQhzPDHpmzu2qh72a8s/A==}
-    engines: {node: ^20.19.0 || >=22.12.0}
-    cpu: [wasm32]
-
-  '@oxc-transform/binding-win32-arm64-msvc@0.130.0':
-    resolution: {integrity: sha512-NEhR4ians3nh7zHOemgGsrrtzZR/s6EegUFsY6GNOhCJ+43PIos9E3vFy6FwPXoF32pn5FxJ+oOuh6ultrlvpw==}
+  '@oxc-transform/binding-win32-arm64-msvc@0.158.0':
+    resolution: {integrity: sha512-AUaFdp+nJ6nlz3mRaqiS5RABPip7Mo3L+IvyxeqZhz19I8zrz14bIRmOSOgOOXBbSBtodNHa+C7lxgNnrviTfQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [win32]
 
-  '@oxc-transform/binding-win32-ia32-msvc@0.130.0':
-    resolution: {integrity: sha512-jsmaQme5JbRNezOYrE42hbKTcqZECycxzvXd5eicUSJolUhWUNzmMBhqWAVK7NIThWGUf1UXLVqYf8lVgECCbw==}
+  '@oxc-transform/binding-win32-ia32-msvc@0.158.0':
+    resolution: {integrity: sha512-0yFhGPHcqkpk9r+J9LrJjX2ghaTooUOo3UqRLqMbOfyVeMyGHT+ZDn+SeYoGXedCtxIPuRgqdabJbYS0wMwl6g==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ia32]
     os: [win32]
 
-  '@oxc-transform/binding-win32-x64-msvc@0.130.0':
-    resolution: {integrity: sha512-tH8QSCOJV01jdM2PsXADQJHXXZe20wq235PgoZ224/q/5qZ34lu9PMcD8OsN7uhFVcRya1DkiURk69G2ufhKUA==}
+  '@oxc-transform/binding-win32-x64-msvc@0.158.0':
+    resolution: {integrity: sha512-YLkL1cm49dYa8TAAAaQjBApi5pm/tqLozpqMu0cLcnSv/rVnVbzUuAwwwqof2p1uHJtn4Chnce1HUilW1AtX7g==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [win32]
@@ -4363,9 +4387,6 @@ packages:
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
 
-  '@tybys/wasm-util@0.10.3':
-    resolution: {integrity: sha512-F3fo1MYrRJYL3zER0OUOmkutjr1Vp23m7OsSgp7nq4SP6OqX6C/56XFIPAl5bt3zaBRjmW7SGz3u/6LwFpYcOg==}
-
   '@types/body-parser@1.19.5':
     resolution: {integrity: sha512-fB3Zu92ucau0iQ0JMCFQE7b/dv8Ot07NI3KaZIkIUNXq82k4eBAqUaneXfleGY9JWskeS9y+u0nXMyspcuQrCg==}
 
@@ -4484,53 +4505,6 @@ packages:
 
   '@typescript/analyze-trace@0.10.1':
     resolution: {integrity: sha512-RnlSOPh14QbopGCApgkSx5UBgGda5MX1cHqp2fsqfiDyCwGL/m1jaeB9fzu7didVS81LQqGZZuxFBcg8YU8EVw==}
-    hasBin: true
-
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-wny2pgKjGbiZtnOIHVa3tXC1UfDqxNEFzyPGmiqybedG8hipG2Nfp0l5UxbaKCjkLacUpH/W5bP2hBOMVhCOzg==}
-    engines: {node: '>=16.20.0'}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-Afc7M5zOwo+GpfcYwz5Z8HMB2tPVsui7nNIqEuuFB73MPdVqNn/Wmpe4tP4MRri0AtJnJknoHBaTJ/VDAp/Jhw==}
-    engines: {node: '>=16.20.0'}
-    cpu: [x64]
-    os: [darwin]
-
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-iITBa2WjjTI5N9t5l7Z4KoOSI+2zBlhbvFzsD/f8qX8QoKjz/Y4DPyBDgezYi8nkqjjksbgSOJ3/ykzhwrB9cg==}
-    engines: {node: '>=16.20.0'}
-    cpu: [arm64]
-    os: [linux]
-
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-hJm/UOqZTr9FHmR7uNm8VGX4oKtfWk0Jem0zPeJFNC8ckGUfSBueyiEYMZB+XmRc1aG4x1E46y3CplP4CLHvGQ==}
-    engines: {node: '>=16.20.0'}
-    cpu: [arm]
-    os: [linux]
-
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-du0dzi6y97Po5vDNdPJTyyijHCpaS22JLRnKZEJXBDaO9gCIymOv/5QQokFRuOlQm0bWl3i9PF4OVdGP6uAOQA==}
-    engines: {node: '>=16.20.0'}
-    cpu: [x64]
-    os: [linux]
-
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-SsAwfhyHJ1akgBc+99z4+hwdbHsdWaKB8EwCNIMA6JfSLMeUjffrYvxu+vfMyxVtOVOz7RrRXRoiDiu4a2sCtg==}
-    engines: {node: '>=16.20.0'}
-    cpu: [arm64]
-    os: [win32]
-
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-DL4u27stv0fo71sVhOzHSwE+YMZsbBijVI+kg5dLDLilSH79WFTJ8RSQ46vJrCMt+Gjlv/JOZP1PuLJDfioYeQ==}
-    engines: {node: '>=16.20.0'}
-    cpu: [x64]
-    os: [win32]
-
-  '@typescript/native-preview@7.0.0-dev.20260707.2':
-    resolution: {integrity: sha512-oUGp+Rep/hqMhPunyinsALUwSlzHINSxitifPiSaeqoKOKD2OlR9NE3TaPqwsl4NlGslsOSUXI1JotWQzpYCPg==}
-    engines: {node: '>=16.20.0'}
     hasBin: true
 
   '@typescript/typescript-aix-ppc64@7.0.2':
@@ -5041,8 +5015,8 @@ packages:
   es-module-lexer@1.7.0:
     resolution: {integrity: sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA==}
 
-  es-module-lexer@2.0.0:
-    resolution: {integrity: sha512-5POEcUuZybH7IdmGsD8wlf0AI55wMecM9rVBTI/qEAy2c1kTOm3DjFYjrBdI2K3BaJjJYfYFeRtM0t9ssnRuxw==}
+  es-module-lexer@2.3.2:
+    resolution: {integrity: sha512-poHGpORABojJJucnV9KbOavETW8lBVnphkW77ER5/BQ5Fz7oXSoCNek7IH3vR5nRjdsEz926ibFYX8KtLQmdyw==}
 
   es-object-atoms@1.1.1:
     resolution: {integrity: sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA==}
@@ -5056,11 +5030,6 @@ packages:
 
   esbuild@0.25.12:
     resolution: {integrity: sha512-bbPBYYrtZbkt6Os6FiTLCTFxvq4tt3JKall1vRwshA3fdVztsLAatFaZobhkBC8/BrPetoa0oksYoKXoG4ryJg==}
-    engines: {node: '>=18'}
-    hasBin: true
-
-  esbuild@0.27.1:
-    resolution: {integrity: sha512-yY35KZckJJuVVPXpvjgxiCuVEJT67F6zDeVTv4rizyPrfGBUpZQsvmxnN+C371c2esD/hNMjj4tpBhuueLN7aA==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -5244,6 +5213,14 @@ packages:
   http-errors@2.0.1:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
     engines: {node: '>= 0.8'}
+
+  i18next@26.4.1:
+    resolution: {integrity: sha512-9YbX5E6gd1H+yaOSX3izCsPj5iWXyH7X4oC+iuHHJJw8AeHglzOK5SJf+1CHxaYKYigcea+8jvzSxqYx46YvyA==}
+    peerDependencies:
+      typescript: ^5 || ^6 || ^7
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   iconv-lite@0.7.2:
     resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
@@ -5694,8 +5671,8 @@ packages:
   oxc-resolver@11.19.1:
     resolution: {integrity: sha512-qE/CIg/spwrTBFt5aKmwe3ifeDdLfA2NESN30E42X/lII5ClF8V7Wt6WIJhcGZjp0/Q+nQ+9vgxGk//xZNX2hg==}
 
-  oxc-transform@0.130.0:
-    resolution: {integrity: sha512-aMD7aOzdG1yOKd2O01ngLiDw+9AEm7txKKsUlDY/jjZ7XyEDeZNL8V9rROfTi4ir/xhzQ73IDaZImSG6b6mp3g==}
+  oxc-transform@0.158.0:
+    resolution: {integrity: sha512-muHHb5xftnipB4HKP/zvbxxoE7eH+5AhKyO1az7D2AX2xvsbC9NWADiuZhTnAldoiRQ7QrSw2yJTJdz44LyCbw==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
   oxfmt@0.51.0:
@@ -5801,9 +5778,19 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   playwright@1.60.0:
     resolution: {integrity: sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA==}
     engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.63.0:
+    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+    engines: {node: '>=20'}
     hasBin: true
 
   postcss@8.5.14:
@@ -6247,6 +6234,14 @@ packages:
     resolution: {integrity: sha512-kiGUalWN+rgBJ/1OHZsBtU4rXZOfj/7rKQxULKlIzwzQSvMJUUNgPwJEEh7gU6xEVxC0ahoOBvN2YI8GH6FNgA==}
     engines: {node: '>=10.12.0'}
 
+  valibot@1.4.2:
+    resolution: {integrity: sha512-gjdCvJ6d3RyHAneqxMYMW9QMCwYMb3jpOO0IyHZV1bnRHFBHrX3VkIILt5XYR0WhwHiH7Mty8ovuPZ/O3gamrg==}
+    peerDependencies:
+      typescript: '>=5'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
@@ -6448,6 +6443,9 @@ packages:
 
   youch@4.1.0-beta.10:
     resolution: {integrity: sha512-rLfVLB4FgQneDr0dv1oddCVZmKjcJ6yX6mS4pU82Mq/Dt9a3cLZQ62pDBL4AUO+uVrCvtWz3ZFUL2HFAFJ/BXQ==}
+
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -6694,20 +6692,9 @@ snapshots:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
 
-  '@emnapi/core@1.10.0':
-    dependencies:
-      '@emnapi/wasi-threads': 1.2.1
-      tslib: 2.7.0
-    optional: true
-
   '@emnapi/core@1.9.1':
     dependencies:
       '@emnapi/wasi-threads': 1.2.0
-      tslib: 2.7.0
-    optional: true
-
-  '@emnapi/runtime@1.10.0':
-    dependencies:
       tslib: 2.7.0
     optional: true
 
@@ -6721,15 +6708,7 @@ snapshots:
       tslib: 2.7.0
     optional: true
 
-  '@emnapi/wasi-threads@1.2.1':
-    dependencies:
-      tslib: 2.7.0
-    optional: true
-
   '@esbuild/aix-ppc64@0.25.12':
-    optional: true
-
-  '@esbuild/aix-ppc64@0.27.1':
     optional: true
 
   '@esbuild/aix-ppc64@0.27.3':
@@ -6741,9 +6720,6 @@ snapshots:
   '@esbuild/android-arm64@0.25.12':
     optional: true
 
-  '@esbuild/android-arm64@0.27.1':
-    optional: true
-
   '@esbuild/android-arm64@0.27.3':
     optional: true
 
@@ -6751,9 +6727,6 @@ snapshots:
     optional: true
 
   '@esbuild/android-arm@0.25.12':
-    optional: true
-
-  '@esbuild/android-arm@0.27.1':
     optional: true
 
   '@esbuild/android-arm@0.27.3':
@@ -6765,9 +6738,6 @@ snapshots:
   '@esbuild/android-x64@0.25.12':
     optional: true
 
-  '@esbuild/android-x64@0.27.1':
-    optional: true
-
   '@esbuild/android-x64@0.27.3':
     optional: true
 
@@ -6775,9 +6745,6 @@ snapshots:
     optional: true
 
   '@esbuild/darwin-arm64@0.25.12':
-    optional: true
-
-  '@esbuild/darwin-arm64@0.27.1':
     optional: true
 
   '@esbuild/darwin-arm64@0.27.3':
@@ -6789,9 +6756,6 @@ snapshots:
   '@esbuild/darwin-x64@0.25.12':
     optional: true
 
-  '@esbuild/darwin-x64@0.27.1':
-    optional: true
-
   '@esbuild/darwin-x64@0.27.3':
     optional: true
 
@@ -6799,9 +6763,6 @@ snapshots:
     optional: true
 
   '@esbuild/freebsd-arm64@0.25.12':
-    optional: true
-
-  '@esbuild/freebsd-arm64@0.27.1':
     optional: true
 
   '@esbuild/freebsd-arm64@0.27.3':
@@ -6813,9 +6774,6 @@ snapshots:
   '@esbuild/freebsd-x64@0.25.12':
     optional: true
 
-  '@esbuild/freebsd-x64@0.27.1':
-    optional: true
-
   '@esbuild/freebsd-x64@0.27.3':
     optional: true
 
@@ -6823,9 +6781,6 @@ snapshots:
     optional: true
 
   '@esbuild/linux-arm64@0.25.12':
-    optional: true
-
-  '@esbuild/linux-arm64@0.27.1':
     optional: true
 
   '@esbuild/linux-arm64@0.27.3':
@@ -6837,9 +6792,6 @@ snapshots:
   '@esbuild/linux-arm@0.25.12':
     optional: true
 
-  '@esbuild/linux-arm@0.27.1':
-    optional: true
-
   '@esbuild/linux-arm@0.27.3':
     optional: true
 
@@ -6847,9 +6799,6 @@ snapshots:
     optional: true
 
   '@esbuild/linux-ia32@0.25.12':
-    optional: true
-
-  '@esbuild/linux-ia32@0.27.1':
     optional: true
 
   '@esbuild/linux-ia32@0.27.3':
@@ -6861,9 +6810,6 @@ snapshots:
   '@esbuild/linux-loong64@0.25.12':
     optional: true
 
-  '@esbuild/linux-loong64@0.27.1':
-    optional: true
-
   '@esbuild/linux-loong64@0.27.3':
     optional: true
 
@@ -6871,9 +6817,6 @@ snapshots:
     optional: true
 
   '@esbuild/linux-mips64el@0.25.12':
-    optional: true
-
-  '@esbuild/linux-mips64el@0.27.1':
     optional: true
 
   '@esbuild/linux-mips64el@0.27.3':
@@ -6885,9 +6828,6 @@ snapshots:
   '@esbuild/linux-ppc64@0.25.12':
     optional: true
 
-  '@esbuild/linux-ppc64@0.27.1':
-    optional: true
-
   '@esbuild/linux-ppc64@0.27.3':
     optional: true
 
@@ -6895,9 +6835,6 @@ snapshots:
     optional: true
 
   '@esbuild/linux-riscv64@0.25.12':
-    optional: true
-
-  '@esbuild/linux-riscv64@0.27.1':
     optional: true
 
   '@esbuild/linux-riscv64@0.27.3':
@@ -6909,9 +6846,6 @@ snapshots:
   '@esbuild/linux-s390x@0.25.12':
     optional: true
 
-  '@esbuild/linux-s390x@0.27.1':
-    optional: true
-
   '@esbuild/linux-s390x@0.27.3':
     optional: true
 
@@ -6919,9 +6853,6 @@ snapshots:
     optional: true
 
   '@esbuild/linux-x64@0.25.12':
-    optional: true
-
-  '@esbuild/linux-x64@0.27.1':
     optional: true
 
   '@esbuild/linux-x64@0.27.3':
@@ -6933,9 +6864,6 @@ snapshots:
   '@esbuild/netbsd-arm64@0.25.12':
     optional: true
 
-  '@esbuild/netbsd-arm64@0.27.1':
-    optional: true
-
   '@esbuild/netbsd-arm64@0.27.3':
     optional: true
 
@@ -6943,9 +6871,6 @@ snapshots:
     optional: true
 
   '@esbuild/netbsd-x64@0.25.12':
-    optional: true
-
-  '@esbuild/netbsd-x64@0.27.1':
     optional: true
 
   '@esbuild/netbsd-x64@0.27.3':
@@ -6957,9 +6882,6 @@ snapshots:
   '@esbuild/openbsd-arm64@0.25.12':
     optional: true
 
-  '@esbuild/openbsd-arm64@0.27.1':
-    optional: true
-
   '@esbuild/openbsd-arm64@0.27.3':
     optional: true
 
@@ -6967,9 +6889,6 @@ snapshots:
     optional: true
 
   '@esbuild/openbsd-x64@0.25.12':
-    optional: true
-
-  '@esbuild/openbsd-x64@0.27.1':
     optional: true
 
   '@esbuild/openbsd-x64@0.27.3':
@@ -6981,9 +6900,6 @@ snapshots:
   '@esbuild/openharmony-arm64@0.25.12':
     optional: true
 
-  '@esbuild/openharmony-arm64@0.27.1':
-    optional: true
-
   '@esbuild/openharmony-arm64@0.27.3':
     optional: true
 
@@ -6991,9 +6907,6 @@ snapshots:
     optional: true
 
   '@esbuild/sunos-x64@0.25.12':
-    optional: true
-
-  '@esbuild/sunos-x64@0.27.1':
     optional: true
 
   '@esbuild/sunos-x64@0.27.3':
@@ -7005,9 +6918,6 @@ snapshots:
   '@esbuild/win32-arm64@0.25.12':
     optional: true
 
-  '@esbuild/win32-arm64@0.27.1':
-    optional: true
-
   '@esbuild/win32-arm64@0.27.3':
     optional: true
 
@@ -7017,9 +6927,6 @@ snapshots:
   '@esbuild/win32-ia32@0.25.12':
     optional: true
 
-  '@esbuild/win32-ia32@0.27.1':
-    optional: true
-
   '@esbuild/win32-ia32@0.27.3':
     optional: true
 
@@ -7027,9 +6934,6 @@ snapshots:
     optional: true
 
   '@esbuild/win32-x64@0.25.12':
-    optional: true
-
-  '@esbuild/win32-x64@0.27.1':
     optional: true
 
   '@esbuild/win32-x64@0.27.3':
@@ -7177,13 +7081,6 @@ snapshots:
       '@emnapi/core': 1.9.1
       '@emnapi/runtime': 1.9.1
       '@tybys/wasm-util': 0.10.1
-    optional: true
-
-  '@napi-rs/wasm-runtime@1.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
-    dependencies:
-      '@emnapi/core': 1.10.0
-      '@emnapi/runtime': 1.10.0
-      '@tybys/wasm-util': 0.10.3
     optional: true
 
   '@octokit/endpoint@10.1.4':
@@ -7399,68 +7296,61 @@ snapshots:
   '@oxc-resolver/binding-win32-x64-msvc@11.19.1':
     optional: true
 
-  '@oxc-transform/binding-android-arm-eabi@0.130.0':
+  '@oxc-transform/binding-android-arm-eabi@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-android-arm64@0.130.0':
+  '@oxc-transform/binding-android-arm64@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-darwin-arm64@0.130.0':
+  '@oxc-transform/binding-darwin-arm64@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-darwin-x64@0.130.0':
+  '@oxc-transform/binding-darwin-x64@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-freebsd-x64@0.130.0':
+  '@oxc-transform/binding-freebsd-x64@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-linux-arm-gnueabihf@0.130.0':
+  '@oxc-transform/binding-linux-arm-gnueabihf@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-linux-arm-musleabihf@0.130.0':
+  '@oxc-transform/binding-linux-arm-musleabihf@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-linux-arm64-gnu@0.130.0':
+  '@oxc-transform/binding-linux-arm64-gnu@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-linux-arm64-musl@0.130.0':
+  '@oxc-transform/binding-linux-arm64-musl@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-linux-ppc64-gnu@0.130.0':
+  '@oxc-transform/binding-linux-ppc64-gnu@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-linux-riscv64-gnu@0.130.0':
+  '@oxc-transform/binding-linux-riscv64-gnu@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-linux-riscv64-musl@0.130.0':
+  '@oxc-transform/binding-linux-riscv64-musl@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-linux-s390x-gnu@0.130.0':
+  '@oxc-transform/binding-linux-s390x-gnu@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-linux-x64-gnu@0.130.0':
+  '@oxc-transform/binding-linux-x64-gnu@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-linux-x64-musl@0.130.0':
+  '@oxc-transform/binding-linux-x64-musl@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-openharmony-arm64@0.130.0':
+  '@oxc-transform/binding-openharmony-arm64@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-wasm32-wasi@0.130.0':
-    dependencies:
-      '@emnapi/core': 1.10.0
-      '@emnapi/runtime': 1.10.0
-      '@napi-rs/wasm-runtime': 1.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+  '@oxc-transform/binding-win32-arm64-msvc@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-win32-arm64-msvc@0.130.0':
+  '@oxc-transform/binding-win32-ia32-msvc@0.158.0':
     optional: true
 
-  '@oxc-transform/binding-win32-ia32-msvc@0.130.0':
-    optional: true
-
-  '@oxc-transform/binding-win32-x64-msvc@0.130.0':
+  '@oxc-transform/binding-win32-x64-msvc@0.158.0':
     optional: true
 
   '@oxfmt/binding-android-arm-eabi@0.51.0':
@@ -7806,11 +7696,6 @@ snapshots:
       tslib: 2.7.0
     optional: true
 
-  '@tybys/wasm-util@0.10.3':
-    dependencies:
-      tslib: 2.7.0
-    optional: true
-
   '@types/body-parser@1.19.5':
     dependencies:
       '@types/connect': 3.4.38
@@ -7955,37 +7840,6 @@ snapshots:
       split2: 3.2.2
       treeify: 1.1.0
       yargs: 16.2.0
-
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260707.2':
-    optional: true
-
-  '@typescript/native-preview@7.0.0-dev.20260707.2':
-    optionalDependencies:
-      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20260707.2
-      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20260707.2
-      '@typescript/native-preview-linux-arm': 7.0.0-dev.20260707.2
-      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20260707.2
-      '@typescript/native-preview-linux-x64': 7.0.0-dev.20260707.2
-      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260707.2
-      '@typescript/native-preview-win32-x64': 7.0.0-dev.20260707.2
 
   '@typescript/typescript-aix-ppc64@7.0.2':
     optional: true
@@ -8419,18 +8273,18 @@ snapshots:
 
   es-module-lexer@1.7.0: {}
 
-  es-module-lexer@2.0.0: {}
+  es-module-lexer@2.3.2: {}
 
   es-object-atoms@1.1.1:
     dependencies:
       es-errors: 1.3.0
 
-  esbuild-plugin-solid@0.6.0(esbuild@0.27.1)(solid-js@1.9.12):
+  esbuild-plugin-solid@0.6.0(esbuild@0.27.7)(solid-js@1.9.12):
     dependencies:
       '@babel/core': 7.28.5
       '@babel/preset-typescript': 7.28.5(@babel/core@7.28.5)
       babel-preset-solid: 1.9.10(@babel/core@7.28.5)(solid-js@1.9.12)
-      esbuild: 0.27.1
+      esbuild: 0.27.7
       solid-js: 1.9.12
     transitivePeerDependencies:
       - supports-color
@@ -8463,35 +8317,6 @@ snapshots:
       '@esbuild/win32-arm64': 0.25.12
       '@esbuild/win32-ia32': 0.25.12
       '@esbuild/win32-x64': 0.25.12
-
-  esbuild@0.27.1:
-    optionalDependencies:
-      '@esbuild/aix-ppc64': 0.27.1
-      '@esbuild/android-arm': 0.27.1
-      '@esbuild/android-arm64': 0.27.1
-      '@esbuild/android-x64': 0.27.1
-      '@esbuild/darwin-arm64': 0.27.1
-      '@esbuild/darwin-x64': 0.27.1
-      '@esbuild/freebsd-arm64': 0.27.1
-      '@esbuild/freebsd-x64': 0.27.1
-      '@esbuild/linux-arm': 0.27.1
-      '@esbuild/linux-arm64': 0.27.1
-      '@esbuild/linux-ia32': 0.27.1
-      '@esbuild/linux-loong64': 0.27.1
-      '@esbuild/linux-mips64el': 0.27.1
-      '@esbuild/linux-ppc64': 0.27.1
-      '@esbuild/linux-riscv64': 0.27.1
-      '@esbuild/linux-s390x': 0.27.1
-      '@esbuild/linux-x64': 0.27.1
-      '@esbuild/netbsd-arm64': 0.27.1
-      '@esbuild/netbsd-x64': 0.27.1
-      '@esbuild/openbsd-arm64': 0.27.1
-      '@esbuild/openbsd-x64': 0.27.1
-      '@esbuild/openharmony-arm64': 0.27.1
-      '@esbuild/sunos-x64': 0.27.1
-      '@esbuild/win32-arm64': 0.27.1
-      '@esbuild/win32-ia32': 0.27.1
-      '@esbuild/win32-x64': 0.27.1
 
   esbuild@0.27.3:
     optionalDependencies:
@@ -8752,6 +8577,10 @@ snapshots:
       setprototypeof: 1.2.0
       statuses: 2.0.2
       toidentifier: 1.0.1
+
+  i18next@26.4.1(typescript@7.0.2):
+    optionalDependencies:
+      typescript: 7.0.2
 
   iconv-lite@0.7.2:
     dependencies:
@@ -9408,28 +9237,27 @@ snapshots:
       '@oxc-resolver/binding-win32-ia32-msvc': 11.19.1
       '@oxc-resolver/binding-win32-x64-msvc': 11.19.1
 
-  oxc-transform@0.130.0:
+  oxc-transform@0.158.0:
     optionalDependencies:
-      '@oxc-transform/binding-android-arm-eabi': 0.130.0
-      '@oxc-transform/binding-android-arm64': 0.130.0
-      '@oxc-transform/binding-darwin-arm64': 0.130.0
-      '@oxc-transform/binding-darwin-x64': 0.130.0
-      '@oxc-transform/binding-freebsd-x64': 0.130.0
-      '@oxc-transform/binding-linux-arm-gnueabihf': 0.130.0
-      '@oxc-transform/binding-linux-arm-musleabihf': 0.130.0
-      '@oxc-transform/binding-linux-arm64-gnu': 0.130.0
-      '@oxc-transform/binding-linux-arm64-musl': 0.130.0
-      '@oxc-transform/binding-linux-ppc64-gnu': 0.130.0
-      '@oxc-transform/binding-linux-riscv64-gnu': 0.130.0
-      '@oxc-transform/binding-linux-riscv64-musl': 0.130.0
-      '@oxc-transform/binding-linux-s390x-gnu': 0.130.0
-      '@oxc-transform/binding-linux-x64-gnu': 0.130.0
-      '@oxc-transform/binding-linux-x64-musl': 0.130.0
-      '@oxc-transform/binding-openharmony-arm64': 0.130.0
-      '@oxc-transform/binding-wasm32-wasi': 0.130.0
-      '@oxc-transform/binding-win32-arm64-msvc': 0.130.0
-      '@oxc-transform/binding-win32-ia32-msvc': 0.130.0
-      '@oxc-transform/binding-win32-x64-msvc': 0.130.0
+      '@oxc-transform/binding-android-arm-eabi': 0.158.0
+      '@oxc-transform/binding-android-arm64': 0.158.0
+      '@oxc-transform/binding-darwin-arm64': 0.158.0
+      '@oxc-transform/binding-darwin-x64': 0.158.0
+      '@oxc-transform/binding-freebsd-x64': 0.158.0
+      '@oxc-transform/binding-linux-arm-gnueabihf': 0.158.0
+      '@oxc-transform/binding-linux-arm-musleabihf': 0.158.0
+      '@oxc-transform/binding-linux-arm64-gnu': 0.158.0
+      '@oxc-transform/binding-linux-arm64-musl': 0.158.0
+      '@oxc-transform/binding-linux-ppc64-gnu': 0.158.0
+      '@oxc-transform/binding-linux-riscv64-gnu': 0.158.0
+      '@oxc-transform/binding-linux-riscv64-musl': 0.158.0
+      '@oxc-transform/binding-linux-s390x-gnu': 0.158.0
+      '@oxc-transform/binding-linux-x64-gnu': 0.158.0
+      '@oxc-transform/binding-linux-x64-musl': 0.158.0
+      '@oxc-transform/binding-openharmony-arm64': 0.158.0
+      '@oxc-transform/binding-win32-arm64-msvc': 0.158.0
+      '@oxc-transform/binding-win32-ia32-msvc': 0.158.0
+      '@oxc-transform/binding-win32-x64-msvc': 0.158.0
 
   oxfmt@0.51.0:
     dependencies:
@@ -9572,11 +9400,17 @@ snapshots:
 
   playwright-core@1.60.0: {}
 
+  playwright-core@1.63.0(patch_hash=9de972030ab106a5cb051ec55fefe7492089a14fd422a48a61aa0dca4e66f5bb): {}
+
   playwright@1.60.0:
     dependencies:
       playwright-core: 1.60.0
     optionalDependencies:
       fsevents: 2.3.2
+
+  playwright@1.63.0:
+    dependencies:
+      playwright-core: 1.63.0(patch_hash=9de972030ab106a5cb051ec55fefe7492089a14fd422a48a61aa0dca4e66f5bb)
 
   postcss@8.5.14:
     dependencies:
@@ -10152,6 +9986,10 @@ snapshots:
       '@types/istanbul-lib-coverage': 2.0.6
       convert-source-map: 2.0.0
 
+  valibot@1.4.2(typescript@7.0.2):
+    optionalDependencies:
+      typescript: 7.0.2
+
   vary@1.1.2: {}
 
   vfile-message@4.0.3:
@@ -10225,7 +10063,7 @@ snapshots:
       '@vitest/snapshot': 4.1.6
       '@vitest/spy': 4.1.6
       '@vitest/utils': 4.1.6
-      es-module-lexer: 2.0.0
+      es-module-lexer: 2.3.2
       expect-type: 1.3.0
       magic-string: 0.30.21
       obug: 2.1.1
@@ -10319,5 +10157,7 @@ snapshots:
       '@speed-highlight/core': 1.2.12
       cookie: 1.1.1
       youch-core: 0.3.3
+
+  zod@4.4.3: {}
 
   zwitch@2.0.4: {}

@@ -1,4 +1,4 @@
-import { css, type Handle } from 'remix/ui'
+import { css, type Handle } from 'remix/component'
 import { theme } from '../../ui/public/design.ts'
 
 import type { ScheduleDocument } from '../../data/schedules.ts'
@@ -21,7 +21,15 @@ export function SchedulePage(handle: Handle<SchedulePageProps>) {
 
     return (
       <Document title="Timeboxer">
-        <div mix={appShellStyle}>
+        <div
+          mix={css({
+            backgroundColor: theme.surface.lvl0,
+            display: 'grid',
+            gridTemplateColumns: '240px minmax(0, 1fr)',
+            height: '100vh',
+            overflow: 'hidden',
+          })}
+        >
           <ScheduleSidebar
             activeScheduleId={activeScheduleId}
             csrfToken={csrfToken}
@@ -38,7 +46,13 @@ export function SchedulePage(handle: Handle<SchedulePageProps>) {
             }))}
           />
 
-          <main aria-label="Workspace" mix={workspaceStyle}>
+          <main
+            aria-label="Workspace"
+            mix={css({
+              minHeight: 0,
+              overflow: 'hidden',
+            })}
+          >
             {schedule ? (
               <ScheduleGrid
                 csrfToken={csrfToken}
@@ -48,7 +62,18 @@ export function SchedulePage(handle: Handle<SchedulePageProps>) {
                 schedule={schedule as GridScheduleDocument}
               />
             ) : (
-              <div mix={emptyWorkspaceStyle}>Create a schedule to get started.</div>
+              <div
+                mix={css({
+                  alignItems: 'center',
+                  color: theme.colors.text.secondary,
+                  display: 'flex',
+                  fontSize: '16px',
+                  height: '100%',
+                  justifyContent: 'center',
+                })}
+              >
+                Create a schedule to get started.
+              </div>
             )}
           </main>
         </div>
@@ -56,25 +81,3 @@ export function SchedulePage(handle: Handle<SchedulePageProps>) {
     )
   }
 }
-
-const appShellStyle = css({
-  backgroundColor: theme.surface.lvl0,
-  display: 'grid',
-  gridTemplateColumns: '240px minmax(0, 1fr)',
-  height: '100vh',
-  overflow: 'hidden',
-})
-
-const workspaceStyle = css({
-  minHeight: 0,
-  overflow: 'hidden',
-})
-
-const emptyWorkspaceStyle = css({
-  alignItems: 'center',
-  color: theme.colors.text.secondary,
-  display: 'flex',
-  fontSize: '16px',
-  height: '100%',
-  justifyContent: 'center',
-})

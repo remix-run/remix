@@ -1,8 +1,10 @@
 import type { Browser, Page } from 'playwright'
 import type { V8CoverageEntry } from './coverage.ts'
-import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
-import { mock, type MockCall, type MockContext, type MockFunction } from './mock.ts'
+import { createFakeTimers, type FakeTimers, type FakeTimersOptions } from './fake-timers.ts'
+import { createMockTracker } from './mock.ts'
+import type { MockCall, MockContext, MockFunction, MockTracker } from './mock.ts'
 import type { getPlaywrightPageOptions } from './playwright.ts'
+import { waitFor } from './wait-for.ts'
 
 /**
  * The shape `t.serve()` consumes. Matches the result of `createTestServer`
@@ -34,6 +36,30 @@ export interface TestContext {
   signal: AbortSignal
 
   /**
+   * Retries an assertion until it stops throwing or rejecting, then returns its value.
+   *
+   * The first attempt starts immediately. Every successful return value, including
+   * `false` and `undefined`, stops polling. Invalid arguments throw synchronously.
+   *
+   * The deadline includes pending attempts and rejects with `Error('waitFor() timed out')`,
+   * using the last failure as `cause`, if any.
+   *
+   * Polling uses real timers and stops when the test aborts or finishes. Test aborts
+   * reject with `t.signal.reason`; normal completion cancels waits without aborting
+   * `t.signal`. Cancellation cannot stop JavaScript or cancel a callback's promise.
+   *
+   * @param condition Assertion callback invoked without arguments.
+   * @param options Finite polling delays in milliseconds, from 0 through 2147483647.
+   * @param options.interval Delay after a failed attempt settles, in milliseconds (50).
+   * @param options.timeout Overall deadline in milliseconds (1000).
+   * @returns The first successful callback result, unwrapped.
+   */
+  waitFor<result>(
+    condition: () => result | PromiseLike<result>,
+    options?: { interval?: number; timeout?: number },
+  ): Promise<Awaited<result>>
+
+  /**
    * Registers a cleanup function to be called after the test completes.
    *
    * @param {() => void} fn - The cleanup function to execute
@@ -42,43 +68,24 @@ export interface TestContext {
   after(fn: () => void): void
 
   /**
-   * Mock tracker for the current test using {@link mock}. Mirrors the shape of Node's
-   * `t.mock`. Method mocks created via `t.mock` are auto-restored on test completion.
+   * {@link MockTracker} for the current test. Function and method mock restoration runs
+   * in registration order with cleanup callbacks. Accessor and property mocks restore
+   * in reverse installation order after those callbacks, including after failures.
    */
-  mock: {
-    /**
-     * Creates a mock function with an optional implementation.
-     *
-     * @template T - The function type to be mocked
-     * @param {T} [impl] - Optional custom implementation for the mock
-     * @returns {MockFunction<T>} A mock function instance
-     */
-    fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
-
-    /**
-     * Replaces `obj[methodName]` with a mock and records every call. The
-     * original method is restored automatically after the test completes.
-     *
-     * @template T - The object type
-     * @template K - The method key of the object
-     * @param {T} obj - The object to mock
-     * @param {K} methodName - The method name to mock
-     * @param {Function} [impl] - Optional implementation override (must be a function)
-     * @returns {MockFunction} A mock function instance for the mocked method
-     */
-    method<T extends object, K extends keyof T>(
-      obj: T,
-      methodName: K,
-      impl?: Function,
-    ): MockFunction
-  }
+  mock: MockTracker
 
   /**
-   * Activates fake timers for testing time-dependent code.
+   * Activates fake timers for testing time-dependent code. Replaces
+   * `setTimeout`, `setInterval`, `setImmediate`, their clear functions,
+   * `AbortSignal.timeout()`, `Date`, and `performance.now()` with fakes driven
+   * by the returned handle. Restores timers on abort or before test cleanup callbacks run.
+   * Calling again restores the previous clock and starts a new one.
+   * Calling after the test finishes or aborts throws.
    *
+   * @param options Optional settings, such as the `now` time the fake `Date` starts at.
    * @returns {FakeTimers} A fake timers instance for controlling time
    */
-  useFakeTimers(): FakeTimers
+  useFakeTimers(options?: FakeTimersOptions): FakeTimers
 
   /**
    * Wires a running test server up to a Playwright page so the test can drive
@@ -110,23 +117,48 @@ export function createTestContext(options?: CreateTestContextOptions): {
   cleanup(): Promise<void>
 } {
   let cleanups: Array<() => void | Promise<void>> = []
+  let mockCleanups: Array<() => void> = []
+  let lifetime = new AbortController()
+  let fakeTimers: FakeTimers | undefined
+  let closed = false
+  let timerErrors: unknown[] = []
+  let signal = options?.signal ?? new AbortController().signal
+  let pollingSignal = AbortSignal.any([signal, lifetime.signal])
+  // A dependent signal cannot be silenced by stopImmediatePropagation on t.signal.
+  let timerSignal = AbortSignal.any([signal])
+
+  function closeTimers(): void {
+    closed = true
+    try {
+      fakeTimers?.restore()
+    } catch (error) {
+      timerErrors.push(error)
+    }
+  }
+
+  timerSignal.addEventListener('abort', closeTimers, { once: true })
 
   let testContext: TestContext = {
-    signal: options?.signal ?? new AbortController().signal,
-    mock: {
-      fn: mock.fn,
-      method(obj, methodName, impl) {
-        let mockFn = mock.method(obj, methodName, impl as any)
-        if (mockFn.mock.restore) cleanups.push(mockFn.mock.restore)
-        return mockFn
-      },
+    signal,
+    waitFor(condition, options) {
+      return waitFor(condition, options, pollingSignal)
     },
+    mock: createMockTracker(
+      (restore) => mockCleanups.push(restore),
+      (restore) => cleanups.push(restore),
+    ),
     after(fn) {
       cleanups.push(fn)
     },
-    useFakeTimers() {
-      let timers = createFakeTimers()
-      cleanups.push(timers.restore)
+    useFakeTimers(options) {
+      if (closed || signal.aborted) throw new Error('This test context has already finished')
+      fakeTimers?.restore()
+      let timers = createFakeTimers(options)
+      fakeTimers = timers
+      if (closed || signal.aborted) {
+        timers.restore()
+        throw new Error('This test context has already finished')
+      }
       return timers
     },
     async serve(server) {
@@ -172,8 +204,34 @@ export function createTestContext(options?: CreateTestContextOptions): {
   return {
     testContext,
     async cleanup() {
-      for (let fn of cleanups) await fn()
+      lifetime.abort()
+      closeTimers()
+      timerSignal.removeEventListener('abort', closeTimers)
+      let errors = timerErrors.splice(0)
+      for (let fn of cleanups) {
+        try {
+          await fn()
+        } catch (error) {
+          errors.push(error)
+        }
+      }
       cleanups.length = 0
+      while (mockCleanups.length > 0) {
+        try {
+          mockCleanups.pop()?.()
+        } catch (error) {
+          errors.push(error)
+        }
+      }
+      if (errors.length === 1) throw errors[0]
+      if (errors.length > 1) {
+        throw new AggregateError(
+          errors,
+          errors
+            .map((error) => (error instanceof Error ? error.message : String(error)))
+            .join('\n'),
+        )
+      }
     },
   }
 }

@@ -1,4 +1,4 @@
-import { clientEntry, Frame, css, on, type Handle } from 'remix/ui'
+import { clientEntry, Frame, css, on, type Handle } from 'remix/component'
 
 export const ClientFrameExample = clientEntry(
   import.meta.url,
@@ -32,6 +32,10 @@ export const ClientFrameExample = clientEntry(
           <button
             type="button"
             mix={[
+              on('click', () => {
+                mounted = !mounted
+                handle.update()
+              }),
               css({
                 padding: '6px 10px',
                 borderRadius: 10,
@@ -40,10 +44,6 @@ export const ClientFrameExample = clientEntry(
                 color: '#e9eefc',
                 cursor: 'pointer',
                 '&:hover': { background: 'rgba(255,255,255,0.10)' },
-              }),
-              on('click', () => {
-                mounted = !mounted
-                handle.update()
               }),
             ]}
           >

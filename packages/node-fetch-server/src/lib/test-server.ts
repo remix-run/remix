@@ -31,7 +31,7 @@ export function createTestServer(
   handler: (request: Request) => Response | Promise<Response>,
 ): Promise<TestServer> {
   return new Promise((resolve, reject) => {
-    let server = http.createServer(createRequestListener((request) => handler(request)))
+    let server = http.createServer(createRequestListener(handler))
 
     server.listen(0, '127.0.0.1', () => {
       let addr = server.address() as { port: number }

@@ -249,6 +249,28 @@ describe('mysql sql-compiler', () => {
       })
     })
 
+    it('compile ordering', async () => {
+      await db.query(accounts).orderBy('email', 'asc').orderBy('id', 'desc').all()
+
+      let compiled = compileMysqlOperation(statements[0])
+      assert.deepEqual(compiled, {
+        text: 'select * from `accounts` order by `email` ASC, `id` DESC',
+        values: [],
+      })
+    })
+
+    it('reject invalid order by directions', async () => {
+      await db
+        .query(accounts)
+        .orderBy('id', 'ascending' as 'asc')
+        .all()
+
+      assert.throws(() => compileMysqlOperation(statements[0]), {
+        name: 'TypeError',
+        message: 'Invalid order by direction: expected "asc" or "desc"',
+      })
+    })
+
     it('compile distinct selection with order by', async () => {
       await db.query(accounts).distinct().orderBy('id', 'desc').all()
 
@@ -449,7 +471,7 @@ describe('mysql sql-compiler', () => {
       let compiled = compileMysqlOperation(statements[0])
       assert.deepEqual(compiled, {
         text: 'insert into `accounts` (`status`, `email`) values (?, ?) on duplicate key update `email` = ?',
-        values: ['contact@remix.run', 'enabled', 'info@remix.run'],
+        values: ['enabled', 'info@remix.run', 'contact@remix.run'],
       })
     })
 

@@ -1,4 +1,4 @@
-import { clientEntry, css, on, type Handle } from 'remix/ui'
+import { clientEntry, css, on, type Handle } from 'remix/component'
 
 import { reloadButtonStyle } from './styles.ts'
 
@@ -28,10 +28,10 @@ export const ReloadScope = clientEntry(import.meta.url, function ReloadScope(han
       <button
         type="button"
         mix={[
-          reloadButtonStyle,
           on('click', () => {
             void handle.frame.reload()
           }),
+          reloadButtonStyle,
         ]}
         style={framePending ? { background: 'rgba(255,255,255,0.04)' } : undefined}
       >
@@ -66,10 +66,10 @@ export const ReloadTopFrame = clientEntry(import.meta.url, function ReloadTopFra
     <button
       type="button"
       mix={[
-        reloadButtonStyle,
         on('click', () => {
           void handle.frames.top.reload()
         }),
+        reloadButtonStyle,
       ]}
       style={pending ? { background: 'rgba(255,255,255,0.04)' } : undefined}
     >
