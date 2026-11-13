@@ -9,15 +9,13 @@ interface PendingButtonProps extends Props<'button'> {
 }
 
 export function PendingButton(handle: Handle<PendingButtonProps>) {
-  let saving = false
-  let submissionFailed = false
-  let animatingFailure = false
+  let state: 'idle' | 'pending' | 'failed' | 'animatingFailure' = 'idle'
 
   return () => {
     let {
       children,
-      pending = saving,
-      failed = submissionFailed,
+      pending = state === 'pending',
+      failed = state === 'failed' || state === 'animatingFailure',
       pendingLabel = 'Saving…',
       errorMessage,
       type = 'submit',
@@ -34,17 +32,16 @@ export function PendingButton(handle: Handle<PendingButtonProps>) {
           class={className}
           mix={[
             on('rmx:submission', async (event, signal) => {
-              saving = true
-              submissionFailed = false
+              state = 'pending'
               handle.update()
               try {
                 await event.finished
+                if (signal.aborted) return
+                state = 'idle'
               } catch {
-                if (!signal.aborted) submissionFailed = true
+                if (signal.aborted) return
+                state = 'failed'
               }
-              // The button's next submission, or its removal, aborts the signal.
-              if (signal.aborted) return
-              saving = false
               handle.update()
             }),
             on('animationstart', async (event, signal) => {
@@ -62,30 +59,30 @@ export function PendingButton(handle: Handle<PendingButtonProps>) {
                     animation.animationName === event.animationName,
                 )
               if (!animation) return
-              animatingFailure = true
+              state = 'animatingFailure'
               handle.update()
               await animation.finished.catch(() => {})
-              if (signal.aborted) return
-              animatingFailure = false
+              if (signal.aborted || state !== 'animatingFailure') return
+              state = 'failed'
               handle.update()
             }),
             css({
-              animation: failed ? 'pending-button-failure 400ms ease-in-out' : 'none',
+              animation: failed ? 'pending-button-failure 2000ms ease-in-out' : 'none',
               '@keyframes pending-button-failure': {
-                '0%, 100%': { transform: 'translateX(0) scale(1)' },
-                '20%, 80%': {
+                '0%, 20%, 100%': { transform: 'translateX(0) scale(1)' },
+                '4%, 100%': {
                   backgroundColor: '#dc2626',
                   color: '#fff',
                 },
-                '20%, 60%': { transform: 'translateX(-3px) scale(1.04)' },
-                '40%, 80%': { transform: 'translateX(3px) scale(1.04)' },
+                '4%, 12%': { transform: 'translateX(-3px) scale(1.04)' },
+                '8%, 16%': { transform: 'translateX(3px) scale(1.04)' },
               },
               '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
             }),
             ...mix,
           ]}
         >
-          {pending ? pendingLabel : animatingFailure ? 'Failed!' : children}
+          {pending ? pendingLabel : state === 'animatingFailure' ? 'Failed!' : children}
         </button>
         {errorMessage ? (
           <span
