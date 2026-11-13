@@ -850,6 +850,15 @@ export function diffVNodes(
     }
     case 'fragment': {
       let childInputs = next._children
+      // `anchor` marks the end of the parent's child list, not the end of this
+      // fragment, so new children would land after the fragment's siblings.
+      // Insert them right after the fragment's current DOM instead, which keeps
+      // its range contiguous for a later keyed move.
+      let currLastDom = findLastDomAnchor(curr)
+      let fragmentAnchor =
+        currLastDom && currLastDom.parentNode === domParent
+          ? (currLastDom.nextSibling ?? undefined)
+          : (findNextSiblingDomAnchor(curr) ?? anchor)
       let committed = beginFragmentNode(next, vParent, svg)
       committed._children = diffChildren(
         (curr as CommittedFragmentNode)._children,
@@ -858,7 +867,7 @@ export function diffVNodes(
         committed,
         context,
         undefined,
-        anchor,
+        fragmentAnchor,
       )
       return committed
     }
@@ -1775,7 +1784,16 @@ function patchKeyedChildren(
   // directly before the next stable sibling instead of at the end of the list
   // and moved by the placement pass. Hydration keeps the list end anchor
   // because it marks where adoption stops.
-  let stableIndexes = matchAnalysis.canSkipPlacement ? null : lisMatches(matches)
+  // A matched child with no DOM yet can't be stable: if it starts rendering
+  // DOM, `replace()` finds an insertion point from the old child order, which
+  // a reorder has already invalidated, so the placement pass has to move it.
+  let stableIndexes = matchAnalysis.canSkipPlacement
+    ? null
+    : lisMatches(
+        matches.map((oldIndex) =>
+          oldIndex >= 0 && findFirstDomAnchor(curr[oldIndex]) ? oldIndex : -1,
+        ),
+      )
   let nextStableCursor = 0
   // The cached anchor stays valid for new children before `stableAnchorIndex`
   // because that stable child has not been diffed yet
@@ -2150,7 +2168,9 @@ export function findNextSiblingDomAnchor(
   if (idx === -1) return null
   for (let i = idx + 1; i < children.length; i++) {
     let dom = findFirstDomAnchor(children[i])
-    if (dom) return dom
+    // During a keyed diff `children` is still the old list, so a sibling may
+    // already have been removed from the DOM
+    if (dom?.parentNode) return dom
   }
 
   if (isFragmentNode(vParent)) {
