@@ -16,7 +16,7 @@ async function write(dir: string, relativePath: string, content: string): Promis
 
 async function createTestServer(
   rootDir: string,
-  options: { fingerprint?: boolean } = {},
+  options: { fingerprint?: boolean; minify?: boolean } = {},
 ): Promise<{
   baseUrl: string
   close(): Promise<void>
@@ -26,6 +26,7 @@ async function createTestServer(
     allowFiles: ['app/**'],
     basePath: '/assets',
     fingerprint: options.fingerprint,
+    minify: options.minify,
     rootDir,
     watch: false,
   })
@@ -46,7 +47,7 @@ async function createTestServer(
         return
       }
 
-      requestedAssetPaths.push(url.pathname)
+      if (url.pathname.startsWith('/assets/')) requestedAssetPaths.push(url.pathname)
       let assetResponse = await assetServer.fetch(new Request(url))
       if (!assetResponse) {
         response.statusCode = 404
@@ -183,6 +184,83 @@ describe('barrel file import optimization', () => {
       order: ['before', 'values', 'second', 'between', 'after'],
       values: [1, 2, 3],
     })
+  })
+
+  it('drops nested barrels while preserving evaluation order and cyclic live bindings', async (t) => {
+    let dir = await fs.mkdtemp(path.join(os.tmpdir(), 'nested-barrel-order-test-'))
+    await write(
+      dir,
+      'package.json',
+      JSON.stringify({ sideEffects: ['./app/shared.ts', './app/other.ts'] }),
+    )
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import { read, increment } from "./barrel.ts"',
+        'const before = read()',
+        'increment()',
+        'globalThis.result = { before, after: read(), order: globalThis.order }',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { unused } from "./unused.ts"', 'export { read, increment } from "./value.ts"'].join(
+        '\n',
+      ),
+    )
+    await write(
+      dir,
+      'app/unused.ts',
+      'import { shared } from "./shared-barrel.ts"\nexport const unused = shared',
+    )
+    await write(
+      dir,
+      'app/value.ts',
+      [
+        'import "./other.ts"',
+        'import { shared, increment as bump } from "./shared-barrel.ts"',
+        'export function read() { return shared }',
+        'export function increment() { return bump() }',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/shared-barrel.ts',
+      [
+        'export { shared, increment } from "./shared.ts"',
+        'export { extra } from "./extra.ts"',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/shared.ts',
+      [
+        'import { current } from "./cycle.ts"',
+        'globalThis.order = ["shared"]',
+        'export let shared = 1',
+        'export function increment() { shared = current() + 1 }',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/cycle.ts',
+      'import { shared } from "./shared.ts"\nexport function current() { return shared }',
+    )
+    await write(dir, 'app/other.ts', 'globalThis.order.push("other")')
+    await write(dir, 'app/extra.ts', 'export const extra = "extra"')
+
+    let server = await createTestServer(dir, { fingerprint: true, minify: true })
+    let page = await t.serve(server)
+    t.after(() => fs.rm(dir, { recursive: true, force: true }))
+    await page.goto('/')
+    await page.waitForFunction(() => 'result' in globalThis)
+
+    let result: unknown = await page.evaluate(() => Reflect.get(globalThis, 'result'))
+    assert.deepEqual(result, { order: ['shared', 'other'], before: 1, after: 2 })
+    assert.ok(!server.requestedAssetPaths.some((pathname) => /barrel|unused|extra/.test(pathname)))
+    assert.equal(new Set(server.requestedAssetPaths).size, 5)
   })
 
   it('preserves retained dependency order across removed branches', async (t) => {
