@@ -65,6 +65,8 @@ await createAccount(submission.value)
 
 Pass failures directly to Context to restore values and show errors. Sensitive fields and files are never restored; success still returns their validated values. Handlers can also construct a `FormSubmission` for business failures. See [form schemas](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/experimental-form/README.md) for decoding, sensitivity, and message options.
 
+For feedback persisted across requests, use `Signup.submissionSchema` with ordinary `s.parse()` or `s.parseSafe()` to restore the saved payload before passing it to Context. This checks the feedback's structure without rerunning the form's validation rules or transforms.
+
 ## Context and mixins
 
 - `Context` supplies stable typed `fields` and grouped submission `errors`; `errors.form` is absent when there are no form-level messages. Bindings belong to one Context. Changing the schema requires a new keyed Context.

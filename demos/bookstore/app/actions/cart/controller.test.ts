@@ -89,20 +89,9 @@ describe('cart handlers', () => {
     assertContains(html, 'Three Ways to Change Your Life')
   })
 
-  it('GET /fragments/cart-items renders table fragment for cart items', async () => {
-    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
-      method: 'POST',
-      body: new URLSearchParams({
-        bookId: '2',
-        slug: 'heavy-metal',
-      }),
-      redirect: 'manual',
-    })
-
-    let sessionId = getSessionCookie(addResponse)
-    assert.ok(sessionId)
-
-    let request = requestWithSession('https://remix.run/fragments/cart-items', sessionId)
+  it('GET /cart/items renders the table, total, and actions', async () => {
+    let session = await cartSession('2')
+    let request = requestWithSession('https://remix.run/cart/items', session)
     let response = await router.fetch(request)
     let html = await response.text()
 
@@ -113,34 +102,13 @@ describe('cart handlers', () => {
     assertContains(html, 'Update')
     assertContains(html, 'Remove')
     assertContains(html, 'Total:')
-  })
-
-  it('GET /fragments/cart-items renders totals and actions', async () => {
-    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
-      method: 'POST',
-      body: new URLSearchParams({
-        bookId: '1',
-        slug: 'bbq',
-      }),
-      redirect: 'manual',
-    })
-
-    let sessionId = getSessionCookie(addResponse)
-    assert.ok(sessionId)
-
-    let request = requestWithSession('https://remix.run/fragments/cart-items', sessionId)
-    let response = await router.fetch(request)
-    let html = await response.text()
-
-    assert.equal(response.status, 200)
-    assertContains(html, 'Total:')
-    assertContains(html, '$16.99')
+    assertContains(html, '$27.00')
     assertContains(html, 'Continue Shopping')
     assertContains(html, 'Login to Checkout')
   })
 
-  it('GET /fragments/cart-items renders empty state when cart is empty', async () => {
-    let response = await router.fetch('https://remix.run/fragments/cart-items')
+  it('GET /cart/items renders empty state when cart is empty', async () => {
+    let response = await router.fetch('https://remix.run/cart/items')
     let html = await response.text()
 
     assert.equal(response.status, 200)
@@ -148,54 +116,110 @@ describe('cart handlers', () => {
     assertContains(html, 'Browse Books')
   })
 
-  it('PUT /cart/api/update returns 204 when redirect is none', async () => {
-    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
-      method: 'POST',
-      body: new URLSearchParams({
-        bookId: '1',
-        slug: 'bbq',
+  it('POST /cart/items returns the updated HTML directly for frame submissions', async () => {
+    let session = await cartSession()
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'POST',
+        headers: { 'X-Remix-Frame': 'true' },
+        body: new URLSearchParams({ bookId: '1', quantity: '1e2' }),
       }),
-      redirect: 'manual',
-    })
-
-    let sessionId = getSessionCookie(addResponse)
-    assert.ok(sessionId)
-
-    let request = requestWithSession('https://remix.run/cart/api/update', sessionId, {
-      method: 'PUT',
-      body: new URLSearchParams({
-        bookId: '1',
-        quantity: '2',
-        redirect: 'none',
-      }),
-    })
-    let response = await router.fetch(request)
-
-    assert.equal(response.status, 204)
+    )
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('Location'), null)
+    assert.equal(response.headers.get('Cache-Control'), 'no-store')
+    let html = await response.text()
+    assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$1699\.00/)
+    assertContains(html, 'action="/cart/items"')
+    assert.ok(!html.includes('<html'))
   })
 
-  it('DELETE /cart/api/remove returns 204 when redirect is none', async () => {
-    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
-      method: 'POST',
-      body: new URLSearchParams({
-        bookId: '1',
-        slug: 'bbq',
+  it('rejects invalid quantities and missing items without losing the cart', async () => {
+    let session = await cartSession()
+    for (let quantity of ['', '0', '-1', '1.5', '2abc', '9007199254740992']) {
+      let response = await router.fetch(
+        requestWithSession('https://remix.run/cart/items', session, {
+          method: 'POST',
+          headers: { 'X-Remix-Frame': 'true' },
+          body: new URLSearchParams({ bookId: '1', quantity }),
+        }),
+      )
+      assert.equal(response.status, 400)
+      assertContains(await response.text(), 'Invalid quantity')
+    }
+    let missing = await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'POST',
+        headers: { 'X-Remix-Frame': 'true' },
+        body: new URLSearchParams({ bookId: '2', quantity: '3' }),
       }),
-      redirect: 'manual',
-    })
+    )
+    assert.equal(missing.status, 404)
+    assertContains(await missing.text(), 'That book is no longer in your cart.')
+    let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
+    assert.match(await cart.text(), /Total:\s*(?:<[^>]+>\s*)*\$16\.99/)
+  })
 
-    let sessionId = getSessionCookie(addResponse)
-    assert.ok(sessionId)
-
-    let request = requestWithSession('https://remix.run/cart/api/remove', sessionId, {
-      method: 'DELETE',
-      body: new URLSearchParams({
-        bookId: '1',
-        redirect: 'none',
+  it('DELETE /cart/items removes only the requested item and is safe to retry', async () => {
+    let session = await cartSession()
+    await router.fetch(
+      requestWithSession('https://remix.run/cart/api/add', session, {
+        method: 'POST',
+        body: new URLSearchParams({ bookId: '2' }),
       }),
-    })
-    let response = await router.fetch(request)
+    )
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let response = await router.fetch(
+        requestWithSession('https://remix.run/cart/items', session, {
+          method: 'DELETE',
+          headers: { 'X-Remix-Frame': 'true' },
+          body: new URLSearchParams({ bookId: '1' }),
+        }),
+      )
+      assert.equal(response.status, 200)
+      assert.equal(response.headers.get('Location'), null)
+      assert.equal(response.headers.get('Cache-Control'), 'no-store')
+      let html = await response.text()
+      assert.ok(!html.includes('Ash &amp; Smoke'))
+      assertContains(html, 'Heavy Metal Guitar Riffs')
+      assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$27\.00/)
+    }
+  })
 
-    assert.equal(response.status, 204)
+  it('rejects malformed item IDs and missing books before changing the cart', async () => {
+    let session = await cartSession()
+    for (let method of ['POST', 'DELETE']) {
+      for (let bookId of ['', '0', '-1', '1.5', '1abc', '9007199254740992']) {
+        let response = await router.fetch(
+          requestWithSession('https://remix.run/cart/items', session, {
+            method,
+            headers: { 'X-Remix-Frame': 'true' },
+            body: new URLSearchParams({ bookId, quantity: '3' }),
+          }),
+        )
+        assert.equal(response.status, 400, `${method} ${bookId}`)
+        assertContains(await response.text(), 'Invalid book.')
+      }
+      let missing = await router.fetch(
+        requestWithSession('https://remix.run/cart/items', session, {
+          method,
+          headers: { 'X-Remix-Frame': 'true' },
+          body: new URLSearchParams({ bookId: '999999', quantity: '3' }),
+        }),
+      )
+      assert.equal(missing.status, 404)
+    }
+    let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
+    assert.match(await cart.text(), /Total:\s*(?:<[^>]+>\s*)*\$16\.99/)
   })
 })
+
+async function cartSession(bookId = '1'): Promise<string> {
+  let response = await router.fetch('https://remix.run/cart/api/add', {
+    method: 'POST',
+    body: new URLSearchParams({ bookId }),
+  })
+  let session = getSessionCookie(response)
+  assert.ok(session)
+  return session
+}

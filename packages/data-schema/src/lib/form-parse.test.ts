@@ -223,3 +223,126 @@ describe('form parsing', () => {
     assert.equal(fd.parseSafe(Signup, data).success, false)
   })
 })
+
+describe('form submissionSchema', () => {
+  it('roundtrips failed submissions through JSON with raw values and grouped errors', () => {
+    let failure = fd.parseSafe(
+      Profile,
+      new URLSearchParams({ name: 'A', age: ' 0012 ', password: 'private-secret', bio: '' }),
+    )
+    if (failure.success) throw new Error('Expected failure')
+
+    let Submission = Profile.submissionSchema
+    assert.equal(Profile.submissionSchema, Submission)
+    let restored: fd.FormSubmission = s.parse(Submission, JSON.parse(JSON.stringify(failure)))
+    assert.deepEqual(restored, { values: failure.values, errors: failure.errors })
+    assert.deepEqual(s.parse(Submission, { values: {}, errors: { fields: {} } }), {
+      values: {},
+      errors: { fields: {} },
+    })
+  })
+
+  it('preserves application errors and invalid input without running form validation or transforms', () => {
+    let calls = 0
+    let schema = fd.object({
+      name: fd.text(
+        s.string().transform((value) => {
+          calls++
+          return value.length
+        }),
+      ),
+      quantity: fd.number(
+        s.number().refine((value) => {
+          calls++
+          return Number.isInteger(value)
+        }),
+      ),
+      tags: fd.fields(s.array(s.string().pipe(minLength(2)))),
+      note: fd.text(
+        s.defaulted(s.string(), () => {
+          calls++
+          return 'Default note'
+        }),
+      ),
+    })
+    let feedback = {
+      values: { name: '', quantity: '1.5', tags: ['', 'a'] },
+      errors: {
+        fields: { quantity: ['Only two copies remain.'] },
+        form: ['Please review your cart.'],
+      },
+    }
+    let restored = s.parse(schema.submissionSchema, JSON.parse(JSON.stringify(feedback)))
+    assert.deepEqual(restored, feedback)
+    assert.equal(calls, 0)
+  })
+
+  it('uses logical field keys and strips sensitive values, files, and unknown properties', () => {
+    let schema = fd.object({
+      name: fd.text(s.string(), { name: 'user.name' }),
+      card: fd.text(s.string(), { sensitive: true }),
+      password: fd.password(s.string(), { sensitive: false }),
+      upload: fd.file(s.instanceof_(Blob)),
+      attachments: fd.files(s.array(s.instanceof_(Blob))),
+    })
+    let restored = s.parse(schema.submissionSchema, {
+      values: {
+        name: 'Ada',
+        'user.name': 'Transport name',
+        card: 'private-card',
+        password: 'private-password',
+        upload: 'file contents',
+        attachments: ['more file contents'],
+        other: 'unknown',
+      },
+      errors: {
+        fields: { password: ['Invalid password'], upload: ['Invalid file'] },
+        other: 'unknown',
+      },
+      issues: [{ message: 'Internal issue metadata' }],
+    })
+    assert.deepEqual(restored, {
+      values: { name: 'Ada' },
+      errors: { fields: { password: ['Invalid password'], upload: ['Invalid file'] } },
+    })
+  })
+
+  it('rejects malformed feedback, incorrect raw kinds, and unknown field errors', () => {
+    let Submission = fd.object({
+      quantity: fd.number(s.number()),
+      terms: fd.checkbox(),
+      tags: fd.fields(s.array(s.string())),
+    }).submissionSchema
+    for (let values of [{ quantity: 1 }, { terms: 'false' }, { tags: ['a', 2] }]) {
+      let result = s.parseSafe(Submission, { values, errors: { fields: {} } })
+      if (result.success) throw new Error('Expected malformed values to fail')
+      assert.equal(result.issues[0].path?.[0], 'values')
+    }
+    for (let feedback of [
+      null,
+      { values: {}, errors: {} },
+      { values: {}, errors: { fields: { quantity: [1] } } },
+      { values: {}, errors: { fields: { unknown: ['Invalid'] } } },
+      { values: {}, errors: { fields: {}, form: 'Invalid' } },
+    ]) {
+      assert.equal(s.parseSafe(Submission, feedback).success, false)
+    }
+  })
+
+  it('preserves reserved logical keys as own properties without changing prototypes', () => {
+    let schema = fd.object({
+      ['__proto__']: fd.text(s.string()),
+      constructor: fd.text(s.string()),
+      toString: fd.text(s.string()),
+    })
+    let feedback = JSON.parse(
+      '{"values":{"__proto__":"raw","constructor":"","toString":"text"},"errors":{"fields":{"__proto__":["Invalid"],"constructor":["Required"]}}}',
+    )
+    let restored = s.parse(schema.submissionSchema, feedback)
+    assert.deepEqual(restored, feedback)
+    assert.equal(Object.hasOwn(restored.values, '__proto__'), true)
+    assert.equal(Object.hasOwn(restored.errors.fields, '__proto__'), true)
+    assert.equal(Object.getPrototypeOf(restored.values), Object.prototype)
+    assert.equal(Object.getPrototypeOf(restored.errors.fields), Object.prototype)
+  })
+})
