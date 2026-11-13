@@ -20,7 +20,11 @@ import {
 import { DOCUMENT_NONCE_META_NAME } from '../runtime/nonce.ts'
 import {
   appendFlushMarker,
+  createFrameStartMarker,
+  createHydrationStartMarker,
+  FRAME_END_MARKER,
   FRAME_TEMPLATE_END_MARKER,
+  HYDRATION_END_MARKER,
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
@@ -1287,7 +1291,7 @@ function buildEntrySegment(
   output: Segment[],
 ): void {
   let instanceId = randomId('h')
-  output.push(`<!-- rmx:h:${instanceId} -->`)
+  output.push(`<!--${createHydrationStartMarker(instanceId)}-->`)
   buildComponentSegment(type, props, context, instanceId, frameState, output)
 
   // Store hydration data in context for aggregation
@@ -1300,7 +1304,7 @@ function buildEntrySegment(
     propsJson,
   })
 
-  output.push('<!-- /rmx:h -->')
+  output.push(`<!--${HYDRATION_END_MARKER}-->`)
 }
 
 function resolveDefaultClientEntry(
@@ -1433,10 +1437,10 @@ function serializeSegment(segments: Segment[]): string {
     } else if (seg.kind === 'static') {
       parts.push(seg.html)
     } else {
-      parts.push(`<!-- rmx:f:${seg.frameId} -->`)
+      parts.push(`<!--${createFrameStartMarker(seg.frameId)}-->`)
       if (typeof seg.content === 'string') parts.push(seg.content)
       else if (seg.content) parts.push(serializeSegment(seg.content))
-      parts.push('<!-- /rmx:f -->')
+      parts.push(`<!--${FRAME_END_MARKER}-->`)
     }
   }
   return parts.join('')

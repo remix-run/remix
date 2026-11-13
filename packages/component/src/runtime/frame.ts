@@ -41,7 +41,6 @@ import {
 import {
   findContextFromAncestry,
   insertDomNode,
-  isFrameStartComment,
   remove,
   type CommittedFrameNode,
   type FrameNode,
@@ -56,18 +55,24 @@ import {
   diffNodes,
   findEndMarker,
   getClientEntryKey,
-  getFrameId,
-  isCommentNode,
-  isFrameEnd,
-  isFrameStart,
-  isHydrationEnd,
-  isHydrationStart,
 } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
 import { css } from '../style/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
 import type { CSSProps } from '../style/style.ts'
-import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
+import {
+  createFrameStartMarker,
+  findFlushMarker,
+  FRAME_END_MARKER,
+  type FlushKind,
+  getFrameId,
+  getHydrationId,
+  isFrameEnd,
+  isFrameStart,
+  isFrameTemplateEnd,
+  isHydrationEnd,
+  isHydrationStart,
+} from './stream-protocol.ts'
 import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
 import { unwrapFrameResolution } from './spa-response.ts'
 import {
@@ -1372,7 +1377,7 @@ function insertFrame(
 
   // Hydration path: adopt server-rendered frame markers and reuse the existing
   // frame instance created during createSubFrames().
-  if (isFrameStartComment(cursor?.current)) {
+  if (isFrameStart(cursor?.current)) {
     let start = cursor.current
     let end = findFrameEndComment(start)
     if (end) {
@@ -1391,8 +1396,8 @@ function insertFrame(
     }
   }
 
-  let start = document.createComment(` rmx:f:${randomFrameId()} `)
-  let end = document.createComment(' /rmx:f ')
+  let start = document.createComment(createFrameStartMarker(randomFrameId()))
+  let end = document.createComment(FRAME_END_MARKER)
   insertDomNode(start, domParent, anchor)
   insertDomNode(end, domParent, anchor)
 
@@ -2124,8 +2129,8 @@ function isHydrationMarkerLive(marker: HydrationMarker, context: FrameContext): 
   if (!marker.start.isConnected || !marker.end.isConnected) return false
   if (marker.start.parentNode !== marker.end.parentNode) return false
 
-  if (marker.start.data.trim() !== `rmx:h:${marker.id}`) return false
-  if (marker.end.data.trim() !== '/rmx:h') return false
+  if (!isHydrationStart(marker.start) || getHydrationId(marker.start) !== marker.id) return false
+  if (!isHydrationEnd(marker.end)) return false
 
   if (context.regionTailRef) {
     let startPosition = marker.start.compareDocumentPosition(context.regionTailRef)
@@ -2169,16 +2174,13 @@ function getEarlyFrameContent(id: string): DocumentFragment | null {
 
 function isFrameTemplateComplete(template: HTMLTemplateElement): boolean {
   let end = template.content.lastChild
-  return (
-    (isCommentNode(end) && end.data === FRAME_TEMPLATE_END_MARKER) ||
-    template.ownerDocument.readyState !== 'loading'
-  )
+  return isFrameTemplateEnd(end) || template.ownerDocument.readyState !== 'loading'
 }
 
 function takeFrameTemplateContent(template: HTMLTemplateElement): DocumentFragment {
   let fragment = template.content
   let end = fragment.lastChild
-  if (isCommentNode(end) && end.data === FRAME_TEMPLATE_END_MARKER) end.remove()
+  if (isFrameTemplateEnd(end)) end.remove()
   template.remove()
   return fragment
 }
@@ -2524,19 +2526,17 @@ function findHydrationMarkers(container: FrameContainer, data: RmxData['h']): Hy
         continue
       }
 
-      if (isCommentNode(node)) {
-        if (isHydrationStart(node)) {
-          let id = node.data.trim().slice('rmx:h:'.length)
-          let boundary = { id, start: node, parent }
-          markers.push(boundary)
-          boundaries.push(boundary)
-          if (data?.[id] || pendingClientEntryHydrations.has(node)) parent = node
-        } else if (isHydrationEnd(node)) {
-          let boundary = boundaries.pop()
-          if (boundary) {
-            boundary.end = node
-            parent = boundary.parent
-          }
+      if (isHydrationStart(node)) {
+        let id = getHydrationId(node)
+        let boundary = { id, start: node, parent }
+        markers.push(boundary)
+        boundaries.push(boundary)
+        if (data?.[id] || pendingClientEntryHydrations.has(node)) parent = node
+      } else if (isHydrationEnd(node)) {
+        let boundary = boundaries.pop()
+        if (boundary) {
+          boundary.end = node
+          parent = boundary.parent
         }
       }
       if (node.childNodes.length > 0) {
