@@ -1,0 +1,1 @@
+Follow frame reloads with `FrameReloadStartEvent` from `remix/component`, carrying request and origin details aligned with `frame.reload()`. Its `element` is an `HTMLAnchorElement`, `HTMLAreaElement`, `HTMLFormElement`, or `null`. Its `finished` promise follows the `Promise<AbortSignal>` contract of `frame.reload()`, and descendant frames track their own completion.

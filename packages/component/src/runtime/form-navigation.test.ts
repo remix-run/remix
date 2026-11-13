@@ -4,6 +4,54 @@ import { describe, it } from '@remix-run/test'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
 
 describe('form navigation', () => {
+  it('retains the navigation submitter when formdata was not observed', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+    let submission: FormSubmission | undefined
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        formNavigation = resolveFormNavigation(event)
+        let getSubmission = formNavigation?.getSubmission
+        event.intercept({
+          async handler() {
+            submission = await getSubmission?.()
+          },
+        })
+      },
+      { signal: controller.signal },
+    )
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'get'
+    // Exercise the Navigation API source without a cached native formdata event.
+    form.addEventListener('formdata', (event) => event.stopImmediatePropagation())
+    let button = document.createElement('button')
+    button.formMethod = 'post'
+    button.formEnctype = 'text/plain'
+    button.name = 'intent'
+    button.value = 'save'
+    form.append(button)
+    document.body.append(form)
+    let navigated = false
+    try {
+      let succeeded = nextNavigation(controller.signal)
+      form.requestSubmit(button)
+      await succeeded
+      navigated = true
+
+      expect(formNavigation?.form).toBe(form)
+      expect(formNavigation?.submitter).toBe(button)
+      expect(submission?.method).toBe('post')
+      expect(submission?.encType).toBe('text/plain')
+    } finally {
+      form.remove()
+      controller.abort()
+      if (navigated) await window.navigation.back().finished
+    }
+  })
+
   it('resolves browser form data and submitter overrides', async () => {
     let controller = new AbortController()
     let resolveFormNavigation = createFormNavigationResolver(controller.signal)
@@ -62,6 +110,8 @@ describe('form navigation', () => {
       didNavigate = true
 
       expect(formNavigation?.hasAttribute('data-target')).toBe(true)
+      expect(formNavigation?.form).toBe(form)
+      expect(formNavigation?.submitter).toBe(button)
       expect(formNavigation?.getAttribute('data-target', 'data-submit-target')).toBe('button')
       let submission = await resolvedSubmission.promise
       expect(submission.method).toBe('post')

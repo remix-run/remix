@@ -1,4 +1,4 @@
-import type { FrameHandle, FrameResolution } from './component.ts'
+import type { FrameHandle, FrameResolution, ReloadOrigin } from './component.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameInstance } from './frame.ts'
@@ -73,7 +73,14 @@ export type PendingClientEntries = Map<
   [Comment, RemixElement | undefined, ResourceNonces?]
 >
 
-export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'>
+export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
+  /** The initiating anchor, area, or owning form. */
+  element?: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
+  /** The actual submitter captured by the native submit event. */
+  submitter?: HTMLElement | null
+  /** The owning form for a submission, even when its submitter has been detached. */
+  form?: HTMLFormElement
+}
 
 export type FrameReloadResult = {
   signal: AbortSignal
@@ -155,6 +162,7 @@ export type FrameRuntime = {
   serverFrameReload:
     | {
         signal: AbortSignal
+        origin?: ReloadOrigin
         transition?: NavigationTransition
         reconciliationTracker?: ReconciliationTracker
         blockingFrameTracker?: ReconciliationTracker

@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import { navigate, startNavigationListener } from '../runtime/navigation.ts'
 import type { FrameHandle } from '../runtime/component.ts'
-import type { ResolveFrameOptions } from '../runtime/frame-runtime.ts'
+import type { FrameNavigationOptions, ResolveFrameOptions } from '../runtime/frame-runtime.ts'
 import { withResolvers } from './utils.ts'
 import { reloadDocument } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
@@ -1666,6 +1666,46 @@ describe('navigate', () => {
     controller.abort()
   })
 
+  it('intercepts SVG anchors without exposing them as HTML origin elements', async (t) => {
+    let reloadFrame = mock.fn((frame: FrameHandle, _options?: FrameNavigationOptions) =>
+      stubFrames.reloadFrame(frame),
+    )
+    let namedFrame = { ...stubFrames.top, src: '/initial-frame' }
+    let dispatchNavigation = startStubNavigationListener(t, {
+      ...stubFrames,
+      get: () => namedFrame,
+      reloadFrame,
+    })
+    let anchor = document.createElementNS('http://www.w3.org/2000/svg', 'a')
+    anchor.setAttribute('href', '/logo')
+    anchor.setAttribute('data-rmx-src', '/logo-frame')
+    anchor.setAttribute('data-rmx-target', 'details')
+    let intercept = mock.fn()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      navigationType: 'push',
+      signal: new AbortController().signal,
+      sourceElement: anchor,
+      destination: {
+        url: new URL('/logo', window.location.origin).href,
+        key: 'next',
+        getState: () => undefined,
+      },
+      intercept,
+      scroll() {},
+    })
+
+    let transition = dispatchNavigation(event)
+    await transition.runHandler()
+    await transition.succeed()
+
+    expect(intercept).toHaveBeenCalledTimes(1)
+    expect(reloadFrame).toHaveBeenCalledTimes(1)
+    expect(reloadFrame.mock.calls[0]?.arguments[0]).toBe(namedFrame)
+    expect(new URL(namedFrame.src, document.baseURI).pathname).toBe('/logo-frame')
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.element).toBe(undefined)
+  })
+
   it('intercepts anchors when sourceElement is a nested svg node', (t) => {
     let navigateListener: EventListener | undefined
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
@@ -1720,7 +1760,7 @@ describe('navigate', () => {
     let originalUrl = window.location.href
     let destination = new URL(originalUrl)
     destination.searchParams.set('frame-navigation', 'replace-link')
-    let reload = mock.fn(async (_options?: ResolveFrameOptions) => new AbortController().signal)
+    let reload = mock.fn(async (_options?: FrameNavigationOptions) => new AbortController().signal)
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
     startNavigationListener(controller.signal, {
@@ -1750,6 +1790,9 @@ describe('navigate', () => {
       expect(entryAfterNavigation.url).toBe(destination.href)
       expect(topFrame.src).toBe(destination.href)
       expect(reload).toHaveBeenCalledTimes(1)
+      // The replacement navigation has no source element of its own.
+      expect(reload.mock.calls[0]?.arguments[0]?.element).toBe(anchor)
+      expect(reload.mock.calls[0]?.arguments[0]?.form).toBeUndefined()
       expect(document.activeElement).toBe(anchor)
     } finally {
       if (didNavigate) await navigate(originalUrl, { history: 'replace' })
@@ -2608,14 +2651,15 @@ describe('form navigation', () => {
     document.body.textContent = ''
   })
 
-  it('replaces same-location POST submission history before commit when supported', async () => {
+  it('replaces same-location POST submission history before commit when supported', async (t) => {
     expect(typeof Reflect.get(window, 'NavigationPrecommitController')).toBe('function')
 
-    let reload = mock.fn(async (_options?: ResolveFrameOptions) => ({
+    let reload = mock.fn(async (_options?: FrameNavigationOptions) => ({
       signal: new AbortController().signal,
     }))
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
+    t.after(() => controller.abort())
     startNavigationListener(controller.signal, {
       top: topFrame,
       get: () => topFrame,
@@ -2645,18 +2689,19 @@ describe('form navigation', () => {
     expect(entryAfterSubmission.url).toBe(entryBeforeSubmission.url)
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
-
-    controller.abort()
+    expect(reload.mock.calls[0]?.arguments[0]?.element).toBe(form)
+    expect(reload.mock.calls[0]?.arguments[0]?.form).toBe(form)
   })
 
   it('replays same-location POST submissions as replace navigations without precommit support', async (t) => {
     stubGlobalField(t, 'NavigationPrecommitController', undefined)
 
-    let reload = mock.fn(async (_options?: ResolveFrameOptions) => ({
+    let reload = mock.fn(async (_options?: FrameNavigationOptions) => ({
       signal: new AbortController().signal,
     }))
     let topFrame = { src: '' } as FrameHandle
     let controller = new AbortController()
+    t.after(() => controller.abort())
     startNavigationListener(controller.signal, {
       top: topFrame,
       get: () => topFrame,
@@ -2686,8 +2731,8 @@ describe('form navigation', () => {
     expect(entryAfterSubmission.url).toBe(entryBeforeSubmission.url)
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
-
-    controller.abort()
+    expect(reload.mock.calls[0]?.arguments[0]?.element).toBe(form)
+    expect(reload.mock.calls[0]?.arguments[0]?.form).toBe(form)
   })
 
   it('replays a POST submission in the frame selected before cancelling it', async (t) => {
