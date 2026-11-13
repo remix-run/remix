@@ -223,12 +223,8 @@ Hydrate the submit button and use
 [`on('rmx:submission', handler)`](/api/component/#following-a-form-submission) to show when its save is in progress.
 The rest of the form stays server-rendered. The handler runs for submissions using that button,
 including Enter when it is the form's default button. Links and other forms don't start its pending
-state.
-
-Following the event's `finished` promise also handles validation responses that keep the same
-component mounted. A pending flag cleared only when the form is replaced would stay on “Saving…”.
-When you [send a request yourself with `fetch()`](/interactivity/#enhancing-forms-with-fetch-and-navigation),
-clear pending state when that request ends instead.
+state. Following the event's `finished` promise allows validation responses that keep the same
+component mounted.
 
 Put the button in the edit action's `public/` directory so the [asset server can serve it to the browser](/files-and-assets/#control-what-the-browser-can-reach):
 

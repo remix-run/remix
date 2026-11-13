@@ -5,16 +5,16 @@ import {
   FRAME_NODE,
   createComponentErrorEvent,
   createFrameHandle,
+  createFrameReloadStartEvent,
   getComponentError,
   type FrameContent,
   type FrameProps,
   type Handle,
   type RenderFn,
+  type ReloadOrigin,
 } from './component.ts'
-import { createFrameReloadStartEvent, type ReloadOrigin } from './reload-start-event.ts'
-import { createFormSubmissionEvent } from './form-submission-event.ts'
 import { invariant } from './invariant.ts'
-import { encodeFormDataAsSearchParams } from './form-navigation.ts'
+import { createFormSubmissionEvent, encodeFormDataAsSearchParams } from './form-navigation.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'

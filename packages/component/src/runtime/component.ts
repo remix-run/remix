@@ -1,7 +1,6 @@
 import type { ElementProps, ElementType, RemixNode, Renderable } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
-import type { FrameReloadStartEvent } from './reload-start-event.ts'
 
 /**
  * An `EventTarget` subclass with typed event maps.
@@ -268,6 +267,82 @@ export type FrameContent = ReadableStream<Uint8Array> | string | RemixNode
  * and browser URL for a top-frame navigation.
  */
 export type FrameResolution = FrameContent | Response
+
+/** Request and lifecycle details shared by frame reload and form submission events. */
+export interface ReloadDetails {
+  /**
+   * Source of the initiating reload, including any GET submission query. Inherited reloads keep
+   * their ancestor's source. Relative values use the document base URL.
+   */
+  readonly src: string
+  /** Effective HTTP method of the initiating reload, in lowercase. */
+  readonly method: string
+  /** Form encoding of the initiating POST reload. `null` for GET reloads. */
+  readonly encType: string | null
+  /**
+   * Submitted form entries for a POST reload. `null` for GET reloads.
+   * Shared with the initiating request; copy the entries before modifying them.
+   */
+  readonly formData: FormData | null
+  /** The actual submit button, or `null` when there is no submitter. */
+  readonly submitter: HTMLElement | null
+  /**
+   * Follows this reload like `frame.reload()`: resolves with its signal after rendering, or with
+   * an aborted signal on cancellation, supersession, or frame removal. Rejects on failure.
+   * On success, retained components have updated props. Descendant frame events track their
+   * own reload completion.
+   */
+  readonly finished: Promise<AbortSignal>
+}
+
+/**
+ * Event dispatched when a direct or ancestor-driven reload of a frame starts.
+ */
+export type FrameReloadStartEvent = Event &
+  ReloadDetails & {
+    /**
+     * The initiating HTML anchor, area, or owning form. `null` for SVG links, programmatic reloads,
+     * programmatic navigations, and history traversal.
+     */
+    readonly element: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement | null
+  }
+
+/**
+ * What a `reloadStart` event describes: the navigation that started the reload, if any, and the
+ * reload's outcome.
+ */
+export type FrameReloadStartEventInit = {
+  src: string
+  method: string
+  encType: string | null
+  formData?: FormData
+  element?: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
+  submitter?: HTMLElement | null
+  finished: ReloadDetails['finished']
+}
+
+// The initiating request, inherited by frames that reload while rendering its response.
+export type ReloadOrigin = Omit<FrameReloadStartEventInit, 'finished'>
+
+/**
+ * Creates a `reloadStart` event.
+ *
+ * @param init The reload's submission and outcome.
+ * @returns A `reloadStart` event carrying the reload's details.
+ */
+export function createFrameReloadStartEvent(
+  init: FrameReloadStartEventInit,
+): FrameReloadStartEvent {
+  return Object.assign(new Event('reloadStart'), {
+    src: init.src,
+    method: init.method,
+    encType: init.encType,
+    formData: init.formData ?? null,
+    element: init.element ?? null,
+    submitter: init.submitter ?? null,
+    finished: init.finished,
+  })
+}
 
 /**
  * Events emitted by frame handles during reloads.
