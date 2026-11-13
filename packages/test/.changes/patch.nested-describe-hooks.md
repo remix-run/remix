@@ -1,0 +1,1 @@
+Fix `beforeAll` and `afterAll` hooks running once per nested `describe` instead of once per scope. A hook registered in a parent `describe` (or at the top level) now runs once before the first suite in its scope and once after the last, rather than being repeated for every nested `describe`.
