@@ -14,11 +14,7 @@ export type AcceptEncodingInit = WeightedHeaderValueInit
  */
 export class AcceptEncoding extends WeightedHeaderValue {
   constructor(init?: string | AcceptEncodingInit) {
-    super(init, (range, encoding) => {
-      if (encoding === '*') return 0
-      if (range === encoding) return 1
-      return range === '*' ? 0 : null
-    })
+    super(init, (range, encoding) => (range === '*' || encoding === '*' ? 0 : null))
   }
 
   /**
@@ -30,13 +26,16 @@ export class AcceptEncoding extends WeightedHeaderValue {
 
   /**
    * Returns `true` if the header matches the given encoding (i.e. it is "acceptable"). The
-   * `identity` encoding is always acceptable.
+   * `identity` encoding is acceptable unless the header refuses it with `identity;q=0`, or with
+   * `*;q=0` and no `identity` entry.
    *
    * @param encoding The encoding to check
    * @returns `true` if the encoding is acceptable, `false` otherwise
    */
   accepts(encoding: string): boolean {
-    return encoding.toLowerCase() === 'identity' || super.accepts(encoding)
+    if (encoding.toLowerCase() === 'identity' && !this.has('identity') && !this.has('*'))
+      return true
+    return super.accepts(encoding)
   }
 
   /**

@@ -200,7 +200,7 @@ acceptLanguage.languages // ['en-us', 'en']
 acceptLanguage.weights // [1, 0.9]
 acceptLanguage.accepts('en-US') // true
 acceptLanguage.accepts('en-GB') // true (matches en)
-acceptLanguage.getWeight('en-GB') // 1 (matches en)
+acceptLanguage.getWeight('en-GB') // 0.9 (matches en)
 acceptLanguage.getPreferred(['en-US', 'en-GB', 'fr']) // 'en-US'
 
 // Modify and set header

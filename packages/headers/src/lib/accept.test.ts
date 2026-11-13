@@ -73,7 +73,7 @@ describe('Accept', () => {
     let header = new Accept('text/html,text/*;q=0.9,application/json;q=0.8')
     assert.equal(header.getWeight('text/html'), 1)
     assert.equal(header.getWeight('*/*'), 1)
-    assert.equal(header.getWeight('text/*'), 1)
+    assert.equal(header.getWeight('text/*'), 0.9)
     assert.equal(header.getWeight('text/plain'), 0.9)
     assert.equal(header.getWeight('application/json'), 0.8)
     assert.equal(header.getWeight('image/jpeg'), 0)

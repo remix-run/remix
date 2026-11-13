@@ -6,8 +6,8 @@ import { WeightedHeaderValue, type WeightedHeaderValueInit } from './weighted-he
 export type AcceptLanguageInit = WeightedHeaderValueInit
 
 /**
- * The value of a `Accept-Language` HTTP header. Language weights match by base language and
- * subtype, so `en` matches `en-US` and `en-GB`, and `*` matches all languages.
+ * The value of a `Accept-Language` HTTP header. Language weights match by subtag prefix, so `en`
+ * matches `en-US` and `en-GB`, and `*` matches all languages.
  *
  * [MDN `Accept-Language` Reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language)
  *
@@ -16,18 +16,17 @@ export type AcceptLanguageInit = WeightedHeaderValueInit
 export class AcceptLanguage extends WeightedHeaderValue {
   constructor(init?: string | AcceptLanguageInit) {
     super(init, (range, language) => {
-      let [rangeBase, rangeSubtype] = range.split('-')
-      let [base, subtype] = language.split('-')
-      if (
-        (rangeBase === base || rangeBase === '*' || base === '*') &&
-        (rangeSubtype === subtype || rangeSubtype === undefined || subtype === undefined)
-      ) {
-        return (
-          (rangeBase === base && base !== '*' ? 1 : 0) +
-          (rangeSubtype !== undefined && rangeSubtype === subtype ? 1 : 0)
-        )
+      let rangeTags = range.split('-')
+      let tags = language.split('-')
+      if (rangeTags[0] === '*' || tags[0] === '*') return 0
+
+      // A range matches a tag when one is a subtag prefix of the other, so `en` and `en-US` match
+      // each other but `zh-Hant-TW` and `zh-Hant-CN` do not. Longer shared prefixes are more specific.
+      let length = Math.min(rangeTags.length, tags.length)
+      for (let i = 0; i < length; i++) {
+        if (rangeTags[i] !== tags[i]) return null
       }
-      return null
+      return length
     })
   }
 

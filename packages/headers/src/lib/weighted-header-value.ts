@@ -8,9 +8,10 @@ import { isIterable, splitList } from './utils.ts'
 export type WeightedHeaderValueInit = Iterable<string | [string, number]> | Record<string, number>
 
 /**
- * Compares a lowercase header range (such as `text/*`) with a lowercase requested value (such as
- * `text/html`). Returns `null` when the range does not match, otherwise its specificity: when more
- * than one range matches, the most specific one determines the weight.
+ * Compares a lowercase header range (such as `text/*`) with a different lowercase requested value
+ * (such as `text/html`). Returns `null` when the range does not match, otherwise its specificity:
+ * when more than one range matches, the most specific one determines the weight. Exact matches are
+ * handled before the matcher runs and always win.
  */
 type RangeMatcher = (range: string, value: string) => number | null
 
@@ -91,14 +92,18 @@ export class WeightedHeaderValue implements HeaderValue, Iterable<[string, numbe
   }
 
   /**
-   * Gets the weight of a value, matching it against wildcard and partial ranges in the header. When
-   * several ranges match, the most specific one wins, so `gzip;q=0, *` gives `gzip` a weight of `0`.
+   * Gets the weight of a value. An exact entry wins; otherwise the value is matched against wildcard
+   * and partial ranges, and the most specific match wins, so `gzip;q=0, *` gives `gzip` a weight of
+   * `0`.
    *
    * @param value The value to get
    * @returns The weight of the value, or `0` if it is not in the header
    */
   getWeight(value: string): number {
     let lower = value.toLowerCase()
+    let exactWeight = this.#map.get(lower)
+    if (exactWeight !== undefined) return exactWeight
+
     let bestSpecificity = -1
     let bestWeight = 0
 

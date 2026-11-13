@@ -88,6 +88,13 @@ describe('Accept-Encoding', () => {
   it('uses an explicit identity weight over the wildcard', () => {
     let header = new AcceptEncoding('identity;q=0, *')
     assert.equal(header.getWeight('identity'), 0)
+    assert.equal(header.accepts('identity'), false)
+  })
+
+  it('accepts identity unless the header refuses it', () => {
+    assert.equal(new AcceptEncoding('gzip').accepts('identity'), true)
+    assert.equal(new AcceptEncoding('gzip, *;q=0').accepts('identity'), false)
+    assert.equal(new AcceptEncoding('identity, *;q=0').accepts('identity'), true)
   })
 
   it('gets the preferred encoding', () => {
