@@ -1003,7 +1003,7 @@ On the server, a client entry renders like any other component. Remix also seria
 - The server renderer maps entry IDs to the URLs the browser loads. See `resolveClientEntry` in [`remix/component/server`](./server/README.md).
 - Each client entry hydrates on its own. A client entry inside another one can read its ancestor's context, but sibling client entries don't share context.
 - Hydration adopts the server-rendered DOM. Remix patches mismatched attributes and adds missing ones, but leaves extra attributes alone. When an element's type doesn't match, Remix skips one node to look for a match, then recreates the element.
-- Client entries inside a `data-rmx-preserve-dom` element hydrate normally, but stop receiving new server props on frame reloads. See [Preserving Client-Owned DOM](#preserving-client-owned-dom).
+- Client entries inside an element with `data-rmx-preserve-dom` or `data-rmx-client-dom` hydrate normally, but stop receiving new server props on frame reloads. See [Preserving Client-Owned DOM](#preserving-client-owned-dom).
 
 Client entry props cross from the server to the browser, so they must be serializable:
 
@@ -1372,9 +1372,22 @@ Use `data-rmx-preserve-dom` on the smallest element whose live DOM should belong
 </pagefind-ui>
 ```
 
-- The runtime still renders the element's children during server rendering and hydrates any initial client entries inside it. The attribute only affects later frame reloads. When incoming frame HTML has `data-rmx-preserve-dom` on a matched element, the runtime keeps that element's current attributes and children instead of applying incoming changes below it.
-- Add `data-rmx-key` when the element can move among siblings, so reloads match the same live element before falling back to matching by position.
-- Avoid wrapping Remix-owned UI that should keep receiving server-driven frame updates. A client entry inside `data-rmx-preserve-dom` hydrates from the initial HTML, but later frame reloads won't patch new server-rendered children or props through the preserved element. Put the client entry outside the preserved element when it needs future frame data, or put `data-rmx-preserve-dom` inside the client entry around only the imperative DOM.
+Server rendering and initial hydration still process the element and its children. On later frame reloads, a matched element with `data-rmx-preserve-dom` in incoming HTML keeps its live attributes and children. The server controls its lifetime: omitting it removes it and disposes any client entries inside. Removing the attribute from incoming HTML resumes normal reconciliation. Use `data-rmx-key` when a server widget can move among siblings.
+
+Use the boolean `data-rmx-client-dom` attribute when client code owns the whole element, such as a portal host appended to an arbitrary container:
+
+```ts
+let host = document.createElement('div')
+host.setAttribute('data-rmx-client-dom', '')
+document.body.append(host)
+```
+
+- Frame reloads leave client-owned elements connected without matching them to incoming HTML, including elements with the same `data-rmx-key`. Their live attributes and children stay intact, preserving focus, transitions, and scroll position. New siblings are inserted before trailing client-owned hosts.
+- Ownership comes from the presence of `data-rmx-client-dom`. An element can be claimed by client code even if it was originally server-rendered. Server rendering and initial hydration still process initial content with this attribute; subsequent server responses should omit that host.
+- Client code must remove the element when its owner is done. To return it to server reconciliation, remove `data-rmx-client-dom` before the next reload. The server can then match or remove it normally. If both attributes are present, client ownership takes precedence; after removing `data-rmx-client-dom`, `data-rmx-preserve-dom` still preserves matched live DOM when incoming HTML includes it.
+- Removing a host's parent still removes the host. Keep portal destinations under a stable parent when their content should survive frame reloads.
+
+Avoid wrapping Remix-owned UI that should keep receiving server-driven frame updates. A client entry inside an element with either attribute hydrates from the initial HTML, but later frame reloads won't patch new server-rendered children or props through that element. Put the client entry outside the element when it needs future frame data, or put the attribute inside the client entry around only the imperative DOM.
 
 ### Preserving Client-Owned Attributes
 

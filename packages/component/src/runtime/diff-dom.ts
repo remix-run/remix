@@ -47,6 +47,7 @@ type MarkerKind = 'frame-start' | 'frame-end' | 'virtual-root-start' | 'virtual-
 type NodeSiblingUnit = {
   kind: 'node'
   node: Node
+  clientOwned: boolean
   startIndex: number
   endIndex: number
 }
@@ -72,6 +73,7 @@ type SiblingDiff = {
 }
 
 const REMIX_PRESERVE_DOM_ATTRIBUTE = 'data-rmx-preserve-dom'
+const REMIX_CLIENT_DOM_ATTRIBUTE = 'data-rmx-client-dom'
 
 export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
   let parent = curr[0]?.parentNode ?? context.regionParent ?? null
@@ -200,6 +202,10 @@ export function diffElementAttributes(current: Element, next: Element): void {
 }
 
 function shouldPreserveDomElement(current: Element, next: Element): boolean {
+  if (next.hasAttribute(REMIX_CLIENT_DOM_ATTRIBUTE)) {
+    current.setAttribute(REMIX_CLIENT_DOM_ATTRIBUTE, '')
+    return true
+  }
   if (!next.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) return false
   if (!current.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) {
     current.setAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE, '')
@@ -331,8 +337,8 @@ function createSiblingDiff(
   nextNodes: Node[],
   parent: ParentNode,
 ): SiblingDiff {
-  let currentUnits = parseSiblingUnits(currentNodes)
-  let nextUnits = parseSiblingUnits(nextNodes)
+  let currentUnits = parseSiblingUnits(currentNodes, 'current')
+  let nextUnits = parseSiblingUnits(nextNodes, 'next')
   return {
     parent,
     currentNodes,
@@ -351,6 +357,7 @@ function matchKeyedSiblingUnits(diff: SiblingDiff, context: FrameContext): void 
   let keyToIndex = new Map<string, number>()
 
   for (let i = 0; i < currentUnits.length; i++) {
+    if (isClientOwnedUnit(currentUnits[i])) continue
     let key = getSiblingUnitKey(currentUnits[i])
     if (key !== undefined) keyToIndex.set(key, i)
   }
@@ -395,7 +402,9 @@ function matchPositionalSiblingUnits(diff: SiblingDiff): void {
 
   let remainingCurrentIndexes: number[] = []
   for (let i = 0; i < currentUnits.length; i++) {
-    if (!used[i]) remainingCurrentIndexes.push(i)
+    if (!used[i] && !isClientOwnedUnit(currentUnits[i])) {
+      remainingCurrentIndexes.push(i)
+    }
   }
 
   let remainingNextIndexes: number[] = []
@@ -436,7 +445,12 @@ function matchShiftedHeadUnits(diff: SiblingDiff): void {
   let currentIndexesByIdentity = new Map<string, number[]>()
   for (let i = 0; i < currentUnits.length; i++) {
     let currentUnit = currentUnits[i]
-    if (used[i] || currentUnit.kind !== 'node' || getSiblingUnitKey(currentUnit) !== undefined) {
+    if (
+      used[i] ||
+      currentUnit.kind !== 'node' ||
+      currentUnit.clientOwned ||
+      getSiblingUnitKey(currentUnit) !== undefined
+    ) {
       continue
     }
     let identity = getUnkeyedNodeIdentity(currentUnit.node)
@@ -515,11 +529,12 @@ function commitSiblingUnits(diff: SiblingDiff, context: FrameContext): SiblingUn
 }
 
 // Remove obsolete siblings before placement so they do not force surviving
-// nodes to move and lose focus.
+// nodes to move and lose focus. Explicitly client-owned elements survive omission.
 function removeUnusedSiblingUnits(diff: SiblingDiff, context: FrameContext): void {
   let { parent, currentUnits, used } = diff
   for (let i = 0; i < currentUnits.length; i++) {
-    if (!used[i]) removeSiblingUnit(currentUnits[i], parent, context)
+    if (!used[i] && !isClientOwnedUnit(currentUnits[i]))
+      removeSiblingUnit(currentUnits[i], parent, context)
   }
 }
 
@@ -531,9 +546,17 @@ function placeSiblingUnits(
   committed: SiblingUnit[],
   regionTailRef: ChildNode | null,
 ): void {
-  let { parent } = diff
+  let { parent, currentUnits, used } = diff
   let stable = getStableCommittedIndexes(diff, committed)
+
+  // Unmatched client-owned elements stay in place. Insert before the trailing ones so
+  // client-owned nodes keep trailing the region, instead of appending after them.
   let anchor: Node | null = regionTailRef
+  for (let i = currentUnits.length - 1; i >= 0 && !used[i]; i--) {
+    let unit = currentUnits[i]
+    if (unit.kind === 'node' && isClientOwnedUnit(unit)) anchor = unit.node
+  }
+
   for (let i = committed.length - 1; i >= 0; i--) {
     let unit = committed[i]
     let first = getSiblingUnitFirstNode(unit)
@@ -653,7 +676,7 @@ function getUnkeyedNodeIdentity(node: Node): string | undefined {
   }
 }
 
-function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
+function parseSiblingUnits(nodes: Node[], source: 'current' | 'next'): SiblingUnit[] {
   let units: SiblingUnit[] = []
 
   for (let i = 0; i < nodes.length; i++) {
@@ -680,7 +703,14 @@ function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
 
     invariant(!isHydrationEnd(node), 'Unexpected hydration end marker')
     invariant(!isFrameEndMarker(node), 'Unexpected frame end marker')
-    units.push({ kind: 'node', node, startIndex: i, endIndex: i })
+    units.push({
+      kind: 'node',
+      node,
+      clientOwned:
+        source === 'current' && isElement(node) && node.hasAttribute(REMIX_CLIENT_DOM_ATTRIBUTE),
+      startIndex: i,
+      endIndex: i,
+    })
   }
 
   return units
@@ -739,8 +769,16 @@ function removeSiblingUnit(unit: SiblingUnit, parent: ParentNode, context: Frame
   }
 }
 
+function isClientOwnedUnit(unit: SiblingUnit): boolean {
+  return unit.kind === 'node' && unit.clientOwned
+}
+
 function isPreservedDomElement(node: Node): node is Element {
-  return isElement(node) && node.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)
+  return (
+    isElement(node) &&
+    (node.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE) ||
+      node.hasAttribute(REMIX_CLIENT_DOM_ATTRIBUTE))
+  )
 }
 
 function nodeTypesComparable(a: Node, b: Node): boolean {

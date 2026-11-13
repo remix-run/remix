@@ -166,11 +166,12 @@ describe('hydration', () => {
       expect(existingDiv.getAttribute('data-value')).toBe('42')
     })
 
-    it('hydrates data-rmx-document and data-rmx-preserve-dom as boolean attributes', async () => {
+    it('renders, hydrates, and updates Remix boolean attributes by presence', async (t) => {
       let html = await renderToString(
-        <a href="/login" data-rmx-preserve-dom={true} data-rmx-document={false} />,
+        <a href="/login" data-rmx-preserve-dom data-rmx-client-dom data-rmx-document={false} />,
       )
-      expect(html).toBe('<a href="/login" data-rmx-preserve-dom></a>')
+      expect(html).toBe('<a href="/login" data-rmx-preserve-dom data-rmx-client-dom></a>')
+      expect(await renderToString(<div data-rmx-client-dom={false} />)).toBe('<div></div>')
       container.innerHTML = html
       let serverHtml = container.innerHTML
 
@@ -178,11 +179,22 @@ describe('hydration', () => {
       invariant(existingAnchor)
 
       let root = createRoot(container)
-      root.render(<a href="/login" data-rmx-preserve-dom={true} data-rmx-document={false} />)
+      t.after(() => root.dispose())
+      root.render(
+        <a href="/login" data-rmx-preserve-dom data-rmx-client-dom data-rmx-document={false} />,
+      )
       root.flush()
 
       expect(container.querySelector('a')).toBe(existingAnchor)
       expect(container.innerHTML).toBe(serverHtml)
+
+      root.render(<a href="/login" data-rmx-preserve-dom data-rmx-client-dom={false} />)
+      root.flush()
+      expect(existingAnchor.hasAttribute('data-rmx-client-dom')).toBe(false)
+      expect(existingAnchor.hasAttribute('data-rmx-preserve-dom')).toBe(true)
+      root.render(<a href="/login" data-rmx-preserve-dom data-rmx-client-dom />)
+      root.flush()
+      expect(existingAnchor.getAttribute('data-rmx-client-dom')).toBe('')
     })
 
     it('hydrates and updates MathML boolean attributes as strings', async (t) => {
