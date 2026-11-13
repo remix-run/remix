@@ -4553,6 +4553,47 @@ describe('stream', () => {
       expect(resolvedTemplate?.innerHTML).toContain('<div id="resolved">Resolved</div>')
     })
 
+    it('keeps multibyte characters split across frame stream chunks', async () => {
+      let bytes = new TextEncoder().encode('<p>café</p>')
+      let split = bytes.indexOf(0xc3) + 1
+      let stream = renderToStream(<Frame src="/x" />, {
+        resolveFrame() {
+          return new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(bytes.slice(0, split))
+              controller.enqueue(bytes.slice(split))
+              controller.close()
+            },
+          })
+        },
+      })
+      let result = await drain(stream)
+
+      // Only the first chunk renders inside the frame; later chunks follow as raw bytes.
+      expect(result).toContain('<p>caf<!-- /rmx:f -->')
+      expect(result).toContain('é</p>')
+      expect(result).not.toContain('\uFFFD')
+    })
+
+    it('keeps multibyte characters that start in a leading whitespace chunk', async () => {
+      let bytes = new TextEncoder().encode(' é<p>Resolved</p>')
+      let stream = renderToStream(<Frame src="/x" />, {
+        resolveFrame() {
+          return new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(bytes.slice(0, 2))
+              controller.enqueue(bytes.slice(2))
+              controller.close()
+            },
+          })
+        },
+      })
+      let result = await drain(stream)
+
+      expect(result).toContain('é<p>Resolved</p>')
+      expect(result).not.toContain('\uFFFD')
+    })
+
     it('adds frame scripts for blocking frames', async () => {
       let stream = renderToStream(<Frame src="/x" />, {
         resolveFrame: () => '<div>Resolved</div>',
