@@ -359,12 +359,14 @@ export function fetchFrame(
   target: string | undefined,
   init: RequestInit,
   contentType?: string,
-  fetchImpl: typeof globalThis.fetch = globalThis.fetch,
+  fetchImpl: (url: string, init: RequestInit) => Promise<Response> = globalThis.fetch,
 ): Promise<Response> {
+  let url = new URL(src, document.baseURI)
+  url.hash = ''
   let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
   if (target != null) headers.set('X-Remix-Target', target)
   if (contentType) headers.set('Content-Type', contentType)
-  return fetchImpl(src, { ...init, headers, mode: 'same-origin' })
+  return fetchImpl(url.href, { ...init, headers, mode: 'same-origin' })
 }
 
 export function createDefaultPrefetch(

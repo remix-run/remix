@@ -400,7 +400,7 @@ describe('defaultResolveFrame commit', () => {
         if (signals.length === 1) initial.resolve()
         else reloaded.resolve()
       },
-      async (input) => new Response(`<p id="details-value">${String(input)}</p>`),
+      async (input) => new Response(`<p id="details-value">${new URL(String(input)).pathname}</p>`),
     )
     await fixture.app.frames.top.replace(jsx(Frame, { name: 'details', src: '/details' }))
     await initial.promise
@@ -429,10 +429,10 @@ describe('defaultResolveFrame commit', () => {
         if (++committed === 3) completed.resolve()
       },
       async (input) => {
-        if (String(input) === '/nested') {
+        if (new URL(String(input)).pathname === '/nested') {
           return new Response('<p id="nested-value">nested</p>')
         }
-        if (String(input) === '/details') {
+        if (new URL(String(input)).pathname === '/details') {
           return spaResponse.create(jsx(Frame, { name: 'nested', src: '/nested' }))
         }
         return spaResponse.create(
@@ -478,7 +478,7 @@ describe('defaultResolveFrame commit', () => {
         else refreshed.resolve()
       },
       async (input) => {
-        if (String(input) === '/lazy') return new Response('<p>Loaded</p>')
+        if (new URL(String(input)).pathname === '/lazy') return new Response('<p>Loaded</p>')
         return new Response(
           await renderToString(
             jsx('html', {
@@ -541,7 +541,7 @@ describe('defaultResolveFrame commit', () => {
         return committed
       },
       async (input) => {
-        if (String(input) === '/client-child') {
+        if (new URL(String(input)).pathname === '/client-child') {
           return new Response('<p id="client-value">Client content</p>')
         }
         let response = new Response(html)
@@ -575,7 +575,9 @@ describe('defaultResolveFrame commit', () => {
         return commitFrame()
       },
       async (input) => {
-        if (String(input) === '/client-child') return new Response('<p>Stale content</p>')
+        if (new URL(String(input)).pathname === '/client-child') {
+          return new Response('<p>Stale content</p>')
+        }
         if (String(input).includes('latest')) {
           requested.resolve()
           await release.promise

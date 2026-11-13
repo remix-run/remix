@@ -1,4 +1,4 @@
-Customize frame requests and rendering with `defaultResolveFrame` and its optional `{ fetch, commit }` overrides. The `fetch` override receives the prepared URL and request settings; `commit(commitFrame, { to, response, signal })` wraps rendering for userland view transitions. Form encoding, frame headers, response validation, and streaming keep their default behavior.
+Customize frame requests and rendering with `defaultResolveFrame` and its optional `{ fetch, commit }` overrides. The `fetch` override receives an absolute URL without a fragment and prepared `RequestInit`; `commit(commitFrame, { to, response, signal })` wraps rendering for userland view transitions. Form encoding, frame headers, response validation, and streaming keep their default behavior.
 
 Resolvers receive the original browser `options.transition` for navigation-driven loads, including descendant client frames. Independent loads and `frame.reload()` leave it undefined. The commit callback receives the destination after redirects as `to`, and `commitFrame()` waits for rendering and navigation completion, including followed redirects.
 

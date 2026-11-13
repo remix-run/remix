@@ -79,11 +79,12 @@ export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
 /** Request and rendering overrides used by {@link defaultResolveFrame}. */
 export interface DefaultResolveFrameOverrides {
   /**
-   * Receives the URL and prepared request settings, including form encoding, frame headers,
-   * abort signal, and `same-origin` mode. Can modify the request or return a cached response
+   * Receives an absolute URL string without a fragment and prepared request settings, including
+   * form encoding, frame headers, abort signal, and `same-origin` mode. Relative sources resolve
+   * against `document.baseURI`. Can modify the request or return a cached response
    * (defaults to `globalThis.fetch`).
    */
-  fetch?: typeof globalThis.fetch
+  fetch?(url: string, init: RequestInit): Promise<Response>
   /** Wraps the frame's default commit when Remix renders the returned response. */
   commit?: FrameCommit
 }

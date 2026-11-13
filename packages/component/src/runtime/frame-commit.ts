@@ -1,5 +1,5 @@
 /** Context for a custom frame commit callback. */
-export interface FrameCommitOptions {
+export interface FrameCommitContext {
   /** Resolved frame destination after redirects, or the requested source when not redirected. */
   to: string
   /** Original frame response, still unconsumed when the callback starts. */
@@ -20,12 +20,12 @@ export interface FrameCommitOptions {
  * on the runtime.
  *
  * @param commitFrame Starts the default frame commit and waits for the completed update.
- * @param options Resolved destination, response, and cancellation context for this update.
+ * @param context Resolved destination, response, and cancellation context for this update.
  * @returns Optional asynchronous work surrounding the commit, such as an animation.
  */
 export type FrameCommit = (
   commitFrame: () => Promise<void>,
-  options: FrameCommitOptions,
+  context: FrameCommitContext,
 ) => void | Promise<void>
 
 export interface FrameCommitNavigation {

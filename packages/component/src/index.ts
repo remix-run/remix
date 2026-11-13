@@ -3,7 +3,7 @@
 // -- Roots --
 export { defaultResolveFrame, run } from './runtime/run.ts'
 export type { DefaultResolveFrameOverrides } from './runtime/run.ts'
-export type { FrameCommit, FrameCommitOptions } from './runtime/frame-commit.ts'
+export type { FrameCommit, FrameCommitContext } from './runtime/frame-commit.ts'
 export type { AppRuntime, AppRuntimeEventMap, RunInit } from './runtime/run.ts'
 export type { ComponentErrorEvent } from './runtime/component.ts'
 

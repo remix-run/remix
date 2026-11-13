@@ -11,6 +11,10 @@ describe('defaultResolveFrame', () => {
   })
 
   it('passes the prepared frame request to a custom fetch implementation', async (t) => {
+    let base = document.createElement('base')
+    base.href = new URL('/frames/', window.location.href).href
+    document.head.prepend(base)
+    t.after(() => base.remove())
     let response = new Response('<p>Saved</p>', {
       headers: { 'Content-Security-Policy': "script-src 'nonce-response'" },
     })
@@ -21,11 +25,11 @@ describe('defaultResolveFrame', () => {
     formData.set('name', 'Ada Lovelace')
 
     let result = await defaultResolveFrame(
-      '/account',
+      './account?tab=profile#details',
       { target: 'details', method: 'post', formData, signal: controller.signal },
       {
-        fetch(url, init) {
-          let headers = new Headers(init?.headers)
+        fetch(url: string, init: RequestInit) {
+          let headers = new Headers(init.headers)
           headers.set('Authorization', 'Bearer example')
           return fetch(url, {
             ...init,
@@ -41,7 +45,7 @@ describe('defaultResolveFrame', () => {
     expect(result.bodyUsed).toBe(false)
     expect(commit).not.toHaveBeenCalled()
     let [src, init] = fetchMock.mock.calls[0]!.arguments
-    expect(src).toBe('/account')
+    expect(src).toBe(new URL('/frames/account?tab=profile', window.location.href).href)
     expect(init?.cache).toBe('no-cache')
     expect(init?.method).toBe('post')
     expect(init?.signal).toBe(controller.signal)
@@ -53,6 +57,19 @@ describe('defaultResolveFrame', () => {
     expect(headers.get('X-Remix-Frame')).toBe('true')
     expect(headers.get('X-Remix-Target')).toBe('details')
     expect(headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
+  })
+
+  it('preserves an absolute frame URL under a cross-origin document base', async (t) => {
+    let base = document.createElement('base')
+    base.href = 'https://cdn.example.com/assets/'
+    document.head.prepend(base)
+    t.after(() => base.remove())
+    let fetchMock = t.mock.method(globalThis, 'fetch', async () => new Response('<p>Ready</p>'))
+    let src = `${window.location.origin}//frame?version=1`
+
+    await defaultResolveFrame(`${src}#details`, undefined, { fetch })
+
+    expect(fetchMock.mock.calls[0]!.arguments[0]).toBe(src)
   })
 
   it('lets Fetch encode multipart bodies and omits a target for unnamed frames', async (t) => {

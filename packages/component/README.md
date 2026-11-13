@@ -1274,7 +1274,7 @@ run({
 
 `options.transition` is the original browser `NavigationTransition` for a navigation-driven load. Its `navigationType` is `push`, `replace`, `traverse`, or `reload`, and `from` identifies the history entry being left. Client frames loaded while rendering the response inherit it. Independent loads and `frame.reload()` leave it undefined, even while another navigation is active.
 
-The `fetch` override receives the URL and prepared `RequestInit`, including the encoded form body, frame headers, abort signal, and `same-origin` mode. Forward these settings as in the example to preserve the default request behavior. The resolver validates the returned response. Custom fetch implementations own any changes to request and redirect policies.
+The `fetch` override receives an absolute URL string without a fragment and an always-present `RequestInit`, including the encoded form body, frame headers, abort signal, and `same-origin` mode. Relative sources resolve against `document.baseURI`. Forward these settings as in the example to preserve the default request behavior. The resolver validates the returned response. Custom fetch implementations own any changes to request and redirect policies.
 
 For application-managed storage with the Cache API, construct `new Request(url, init)` as a cache key and return a stored `Response`. The app owns cache writes, invalidation, and partitioning by user.
 
