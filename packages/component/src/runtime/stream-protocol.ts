@@ -42,7 +42,7 @@ export function isHydrationEnd(node: Node | null | undefined): node is Comment {
 }
 
 export function isFrameTemplateEnd(node: Node | null | undefined): node is Comment {
-  return isCommentNode(node) && node.data.trim() === FRAME_TEMPLATE_END_MARKER
+  return isCommentNode(node) && node.data === FRAME_TEMPLATE_END_MARKER
 }
 
 export function getFrameId(start: Comment): string {
@@ -56,9 +56,7 @@ export function getHydrationId(start: Comment): string {
 }
 
 function isStartMarker(node: Node | null | undefined, prefix: string): node is Comment {
-  if (!isCommentNode(node)) return false
-  let data = node.data.trim()
-  return data.length > prefix.length && data.startsWith(prefix)
+  return isCommentNode(node) && node.data.trim().startsWith(prefix)
 }
 
 const FLUSH_MARKER_PATTERN = /<!--\s*rmx:flush\s+(document|fragment)\s*-->/g

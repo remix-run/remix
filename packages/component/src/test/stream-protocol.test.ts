@@ -4,6 +4,7 @@ import { createElement } from '../runtime/create-element.ts'
 import { Frame } from '../runtime/frame.ts'
 import {
   getFrameId,
+  getHydrationId,
   isFrameEnd,
   isFrameStart,
   isFrameTemplateEnd,
@@ -46,14 +47,16 @@ describe('stream protocol', () => {
     }
   })
 
-  it('does not treat start markers without an id as markers', () => {
-    expect(isFrameStart(document.createComment(' rmx:f: '))).toBe(false)
-    expect(isHydrationStart(document.createComment(' rmx:h: '))).toBe(false)
-    expect(() => getFrameId(document.createComment(' rmx:f: '))).toThrow()
+  it('pairs start markers without an id with their end markers', () => {
+    let start = document.createComment(' rmx:h: ')
+
+    expect(isHydrationStart(start)).toBe(true)
+    expect(getHydrationId(start)).toBe('')
+    expect(isFrameStart(document.createComment(' rmx:f: '))).toBe(true)
   })
 
-  it('trims padding around the frame template end marker', () => {
+  it('only matches the unpadded frame template end marker the server writes', () => {
     expect(isFrameTemplateEnd(document.createComment('rmx:template-end'))).toBe(true)
-    expect(isFrameTemplateEnd(document.createComment(' rmx:template-end '))).toBe(true)
+    expect(isFrameTemplateEnd(document.createComment(' rmx:template-end '))).toBe(false)
   })
 })

@@ -39,7 +39,7 @@ import {
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
-import { isFrameStart, isHydrationStart } from './stream-protocol.ts'
+import { isCommentNode, isFrameStart, isHydrationStart } from './stream-protocol.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 
@@ -1181,7 +1181,7 @@ function insert(
     vParent.kind !== 'root' &&
     node.kind === 'component' &&
     isEntry(node.type) &&
-    hydrationNode instanceof Comment
+    isCommentNode(hydrationNode)
   ) {
     let runtime = getFrameRuntime(frame)
     let pending = runtime?.pendingClientEntries.get(hydrationNode)
