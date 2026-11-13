@@ -217,6 +217,7 @@ describe('cart handlers', () => {
       let response = await router.fetch(
         requestWithSession('https://remix.run/cart/items', session, {
           method: 'POST',
+          headers: { 'X-Remix-Frame': 'true' },
           body: new URLSearchParams({ bookId: '1', quantity }),
         }),
       )
@@ -234,6 +235,36 @@ describe('cart handlers', () => {
     assertContains(await missing.text(), 'That book is no longer in your cart.')
     let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
     assertContains(await cart.text(), 'Total: $16.99')
+  })
+
+  it('redirects native mutation failures to the cart and displays feedback once', async () => {
+    let session = await cartSession()
+    for (let [body, message] of [
+      [new URLSearchParams({ bookId: '1', quantity: '1.5' }), 'Invalid quantity'],
+      [new URLSearchParams({ bookId: '2', quantity: '3' }), 'That book is no longer in your cart.'],
+      [new URLSearchParams({ bookId: '999999', _method: 'DELETE' }), 'Book not found.'],
+    ] satisfies Array<[URLSearchParams, string]>) {
+      let response = await router.fetch(
+        requestWithSession('https://remix.run/cart/items', session, {
+          method: 'POST',
+          body,
+        }),
+      )
+      assert.equal(response.status, 303)
+      assert.equal(response.headers.get('Location'), '/cart')
+
+      let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
+      assert.equal(cart.status, 200)
+      let html = await cart.text()
+      assertContains(html, 'role="alert"')
+      assertContains(html, message)
+      assertContains(html, 'Total: $16.99')
+
+      let reloaded = await router.fetch(requestWithSession('https://remix.run/cart', session))
+      let reloadedHtml = await reloaded.text()
+      assert.ok(!reloadedHtml.includes('role="alert"'))
+      assertContains(reloadedHtml, 'Total: $16.99')
+    }
   })
 
   it('DELETE /cart/items removes only the requested item and is safe to retry', async () => {

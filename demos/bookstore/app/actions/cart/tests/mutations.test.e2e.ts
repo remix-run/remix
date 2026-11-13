@@ -355,7 +355,7 @@ describe('cart submissions', () => {
     )
   })
 
-  it('submits cart forms with JavaScript disabled and returns to the current page', async (t) => {
+  it('keeps native submissions on their document URLs and displays cart errors once', async (t) => {
     let router = await createTestRouter()
     let mutations: string[] = []
     let server = await createTestServer(async (request) => {
@@ -385,7 +385,34 @@ describe('cart submissions', () => {
     await book.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
     mutations.length = 0
     await page.goto('/cart')
-    await page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' }).fill('2')
+    let quantity = page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' })
+    await quantity.fill('1.5')
+    await quantity.evaluate((input: HTMLInputElement) => {
+      if (!input.form) throw new Error('Missing quantity form')
+      input.form.noValidate = true
+    })
+    await page.getByRole('button', { name: 'Update', exact: true }).click()
+    await page.getByRole('alert').filter({ hasText: 'Invalid quantity' }).waitFor()
+    assert.deepEqual(mutations, ['/cart/items 303'])
+    assert.equal(new URL(page.url()).pathname, '/cart')
+    assert.equal(await quantity.inputValue(), '1.5')
+    assert.equal(await quantity.getAttribute('aria-invalid'), 'true')
+    let errorId = await quantity.getAttribute('aria-describedby')
+    assert.ok(errorId)
+    assert.equal(await page.locator(`[id="${errorId}"]`).textContent(), 'Invalid quantity')
+    assert.equal(
+      await quantity.evaluate((input) => getComputedStyle(input).borderColor),
+      'rgb(220, 38, 38)',
+    )
+    await page.getByText('Total: $16.99', { exact: true }).waitFor()
+
+    await page.reload()
+    assert.equal(new URL(page.url()).pathname, '/cart')
+    assert.equal(await quantity.inputValue(), '1')
+    assert.equal(await quantity.getAttribute('aria-invalid'), null)
+    assert.equal(await page.getByRole('alert').count(), 0)
+    mutations.length = 0
+    await quantity.fill('2')
     await page.getByRole('button', { name: 'Update', exact: true }).click()
     await page.getByText('Total: $33.98', { exact: true }).waitFor()
     assert.deepEqual(mutations, ['/cart/items 303'])

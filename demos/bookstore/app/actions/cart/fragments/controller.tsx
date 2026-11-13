@@ -1,5 +1,6 @@
 import { css } from 'remix/component'
 import { createController, type RouterTypes } from 'remix/router'
+import * as s from 'remix/data-schema'
 import * as fd from 'remix/data-schema/experimental/form'
 import type { FormSubmission } from 'remix/data-schema/experimental/form'
 import { redirect } from 'remix/response/redirect'
@@ -10,16 +11,24 @@ import { addToCart, getCartTotal, removeFromCart } from '../../../utils/cart.ts'
 import { getCurrentCart, getCurrentUserSafely } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
 import { removeCartItem, updateCart } from '../cart-api.ts'
-import { CartPage } from '../page.tsx'
 import { CartButton } from './public/cart-button.tsx'
 import { CartItems } from './public/cart-items.tsx'
 import { CartButtonForm, CartItemRemoveForm, CartItemUpdateForm } from './public/schema.ts'
 
 type CartError = { status: number; message: string; submission?: FormSubmission }
 
+const cartErrorSchema = s.object({
+  status: s.number(),
+  message: s.string(),
+  submission: s.optional(fd.submissionSchema(CartItemUpdateForm)),
+})
+
 export default createController(routes.cart.fragments, {
   actions: {
-    items: renderCartItems,
+    items(context) {
+      let error = s.parseSafe(cartErrorSchema, context.flashUntilRead.get('cartError'))
+      return renderCartItems(context, error.success ? error.value : undefined)
+    },
 
     async itemsUpdate(context) {
       let { db, formData, session } = context
@@ -116,10 +125,7 @@ function mutationResponse(context: RouterTypes['context'], error?: CartError): R
     return renderCartItems(context, error)
   }
   if (error) {
-    return context.render(<CartPage error={error.message} />, {
-      status: error.status,
-      headers: { 'Cache-Control': 'no-store' },
-    })
+    context.flashUntilRead.set('cartError', error)
   }
   return redirect(routes.cart.index.href(), 303)
 }

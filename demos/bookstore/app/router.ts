@@ -33,6 +33,7 @@ import rootController from './actions/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
+import { flashUntilRead } from './middleware/flash-until-read.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
@@ -66,6 +67,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
       formData({ uploadHandler }),
       methodOverride(),
       session(cookie, storage),
+      flashUntilRead(),
       asyncContext(),
       loadDatabase(),
       loadAssetEntry(),
