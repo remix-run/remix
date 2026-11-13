@@ -7,8 +7,10 @@ import {
 import { createMatcher } from 'remix/route-pattern/match'
 
 import { routes } from '../../routes.ts'
+import { installDebugBoundaries } from './debug-boundaries.ts'
 
 const bookDetailsMatcher = createMatcher(routes.books.show.pattern)
+const disposeDebugBoundaries = installDebugBoundaries()
 
 export const app = run({
   async loadModule(moduleUrl: string, exportName: string) {
@@ -68,6 +70,7 @@ export const app = run({
 })
 
 if (import.meta.hot) {
+  import.meta.hot.dispose(disposeDebugBoundaries)
   import.meta.hot.on('server:update', async () => {
     try {
       await app.ready()
