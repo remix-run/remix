@@ -163,6 +163,28 @@ describe('vnode rendering', () => {
       expect(div.namespaceURI).toBe('http://www.w3.org/1999/xhtml')
     })
 
+    it('creates the foreignObject element itself in the SVG namespace', () => {
+      let container = document.createElement('div')
+      let { render } = createRoot(container)
+
+      render(
+        <svg>
+          <foreignObject x={0} y={0} width={200} height={100}>
+            <div id="inside">Hello from HTML</div>
+          </foreignObject>
+        </svg>,
+      )
+
+      let foreignObject = container.querySelector('svg')?.firstElementChild
+      invariant(foreignObject)
+      expect(foreignObject.namespaceURI).toBe('http://www.w3.org/2000/svg')
+      expect(foreignObject instanceof SVGForeignObjectElement).toBe(true)
+
+      let inside = container.querySelector('#inside')
+      invariant(inside)
+      expect(inside.namespaceURI).toBe('http://www.w3.org/1999/xhtml')
+    })
+
     it('updates and removes SVG attributes', () => {
       let container = document.createElement('div')
       let root = createRoot(container)

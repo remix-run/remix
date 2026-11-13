@@ -398,18 +398,26 @@ let persistedRemovalToken = 0
 const persistedMixinNodes = new Set<CommittedHostNode>()
 let activeSchedulerUpdateParents: ParentNode[] | undefined
 
-// Compute SVG context for a node based on its parent and type.
-// Returns true if the node is within an SVG subtree, false otherwise.
+// Compute SVG context for a node's children based on its parent and type.
+// Returns true if the node's children live inside an SVG subtree, false otherwise.
 function getSvgContext(vParent: VNodeParent, node: VNodeInput): boolean {
   // Only host elements (strings) can affect SVG context
   if (node.kind === 'host') {
     // svg element creates SVG context
     if (node.type === 'svg') return true
-    // foreignObject switches back to HTML context
+    // foreignObject switches its children back to HTML context, but the
+    // element itself is still an SVG element
     if (node.type === 'foreignObject') return false
   }
   // Otherwise inherit from parent
   return vParent._svg
+}
+
+// Whether the element itself belongs to the SVG namespace. `foreignObject` is
+// SVG while its children are HTML, so this cannot reuse getSvgContext.
+function isSvgElement(vParent: VNodeParent, node: VNodeInput): boolean {
+  if (node.kind === 'host' && node.type === 'foreignObject') return true
+  return getSvgContext(vParent, node)
 }
 
 function getHostProps(node: HostNode | CommittedHostNode): RuntimeHostProps {
@@ -1299,14 +1307,17 @@ function insert(
     }
 
     if (hydrationNode instanceof Element) {
-      let cursorTag = getHydrationTagName(hydrationNode, svg)
+      let cursorTag = getHydrationTagName(hydrationNode, isSvgElement(vParent, node))
       let match: Element | null = cursorTag === node.type ? hydrationNode : null
       if (!match) {
         // Type mismatch - try single-advance retry to handle browser extension injections
         // at the start of containers. Skip this node and try the next sibling once, and
         // leave the skipped node in place if the next sibling matches.
         let nextSibling = skipComments(hydrationNode.nextSibling)
-        if (nextSibling instanceof Element && getHydrationTagName(nextSibling, svg) === node.type) {
+        if (
+          nextSibling instanceof Element &&
+          getHydrationTagName(nextSibling, isSvgElement(vParent, node)) === node.type
+        ) {
           match = nextSibling
         }
       }
@@ -1323,7 +1334,9 @@ function insert(
       logHydrationMismatch('tag', cursorTag, node.type)
       if (cursor) cursor.current = undefined // stop hydration for this tree
     }
-    let dom = svg ? document.createElementNS(SVG_NS, node.type) : document.createElement(node.type)
+    let dom = isSvgElement(vParent, node)
+      ? document.createElementNS(SVG_NS, node.type)
+      : document.createElement(node.type)
     let committed = mountHostNode(node, vParent, svg, dom, resolved, context, undefined, domParent)
     insertDomNode(dom, domParent, anchor)
     return committed
