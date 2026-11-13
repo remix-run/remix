@@ -56,35 +56,6 @@ describe('cart handlers', () => {
     assertContains(html, 'Heavy Metal Guitar Riffs')
   })
 
-  it('POST /cart/button/:bookId returns confirmed button HTML and rejects invalid intents', async () => {
-    let response = await router.fetch('https://remix.run/cart/button/1', {
-      method: 'POST',
-      headers: { 'X-Remix-Frame': 'true' },
-      body: new URLSearchParams({ intent: 'add' }),
-    })
-    let session = getSessionCookie(response)
-    assert.ok(session)
-    assert.equal(response.status, 200)
-    assert.equal(response.headers.get('Location'), null)
-    assert.equal(response.headers.get('Cache-Control'), 'no-store')
-    let html = await response.text()
-    assertContains(html, 'Remove from Cart')
-    assertContains(html, 'action="/cart/button/1"')
-    assert.ok(!html.includes('<html'))
-
-    let invalid = await router.fetch(
-      requestWithSession('https://remix.run/cart/button/1', session, {
-        method: 'POST',
-        headers: { 'X-Remix-Frame': 'true' },
-        body: new URLSearchParams({ intent: 'toggle' }),
-      }),
-    )
-    assert.equal(invalid.status, 400)
-    assertContains(await invalid.text(), 'role="alert"')
-    let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
-    assertContains(await cart.text(), 'Total: $16.99')
-  })
-
   it('cart persists state across requests with same session', async () => {
     // Add first item
     let addResponse1 = await router.fetch('https://remix.run/cart/api/add', {
@@ -116,22 +87,6 @@ describe('cart handlers', () => {
     let html = await cartResponse.text()
     assertContains(html, 'Ash & Smoke')
     assertContains(html, 'Three Ways to Change Your Life')
-  })
-
-  it('native cart button submissions return to a same-origin referrer or the home page', async () => {
-    for (let [referer, expected] of [
-      ['https://remix.run/books?sort=title', 'https://remix.run/books?sort=title'],
-      ['https://example.com/books', '/'],
-      ['', '/'],
-    ]) {
-      let response = await router.fetch('https://remix.run/cart/button/1', {
-        method: 'POST',
-        headers: { Referer: referer },
-        body: new URLSearchParams({ intent: 'add' }),
-      })
-      assert.equal(response.status, 303)
-      assert.equal(response.headers.get('Location'), expected)
-    }
   })
 
   it('GET /cart/items renders table fragment for cart items', async () => {

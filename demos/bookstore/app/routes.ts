@@ -5,6 +5,12 @@ export const assetsBase = '/assets'
 export const routes = route({
   assets: `${assetsBase}/*path`,
   uploads: '/uploads/*key',
+  fragments: route('fragments', {
+    cartButton: get('/cart-button/:bookId'),
+  }),
+  api: route('api', {
+    cartToggle: post('/cart/toggle'),
+  }),
 
   // Simple static routes
   home: '/',
@@ -53,8 +59,6 @@ export const routes = route({
       items: get('/items'),
       itemsUpdate: post('/items'),
       itemsRemove: del('/items'),
-      cartButton: get('/button/:bookId'),
-      cartButtonToggle: post('/button/:bookId'),
     },
 
     // API-style endpoints under /cart/api

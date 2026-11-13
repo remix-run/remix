@@ -17,5 +17,3 @@ export const CartItemUpdateForm = fd.object({
 })
 
 export const CartItemRemoveForm = fd.object({ bookId })
-
-export const CartButtonForm = fd.object({ intent: fd.text(s.enum_(['add', 'remove'])) })

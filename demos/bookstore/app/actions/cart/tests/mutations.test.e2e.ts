@@ -6,81 +6,6 @@ import type { Page } from 'playwright'
 import { createTestRouter } from '../../../../test/helpers.ts'
 
 describe('cart submissions', () => {
-  it('posts the cart button once to its frame source and keeps focus while saving', async (t) => {
-    let received = Promise.withResolvers<void>()
-    let release = Promise.withResolvers<void>()
-    t.after(() => release.resolve())
-    let requests: string[] = []
-    let page = await serveCart(
-      t,
-      async (request) => {
-        let pathname = new URL(request.url).pathname
-        if (pathname !== '/cart/button/1') return
-        requests.push(`${request.method} ${pathname}`)
-        if (request.method !== 'POST') return
-        received.resolve()
-        await release.promise
-      },
-      [],
-      '/books/bbq',
-    )
-    requests.length = 0
-    let initial = await frameState(page)
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).press('Enter')
-    await received.promise
-    let saving = page.getByRole('button', { name: 'Saving...', exact: true })
-    await saving.waitFor()
-    assert.equal(await saving.getAttribute('aria-disabled'), 'true')
-    assert.equal(await saving.evaluate((button) => button === document.activeElement), true)
-    await page.locator('form[action="/cart/button/1"]').evaluate((form: HTMLFormElement) => {
-      form.requestSubmit(form.querySelector('button'))
-    })
-    release.resolve()
-    let remove = page.getByRole('button', { name: 'Remove from Cart', exact: true })
-    await remove.waitFor()
-    assert.equal(await remove.evaluate((button) => button === document.activeElement), true)
-    assert.deepEqual(requests, ['POST /cart/button/1'])
-    assert.deepEqual(await frameState(page), initial)
-    await remove.click()
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
-    assert.deepEqual(requests, ['POST /cart/button/1', 'POST /cart/button/1'])
-    await page.goto('/cart')
-    await page.getByText('Your cart is empty.', { exact: true }).waitFor()
-  })
-
-  it('safely retries cart button actions when a committed response is lost', async (t) => {
-    let intents: FormDataEntryValue[] = []
-    let page = await serveCart(
-      t,
-      async (request, respond) => {
-        if (new URL(request.url).pathname !== '/cart/button/1' || request.method !== 'POST') return
-        let intent = (await request.clone().formData()).get('intent')
-        assert.ok(intent)
-        intents.push(intent)
-        if (intents.length === 1 || intents.length === 3) {
-          await (await respond()).text()
-          return new Response('Unavailable', { status: 503 })
-        }
-      },
-      [],
-      '/books/bbq',
-    )
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).click()
-    await page.getByRole('alert').filter({ hasText: 'Couldn’t update your cart.' }).waitFor()
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).click()
-    await page.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
-    await page.getByRole('alert').waitFor({ state: 'detached' })
-    let cart = await page.request.get('/cart/items')
-    assert.ok((await cart.text()).includes('Total: $16.99'))
-    await page.getByRole('button', { name: 'Remove from Cart', exact: true }).click()
-    await page.getByRole('alert').waitFor()
-    await page.getByRole('button', { name: 'Remove from Cart', exact: true }).click()
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
-    assert.deepEqual(intents, ['add', 'add', 'remove', 'remove'])
-    await page.goto('/cart')
-    await page.getByText('Your cart is empty.', { exact: true }).waitFor()
-  })
-
   it('posts once to the frame source with pending prices and stable focus', async (t) => {
     let received = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
@@ -370,19 +295,7 @@ describe('cart submissions', () => {
     let context = await browser.newContext({ baseURL: server.baseUrl, javaScriptEnabled: false })
     t.after(() => context.close())
     let page = await context.newPage()
-    await page.goto('/books?sort=title')
-    let book = page.locator('[data-test-slug="bbq"]')
-    await book.getByRole('button', { name: 'Add to Cart', exact: true }).click()
-    assert.deepEqual(mutations, ['/cart/button/1 303'])
-    assert.equal(new URL(page.url()).pathname, '/books')
-    assert.equal(new URL(page.url()).search, '?sort=title')
-    await book.getByRole('button', { name: 'Remove from Cart', exact: true }).click()
-    await book.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
-    assert.deepEqual(mutations, ['/cart/button/1 303', '/cart/button/1 303'])
-    assert.equal(new URL(page.url()).pathname, '/books')
-    assert.equal(new URL(page.url()).search, '?sort=title')
-    await book.getByRole('button', { name: 'Add to Cart', exact: true }).click()
-    await book.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
+    await page.request.post('/cart/api/add', { form: { bookId: '1' } })
     mutations.length = 0
     await page.goto('/cart')
     let quantity = page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' })

@@ -5,15 +5,12 @@ import * as fd from 'remix/data-schema/experimental/form'
 import type { FormSubmission } from 'remix/data-schema/experimental/form'
 import { redirect } from 'remix/response/redirect'
 
-import { books, type Book } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
-import { addToCart, getCartTotal, removeFromCart } from '../../../utils/cart.ts'
+import { getCartTotal } from '../../../utils/cart.ts'
 import { getCurrentCart, getCurrentUserSafely } from '../../../utils/context.ts'
-import { parseId } from '../../../utils/ids.ts'
 import { removeCartItem, updateCart } from '../cart-api.ts'
-import { CartButton } from './public/cart-button.tsx'
 import { CartItems } from './public/cart-items.tsx'
-import { CartButtonForm, CartItemRemoveForm, CartItemUpdateForm } from './public/schema.ts'
+import { CartItemRemoveForm, CartItemUpdateForm } from './public/schema.ts'
 
 type CartError = { status: number; message: string; submission?: FormSubmission }
 
@@ -59,66 +56,8 @@ export default createController(routes.cart.fragments, {
 
       return mutationResponse(context, error)
     },
-
-    async cartButton(context) {
-      let { db, params, render } = context
-      let bookId = parseId(params.bookId)
-      let book = bookId === undefined ? undefined : await db.find(books, bookId)
-
-      if (!book) {
-        return render(<p>Book not found</p>, fragmentResponseInit({ status: 404 }))
-      }
-
-      return renderCartButton(context, book)
-    },
-
-    async cartButtonToggle(context) {
-      let { db, params, formData, render, request, session } = context
-      let bookId = parseId(params.bookId)
-      let book = bookId === undefined ? undefined : await db.find(books, bookId)
-      if (!book) {
-        return render(<p>Book not found</p>, fragmentResponseInit({ status: 404 }))
-      }
-
-      let submission = fd.parseSafe(CartButtonForm, formData)
-      if (!submission.success) {
-        return renderCartButton(context, book, {
-          status: 400,
-          message: submission.issues[0].message,
-        })
-      }
-      if (process.env.NODE_ENV !== 'test') {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-      }
-
-      let cart = getCurrentCart(session)
-      if (submission.value.intent === 'remove') {
-        session.set('cart', removeFromCart(cart, book.id))
-      } else if (!cart.items.some((item) => item.bookId === book.id)) {
-        session.set('cart', addToCart(cart, book.id, book.slug, book.title, book.price, 1))
-      }
-
-      if (request.headers.get('X-Remix-Frame') === 'true') {
-        return renderCartButton(context, book)
-      }
-      let referer = URL.parse(request.headers.get('Referer') ?? '')
-      let returnTo = referer?.origin === context.url.origin ? referer.href : routes.home.href()
-      return redirect(returnTo, 303)
-    },
   },
 })
-
-function renderCartButton(
-  { render, session }: RouterTypes['context'],
-  book: Book,
-  error?: CartError,
-): Response {
-  let inCart = getCurrentCart(session).items.some((item) => item.bookId === book.id)
-  return render(
-    <CartButton inCart={inCart} id={book.id} error={error?.message} />,
-    fragmentResponseInit({ status: error?.status ?? 200 }),
-  )
-}
 
 function mutationResponse(context: RouterTypes['context'], error?: CartError): Response {
   if (context.request.headers.get('X-Remix-Frame') === 'true') {
@@ -174,13 +113,4 @@ function renderCartItems(
     />,
     responseInit,
   )
-}
-
-function fragmentResponseInit(init?: ResponseInit): ResponseInit {
-  let headers = new Headers(init?.headers)
-  if (!headers.has('Cache-Control')) {
-    headers.set('Cache-Control', 'no-store')
-  }
-
-  return { ...init, headers }
 }

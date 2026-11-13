@@ -76,7 +76,7 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
               <div mix={css({ marginTop: '2rem' })}>
                 <Frame
                   name={`cart-button-${book.id}`}
-                  src={routes.cart.fragments.cartButton.href({ bookId: book.id })}
+                  src={routes.fragments.cartButton.href({ bookId: book.id })}
                 />
               </div>
             ) : (
