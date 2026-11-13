@@ -21,6 +21,7 @@ type CartItemsProps = {
   total: number
   canCheckout: boolean
   error?: string
+  showErrorMessage?: boolean
   errorBookId?: number
   submission?: FormSubmission
 }
@@ -70,34 +71,15 @@ export const CartItems = clientEntry(
     )
 
     return () => {
-      let { items, canCheckout, error, errorBookId, submission, total } = handle.props
+      let { items, canCheckout, error, showErrorMessage, errorBookId, submission, total } =
+        handle.props
       let isPending = activeReload !== undefined
       let hasQuantityError =
         submission?.errors.fields.quantity &&
         items.some((item) => item.bookId === Number(submission.values.bookId))
-      let failedBookId = failed
-        ? failedAction?.bookId
-        : (errorBookId ?? Number(submission?.values.bookId))
-      let cartError = failed ? (
-        <>
-          {failedAction?.type === 'remove'
-            ? 'Couldn’t remove this item.'
-            : 'Couldn’t update this item.'}{' '}
-          Try again, or{' '}
-          <button
-            type="button"
-            mix={on('click', (event) => {
-              event.currentTarget.closest<HTMLElement>('[role="region"]')?.focus()
-              void handle.frame.reload().catch(() => {})
-            })}
-          >
-            reload cart
-          </button>{' '}
-          to see what’s saved.
-        </>
-      ) : !isPending && error && !hasQuantityError ? (
-        error
-      ) : undefined
+      let failedBookId = errorBookId ?? Number(submission?.values.bookId)
+      let cartError =
+        !isPending && !failed && showErrorMessage && !hasQuantityError ? error : undefined
 
       return (
         <div

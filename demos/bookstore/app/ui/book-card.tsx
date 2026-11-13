@@ -23,7 +23,15 @@ export function BookCard(handle: Handle<BookCardProps>) {
           <h3 mix={bookTitleTransition(book.id)}>{book.title}</h3>
           <p class="author">by {book.author}</p>
           <p class="price">${book.price.toFixed(2)}</p>
-          <div mix={css({ display: 'flex', gap: '0.5rem', alignItems: 'center' })}>
+          <div
+            mix={css({
+              display: 'grid',
+              gridTemplateColumns: 'max-content minmax(0, 1fr)',
+              gap: '0.5rem',
+              alignItems: 'center',
+              justifyItems: 'start',
+            })}
+          >
             <a
               href={routes.books.show.href({ slug: book.slug })}
               data-rmx-prefetch="viewport"

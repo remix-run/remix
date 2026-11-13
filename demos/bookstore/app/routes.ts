@@ -7,9 +7,7 @@ export const routes = route({
   uploads: '/uploads/*key',
   fragments: route('fragments', {
     cartButton: get('/cart-button/:bookId'),
-  }),
-  api: route('api', {
-    cartToggle: post('/cart/toggle'),
+    cartToggle: post('/cart-button/:bookId'),
   }),
 
   // Simple static routes

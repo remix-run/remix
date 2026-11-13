@@ -71,12 +71,13 @@ function mutationResponse(context: RouterTypes['context'], error?: CartError): R
 }
 
 function renderCartItems(
-  { auth, render, session }: RouterTypes['context'],
+  { auth, render, request, session }: RouterTypes['context'],
   error?: CartError,
 ): Response {
   let cart = getCurrentCart(session)
   let total = getCartTotal(cart)
   let user = getCurrentUserSafely(auth)
+  let showErrorMessage = request.method === 'GET'
   let responseInit = {
     status: error?.status ?? 200,
     headers: { 'Cache-Control': 'no-store' },
@@ -85,7 +86,7 @@ function renderCartItems(
   if (cart.items.length === 0) {
     return render(
       <div mix={css({ marginTop: '2rem' })}>
-        {error ? (
+        {error && showErrorMessage ? (
           <p
             role="alert"
             mix={css({ color: '#dc2626', textAlign: 'center', paddingBottom: '1.5rem' })}
@@ -110,6 +111,7 @@ function renderCartItems(
       total={total}
       canCheckout={!!user}
       error={error?.message}
+      showErrorMessage={showErrorMessage}
       errorBookId={error?.bookId}
       submission={error?.submission}
     />,

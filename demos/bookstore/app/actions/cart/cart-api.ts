@@ -2,7 +2,7 @@ import type { Database } from 'remix/data-table'
 import type { Session } from 'remix/session'
 
 import { books } from '../../data/schema.ts'
-import { removeFromCart, updateCartItem } from '../../utils/cart.ts'
+import { addToCart, removeFromCart, updateCartItem } from '../../utils/cart.ts'
 import { getCurrentCart } from '../../utils/context.ts'
 
 interface CartItemOptions {
@@ -12,6 +12,30 @@ interface CartItemOptions {
 }
 
 type CartError = { message: string; status: number }
+
+export async function toggleCart({
+  db,
+  session,
+  bookId,
+}: CartItemOptions): Promise<CartError | undefined> {
+  if (process.env.NODE_ENV !== 'test') {
+    await new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 701)))
+  }
+
+  let book = await db.find(books, bookId)
+  if (!book) return { status: 404, message: 'Book not found.' }
+  if (book.slug === 'three-ways' && Math.random() < 0.5) {
+    return { status: 500, message: 'Couldn’t update this book. Try again.' }
+  }
+
+  let cart = getCurrentCart(session)
+  let inCart = cart.items.some((item) => item.bookId === book.id)
+  let next = inCart
+    ? removeFromCart(cart, book.id)
+    : addToCart(cart, book.id, book.slug, book.title, book.price, 1)
+
+  session.set('cart', next)
+}
 
 export async function updateCart({
   db,
