@@ -8,7 +8,12 @@ import {
 } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './core/vnode.ts'
-import { createFrameRuntime, NamedFrameRegistry, type ResolveFrame } from './frame-runtime.ts'
+import {
+  createFrameRuntime,
+  getFrameRuntime,
+  NamedFrameRegistry,
+  type ResolveFrame,
+} from './frame-runtime.ts'
 import { createScheduler, type Scheduler } from './scheduler.ts'
 import {
   defaultStyleManager,
@@ -174,6 +179,44 @@ function createVirtualRoot(
   }
   attachDomErrorForwarding()
 
+  function enqueueRootWork(work: () => void) {
+    let runtime = getFrameRuntime(frameStub)
+    let renderContext = runtime?.renderContext
+    let serverFrameReload = runtime?.serverFrameReload
+    scheduler.enqueueWork([
+      () => {
+        let previousContext = runtime?.renderContext
+        let previousReload = runtime?.serverFrameReload
+        if (runtime) {
+          runtime.renderContext = renderContext
+          runtime.serverFrameReload = serverFrameReload
+        }
+        try {
+          work()
+        } finally {
+          if (runtime) {
+            runtime.renderContext = previousContext
+            runtime.serverFrameReload = previousReload
+          }
+        }
+      },
+    ])
+
+    // Other queued component updates belong to their own operations, even in this flush.
+    if (runtime) {
+      runtime.renderContext = undefined
+      runtime.serverFrameReload = undefined
+    }
+    try {
+      scheduler.dequeue()
+    } finally {
+      if (runtime) {
+        runtime.renderContext = renderContext
+        runtime.serverFrameReload = serverFrameReload
+      }
+    }
+  }
+
   let root = Object.assign(eventTarget, {
     render(element: RemixNode) {
       attachDomErrorForwarding()
@@ -191,17 +234,14 @@ function createVirtualRoot(
         _rangeEnd: rangeEnd,
         _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(rangeStart),
       }
-      scheduler.enqueueWork([
-        () => {
-          let cursor = hydrationCursor === null ? undefined : { current: hydrationCursor }
-          let committed = diffVNodes(vroot, vnode, parent, vParent, context, rangeEnd, cursor)
-          vParent._children = [committed]
-          vroot = committed
-          hydrationCursor = null
-          restoreAncestorSelect(parent)
-        },
-      ])
-      scheduler.dequeue()
+      enqueueRootWork(() => {
+        let cursor = hydrationCursor === null ? undefined : { current: hydrationCursor }
+        let committed = diffVNodes(vroot, vnode, parent, vParent, context, rangeEnd, cursor)
+        vParent._children = [committed]
+        vroot = committed
+        hydrationCursor = null
+        restoreAncestorSelect(parent)
+      })
     },
 
     reconcile() {
@@ -217,13 +257,10 @@ function createVirtualRoot(
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueWork([
-        () => {
-          removeVNode(current, parent, context)
-          restoreAncestorSelect(parent)
-        },
-      ])
-      scheduler.dequeue()
+      enqueueRootWork(() => {
+        removeVNode(current, parent, context)
+        restoreAncestorSelect(parent)
+      })
     },
 
     flush() {

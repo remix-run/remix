@@ -11,5 +11,10 @@
     "allowFiles": ["demos/frames/app/routes.ts", "demos/frames/app/**/public/**"],
     "allowPackages": ["remix"],
     "denyFiles": ["demos/frames/app/**/*.test.*"]
+  },
+  "test": {
+    "playwright": {
+      "configFile": "./playwright.config.ts"
+    }
   }
 }

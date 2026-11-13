@@ -3,7 +3,7 @@ import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test
 import { navigate, startNavigationListener } from '../runtime/navigation.ts'
 import type { FrameHandle } from '../runtime/component.ts'
 import type { ResolveFrameOptions } from '../runtime/frame-runtime.ts'
-import { withResolvers } from './utils.ts'
+import { waitForDom, withResolvers } from './utils.ts'
 import { reloadDocument } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 
@@ -2870,7 +2870,7 @@ describe('form navigation', () => {
   it('leaves POST submissions with a missing named target to document navigation', (t) => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
-      currentEntry: { url: window.location.href },
+      currentEntry: Object.assign(new EventTarget(), { key: 'current', url: window.location.href }),
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
         if (type === 'navigate') navigateListener = listener
@@ -3139,6 +3139,9 @@ describe('form navigation', () => {
     controller.abort()
   })
 })
+
+// Browser tests run in an iframe, whose history entries WebKit's scroll saving never touches, so
+// these stand in for the browser's restoration. demos/frames tests the restoration in WebKit.
 
 function getCurrentNavigationEntry(): NavigationHistoryEntry {
   let entry = window.navigation.currentEntry

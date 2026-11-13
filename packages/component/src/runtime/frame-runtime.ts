@@ -80,6 +80,30 @@ export type FrameReloadTransition = {
   finished: Promise<FrameReloadResult>
 }
 
+export type FrameNavigationContent = {
+  signal: AbortSignal
+  target: FrameHandle
+  owner?: FrameContentCommit
+  committed: () => void
+  finished: () => void
+}
+
+export type FrameContentCommit = {
+  signal: AbortSignal
+  blockingFrameTracker: ReconciliationTracker
+  contentReadyTracker: ReconciliationTracker
+  disposed: (frame: FrameHandle) => void
+  mutating: (frame: FrameHandle) => void
+  ready: () => void
+  finished: (frame: FrameHandle) => void
+}
+
+export type FrameRenderContext = {
+  contentCommit: FrameContentCommit | undefined
+  reconciliationTracker?: ReconciliationTracker
+  blockingFrameTracker?: ReconciliationTracker
+}
+
 export type ReconciliationTracker = {
   track: () => () => void
   waitFor: (task: Promise<void>) => void
@@ -154,6 +178,9 @@ export type FrameRuntime = {
       }
     | undefined
   reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
+  navigationContent?: FrameNavigationContent
+  captureContentCommit?: () => FrameContentCommit | undefined
+  renderContext?: FrameRenderContext
 }
 
 export type SharedFrameRuntime = Pick<
