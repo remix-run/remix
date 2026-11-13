@@ -232,7 +232,8 @@ describe('form submissionSchema', () => {
     )
     if (failure.success) throw new Error('Expected failure')
 
-    let Submission = fd.submissionSchema(Profile)
+    let Submission = Profile.submissionSchema
+    assert.equal(Profile.submissionSchema, Submission)
     let restored: fd.FormSubmission = s.parse(Submission, JSON.parse(JSON.stringify(failure)))
     assert.deepEqual(restored, { values: failure.values, errors: failure.errors })
     assert.deepEqual(restored.values, { name: 'A', age: ' 0012 ', bio: '', terms: false })
@@ -273,7 +274,7 @@ describe('form submissionSchema', () => {
         form: ['Please review your cart.'],
       },
     }
-    let restored = s.parse(fd.submissionSchema(schema), JSON.parse(JSON.stringify(feedback)))
+    let restored = s.parse(schema.submissionSchema, JSON.parse(JSON.stringify(feedback)))
     assert.deepEqual(restored, feedback)
     assert.equal(calls, 0)
   })
@@ -286,7 +287,7 @@ describe('form submissionSchema', () => {
       upload: fd.file(s.instanceof_(Blob)),
       attachments: fd.files(s.array(s.instanceof_(Blob))),
     })
-    let restored = s.parse(fd.submissionSchema(schema), {
+    let restored = s.parse(schema.submissionSchema, {
       values: {
         name: 'Ada',
         'user.name': 'Transport name',
@@ -309,13 +310,11 @@ describe('form submissionSchema', () => {
   })
 
   it('rejects malformed feedback, incorrect raw kinds, and unknown field errors', () => {
-    let Submission = fd.submissionSchema(
-      fd.object({
-        quantity: fd.number(s.number()),
-        terms: fd.checkbox(),
-        tags: fd.fields(s.array(s.string())),
-      }),
-    )
+    let Submission = fd.object({
+      quantity: fd.number(s.number()),
+      terms: fd.checkbox(),
+      tags: fd.fields(s.array(s.string())),
+    }).submissionSchema
     for (let values of [{ quantity: 1 }, { terms: 'false' }, { tags: ['a', 2] }]) {
       let result = s.parseSafe(Submission, { values, errors: { fields: {} } })
       if (result.success) throw new Error('Expected malformed values to fail')
@@ -341,7 +340,7 @@ describe('form submissionSchema', () => {
     let feedback = JSON.parse(
       '{"values":{"__proto__":"raw","constructor":"","toString":"text"},"errors":{"fields":{"__proto__":["Invalid"],"constructor":["Required"]}}}',
     )
-    let restored = s.parse(fd.submissionSchema(schema), feedback)
+    let restored = s.parse(schema.submissionSchema, feedback)
     assert.deepEqual(restored, feedback)
     assert.equal(Object.hasOwn(restored.values, '__proto__'), true)
     assert.equal(Object.hasOwn(restored.errors.fields, '__proto__'), true)

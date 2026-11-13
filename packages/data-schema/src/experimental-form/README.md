@@ -28,15 +28,13 @@ Form objects implement Standard Schema, so core `s.parse` and `s.parseSafe` work
 
 ## Persist submission feedback
 
-Derive a schema for saved feedback from the same form definition with `fd.submissionSchema()`. Failed submissions are already JSON-safe, so storage can serialize them normally:
+Use the form's `submissionSchema` property to restore saved feedback from the same definition. The property creates the schema on first access and reuses it on subsequent accesses. Failed submissions are already JSON-safe, so storage can serialize them normally:
 
 ```ts
-const SignupSubmission = fd.submissionSchema(Signup)
-
 let result = fd.parseSafe(Signup, await request.formData())
 if (!result.success) {
   let serialized = JSON.stringify(result)
-  let restored = s.parse(SignupSubmission, JSON.parse(serialized))
+  let restored = s.parse(Signup.submissionSchema, JSON.parse(serialized))
   // Persist the serialized value between requests, then pass restored to form.Context.
 }
 ```

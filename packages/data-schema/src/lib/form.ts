@@ -170,6 +170,13 @@ export type FormSchema<entries extends FormEntries = FormEntries> = Schema<
 > & {
   /** Immutable descriptions of the form's submitted fields. */
   readonly entries: Readonly<entries>
+  /**
+   * Lazily created, cached schema for restoring serialized submission values and errors.
+   * Preserves raw invalid input without rerunning field validation or transforms.
+   * Omits unknown values, sensitive values, files, and extra submission properties.
+   * Field errors must use logical keys from this form, including sensitive and file fields.
+   */
+  readonly submissionSchema: Schema<unknown, FormSubmission>
 }
 
 const numeric = coerceNumber()
@@ -361,9 +368,14 @@ export function object<const entries extends FormEntries>(entries: entries): For
     ]),
   )
   // Each extracted entry delegates to the corresponding original schema, preserving its output.
-  let schema = Object.defineProperty(formDataObject(extracted), 'entries', {
-    value: Object.freeze(descriptions),
-    enumerable: true,
+  let submissionSchema: Schema<unknown, FormSubmission> | undefined
+  let schema = Object.defineProperties(formDataObject(extracted), {
+    entries: { value: Object.freeze(descriptions), enumerable: true },
+    submissionSchema: {
+      get() {
+        return (submissionSchema ??= createSubmissionSchema(schema))
+      },
+    },
   }) as FormSchema<entries>
   return schema
 }
@@ -372,17 +384,7 @@ function isEmptyUpload(value: unknown): boolean {
   return value instanceof File && value.name === '' && value.size === 0
 }
 
-/**
- * Derives a schema for restoring serialized submission values and errors without rerunning form validation.
- * Unknown values, sensitive values, files, and extra submission properties are omitted.
- * Field errors must refer to logical keys in the form, including sensitive and file fields.
- *
- * This experimental API may change or be removed in patch releases.
- *
- * @param schema The inspectable form schema used to parse the original submission.
- * @returns A schema accepting submission feedback with optional raw values and grouped messages.
- */
-export function submissionSchema(schema: FormSchema): Schema<unknown, FormSubmission> {
+function createSubmissionSchema(schema: FormSchema): Schema<unknown, FormSubmission> {
   let values: Array<[string, Schema<unknown, FormRawValue | undefined>]> = []
   let fields: Array<[string, Schema<unknown, string[] | undefined>]> = []
   for (let [key, entry] of Object.entries(schema.entries)) {

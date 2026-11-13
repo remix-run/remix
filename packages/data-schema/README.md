@@ -71,7 +71,7 @@ if (!result.success) {
 
 Both `parse` and `parseSafe` accept any [Standard Schema](https://standardschema.dev/) v1 schema, not just data-schema's own schemas. You can pass a Zod, Valibot, or ArkType schema and they'll work.
 
-For native form submissions, [`remix/data-schema/experimental/form`](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/experimental-form/README.md) describes input kinds and provides functional `fd.parse(schema, data)` / `fd.parseSafe(schema, data)` APIs. Safe failures include restorable values and grouped errors for UI rendering. Use `fd.submissionSchema(schema)` to restore saved feedback from unknown data using the original form definition. For explicit extraction without form kinds or restoration, the lower-level `remix/data-schema/form-data` helpers plug into the ordinary `parse()` / `parseSafe()` flow:
+For native form submissions, [`remix/data-schema/experimental/form`](https://github.com/remix-run/remix/blob/main/packages/data-schema/src/experimental-form/README.md) describes input kinds and provides functional `fd.parse(schema, data)` / `fd.parseSafe(schema, data)` APIs. Safe failures include restorable values and grouped errors for UI rendering. Use the form's `schema.submissionSchema` property to restore saved feedback from unknown data using the original form definition. For explicit extraction without form kinds or restoration, the lower-level `remix/data-schema/form-data` helpers plug into the ordinary `parse()` / `parseSafe()` flow:
 
 ```ts
 import * as s from 'remix/data-schema'

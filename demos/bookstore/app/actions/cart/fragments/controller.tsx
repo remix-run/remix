@@ -18,7 +18,7 @@ const cartErrorSchema = s.object({
   status: s.number(),
   message: s.string(),
   bookId: s.optional(s.number()),
-  submission: s.optional(fd.submissionSchema(CartItemUpdateForm)),
+  submission: s.optional(CartItemUpdateForm.submissionSchema),
 })
 
 export default createController(routes.cart.fragments, {
