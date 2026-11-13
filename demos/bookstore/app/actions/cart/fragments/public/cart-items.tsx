@@ -26,7 +26,7 @@ type CartItemsProps = {
   submission?: FormSubmission
 }
 
-type PendingAction = {
+type CartAction = {
   bookId: number
   type: 'update' | 'remove'
 }
@@ -34,37 +34,35 @@ type PendingAction = {
 export const CartItems = clientEntry(
   import.meta.url,
   function CartItems(handle: Handle<CartItemsProps>) {
-    let pendingAction: PendingAction | undefined
-    let failedAction: PendingAction | undefined
-    let activeReload: FrameReloadStartEvent | undefined
-    let failed = false
+    let state:
+      | { status: 'idle' }
+      | { status: 'pending'; reload: FrameReloadStartEvent; action: CartAction | undefined }
+      | { status: 'failed'; action: CartAction | undefined; source: 'response' | 'request' } = {
+      status: 'idle',
+    }
 
     handle.frame.addEventListener(
       'reloadStart',
       async (event) => {
-        activeReload = event
         let formData = event.formData
         let removing = formData?.get('_method') === 'DELETE'
-        pendingAction = formData?.has('bookId')
+        let action: CartAction | undefined = formData?.has('bookId')
           ? { bookId: Number(formData.get('bookId')), type: removing ? 'remove' : 'update' }
           : undefined
-        failed = false
-        failedAction = undefined
+        state = { status: 'pending', reload: event, action }
         handle.update()
         try {
           let signal = await event.finished
-          if (!signal.aborted && activeReload === event && handle.props.error) {
-            failedAction = pendingAction
+          if (handle.signal.aborted || state.status !== 'pending' || state.reload !== event) return
+          if (!signal.aborted && handle.props.error) {
+            state = { status: 'failed', action, source: 'response' }
+          } else {
+            state = { status: 'idle' }
           }
         } catch {
-          if (activeReload === event) {
-            failed = true
-            failedAction = pendingAction
-          }
+          if (handle.signal.aborted || state.status !== 'pending' || state.reload !== event) return
+          state = { status: 'failed', action, source: 'request' }
         }
-        if (handle.signal.aborted || activeReload !== event) return
-        activeReload = undefined
-        pendingAction = undefined
         handle.update()
       },
       { signal: handle.signal },
@@ -73,13 +71,16 @@ export const CartItems = clientEntry(
     return () => {
       let { items, canCheckout, error, showErrorMessage, errorBookId, submission, total } =
         handle.props
-      let isPending = activeReload !== undefined
+      let isPending = state.status === 'pending'
+      let pendingAction = state.status === 'pending' ? state.action : undefined
+      let failedAction = state.status === 'failed' ? state.action : undefined
+      let requestFailed = state.status === 'failed' && state.source === 'request'
       let hasQuantityError =
         submission?.errors.fields.quantity &&
         items.some((item) => item.bookId === Number(submission.values.bookId))
       let failedBookId = errorBookId ?? Number(submission?.values.bookId)
       let cartError =
-        !isPending && !failed && showErrorMessage && !hasQuantityError ? error : undefined
+        !isPending && !requestFailed && showErrorMessage && !hasQuantityError ? error : undefined
 
       return (
         <div
@@ -88,7 +89,7 @@ export const CartItems = clientEntry(
             let form = event.target
             if (!(form instanceof HTMLFormElement)) return
             event.preventDefault()
-            if (activeReload) return
+            if (state.status === 'pending') return
             let body = new FormData(form, event.submitter)
             let cartRegion =
               body.get('_method') === 'DELETE' && form.contains(document.activeElement)
@@ -199,7 +200,7 @@ export const CartItems = clientEntry(
                             <input
                               aria-label={`Quantity of ${item.title}`}
                               defaultValue={
-                                !failed && typeof submittedQuantity === 'string'
+                                !requestFailed && typeof submittedQuantity === 'string'
                                   ? submittedQuantity
                                   : item.quantity
                               }
