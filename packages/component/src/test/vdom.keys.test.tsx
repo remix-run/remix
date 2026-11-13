@@ -306,6 +306,101 @@ describe('vnode rendering (keys)', () => {
     })
   })
 
+  describe('keyed insertions', () => {
+    function List(handle: Handle<{ values: string[] }>) {
+      return () => (
+        <ul>
+          {handle.props.values.map((value) => (
+            <li key={value} data-id={value}>
+              {value}
+            </li>
+          ))}
+        </ul>
+      )
+    }
+
+    function renderAndCountInsertions(
+      root: ReturnType<typeof createRoot>,
+      list: Element,
+      values: string[],
+    ): { added: number; removed: number } {
+      let observer = new MutationObserver(() => {})
+      observer.observe(list, { childList: true })
+      root.render(<List values={values} />)
+      let records = observer.takeRecords()
+      observer.disconnect()
+      return {
+        added: records.reduce((count, record) => count + record.addedNodes.length, 0),
+        removed: records.reduce((count, record) => count + record.removedNodes.length, 0),
+      }
+    }
+
+    it('inserts restored keyed children once at their final position', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let all = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+      root.render(<List values={all.filter((value) => Number(value) % 2 === 0)} />)
+      let list = container.querySelector('ul')
+      invariant(list)
+      expect(list.textContent).toBe('02468')
+
+      expect(renderAndCountInsertions(root, list, all)).toEqual({ added: 5, removed: 0 })
+      expect(list.textContent).toBe('0123456789')
+    })
+
+    it('inserts new keyed children once when existing children also move', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'b', 'c', 'd']} />)
+      let list = container.querySelector('ul')
+      invariant(list)
+
+      // d moves to the front, x and y are new
+      let counts = renderAndCountInsertions(root, list, ['d', 'x', 'a', 'b', 'y', 'c'])
+      expect(list.textContent).toBe('dxabyc')
+      expect(counts).toEqual({ added: 3, removed: 1 })
+    })
+
+    it('inserts new keyed children before the next stable child that renders DOM', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function Empty(_handle: Handle<{ value: string }>) {
+        return () => null
+      }
+
+      function Items(handle: Handle<{ values: string[] }>) {
+        return () => (
+          <ul>
+            {handle.props.values.map((value) =>
+              value === 'empty' ? (
+                <Empty key={value} value={value} />
+              ) : (
+                <li key={value}>{value}</li>
+              ),
+            )}
+          </ul>
+        )
+      }
+
+      root.render(<Items values={['a', 'b', 'empty', 'c']} />)
+      let list = container.querySelector('ul')
+      invariant(list)
+
+      let observer = new MutationObserver(() => {})
+      observer.observe(list, { childList: true })
+      // b moves to the end, x is new and the stable child after it renders no DOM
+      root.render(<Items values={['a', 'x', 'empty', 'c', 'b']} />)
+      let records = observer.takeRecords()
+      observer.disconnect()
+
+      expect(list.textContent).toBe('axcb')
+      expect(records.reduce((count, record) => count + record.addedNodes.length, 0)).toBe(2)
+    })
+  })
+
   describe('key semantics', () => {
     it('replaces nodes when keys match but type differs', () => {
       let container = document.createElement('div')
