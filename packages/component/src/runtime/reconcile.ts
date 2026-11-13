@@ -39,6 +39,7 @@ import {
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
+import { isFrameStart, isHydrationStart } from './stream-protocol.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 
@@ -1369,21 +1370,11 @@ function skipCommentsExceptBoundaryStart(
   preserveClientEntry: boolean,
 ): Node | null {
   while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
-    if (isFrameStartComment(cursor)) return cursor
-    if (preserveClientEntry && isCommentNode(cursor) && cursor.data.trim().startsWith('rmx:h:')) {
-      return cursor
-    }
+    if (isFrameStart(cursor)) return cursor
+    if (preserveClientEntry && isHydrationStart(cursor)) return cursor
     cursor = cursor.nextSibling
   }
   return cursor
-}
-
-export function isFrameStartComment(node: Node | null | undefined): node is Comment {
-  return isCommentNode(node) && node.data.trim().startsWith('rmx:f:')
-}
-
-function isCommentNode(node: Node | null | undefined): node is Comment {
-  return node?.nodeType === Node.COMMENT_NODE
 }
 
 export function renderComponent(

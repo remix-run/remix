@@ -1,4 +1,13 @@
 import { invariant } from './invariant.ts'
+import {
+  getFrameId,
+  getHydrationId,
+  isCommentNode,
+  isFrameEnd,
+  isFrameStart,
+  isHydrationEnd,
+  isHydrationStart,
+} from './stream-protocol.ts'
 import type { FrameContext } from './frame.ts'
 import {
   disposeClientEntryBoundary,
@@ -110,7 +119,7 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   // Comment -> Comment
   if (isCommentNode(current) && isCommentNode(next) && markerKindsMatch(current, next)) {
     let newData = next.data
-    if (isFrameStartMarker(current)) {
+    if (isFrameStart(current)) {
       if (shouldPreserveFrameStartMarker(current, next, context)) {
         if (current.data !== newData) {
           current.data = newData
@@ -668,18 +677,18 @@ function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
       continue
     }
 
-    if (isFrameStartMarker(node)) {
-      let endIndex = findEndIndex(nodes, i, isFrameStartMarker, isFrameEndMarker)
+    if (isFrameStart(node)) {
+      let endIndex = findEndIndex(nodes, i, isFrameStart, isFrameEnd)
       invariant(endIndex > i, 'Frame end marker not found')
       let end = nodes[endIndex]
-      invariant(isFrameEndMarker(end), 'Expected frame end marker')
+      invariant(isFrameEnd(end), 'Expected frame end marker')
       units.push({ kind: 'frame', start: node, end, startIndex: i, endIndex })
       i = endIndex
       continue
     }
 
     invariant(!isHydrationEnd(node), 'Unexpected hydration end marker')
-    invariant(!isFrameEndMarker(node), 'Unexpected frame end marker')
+    invariant(!isFrameEnd(node), 'Unexpected frame end marker')
     units.push({ kind: 'node', node, startIndex: i, endIndex: i })
   }
 
@@ -752,8 +761,8 @@ function nodeTypesComparable(a: Node, b: Node): boolean {
 
 function getMarkerKind(node: Node): MarkerKind | undefined {
   if (!isCommentNode(node)) return undefined
-  if (isFrameStartMarker(node)) return 'frame-start'
-  if (isFrameEndMarker(node)) return 'frame-end'
+  if (isFrameStart(node)) return 'frame-start'
+  if (isFrameEnd(node)) return 'frame-end'
   if (isHydrationStart(node)) return 'virtual-root-start'
   if (isHydrationEnd(node)) return 'virtual-root-end'
   return undefined
@@ -768,7 +777,7 @@ function findHydrationEndMarker(start: Comment): Comment {
 }
 
 function findFrameEndMarker(start: Comment): Comment {
-  return findEndMarker(start, isFrameStartMarker, isFrameEndMarker, 'Frame end marker not found')
+  return findEndMarker(start, isFrameStart, isFrameEnd, 'Frame end marker not found')
 }
 
 function findEndIndex(
@@ -799,20 +808,12 @@ function isElement(node: Node): node is Element {
   return node.nodeType === Node.ELEMENT_NODE
 }
 
-function isFrameStartMarker(node: Node): node is Comment {
-  return node instanceof Comment && node.data.trim().startsWith('rmx:f:')
-}
-
-function isFrameEndMarker(node: Node): node is Comment {
-  return node instanceof Comment && node.data.trim() === '/rmx:f'
-}
-
 function shouldPreserveFrameStartMarker(
   current: Comment,
   next: Comment,
   context: FrameContext,
 ): boolean {
-  if (!isFrameStartMarker(next)) return false
+  if (!isFrameStart(next)) return false
 
   let nextData = getFrameMarkerData(next, context)
   let currentFrame = context.frameInstances.get(current)
@@ -847,12 +848,6 @@ function getHydrationMarkerData(marker: Comment, context: FrameContext) {
   return context.data.h?.[id]
 }
 
-function getHydrationId(marker: Comment): string {
-  let trimmed = marker.data.trim()
-  invariant(trimmed.startsWith('rmx:h:'), 'Invalid hydration start marker')
-  return trimmed.slice('rmx:h:'.length)
-}
-
 function getFrameMarkerData(marker: Comment, context: FrameContext) {
   let id = getFrameId(marker)
   return context.data.f?.[id]
@@ -879,7 +874,7 @@ function replaceCommentMarkerRange(
 }
 
 function findCommentMarkerRangeEnd(start: Comment): Comment {
-  if (isFrameStartMarker(start)) return findFrameEndMarker(start)
+  if (isFrameStart(start)) return findFrameEndMarker(start)
   if (isHydrationStart(start)) return findHydrationEndMarker(start)
   throw new Error('Comment marker range start not found')
 }
@@ -917,7 +912,7 @@ function collectFrameContentFragment(
 function removeNode(node: Node, parent: ParentNode, context: FrameContext): void {
   visitSubtree(node, (next) => isHydrationStart(next) && disposeClientEntryBoundary(next))
   visitSubtree(node, (next) => {
-    if (isFrameStartMarker(next)) disposeFrameStartMarker(next, context)
+    if (isFrameStart(next)) disposeFrameStartMarker(next, context)
   })
 
   if (node.parentNode === parent) {
@@ -944,32 +939,6 @@ function disposeFrameStartMarker(marker: Comment, context: FrameContext): void {
     subFrame.dispose()
     context.frameInstances.delete(marker)
   }
-}
-
-export function isCommentNode(node: Node | null | undefined): node is Comment {
-  return node?.nodeType === Node.COMMENT_NODE
-}
-
-export function isFrameStart(node: Node): node is Comment {
-  return isCommentNode(node) && node.data.trim().startsWith('rmx:f:')
-}
-
-export function isFrameEnd(node: Node): node is Comment {
-  return isCommentNode(node) && node.data.trim() === '/rmx:f'
-}
-
-export function isHydrationStart(node: Node): node is Comment {
-  return isCommentNode(node) && node.data.trim().startsWith('rmx:h:')
-}
-
-export function isHydrationEnd(node: Node): node is Comment {
-  return isCommentNode(node) && node.data.trim() === '/rmx:h'
-}
-
-export function getFrameId(start: Comment): string {
-  let trimmed = start.data.trim()
-  invariant(trimmed.startsWith('rmx:f:'), 'Invalid frame start marker')
-  return trimmed.slice('rmx:f:'.length)
 }
 
 export function findEndMarker(
