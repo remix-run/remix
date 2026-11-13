@@ -1,0 +1,1 @@
+`compressResponse` now applies consumer backpressure to the source body while compressing. A slow or paused client no longer causes the compressor to pull and buffer the entire uncompressed response in memory before the consumer reads.
