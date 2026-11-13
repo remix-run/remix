@@ -47,7 +47,7 @@ async function createTestServer(
         return
       }
 
-      requestedAssetPaths.push(url.pathname)
+      if (url.pathname.startsWith('/assets/')) requestedAssetPaths.push(url.pathname)
       let assetResponse = await assetServer.fetch(new Request(url))
       if (!assetResponse) {
         response.statusCode = 404
