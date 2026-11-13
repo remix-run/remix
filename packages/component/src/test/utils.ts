@@ -16,8 +16,9 @@ export async function drain(stream: ReadableStream<Uint8Array>): Promise<string>
   while (true) {
     let { done, value } = await reader.read()
     if (done) break
-    html += decoder.decode(value)
+    html += decoder.decode(value, { stream: true })
   }
+  html += decoder.decode()
 
   return stripFlushMarkers(html)
 }

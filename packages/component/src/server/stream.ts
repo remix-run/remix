@@ -493,20 +493,28 @@ async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<Reso
   let reader = stream.getReader()
   let decoder = new TextDecoder()
 
-  let first: Uint8Array | undefined
+  // Decode every chunk up to and including the first renderable one exactly once. The bytes of a
+  // character cut off at the end of that chunk belong to the tail, which is forwarded as raw bytes.
+  let html = ''
+  let pendingBytes: Uint8Array = new Uint8Array(0)
+  let found = false
   while (true) {
     let { value, done } = await reader.read()
     if (done || !value) break
 
-    let text = decoder.decode(value, { stream: true })
-    if (hasRenderableHtml(text)) {
-      first = value
+    html += decoder.decode(value, { stream: true })
+    let bytes = new Uint8Array(pendingBytes.length + value.length)
+    bytes.set(pendingBytes)
+    bytes.set(value, pendingBytes.length)
+    pendingBytes = getIncompleteUtf8Suffix(bytes)
+
+    if (hasRenderableHtml(html)) {
+      found = true
       break
     }
   }
 
-  if (!first) {
-    decoder.decode()
+  if (!found) {
     reader.releaseLock()
     return { html: '', tail: emptyReadableStream() }
   }
@@ -523,6 +531,9 @@ async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<Reso
   }
 
   let tail = new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (pendingBytes.length > 0) controller.enqueue(pendingBytes)
+    },
     async pull(controller) {
       let next = await reader.read()
       if (next.done) {
@@ -538,7 +549,17 @@ async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<Reso
     },
   })
 
-  return { html: stripFlushMarkers(stripDoctypeMarkup(decoder.decode(first))), tail }
+  return { html: stripFlushMarkers(stripDoctypeMarkup(html)), tail }
+}
+
+function getIncompleteUtf8Suffix(bytes: Uint8Array): Uint8Array {
+  for (let index = bytes.length - 1; index >= Math.max(0, bytes.length - 3); index--) {
+    let byte = bytes[index]
+    if ((byte & 0xc0) === 0x80) continue
+    let length = byte >= 0xf0 ? 4 : byte >= 0xe0 ? 3 : byte >= 0xc0 ? 2 : 1
+    return bytes.length - index < length ? bytes.slice(index) : new Uint8Array(0)
+  }
+  return new Uint8Array(0)
 }
 
 async function resolveFrameHtml(
