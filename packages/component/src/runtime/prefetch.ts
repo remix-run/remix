@@ -58,7 +58,7 @@ export interface PrefetchReferences {
 }
 
 /** The parsed, detached HTML and references available to a custom prefetch hook. */
-export interface PrefetchFrameContext extends PrefetchContext {
+export interface ProcessFrameContext extends PrefetchContext {
   /** Original response, whose body has been consumed into the fragment. */
   response: Response
   /** Inert HTML fragment, including templates; it is never mounted by Remix. */
@@ -97,7 +97,7 @@ export interface DefaultPrefetchOverrides {
    */
   processFrame?(
     prefetchReferences: (references?: PrefetchReferences) => Promise<void>,
-    context: PrefetchFrameContext,
+    context: ProcessFrameContext,
   ): void | Promise<void>
 }
 

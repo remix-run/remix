@@ -1481,7 +1481,7 @@ run({
 
 `loadModule` and `prefetchImages` are application helpers. The image helper can create and retain `Image` instances using the declarations' source sets, sizes, CORS, and referrer settings. Resolve raw `src` and `href` attributes against the computed base URL; DOM URL properties would use the current document. This query covers the fragment itself; inspect nested template contents separately when needed.
 
-The `processFrame` hook runs for each parsed response. Its context contains the requested `src` and `target`, triggering `element`, cancellation `signal`, consumed `response`, inert `fragment`, original `assets` with their attributes, and same-origin nested `frames`. Remix never mounts the fragment. Custom asset loading can also use `fetch(url, { priority: 'low', signal })`; applications own its queue, deduplication, and cache policy.
+The `processFrame` hook runs for each parsed response. Its `ProcessFrameContext` contains the requested `src` and `target`, triggering `element`, cancellation `signal`, consumed `response`, inert `fragment`, original `assets` with their attributes, and same-origin nested `frames`. Remix never mounts the fragment. Custom asset loading can also use `fetch(url, { priority: 'low', signal })`; applications own its queue, deduplication, and cache policy.
 
 Call `prefetchReferences()` for default asset hints, or pass `{ assets: selected }` to filter them. `assets: []` skips assets. Only supported original fragment elements are accepted, including those inside templates and manually selected nonresponsive `<img src>` elements; newly created elements, responsive images, and track preloads are ignored. Nested sources require explicit `{ frames }` selection, as shown [below](#prefetching-nested-frames).
 

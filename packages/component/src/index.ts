@@ -83,7 +83,7 @@ export type {
   PrefetchContext,
   PrefetchFrame,
   PrefetchFrameOptions,
-  PrefetchFrameContext,
+  ProcessFrameContext,
   PrefetchFrameReference,
   PrefetchOptions,
   PrefetchReferences,

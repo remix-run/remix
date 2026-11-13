@@ -16,7 +16,7 @@ import {
   defaultPrefetch,
   type DefaultPrefetchOverrides,
   type PrefetchContext,
-  type PrefetchFrameContext,
+  type ProcessFrameContext,
 } from '../index.ts'
 
 function expectPrefetchCall(
@@ -1883,7 +1883,7 @@ describe('defaultPrefetch overrides', () => {
 
   it('exposes usable asset URLs while leaving unsupported and incomplete declarations in the fragment', async (t) => {
     startTestPrefetching(t)
-    let context: PrefetchFrameContext | undefined
+    let context: ProcessFrameContext | undefined
     await defaultPrefetch('/page', undefined, {
       fetch: async () =>
         htmlResponse(`<base href="https://assets.example/resources/">
