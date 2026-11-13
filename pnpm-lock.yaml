@@ -445,8 +445,8 @@ importers:
   packages/assets:
     dependencies:
       '@oxc-project/runtime':
-        specifier: ^0.121.0
-        version: 0.121.0
+        specifier: ^0.158.0
+        version: 0.158.0
       '@remix-run/file-storage':
         specifier: workspace:^
         version: link:../file-storage
@@ -2306,6 +2306,9 @@ importers:
 
   packages/test:
     dependencies:
+      '@oxc-project/runtime':
+        specifier: ^0.158.0
+        version: 0.158.0
       '@remix-run/node-tsx':
         specifier: workspace:^
         version: link:../node-tsx
@@ -3588,8 +3591,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@oxc-project/runtime@0.121.0':
-    resolution: {integrity: sha512-p0bQukD8OEHxzY4T9OlANBbEFGnOnjo1CYi50HES7OD36UO2yPh6T+uOJKLtlg06eclxroipRCpQGMpeH8EJ/g==}
+  '@oxc-project/runtime@0.158.0':
+    resolution: {integrity: sha512-OYWBlK/wnZHyol5jkvBJadD8KTR6DJfFDRClqrU6kBDQKHd4bXNZALg3qfXk0aFl6F5loSxMT24EZurNWE4MKQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
   '@oxc-project/types@0.121.0':
@@ -7230,7 +7233,7 @@ snapshots:
   '@oxc-parser/binding-win32-x64-msvc@0.121.0':
     optional: true
 
-  '@oxc-project/runtime@0.121.0': {}
+  '@oxc-project/runtime@0.158.0': {}
 
   '@oxc-project/types@0.121.0': {}
 

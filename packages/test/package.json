@@ -69,6 +69,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@oxc-project/runtime": "^0.158.0",
     "@remix-run/node-tsx": "workspace:^",
     "@remix-run/terminal": "workspace:^",
     "es-module-lexer": "^2.3.0",

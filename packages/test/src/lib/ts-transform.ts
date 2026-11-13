@@ -29,6 +29,7 @@ export async function transformTypeScript(
     sourceType: 'module',
     sourcemap: true,
     jsx: getJsxTransformOptions(filePath, compilerOptions),
+    decorator: compilerOptions?.experimentalDecorators === true ? { legacy: true } : undefined,
   })
 
   if (result.errors.length > 0) {

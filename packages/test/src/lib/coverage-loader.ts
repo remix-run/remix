@@ -2,6 +2,21 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { transformTypeScript } from './ts-transform.ts'
 
+export async function resolve(
+  specifier: string,
+  context: { parentURL?: string },
+  nextResolve: (
+    specifier: string,
+    context: { parentURL?: string },
+  ) => Promise<{ url: string; format?: string }>,
+): Promise<{ url: string; format?: string }> {
+  // Oxc injects these imports, so the runner supplies its matching helpers.
+  if (specifier.startsWith('@oxc-project/runtime/helpers/')) {
+    return nextResolve(specifier, { ...context, parentURL: import.meta.url })
+  }
+  return nextResolve(specifier, context)
+}
+
 // Custom ESM loader hook for TypeScript files.
 //
 // Applies an un-minified Oxc transform that preserves line structure.

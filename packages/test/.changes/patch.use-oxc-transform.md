@@ -1,1 +1,1 @@
-Use Oxc 0.158.0 instead of esbuild for TypeScript transforms in coverage-enabled server tests and browser tests.
+Use Oxc 0.158.0 instead of esbuild for TypeScript transforms in coverage-enabled server tests and browser tests. Honor `experimentalDecorators` and supply the matching runtime helpers without requiring test projects to install them.
