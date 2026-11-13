@@ -363,7 +363,9 @@ export function fetchFrame(
 ): Promise<Response> {
   let url = new URL(src, document.baseURI)
   url.hash = ''
-  let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
+  let headers = new Headers(init.headers)
+  headers.set('Accept', 'text/html')
+  headers.set('X-Remix-Frame', 'true')
   if (target != null) headers.set('X-Remix-Target', target)
   if (contentType) headers.set('Content-Type', contentType)
   return fetchImpl(url.href, { ...init, headers, mode: 'same-origin' })
