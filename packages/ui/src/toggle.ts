@@ -1,6 +1,8 @@
 import { createElement, createMixin, on, ref } from '@remix-run/component'
 import type { Dispatched, ElementProps, MixinFactory } from '@remix-run/component'
 
+import { onFormReset } from './lib/form-reset.ts'
+
 export interface ToggleOptions {
   checked?: boolean
   defaultChecked?: boolean
@@ -64,6 +66,8 @@ const toggleMixin: MixinFactory<HTMLElement, [options?: ToggleOptions], ElementP
 >((handle, hostType) => {
   let uncontrolledChecked = false
   let hasInitialized = false
+  let latestOptions: ToggleOptions = {}
+  let latestProps: ElementProps = {}
 
   function getChecked(options: ToggleOptions, props: ElementProps) {
     let optionChecked = getBooleanState(options.checked)
@@ -107,7 +111,10 @@ const toggleMixin: MixinFactory<HTMLElement, [options?: ToggleOptions], ElementP
     node.dispatchEvent(new ToggleChangeEvent(nextChecked))
   }
 
-  return (options = {}, props) => {
+  // Without options the runner receives only the host props as the first argument.
+  return (options = {}, props = options as ElementProps) => {
+    latestOptions = options
+    latestProps = props
     let checked = getChecked(options, props)
     let disabled = isDisabled(options, props)
     let readOnly = isReadOnly(options, props)
@@ -151,6 +158,15 @@ const toggleMixin: MixinFactory<HTMLElement, [options?: ToggleOptions], ElementP
         ref((node: HTMLElement, signal) => {
           if (node instanceof HTMLInputElement) {
             options.inputRef?.(node, signal)
+
+            // Native reset restores the input's own default, which ignores `defaultChecked`
+            // and controlled values, so resync the DOM and any uncontrolled state. Like native
+            // reset, this does not notify change handlers.
+            onFormReset(node, signal, () => {
+              hasInitialized = false
+              node.checked = getChecked(latestOptions, latestProps)
+              void handle.update()
+            })
           }
         }),
         on<HTMLElement, 'click'>('click', (event) => {

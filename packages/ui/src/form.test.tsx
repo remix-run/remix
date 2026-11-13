@@ -8,7 +8,7 @@ import * as fd from '@remix-run/data-schema/experimental/form'
 import { email, minLength, min, max } from '@remix-run/data-schema/checks'
 import * as form from './form.ts'
 import type { FieldBinding } from './form.ts'
-import { renderForm, renderServerForm, input, edit, blur } from './test/form.tsx'
+import { renderForm, renderServerForm, input, edit, blur, resetForm } from './test/form.tsx'
 
 describe('form.Context', () => {
   it('validates transformed outputs without projecting their bounds onto raw inputs', (t) => {
@@ -134,8 +134,7 @@ describe('form.Context', () => {
     view.rerender(next)
     expect([...select.selectedOptions].map((option) => option.value)).toEqual(['b', 'c'])
     select.options[0].selected = true
-    native.reset()
-    await Promise.resolve()
+    await resetForm(native)
     view.root.flush()
     expect([...select.selectedOptions].map((option) => option.value)).toEqual(['b', 'c'])
     view.rerender({ values: { topics: [] }, errors: { fields: {} } })
@@ -217,8 +216,7 @@ describe('form.Context', () => {
     expect(nodes[0].checked).toBe(true)
     expect(nodes[1].checked).toBe(false)
     nodes[1].click()
-    native.reset()
-    await Promise.resolve()
+    await resetForm(native)
     view.root.flush()
     expect(nodes[1].checked).toBe(false)
     expect(binding.touched).toBe(false)
@@ -361,8 +359,7 @@ describe('form.Context', () => {
     view.rerender({ ...submission })
     expect(sms.checked).toBe(true)
     email.click()
-    native.reset()
-    await Promise.resolve()
+    await resetForm(native)
     view.root.flush()
     expect(sms.checked).toBe(true)
     email.click()
@@ -434,8 +431,7 @@ describe('form.Context', () => {
     if (!result.success) throw new Error('Expected success')
     expect(result.value.avatar?.size).toBe(2)
     expect(result.value.attachments.length).toBe(2)
-    native.reset()
-    await Promise.resolve()
+    await resetForm(native)
     view.root.flush()
     expect(avatar.files?.length).toBe(0)
     expect(view.fields.avatar.touched).toBe(false)
@@ -637,8 +633,7 @@ describe('form.Context', () => {
     expect(role.value).toBe('customer')
     expect(secret.value).toBe('')
     edit(role, 'admin')
-    native.reset()
-    await Promise.resolve()
+    await resetForm(native)
     view.root.flush()
     expect(role.value).toBe('customer')
   })
@@ -672,13 +667,11 @@ describe('form.Context', () => {
     blur(bio)
     let cancel = (event: Event) => event.preventDefault()
     native.addEventListener('reset', cancel)
-    native.reset()
-    await Promise.resolve()
+    await resetForm(native)
     expect(bio.value).toBe('edited')
     expect(view.fields.bio.touched).toBe(true)
     native.removeEventListener('reset', cancel)
-    native.reset()
-    await Promise.resolve()
+    await resetForm(native)
     view.root.flush()
     expect(bio.value).toBe('original')
     expect(view.fields.bio.touched).toBe(false)

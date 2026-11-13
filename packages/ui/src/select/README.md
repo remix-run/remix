@@ -93,3 +93,4 @@ Listen for committed-value changes on the select root or an ancestor:
 - Selecting the already-selected value updates state but does not dispatch a change event.
 - `SelectChangeEvent` bubbles from the trigger when a trigger exists. It includes `value`, `label`, and `optionId`.
 - Passing `name` to `Context` and applying `hiddenInput()` to an input lets the selected value participate in `FormData`. Disabled selects disable the trigger and hidden input.
+- When the trigger's form resets, the select returns to `defaultValue` and `defaultLabel` without dispatching a change event.
