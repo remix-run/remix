@@ -1478,31 +1478,39 @@ describe('anchor prefetch ownership', () => {
     let second = createIntentLink('/shared')
     let response = Promise.withResolvers<Response>()
     t.after(() => response.resolve(htmlResponse('Finished')))
-    let context: PrefetchContext | undefined
-    let fetched = mock.fn((_url: string, _init: RequestInit, value: PrefetchContext) => {
-      context = value
+    let requestSignal: AbortSignal | undefined
+    let initiatingElement: Element | undefined
+    let fetched = mock.fn((_url: string, init: RequestInit) => {
+      requestSignal = init.signal ?? undefined
       return response.promise
     })
     let callers: AbortSignal[] = []
     startTestPrefetching(t, (src, options) => {
       if (!options?.signal) throw new Error('Expected caller signal')
       callers.push(options.signal)
-      return defaultPrefetch(src, options, { fetch: fetched })
+      return defaultPrefetch(src, options, {
+        fetch(url, init) {
+          initiatingElement = options.element
+          return fetched(url, init)
+        },
+      })
     })
     prefetch(first)
     prefetch(second)
-    if (!context) throw new Error('Expected fetch context')
+    if (!requestSignal) throw new Error('Expected fetch signal')
     expect(fetched).toHaveBeenCalledTimes(1)
-    expect(context.element).toBe(first)
+    expect(initiatingElement).toBe(first)
+    expect(requestSignal).not.toBe(callers[0])
+    expect(requestSignal).not.toBe(callers[1])
     let firstCancelled = new Promise<void>((resolve) =>
       callers[0].addEventListener('abort', () => resolve(), { once: true }),
     )
     first.remove()
     await firstCancelled
-    expect(context.element?.isConnected).toBe(false)
-    expect(context.signal.aborted).toBe(false)
+    expect(initiatingElement?.isConnected).toBe(false)
+    expect(requestSignal.aborted).toBe(false)
     let finished = new Promise<void>((resolve) =>
-      context?.signal.addEventListener('abort', () => resolve(), { once: true }),
+      requestSignal?.addEventListener('abort', () => resolve(), { once: true }),
     )
     second.remove()
     await finished
@@ -1513,13 +1521,13 @@ describe('anchor prefetch ownership', () => {
     let anchor = createIntentLink('/shared')
     let response = Promise.withResolvers<Response>()
     let parsed = Promise.withResolvers<void>()
-    let context: PrefetchContext | undefined
+    let requestSignal: AbortSignal | undefined
     let callerSignal: AbortSignal | undefined
     startTestPrefetching(t, (src, options) => {
       if (options?.element) callerSignal = options.signal
       return defaultPrefetch(src, options, {
-        fetch(_url, _init, value) {
-          context = value
+        fetch(_url, init) {
+          requestSignal = init.signal ?? undefined
           return response.promise
         },
         processFrame() {
@@ -1529,13 +1537,13 @@ describe('anchor prefetch ownership', () => {
     })
     prefetch(anchor)
     prefetch('/shared')
-    if (!callerSignal || !context) throw new Error('Expected signals')
+    if (!callerSignal || !requestSignal) throw new Error('Expected signals')
     let cancelled = new Promise<void>((resolve) =>
       callerSignal?.addEventListener('abort', () => resolve(), { once: true }),
     )
     anchor.remove()
     await cancelled
-    expect(context.signal.aborted).toBe(false)
+    expect(requestSignal.aborted).toBe(false)
     response.resolve(htmlResponse('<main>Shared</main>'))
     await parsed.promise
   })
@@ -1641,14 +1649,16 @@ describe('anchor prefetch ownership', () => {
 describe('defaultPrefetch overrides', () => {
   it('retains idle discovery for shared anchors and cancels it when the last caller disconnects', async (t) => {
     let idle = stubIdleCallbacks(t)
-    let context: PrefetchContext | undefined
+    let requestSignal: AbortSignal | undefined
+    let initiatingElement: Element | undefined
     let processFrame = mock.fn()
     let requests: Promise<void>[] = []
     startTestPrefetching(t, (src, options) => {
       requests.push(
         defaultPrefetch(src, options, {
-          fetch(_url, _init, value) {
-            context = value
+          fetch(_url, init) {
+            initiatingElement = options?.element
+            requestSignal = init.signal ?? undefined
             return Promise.resolve(htmlResponse('<main>Shared page</main>'))
           },
           processFrame,
@@ -1660,27 +1670,28 @@ describe('defaultPrefetch overrides', () => {
     prefetch(first)
     prefetch(second)
     await idle.waitFor()
-    expect(context?.element).toBe(first)
+    expect(initiatingElement).toBe(first)
     expect(idle.pending).toBe(1)
 
     let changed = nextDomMutation()
     first.remove()
     await changed
-    expect(context?.signal.aborted).toBe(false)
+    expect(requestSignal?.aborted).toBe(false)
     expect(idle.pending).toBe(1)
 
     changed = nextDomMutation()
     second.remove()
     await changed
     await Promise.all(requests)
-    expect(context?.signal.aborted).toBe(true)
+    expect(requestSignal?.aborted).toBe(true)
     expect(idle.pending).toBe(0)
     idle.flush()
     expect(processFrame).not.toHaveBeenCalled()
   })
 
-  it('passes the marked link through options and both hooks when a descendant is pressed', async (t) => {
+  it('exposes the marked link through closure options and processFrame when a descendant is pressed', async (t) => {
     let parsed = Promise.withResolvers<void>()
+    let requestSignal: AbortSignal | undefined
     let anchor = createIntentLink('/page#details')
     let child = document.createElement('span')
     anchor.append(child)
@@ -1690,15 +1701,18 @@ describe('defaultPrefetch overrides', () => {
         expect(options?.element).toBe(anchor)
         expect(options?.element).not.toBe(child)
         return defaultPrefetch(src, options, {
-          fetch(url, init, context) {
-            expect(context.src).toBe(url)
-            expect(context.signal).toBe(init.signal)
-            expect(context.element).toBe(anchor)
+          fetch(url, init) {
+            expect(url).toBe(src)
+            expect(options?.element).toBe(anchor)
+            expect(init.signal).toBeInstanceOf(AbortSignal)
+            expect(init.signal).not.toBe(options?.signal)
+            requestSignal = init.signal ?? undefined
             return Promise.resolve(htmlResponse('<main>Page</main>'))
           },
           processFrame(_prefetchReferences, context) {
             expect(context.element).toBe(anchor)
             expect(context.element?.isConnected).toBe(true)
+            expect(context.signal).toBe(requestSignal)
             parsed.resolve()
           },
         })
@@ -1718,94 +1732,90 @@ describe('defaultPrefetch overrides', () => {
     let response = Promise.withResolvers<Response>()
     let parsed = Promise.withResolvers<PrefetchContext>()
     let release = Promise.withResolvers<void>()
-    let requestContext: PrefetchContext | undefined
-    let first = defaultPrefetch(
-      '/page',
-      {
-        signal: firstController.signal,
-        element: firstElement,
+    let requestSignal: AbortSignal | undefined
+    let fetchedElement: Element | undefined
+    let options = { signal: firstController.signal, element: firstElement }
+    let first = defaultPrefetch('/page', options, {
+      fetch(_url, init) {
+        requestSignal = init.signal ?? undefined
+        fetchedElement = options.element
+        return response.promise
       },
-      {
-        fetch(_url, _init, context) {
-          requestContext = context
-          return response.promise
-        },
-        async processFrame(_prefetchReferences, context) {
-          parsed.resolve(context)
-          await release.promise
-        },
+      async processFrame(_prefetchReferences, context) {
+        parsed.resolve(context)
+        await release.promise
       },
-    )
-    if (!requestContext) throw new Error('Expected request context')
+    })
+    if (!requestSignal) throw new Error('Expected request signal')
+    expect(requestSignal).not.toBe(options.signal)
     let duplicateFetch = mock.fn(() => Promise.resolve(htmlResponse('Duplicate')))
     let second = defaultPrefetch('/page', { element: secondElement }, { fetch: duplicateFetch })
-    expect(requestContext.element).toBe(firstElement)
+    expect(fetchedElement).toBe(firstElement)
     expect(duplicateFetch).not.toHaveBeenCalled()
     response.resolve(htmlResponse('<main>Page</main>'))
     let frameContext = await parsed.promise
     expect(frameContext.element).toBe(firstElement)
+    expect(frameContext.signal).toBe(requestSignal)
     firstController.abort()
     await first
     expect(frameContext.element).toBe(firstElement)
-    expect(requestContext.element).toBe(firstElement)
+    expect(fetchedElement).toBe(firstElement)
+    expect(requestSignal.aborted).toBe(false)
     expect(frameContext.signal.aborted).toBe(false)
     release.resolve()
     await second
   })
 
-  it('inherits the initiating element through shared nested frame requests', async (t) => {
+  it('inherits the initiating element and prepares nested targets through shared frame requests', async (t) => {
     startTestPrefetching(t)
     let firstElement = createIntentLink('/page')
     let secondElement = createIntentLink('/page')
     let directElement = createIntentLink('/child')
     let firstController = new AbortController()
     let secondController = new AbortController()
-    let nested = Promise.withResolvers<PrefetchContext>()
+    let nested = Promise.withResolvers<AbortSignal>()
     let parsed = Promise.withResolvers<PrefetchContext>()
     let release = Promise.withResolvers<void>()
-    let first = defaultPrefetch(
-      '/page',
-      {
-        signal: firstController.signal,
-        element: firstElement,
+    let options = { signal: firstController.signal, element: firstElement }
+    let first = defaultPrefetch('/page', options, {
+      fetch(url, init) {
+        if (new URL(url).pathname === '/child') {
+          if (!init.signal) throw new Error('Expected fetch signal')
+          expect(options.element).toBe(firstElement)
+          expect(new Headers(init.headers).get('X-Remix-Target')).toBe('details')
+          nested.resolve(init.signal)
+        }
+        return Promise.resolve(
+          htmlResponse(
+            new URL(url).pathname === '/page'
+              ? '<script id="rmx-data" type="application/json">{"f":{"child":{"src":"/child","name":"details"}}}</script>'
+              : '<main>Child</main>',
+          ),
+        )
       },
-      {
-        fetch(url, _init, context) {
-          if (new URL(url).pathname === '/child') {
-            expect(context.element).toBe(firstElement)
-            nested.resolve(context)
-          }
-          return Promise.resolve(
-            htmlResponse(
-              new URL(url).pathname === '/page'
-                ? '<script id="rmx-data" type="application/json">{"f":{"child":{"src":"/child"}}}</script>'
-                : '<main>Child</main>',
-            ),
-          )
-        },
-        async processFrame(prefetchReferences, context) {
-          if (new URL(context.src).pathname === '/child') {
-            parsed.resolve(context)
-            await release.promise
-          }
-          await prefetchReferences({ frames: context.frames })
-        },
+      async processFrame(prefetchReferences, context) {
+        if (new URL(context.src).pathname === '/child') {
+          parsed.resolve(context)
+          await release.promise
+        }
+        await prefetchReferences({ frames: context.frames })
       },
-    )
-    let context = await nested.promise
+    })
+    let requestSignal = await nested.promise
     let frameContext = await parsed.promise
     let second = defaultPrefetch('/page', {
       signal: secondController.signal,
       element: secondElement,
     })
-    let direct = defaultPrefetch('/child', { element: directElement })
+    let direct = defaultPrefetch('/child', { target: 'details', element: directElement })
     firstController.abort()
     await first
     secondController.abort()
     await second
-    expect(context.element).toBe(firstElement)
     expect(frameContext.element).toBe(firstElement)
-    expect(context.signal.aborted).toBe(false)
+    expect(frameContext.target).toBe('details')
+    expect(frameContext.signal).toBe(requestSignal)
+    expect(requestSignal.aborted).toBe(false)
     release.resolve()
     await direct
   })
@@ -1813,10 +1823,7 @@ describe('defaultPrefetch overrides', () => {
   it('provides no implicit origin and preserves element options through defaultPrefetch', async (t) => {
     startTestPrefetching(t)
     await defaultPrefetch('/without-origin', undefined, {
-      fetch(_url, _init, context) {
-        expect(context.element).toBeUndefined()
-        return Promise.resolve(htmlResponse('<main>Page</main>'))
-      },
+      fetch: async () => htmlResponse('<main>Page</main>'),
       processFrame(_prefetchReferences, context) {
         expect(context.element).toBeUndefined()
       },
@@ -1826,10 +1833,7 @@ describe('defaultPrefetch overrides', () => {
       '/with-origin',
       { element: source },
       {
-        fetch(_url, _init, context) {
-          expect(context.element).toBe(source)
-          return Promise.resolve(htmlResponse('<main>Page</main>'))
-        },
+        fetch: async () => htmlResponse('<main>Page</main>'),
         processFrame(_prefetchReferences, context) {
           expect(context.element).toBe(source)
         },
@@ -1853,6 +1857,7 @@ describe('defaultPrefetch overrides', () => {
     await defaultPrefetch('/page#hash', { target: 'details' }, { fetch: transport, processFrame })
 
     expect(transport).toHaveBeenCalledTimes(1)
+    expect(transport.mock.calls[0].arguments).toHaveLength(2)
     let [url, init] = transport.mock.calls[0].arguments
     expect(url).toBe(new URL('/page', location.href).href)
     expect(init?.method).toBe('GET')
@@ -1865,6 +1870,7 @@ describe('defaultPrefetch overrides', () => {
     expect(new Headers(init?.headers).get('X-Remix-Prefetch')).toBe('true')
     expect(processFrame).toHaveBeenCalledTimes(1)
     let context = processFrame.mock.calls[0].arguments[1]
+    expect(context.signal).toBe(init?.signal)
     expect(context.response).toBe(response)
     expect(context.response.bodyUsed).toBe(true)
     expect(context.src).toBe(new URL('/page', location.href).href)

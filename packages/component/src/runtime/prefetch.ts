@@ -5,7 +5,7 @@ import { getInterceptableNavigation, getSameOriginUrl } from './navigation.ts'
 export interface PrefetchOptions {
   /** Name of the destination frame, sent as `X-Remix-Target` by the default strategy. */
   target?: string
-  /** Cancels this caller's prefetch, retaining work shared with other callers. */
+  /** Cancels only this caller's prefetch; the shared fetch signal may remain active. */
   signal?: AbortSignal
 }
 
@@ -21,7 +21,7 @@ export interface PrefetchAnchorOptions {
   signal?: AbortSignal
 }
 
-/** Shared frame request and its initiating element for prefetch hooks. */
+/** Shared frame request metadata for {@link ProcessFrameContext}. */
 export interface PrefetchContext {
   /** Requested absolute frame source URL. */
   src: string
@@ -33,7 +33,7 @@ export interface PrefetchContext {
    * retains the work.
    */
   readonly element: Element | undefined
-  /** Aborts when all callers cancel or the runtime is disposed. */
+  /** Same as this frame's `fetch` `init.signal`; aborts when all callers cancel or runtime is disposed. */
   signal: AbortSignal
 }
 
@@ -75,15 +75,17 @@ export interface ProcessFrameContext extends PrefetchContext {
 /** Request and discovered-reference handling overrides for {@link defaultPrefetch}. */
 export interface DefaultPrefetchOverrides {
   /**
-   * Fetches each prepared HTML request (defaults to `globalThis.fetch`). Two-argument Fetch
-   * implementations remain supported; the third argument provides the initiating element.
+   * Fetches each prepared HTML request (defaults to `globalThis.fetch`). Capture the initiating
+   * element from the outer prefetch handler's options. Use `init.signal` for queues and retries:
+   * the caller's options signal may abort while another caller still needs the shared request.
+   * Nested requests inherit the hook and element, but have their own URL, target header, and signal.
    *
    * @param url Prepared absolute frame source URL.
-   * @param init Frame headers, `X-Remix-Prefetch: true`, GET method, low priority, and abort signal.
-   * @param context Shared frame request and initiating element.
+   * @param init Frame headers, `X-Remix-Prefetch: true`, GET method, low priority, and shared abort
+   * signal (always supplied).
    * @returns The unconsumed response for validation and parsing.
    */
-  fetch?(url: string, init: RequestInit, context: PrefetchContext): Promise<Response>
+  fetch?(url: string, init: RequestInit): Promise<Response>
   /**
    * Handles each parsed response. Call `prefetchReferences()` to prefetch discovered assets,
    * or pass selected arrays. Omitted assets use discovered defaults; omitted frames are not fetched.
@@ -711,15 +713,9 @@ export function createDefaultPrefetch(
     visited: Set<string>,
   ): Promise<void> {
     let jobSignal = entry.controller.signal
-    let context: PrefetchContext = {
-      src,
-      target,
-      signal: jobSignal,
-      element: entry.element,
-    }
     let nestedOwner: PrefetchOwner = {
       signal: jobSignal,
-      element: context.element,
+      element: entry.element,
     }
     try {
       let fetchOverride = overrides?.fetch
@@ -733,7 +729,7 @@ export function createDefaultPrefetch(
           signal: jobSignal,
         },
         undefined,
-        fetchOverride ? (_url, init) => fetchOverride(src, init ?? {}, context) : undefined,
+        fetchOverride ? (_url, init) => fetchOverride(src, init ?? {}) : undefined,
       )
       if (
         jobSignal.aborted ||
@@ -837,7 +833,7 @@ export function createDefaultPrefetch(
             assets: discoveredAssets,
             frames,
             signal: jobSignal,
-            element: context.element,
+            element: entry.element,
           })
         } else {
           void prefetchReferences()

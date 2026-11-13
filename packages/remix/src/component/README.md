@@ -1487,13 +1487,19 @@ Call `prefetchReferences()` for default asset hints, or pass `{ assets: selected
 
 Returning without delegation skips native asset and nested-frame work. Call the continuation while the hook is active; after it settles or is cancelled, further calls do nothing. Repeated calls deduplicate references. `defaultPrefetch()` awaits the hook and all delegated work, even when the hook doesn't return that work's promise. Speculative failures don't affect navigation.
 
-An optional `fetch(url, init, context)` hook replaces HTML fetching. Forward `init` to retain the prepared request settings and return an unconsumed `Response`. The hook can queue requests, retry, or return cached responses. Automatic retries and `Retry-After` handling, including for `503` responses, belong to the application.
+An optional `fetch(url, init)` hook replaces HTML fetching. Forward `init` to retain the prepared request settings and return an unconsumed `Response`. The hook can queue requests, retry, or return cached responses. Automatic retries and `Retry-After` handling, including for `503` responses, belong to the application.
 
-Automatic triggers and anchor calls supply `options.element` to the `run({ prefetch })` handler; string calls have no element. Forward `options` to retain that context and caller cancellation. Pending HTML is shared by source and target, with the first caller supplying both hooks and their `context.element`. Nested requests inherit that element. Apps that need every trigger can record elements in the handler before deduplication.
+Automatic triggers and anchor calls supply `options.element` to the `run({ prefetch })` handler; string calls have no element. Forward `options` to retain that context and caller cancellation. Pending HTML is shared by source and target, with the first caller supplying both hooks. Capture `options.element` in the fetch hook's closure; `processFrame` receives it as `context.element`. Nested requests inherit the hooks and element, but have their own URL, target, and shared signal. Read the current request's target from `new Headers(init.headers).get('X-Remix-Target')`, since it can differ from the outer `options.target`. Apps that need every trigger can record elements in the handler before deduplication.
 
 Anchor callers cancel when their link disconnects, its effective source or target changes, it becomes ineligible, or an explicit signal aborts. Removing or disabling `data-rmx-prefetch` also cancels declarative callers; imperative anchor calls don't depend on that marker. Hash-only changes, document moves, viewport exit, and switching between `intent` and `viewport` retain work.
 
-Each caller's signal cancels only its own interest; the hooks' `context.signal` aborts when all callers cancel or the runtime is disposed. Shared work can therefore retain a disconnected `context.element`. Honor the signal in custom queues and loaders rather than treating that element's connection state as cancellation.
+The signals have different scopes:
+
+- `options.signal` cancels one caller's interest. For anchor calls, it includes the anchor lifetime conditions above; for string calls, it is the optional caller-supplied signal.
+- The fetch hook's `init.signal` cancels the shared frame request when all callers cancel or the runtime is disposed. Remix always supplies it. Use it for fetch queues, retries, and body consumption.
+- `ProcessFrameContext.signal` is the same signal as that frame request's `init.signal`. Use it for custom asset queues and loaders.
+
+If two anchors share a request and the first disconnects, its `options.signal` aborts while `init.signal` stays active for the second caller. The captured element and `context.element` still refer to the first anchor. Honor the shared signal for shared work; the initiating element's connection state and caller signal can no longer tell you whether that work is needed.
 
 #### Prefetching Nested Frames
 
@@ -1533,25 +1539,28 @@ run({
   loadModule,
   prefetch(src, options) {
     return defaultPrefetch(src, options, {
-      fetch(url, init, context) {
+      fetch(url, init) {
+        let signal = init.signal
+        if (!signal) throw new Error('Expected prefetch signal')
+        let target = new Headers(init.headers).get('X-Remix-Target') ?? undefined
         return frameQueue.run(
           async () => {
-            context.signal.throwIfAborted()
+            signal.throwIfAborted()
             let response = await fetch(url, init)
             if (
               response.ok &&
               response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
             ) {
-              await response.clone().body?.pipeTo(new WritableStream())
-              context.signal.throwIfAborted()
-              prefetched.set(frameKey(url, context.target), response)
+              await response.clone().body?.pipeTo(new WritableStream(), { signal })
+              signal.throwIfAborted()
+              prefetched.set(frameKey(url, target), response)
               return response.clone()
             }
             return response
           },
           {
-            signal: context.signal,
-            score: () => (context.element ? scoreLink(context.element) : 0),
+            signal,
+            score: () => (options?.element ? scoreLink(options.element) : 0),
           },
         )
       },

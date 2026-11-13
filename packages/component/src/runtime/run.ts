@@ -50,6 +50,7 @@ export interface RunInit {
    * for example to hold the response in memory until the next navigation to that URL and target.
    * Named-frame links pass their target and use `data-rmx-src` as the source when specified.
    * Automatic triggers pass their marked link in `options.element`.
+   * `options.signal` cancels this caller; custom fetch queues and retries use the shared `init.signal`.
    * Delegate to `defaultPrefetch(src, options, { fetch, processFrame })` to retain Remix's parsing,
    * discovery, and native hints while customizing requests or handling discovered references.
    */
