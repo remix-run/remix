@@ -1,6 +1,15 @@
 import { object as formDataObject } from './form-data.ts'
 import type { FormDataEntrySchema, FormDataSource } from './form-data.ts'
-import { boolean, createSchema, parseSafe as parseValueSafe } from './schema.ts'
+import {
+  array,
+  boolean,
+  createSchema,
+  fail,
+  object as valueObject,
+  optional,
+  parseSafe as parseValueSafe,
+  string,
+} from './schema.ts'
 import type { ErrorMap, Issue, ParseOptions, Schema, ValidationResult } from './schema.ts'
 import { coerceNumber } from './coerce.ts'
 
@@ -361,6 +370,78 @@ export function object<const entries extends FormEntries>(entries: entries): For
 
 function isEmptyUpload(value: unknown): boolean {
   return value instanceof File && value.name === '' && value.size === 0
+}
+
+/**
+ * Derives a schema for restoring serialized submission values and errors without rerunning form validation.
+ * Unknown values, sensitive values, files, and extra submission properties are omitted.
+ * Field errors must refer to logical keys in the form, including sensitive and file fields.
+ *
+ * This experimental API may change or be removed in patch releases.
+ *
+ * @param schema The inspectable form schema used to parse the original submission.
+ * @returns A schema accepting submission feedback with optional raw values and grouped messages.
+ */
+export function submissionSchema(schema: FormSchema): Schema<unknown, FormSubmission> {
+  let values: Array<[string, Schema<unknown, FormRawValue | undefined>]> = []
+  let fields: Array<[string, Schema<unknown, string[] | undefined>]> = []
+  for (let [key, entry] of Object.entries(schema.entries)) {
+    fields.push([key, optional(array(string()))])
+    if (isFormField(entry) && (entry.formKind === 'password' || entry.sensitive)) continue
+    if (isFormField(entry) && entry.formKind === 'checkbox') {
+      values.push([key, optional(boolean())])
+    } else if (entry.kind === 'field') {
+      values.push([key, optional(string())])
+    } else if (entry.kind === 'fields') {
+      values.push([key, optional(array(string()))])
+    }
+  }
+
+  return valueObject({
+    values: submissionFields(values),
+    errors: valueObject({
+      fields: submissionFields(fields, { unknownKeys: 'error' }),
+      form: optional(array(string())),
+    }),
+  })
+}
+
+function submissionFields<output>(
+  entries: Array<[string, Schema<unknown, output | undefined>]>,
+  options?: { unknownKeys: 'error' },
+): Schema<unknown, Record<string, output>> {
+  let fields = new Map(entries)
+  return createSchema((value, context) => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      return fail('Expected object', context.path, {
+        code: 'type.object',
+        input: value,
+        parseOptions: context.options,
+      })
+    }
+
+    let values: Array<[string, output]> = []
+    let issues: Issue[] = []
+    for (let key of Object.keys(value)) {
+      let field = fields.get(key)
+      if (!field && options?.unknownKeys !== 'error') continue
+      let fieldContext = { ...context, path: [...context.path, key] }
+      let result = field
+        ? field['~run'](Object.getOwnPropertyDescriptor(value, key)?.value, fieldContext)
+        : fail('Unknown form field', fieldContext.path, {
+            code: 'object.unknown_key',
+            input: key,
+            parseOptions: context.options,
+          })
+      if (result.issues) {
+        if (context.options?.abortEarly) return result
+        issues.push(...result.issues)
+      } else if (result.value !== undefined) {
+        values.push([key, result.value])
+      }
+    }
+    return issues.length > 0 ? { issues } : { value: Object.fromEntries(values) }
+  })
 }
 
 /**

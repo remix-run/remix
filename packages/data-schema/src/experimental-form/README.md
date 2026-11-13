@@ -26,6 +26,27 @@ On failure, `values` retains raw text, number text, checkbox states, and repeate
 
 Form objects implement Standard Schema, so core `s.parse` and `s.parseSafe` work with them too; core safe parsing keeps its ordinary failure contract without restoration data or issue projection. Neither ordinary nor form schemas exposes instance parsing methods.
 
+## Persist submission feedback
+
+Derive a schema for saved feedback from the same form definition with `fd.submissionSchema()`. Failed submissions are already JSON-safe, so storage can serialize them normally:
+
+```ts
+const SignupSubmission = fd.submissionSchema(Signup)
+
+let result = fd.parseSafe(Signup, await request.formData())
+if (!result.success) {
+  let serialized = JSON.stringify(result)
+  let restored = s.parse(SignupSubmission, JSON.parse(serialized))
+  // Persist the serialized value between requests, then pass restored to form.Context.
+}
+```
+
+The derived schema returns a `FormSubmission` containing only `values` and `errors`. It accepts raw strings for text and number controls, booleans for checkboxes, and string arrays for repeated fields. Every restoration value is optional, including values for required inputs. Validation rules, defaults, refinements, transforms, and error maps from the original form are not run again; invalid input and application-authored messages are preserved.
+
+Values and field errors use logical form keys, independently of transport name overrides. Unknown values, sensitive values, password values, files, and extra submission properties are stripped. Errors for sensitive and file fields remain available. Malformed feedback, incorrect raw value kinds, and errors for unknown fields are rejected. Application-authored messages must still avoid embedding secrets. Use ordinary `s.parseSafe()` when invalid or stale saved feedback should be discarded instead of throwing.
+
+The derived schema also accepts application-created `FormSubmission` objects for business failures. It restores UI feedback rather than validated success output, which may contain files or transformed values that require application-specific serialization.
+
 ## Reuse domain rules
 
 A domain schema is optional. Reuse its typed property schemas through the experimental inspection API:

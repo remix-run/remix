@@ -1,0 +1,1 @@
+Restore saved form feedback with `submissionSchema(formSchema)` from `remix/data-schema/experimental/form`, using the original form definition instead of a second schema for serialized values and errors. The derived schema preserves raw invalid input and application messages without rerunning form validation or transforms, and strips unknown values, sensitive values, and files.

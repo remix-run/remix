@@ -1,0 +1,1 @@
+Restore form values and inline errors across requests with `submissionSchema(formSchema)` from `remix/data-schema/experimental/form`. Derive the feedback schema from the original form definition and pass the restored submission to `form.Context`.
