@@ -122,7 +122,7 @@ accept.weights // [1, 0.9]
 accept.accepts('text/html') // true
 accept.accepts('text/plain') // true (matches text/*)
 accept.accepts('image/jpeg') // false
-accept.getWeight('text/plain') // 1 (matches text/*)
+accept.getWeight('text/plain') // 0.9 (matches text/*)
 accept.getPreferred(['text/html', 'text/plain']) // 'text/html'
 
 // Iterate
