@@ -15,7 +15,6 @@ import { drain, nextDomMutation } from './utils.ts'
 import {
   defaultPrefetch,
   type DefaultPrefetchOverrides,
-  type PrefetchContext,
   type ProcessFrameContext,
 } from '../index.ts'
 
@@ -1730,7 +1729,7 @@ describe('defaultPrefetch overrides', () => {
     let secondElement = document.createElement('button')
     let firstController = new AbortController()
     let response = Promise.withResolvers<Response>()
-    let parsed = Promise.withResolvers<PrefetchContext>()
+    let parsed = Promise.withResolvers<ProcessFrameContext>()
     let release = Promise.withResolvers<void>()
     let requestSignal: AbortSignal | undefined
     let fetchedElement: Element | undefined
@@ -1774,7 +1773,7 @@ describe('defaultPrefetch overrides', () => {
     let firstController = new AbortController()
     let secondController = new AbortController()
     let nested = Promise.withResolvers<AbortSignal>()
-    let parsed = Promise.withResolvers<PrefetchContext>()
+    let parsed = Promise.withResolvers<ProcessFrameContext>()
     let release = Promise.withResolvers<void>()
     let options = { signal: firstController.signal, element: firstElement }
     let first = defaultPrefetch('/page', options, {

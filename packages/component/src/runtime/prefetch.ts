@@ -21,22 +21,6 @@ export interface PrefetchAnchorOptions {
   signal?: AbortSignal
 }
 
-/** Shared frame request metadata for {@link ProcessFrameContext}. */
-export interface PrefetchContext {
-  /** Requested absolute frame source URL. */
-  src: string
-  /** Destination frame name, when provided. */
-  target: string | undefined
-  /**
-   * First caller's live triggering element. Nested requests inherit it, and later callers joining
-   * shared work do not replace it. It may be disconnected or point elsewhere while another caller
-   * retains the work.
-   */
-  readonly element: Element | undefined
-  /** Same as this frame's `fetch` `init.signal`; aborts when all callers cancel or runtime is disposed. */
-  signal: AbortSignal
-}
-
 /** A same-origin nested frame source discovered in prefetched HTML. */
 export interface PrefetchFrameReference {
   /** Absolute frame source URL without a hash. */
@@ -58,7 +42,19 @@ export interface PrefetchReferences {
 }
 
 /** The parsed, detached HTML and references available to a custom prefetch hook. */
-export interface ProcessFrameContext extends PrefetchContext {
+export interface ProcessFrameContext {
+  /** Requested absolute frame source URL. */
+  src: string
+  /** Destination frame name, when provided. */
+  target: string | undefined
+  /**
+   * First caller's live triggering element. Nested requests inherit it, and later callers joining
+   * shared work do not replace it. It may be disconnected or point elsewhere while another caller
+   * retains the work.
+   */
+  readonly element: Element | undefined
+  /** Same as this frame's `fetch` `init.signal`; aborts when all callers cancel or runtime is disposed. */
+  signal: AbortSignal
   /** Original response, whose body has been consumed into the fragment. */
   response: Response
   /** Inert HTML fragment, including templates; it is never mounted by Remix. */

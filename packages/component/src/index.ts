@@ -80,7 +80,6 @@ export { defaultPrefetch, prefetch } from './runtime/prefetch.ts'
 export type {
   DefaultPrefetchOverrides,
   PrefetchAnchorOptions,
-  PrefetchContext,
   PrefetchFrame,
   PrefetchFrameOptions,
   ProcessFrameContext,
