@@ -14,6 +14,7 @@ import { encodeFormDataAsSearchParams, normalizeFormLineBreaks } from './form-na
 import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
 import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
+import { setFrameCommit, type FrameCommit } from './frame-commit.ts'
 
 /**
  * Options for starting the client runtime with {@link run}.
@@ -30,8 +31,9 @@ export interface RunInit {
   /**
    * Resolves browser-loaded frame content, including top-frame navigation and reloads.
    *
-   * Defaults to fetching the frame source as HTML with the submitted form data, method, encoding,
-   * and abort signal. All requests send `X-Remix-Frame: true`, plus `X-Remix-Target` when named.
+   * Defaults to {@link defaultResolveFrame}, which fetches HTML with the submitted form data,
+   * method, encoding, and abort signal. All requests send `X-Remix-Frame: true`, plus
+   * `X-Remix-Target` when named.
    * The default resolver only fetches from the document origin, including
    * redirects, but does not sanitize the returned HTML. Custom resolvers own their request,
    * redirect, and content trust policies. Preserve the Response's `Content-Security-Policy` and
@@ -74,6 +76,19 @@ export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
   dispose(): void
 }
 
+/** Request and rendering overrides used by {@link defaultResolveFrame}. */
+export interface DefaultResolveFrameOverrides {
+  /**
+   * Receives an absolute URL string without a fragment and prepared request settings, including
+   * form encoding, frame headers, abort signal, and `same-origin` mode. Relative sources resolve
+   * against `document.baseURI`. Can modify the request or return a cached response
+   * (defaults to `globalThis.fetch`).
+   */
+  fetch?(url: string, init: RequestInit): Promise<Response>
+  /** Wraps the frame's default commit when Remix renders the returned response. */
+  commit?: FrameCommit
+}
+
 function getRequestBody(options?: ResolveFrameOptions): {
   body?: BodyInit
   encType?: string
@@ -102,19 +117,38 @@ function getRequestBody(options?: ResolveFrameOptions): {
   }
 }
 
-async function defaultResolveFrame(src: string, options?: ResolveFrameOptions): Promise<Response> {
+/**
+ * Fetches frame HTML with default request encoding and response validation.
+ *
+ * Rejects non-HTML `3xx`/`4xx` responses and all `5xx` responses, including those returned by a
+ * custom fetch implementation. The optional commit callback runs when Remix renders the response.
+ *
+ * @param src Frame source to fetch.
+ * @param options Frame target, navigation transition, form submission, and cancellation settings.
+ * @param overrides Fetch implementation and callback wrapping the default frame commit.
+ * @returns The unconsumed response for streaming into the frame. Return it directly to preserve
+ * its commit callback; cloning or replacing it does not copy the callback.
+ */
+export async function defaultResolveFrame(
+  src: string,
+  options?: ResolveFrameOptions,
+  overrides?: DefaultResolveFrameOverrides,
+): Promise<Response> {
   let { body, encType } = getRequestBody(options)
   let response = await fetchFrame(
     src,
     options?.target,
     { body, method: options?.method, signal: options?.signal },
     encType,
+    overrides?.fetch,
   )
 
   let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
   if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
     throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
   }
+
+  if (overrides?.commit) setFrameCommit(response, overrides.commit)
 
   return response
 }

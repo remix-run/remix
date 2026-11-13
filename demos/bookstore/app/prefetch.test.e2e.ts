@@ -10,6 +10,63 @@ import { assets } from './utils/assets.ts'
 const router = await createTestRouter()
 
 describe('bookstore prefetching', () => {
+  it('reuses stale frame HTML on Back/Forward and fetches again on ordinary navigation', async (t) => {
+    let requests: string[] = []
+    let page = await t.serve(
+      await createTestServer(async (request) => {
+        let response = await router.fetch(request)
+        let pathname = new URL(request.url).pathname
+        if (
+          (pathname === '/about' || pathname === '/contact') &&
+          request.headers.get('X-Remix-Frame') === 'true'
+        ) {
+          requests.push(pathname)
+          // Make browsing HTML immediately stale without waiting for its normal 30-second lifetime.
+          response.headers.set('Cache-Control', 'private, max-age=0')
+        }
+        return response
+      }),
+    )
+    await page.goto('/contact')
+    await waitForNavigationRuntime(page)
+
+    await page
+      .getByRole('banner')
+      .getByRole('link', { name: 'About', exact: true })
+      .evaluate((anchor: HTMLAnchorElement) => anchor.click())
+    await page.getByRole('heading', { name: 'About Our Bookstore' }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    await page
+      .getByRole('banner')
+      .getByRole('link', { name: 'Contact', exact: true })
+      .evaluate((anchor: HTMLAnchorElement) => anchor.click())
+    await page.getByRole('heading', { name: 'Contact Us', exact: true }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    assert.deepEqual(requests, ['/about', '/contact'])
+
+    await page.evaluate(async () => window.navigation.back().finished)
+    await page.getByRole('heading', { name: 'About Our Bookstore' }).waitFor()
+    await page.evaluate(async () => window.navigation.forward().finished)
+    await page.getByRole('heading', { name: 'Contact Us', exact: true }).waitFor()
+    assert.deepEqual(
+      requests,
+      reusesCachedHtml(page)
+        ? ['/about', '/contact']
+        : ['/about', '/contact', '/about', '/contact'],
+    )
+
+    await page
+      .getByRole('banner')
+      .getByRole('link', { name: 'About', exact: true })
+      .evaluate((anchor: HTMLAnchorElement) => anchor.click())
+    await page.getByRole('heading', { name: 'About Our Bookstore' }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    assert.equal(
+      requests.filter((pathname) => pathname === '/about').length,
+      reusesCachedHtml(page) ? 2 : 3,
+    )
+  })
+
   it('reuses viewport-prefetched frame HTML without caching document navigations', async (t) => {
     let releaseImages = Promise.withResolvers<void>()
     t.after(() => releaseImages.resolve())
@@ -74,7 +131,7 @@ describe('bookstore prefetching', () => {
     assert.equal(imageRequests.filter((path) => path.includes('/bbq-')).length, 1)
     await link.click()
     await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
-    assert.equal(requests.length, reusesPrefetchedHtml(page) ? 1 : 2)
+    assert.equal(requests.length, reusesCachedHtml(page) ? 1 : 2)
     assert.equal(requests[0].headers.get('X-Remix-Frame'), 'true')
     assert.equal(
       await page.getByRole('img', { name: 'Image 1 of 3' }).getAttribute('src'),
@@ -115,7 +172,7 @@ describe('bookstore prefetching', () => {
     releaseImages.resolve()
     let freshDocument = await page.goto('/books/bbq')
     assert.equal(freshDocument?.headers()['cache-control'], 'no-store')
-    assert.equal(requests.length, reusesPrefetchedHtml(page) ? 2 : 3)
+    assert.equal(requests.length, reusesCachedHtml(page) ? 2 : 3)
     assert.equal(requests.at(-1)?.headers.get('X-Remix-Frame'), null)
   })
 
@@ -329,7 +386,7 @@ describe('bookstore prefetching', () => {
     await (await prefetched).finished()
     await link.click()
     await page.getByRole('heading', { name: 'About Our Bookstore' }).waitFor()
-    assert.equal(requests, reusesPrefetchedHtml(page) ? 1 : 2)
+    assert.equal(requests, reusesCachedHtml(page) ? 1 : 2)
   })
 
   it('observes links added by frame navigation and does not repeat on viewport reentry', async (t) => {
@@ -392,7 +449,7 @@ async function waitForNavigationRuntime(page: Page): Promise<void> {
 
 // Playwright's WebKit contexts keep no HTTP cache, so navigations there fetch prefetched HTML again.
 // Safari reuses it, as WebKit does with a persistent profile.
-function reusesPrefetchedHtml(page: Page): boolean {
+function reusesCachedHtml(page: Page): boolean {
   return page.context().browser()?.browserType().name() !== 'webkit'
 }
 

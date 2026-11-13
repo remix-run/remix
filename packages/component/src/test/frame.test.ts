@@ -49,6 +49,17 @@ function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestF
   })
 }
 
+function createTestTransition(): NavigationTransition {
+  let from = window.navigation.currentEntry
+  if (!from) throw new Error('Expected a current navigation entry')
+  return {
+    navigationType: 'traverse',
+    from,
+    committed: Promise.resolve(),
+    finished: Promise.resolve(),
+  }
+}
+
 describe('frames', () => {
   afterEach(() => {
     resetDocumentImportMapManager(document)
@@ -1431,6 +1442,58 @@ describe('frames', () => {
 
     expect(resolveFrame.mock.calls).toHaveLength(2)
     expect(root.textContent).toBe('Reloaded')
+  })
+
+  it('passes the current transition through new and preserved server frames', async (t) => {
+    let renderClientFrame = false
+    let Entry = clientEntry('/entry.js#Entry', function Entry() {
+      return () =>
+        renderClientFrame
+          ? jsx(Frame, { src: '/client-child' })
+          : jsx('p', { children: 'Server content' })
+    })
+    let html = await drain(
+      renderToStream(
+        jsx('html', {
+          children: [
+            jsx('head', {}),
+            jsx('body', {
+              children: jsx(Frame, { name: 'server-wrapper', src: '/server-wrapper' }),
+            }),
+          ],
+        }),
+        { resolveFrame: () => renderToString(jsx(Entry, {})) },
+      ),
+    )
+    let transition = createTestTransition()
+    let nextTransition = createTestTransition()
+    let namedFrames = new NamedFrameRegistry()
+    let loads: Array<ResolveFrameOptions['transition']> = []
+    let frame = createTestFrame(document, {
+      namedFrames,
+      loadModule: () => Entry,
+      resolveFrame(src, options) {
+        if (src === 'https://example.com/initial') return html
+        expect(src).toBe('/client-child')
+        loads.push(options?.transition)
+        return '<p id="client-child">Client content</p>'
+      },
+    })
+    t.after(() => frame.dispose())
+    await frame.ready()
+    renderClientFrame = true
+
+    await reloadFrameForNavigation(frame.handle, { transition }).finished
+    let serverFrame = namedFrames.get('server-wrapper')
+    expect(serverFrame).toBeDefined()
+    await reloadFrameForNavigation(frame.handle, { transition: nextTransition }).finished
+
+    expect(namedFrames.get('server-wrapper')).toBe(serverFrame)
+    expect(loads).toEqual([transition, nextTransition])
+    expect(document.getElementById('client-child')?.textContent).toBe('Client content')
+
+    await frame.handle.reload()
+    expect(loads).toEqual([transition, nextTransition, undefined])
   })
 
   it('submits FormData in one request and renders its response without navigation', async (t) => {
