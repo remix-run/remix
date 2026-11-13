@@ -63,8 +63,7 @@ function resyncWebKitScrollAfterNavigation(
   resetScroll: boolean,
   transition: NavigationTransition,
 ): void {
-  let userAgent = navigator.userAgent
-  if (!userAgent.includes('AppleWebKit') || isChromiumUserAgent(userAgent)) return
+  if (!isWebKitUserAgent(navigator.userAgent)) return
   if (!resetScroll || (event.navigationType !== 'push' && event.navigationType !== 'replace'))
     return
   if (new URL(event.destination.url).hash) return
@@ -333,6 +332,36 @@ export function startNavigationListener(
   if (!navigation) return
   let resolveFormNavigation = createFormNavigationResolver(signal)
   let coordinator = createNavigationCoordinator(navigation)
+  let userAgent = navigator.userAgent
+  let scrollPositions =
+    isWebKitUserAgent(userAgent) || isFirefoxUserAgent(userAgent)
+      ? new Map<string, { left: number; top: number }>()
+      : undefined
+  let settledEntryKey = scrollPositions ? navigation.currentEntry?.key : undefined
+  // Input can be delivered after the navigation it preceded. Compare timestamps, not delivery order.
+  let lastInputTime = 0
+  if (scrollPositions) {
+    for (let type of ['pointerdown', 'wheel', 'keydown', 'touchmove']) {
+      window.addEventListener(
+        type,
+        (event) => {
+          lastInputTime = Math.max(lastInputTime, event.timeStamp)
+        },
+        { capture: true, passive: true, signal },
+      )
+    }
+
+    navigation.addEventListener(
+      'currententrychange',
+      (event) => {
+        // Hash changes and URL-only updates keep the displayed content in the new entry.
+        if (settledEntryKey !== undefined && settledEntryKey === event.from.key) {
+          settledEntryKey = navigation.currentEntry?.key
+        }
+      },
+      { signal },
+    )
+  }
 
   navigation.updateCurrentEntry({
     state: {
@@ -348,6 +377,20 @@ export function startNavigationListener(
     'navigate',
     (event) => {
       coordinator.observeEntry()
+      if (scrollPositions) {
+        let currentKey = navigation.currentEntry?.key
+        if (currentKey !== undefined && currentKey === settledEntryKey) {
+          scrollPositions.set(currentKey, { left: window.scrollX, top: window.scrollY })
+          let keys = new Set(navigation.entries().map((entry) => entry.key))
+          for (let key of scrollPositions.keys()) {
+            if (!keys.has(key)) scrollPositions.delete(key)
+          }
+        } else if (currentKey !== undefined) {
+          // A failed, interrupted, or superseded load cannot refresh this entry's snapshot. Forget
+          // the old one so the next visit uses native restoration rather than stale coordinates.
+          scrollPositions.delete(currentKey)
+        }
+      }
 
       if (
         isDocumentReload(event.info) ||
@@ -405,6 +448,10 @@ export function startNavigationListener(
       }
 
       if (!coordinator.transition(event, { type: 'accepted', replaceHistory })) return
+      // The URL advances before the content. An interrupted or failed load must not save the
+      // outgoing viewport as the pending destination's position.
+      if (scrollPositions) settledEntryKey = undefined
+      let savedPosition = isTraverse ? scrollPositions?.get(event.destination.key) : undefined
 
       // WebKit runs a traversal's handlers before moving its history to the destination entry, which
       // it does later in the task that fires `navigate`. Scrolling before then restores the position
@@ -445,11 +492,24 @@ export function startNavigationListener(
             if (!coordinator.isCurrent(event)) return
             event.scroll()
             if (!coordinator.isCurrent(event)) return
+            // WebKit can overwrite the destination's native position during a slow traversal;
+            // Firefox can clamp it to the outgoing document's height before this commit.
+            if (
+              savedPosition &&
+              lastInputTime < event.timeStamp &&
+              window.history.scrollRestoration === 'auto'
+            ) {
+              window.scrollTo({ ...savedPosition, behavior: 'instant' })
+              if (!coordinator.isCurrent(event)) return
+            }
             webKitScrollResets.get(event)?.()
           }
 
           let { redirectedTo } = await reload.finished
           if (!coordinator.transition(event, { type: 'frame-finished' })) return
+          // Do not adopt independent retries or takeovers, or content whose stream is unfinished.
+          // Completing a later navigation makes this entry eligible for snapshots again.
+          if (scrollPositions) settledEntryKey = navigation.currentEntry?.key
 
           if (redirectedTo && frame === topFrame) {
             frame.src = redirectedTo
@@ -853,6 +913,14 @@ function getNavigationScrollStyles(event: NavigateEvent, resetScroll: boolean): 
 
 function isChromiumUserAgent(userAgent: string): boolean {
   return userAgent.includes('Chrome') || userAgent.includes('Chromium')
+}
+
+function isWebKitUserAgent(userAgent: string): boolean {
+  return userAgent.includes('AppleWebKit') && !isChromiumUserAgent(userAgent)
+}
+
+function isFirefoxUserAgent(userAgent: string): boolean {
+  return userAgent.includes('Firefox')
 }
 
 type NavigationScrollStylesheet = {
