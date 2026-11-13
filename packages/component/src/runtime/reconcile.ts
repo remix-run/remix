@@ -1771,19 +1771,56 @@ function patchKeyedChildren(
     }
   }
 
+  // Stable children keep their DOM position, so a new child can be inserted
+  // directly before the next stable sibling instead of at the end of the list
+  // and moved by the placement pass. Hydration keeps the list end anchor
+  // because it marks where adoption stops.
+  let stableIndexes = matchAnalysis.canSkipPlacement ? null : lisMatches(matches)
+  let nextStableCursor = 0
+  // The cached anchor stays valid for new children before `stableAnchorIndex`
+  // because that stable child has not been diffed yet
+  let stableAnchorIndex = -1
+  let stableAnchor = anchor
+
   for (let index = 0; index < next.length; index++) {
     let oldIndex = matches[index]
     let oldNode = oldIndex >= 0 ? curr[oldIndex] : null
+    let insertAnchor = anchor
 
-    committed[index] = diffVNodes(oldNode, next[index], domParent, vParent, context, anchor, cursor)
+    if (!oldNode && stableIndexes && !cursor) {
+      if (stableAnchorIndex < index) {
+        stableAnchorIndex = next.length
+        stableAnchor = anchor
+        while (nextStableCursor < stableIndexes.length) {
+          let stableIndex = stableIndexes[nextStableCursor++]
+          if (stableIndex < index) continue
+          let stableDom = findFirstDomAnchor(curr[matches[stableIndex]])
+          if (stableDom) {
+            stableAnchorIndex = stableIndex
+            stableAnchor = stableDom
+            break
+          }
+        }
+      }
+      insertAnchor = stableAnchor
+    }
+
+    committed[index] = diffVNodes(
+      oldNode,
+      next[index],
+      domParent,
+      vParent,
+      context,
+      insertAnchor,
+      cursor,
+    )
   }
   let committedChildren = committed as CommittedVNode[]
 
-  if (matchAnalysis.canSkipPlacement) {
+  if (!stableIndexes) {
     return committedChildren
   }
 
-  let stableIndexes = lisMatches(matches)
   let stableCursor = stableIndexes.length - 1
   let placementAnchor: Node | null = anchor ?? null
 
@@ -2032,6 +2069,9 @@ function placeVNode(node: CommittedVNode, domParent: ParentNode, anchor: Node | 
   if (!lastDom) return
   if (anchor && domRangeContainsNode(firstDom, lastDom, anchor)) return
   if (firstDom === anchor) return
+  // Re-inserting a node that is already in place still disconnects and
+  // reconnects it, which runs custom element callbacks and resets state
+  if (lastDom.nextSibling === anchor) return
 
   moveDomRange(domParent, firstDom, lastDom, anchor)
 }
