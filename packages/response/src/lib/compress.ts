@@ -172,9 +172,9 @@ function negotiateEncoding(
   let preferred = acceptEncoding.getPreferred(supportedEncodings)
 
   if (!preferred) {
-    // Clients can explicitly reject 'identity' by setting its weight to 0,
-    // otherwise it is considered an acceptable fallback.
-    return acceptEncoding.getWeight('identity') === 0 ? null : 'identity'
+    // Clients can refuse 'identity' with `identity;q=0` or `*;q=0`, otherwise it is an acceptable
+    // fallback.
+    return acceptEncoding.accepts('identity') ? 'identity' : null
   }
 
   return preferred

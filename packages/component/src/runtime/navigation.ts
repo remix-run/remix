@@ -6,6 +6,11 @@ import {
 } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
 import type { FrameHandle, Handle } from './component.ts'
+import {
+  getFrameCommitNavigation,
+  setFrameCommitNavigation,
+  type FrameCommitNavigation,
+} from './frame-commit.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -38,8 +43,17 @@ interface FrameRedirectNavigationInfo {
   resetFocus: NonNullable<NavigationInterceptOptions['focusReset']>
 }
 
+interface FrameCommitNavigationState extends FrameCommitNavigation {
+  controller: AbortController
+  redirecting: boolean
+}
+
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
 const frameRedirectNavigationInfoType = 'frame-redirect'
+const frameRedirectCommitNavigations = new WeakMap<
+  FrameRedirectNavigationInfo,
+  FrameCommitNavigationState
+>()
 
 interface PendingUrlUpdate {
   controller: AbortController
@@ -115,12 +129,22 @@ function resyncWebKitScrollAfterNavigation(
 
     // WebKit can reset its internal scroll position without synchronizing the visual viewport.
     // https://bugs.webkit.org/show_bug.cgi?id=309542
-    if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 0) return
-    window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
-    requestAnimationFrame(() => {
-      if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 1) return
-      window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
-    })
+    function resyncScroll() {
+      if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 0) return
+      window.scrollTo({ behavior: 'instant', left: 0, top: 1 })
+      requestAnimationFrame(() => {
+        if (event.signal.aborted || window.scrollX !== 0 || window.scrollY !== 1) return
+        window.scrollTo({ behavior: 'instant', left: 0, top: 0 })
+      })
+    }
+
+    // A commit hook may pause animation frames for a view-transition snapshot. Wait for frames
+    // to resume before nudging, while keeping the repair for hooks that don't animate.
+    if (getFrameCommitNavigation(event.signal)?.pendingCommits) {
+      requestAnimationFrame(resyncScroll)
+    } else {
+      resyncScroll()
+    }
   }, stop)
 }
 
@@ -333,6 +357,7 @@ export function startNavigationListener(
   if (!navigation) return
   let resolveFormNavigation = createFormNavigationResolver(signal)
   let coordinator = createNavigationCoordinator(navigation)
+  let currentCommitNavigation: FrameCommitNavigationState | undefined
 
   navigation.updateCurrentEntry({
     state: {
@@ -349,6 +374,15 @@ export function startNavigationListener(
     (event) => {
       coordinator.observeEntry()
 
+      let redirectCommit = isFrameRedirectNavigationInfo(event.info)
+        ? frameRedirectCommitNavigations.get(event.info)
+        : undefined
+      if (redirectCommit !== currentCommitNavigation) redirectCommit = undefined
+      if (currentCommitNavigation && currentCommitNavigation !== redirectCommit) {
+        currentCommitNavigation.controller.abort(
+          new DOMException('Frame navigation was superseded', 'AbortError'),
+        )
+      }
       if (
         isDocumentReload(event.info) ||
         (event.hashChange && !coordinator.needsFrameReload) ||
@@ -364,6 +398,7 @@ export function startNavigationListener(
       }
 
       if (isFrameRedirectNavigationInfo(event.info)) {
+        if (redirectCommit) setFrameCommitNavigation(event.signal, redirectCommit)
         interceptNavigation(navigation, event, event.info.resetScroll !== 'manual', {
           async handler() {},
           scroll: 'manual',
@@ -413,6 +448,42 @@ export function startNavigationListener(
       let handler = async () => {
         try {
           if (!coordinator.transition(event, { type: 'handler-started' })) return
+          let completed = Promise.withResolvers<void>()
+          let controller = new AbortController()
+          let commitNavigation: FrameCommitNavigationState = {
+            controller,
+            signal: controller.signal,
+            finished: completed.promise,
+            redirecting: false,
+            pendingCommits: 0,
+          }
+          currentCommitNavigation = commitNavigation
+          setFrameCommitNavigation(event.signal, commitNavigation)
+          void completed.promise.catch(() => {})
+          controller.signal.addEventListener('abort', () => completed.resolve(), { once: true })
+          signal.addEventListener('abort', () => controller.abort(signal.reason), {
+            once: true,
+            signal: controller.signal,
+          })
+          event.signal.addEventListener(
+            'abort',
+            () => {
+              if (!commitNavigation.redirecting) controller.abort(event.signal.reason)
+            },
+            { once: true, signal: controller.signal },
+          )
+          let transition = navigation.transition
+          if (transition) {
+            void transition.finished.then(
+              () => {
+                if (!commitNavigation.redirecting) completed.resolve()
+              },
+              (error) => {
+                if (!commitNavigation.redirecting) completed.reject(error)
+              },
+            )
+          }
+
           let submission = await runtimeNavigation.getSubmission?.()
           if (!coordinator.transition(event, { type: 'submission-ready' })) return
 
@@ -431,6 +502,7 @@ export function startNavigationListener(
           let reload = reloadFrame(frame, {
             ...submission,
             signal: event.signal,
+            transition: transition ?? undefined,
           })
           coordinator.transition(event, { type: 'reload-started', signal: reload.signal })
           await reload.committed
@@ -454,17 +526,27 @@ export function startNavigationListener(
           if (redirectedTo && frame === topFrame) {
             frame.src = redirectedTo
             if (!coordinator.isCurrent(event)) return
+            commitNavigation.redirecting = true
+            let info: FrameRedirectNavigationInfo = {
+              type: frameRedirectNavigationInfoType,
+              resetScroll: scroll,
+              resetFocus: focusReset,
+            }
+            frameRedirectCommitNavigations.set(info, commitNavigation)
             // Start the successor navigation without awaiting it: this handler must settle before
             // the replacement navigation can finish.
-            navigation.navigate(redirectedTo, {
+            let redirected = navigation.navigate(redirectedTo, {
               history: 'replace',
               state: { ...state, src: redirectedTo },
-              info: {
-                type: frameRedirectNavigationInfoType,
-                resetScroll: scroll,
-                resetFocus: focusReset,
-              } satisfies FrameRedirectNavigationInfo,
+              info,
             })
+            if (redirected?.finished) {
+              void redirected.finished.then(() => completed.resolve(), completed.reject)
+            } else {
+              completed.resolve()
+            }
+          } else if (!transition) {
+            completed.resolve()
           }
         } finally {
           coordinator.release(event)

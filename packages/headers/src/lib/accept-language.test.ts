@@ -73,16 +73,48 @@ describe('Accept-Language', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9,fr;q=0.8')
     assert.equal(header.getWeight('en-US'), 1)
     assert.equal(header.getWeight('*'), 1)
-    assert.equal(header.getWeight('en'), 1)
+    assert.equal(header.getWeight('en'), 0.9)
     assert.equal(header.getWeight('en-GB'), 0.9)
     assert.equal(header.getWeight('fr'), 0.8)
     assert.equal(header.getWeight('fi'), 0)
   })
 
+  it('uses the most specific matching range for weights', () => {
+    let header = new AcceptLanguage('en-US;q=0, *')
+    assert.equal(header.getWeight('en-US'), 0)
+    assert.equal(header.accepts('en-US'), false)
+    assert.equal(header.getWeight('en-GB'), 1)
+
+    header = new AcceptLanguage('*;q=0.8, en;q=0.5, en-US;q=0.1')
+    assert.equal(header.getWeight('en-US'), 0.1)
+    assert.equal(header.getWeight('en-GB'), 0.5)
+    assert.equal(header.getWeight('fr'), 0.8)
+    assert.equal(header.getPreferred(['en-US', 'en-GB', 'fr']), 'fr')
+  })
+
+  it('uses an exact language entry over a more specific range', () => {
+    let header = new AcceptLanguage('en;q=0, en-US')
+    assert.equal(header.accepts('en'), false)
+    assert.equal(header.getWeight('en-US'), 1)
+
+    header = new AcceptLanguage('en-US, en;q=0.1')
+    assert.equal(header.getWeight('en'), 0.1)
+  })
+
+  it('matches language ranges by subtag prefix', () => {
+    let header = new AcceptLanguage('zh-Hant-TW;q=0.1, *')
+    assert.equal(header.getWeight('zh-Hant-TW'), 0.1)
+    assert.equal(header.getWeight('zh-Hant-CN'), 1)
+
+    header = new AcceptLanguage('zh-Hant;q=0.5, *;q=0.1')
+    assert.equal(header.getWeight('zh-Hant-TW'), 0.5)
+    assert.equal(header.getWeight('zh-Hans'), 0.1)
+  })
+
   it('gets the preferred language', () => {
     let header = new AcceptLanguage('en-US,en;q=0.9')
     assert.equal(header.getPreferred(['en-GB', 'en-US']), 'en-US')
-    assert.equal(header.getPreferred(['en-GB', 'en']), 'en')
+    assert.equal(header.getPreferred(['en', 'fr']), 'en')
     assert.equal(header.getPreferred(['fr', 'en-GB']), 'en-GB')
     assert.equal(header.getPreferred(['fi', 'ja']), null)
   })

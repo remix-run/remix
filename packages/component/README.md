@@ -1247,19 +1247,120 @@ if (form.reportValidity()) {
 
 ### Resolving Frames
 
-`run()` installs a default frame resolver. It's used for `<Frame>` elements first rendered in the browser, lazy frames approaching the viewport, `frame.reload()` calls, link navigations, and form navigations. Pending eager frames from the server response are filled in by the streamed HTML. A normal browser document load doesn't use the resolver either.
+Pass a custom `resolveFrame` to `run()` and delegate to `defaultResolveFrame(src, options?, overrides?)` to customize requests without copying form encoding or response handling. For example, use the browser HTTP cache for Back/Forward navigations:
 
-The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`. Top-frame and unnamed frame requests omit the target, so give a frame a name when its route needs to tell it apart. The route decides whether to return a full document or a fragment.
+```ts
+import { defaultResolveFrame, run } from 'remix/component'
 
-The default resolver doesn't tell the server which page contains the frame. If frame content depends on the containing page, include that context explicitly in the frame's `src`.
+run({
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    return mod[exportName]
+  },
+  resolveFrame(src, options) {
+    return defaultResolveFrame(src, options, {
+      fetch(url, init) {
+        return fetch(url, {
+          ...init,
+          cache: options?.transition?.navigationType === 'traverse' ? 'force-cache' : 'default',
+        })
+      },
+    })
+  },
+})
+```
 
-The default resolver is a short `fetch()` call ([source](https://github.com/remix-run/remix/blob/main/packages/component/src/runtime/run.ts)), so a custom resolver can start from a copy of it. It also follows these rules:
+`force-cache` can reuse stale responses and falls back to the network on a cache miss. The server must allow storage with suitable `Cache-Control` and `Vary` headers. Decide when to bypass the cache after mutations or changes to the signed-in user.
 
-- GET form values are already encoded in `src`. `application/x-www-form-urlencoded` submissions use `URLSearchParams`, `text/plain` submissions use CRLF-delimited text, and `multipart/form-data` submissions use `FormData`.
-- It accepts `2xx` responses, and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text.
-- It uses the `same-origin` Fetch mode, so cross-origin sources and redirects fail, even when the destination allows CORS.
+`options.transition` is the original browser `NavigationTransition` for a navigation-driven load. Its `navigationType` is `push`, `replace`, `traverse`, or `reload`, and `from` identifies the history entry being left. Client frames loaded while rendering the response inherit it. Independent loads and `frame.reload()` leave it undefined, even while another navigation is active.
 
-Pass a custom `resolveFrame` to `run()` when the server requires additional headers, another body encoding, or a different response policy. A custom resolver can return frame content directly, or return the fetched `Response` with any status to render its body. Returning the response lets Remix stream it. When `fetch()` followed a redirect, frames other than the top frame render the response without changing either URL.
+The `fetch` override receives an absolute URL string without a fragment and an always-present `RequestInit`, including the encoded form body, frame headers, abort signal, and `same-origin` mode. Relative sources resolve against `document.baseURI`. Forward these settings as in the example to preserve the default request behavior. The resolver validates the returned response. Custom fetch implementations own any changes to request and redirect policies.
+
+For application-managed storage with the Cache API, construct `new Request(url, init)` as a cache key and return a stored `Response`. The app owns cache writes, invalidation, and partitioning by user.
+
+#### Default Resolver Behavior
+
+`run()` uses `defaultResolveFrame` unless you supply `resolveFrame`. It resolves client-created frames, lazy frames approaching the viewport, `frame.reload()`, and intercepted link and form navigations. Pending eager frames from the server are filled by streamed HTML; normal document loads do not use the resolver.
+
+Every request sends `X-Remix-Frame: true`. Named frames also send `X-Remix-Target`; top-frame and unnamed frame requests omit it. The route decides whether to return a document or a fragment. Include any context about the containing page in the frame's `src`.
+
+- GET form values are already encoded in `src`. POST submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for `text/plain`, or `FormData` for `multipart/form-data`. Fetch generates multipart boundaries.
+- The resolver accepts `2xx` responses and HTML `3xx` or `4xx` responses, matching `text/html` case-insensitively. It rejects other `3xx` or `4xx` responses and all `5xx` responses with their status and status text.
+- The default fetch uses `same-origin` mode, which rejects cross-origin sources and redirects even when the destination allows CORS.
+
+To use another body encoding or response policy, provide `resolveFrame` without delegating. It can return frame content directly or a `Response` with any status to stream its body. When Fetch follows a redirect, frames other than the top frame render the final content without changing the frame source or browser URL.
+
+#### Wrapping Frame Commits
+
+Use the `commit` override to wrap rendering in a same-document view transition. This example assumes every subframe has a nonempty name, so a missing `target` identifies the top frame. It animates push, replace, and Back/Forward navigations, while reloads and independent frame updates commit immediately:
+
+```ts
+import { defaultResolveFrame, run } from 'remix/component'
+
+run({
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    return mod[exportName]
+  },
+  resolveFrame(src, options) {
+    let transition = options?.transition
+    let animate =
+      !options?.target && transition !== undefined && transition.navigationType !== 'reload'
+
+    return defaultResolveFrame(src, options, {
+      async commit(commitFrame, { signal }) {
+        if (
+          !animate ||
+          !document.startViewTransition ||
+          matchMedia('(prefers-reduced-motion: reduce)').matches ||
+          signal.aborted
+        ) {
+          return commitFrame()
+        }
+
+        let viewTransition = document.startViewTransition(commitFrame)
+        let skip = () => viewTransition.skipTransition()
+        signal.addEventListener('abort', skip, { once: true })
+        void viewTransition.ready.catch(() => {})
+
+        try {
+          await viewTransition.finished
+        } finally {
+          signal.removeEventListener('abort', skip)
+        }
+      },
+    })
+  },
+})
+```
+
+The `fetch` and `commit` overrides can be supplied together. Return the response from `defaultResolveFrame` directly; cloning or replacing it loses the commit callback.
+
+`commit(commitFrame, { to, response, signal })` runs before the response body is consumed. `to` is the frame destination after redirects, including application-managed redirects whose response has no URL. Without a redirect, it is the requested source. Use `to` for destination-specific animation decisions; `options.transition` still describes the original navigation.
+
+`commitFrame()` starts rendering once. Its promise waits for rendering and, for navigation-driven loads, the enclosing navigation's URL, scroll, and focus handling, including a followed redirect's replacement navigation. Independent frame loads wait only for their own rendering. Navigation does not wait for the callback's post-commit animation.
+
+The callback's `signal` aborts when the update is superseded or disposed, including during an animation. Cancellation releases a pending `commitFrame()` and prevents a late call from rendering stale content.
+
+Returning or throwing without calling `commitFrame()` falls back to the default commit. Callback errors are reported on the runtime; rendering failures reject `commitFrame()`. A callback that stays pending without calling `commitFrame()` holds the update until cancellation.
+
+Shared elements need a unique `view-transition-name` within each captured page. An outgoing card and its destination image share a name, but two cards on the same page cannot. If a product appears more than once, name only the participating card before starting the transition and leave the others unnamed (`view-transition-name: none`). Duplicate names cause the browser to skip the animation; `view-transition-class` shares styles across elements with different names. See [the browser's naming rules](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/view-transition-name).
+
+To wait for destination images before capturing the new snapshot, replace `document.startViewTransition(commitFrame)` inside the example's `commit` callback with the following. Keep its abort listener and cleanup:
+
+```ts
+let viewTransition = document.startViewTransition(async () => {
+  await commitFrame()
+  if (signal.aborted) return
+
+  let images = document.querySelectorAll<HTMLImageElement>('img[data-view-transition-image]')
+  await Promise.allSettled(Array.from(images, (image) => image.decode()))
+})
+```
+
+Add the application-defined `data-view-transition-image` attribute only to images needed for the snapshot, such as the destination's main product image. `Promise.allSettled()` handles decode failures. Preloading can reduce the wait but does not guarantee decoding has finished.
+
+Response bodies remain streamed. A slow body or image decode can delay the snapshot or cause the browser to skip the animation. Avoid awaiting `requestAnimationFrame` inside the update callback: rendering is paused and may prevent it from running.
 
 ### Preserving Client-Owned DOM
 
@@ -1524,8 +1625,8 @@ Remix has no numeric concurrency limit or batch API. Viewport triggers dispatch 
 The following example uses an application queue with three slots, cancellation, and dynamic link scoring, and shares prefetched HTML with `resolveFrame`. Since `fetch()` resolves at headers, drain a response clone before releasing the slot. Keep the original response for the cache and return a separate clone for Remix's parser:
 
 ```ts
-import { defaultPrefetch, run } from 'remix/component'
-import { loadModule, frameQueue, scoreLink, resolveFrame } from './frame-loading.ts'
+import { defaultPrefetch, defaultResolveFrame, run } from 'remix/component'
+import { loadModule, frameQueue, scoreLink } from './frame-loading.ts'
 
 let prefetched = new Map<string, Response>()
 
@@ -1567,14 +1668,19 @@ run({
     })
   },
   resolveFrame(src, options) {
-    let isGet = !options?.method || options.method.toUpperCase() === 'GET'
-    let cached = isGet ? prefetched.get(frameKey(src, options?.target)) : undefined
-    return cached ? cached.clone() : resolveFrame(src, options)
+    return defaultResolveFrame(src, options, {
+      async fetch(url, init) {
+        let isGet = !init.method || init.method.toUpperCase() === 'GET'
+        let target = new Headers(init.headers).get('X-Remix-Target') ?? undefined
+        let cached = isGet ? prefetched.get(frameKey(url, target)) : undefined
+        return cached ? cached.clone() : fetch(url, init)
+      },
+    })
   },
 })
 ```
 
-`loadModule`, `frameQueue`, `scoreLink`, and the fallback `resolveFrame` are application helpers. The fallback resolver handles submissions and normal frame requests. The application owns cache expiry, invalidation, and eviction. Clones preserve response metadata but can buffer and copy body chunks; draining avoids another whole-body `ArrayBuffer`, and each reader needs an unconsumed clone.
+`loadModule`, `frameQueue`, and `scoreLink` are application helpers. `defaultResolveFrame` retains request encoding and response validation when serving cached HTML. The application owns cache expiry, invalidation, and eviction. Clones preserve response metadata but can buffer and copy body chunks; draining avoids another whole-body `ArrayBuffer`, and each reader needs an unconsumed clone.
 
 Use a separate queue in `processFrame` for asset limits and scoring, forwarding `context.signal`. A loop is sufficient for imperative anchor scheduling:
 
