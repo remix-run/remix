@@ -2,6 +2,17 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.3
+
+### Patch Changes
+
+- Fix CSS `@import` resolution failing with a raw `ENOTDIR` error when an import path passes through a file, such as `@import "./theme.css/dark.css"`. These imports now report `IMPORT_RESOLUTION_FAILED`, matching script imports and other missing CSS imports. ([#12282](https://github.com/remix-run/remix/pull/12282))
+
+- Fix barrel file import optimisation downloading unused modules in nested import graphs. Imports added to preserve execution order could bring back an entire barrel that a nested import had already been optimised to bypass. These imports now request only the implementation modules needed to preserve that order. ([#12296](https://github.com/remix-run/remix/pull/12296))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.1.1`](https://github.com/remix-run/remix/releases/tag/headers@1.1.1)
+
 ## v1.0.2
 
 ### Patch Changes

@@ -1,1 +1,0 @@
-Inspect typed object fields and validation metadata with `getSchemaMetadata()` from `remix/data-schema/experimental`, without running validators or default factories. This experimental export may change or be removed in patch releases.

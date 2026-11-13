@@ -2,6 +2,94 @@
 
 This is the changelog for [`component`](https://github.com/remix-run/remix/tree/main/packages/component). It follows [semantic versioning](https://semver.org/).
 
+## v1.3.0
+
+### Minor Changes
+
+- Customize frame requests and rendering with `defaultResolveFrame` and its `{ fetch, commit }` overrides ([#12249](https://github.com/remix-run/remix/pull/12249))
+  - Previously, adding a custom `resolveFrame` required you to take _full_ control and re-implement core logic from the default `resolveFrame` implementation
+  - `defaultResolveFrame` provides the internal default implementation with targeted `fetch` and `commit` hooks
+  - `fetch` allows you to override just the `fetch` call for the frame (set custom fetch options/headers, implement an in-memory cache, etc.)
+  - `commit` allows you to control the DOM update (trigger a view transition, etc.)
+  - `resolveFrame` now receives `options.transition` representing the browser navigation transition for navigation-driven frame reloads, allowing you to differentiate navigation versus imperative `frame.reload()` calls
+  - See [Resolving Frames](https://github.com/remix-run/remix/tree/main/packages/component#resolving-frames) for more information and the [bookstore demo](https://github.com/remix-run/remix/tree/main/demos/bookstore#view-transitions) for example usages
+
+- Follow a form's submissions with the typed `rmx:submission` event to show pending or optimistic UI. See [following a form submission](https://github.com/remix-run/remix/tree/main/packages/component#following-a-form-submission) for details. ([#12183](https://github.com/remix-run/remix/pull/12183))
+
+  ```tsx
+  // Inside a hydrated component:
+  <button
+    type="submit"
+    mix={on('rmx:submission', async (event, signal) => {
+      saving = true
+      handle.update()
+      await event.finished.catch(console.error)
+      if (signal.aborted) return
+      saving = false
+      handle.update()
+    })}
+  >
+    {saving ? 'Saving…' : 'Save'}
+  </button>
+  ```
+
+- Defer below-the-fold frame requests with `<Frame loading="lazy" fallback={<p>Loading…</p>} />` ([#12229](https://github.com/remix-run/remix/pull/12229))
+  - The server renders only the fallback, and the browser loads the frame when it approaches the viewport
+  - The fallback must be a DOM element to rive the intersection observer; the frame will default to eager loading without a valid fallback element
+
+- Enhance the frame `reloadStart` event with `src`, `method`, `encType`, `formData`, `element`, `submitter`, and `finished` fields for pending and optimistic UI. See [following a reload](https://github.com/remix-run/remix/tree/main/packages/component#following-a-reload) for details. ([#12183](https://github.com/remix-run/remix/pull/12183))
+
+- Multiple selects accept arrays in `value` and `defaultValue`. Use `value={[]}` to clear the current selection, or `defaultValue={[]}` to initialize a select with no selections. ([#12204](https://github.com/remix-run/remix/pull/12204))
+
+- Pass a DOM anchor element to `prefetch()` to use its navigation source and frame target and expose it to custom hooks ([#12277](https://github.com/remix-run/remix/pull/12277))
+
+- Customize prefetching with `defaultPrefetch` and its `{ fetch, processFrame }` overrides ([#12277](https://github.com/remix-run/remix/pull/12277))
+  - Previously, adding a custom `prefetch` required you to take _full_ control and re-implement core logic from the default `prefetch` implementation
+  - `defaultPrefetch` provides the internal default implementation with targeted `fetch` and `processFrame` hooks
+  - `fetch` allows you to override just the `fetch` call for the prefetched frame (set custom fetch options/headers, implement an in-memory cache, etc.)
+  - `processFrame` allows you to control subsequent asset prefetching - allowing Remix to discover, but you own control of what gets prefetched and in what order (includes scripts, stylesheets, images, and even nested frames based on their `fallback`/`loading` behaviors)
+  - The incoming frame `fragment` allows you to query the inert DOM of the prefetched frame to discover additional assets and implement your own custom prefetching behaviors
+  - See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/README.md#prefetching) for usage
+
+- Reflect locally rendered state in the URL with `updateUrl(href, options?)`, without fetching, rendering, or changing scroll and focus: ([#12110](https://github.com/remix-run/remix/pull/12110))
+
+  ```ts
+  import { updateUrl } from 'remix/component'
+
+  let signal = await updateUrl('/products/shirt?color=blue')
+  await updateUrl('/products/shirt?color=red', { history: 'push' })
+  ```
+
+### Patch Changes
+
+- Fix `clientEntry()` failing with "Type instantiation is excessively deep and possibly infinite" when a component's props include a `SerializableObject` (or another `SerializableValue` type) alongside a prop that is serializable but not assignable to `SerializableObject`, such as a `FormSubmission` from `@remix-run/data-schema/experimental/form` with its readonly arrays and records. ([#12219](https://github.com/remix-run/remix/pull/12219))
+
+- The browser runtime is smaller, with no behavior changes. Pages that hydrate with `run()` load 6 fewer component modules and about 3% less gzipped code, and apps that only use `createRoot()` or `createRangeRoot()` load 6 fewer component modules and about 8% less gzipped code. ([#12244](https://github.com/remix-run/remix/pull/12244))
+
+- Fix a client-rendered `<Frame>` remounting with its `fallback` when its `src` changed after its content appeared but while frames or client entries inside it were still loading. Once a frame's content is visible, changing `src` now always reloads the frame in place, keeping the current content until the new source resolves. ([#12274](https://github.com/remix-run/remix/pull/12274))
+
+- Fix server-rendered `<Frame>` content corrupting multibyte characters when `resolveFrame` returns a stream whose chunks split a UTF-8 character. The first renderable chunk was decoded twice, and a character cut off at the end of that chunk, or starting in an earlier whitespace-only chunk, was replaced with `U+FFFD`. Whitespace-only chunks before the first renderable chunk are also no longer dropped. ([#12300](https://github.com/remix-run/remix/pull/12300))
+
+- Pending viewport prefetches pause while the document is hidden and resume with fresh visibility and eligibility checks when it becomes visible. Intent and imperative triggers keep their existing timing. ([#12286](https://github.com/remix-run/remix/pull/12286))
+
+  Default prefetching waits for idle time before parsing downloaded HTML and discovering assets. The idle callback has a one-second timeout so busy pages can still make progress; browsers without idle callbacks yield through a timer. Runtime disposal cancels pending viewport work and HTML discovery.
+
+- Fix focus moving to `<body>` when a frame navigation fails, such as a form submission whose response is a 5xx page. The page stays as it was, so focus now stays where the visitor left it. Navigations that succeed still reset focus unless they opt out with `data-rmx-reset-focus="manual"` or `resetFocus: 'manual'`. ([#12208](https://github.com/remix-run/remix/pull/12208))
+
+- Insert new keyed children once, directly at their final position. Before, a keyed list that gained children while other children kept their places (for example, restoring filtered-out rows) appended each new child to the end of the list and then moved it into place. Custom elements in those rows ran `connectedCallback`, `disconnectedCallback`, and `connectedCallback` again. ([#12301](https://github.com/remix-run/remix/pull/12301))
+
+- Avoid starting a stale frame reload when a `currententrychange` listener starts another navigation while Remix updates the current history entry state. ([#12248](https://github.com/remix-run/remix/pull/12248))
+
+- Keep inherited frame reloads in one lifecycle, without extra `reloadStart` events or `reloadComplete` before rendering finishes. Replaying cached HTML with unchanged frame markers now completes descendant reloads after their content renders. Report streamed child render failures, preserve initial streams on cancellation, and preserve reloads started by synchronous completion or abort listeners. ([#12200](https://github.com/remix-run/remix/pull/12200))
+
+- Fix a link click, form submission or `navigate()` call that interrupts a navigation before its page renders leaving a history entry for the page that never rendered. The new navigation now replaces that entry, so Back returns to the page the visitor saw, including when a `currententrychange` listener starts it before rendering begins. Links and GET forms with `data-rmx-history="replace"` also replace the entry before their navigation commits in browsers that support it, as POST forms already did, instead of cancelling the navigation and starting a replacement. ([#12240](https://github.com/remix-run/remix/pull/12240))
+
+- Fix Safari restoring the wrong scroll position on a back or forward navigation whose frames render without waiting on the network, for example when `resolveFrame` returns content that is already available. Safari applied the scroll position of the page being left, usually the top, instead of the position saved for the destination. Remix now restores scroll once Safari has moved its history to the destination entry. ([#12274](https://github.com/remix-run/remix/pull/12274))
+
+- Align `<select>` initialization across server rendering, client mounting, and hydration with explicit precedence: `value`, then initial `defaultValue`, then option `selected`. This resolves previously ambiguous combinations of select and option selection props. ([#12204](https://github.com/remix-run/remix/pull/12204))
+
+- Add a 150ms scroll delay to viewport-driven prefetching, to avoid unnecessary prefetches during scrolls through a list of prefetch-eligible links. Links the visitor stops on are prefetched as before, and links that enter the viewport without a scroll, such as on page load, still prefetch right away. ([#12256](https://github.com/remix-run/remix/pull/12256))
+
 ## v1.2.0
 
 ### Minor Changes

@@ -2,6 +2,22 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## v1.1.1
+
+### Patch Changes
+
+- Fix `Accept`, `Accept-Encoding` and `Accept-Language` weights when several header entries match a value. `getWeight()`, `accepts()` and `getPreferred()` now prefer an exact entry, then the most specific matching range, as RFC 9110 requires. Previously the highest-weighted match won, so `Accept-Encoding: gzip;q=0, *` reported `gzip` as acceptable and `Accept-Language: en;q=0, en-US` reported `en` as acceptable. ([#12297](https://github.com/remix-run/remix/pull/12297))
+
+  `Accept-Language` ranges now match by full subtag prefix, so `zh-Hant-TW` no longer matches `zh-Hant-CN`.
+
+  `AcceptEncoding#accepts('identity')` now returns `false` when the header refuses `identity` with `identity;q=0`, or with `*;q=0` and no `identity` entry. It still returns `true` when `identity` is not mentioned.
+
+- `CacheControl.from()` no longer drops directives whose names aren't lowercase, such as `No-Store` or `MAX-AGE=60`. ([#12237](https://github.com/remix-run/remix/pull/12237))
+
+- `Vary` keeps header names as they were first given instead of lowercasing them, so `compression()` and `cors()` no longer rewrite `Vary: Cookie` to `Vary: cookie`. Safari only varies its cache on cookies when the name is spelled `Cookie`, so the lowercased value could let it reuse a private response for a different session. ([#12271](https://github.com/remix-run/remix/pull/12271))
+
+- `Vary` treats `*` as varying on everything, so `compression()` and `cors()` no longer turn `Vary: *` into an invalid value like `Vary: *, Accept-Encoding`. ([#12273](https://github.com/remix-run/remix/pull/12273))
+
 ## v1.1.0
 
 ### Minor Changes

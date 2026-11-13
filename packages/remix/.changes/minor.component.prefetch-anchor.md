@@ -1,1 +1,0 @@
-Pass anchors to `prefetch()` from `remix/component` to use their navigation destinations and cancel stale prefetches when links change or disconnect. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/README.md#prefetching) for usage.

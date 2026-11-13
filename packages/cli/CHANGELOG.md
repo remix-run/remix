@@ -2,6 +2,20 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.3
+
+### Patch Changes
+
+- The starter app keeps single-use styles and helpers beside the JSX that uses them, and the bundled Remix skill favors keeping related code together. ([#12171](https://github.com/remix-run/remix/pull/12171))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.3`](https://github.com/remix-run/remix/releases/tag/assets@1.0.3)
+  - [`data-table@1.1.0`](https://github.com/remix-run/remix/releases/tag/data-table@1.1.0)
+  - [`data-table-mysql@1.0.1`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@1.0.1)
+  - [`data-table-postgres@1.0.1`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@1.0.1)
+  - [`data-table-sqlite@1.0.1`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@1.0.1)
+  - [`test@1.2.0`](https://github.com/remix-run/remix/releases/tag/test@1.2.0)
+
 ## v1.0.2
 
 ### Patch Changes

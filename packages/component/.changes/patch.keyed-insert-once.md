@@ -1,1 +1,0 @@
-Insert new keyed children once, directly at their final position. Before, a keyed list that gained children while other children kept their places (for example, restoring filtered-out rows) appended each new child to the end of the list and then moved it into place. Custom elements in those rows ran `connectedCallback`, `disconnectedCallback`, and `connectedCallback` again.

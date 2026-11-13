@@ -1,1 +1,0 @@
-Align `<select>` initialization across server rendering, client mounting, and hydration with explicit precedence: `value`, then initial `defaultValue`, then option `selected`. This resolves previously ambiguous combinations of select and option selection props.
