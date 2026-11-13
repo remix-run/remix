@@ -17,10 +17,16 @@ export default createController(routes.api, {
   actions: {
     async cartToggle({ db, formData, session }) {
       let { bookId } = s.parse(bookIdSchema, formData)
+      if (process.env.NODE_ENV !== 'test') {
+        await new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 701)))
+      }
       let parsedBookId = parseId(bookId)
       let book = parsedBookId === undefined ? undefined : await db.find(books, parsedBookId)
       if (!book) {
         return new Response('Book not found', { status: 404 })
+      }
+      if (book.slug === 'three-ways' && Math.random() < 0.5) {
+        return new Response('Couldn’t update this book. Try again.', { status: 500 })
       }
 
       let cart = getCurrentCart(session)

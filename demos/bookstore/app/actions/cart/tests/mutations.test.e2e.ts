@@ -6,6 +6,51 @@ import type { Page } from 'playwright'
 import { createTestRouter } from '../../../../test/helpers.ts'
 
 describe('cart submissions', () => {
+  it('shows the shared pending button while toggling a book through the existing API', async (t) => {
+    let received = Promise.withResolvers<void>()
+    let release = Promise.withResolvers<void>()
+    t.after(() => release.resolve())
+    let requests: string[] = []
+    let rejecting = false
+    let page = await serveCart(
+      t,
+      async (request) => {
+        let pathname = new URL(request.url).pathname
+        if (pathname !== '/api/cart/toggle' && pathname !== '/fragments/cart-button/1') return
+        requests.push(`${request.method} ${pathname}`)
+        if (request.method !== 'POST') return
+        received.resolve()
+        await release.promise
+        if (rejecting) return new Response('Unavailable', { status: 503 })
+      },
+      [],
+      '/books/bbq',
+    )
+    requests.length = 0
+    let url = page.url()
+    await page.getByRole('button', { name: 'Add to Cart', exact: true }).click()
+    await received.promise
+    await page.getByRole('button', { name: 'Saving...', exact: true }).waitFor()
+    release.resolve()
+    await page.getByRole('button', { name: 'Remove from Cart', exact: true }).click()
+    await page.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
+    rejecting = true
+    await page.getByRole('button', { name: 'Add to Cart', exact: true }).click()
+    let add = page.getByRole('button', { name: 'Add to Cart', exact: true })
+    await add.waitFor()
+    assert.notEqual(await add.evaluate((button) => getComputedStyle(button).animationName), 'none')
+    assert.deepEqual(requests, [
+      'POST /api/cart/toggle',
+      'GET /fragments/cart-button/1',
+      'POST /api/cart/toggle',
+      'GET /fragments/cart-button/1',
+      'POST /api/cart/toggle',
+    ])
+    assert.equal(page.url(), url)
+    await page.goto('/cart')
+    await page.getByText('Your cart is empty.', { exact: true }).waitFor()
+  })
+
   it('posts once to the frame source with pending prices and stable focus', async (t) => {
     let received = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
@@ -26,9 +71,25 @@ describe('cart submissions', () => {
     await quantity.press('Enter')
     await received.promise
     await page.getByRole('button', { name: 'Saving...' }).waitFor()
-    await page.getByText('Total: ---', { exact: true }).waitFor()
+    await page.getByText('Total: $16.99', { exact: true }).locator('[aria-busy="true"]').waitFor()
     let row = page.getByRole('row').filter({ hasText: 'Ash & Smoke' })
-    assert.equal(await row.getByRole('cell').nth(3).textContent(), '---')
+    let subtotal = row.getByRole('cell').nth(3)
+    assert.equal(await subtotal.textContent(), '$16.99')
+    await subtotal.locator('[aria-busy="true"]').waitFor()
+    let appearance = await subtotal.evaluate((cell) => {
+      let amount = cell.querySelector('[aria-busy] > span')
+      let spinner = cell.querySelector('[aria-hidden="true"]')
+      if (!amount || !spinner) throw new Error('Missing pending price')
+      for (let animation of amount.getAnimations()) animation.finish()
+      return {
+        opacity: getComputedStyle(amount).opacity,
+        spinner: getComputedStyle(spinner).visibility,
+        animation: getComputedStyle(spinner).animationName,
+      }
+    })
+    assert.equal(appearance.opacity, '0.5')
+    assert.equal(appearance.spinner, 'visible')
+    assert.notEqual(appearance.animation, 'none')
     assert.equal(await quantity.getAttribute('readonly'), '')
     assert.equal(
       await page.evaluate(() => document.activeElement?.getAttribute('name')),
@@ -44,6 +105,7 @@ describe('cart submissions', () => {
     await page.getByRole('button', { name: 'Update', exact: true }).waitFor()
     await page.getByText('Total: $50.97', { exact: true }).waitFor()
     assert.equal(await row.getByRole('cell').nth(3).textContent(), '$50.97')
+    assert.equal(await page.locator('[aria-busy="true"]').count(), 0)
     assert.deepEqual(requests, ['POST /cart/items'])
     assert.deepEqual(await frameState(page), initial)
     assert.equal(
@@ -102,6 +164,12 @@ describe('cart submissions', () => {
     let error = page.locator(`[id="${errorId}"][role="alert"]`)
     await error.waitFor()
     assert.equal(await error.textContent(), 'Invalid quantity')
+    assert.notEqual(
+      await row
+        .getByRole('button', { name: 'Update', exact: true })
+        .evaluate((button) => getComputedStyle(button).animationName),
+      'none',
+    )
     assert.equal(await second.inputValue(), '2')
     assert.equal(await second.getAttribute('aria-invalid'), null)
 
@@ -131,6 +199,12 @@ describe('cart submissions', () => {
     await quantity.press('Enter')
     await page.getByRole('alert').filter({ hasText: 'Couldn’t update your cart.' }).waitFor()
     await page.getByText('Total: $16.99', { exact: true }).waitFor()
+    assert.notEqual(
+      await page
+        .getByRole('button', { name: 'Update', exact: true })
+        .evaluate((button) => getComputedStyle(button).animationName),
+      'none',
+    )
     assert.equal(await quantity.inputValue(), '1')
     assert.equal(await quantity.getAttribute('readonly'), null)
     assert.equal(
@@ -200,7 +274,7 @@ describe('cart submissions', () => {
     await received.promise
     let removing = row.getByRole('button', { name: 'Removing...', exact: true })
     await removing.waitFor()
-    await page.getByText('Total: ---', { exact: true }).waitFor()
+    await page.getByText('Total: $43.99', { exact: true }).locator('[aria-busy="true"]').waitFor()
     assert.equal(await removing.getAttribute('aria-disabled'), 'true')
     assert.equal(await removing.evaluate((button) => button === document.activeElement), true)
     assert.deepEqual(await frameState(page), initial)
@@ -236,7 +310,7 @@ describe('cart submissions', () => {
     let removing = page.getByRole('button', { name: 'Removing...', exact: true })
     await removing.waitFor()
     assert.equal(await page.getByText('Your cart is empty.', { exact: true }).count(), 0)
-    await page.getByText('Total: ---', { exact: true }).waitFor()
+    await page.getByText('Total: $16.99', { exact: true }).locator('[aria-busy="true"]').waitFor()
     assert.equal(await removing.evaluate((button) => button === document.activeElement), true)
     release.resolve()
     await page.getByRole('link', { name: 'Browse Books', exact: true }).waitFor()
@@ -262,6 +336,10 @@ describe('cart submissions', () => {
     await page.getByRole('alert').filter({ hasText: 'Couldn’t update your cart.' }).waitFor()
     await remove.waitFor()
     await page.getByText('Total: $16.99', { exact: true }).waitFor()
+    assert.notEqual(
+      await remove.evaluate((button) => getComputedStyle(button).animationName),
+      'none',
+    )
     assert.equal(await remove.evaluate((button) => button === document.activeElement), true)
     assert.equal(await remove.getAttribute('aria-disabled'), null)
     let response = page.waitForResponse((response) => response.request().method() === 'POST')

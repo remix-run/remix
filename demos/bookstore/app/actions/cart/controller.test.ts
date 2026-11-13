@@ -161,7 +161,7 @@ describe('cart handlers', () => {
     assert.equal(response.headers.get('Location'), null)
     assert.equal(response.headers.get('Cache-Control'), 'no-store')
     let html = await response.text()
-    assertContains(html, 'Total: $1699.00')
+    assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$1699\.00/)
     assertContains(html, 'action="/cart/items"')
     assert.ok(!html.includes('<html'))
   })
@@ -189,7 +189,7 @@ describe('cart handlers', () => {
     assert.equal(missing.status, 404)
     assertContains(await missing.text(), 'That book is no longer in your cart.')
     let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
-    assertContains(await cart.text(), 'Total: $16.99')
+    assert.match(await cart.text(), /Total:\s*(?:<[^>]+>\s*)*\$16\.99/)
   })
 
   it('redirects native mutation failures to the cart and displays feedback once', async () => {
@@ -213,12 +213,12 @@ describe('cart handlers', () => {
       let html = await cart.text()
       assertContains(html, 'role="alert"')
       assertContains(html, message)
-      assertContains(html, 'Total: $16.99')
+      assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$16\.99/)
 
       let reloaded = await router.fetch(requestWithSession('https://remix.run/cart', session))
       let reloadedHtml = await reloaded.text()
       assert.ok(!reloadedHtml.includes('role="alert"'))
-      assertContains(reloadedHtml, 'Total: $16.99')
+      assert.match(reloadedHtml, /Total:\s*(?:<[^>]+>\s*)*\$16\.99/)
     }
   })
 
@@ -244,7 +244,7 @@ describe('cart handlers', () => {
       let html = await response.text()
       assert.ok(!html.includes('Ash &amp; Smoke'))
       assertContains(html, 'Heavy Metal Guitar Riffs')
-      assertContains(html, 'Total: $27.00')
+      assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$27\.00/)
     }
   })
 
@@ -272,7 +272,7 @@ describe('cart handlers', () => {
       assert.equal(missing.status, 404)
     }
     let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
-    assertContains(await cart.text(), 'Total: $16.99')
+    assert.match(await cart.text(), /Total:\s*(?:<[^>]+>\s*)*\$16\.99/)
   })
 })
 

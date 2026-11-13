@@ -4,6 +4,7 @@ import type { FrameReloadStartEvent, Handle } from 'remix/component'
 import { css, clientEntry, on } from 'remix/component'
 
 import { routes } from '../../../../routes.ts'
+import { PendingButton } from '../../../../ui/public/pending-button.tsx'
 import { RestfulForm } from '../../../../ui/restful-form.tsx'
 import { CartItemRemoveForm, CartItemUpdateForm } from './schema.ts'
 
@@ -32,6 +33,7 @@ export const CartItems = clientEntry(
   import.meta.url,
   function CartItems(handle: Handle<CartItemsProps>) {
     let pendingAction: PendingAction | undefined
+    let failedAction: PendingAction | undefined
     let activeReload: FrameReloadStartEvent | undefined
     let failed = false
 
@@ -45,11 +47,18 @@ export const CartItems = clientEntry(
           ? { bookId: Number(formData.get('bookId')), type: removing ? 'remove' : 'update' }
           : undefined
         failed = false
+        failedAction = undefined
         handle.update()
         try {
-          await event.finished
+          let signal = await event.finished
+          if (!signal.aborted && activeReload === event && handle.props.error) {
+            failedAction = pendingAction
+          }
         } catch {
-          if (activeReload === event) failed = true
+          if (activeReload === event) {
+            failed = true
+            failedAction = pendingAction
+          }
         }
         if (handle.signal.aborted || activeReload !== event) return
         activeReload = undefined
@@ -62,7 +71,6 @@ export const CartItems = clientEntry(
     return () => {
       let { items, canCheckout, error, submission, total } = handle.props
       let isPending = activeReload !== undefined
-      let totalLabel = isPending ? '---' : `$${total.toFixed(2)}`
       let hasQuantityError =
         submission?.errors.fields.quantity &&
         items.some((item) => item.bookId === Number(submission.values.bookId))
@@ -212,8 +220,13 @@ export const CartItems = clientEntry(
                               ]}
                             />
 
-                            <button
-                              type="submit"
+                            <PendingButton
+                              pending={isUpdating}
+                              failed={
+                                failedAction?.type === 'update' &&
+                                failedAction.bookId === item.bookId
+                              }
+                              pendingLabel="Saving..."
                               aria-disabled={isPending || undefined}
                               class="btn btn-secondary"
                               mix={css({
@@ -225,8 +238,8 @@ export const CartItems = clientEntry(
                                 transition: 'opacity 150ms',
                               })}
                             >
-                              {isUpdating ? 'Saving...' : 'Update'}
-                            </button>
+                              Update
+                            </PendingButton>
 
                             {fields.quantity.errors.length > 0 ? (
                               <p
@@ -249,7 +262,9 @@ export const CartItems = clientEntry(
                       </form.Context>
                     </td>
 
-                    <td>{isUpdating ? '---' : `$${(item.price * item.quantity).toFixed(2)}`}</td>
+                    <td>
+                      <PendingPrice amount={item.price * item.quantity} pending={isUpdating} />
+                    </td>
 
                     <td>
                       <form.Context
@@ -269,8 +284,13 @@ export const CartItems = clientEntry(
                               mix={form.control(fields.bookId)}
                             />
 
-                            <button
-                              type="submit"
+                            <PendingButton
+                              pending={isRemoving}
+                              failed={
+                                failedAction?.type === 'remove' &&
+                                failedAction.bookId === item.bookId
+                              }
+                              pendingLabel="Removing..."
                               aria-disabled={isPending || undefined}
                               class="btn btn-danger"
                               mix={css({
@@ -280,8 +300,8 @@ export const CartItems = clientEntry(
                                 textAlign: 'center',
                               })}
                             >
-                              {isRemoving ? 'Removing...' : 'Remove'}
-                            </button>
+                              Remove
+                            </PendingButton>
                           </RestfulForm>
                         )}
                       </form.Context>
@@ -296,7 +316,7 @@ export const CartItems = clientEntry(
             <p
               mix={css({ margin: 0, fontSize: '1.25rem', fontWeight: 'bold', marginRight: 'auto' })}
             >
-              Total: {totalLabel}
+              Total: <PendingPrice amount={total} pending={isPending} />
             </p>
 
             <a
@@ -322,3 +342,35 @@ export const CartItems = clientEntry(
     }
   },
 )
+
+function PendingPrice(handle: Handle<{ amount: number; pending: boolean }>) {
+  return () => {
+    let { amount, pending } = handle.props
+    return (
+      <span
+        aria-busy={pending || undefined}
+        mix={css({ display: 'inline-flex', alignItems: 'center', gap: '0.35em' })}
+      >
+        <span mix={css({ opacity: pending ? 0.5 : 1, transition: 'opacity 150ms' })}>
+          ${amount.toFixed(2)}
+        </span>
+        <span
+          aria-hidden="true"
+          mix={css({
+            width: '0.65em',
+            height: '0.65em',
+            border: '1.5px solid currentColor',
+            borderTopColor: 'transparent',
+            borderRadius: '50%',
+            visibility: pending ? 'visible' : 'hidden',
+            animation: pending ? 'cart-price-spin 650ms linear infinite' : 'none',
+            '@keyframes cart-price-spin': {
+              to: { transform: 'rotate(360deg)' },
+            },
+            '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+          })}
+        />
+      </span>
+    )
+  }
+}
