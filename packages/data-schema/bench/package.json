@@ -5,6 +5,8 @@
   "scripts": {
     "prebench": "pnpm --dir .. run build",
     "bench": "node --disable-warning=ExperimentalWarning runner.ts",
+    "prebundle-size": "pnpm --dir .. run build",
+    "bundle-size": "node bundle-size.ts",
     "pretypecheck": "pnpm --dir .. run build",
     "typecheck": "tsc --noEmit"
   },
@@ -15,6 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "esbuild": "^0.27.1",
     "typescript": "catalog:"
   }
 }
