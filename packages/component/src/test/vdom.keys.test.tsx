@@ -433,6 +433,17 @@ describe('vnode rendering (keys)', () => {
       expect(container.textContent).toBe('a1b')
     })
 
+    it('keeps siblings when a fragment at the end of the list loses all its children', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'f']} fragment={['1']} />)
+      expect(container.textContent).toBe('a1')
+
+      root.render(<List values={['a', 'f']} fragment={[]} />)
+      expect(container.textContent).toBe('a')
+    })
+
     it('places a keyed component that starts rendering DOM while its siblings move', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
@@ -468,6 +479,44 @@ describe('vnode rendering (keys)', () => {
       // old next sibling no longer marks where g belongs
       root.render(<Items show={true} order={['f', 'g', 'c']} fragment={['1', '2']} />)
       expect(container.textContent).toBe('12gc')
+    })
+
+    it('places a component inside a fragment that starts rendering DOM while siblings move', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function Maybe(handle: Handle<{ show: boolean }>) {
+        return () => (handle.props.show ? <li>g</li> : null)
+      }
+
+      function Items(handle: Handle<{ show: boolean; order: string[]; fragment: string[] }>) {
+        return () => (
+          <ul>
+            {handle.props.order.map((key) =>
+              key === 'e' ? (
+                <Fragment key="e">
+                  <li>x</li>
+                  <Maybe show={handle.props.show} />
+                </Fragment>
+              ) : (
+                <Fragment key="f">
+                  {handle.props.fragment.map((child) => (
+                    <li key={child}>{child}</li>
+                  ))}
+                </Fragment>
+              ),
+            )}
+          </ul>
+        )
+      }
+
+      root.render(<Items show={false} order={['e', 'f']} fragment={['2']} />)
+      expect(container.textContent).toBe('x2')
+
+      // f moves ahead of e and gains a child before its old first child, so the
+      // sibling after e in the old order no longer marks where e ends
+      root.render(<Items show={true} order={['f', 'e']} fragment={['1', '2']} />)
+      expect(container.textContent).toBe('12xg')
     })
 
     it('renders a keyed component that starts rendering DOM while a later sibling is removed', () => {

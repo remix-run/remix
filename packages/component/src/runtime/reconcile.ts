@@ -859,7 +859,7 @@ export function diffVNodes(
       let fragmentAnchor =
         currLastDom && currLastDom.parentNode === domParent
           ? (currLastDom.nextSibling ?? undefined)
-          : (findNextSiblingDomAnchor(curr) ?? anchor)
+          : (findNextSiblingDomAnchor(curr, true) ?? anchor)
       let committed = beginFragmentNode(next, vParent, svg)
       committed._children = diffChildren(
         (curr as CommittedFragmentNode)._children,
@@ -918,7 +918,7 @@ function replace(
     }
   }
 
-  let replacementAnchor = findNextSiblingDomAnchor(curr) ?? anchor
+  let replacementAnchor = findNextSiblingDomAnchor(curr, true) ?? anchor
   remove(curr, domParent, context)
   return insert(next, domParent, vParent, context, replacementAnchor)
 }
@@ -1635,11 +1635,13 @@ function diffChildren(
     return committed as CommittedVNode[]
   }
 
-  // Only bulk-clear when at least one committed child is being removed.
+  // Only bulk-clear when at least one committed child is being removed. A
+  // fragment shares its DOM parent with its siblings, so it can't clear it.
   if (
     curr.length > 0 &&
     next.length === 0 &&
     anchor === undefined &&
+    vParent.kind !== 'fragment' &&
     !parentUsesInnerHTML(vParent) &&
     canBulkClearChildren(curr)
   ) {
@@ -1775,16 +1777,7 @@ function patchKeyedChildren(
   // directly before the next stable sibling instead of at the end of the list
   // and moved by the placement pass. Hydration keeps the list end anchor
   // because it marks where adoption stops.
-  // A matched child with no DOM yet can't be stable: if it starts rendering
-  // DOM, `replace()` finds an insertion point from the old child order, which
-  // a reorder has already invalidated, so the placement pass has to move it.
-  let stableIndexes = matchAnalysis.canSkipPlacement
-    ? null
-    : lisMatches(
-        matches.map((oldIndex) =>
-          oldIndex >= 0 && findFirstDomAnchor(curr[oldIndex]) ? oldIndex : -1,
-        ),
-      )
+  let stableIndexes = matchAnalysis.canSkipPlacement ? null : lisMatches(matches, curr)
   let nextStableCursor = 0
   // The cached anchor stays valid for new children before `stableAnchorIndex`
   // because that stable child has not been diffed yet
@@ -1803,12 +1796,9 @@ function patchKeyedChildren(
         while (nextStableCursor < stableIndexes.length) {
           let stableIndex = stableIndexes[nextStableCursor++]
           if (stableIndex < index) continue
-          let stableDom = findFirstDomAnchor(curr[matches[stableIndex]])
-          if (stableDom) {
-            stableAnchorIndex = stableIndex
-            stableAnchor = stableDom
-            break
-          }
+          stableAnchorIndex = stableIndex
+          stableAnchor = findFirstDomAnchor(curr[matches[stableIndex]]) ?? anchor
+          break
         }
       }
       insertAnchor = stableAnchor
@@ -2035,13 +2025,16 @@ function analyzeKeyedChildMatches(
   return { hasRemovals, canSkipPlacement }
 }
 
-function lisMatches(matches: readonly number[]): number[] {
+function lisMatches(matches: readonly number[], curr: CommittedVNode[]): number[] {
   let predecessors = Array.from<number>({ length: matches.length })
   let tails: number[] = []
 
   for (let index = 0; index < matches.length; index++) {
     let value = matches[index] + 1
-    if (value === 0) continue
+    // A matched child with no DOM yet can't be stable: if it starts rendering
+    // DOM, `replace()` finds an insertion point from the old child order, which
+    // a reorder has already invalidated, so the placement pass has to move it.
+    if (value === 0 || !findFirstDomAnchor(curr[matches[index]])) continue
 
     let low = 0
     let high = tails.length
@@ -2143,15 +2136,21 @@ function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
   return true
 }
 
+// During a diff the caller already has the end anchor of the enclosing
+// fragment, so `stopAtFragmentEnd` returns null there instead of walking the
+// fragment's old siblings, which a keyed diff may have reordered or grown
 export function findNextSiblingDomAnchor(
   curr: CommittedVNode | MountingComponentNode,
+  stopAtFragmentEnd = false,
 ): Node | null {
   let vParent = curr._parent
-  if (vParent.kind === 'component') return findNextSiblingDomAnchor(vParent)
+  if (vParent.kind === 'component') return findNextSiblingDomAnchor(vParent, stopAtFragmentEnd)
   let children = vParent._children
   if (children.length === 0) {
     if (vParent.kind === 'root') return vParent._rangeEnd ?? null
-    if (vParent.kind === 'fragment') return findNextSiblingDomAnchor(vParent)
+    if (vParent.kind === 'fragment') {
+      return stopAtFragmentEnd ? null : findNextSiblingDomAnchor(vParent)
+    }
     return null
   }
 
@@ -2165,7 +2164,7 @@ export function findNextSiblingDomAnchor(
   }
 
   if (isFragmentNode(vParent)) {
-    return findNextSiblingDomAnchor(vParent)
+    return stopAtFragmentEnd ? null : findNextSiblingDomAnchor(vParent)
   }
 
   return vParent.kind === 'root' ? (vParent._rangeEnd ?? null) : null
