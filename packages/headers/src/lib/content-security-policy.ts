@@ -54,6 +54,35 @@ export interface ContentSecurityPolicyInit {
   requireTrustedTypesFor?: readonly string[]
 }
 
+// Built policies convert the same initializer keys on every request, so known names skip the regex.
+const directiveNames: Record<keyof ContentSecurityPolicyInit, string> = {
+  defaultSrc: 'default-src',
+  scriptSrc: 'script-src',
+  scriptSrcElem: 'script-src-elem',
+  scriptSrcAttr: 'script-src-attr',
+  styleSrc: 'style-src',
+  styleSrcElem: 'style-src-elem',
+  styleSrcAttr: 'style-src-attr',
+  imgSrc: 'img-src',
+  fontSrc: 'font-src',
+  connectSrc: 'connect-src',
+  mediaSrc: 'media-src',
+  objectSrc: 'object-src',
+  frameSrc: 'frame-src',
+  childSrc: 'child-src',
+  workerSrc: 'worker-src',
+  manifestSrc: 'manifest-src',
+  baseUri: 'base-uri',
+  formAction: 'form-action',
+  frameAncestors: 'frame-ancestors',
+  sandbox: 'sandbox',
+  upgradeInsecureRequests: 'upgrade-insecure-requests',
+  reportTo: 'report-to',
+  reportUri: 'report-uri',
+  trustedTypes: 'trusted-types',
+  requireTrustedTypesFor: 'require-trusted-types-for',
+}
+
 /**
  * A single Content Security Policy, independent of routing and nonce generation.
  * Comma-separated policy lists must be handled as separate policies.
@@ -77,7 +106,9 @@ export class ContentSecurityPolicy implements HeaderValue {
     } else if (init != null) {
       for (let [name, values] of Object.entries(init)) {
         if (values === undefined || values === false) continue
-        let directive = name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+        let directive = Object.hasOwn(directiveNames, name)
+          ? directiveNames[name as keyof ContentSecurityPolicyInit]
+          : name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
         this.set(directive, typeof values === 'string' ? [values] : values === true ? [] : values)
       }
     }
