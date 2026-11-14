@@ -2009,16 +2009,28 @@ importers:
       '@remix-run/response':
         specifier: workspace:^
         version: link:../response
+      '@remix-run/session-middleware':
+        specifier: workspace:^
+        version: link:../session-middleware
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/cookie':
+        specifier: workspace:*
+        version: link:../cookie
+      '@remix-run/headers':
+        specifier: workspace:*
+        version: link:../headers
       '@remix-run/multiple-import-maps-polyfill':
         specifier: workspace:^
         version: link:../multiple-import-maps-polyfill
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:../node-fetch-server
+      '@remix-run/session':
+        specifier: workspace:*
+        version: link:../session
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test

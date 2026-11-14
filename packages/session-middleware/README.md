@@ -59,6 +59,12 @@ Configure `maxAge` (seconds) or `expires` (a `Date`) on the session cookie to li
 
 Cookies issued by older versions do not contain expiration metadata. When a lifetime is configured, those cookies start a new session after upgrading. Keep the middleware responsible for reading and writing these cookies; the storage backend continues to receive its original opaque value. This check does not remove abandoned backend records. Configure a backend TTL or your own cleanup policy when records also need to be removed from storage.
 
+### Internal Requests
+
+Requests a handler sends back through the router, such as server-rendered frames, run the session middleware again. Call `inheritSession(request, context)` before passing that exact `Request` to the router so it reuses the current session instead of loading it from storage again. Flash messages then stay available to every part of the response, and the next independent request no longer sees them. Clones and independent browser requests do not inherit the session, and only the session middleware that loaded it reuses it.
+
+The standard `render()` middleware does this for same-origin frame requests, including redirects.
+
 ### Login/Logout Flow
 
 A basic login/logout flow could look like this:
