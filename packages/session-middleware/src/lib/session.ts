@@ -1,6 +1,26 @@
 import type { Cookie } from '@remix-run/cookie'
-import type { Middleware } from '@remix-run/fetch-router'
+import type { AnyParams, ContextEntries, Middleware, RequestContext } from '@remix-run/fetch-router'
 import { Session, type SessionStorage } from '@remix-run/session'
+
+// Keyed by request object so browser requests cannot claim another request's session.
+const inheritedSessions = new WeakMap<Request, Session>()
+
+/**
+ * Shares the current request's session with an internal request before router dispatch, so
+ * content embedded in the same response (such as server-rendered frames) reads the same session,
+ * including flash messages that saving the session would otherwise clear.
+ * Pass the same Request object to the router; cloning it does not carry the session.
+ *
+ * @param request Internal request whose response will be embedded in the current response.
+ * @param context Current request context. Does nothing when it has no session.
+ */
+export function inheritSession(
+  request: Request,
+  context: Pick<RequestContext<AnyParams, ContextEntries>, 'get'>,
+): void {
+  let session = context.get(Session)
+  if (session !== undefined) inheritedSessions.set(request, session)
+}
 
 /**
  * Middleware that manages request session state on request context.
@@ -29,17 +49,23 @@ export function session(
   let maxAge = sessionCookie.maxAge
   let expires = sessionCookie.expires
   let hasExpiration = maxAge != null || expires != null
+  // Only reuse inherited sessions that came from this cookie and storage.
+  let loadedSessions = new WeakSet<Session>()
 
   return async (context, next) => {
     if (context.has(Session)) {
       throw new Error('Existing session found, refusing to overwrite')
     }
 
-    let cookieValue = await sessionCookie.parse(context.headers.get('Cookie'))
-    if (hasExpiration) {
-      cookieValue = readExpiringCookie(cookieValue)
+    let session = inheritedSessions.get(context.request)
+    if (session === undefined || !loadedSessions.has(session)) {
+      let cookieValue = await sessionCookie.parse(context.headers.get('Cookie'))
+      if (hasExpiration) {
+        cookieValue = readExpiringCookie(cookieValue)
+      }
+      session = await sessionStorage.read(cookieValue)
+      loadedSessions.add(session)
     }
-    let session = await sessionStorage.read(cookieValue)
 
     context.set(Session, session, { property: 'session' })
 

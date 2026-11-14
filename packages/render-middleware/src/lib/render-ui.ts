@@ -2,6 +2,7 @@ import type { AssetServer } from '@remix-run/assets'
 import { CspNonce, getCspNonce, inheritCspNonce } from '@remix-run/csp-middleware'
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 import { createHtmlResponse } from '@remix-run/response/html'
+import { inheritSession } from '@remix-run/session-middleware'
 import {
   renderToStream,
   type ImportMapData,
@@ -10,7 +11,7 @@ import {
 
 import { renderWith, type Renderer } from './render.ts'
 
-type RenderRequestContext = Pick<RequestContext, 'headers' | 'request' | 'router' | 'url'>
+type RenderRequestContext = Pick<RequestContext, 'get' | 'headers' | 'request' | 'router' | 'url'>
 type RemixNode = Parameters<typeof renderToStream>[0]
 
 const FRAME_HEADER = 'X-Remix-Frame'
@@ -206,10 +207,12 @@ async function followFrameRedirects(
   nonce: string | undefined,
 ): Promise<Response> {
   let url = initialUrl
+  let sameOrigin = true
 
   for (let redirectCount = 0; redirectCount <= MAX_FRAME_REDIRECTS; redirectCount++) {
     if (url.origin !== context.url.origin) {
       headers = createCrossOriginFrameHeaders(headers)
+      sameOrigin = false
     }
 
     let request = new Request(url, {
@@ -219,6 +222,9 @@ async function followFrameRedirects(
     })
     internalFrameRequests.add(request)
     if (nonce !== undefined) inheritCspNonce(request, nonce)
+    // Frames share the outer session so saving one frame's session cannot clear flash
+    // messages before the rest of the document reads them.
+    if (sameOrigin) inheritSession(request, context)
     let response = await context.router.fetch(request)
     let location = response.headers.get('Location')
 

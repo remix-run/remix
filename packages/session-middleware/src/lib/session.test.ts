@@ -5,9 +5,10 @@ import { createCookie } from '@remix-run/cookie'
 import { SetCookie } from '@remix-run/headers/set-cookie'
 import { createSession, Session } from '@remix-run/session'
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
+import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { createRouter } from '@remix-run/fetch-router'
 
-import { session as sessionMiddleware } from './session.ts'
+import { inheritSession, session as sessionMiddleware } from './session.ts'
 
 // Create a new request using the cookie in the given response
 function createRequest(fromResponse?: Response): Request {
@@ -216,5 +217,69 @@ describe('session middleware', () => {
 
     let setCookie = response.headers.getSetCookie()
     assert.equal(setCookie.length, 2)
+  })
+
+  it('shares the session and its flash messages with internal requests that inherit it', async () => {
+    let cookie = createCookie('__sess', { secrets: ['secret1'] })
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, createMemorySessionStorage())],
+    })
+    router.map('/flash', ({ session }) => {
+      session.flash('message', 'Saved!')
+      return new Response('ok')
+    })
+    router.map('/message', ({ session }) => new Response(String(session.get('message') ?? 'none')))
+    router.map('/', async (context) => {
+      let first = new Request(new URL('/message', context.url), { headers: context.headers })
+      inheritSession(first, context)
+      let second = new Request(new URL('/message', context.url), { headers: context.headers })
+      inheritSession(second, context)
+      let independent = new Request(new URL('/message', context.url), { headers: context.headers })
+      let texts = [
+        await (await context.router.fetch(first)).text(),
+        await (await context.router.fetch(second)).text(),
+        await (await context.router.fetch(independent)).text(),
+      ]
+      return new Response(texts.join(','))
+    })
+
+    let flashResponse = await router.fetch('https://remix.run/flash')
+    let response = await router.fetch(createRequest(flashResponse))
+    // The independent request saw storage after the first internal request cleared the flash.
+    assert.equal(await response.text(), 'Saved!,Saved!,none')
+
+    let nextRequest = new Request('https://remix.run/message', {
+      headers: createRequest(flashResponse).headers,
+    })
+    assert.equal(await (await router.fetch(nextRequest)).text(), 'none')
+  })
+
+  it('ignores sessions inherited from another session middleware', async () => {
+    let outerRouter = createRouter({
+      middleware: [
+        sessionMiddleware(
+          createCookie('__outer', { secrets: ['secret1'] }),
+          createMemorySessionStorage(),
+        ),
+      ],
+    })
+    let innerRouter = createRouter({
+      middleware: [
+        sessionMiddleware(
+          createCookie('__inner', { secrets: ['secret1'] }),
+          createMemorySessionStorage(),
+        ),
+      ],
+    })
+    innerRouter.map('/', ({ session }) => new Response(String(session.get('userId') ?? 'none')))
+    outerRouter.map('/', async (context) => {
+      context.session.set('userId', '123')
+      let request = new Request('https://remix.run', { headers: context.headers })
+      inheritSession(request, context)
+      return innerRouter.fetch(request)
+    })
+
+    let response = await outerRouter.fetch('https://remix.run')
+    assert.equal(await response.text(), 'none')
   })
 })
