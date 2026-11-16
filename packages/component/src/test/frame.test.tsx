@@ -1178,7 +1178,7 @@ describe('run', () => {
     await events[0]?.finished
     await updateUrl('?navigation=url-only')
     expect(events).toHaveLength(1)
-    expect(events[0]?.signal.aborted).toBe(false)
+    expect((await events[0]?.finished)?.aborted).toBe(false)
   })
 
   it('resolves finished as aborted when the frame is disposed mid-reload', async (t) => {
@@ -1246,7 +1246,6 @@ describe('run', () => {
     let event = await navigationEvent.promise
     await expect(event.finished).rejects.toBe(null)
     await loading
-    expect(event.signal.aborted).toBe(true)
   })
 
   it('preserves a client child frame’s failure normally and when an error listener retries', async (t) => {

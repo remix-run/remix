@@ -274,10 +274,10 @@ import { SaveButton } from "./public/save-button.tsx";
 </form>;
 ```
 
-`finished` follows the same contract as `frame.reload()`. It resolves with an `AbortSignal` when
-the response renders, including validation responses, and rejects when the reload fails. Cancellation
-resolves with an aborted signal, so it clears “Saving…” without showing a failure. Before showing
-success feedback such as “Saved!”, check the returned signal's `aborted` flag.
+`finished` resolves with an `AbortSignal` after the response renders and navigation completes,
+including redirects, scroll, and focus handling. Rendering a validation response counts as completion.
+Failures reject. Cancellation resolves with an aborted signal, so it clears “Saving…” without showing a
+failure. Before showing success feedback such as “Saved!”, check the returned signal's `aborted` flag.
 
 The button stays enabled so the visitor can submit again. The next submission, or removal of the
 button, aborts the earlier handler's signal and prevents it from overwriting newer state.

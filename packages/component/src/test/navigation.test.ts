@@ -2870,7 +2870,7 @@ describe('form navigation', () => {
     expect(events[1]?.navigationType).toBe('traverse')
     expect(events[1]?.element).toBe(null)
     expect(events[1]?.formData).toBe(undefined)
-    expect(events[0]?.signal.aborted).toBe(false)
+    expect((await events[0]?.finished)?.aborted).toBe(false)
   })
 
   it('reloads a targeted frame with submitter-overridden submission metadata', async () => {

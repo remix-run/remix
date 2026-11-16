@@ -68,6 +68,7 @@ describe('rmx:navigation', () => {
     anchor.click()
     let original = await accepted.promise
     expect('detail' in original).toBe(false)
+    expect('signal' in original).toBe(false)
     expect(original.composed).toBe(true)
     expect(original.frameTarget).toBe(undefined)
     expect(original.frameSrc).toBe(anchor.href)
@@ -79,23 +80,15 @@ describe('rmx:navigation', () => {
     void original.finished.then(() => (finished = true))
     await redirectStarted.promise
 
-    expect(events).toHaveLength(2)
-    expect(events[1]?.to).toBe(finalUrl)
-    expect(events[1]?.frameSrc).toBe(original.frameSrc)
-    expect(events[1]?.signal).toBe(original.signal)
-    expect(original.to).toBe(anchor.href)
-    expect(events[1]?.navigationType).toBe('push')
-    expect(events[1]?.from).toBe(from)
+    expect(events).toHaveLength(1)
     expect(resolveFrame).toHaveBeenCalledTimes(1)
-    expect(events[1]?.finished).toBe(original.finished)
-    expect(events[0]).toBe(original)
-    expect(events[1]?.target).toBe(window)
-    expect(original.signal.aborted).toBe(false)
     expect(finished).toBe(false)
     release.resolve()
     let outcome = await original.finished
 
     expect(outcome.aborted).toBe(false)
+    expect(events).toEqual([original])
+    expect(original.to).toBe(anchor.href)
     expect(window.location.href).toBe(finalUrl)
     expect(document.activeElement?.id).toBe('destination-focus')
   })
@@ -116,7 +109,7 @@ describe('rmx:navigation', () => {
     void navigate('?navigation=blocked-again').catch(() => {})
     app.dispose()
     expect((await events[2]?.finished)?.aborted).toBe(true)
-    expect(events[1]?.signal.aborted).toBe(false)
+    expect((await events[1]?.finished)?.aborted).toBe(false)
   })
 
   it('does not clear a replacement started by a window navigation listener', async (t) => {

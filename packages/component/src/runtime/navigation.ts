@@ -15,8 +15,8 @@ import {
 /**
  * Noncancelable event dispatched when Remix accepts a frame navigation, before `reloadStart`.
  * It bubbles from the initiating link, submitter, or form, and crosses shadow roots. Navigations
- * without a connected source and redirect updates notify `window` directly. Notifications for
- * one operation share `signal` and `finished`, including external submitter and form copies.
+ * without a connected source notify `window` directly. Notifications for one operation share
+ * `finished`, including external submitter and form copies. Redirects do not dispatch another event.
  */
 export interface NavigationEvent extends Event {
   /** Source passed to `resolveFrame` for the initiating load, unchanged through redirects. */
@@ -36,7 +36,7 @@ export interface NavigationEvent extends Event {
    * on cancellation or replacement. Rejects on failure.
    */
   readonly finished: Promise<AbortSignal>
-  /** Browser destination for this notification. Redirects emit another event with the updated URL. */
+  /** Initial browser destination, unchanged through redirects. */
   readonly to: string
   /** Effective history behavior of the original navigation, preserved through redirects. */
   readonly navigationType: NavigationType
@@ -44,8 +44,6 @@ export interface NavigationEvent extends Event {
   readonly from: NavigationHistoryEntry
   /** Named destination frame, or undefined for the top frame. */
   readonly frameTarget: string | undefined
-  /** Aborts if this operation is cancelled, superseded, or fails; stays active after success. */
-  readonly signal: AbortSignal
 }
 
 type NavigationEventInit = Omit<NavigationEvent, keyof Event>
@@ -399,7 +397,7 @@ async function waitForUrlUpdate(updating: Promise<void>, signal?: AbortSignal): 
   }
 }
 
-function dispatchNavigationEvent(init: NavigationEventInit, fromSource = true): void {
+function dispatchNavigationEvent(init: NavigationEventInit, signal: AbortSignal): void {
   function dispatch(target: EventTarget, bubbles = true) {
     EventTarget.prototype.dispatchEvent.call(
       target,
@@ -407,18 +405,18 @@ function dispatchNavigationEvent(init: NavigationEventInit, fromSource = true): 
     )
   }
 
-  let element = fromSource ? init.element : null
+  let element = init.element
   let target = element ? (init.submitter ?? element) : null
   if (!target || Node.prototype.getRootNode.call(target, { composed: true }) !== document) {
     dispatch(window)
   }
-  if (!element || !target || init.signal.aborted) return
+  if (!element || !target || signal.aborted) return
 
   // Form controls can shadow methods on their owning form.
   let bubbles = Node.prototype.contains.call(element, target)
   dispatch(target, bubbles)
   // External or detached submitters have no event path through their owning form.
-  if (!bubbles && !init.signal.aborted) dispatch(element)
+  if (!bubbles && !signal.aborted) dispatch(element)
 }
 
 /**
@@ -577,7 +575,6 @@ export function startNavigationListener(
             ...(submission?.method.toLowerCase() === 'post'
               ? { encType: submission.encType, formData: submission.formData }
               : {}),
-            signal: outcome.signal,
             finished,
           },
         }
@@ -595,7 +592,7 @@ export function startNavigationListener(
           },
           { once: true, signal: controller.signal },
         )
-        dispatchNavigationEvent(operation.navigation)
+        dispatchNavigationEvent(operation.navigation, operation.signal)
       }
 
       let handler = async () => {
@@ -689,10 +686,6 @@ export function startNavigationListener(
               void redirected.finished.then(() => completion.resolve(), completion.reject)
             } else {
               completion.resolve()
-            }
-            if (currentCommitNavigation === operation && !operation.signal.aborted) {
-              operation.navigation = { ...operation.navigation, to: redirectedTo }
-              dispatchNavigationEvent(operation.navigation, false)
             }
           } else if (!transition) {
             completion.resolve()

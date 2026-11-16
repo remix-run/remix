@@ -945,8 +945,9 @@ for disabled controls, pending labels, progress indicators, and duplicate-submis
 
 For forms Remix handles as [frame navigations](#client-navigation), use
 [`on('rmx:navigation', handler)`](/api/component/#following-a-form-submission) to follow a button's or form's own
-submissions. The handler receives the submitted `formData` and a `finished` promise that follows
-the same `Promise<AbortSignal>` contract as `frame.reload()`.
+submissions. The event carries the submitted `formData`. Its `finished` promise resolves with an
+`AbortSignal` after rendering and navigation complete, including redirects, and rejects on failure.
+Cancellation resolves with an aborted signal.
 [Add pending feedback](/forms-and-mutations/#add-pending-feedback) shows how to use it for a save button.
 
 Optimistic UI renders the expected result before the request completes. A hydrated form can render
