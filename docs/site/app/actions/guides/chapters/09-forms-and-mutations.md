@@ -282,7 +282,7 @@ success feedback such as “Saved!”, check the returned signal's `aborted` fla
 The button stays enabled so the visitor can submit again. The next submission, or removal of the
 button, aborts the earlier handler's signal and prevents it from overwriting newer state.
 
-`rmx:navigation` reports a reload that already started. Cancel a submission in native `submit`.
+`rmx:navigation` reports a navigation Remix has accepted. Cancel a submission in native `submit`.
 For submitted values and optimistic rendering, see [pending and optimistic UI](/interactivity/#optimistic-ui).
 
 ## Use other HTTP methods when the route calls for them

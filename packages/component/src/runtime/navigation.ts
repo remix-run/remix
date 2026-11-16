@@ -1,3 +1,4 @@
+import { dispatchNavigationEvent, type NavigationEventInit } from './navigation-event.ts'
 import {
   isDocumentReload,
   reloadCurrentDocument,
@@ -29,6 +30,7 @@ type NavigationSource = {
   element: HTMLAnchorElement | HTMLAreaElement | SVGAElement | HTMLFormElement
   form?: HTMLFormElement
   submitter?: HTMLElement | null
+  submission?: FormSubmission
 }
 
 type RuntimeNavigation = {
@@ -63,6 +65,7 @@ interface FrameRedirectNavigationInfo {
 interface FrameCommitNavigationState extends FrameCommitNavigation {
   controller: AbortController
   redirecting: boolean
+  navigation: NavigationEventInit
 }
 
 const formSubmissionNavigationInfoType = Symbol('frame-form-submission')
@@ -469,47 +472,97 @@ export function startNavigationListener(
       // it does later in the task that fires `navigate`. Scrolling before then restores the position
       // of the entry being left.
       let traversalApplied = isTraverse ? afterCurrentTask() : undefined
+      let commitNavigation: FrameCommitNavigationState | undefined
+      let completed: PromiseWithResolvers<void> | undefined
+
+      let interceptFrameNavigation = (interceptOptions: NavigationInterceptOptions) => {
+        interceptNavigation(navigation, event, scroll !== 'manual', interceptOptions)
+        if (event.signal.aborted || signal.aborted) return
+        let completion = Promise.withResolvers<void>()
+        completed = completion
+        let controller = new AbortController()
+        let outcome = new AbortController()
+        let cancel = () => {
+          outcome.abort(controller.signal.reason)
+          completion.resolve()
+        }
+        controller.signal.addEventListener('abort', cancel, { once: true })
+        let finished = completion.promise.then(
+          () => {
+            controller.signal.removeEventListener('abort', cancel)
+            return outcome.signal
+          },
+          (error) => {
+            controller.signal.removeEventListener('abort', cancel)
+            outcome.abort(error)
+            throw error
+          },
+        )
+        void finished.catch(() => {})
+        let submission = source?.submission
+        let operation: FrameCommitNavigationState = {
+          controller,
+          signal: controller.signal,
+          finished: completion.promise,
+          redirecting: false,
+          pendingCommits: 0,
+          navigation: {
+            frameSrc: state.src,
+            to: event.destination.url,
+            navigationType: replaceHistory ? 'replace' : event.navigationType,
+            from,
+            frameTarget: frame === topFrame ? undefined : state.target,
+            element: source?.element ?? null,
+            method: submission?.method.toLowerCase() ?? 'get',
+            ...(source?.submitter ? { submitter: source.submitter } : {}),
+            ...(submission?.method.toLowerCase() === 'post'
+              ? { encType: submission.encType, formData: submission.formData }
+              : {}),
+            signal: outcome.signal,
+            finished,
+          },
+        }
+        commitNavigation = operation
+        currentCommitNavigation = operation
+        setFrameCommitNavigation(event.signal, operation)
+        signal.addEventListener('abort', () => controller.abort(signal.reason), {
+          once: true,
+          signal: controller.signal,
+        })
+        event.signal.addEventListener(
+          'abort',
+          () => {
+            if (!operation.redirecting) controller.abort(event.signal.reason)
+          },
+          { once: true, signal: controller.signal },
+        )
+        dispatchNavigationEvent(operation.navigation)
+      }
+
       let handler = async () => {
         try {
           if (!coordinator.transition(event, { type: 'handler-started' })) return
-          let completed = Promise.withResolvers<void>()
-          let controller = new AbortController()
-          let commitNavigation: FrameCommitNavigationState = {
-            controller,
-            signal: controller.signal,
-            finished: completed.promise,
-            redirecting: false,
-            pendingCommits: 0,
-          }
-          currentCommitNavigation = commitNavigation
-          setFrameCommitNavigation(event.signal, commitNavigation)
-          void completed.promise.catch(() => {})
-          controller.signal.addEventListener('abort', () => completed.resolve(), { once: true })
-          signal.addEventListener('abort', () => controller.abort(signal.reason), {
-            once: true,
-            signal: controller.signal,
-          })
-          event.signal.addEventListener(
-            'abort',
-            () => {
-              if (!commitNavigation.redirecting) controller.abort(event.signal.reason)
-            },
-            { once: true, signal: controller.signal },
-          )
+          if (!commitNavigation || !completed || commitNavigation.signal.aborted) return
+          let operation = commitNavigation
+          let completion = completed
           let transition = navigation.transition
           if (transition) {
             void transition.finished.then(
               () => {
-                if (!commitNavigation.redirecting) completed.resolve()
+                if (!operation.redirecting) completion.resolve()
               },
               (error) => {
-                if (!commitNavigation.redirecting) completed.reject(error)
+                if (!operation.redirecting) completion.reject(error)
               },
             )
           }
 
           let submission = await runtimeNavigation.getSubmission?.()
-          if (!coordinator.transition(event, { type: 'submission-ready' })) return
+          if (
+            operation.signal.aborted ||
+            !coordinator.transition(event, { type: 'submission-ready' })
+          )
+            return
 
           if (event.navigationType !== 'traverse') {
             // Updating state dispatches currententrychange, whose listeners can navigate again.
@@ -529,9 +582,14 @@ export function startNavigationListener(
             submitter: source?.submitter,
             form: source?.form,
             signal: event.signal,
-            navigationType: replaceHistory ? 'replace' : event.navigationType,
-            from,
+            navigationType: operation.navigation.navigationType,
+            from: operation.navigation.from,
           })
+          let cancelReload = () => operation.controller.abort(reload.signal.reason)
+          if (reload.signal.aborted) cancelReload()
+          else reload.signal.addEventListener('abort', cancelReload, { once: true })
+          let disconnectReload = () => reload.signal.removeEventListener('abort', cancelReload)
+          void reload.finished.then(disconnectReload, disconnectReload)
           coordinator.transition(event, { type: 'reload-started', signal: reload.signal })
           await reload.committed
           if (!coordinator.transition(event, { type: 'frame-committed' })) return
@@ -569,13 +627,20 @@ export function startNavigationListener(
               info,
             })
             if (redirected?.finished) {
-              void redirected.finished.then(() => completed.resolve(), completed.reject)
+              void redirected.finished.then(() => completion.resolve(), completion.reject)
             } else {
-              completed.resolve()
+              completion.resolve()
+            }
+            if (currentCommitNavigation === operation && !operation.signal.aborted) {
+              operation.navigation = { ...operation.navigation, to: redirectedTo }
+              dispatchNavigationEvent(operation.navigation, false)
             }
           } else if (!transition) {
-            completed.resolve()
+            completion.resolve()
           }
+        } catch (error) {
+          completed?.reject(error)
+          throw error
         } finally {
           coordinator.release(event)
         }
@@ -601,7 +666,7 @@ export function startNavigationListener(
         // <form method="post"> navigations
         if (replaceHistory && replayedSubmission == null) {
           if (supportsPrecommit) {
-            interceptNavigation(navigation, event, scroll !== 'manual', replaceInterceptOptions)
+            interceptFrameNavigation(replaceInterceptOptions)
             return
           }
 
@@ -623,11 +688,11 @@ export function startNavigationListener(
           }
         }
 
-        interceptNavigation(navigation, event, scroll !== 'manual', interceptOptions)
+        interceptFrameNavigation(interceptOptions)
       } else {
         // <a>/<form method="get"> navigations
         if (replaceHistory && supportsPrecommit) {
-          interceptNavigation(navigation, event, scroll !== 'manual', replaceInterceptOptions)
+          interceptFrameNavigation(replaceInterceptOptions)
         } else if (replaceHistory && event.cancelable) {
           // Cancelling rejects the promise of a `navigate()` call that started this navigation,
           // so a replacement navigation is only the fallback.
@@ -641,7 +706,7 @@ export function startNavigationListener(
             } satisfies HistoryReplacementNavigationInfo,
           })
         } else {
-          interceptNavigation(navigation, event, scroll !== 'manual', interceptOptions)
+          interceptFrameNavigation(interceptOptions)
         }
       }
     },
@@ -1113,6 +1178,7 @@ function getSourceElementNavigation(
       element: formNavigation.form,
       form: formNavigation.form,
       submitter: formNavigation.submitter,
+      submission: formNavigation.submission,
     },
     getSubmission: formNavigation.getSubmission,
   }

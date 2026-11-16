@@ -15,7 +15,6 @@ import {
 } from './component.ts'
 import { invariant } from './invariant.ts'
 import { encodeFormDataAsSearchParams } from './form-navigation.ts'
-import { createNavigationEvent } from './navigation-event.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
@@ -1005,23 +1004,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
           previous.status === 'direct'
         ) {
           startSubFrameInheritedReloads(getContentNodes(), controller.signal, origin)
-        }
-        // A reloadStart listener can replace this navigation before its source is notified.
-        let element = origin?.element
-        if (event.origin === 'direct' && element && origin && !controller.signal.aborted) {
-          let target = origin.submitter ?? element
-          // External or detached submitters have no event path through their owning form.
-          let bubbles = Node.prototype.contains.call(element, target)
-          EventTarget.prototype.dispatchEvent.call(
-            target,
-            createNavigationEvent({ ...origin, element, finished: finished.promise, bubbles }),
-          )
-          if (!bubbles && !controller.signal.aborted) {
-            EventTarget.prototype.dispatchEvent.call(
-              element,
-              createNavigationEvent({ ...origin, element, finished: finished.promise }),
-            )
-          }
         }
         return controller
       }

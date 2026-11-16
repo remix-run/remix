@@ -38,6 +38,8 @@ export interface FormNavigation {
   getAttribute(name: string, submitterName?: string): string | null
   /** Resolves browser-generated data for a non-GET submission. */
   getSubmission: (() => Promise<FormSubmission>) | undefined
+  /** Submission details available synchronously when the navigation is accepted. */
+  submission: FormSubmission
 }
 
 const PENDING_FORM_SUBMISSION_TIMEOUT = 1000
@@ -139,6 +141,11 @@ export function createFormNavigationResolver(
     return {
       form,
       submitter,
+      submission: {
+        method,
+        encType,
+        formData: method === 'get' ? undefined : (formEvent.formData ?? pending?.formData),
+      },
       hasAttribute(name) {
         return submitter?.hasAttribute(name) === true || form.hasAttribute(name)
       },

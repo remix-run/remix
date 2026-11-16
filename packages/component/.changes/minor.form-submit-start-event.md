@@ -1,4 +1,4 @@
-Follow links and form submissions with the typed `rmx:navigation` event to show pending or optimistic UI. See [following a navigation](https://github.com/remix-run/remix/tree/main/packages/component#following-a-navigation) for details.
+Follow links, form submissions, programmatic navigation, and Back/Forward with the typed `rmx:navigation` event to show pending or optimistic UI. See [following a navigation](https://github.com/remix-run/remix/tree/main/packages/component#following-a-navigation) for details.
 
 ```tsx
 // Inside a hydrated component:
@@ -17,4 +17,8 @@ Follow links and form submissions with the typed `rmx:navigation` event to show 
 </button>
 ```
 
-`NavigationEvent.frameSrc` is the requested frame URL, including GET submission values. `element` identifies the initiating HTML or SVG anchor, image-map area, or owning form. `submitter` is optional, and `encType` and `formData` are only present for POST submissions.
+`NavigationEvent.frameSrc` is the originally requested frame URL, including GET submission values. `element` identifies the initiating HTML or SVG anchor, image-map area, or owning form, and is null for programmatic navigation and history traversal. `submitter` is optional, and `encType` and `formData` are only present for POST submissions.
+
+`finished` waits through rendering, followed redirects, and navigation scroll and focus handling. It resolves with an aborted signal on cancellation or replacement and rejects on failure.
+
+Listen on `window` in capture mode for application-wide navigation state. Events fire at navigation acceptance, before `reloadStart`, and expose request and lifecycle metadata directly on the event. `navigationType` and `from` align with `resolveFrame` options; `frameSrc` and `frameTarget` correspond to its `src` argument and `target` option. Native `event.target` remains the DOM dispatch target. Redirects notify window with an updated `to` URL and the same `finished` promise and signal; disconnected sources also notify window directly.

@@ -476,10 +476,17 @@ describe('jsx', () => {
           mix={on('rmx:navigation', (event) => {
             type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLFormElement>>
             type inferredElement = Assert<
-              Equal<typeof event.element, Exclude<FrameReloadStartEvent['element'], null>>
+              Equal<typeof event.element, FrameReloadStartEvent['element']>
             >
             type noForm = Assert<Equal<Extract<'form', keyof typeof event>, never>>
+            type noDetail = Assert<Equal<Extract<'detail', keyof typeof event>, never>>
             type inferredFrameSrc = Assert<Equal<typeof event.frameSrc, string>>
+            type inferredTo = Assert<Equal<typeof event.to, string>>
+            type inferredNavigationSignal = Assert<Equal<typeof event.signal, AbortSignal>>
+            type inferredFrameTarget = Assert<Equal<typeof event.frameTarget, string | undefined>>
+            type inferredFrom = Assert<Equal<typeof event.from, NavigationHistoryEntry>>
+            type inferredNavigationType = Assert<Equal<typeof event.navigationType, NavigationType>>
+            type inferredNativeTarget = Assert<Equal<typeof event.target, EventTarget | null>>
             type inferredData = Assert<Equal<typeof event.formData, FormData | undefined>>
             type inferredFinished = Assert<Equal<typeof event.finished, Promise<AbortSignal>>>
             type inferredAborted = Assert<Equal<Awaited<typeof event.finished>['aborted'], boolean>>
