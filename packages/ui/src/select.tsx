@@ -1,5 +1,5 @@
 import { SurfacePortalOwner } from './lib/focus.tsx'
-import { FocusPortal } from './lib/focus-portal.tsx'
+import { FocusPortal, leaveFocusPortal } from './lib/focus-portal.tsx'
 import type { PortalProps } from './portal.tsx'
 import {
   attrs,
@@ -84,7 +84,9 @@ interface SelectContextValue {
   readonly name: string | undefined
   readonly selectedId: string | undefined
   readonly value: listbox.ListboxValue
+  readonly restoreFocusOnHide: boolean
   close: () => void
+  closeForTab: () => void
   open: () => void
   registerPopoverContext: (context: popover.PopoverContext) => void
   registerSurface: (node: HTMLElement) => void
@@ -111,11 +113,13 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>):
   let selectedLabel = ''
   let displayedLabel = ''
   let pendingChange: PendingChange = null
+  let restoreFocusOnHide = true
 
   let listId = `${handle.id}-list`
 
   function open() {
     if (state !== 'closed' || handle.props.disabled) return
+    restoreFocusOnHide = true
     state = 'open'
     activeValue = value
     handle.update()
@@ -300,6 +304,13 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>):
     },
 
     close,
+    closeForTab() {
+      restoreFocusOnHide = false
+      close()
+    },
+    get restoreFocusOnHide() {
+      return restoreFocusOnHide
+    },
 
     open,
 
@@ -450,6 +461,7 @@ const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
       popover.surface({
         open: context.isOpen,
         onHide: context.close,
+        restoreFocusOnHide: context.restoreFocusOnHide,
       }),
     ]
   }
@@ -466,6 +478,26 @@ const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
     attrs({
       id: context.listId,
       'aria-activedescendant': context.activeId,
+    }),
+    ref((node: HTMLElement, signal) => {
+      node.addEventListener(
+        'keydown',
+        (event) => {
+          if (
+            event.target !== node ||
+            !context.isOpen ||
+            event.key !== 'Tab' ||
+            event.defaultPrevented ||
+            event.altKey ||
+            event.ctrlKey ||
+            event.metaKey
+          )
+            return
+          if (!leaveFocusPortal(context, event, context.closeForTab)) context.closeForTab()
+          event.stopImmediatePropagation()
+        },
+        { capture: true, signal },
+      )
     }),
     popover.focusOnShow(),
     listbox.list(),

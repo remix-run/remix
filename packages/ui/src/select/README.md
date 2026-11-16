@@ -93,6 +93,7 @@ This component supplies the popup provider, so consumers do not need a separate 
 - `defaultLabel` is displayed before selection settles. `defaultValue` selects the matching option without replacing the trigger label until a new selection commits.
 - The option `label` is the committed display label and event label. The host's children are the rendered option contents.
 - Click, `ArrowDown`, and `ArrowUp` open the popup. Focus moves into the list and Escape restores focus to the trigger through popover behavior.
+- Tab closes the popup and continues through the form, including when the surface is inline. Shift+Tab continues backwards using the browser's native navigation rules. A portaled surface uses `select.Portal` to return navigation to its origin.
 - Reopening highlights the current selected value.
 - The popup minimum width syncs to the trigger width before opening.
 - Closed-trigger typeahead selects a matching option immediately and supports option `textValue`.

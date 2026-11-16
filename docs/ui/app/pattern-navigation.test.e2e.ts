@@ -99,6 +99,39 @@ describe('Pattern docs keyboard navigation', () => {
     assert.equal(await trigger.evaluate((node) => node === document.activeElement), true)
   })
 
+  it('continues through the Select form without committing the highlighted option on Tab or Shift+Tab', async (t) => {
+    let { page } = await openDocs(t, 'select')
+    let trigger = page
+      .locator('#forms')
+      .getByRole('button', { name: 'Delivery method', exact: true })
+    await waitForDestination(page, '#forms button[aria-label="Delivery method"]')
+    await trigger.press('ArrowDown')
+    let list = page.getByRole('listbox', { name: 'Delivery methods', exact: true })
+    await list.waitFor({ state: 'visible' })
+    await page.keyboard.press('ArrowDown')
+    await page
+      .getByRole('option', { name: 'Express delivery', exact: true })
+      .locator(':scope[data-highlighted="true"]')
+      .waitFor()
+    await page.keyboard.press('Tab')
+    await list.waitFor({ state: 'hidden' })
+    let submit = page.getByRole('button', { name: 'Save delivery preference', exact: true })
+    assert.equal(await submit.evaluate((node) => node === document.activeElement), true)
+    assert.equal(await page.locator('#forms input[name="delivery"]').inputValue(), 'standard')
+    await waitForDestination(page, '#forms button[aria-label="Delivery method"]')
+    await trigger.press('ArrowDown')
+    await list.waitFor({ state: 'visible' })
+    await page.keyboard.press('ArrowDown')
+    await page
+      .getByRole('option', { name: 'Express delivery', exact: true })
+      .locator(':scope[data-highlighted="true"]')
+      .waitFor()
+    await page.keyboard.press('Shift+Tab')
+    await list.waitFor({ state: 'hidden' })
+    assert.equal(await trigger.evaluate((node) => node === document.activeElement), true)
+    assert.equal(await page.locator('#forms input[name="delivery"]').inputValue(), 'standard')
+  })
+
   it('keeps Combobox option focus on its input and continues with native document navigation', async (t) => {
     let { page, tabsButtons } = await openDocs(t, 'combobox')
     let input = page.locator('#forms').getByRole('combobox')

@@ -146,6 +146,35 @@ describe('Portal focus navigation', () => {
     expect(await page.evaluate(() => document.activeElement?.id)).toBe('form-menu-trigger')
   })
 
+  it('exits a portaled select without restoring focus over its continuation', async (t) => {
+    let page = await openFixture(t, '/scoped?scenario=modal')
+    await page.locator('#modal-trigger').click()
+    await page.locator('#modal-select-trigger').click()
+    await page.keyboard.press('Tab')
+    await page.locator('#modal-select-surface[data-open]').waitFor({ state: 'hidden' })
+    expect(
+      await page.locator('#modal-after-select').evaluate((node) => node === document.activeElement),
+    ).toBe(true)
+  })
+  it('exits an inline select and preserves forward and reverse navigation', async (t) => {
+    let page = await openFixture(t, '/scoped?render=inline&scenario=form')
+    await page.locator('#form-select-trigger').click()
+    await page.keyboard.press('Tab')
+    await page.locator('#form-select-surface[data-open]').waitFor({ state: 'hidden' })
+    expect(
+      await page.locator('#form-after-select').evaluate((node) => node === document.activeElement),
+    ).toBe(true)
+    await page.locator('#form-select-trigger').click()
+    await page.keyboard.press('Shift+Tab')
+    await page.locator('#form-select-surface[data-open]').waitFor({ state: 'hidden' })
+    expect(
+      await page.evaluate(() => {
+        let active = document.activeElement
+        return active?.id === 'form-select-trigger' || active?.id === 'form-after-menu'
+      }),
+    ).toBe(true)
+  })
+
   it('keeps combobox navigation on the input and Tab in the form', async (t) => {
     let page = await openFixture(t)
     await page.locator('#form-combo-input').fill('Option')
@@ -197,6 +226,16 @@ describe('Portal focus navigation', () => {
     expect(await page.evaluate(() => !!document.activeElement?.closest('#modal-surface'))).toBe(
       true,
     )
+  })
+  it('continues after an inline select inside a modal dialog', async (t) => {
+    let page = await openFixture(t, '/scoped?render=inline&scenario=modal')
+    await page.locator('#modal-trigger').click()
+    await page.locator('#modal-select-trigger').click()
+    await page.keyboard.press('Tab')
+    await page.locator('#modal-select-surface[data-open]').waitFor({ state: 'hidden' })
+    expect(
+      await page.locator('#modal-after-select').evaluate((node) => node === document.activeElement),
+    ).toBe(true)
   })
 
   it('contains an inline nested modal inside a portaled parent', async (t) => {

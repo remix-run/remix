@@ -218,7 +218,10 @@ export default function SelectPage(handle: Handle<PageProps>) {
           <li>Click, ArrowDown and ArrowUp open the popup.</li>
           <li>Enter and Space select the highlighted option.</li>
           <li>Escape and outside clicks close the popup and return focus to the trigger.</li>
-          <li>Tab navigation follows the option list keyboard behaviour.</li>
+          <li>
+            Tab closes the popup and continues to the next control. Shift+Tab returns to the
+            trigger.
+          </li>
         </ul>
         <p>
           Arrow-key navigation and typeahead follow{' '}
