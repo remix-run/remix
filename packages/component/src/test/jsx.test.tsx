@@ -462,7 +462,7 @@ describe('jsx', () => {
       >
       let button = (
         <button
-          mix={on('rmx:submission', (event, signal) => {
+          mix={on('rmx:navigation', (event, signal) => {
             type inferredEvent = Assert<
               Equal<typeof event, Dispatched<FormSubmissionEvent, HTMLButtonElement>>
             >
@@ -473,7 +473,7 @@ describe('jsx', () => {
       )
       let form = (
         <form
-          mix={on('rmx:submission', (event) => {
+          mix={on('rmx:navigation', (event) => {
             type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLFormElement>>
             type inferredForm = Assert<Equal<typeof event.form, HTMLFormElement>>
             type noElement = Assert<Equal<Extract<'element', keyof typeof event>, never>>
@@ -485,7 +485,7 @@ describe('jsx', () => {
       )
       let ancestor = (
         <section
-          mix={on('rmx:submission', (event) => {
+          mix={on('rmx:navigation', (event) => {
             type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLElement>>
           })}
         />

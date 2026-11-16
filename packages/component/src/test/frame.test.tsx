@@ -835,7 +835,7 @@ describe('run', () => {
     let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
     app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
     let submissions: Event[] = []
-    window.addEventListener('rmx:submission', (event) => submissions.push(event), {
+    window.addEventListener('rmx:navigation', (event) => submissions.push(event), {
       signal: t.signal,
     })
 
@@ -880,12 +880,12 @@ describe('run', () => {
     )
     let submissions: FormSubmissionEvent[] = []
     let buttonEvent: FormSubmissionEvent | undefined
-    button.addEventListener('rmx:submission', (event) => {
+    button.addEventListener('rmx:navigation', (event) => {
       buttonEvent = event
       order.push('button')
       event.preventDefault()
     })
-    form.addEventListener('rmx:submission', (event) => {
+    form.addEventListener('rmx:navigation', (event) => {
       order.push('form')
       submissions.push(event)
     })
@@ -920,7 +920,7 @@ describe('run', () => {
     expect(await requests[0]!.text()).toBe('contains=\r\nintent=save\r\n')
   })
 
-  it('dispatches rmx:submission on the form for requestSubmit() and submit() without a submitter', async (t) => {
+  it('dispatches rmx:navigation on the form for requestSubmit() and submit() without a submitter', async (t) => {
     let { app } = await setupReloadBodyTest(t)
     // submit() skips the native submit event; both methods omit a submitter.
     for (let method of ['requestSubmit', 'submit'] as const) {
@@ -934,7 +934,7 @@ describe('run', () => {
       form.append(input, button)
       document.body.append(form)
       let events: FormSubmissionEvent[] = []
-      form.addEventListener('rmx:submission', (event) => events.push(event))
+      form.addEventListener('rmx:navigation', (event) => events.push(event))
       let reloaded = new Promise<FrameReloadStartEvent>((resolve) => {
         app.frames.top.addEventListener('reloadStart', resolve, { once: true })
       })
@@ -956,11 +956,11 @@ describe('run', () => {
     }
   })
 
-  it('does not dispatch a stale rmx:submission when reloadStart replaces the submission', async (t) => {
+  it('does not dispatch a stale rmx:navigation when reloadStart replaces the submission', async (t) => {
     let { app } = await setupReloadBodyTest(t)
     let form = document.createElement('form')
     let events: FormSubmissionEvent[] = []
-    form.addEventListener('rmx:submission', (event) => events.push(event))
+    form.addEventListener('rmx:navigation', (event) => events.push(event))
     let replacement: Promise<AbortSignal> | undefined
     let reloadEvents: FrameReloadStartEvent[] = []
     app.frames.top.addEventListener('reloadStart', (event) => {
@@ -991,16 +991,16 @@ describe('run', () => {
     document.body.append(form, otherForm)
     let order: string[] = []
     let events: FormSubmissionEvent[] = []
-    button.addEventListener('rmx:submission', (event) => {
+    button.addEventListener('rmx:navigation', (event) => {
       order.push('button')
       events.push(event)
     })
-    form.addEventListener('rmx:submission', (event) => {
+    form.addEventListener('rmx:navigation', (event) => {
       order.push('form')
       events.push(event)
     })
-    otherForm.addEventListener('rmx:submission', () => order.push('other form'))
-    window.addEventListener('rmx:submission', () => order.push('window'), {
+    otherForm.addEventListener('rmx:navigation', () => order.push('other form'))
+    window.addEventListener('rmx:navigation', () => order.push('window'), {
       signal: t.signal,
     })
     let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
@@ -1034,7 +1034,7 @@ describe('run', () => {
     document.body.append(form)
     form.addEventListener('submit', () => button.remove())
     let events: FormSubmissionEvent[] = []
-    form.addEventListener('rmx:submission', (event) => events.push(event))
+    form.addEventListener('rmx:navigation', (event) => events.push(event))
     let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
     app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
 
@@ -1068,7 +1068,7 @@ describe('run', () => {
     document.body.append(form)
     form.addEventListener('submit', () => button.remove())
     let events: FormSubmissionEvent[] = []
-    form.addEventListener('rmx:submission', (event) => events.push(event))
+    form.addEventListener('rmx:navigation', (event) => events.push(event))
     let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
     app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
 
@@ -1082,10 +1082,10 @@ describe('run', () => {
     expect(events[0]?.finished).toBe(reload.finished)
   })
 
-  it('dispatches rmx:submission only for reloads a form submission started', async (t) => {
+  it('dispatches rmx:navigation only for reloads a form submission started', async (t) => {
     let { app } = await setupReloadBodyTest(t)
     let events: Event[] = []
-    window.addEventListener('rmx:submission', (event) => events.push(event), { signal: t.signal })
+    window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
 
     await app.frames.top.reload({ method: 'post', body: new FormData() })
     await navigate(window.location.href)
@@ -1274,7 +1274,7 @@ describe('run', () => {
     })
     let form = document.createElement('form')
     let submissions: FormSubmissionEvent[] = []
-    form.addEventListener('rmx:submission', (event) => submissions.push(event))
+    form.addEventListener('rmx:navigation', (event) => submissions.push(event))
 
     await reloadFrameForNavigation(app.frames.top, { element: form, form }).finished
     await replacement
@@ -5149,7 +5149,7 @@ describe('run', () => {
     expect(completions).toBe(2)
   })
 
-  it('gives child frames the initiating request and their own reload lifecycle before rmx:submission', async (t) => {
+  it('gives child frames the initiating request and their own reload lifecycle before rmx:navigation', async (t) => {
     function renderDocument(label: string) {
       return renderToStream(
         <html>
@@ -5191,7 +5191,7 @@ describe('run', () => {
     let button = document.createElement('button')
     form.append(button)
     let submissions: FormSubmissionEvent[] = []
-    button.addEventListener('rmx:submission', (event) => {
+    button.addEventListener('rmx:navigation', (event) => {
       submissions.push(event)
       order.push('submit')
     })

@@ -14,7 +14,8 @@ import {
   type ReloadOrigin,
 } from './component.ts'
 import { invariant } from './invariant.ts'
-import { createFormSubmissionEvent, encodeFormDataAsSearchParams } from './form-navigation.ts'
+import { encodeFormDataAsSearchParams } from './form-navigation.ts'
+import { createFormSubmissionEvent } from './navigation-event.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'

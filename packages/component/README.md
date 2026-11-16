@@ -1271,11 +1271,11 @@ For a direct reload, `await event.finished` and `await frame.reload()` return th
 
 Rendering a validation response counts as a completed reload. The response carries its field errors.
 
-Descendant frames inherit the initiating request and origin details while their `finished` promises track their own reloads. A replaced reload gets no `reloadComplete`, so follow `finished` to learn how a particular reload ended. Use `reloadStart` for every reload of a frame, or `rmx:submission` for a form's own submissions.
+Descendant frames inherit the initiating request and origin details while their `finished` promises track their own reloads. A replaced reload gets no `reloadComplete`, so follow `finished` to learn how a particular reload ended. Use `reloadStart` for every reload of a frame, or `rmx:navigation` for a form's own submissions.
 
 ### Following a Form Submission
 
-`on('rmx:submission', handler, captureBoolean?)` follows form submissions that start Remix frame reloads. Its handler receives a typed `FormSubmissionEvent`, with the host inferred as `event.currentTarget`. Listen on a submit button for its submissions, or on the form for all of them.
+`on('rmx:navigation', handler, captureBoolean?)` follows form submissions that start Remix frame reloads. Its handler receives a typed `FormSubmissionEvent`, with the host inferred as `event.currentTarget`. Listen on a submit button for its submissions, or on the form for all of them.
 
 To display submitted values while a save is pending:
 
@@ -1293,7 +1293,7 @@ export const TitleForm = clientEntry(
       <form
         method="post"
         action={handle.props.action}
-        mix={on('rmx:submission', async (event, signal) => {
+        mix={on('rmx:navigation', async (event, signal) => {
           submission = event
           failed = false
           handle.update()
@@ -1328,7 +1328,7 @@ The event extends `SubmitEvent` and shares the [reload request and completion de
 
 - Remix dispatches the event after the target and descendant frames' `reloadStart` events. It starts on the submit button and bubbles through the form, or starts on the form when there is no submitter, including `requestSubmit()` and `form.submit()` without one.
 - An external or detached submitter receives a non-bubbling event, followed by a separate bubbling event on its owning form. Capture listeners on shared ancestors can receive both; bubbling listeners receive the form's event once.
-- The event is noncancelable. Cancel through native `submit`; `stopPropagation()` still controls delivery of `rmx:submission`.
+- The event is noncancelable. Cancel through native `submit`; `stopPropagation()` still controls delivery of `rmx:navigation`.
 - Links, `navigate()`, `frame.reload()`, and forms that load a new document don't dispatch it.
 
 ### Resolving Frames
