@@ -292,7 +292,8 @@ export function reloadFrameForNavigation(
 export type FrameContext = {
   reloadOrigin?: ReloadOrigin
   nonce?: string
-  transition?: NavigationTransition
+  navigationType?: NavigationType
+  from?: NavigationHistoryEntry
   topFrame?: FrameHandle
   getContext: (type: ElementFunction) => unknown
   errorTarget: EventTarget
@@ -319,7 +320,8 @@ export type FrameContext = {
 
 type FrameInit = {
   nonce?: string
-  transition?: NavigationTransition
+  navigationType?: NavigationType
+  from?: NavigationHistoryEntry
   signal?: AbortSignal
   name?: string
   loading?: FrameProps['loading']
@@ -457,7 +459,8 @@ export type FrameInstance = {
 type RenderOptions = {
   reloadOrigin?: ReloadOrigin
   nonce?: string
-  transition?: NavigationTransition
+  navigationType?: NavigationType
+  from?: NavigationHistoryEntry
   documentHref?: string
   flushKind?: FlushKind
   reconciliationTracker?: ReconciliationTracker
@@ -557,7 +560,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   let context: FrameContext = {
     nonce: init.nonce,
-    transition: init.transition,
+    navigationType: init.navigationType,
+    from: init.from,
     topFrame: runtime.topFrame,
     getContext: (type) => runtime.getContext?.(type),
     ...getSharedFrameRuntime(runtime),
@@ -630,7 +634,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         runtime.serverFrameReload = {
           signal: options.signal,
           origin: options.reloadOrigin,
-          transition: options.transition,
+          navigationType: options.navigationType,
+          from: options.from,
           reconciliationTracker: options.reconciliationTracker,
           blockingFrameTracker: options.blockingFrameTracker,
         }
@@ -683,7 +688,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       ...context,
       reloadOrigin: options.reloadOrigin,
       nonce: options.nonce,
-      transition: options.transition,
+      navigationType: options.navigationType,
+      from: options.from,
       data: options.data,
       reconciliationTracker: options.reconciliationTracker,
       blockingFrameTracker: options.blockingFrameTracker,
@@ -757,7 +763,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let subFramesReady = hydrateContainer(container, context, {
       reconciliationTracker,
       nonce: context.nonce,
-      transition: context.transition,
+      navigationType: context.navigationType,
+      from: context.from,
       signal: init.signal,
     })
 
@@ -770,7 +777,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         await watchPendingFrameTemplate(currentMarker, {
           reconciliationTracker,
           nonce: context.nonce,
-          transition: context.transition,
+          navigationType: context.navigationType,
+          from: context.from,
           signal: init.signal,
         })
       } else if (currentMarker?.status === 'lazy' && loadState.content === 'pending') {
@@ -825,7 +833,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     return loadState.policy !== 'lazy' || loadState.content !== 'pending'
   }
 
-  function loadLazyFrame(signal?: AbortSignal, transition?: NavigationTransition): void {
+  function loadLazyFrame(
+    signal?: AbortSignal,
+    navigationType?: NavigationType,
+    from?: NavigationHistoryEntry,
+  ): void {
     // Viewport loading completes initial content; active reloads keep their lifecycle.
     let controller = startLoad(
       !signal && loadState.reload.status === 'idle' && loadState.content !== 'resolved'
@@ -837,7 +849,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       loadState.reload.status === 'idle' ? undefined : loadState.reload.origin,
     )
     // Resolution reports errors before rejecting.
-    void resolveAndRenderReload(controller, undefined, { transition }).catch(() => {})
+    void resolveAndRenderReload(controller, undefined, { navigationType, from }).catch(() => {})
   }
 
   function startDeferredLoad(): void {
@@ -1203,7 +1215,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       clearPendingFrameTemplateWatch()
       if (marker.status === 'lazy') {
         if (isInheritedReload && shouldLoadForAncestorReload()) {
-          loadLazyFrame(options?.signal, options?.transition)
+          loadLazyFrame(options?.signal, options?.navigationType, options?.from)
         } else if (loadState.content !== 'resolved' && !currentLoadController()) {
           deferLoad(loadLazyFrame)
         }
@@ -1350,7 +1362,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         await render(content, {
           reloadOrigin: origin,
           nonce,
-          transition: options?.transition,
+          navigationType: options?.navigationType,
+          from: options?.from,
           documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
           signal: controller.signal,
           reconciliationTracker,
@@ -1463,7 +1476,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     options: RenderOptions = {},
     onResolved?: () => void,
   ): Promise<void> {
-    let { reconciliationTracker, signal, nonce, reloadOrigin, transition } = options
+    let { reconciliationTracker, signal, nonce, reloadOrigin, navigationType, from } = options
     if (isRenderAborted(signal)) return
     // A replayed template can reach the initial watcher before its shell accepts the marker.
     let rendering = pendingTemplateRender
@@ -1518,7 +1531,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         }
         try {
           await render(fragment, {
-            transition,
+            navigationType,
+            from,
             nonce,
             signal,
             reloadOrigin: renderOrigin,
@@ -1551,7 +1565,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     clearPendingFrameTemplateWatch()
     await render(template, {
       nonce,
-      transition,
+      navigationType,
+      from,
       reconciliationTracker,
       signal,
       reloadOrigin,
@@ -1813,7 +1828,9 @@ function resolveClientFrame(
       runtime.resolveFrame(frameSrc, {
         signal,
         target: getFrameName(node),
-        ...(serverFrameReload?.transition ? { transition: serverFrameReload.transition } : {}),
+        ...(serverFrameReload?.navigationType
+          ? { navigationType: serverFrameReload.navigationType, from: serverFrameReload.from }
+          : {}),
       }),
     )
     .then(async (resolution) => {
@@ -1826,7 +1843,8 @@ function resolveClientFrame(
         await instance.render(nextContent, {
           reloadOrigin: serverFrameReload?.origin,
           nonce,
-          transition: serverFrameReload?.transition,
+          navigationType: serverFrameReload?.navigationType,
+          from: serverFrameReload?.from,
           signal,
           reconciliationTracker: serverFrameReload?.reconciliationTracker,
           blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
@@ -2329,7 +2347,7 @@ function hydrateRegion(
     let nonceManager = getNonceManager()
     nonceManager.addRootResourceNonces(root, resourceNonces)
     nonceManager.addRootResponseNonce(root, context.nonce)
-    if (!signal && !context.transition) {
+    if (!signal && !context.navigationType) {
       root.render(vElement)
       return
     }
@@ -2344,7 +2362,8 @@ function hydrateRegion(
 
     frameRuntime.serverFrameReload = {
       signal: signal ?? context.lifecycleSignal,
-      transition: context.transition,
+      navigationType: context.navigationType,
+      from: context.from,
       origin: context.reloadOrigin,
       reconciliationTracker: context.reconciliationTracker,
       blockingFrameTracker: context.blockingFrameTracker,
@@ -2418,7 +2437,8 @@ async function createSubFrames(
           let frameMarker: FrameMarkerData = { ...marker, id }
           let subFrame = createFrame([node, end], {
             nonce: context.nonce,
-            transition: context.transition,
+            navigationType: context.navigationType,
+            from: context.from,
             signal: options?.signal,
             src: frameMarker.src,
             marker: frameMarker,

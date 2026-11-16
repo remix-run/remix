@@ -1372,7 +1372,7 @@ run({
       fetch(url, init) {
         return fetch(url, {
           ...init,
-          cache: options?.transition?.navigationType === 'traverse' ? 'force-cache' : 'default',
+          cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
         })
       },
     })
@@ -1382,7 +1382,7 @@ run({
 
 `force-cache` can reuse stale responses and falls back to the network on a cache miss. The server must allow storage with suitable `Cache-Control` and `Vary` headers. Decide when to bypass the cache after mutations or changes to the signed-in user.
 
-`options.transition` is the original browser `NavigationTransition` for a navigation-driven load. Its `navigationType` is `push`, `replace`, `traverse`, or `reload`, and `from` identifies the history entry being left. Client frames loaded while rendering the response inherit it. Independent loads and `frame.reload()` leave it undefined, even while another navigation is active.
+`options.navigationType` is the original navigation's effective `push`, `replace`, `traverse`, or `reload` behavior. `options.from` is the native `NavigationHistoryEntry` being left when it started. Client frames loaded while rendering the response inherit both fields. Independent loads and `frame.reload()` leave both undefined, even while another navigation is active. Redirects preserve the original metadata; the commit callback's `to` identifies the resolved destination.
 
 The `fetch` override receives an absolute URL string without a fragment and an always-present `RequestInit`, including the encoded form body, frame headers, abort signal, and `same-origin` mode. Relative sources resolve against `document.baseURI`. Forward these settings as in the example to preserve the default request behavior. The resolver validates the returned response. Custom fetch implementations own any changes to request and redirect policies.
 
@@ -1413,9 +1413,8 @@ run({
     return mod[exportName]
   },
   resolveFrame(src, options) {
-    let transition = options?.transition
-    let animate =
-      !options?.target && transition !== undefined && transition.navigationType !== 'reload'
+    let navigationType = options?.navigationType
+    let animate = !options?.target && navigationType !== undefined && navigationType !== 'reload'
 
     return defaultResolveFrame(src, options, {
       async commit(commitFrame, { signal }) {
@@ -1446,7 +1445,7 @@ run({
 
 The `fetch` and `commit` overrides can be supplied together. Return the response from `defaultResolveFrame` directly; cloning or replacing it loses the commit callback.
 
-`commit(commitFrame, { to, response, signal })` runs before the response body is consumed. `to` is the frame destination after redirects, including application-managed redirects whose response has no URL. Without a redirect, it is the requested source. Use `to` for destination-specific animation decisions; `options.transition` still describes the original navigation.
+`commit(commitFrame, { to, response, signal })` runs before the response body is consumed. `to` is the frame destination after redirects, including application-managed redirects whose response has no URL. Without a redirect, it is the requested source. Use `to` for destination-specific animation decisions; `options.navigationType` and `options.from` still describe the original navigation.
 
 `commitFrame()` starts rendering once. Its promise waits for rendering and, for navigation-driven loads, the enclosing navigation's URL, scroll, and focus handling, including a followed redirect's replacement navigation. Independent frame loads wait only for their own rendering. Navigation does not wait for the callback's post-commit animation.
 

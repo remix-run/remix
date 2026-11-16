@@ -106,6 +106,7 @@ function startStubNavigationListener(
   options: Parameters<typeof startNavigationListener>[1] = stubFrames,
 ): (event: Event) => StubNavigationTransition {
   let stubNavigation = Object.assign(new EventTarget(), {
+    currentEntry: window.navigation.currentEntry,
     updateCurrentEntry: mock.fn(),
     navigate: mock.fn(),
     entries: mock.fn(() => []),
@@ -1329,6 +1330,7 @@ describe('navigate', () => {
     let navigateListener: EventListener | undefined
     let [transitionFinished, resolveTransitionFinished] = withResolvers<void>()
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
       transition: { finished: transitionFinished } as NavigationTransition,
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
@@ -1459,6 +1461,7 @@ describe('navigate', () => {
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
     let updateCurrentEntryMock = mock.fn()
     let stubNavigation = Object.assign(new EventTarget(), {
+      currentEntry: window.navigation.currentEntry,
       navigate: navigateMethodMock,
       updateCurrentEntry: updateCurrentEntryMock,
     })
@@ -1488,6 +1491,7 @@ describe('navigate', () => {
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
     let updateCurrentEntryMock = mock.fn()
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
       navigate: navigateMethodMock,
       updateCurrentEntry: updateCurrentEntryMock,
       addEventListener(type: string, listener: EventListener) {
@@ -1642,6 +1646,7 @@ describe('navigate', () => {
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
     let updateCurrentEntryMock = mock.fn()
     let stubNavigation = Object.assign(new EventTarget(), {
+      currentEntry: window.navigation.currentEntry,
       navigate: navigateMethodMock,
       updateCurrentEntry: updateCurrentEntryMock,
     })
@@ -1711,6 +1716,7 @@ describe('navigate', () => {
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
     let updateCurrentEntryMock = mock.fn()
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
       navigate: navigateMethodMock,
       updateCurrentEntry: updateCurrentEntryMock,
       addEventListener(type: string, listener: EventListener) {
@@ -2443,6 +2449,7 @@ describe('frame navigation sources', () => {
     let navigateListener: EventListener | undefined
     let reload = mock.fn()
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
       transition: { finished: Promise.resolve() } as NavigationTransition,
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
@@ -2497,6 +2504,7 @@ describe('frame navigation sources', () => {
     let navigateListener: EventListener | undefined
     let reload = mock.fn()
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
       transition: { finished: Promise.resolve() } as NavigationTransition,
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
@@ -2915,7 +2923,7 @@ describe('form navigation', () => {
   it('leaves POST submissions with a missing named target to document navigation', (t) => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
-      currentEntry: { url: window.location.href },
+      currentEntry: window.navigation.currentEntry,
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
         if (type === 'navigate') navigateListener = listener
@@ -3124,6 +3132,7 @@ describe('form navigation', () => {
   it('does not intercept forms that opt into document navigation', (t) => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
       updateCurrentEntry: mock.fn(),
       addEventListener(type: string, listener: EventListener) {
         if (type === 'navigate') navigateListener = listener
@@ -3151,6 +3160,7 @@ describe('form navigation', () => {
   it('does not intercept dialog forms or forms submitted to a new browsing context', (t) => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
       updateCurrentEntry: mock.fn(),
       addEventListener(type: string, listener: EventListener) {
         if (type === 'navigate') navigateListener = listener

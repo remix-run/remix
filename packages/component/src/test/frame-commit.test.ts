@@ -175,14 +175,14 @@ describe('defaultResolveFrame commit', () => {
 
     expect(destinations).toEqual([destination.href])
     expect(fixture.loads.map((load) => load.src)).toEqual([destination.href])
-    expect(fixture.loads[0]?.options?.transition?.navigationType).toBe('push')
+    expect(fixture.loads[0]?.options?.navigationType).toBe('push')
     expect(window.navigation.transition).toBe(null)
     expect(window.location.href).toBe(destination.href)
     expect(document.getElementById('commit-page')?.textContent).toBe(input.value)
     expect(fixture.errors).toEqual([])
   })
 
-  it('commits a browser reload with its reload transition', async (t) => {
+  it('commits a browser reload with its reload metadata', async (t) => {
     let initialUrl = window.location.href
     let completed = Promise.withResolvers<void>()
     let destinations: string[] = []
@@ -202,8 +202,8 @@ describe('defaultResolveFrame commit', () => {
 
     expect(destinations).toEqual([initialUrl])
     expect(fixture.loads.map((load) => load.src)).toEqual([initialUrl])
-    expect(fixture.loads[0]?.options?.transition?.navigationType).toBe('reload')
-    expect(fixture.loads[0]?.options?.transition?.from.url).toBe(initialUrl)
+    expect(fixture.loads[0]?.options?.navigationType).toBe('reload')
+    expect(fixture.loads[0]?.options?.from?.url).toBe(initialUrl)
     expect(window.navigation.transition).toBe(null)
     expect(window.location.href).toBe(initialUrl)
     expect(document.getElementById('commit-page')?.textContent).toBe('reloaded')
@@ -222,8 +222,8 @@ describe('defaultResolveFrame commit', () => {
         expect(received).toBe(response)
         expect(to).toBe(destination)
         expect(window.location.href).toBe(fixture.url('redirect'))
-        expect(fixture.loads[0]?.options?.transition).toBe(window.navigation.transition)
-        expect(fixture.loads[0]?.options?.transition?.navigationType).toBe('push')
+        expect(fixture.loads[0]?.options?.from).toBe(window.navigation.transition?.from)
+        expect(fixture.loads[0]?.options?.navigationType).toBe('push')
         let transition = document.startViewTransition(async () => {
           await commitFrame()
           expect(window.location.href).toBe(destination)
@@ -394,7 +394,8 @@ describe('defaultResolveFrame commit', () => {
       async (commitFrame, { signal, to }) => {
         signals.push(signal)
         expect(to).toBe(signals.length === 1 ? '/details' : '/updated-details')
-        expect(fixture.loads.at(-1)?.options?.transition).toBeUndefined()
+        expect(fixture.loads.at(-1)?.options?.navigationType).toBeUndefined()
+        expect(fixture.loads.at(-1)?.options?.from).toBeUndefined()
         await commitFrame()
         expect(window.navigation.transition).toBe(null)
         if (signals.length === 1) initial.resolve()
@@ -447,18 +448,24 @@ describe('defaultResolveFrame commit', () => {
     )
     await navigate(fixture.url('nested'))
     await completed.promise
-    let transition = fixture.loads[0]?.options?.transition
-    expect(transition?.navigationType).toBe('push')
-    expect(fixture.loads.map((load) => load.options?.transition)).toEqual([
-      transition,
-      transition,
-      transition,
-    ])
+    let from = fixture.loads[0]?.options?.from
+    expect(from).toBeDefined()
+    expect(fixture.loads.map((load) => [load.options?.navigationType, load.options?.from])).toEqual(
+      [
+        ['push', from],
+        ['push', from],
+        ['push', from],
+      ],
+    )
 
     await fixture.app.frames.get('details')?.reload()
-    expect(fixture.loads.slice(3).map((load) => [load.src, load.options?.transition])).toEqual([
-      ['/details', undefined],
-      ['/nested', undefined],
+    expect(
+      fixture.loads
+        .slice(3)
+        .map((load) => [load.src, load.options?.navigationType, load.options?.from]),
+    ).toEqual([
+      ['/details', undefined, undefined],
+      ['/nested', undefined, undefined],
     ])
     expect(fixture.errors).toEqual([])
   })
@@ -506,13 +513,15 @@ describe('defaultResolveFrame commit', () => {
     expect(frame).toBeDefined()
     await frame?.reload()
     await completed.promise
-    expect(fixture.loads.at(-1)?.options?.transition).toBeUndefined()
+    expect(fixture.loads.at(-1)?.options?.navigationType).toBeUndefined()
+    expect(fixture.loads.at(-1)?.options?.from).toBeUndefined()
 
     await navigate(fixture.url('second'))
     await refreshed.promise
     let topLoad = fixture.loads.findLast((load) => load.src === fixture.url('second'))
-    expect(topLoad?.options?.transition?.navigationType).toBe('push')
-    expect(fixture.loads.at(-1)?.options?.transition).toBe(topLoad?.options?.transition)
+    expect(topLoad?.options?.navigationType).toBe('push')
+    expect(fixture.loads.at(-1)?.options?.navigationType).toBe(topLoad?.options?.navigationType)
+    expect(fixture.loads.at(-1)?.options?.from).toBe(topLoad?.options?.from)
     expect(fixture.app.frames.get('lazy')).toBe(frame)
     expect(signals[0]?.aborted).toBe(true)
     expect(signals[1]?.aborted).toBe(false)

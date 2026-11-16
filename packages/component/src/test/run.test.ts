@@ -140,11 +140,11 @@ describe('defaultResolveFrame', () => {
     ).rejects.toThrow('Failed to resolve frame: 503 Service Unavailable')
   })
 
-  it('uses the original transitions to customize traversal fetches', async (t) => {
+  it('uses original navigation metadata to customize traversal fetches', async (t) => {
     let initialUrl = window.location.href
     let initialKey = window.navigation.currentEntry?.key
     let requests: Request[] = []
-    let transitions: Array<ResolveFrameOptions['transition']> = []
+    let loads: Array<Pick<ResolveFrameOptions, 'navigationType' | 'from'>> = []
     document.body.innerHTML = '<main>Initial</main>'
     t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
       requests.push(
@@ -157,13 +157,13 @@ describe('defaultResolveFrame', () => {
     let app = run({
       loadModule: mock.fn(),
       resolveFrame(src, options) {
-        transitions.push(options?.transition)
-        if (options?.transition) expect(options.transition).toBe(window.navigation.transition)
+        loads.push({ navigationType: options?.navigationType, from: options?.from })
+        if (options?.navigationType) expect(options.from).toBe(window.navigation.transition?.from)
         return defaultResolveFrame(src, options, {
           fetch: (url, init) =>
             fetch(url, {
               ...init,
-              cache: options?.transition?.navigationType === 'traverse' ? 'force-cache' : 'default',
+              cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
             }),
         })
       },
@@ -190,7 +190,7 @@ describe('defaultResolveFrame', () => {
     await window.navigation.reload().finished
     await app.frames.top.reload()
 
-    expect(transitions.map((transition) => transition?.navigationType)).toEqual([
+    expect(loads.map((load) => load.navigationType)).toEqual([
       'push',
       'replace',
       'traverse',
@@ -198,7 +198,7 @@ describe('defaultResolveFrame', () => {
       'reload',
       undefined,
     ])
-    expect(transitions[0]?.from.url).toBe(initialUrl)
+    expect(loads[0]?.from?.url).toBe(initialUrl)
     expect(requests.map((request) => request.cache)).toEqual([
       'default',
       'default',
@@ -210,16 +210,16 @@ describe('defaultResolveFrame', () => {
     expect(document.querySelector('main')?.textContent).toBe('Page')
   })
 
-  it('omits the transition from an imperative reload during another navigation', async (t) => {
+  it('omits navigation metadata from an imperative reload during another navigation', async (t) => {
     let initialUrl = window.location.href
     let requested = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
-    let loads: Array<ResolveFrameOptions['transition']> = []
+    let loads: Array<Pick<ResolveFrameOptions, 'navigationType' | 'from'>> = []
     let app = run({
       loadModule: mock.fn(),
       async resolveFrame(src, options) {
         if (src === '/details') {
-          loads.push(options?.transition)
+          loads.push({ navigationType: options?.navigationType, from: options?.from })
           return '<p>Details</p>'
         }
         requested.resolve()
@@ -243,7 +243,10 @@ describe('defaultResolveFrame', () => {
     await requested.promise
     expect(window.navigation.transition).not.toBeNull()
     await details.reload()
-    expect(loads).toEqual([undefined, undefined])
+    expect(loads).toEqual([
+      { navigationType: undefined, from: undefined },
+      { navigationType: undefined, from: undefined },
+    ])
     release.resolve()
     await pending
   })

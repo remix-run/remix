@@ -49,17 +49,6 @@ function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestF
   })
 }
 
-function createTestTransition(): NavigationTransition {
-  let from = window.navigation.currentEntry
-  if (!from) throw new Error('Expected a current navigation entry')
-  return {
-    navigationType: 'traverse',
-    from,
-    committed: Promise.resolve(),
-    finished: Promise.resolve(),
-  }
-}
-
 describe('frames', () => {
   afterEach(() => {
     resetDocumentImportMapManager(document)
@@ -1444,7 +1433,7 @@ describe('frames', () => {
     expect(root.textContent).toBe('Reloaded')
   })
 
-  it('passes the current transition through new and preserved server frames', async (t) => {
+  it('passes navigation metadata through new and preserved server frames', async (t) => {
     let renderClientFrame = false
     let Entry = clientEntry('/entry.js#Entry', function Entry() {
       return () =>
@@ -1465,17 +1454,19 @@ describe('frames', () => {
         { resolveFrame: () => renderToString(jsx(Entry, {})) },
       ),
     )
-    let transition = createTestTransition()
-    let nextTransition = createTestTransition()
+    let from = window.navigation.currentEntry
+    if (!from) throw new Error('Expected a current navigation entry')
+    let navigation = { navigationType: 'traverse', from } satisfies ResolveFrameOptions
+    let nextNavigation = { navigationType: 'replace', from } satisfies ResolveFrameOptions
     let namedFrames = new NamedFrameRegistry()
-    let loads: Array<ResolveFrameOptions['transition']> = []
+    let loads: Array<Pick<ResolveFrameOptions, 'navigationType' | 'from'>> = []
     let frame = createTestFrame(document, {
       namedFrames,
       loadModule: () => Entry,
       resolveFrame(src, options) {
         if (src === 'https://example.com/initial') return html
         expect(src).toBe('/client-child')
-        loads.push(options?.transition)
+        loads.push({ navigationType: options?.navigationType, from: options?.from })
         return '<p id="client-child">Client content</p>'
       },
     })
@@ -1483,17 +1474,21 @@ describe('frames', () => {
     await frame.ready()
     renderClientFrame = true
 
-    await reloadFrameForNavigation(frame.handle, { transition }).finished
+    await reloadFrameForNavigation(frame.handle, navigation).finished
     let serverFrame = namedFrames.get('server-wrapper')
     expect(serverFrame).toBeDefined()
-    await reloadFrameForNavigation(frame.handle, { transition: nextTransition }).finished
+    await reloadFrameForNavigation(frame.handle, nextNavigation).finished
 
     expect(namedFrames.get('server-wrapper')).toBe(serverFrame)
-    expect(loads).toEqual([transition, nextTransition])
+    expect(loads).toEqual([navigation, nextNavigation])
     expect(document.getElementById('client-child')?.textContent).toBe('Client content')
 
     await frame.handle.reload()
-    expect(loads).toEqual([transition, nextTransition, undefined])
+    expect(loads).toEqual([
+      navigation,
+      nextNavigation,
+      { navigationType: undefined, from: undefined },
+    ])
   })
 
   it('submits FormData in one request and renders its response without navigation', async (t) => {

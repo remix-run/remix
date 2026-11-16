@@ -390,6 +390,7 @@ export function startNavigationListener(
   navigation.addEventListener(
     'navigate',
     (event) => {
+      let from = navigation.currentEntry
       coordinator.observeEntry()
 
       let redirectCommit = isFrameRedirectNavigationInfo(event.info)
@@ -406,6 +407,7 @@ export function startNavigationListener(
         (event.hashChange && !coordinator.needsFrameReload) ||
         event.downloadRequest != null ||
         !event.canIntercept ||
+        !from ||
         // Safari seems to incorrectly set canIntercept to true for sub-domain navigations, so
         // we do an origin check ourselves. The spec is clear that a different host should prevent
         // interception so this is likely a bug in Safari:
@@ -527,7 +529,8 @@ export function startNavigationListener(
             submitter: source?.submitter,
             form: source?.form,
             signal: event.signal,
-            transition: transition ?? undefined,
+            navigationType: replaceHistory ? 'replace' : event.navigationType,
+            from,
           })
           coordinator.transition(event, { type: 'reload-started', signal: reload.signal })
           await reload.committed
