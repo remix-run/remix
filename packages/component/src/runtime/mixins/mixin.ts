@@ -738,7 +738,12 @@ function addSchedulerPhaseListener(
       dispatch(event) {
         let listeners = created[event.type as SchedulerPhaseType]
         for (let listener of Array.from(listeners)) {
-          if (listeners.has(listener)) listener(event)
+          if (!listeners.has(listener)) continue
+          try {
+            listener(event)
+          } catch (error) {
+            reportError(error)
+          }
         }
       },
     }
