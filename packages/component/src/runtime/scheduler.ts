@@ -1,7 +1,6 @@
 import type { CommittedComponentNode, VNodeParent } from './reconcile.ts'
 import { createComponentErrorEvent } from './component.ts'
 import {
-  defaultStyleManager,
   findNextSiblingDomAnchor,
   isCommittedComponentNode,
   renderComponent,
@@ -54,14 +53,25 @@ function formatComponentCounts(counts: Map<string, number>): string {
  *
  * @param doc Document associated with the rendered tree.
  * @param rootTarget Event target that receives runtime errors.
- * @param styles Style manager used during reconciliation.
+ * @returns A scheduler instance.
+ */
+export function createScheduler(doc: Document, rootTarget: EventTarget): Scheduler
+/**
+ * Creates the DOM update scheduler used by the component runtime.
+ *
+ * @deprecated The `styles` argument is ignored and will be removed in the next major version.
+ * Each root uses the style manager from its frame context, so call `createScheduler(doc, rootTarget)`.
+ * @param doc Document associated with the rendered tree.
+ * @param rootTarget Event target that receives runtime errors.
+ * @param styles Ignored.
  * @returns A scheduler instance.
  */
 export function createScheduler(
   doc: Document,
   rootTarget: EventTarget,
-  styles: StyleManager = defaultStyleManager,
-): Scheduler {
+  styles: StyleManager,
+): Scheduler
+export function createScheduler(doc: Document, rootTarget: EventTarget): Scheduler {
   let documentState = createDocumentState(doc)
   let scheduled = new Map<CommittedComponentNode, ParentNode>()
   let workTasks: EmptyFn[] = []
