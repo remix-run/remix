@@ -26,7 +26,7 @@ type SourceElementNavigateEvent = NavigateEvent & {
 
 // The element whose navigation this is, and the owning form for a submission.
 type NavigationSource = {
-  element: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
+  element: HTMLAnchorElement | HTMLAreaElement | SVGAElement | HTMLFormElement
   form?: HTMLFormElement
   submitter?: HTMLElement | null
 }
@@ -1089,7 +1089,9 @@ function getSourceElementNavigation(
     return {
       ...getElementNavigation(linkElement, event, false),
       source:
-        linkElement instanceof HTMLAnchorElement || linkElement instanceof HTMLAreaElement
+        linkElement instanceof HTMLAnchorElement ||
+        linkElement instanceof HTMLAreaElement ||
+        linkElement instanceof SVGAElement
           ? { element: linkElement }
           : undefined,
     }

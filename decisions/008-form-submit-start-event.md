@@ -1,10 +1,10 @@
-# Follow a form's own submissions with an element event
+# Follow links and forms with an element event
 
-Use `reloadStart` to observe every reload of a frame and `rmx:navigation` to observe the form submissions that start one. Both carry the initiating request details and share the target frame's `finished` promise. Listen through the existing `on('rmx:navigation', handler, captureBoolean?)` mixin.
+Use `reloadStart` to observe every reload of a frame and `rmx:navigation` to observe the links and form submissions that start one. Both carry the initiating request details and share the target frame's `finished` promise. Listen through the existing `on('rmx:navigation', handler, captureBoolean?)` mixin.
 
 ## Why an element event
 
-A frame's `reloadStart` also fires for links, programmatic reloads, and reloads of an ancestor frame. Filtering those events for a particular form repeats source checks and latest-submission tracking in each component. Checking `source.closest('form')` also mistakes links inside a form for submissions.
+A frame's `reloadStart` also fires for links, programmatic reloads, and reloads of an ancestor frame. Filtering those events for a particular link or form repeats source checks and latest-submission tracking in each component. Checking `source.closest('form')` also mistakes links inside a form for submissions.
 
 Dispatching on the submit button and bubbling through the owning form lets a component listen on the element it renders. The form hears submissions from any of its buttons, while a button hears only its own, including implicit submissions through the form's default button. Without a submitter, the event starts on the form.
 
@@ -12,15 +12,15 @@ External or detached submitters have no event path through their owning form. Th
 
 ## Naming and cancellation
 
-`FormSubmissionEvent` extends the native `SubmitEvent` with `cancelable: false`. The name describes an operation already underway and distinguishes it from native `submit`, where applications can still prevent submission. `stopPropagation()` controls delivery without cancelling the reload.
+`NavigationEvent` extends the native `Event` with `cancelable: false`. The name describes an operation already underway and distinguishes it from native `click` and `submit`, where applications can still prevent navigation. `stopPropagation()` controls delivery without cancelling the reload.
 
-Registering `rmx:navigation` in `HTMLElementEventMap` gives `on()` a typed event, inferred `currentTarget`, and event-name completion. The existing handler signal aborts on reentry or removal, so a dedicated submission mixin would only hide the event name. `reloadStart` and `reloadComplete` retain their existing names.
+Registering `rmx:navigation` in `GlobalEventHandlersEventMap` gives `on()` a typed event, inferred `currentTarget`, and event-name completion. The existing handler signal aborts on reentry or removal, so a dedicated submission mixin would only hide the event name. `reloadStart` and `reloadComplete` retain their existing names.
 
 ## Shared request and origin details
 
-The [reload event contract](https://github.com/remix-run/remix/tree/main/packages/component#following-a-reload) defines `src`, `method`, `encType`, `formData`, `element`, `submitter`, and `finished`. Request fields align with `frame.reload()` options, with `body` exposed as `formData`. GET entries are encoded in `src`; `formData` and `encType` are null. Other body formats remain out of scope, and future encodings can have separate `json` or `text` fields.
+The [reload event contract](https://github.com/remix-run/remix/tree/main/packages/component#following-a-reload) defines `src`, `method`, `encType`, `formData`, `element`, `submitter`, and `finished`. Request fields align with `frame.reload()` options, with `body` exposed as `formData`. GET entries are encoded in `src`; `formData` and `encType` are null on `reloadStart` and absent on `rmx:navigation`. Other body formats remain out of scope, and future encodings can have separate `json` or `text` fields.
 
-On `reloadStart`, `element` is an `HTMLAnchorElement`, `HTMLAreaElement`, or `HTMLFormElement`, and is null for programmatic calls and history traversal. On `rmx:navigation`, the origin is always a form, so `form: HTMLFormElement` replaces `element` for convenient access without narrowing. Both events' `submitter` identifies the actual submit button or is null. This avoids the ambiguity of the Navigation API's `sourceElement`, which can identify either a form or its button. Descendant frame events inherit the initiating details while tracking their own completion.
+Both events identify the initiating HTML or SVG anchor, image-map area, or owning form as `element`. `reloadStart.element` is null for programmatic calls and history traversal. `rmx:navigation` starts on the link or submitter, but its `element` always identifies the link or owning form. Its optional `submitter` identifies the actual submit button, including for GET forms. Descendant frame events inherit the initiating details while tracking their own completion.
 
 ## Completion outcomes
 
@@ -36,7 +36,7 @@ On success, completion follows the response render. Optimistic values can stay a
 
 ## Scope
 
-Only native form submissions that start Remix frame reloads emit `rmx:navigation`. Links, direct `frame.reload()` and `navigate()` calls, and forms that fall back to document navigation do not emit it. Dispatch follows the target and descendant frames' `reloadStart` events and is suppressed if a listener has already started a newer reload.
+Only links and native form submissions that start Remix frame reloads emit `rmx:navigation`. Direct `frame.reload()` and `navigate()` calls, and links or forms that fall back to document navigation do not emit it. Dispatch follows the target and descendant frames' `reloadStart` events and is suppressed if a listener has already started a newer reload.
 
 ## When to revisit
 

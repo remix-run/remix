@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import type { FrameHandle, FrameReloadStartEvent, Handle, RemixNode } from '../runtime/component.ts'
-import type { FormSubmissionEvent } from '../runtime/form-navigation.ts'
+import type { NavigationEvent } from '../runtime/navigation-event.ts'
 import { Fragment } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import { Frame, getNamedFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
@@ -834,7 +834,7 @@ describe('run', () => {
     document.body.append(form)
     let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
     app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
-    let submissions: Event[] = []
+    let submissions: NavigationEvent[] = []
     window.addEventListener('rmx:navigation', (event) => submissions.push(event), {
       signal: t.signal,
     })
@@ -849,7 +849,50 @@ describe('run', () => {
     expect(event.method).toBe('get')
     expect(event.encType).toBeNull()
     expect(event.formData).toBeNull()
-    expect(submissions).toHaveLength(0)
+    expect(submissions).toHaveLength(1)
+    expect(submissions[0]?.element).toBe(anchor)
+    expect(submissions[0]?.target).toBe(anchor)
+    expect(submissions[0]?.submitter).toBe(undefined)
+    expect(submissions[0]?.formData).toBe(undefined)
+    expect(submissions[0]?.encType).toBe(undefined)
+    expect(submissions[0]?.finished).toBe(event.finished)
+  })
+
+  it('dispatches navigation events on image-map areas', async (t) => {
+    await setupReloadBodyTest(t)
+    let area = document.createElement('area')
+    area.href = new URL('/mapped', window.location.href).href
+    document.body.append(area)
+    let started = Promise.withResolvers<NavigationEvent>()
+    area.addEventListener('rmx:navigation', started.resolve, { once: true })
+
+    area.click()
+    let event = await started.promise
+    await event.finished
+
+    expect(event.element).toBe(area)
+    expect(event.src).toBe(area.href)
+    expect(event.method).toBe('get')
+  })
+
+  it('dispatches navigation events on SVG links', async (t) => {
+    await setupReloadBodyTest(t)
+    let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    let anchor = document.createElementNS(svg.namespaceURI, 'a')
+    anchor.setAttribute('href', '/svg-link')
+    svg.append(anchor)
+    document.body.append(svg)
+    let started = Promise.withResolvers<NavigationEvent>()
+    window.addEventListener('rmx:navigation', started.resolve, { once: true, signal: t.signal })
+
+    anchor.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    let event = await started.promise
+    await event.finished
+
+    expect(event.element).toBe(anchor)
+    expect(event.target).toBe(anchor)
+    expect(event.method).toBe('get')
+    expect(event.formData).toBe(undefined)
   })
 
   it('describes native form submission options after submitter overrides', async (t) => {
@@ -878,8 +921,8 @@ describe('run', () => {
       },
       { once: true },
     )
-    let submissions: FormSubmissionEvent[] = []
-    let buttonEvent: FormSubmissionEvent | undefined
+    let submissions: NavigationEvent[] = []
+    let buttonEvent: NavigationEvent | undefined
     button.addEventListener('rmx:navigation', (event) => {
       buttonEvent = event
       order.push('button')
@@ -904,16 +947,16 @@ describe('run', () => {
     let submission = submissions[0]!
     expect(submission).toBe(buttonEvent)
     expect(order).toEqual(['reloadStart', 'button', 'form'])
-    expect(submission).toBeInstanceOf(SubmitEvent)
+    expect(submission).toBeInstanceOf(Event)
     expect(submission.target).toBe(button)
     expect(submission.cancelable).toBe(false)
     expect(submission.defaultPrevented).toBe(false)
-    expect('element' in submission).toBe(false)
+    expect('form' in submission).toBe(false)
     expect(submission.src).toBe(event.src)
     expect(submission.method).toBe('post')
     expect(submission.encType).toBe('text/plain')
     expect(submission.formData).toBe(event.formData)
-    expect(submission.form).toBe(form)
+    expect(submission.element).toBe(form)
     expect(submission.submitter).toBe(button)
     expect(submission.finished).toBe(event.finished)
     expect(requests[0]!.headers.get('Content-Type')).toBe('text/plain')
@@ -933,7 +976,7 @@ describe('run', () => {
       let button = document.createElement('button')
       form.append(input, button)
       document.body.append(form)
-      let events: FormSubmissionEvent[] = []
+      let events: NavigationEvent[] = []
       form.addEventListener('rmx:navigation', (event) => events.push(event))
       let reloaded = new Promise<FrameReloadStartEvent>((resolve) => {
         app.frames.top.addEventListener('reloadStart', resolve, { once: true })
@@ -945,10 +988,10 @@ describe('run', () => {
       expect(events).toHaveLength(1)
       let event = events[0]!
       expect(event.target).toBe(form)
-      expect(event.form).toBe(form)
-      expect(event.submitter).toBe(null)
+      expect(event.element).toBe(form)
+      expect(event.submitter).toBe(undefined)
       expect(reload.element).toBe(form)
-      expect(reload.submitter).toBe(event.submitter)
+      expect(reload.submitter).toBe(event.submitter ?? null)
       expect(event.formData?.get('title')).toBe('Ada')
       expect(event.finished).toBe(reload.finished)
       await event.finished
@@ -959,7 +1002,7 @@ describe('run', () => {
   it('does not dispatch a stale rmx:navigation when reloadStart replaces the submission', async (t) => {
     let { app } = await setupReloadBodyTest(t)
     let form = document.createElement('form')
-    let events: FormSubmissionEvent[] = []
+    let events: NavigationEvent[] = []
     form.addEventListener('rmx:navigation', (event) => events.push(event))
     let replacement: Promise<AbortSignal> | undefined
     let reloadEvents: FrameReloadStartEvent[] = []
@@ -990,7 +1033,7 @@ describe('run', () => {
     otherForm.append(button)
     document.body.append(form, otherForm)
     let order: string[] = []
-    let events: FormSubmissionEvent[] = []
+    let events: NavigationEvent[] = []
     button.addEventListener('rmx:navigation', (event) => {
       order.push('button')
       events.push(event)
@@ -1015,7 +1058,7 @@ describe('run', () => {
     expect(events[0]?.target).toBe(button)
     expect(events[0]?.bubbles).toBe(false)
     expect(events[1]?.target).toBe(form)
-    expect(events[1]?.form).toBe(form)
+    expect(events[1]?.element).toBe(form)
     expect(events[1]?.submitter).toBe(button)
     expect(events[1]?.finished).toBe(reload.finished)
     expect(events[0]?.finished).toBe(reload.finished)
@@ -1033,7 +1076,7 @@ describe('run', () => {
     form.append(input, button)
     document.body.append(form)
     form.addEventListener('submit', () => button.remove())
-    let events: FormSubmissionEvent[] = []
+    let events: NavigationEvent[] = []
     form.addEventListener('rmx:navigation', (event) => events.push(event))
     let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
     app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
@@ -1047,13 +1090,13 @@ describe('run', () => {
     expect(reload.element).toBe(form)
     expect(reload.submitter).toBe(button)
     expect(events).toHaveLength(1)
-    expect(events[0]?.form).toBe(form)
+    expect(events[0]?.element).toBe(form)
     expect(events[0]?.submitter).toBe(button)
     expect(events[0]?.src).toBe(reload.src)
     expect(new URL(reload.src).searchParams.get('q')).toBe('Ada')
     expect(events[0]?.method).toBe('get')
-    expect(events[0]?.encType).toBeNull()
-    expect(events[0]?.formData).toBeNull()
+    expect(events[0]?.encType).toBe(undefined)
+    expect(events[0]?.formData).toBe(undefined)
     expect(events[0]?.finished).toBe(reload.finished)
   })
 
@@ -1067,7 +1110,7 @@ describe('run', () => {
     form.append(button)
     document.body.append(form)
     form.addEventListener('submit', () => button.remove())
-    let events: FormSubmissionEvent[] = []
+    let events: NavigationEvent[] = []
     form.addEventListener('rmx:navigation', (event) => events.push(event))
     let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
     app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
@@ -1077,12 +1120,12 @@ describe('run', () => {
     await reload.finished
 
     expect(events).toHaveLength(1)
-    expect(events[0]?.form).toBe(form)
+    expect(events[0]?.element).toBe(form)
     expect(events[0]?.submitter).toBe(button)
     expect(events[0]?.finished).toBe(reload.finished)
   })
 
-  it('dispatches rmx:navigation only for reloads a form submission started', async (t) => {
+  it('dispatches rmx:navigation only for navigations started by a link or form', async (t) => {
     let { app } = await setupReloadBodyTest(t)
     let events: Event[] = []
     window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
@@ -1273,7 +1316,7 @@ describe('run', () => {
       if (events.length === 1) replacement = app.frames.top.reload()
     })
     let form = document.createElement('form')
-    let submissions: FormSubmissionEvent[] = []
+    let submissions: NavigationEvent[] = []
     form.addEventListener('rmx:navigation', (event) => submissions.push(event))
 
     await reloadFrameForNavigation(app.frames.top, { element: form, form }).finished
@@ -5190,7 +5233,7 @@ describe('run', () => {
     let form = document.createElement('form')
     let button = document.createElement('button')
     form.append(button)
-    let submissions: FormSubmissionEvent[] = []
+    let submissions: NavigationEvent[] = []
     button.addEventListener('rmx:navigation', (event) => {
       submissions.push(event)
       order.push('submit')

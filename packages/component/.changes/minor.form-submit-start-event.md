@@ -1,4 +1,4 @@
-Follow a form's submissions with the typed `rmx:navigation` event to show pending or optimistic UI. See [following a form submission](https://github.com/remix-run/remix/tree/main/packages/component#following-a-form-submission) for details.
+Follow links and form submissions with the typed `rmx:navigation` event to show pending or optimistic UI. See [following a navigation](https://github.com/remix-run/remix/tree/main/packages/component#following-a-navigation) for details.
 
 ```tsx
 // Inside a hydrated component:
@@ -16,3 +16,5 @@ Follow a form's submissions with the typed `rmx:navigation` event to show pendin
   {saving ? 'Saving…' : 'Save'}
 </button>
 ```
+
+`NavigationEvent.element` identifies the initiating HTML or SVG anchor, image-map area, or owning form. `submitter` is optional, and `encType` and `formData` are only present for POST submissions.

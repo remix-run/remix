@@ -1249,15 +1249,15 @@ if (form.reportValidity()) {
 
 `reloadStart` is a `FrameReloadStartEvent`, which describes the effective request and how the reload ends. Its request fields correspond to `frame.reload()` options, with `body` exposed as `formData` and GET fields included in `src`:
 
-| Property    | Value                                                                                                                                                                |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src`       | The initiating reload's source, including any GET submission query. Relative values use the document base URL, as with `frame.reload()`.                             |
-| `method`    | The effective request method in lowercase: `get` or `post`.                                                                                                          |
-| `encType`   | The effective POST encoding: `application/x-www-form-urlencoded` (default), `multipart/form-data`, or `text/plain`. `null` for GET.                                  |
-| `formData`  | The submitted entries for a non-GET form submission or a POST `reload()`, otherwise `null`.                                                                          |
-| `element`   | The initiating `HTMLAnchorElement`, `HTMLAreaElement`, or `HTMLFormElement`. `null` for SVG links, `frame.reload()`, programmatic navigation, and history traversal. |
-| `submitter` | The actual submit button, or `null` when there is no submitter.                                                                                                      |
-| `finished`  | A `Promise<AbortSignal>` that follows this reload like `frame.reload()`. Rejects on failure.                                                                         |
+| Property    | Value                                                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src`       | The initiating reload's source, including any GET submission query. Relative values use the document base URL, as with `frame.reload()`.                                 |
+| `method`    | The effective request method in lowercase: `get` or `post`.                                                                                                              |
+| `encType`   | The effective POST encoding: `application/x-www-form-urlencoded` (default), `multipart/form-data`, or `text/plain`. `null` for GET.                                      |
+| `formData`  | The submitted entries for a non-GET form submission or a POST `reload()`, otherwise `null`.                                                                              |
+| `element`   | The initiating `HTMLAnchorElement`, `HTMLAreaElement`, `SVGAElement`, or `HTMLFormElement`. `null` for `frame.reload()`, programmatic navigation, and history traversal. |
+| `submitter` | The actual submit button, or `null` when there is no submitter.                                                                                                          |
+| `finished`  | A `Promise<AbortSignal>` that follows this reload like `frame.reload()`. Rejects on failure.                                                                             |
 
 `event.finished` follows the same contract as `frame.reload()`:
 
@@ -1271,22 +1271,24 @@ For a direct reload, `await event.finished` and `await frame.reload()` return th
 
 Rendering a validation response counts as a completed reload. The response carries its field errors.
 
-Descendant frames inherit the initiating request and origin details while their `finished` promises track their own reloads. A replaced reload gets no `reloadComplete`, so follow `finished` to learn how a particular reload ended. Use `reloadStart` for every reload of a frame, or `rmx:navigation` for a form's own submissions.
+Descendant frames inherit the initiating request and origin details while their `finished` promises track their own reloads. A replaced reload gets no `reloadComplete`, so follow `finished` to learn how a particular reload ended. Use `reloadStart` for every reload of a frame, or `rmx:navigation` for a link's or form's own navigations.
 
-### Following a Form Submission
+### Following a Navigation
 
-`on('rmx:navigation', handler, captureBoolean?)` follows form submissions that start Remix frame reloads. Its handler receives a typed `FormSubmissionEvent`, with the host inferred as `event.currentTarget`. Listen on a submit button for its submissions, or on the form for all of them.
+<a id="following-a-form-submission"></a>
+
+`on('rmx:navigation', handler, captureBoolean?)` follows links and form submissions that start Remix frame reloads. Its handler receives a typed `NavigationEvent`, with the host inferred as `event.currentTarget`. Listen on an HTML or SVG link, an image-map area, a submit button, or a form. A listener on an ancestor also receives bubbling navigations from those elements.
 
 To display submitted values while a save is pending:
 
 ```tsx
 import { clientEntry, on } from 'remix/component'
-import type { FormSubmissionEvent, Handle } from 'remix/component'
+import type { NavigationEvent, Handle } from 'remix/component'
 
 export const TitleForm = clientEntry(
   import.meta.url,
   function TitleForm(handle: Handle<{ action: string; title: string }>) {
-    let submission: FormSubmissionEvent | undefined
+    let submission: NavigationEvent | undefined
     let failed = false
 
     return () => (
@@ -1322,14 +1324,36 @@ export const TitleForm = clientEntry(
 )
 ```
 
-The handler's signal aborts on the host's next submission or removal, so the check prevents stale updates. A cancelled reload resolves `finished` with an aborted signal, letting this example clear pending state without showing a failure. For success-only behavior such as announcing “Saved!”, use `let reloadSignal = await event.finished` and check `reloadSignal.aborted` first. If submitting removes the form itself, listen on an ancestor that stays mounted.
+The handler's signal aborts on the host's next navigation event or removal, so the check prevents stale updates. A cancelled reload resolves `finished` with an aborted signal, letting this example clear pending state without showing a failure. For success-only behavior such as announcing “Saved!”, use `let reloadSignal = await event.finished` and check `reloadSignal.aborted` first. If submitting removes the form itself, listen on an ancestor that stays mounted.
 
-The event extends `SubmitEvent` and shares the [reload request and completion details](#following-a-reload), including the same `FormData` object and `finished` promise as the target frame's `reloadStart`. Its `form` property is always the owning `HTMLFormElement`, even when the submitter is external or detached. `submitter` is the actual submit button or `null`.
+The event extends `Event` and shares the [reload request and completion details](#following-a-reload), including the same `finished` promise as the target frame's `reloadStart`. `element` identifies the initiating `HTMLAnchorElement`, `HTMLAreaElement`, `SVGAElement`, or owning `HTMLFormElement`, including when its submitter is external or detached. `submitter` is present when a form has an actual submit button. `formData` and `encType` are optional and only present for POST submissions; GET values are encoded in `src`.
 
-- Remix dispatches the event after the target and descendant frames' `reloadStart` events. It starts on the submit button and bubbles through the form, or starts on the form when there is no submitter, including `requestSubmit()` and `form.submit()` without one.
+- Remix dispatches the event after the target and descendant frames' `reloadStart` events. It starts on the link or submit button and bubbles, or starts on the form when there is no submitter, including `requestSubmit()` and `form.submit()` without one.
 - An external or detached submitter receives a non-bubbling event, followed by a separate bubbling event on its owning form. Capture listeners on shared ancestors can receive both; bubbling listeners receive the form's event once.
-- The event is noncancelable. Cancel through native `submit`; `stopPropagation()` still controls delivery of `rmx:navigation`.
-- Links, `navigate()`, `frame.reload()`, and forms that load a new document don't dispatch it.
+- The event is noncancelable. Cancel through native `click` or `submit`; `stopPropagation()` still controls delivery of `rmx:navigation`.
+- `navigate()`, `frame.reload()`, and links or forms that load a new document don't dispatch it.
+
+For a link-adjacent loading indicator, use the same pattern on an anchor:
+
+```tsx
+<a
+  href="/products"
+  mix={on('rmx:navigation', async (event, signal) => {
+    pending = true
+    handle.update()
+    try {
+      await event.finished
+    } catch {
+      // The runtime reports navigation failures.
+    }
+    if (signal.aborted) return
+    pending = false
+    handle.update()
+  })}
+>
+  Products {pending ? 'Loading…' : ''}
+</a>
+```
 
 ### Resolving Frames
 

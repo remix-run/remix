@@ -75,7 +75,7 @@ export type PendingClientEntries = Map<
 
 export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
   /** The initiating anchor, area, or owning form. */
-  element?: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
+  element?: HTMLAnchorElement | HTMLAreaElement | SVGAElement | HTMLFormElement
   /** The actual submitter captured by the native submit event. */
   submitter?: HTMLElement | null
   /** The owning form for a submission, even when its submitter has been detached. */

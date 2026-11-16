@@ -1703,7 +1703,7 @@ describe('navigate', () => {
     expect(reloadFrame).toHaveBeenCalledTimes(1)
     expect(reloadFrame.mock.calls[0]?.arguments[0]).toBe(namedFrame)
     expect(new URL(namedFrame.src, document.baseURI).pathname).toBe('/logo-frame')
-    expect(reloadFrame.mock.calls[0]?.arguments[1]?.element).toBe(undefined)
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.element).toBe(anchor)
   })
 
   it('intercepts anchors when sourceElement is a nested svg node', (t) => {

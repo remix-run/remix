@@ -15,7 +15,7 @@ import {
 } from './component.ts'
 import { invariant } from './invariant.ts'
 import { encodeFormDataAsSearchParams } from './form-navigation.ts'
-import { createFormSubmissionEvent } from './navigation-event.ts'
+import { createNavigationEvent } from './navigation-event.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
@@ -994,21 +994,20 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         ) {
           startSubFrameInheritedReloads(getContentNodes(), controller.signal, origin)
         }
-        // A `reloadStart` listener can start a newer reload, which this submission no longer leads to.
-        let form = event.form
-        if (form && origin && !controller.signal.aborted) {
-          let target = origin?.submitter ?? form
-          // Form controls can shadow methods on their owning form.
-          let bubbles = Node.prototype.contains.call(form, target)
+        // A reloadStart listener can replace this navigation before its source is notified.
+        let element = origin?.element
+        if (event.origin === 'direct' && element && origin && !controller.signal.aborted) {
+          let target = origin.submitter ?? element
+          // External or detached submitters have no event path through their owning form.
+          let bubbles = Node.prototype.contains.call(element, target)
           EventTarget.prototype.dispatchEvent.call(
             target,
-            createFormSubmissionEvent({ ...origin, form, finished: finished.promise, bubbles }),
+            createNavigationEvent({ ...origin, element, finished: finished.promise, bubbles }),
           )
-          // External or detached submitters have no event path through their owning form.
           if (!bubbles && !controller.signal.aborted) {
             EventTarget.prototype.dispatchEvent.call(
-              form,
-              createFormSubmissionEvent({ ...origin, form, finished: finished.promise }),
+              element,
+              createNavigationEvent({ ...origin, element, finished: finished.promise }),
             )
           }
         }
