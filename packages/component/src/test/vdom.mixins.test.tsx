@@ -2,6 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createElement } from '../runtime/create-element.ts'
 import { createRoot } from '../runtime/vdom.ts'
+import { createScheduler } from '../runtime/scheduler.ts'
 import { createMixin, on, ref, unsafeHTML } from '../index.ts'
 import { invariant } from '../runtime/invariant.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
@@ -496,6 +497,57 @@ describe('vnode mixins', () => {
     root.flush()
 
     expect(commits).toBe(1)
+  })
+
+  it('shares one scheduler phase listener across mixin handles', () => {
+    let calls: string[] = []
+    let subscriptions: string[] = []
+    let scheduler = createScheduler(document, new EventTarget())
+    let addEventListener = scheduler.addEventListener
+    let removeEventListener = scheduler.removeEventListener
+    scheduler.addEventListener = (type, listener, options) => {
+      subscriptions.push(`add:${type}`)
+      addEventListener(type, listener, options)
+    }
+    scheduler.removeEventListener = (type, listener, options) => {
+      subscriptions.push(`remove:${type}`)
+      removeEventListener(type, listener, options)
+    }
+
+    let withPhases = createMixin((handle) => {
+      handle.addEventListener('beforeUpdate', (event) => calls.push(`before:${event.node.id}`))
+      handle.addEventListener('commit', (event) => calls.push(`commit:${event.node.id}`))
+    })
+
+    let update = () => {}
+    function List(handle: Handle) {
+      update = () => handle.update()
+      return () => (
+        <div>
+          <span id="a" mix={withPhases()} />
+          <span id="b" mix={withPhases()} />
+          <span id="c" mix={withPhases()} />
+        </div>
+      )
+    }
+
+    let root = createRoot(document.createElement('div'), { scheduler })
+    root.render(<List />)
+    root.flush()
+    expect(subscriptions).toEqual(['add:beforeUpdate', 'add:commit'])
+
+    update()
+    root.flush()
+    expect(calls).toEqual(['before:a', 'before:b', 'before:c', 'commit:a', 'commit:b', 'commit:c'])
+
+    root.render(null)
+    root.flush()
+    expect(subscriptions).toEqual([
+      'add:beforeUpdate',
+      'add:commit',
+      'remove:beforeUpdate',
+      'remove:commit',
+    ])
   })
 
   it('composes ref callbacks across mixins and base mix', () => {
