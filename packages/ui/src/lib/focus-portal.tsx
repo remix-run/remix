@@ -28,24 +28,26 @@ export function leaveFocusPortal(
   owner: object,
   event: KeyboardEvent,
   close?: () => void,
-  inlineRootTrigger?: HTMLElement,
+  inlineRootSurface?: HTMLElement,
 ): boolean {
   let transport = transports.get(owner)
   if (!transport?.active || event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey)
     return false
   transport.restoreFocus = false
-  if (inlineRootTrigger) {
-    // A portaled submenu can belong to an inline root. Re-establish the native
-    // navigation start point at that root, rather than at the submenu destination.
-    inlineRootTrigger.focus()
-    if (event.shiftKey) event.preventDefault()
-    if (close) void close()
-    return true
-  }
   event.preventDefault()
   let direction: 1 | -1 = event.shiftKey ? -1 : 1
+  let rootBoundary =
+    inlineRootSurface &&
+    getSurfaceBoundaries(inlineRootSurface.ownerDocument).find(
+      (boundary) => boundary.node === inlineRootSurface,
+    )
   if (close) void close()
-  transport.route(direction)
+  // Route past the whole inline root. Native tab navigation can otherwise reach
+  // its guard before the closing render removes that guard from the tab order.
+  transport.route(
+    direction,
+    rootBoundary && (direction === 1 ? rootBoundary.after : rootBoundary.before),
+  )
   return true
 }
 
@@ -247,9 +249,9 @@ export function FocusPortal(handle: Handle<PortalOptions>): () => RemixNode {
         observe()
       }
     },
-    route(direction) {
+    route(direction, inlineOrigin) {
       transport.restore()
-      let origin = direction === 1 ? after : before
+      let origin = inlineOrigin ?? (direction === 1 ? after : before)
       if (!origin) return
       let candidates = tabbable(origin.ownerDocument.body, { getShadowRoot: true }).filter(
         (node) => !transport.contains(node),

@@ -226,6 +226,14 @@ describe('Portal focus navigation', () => {
     expect(await page.evaluate(() => !!document.activeElement?.closest('#modal-surface'))).toBe(
       true,
     )
+    await page.goto('/scoped?render=inline&scenario=modal&submenu=portaled')
+    await page.locator('#modal-trigger').press('Enter')
+    await page.locator('#modal-menu-trigger').press('Enter')
+    await page.locator('#modal-menu-sub-trigger').press('ArrowRight')
+    await page.locator('#modal-menu-sub-list [role="menuitem"]:focus').waitFor()
+    await page.keyboard.press('Shift+Tab')
+    await page.locator('#modal-menu-surface[data-open]').waitFor({ state: 'hidden' })
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('modal-menu-trigger')
   })
   it('continues after an inline select inside a modal dialog', async (t) => {
     let page = await openFixture(t, '/scoped?render=inline&scenario=modal')

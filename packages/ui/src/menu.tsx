@@ -1059,7 +1059,7 @@ const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
               context,
               event,
               () => context.closeAll({ focusRoot: false }),
-              context.root.triggerNode,
+              context.root.surfaceNode,
             )
           )
             return

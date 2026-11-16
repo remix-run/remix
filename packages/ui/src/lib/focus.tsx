@@ -15,7 +15,7 @@ export type FocusTransport = {
   contains(node: Node | null): boolean
   restore(): void
   register(boundary: SurfaceBoundaryRegistration): () => void
-  route(direction: 1 | -1): void
+  route(direction: 1 | -1, inlineOrigin?: HTMLElement): void
   update(): void
 }
 
