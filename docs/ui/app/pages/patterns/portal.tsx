@@ -14,7 +14,8 @@ export const meta = {
   importPath: '@remix-run/ui/portal',
 } satisfies PageMeta
 
-const basic = await loadExample('popover/basic')
+const basic = await loadExample('portal/basic')
+const container = await loadExample('portal/container')
 const anatomyCode = await highlightSource(`
   import { Portal } from '@remix-run/ui/portal'
 
@@ -37,14 +38,33 @@ export default function PortalPage(handle: Handle<PageProps>) {
       </Section>
       <Section id="placement" title="Placement and lifecycle">
         <p>
-          The filter popover above uses a portal to escape its preview's clipping and stacking
-          context. Children render under the document body by default. Pass an element from the same
-          document as <code>container</code> to choose another destination.
+          Children render under the document body by default, outside their original clipping and
+          stacking contexts. Pass an element from the same document as <code>container</code> to
+          choose another destination.
         </p>
         <p>
           Component context, frame and child state survive parent updates and container changes.
           Removing the portal disposes its children and removes its host. Server rendering emits
-          only an inert marker; children mount in the browser.
+          only an inert marker. Children mount in the browser.
+        </p>
+      </Section>
+      <Section id="container" title="Custom container">
+        <p>
+          Pass <code>container</code> to choose a destination. Changing the destination preserves
+          the content's component state.
+        </p>
+        <Example id="custom-container" example={container} />
+      </Section>
+      <Section id="focus-boundaries" title="Remix UI patterns">
+        <p>
+          Portal is a generic rendering utility. It does not manage focus, coordinate keyboard or
+          screen-reader navigation with the origin, or supply accessibility semantics. Use a
+          corresponding Portal component for focus and accessibility integration:{' '}
+          <a href="/patterns/dialog/#portal-reference">dialog.Portal</a>,{' '}
+          <a href="/patterns/popover/#portal-reference">popover.Portal</a>,{' '}
+          <a href="/patterns/menu/#portal-reference">menu.Portal</a>,{' '}
+          <a href="/patterns/select/#portal-reference">select.Portal</a> or{' '}
+          <a href="/patterns/combobox/#portal-reference">combobox.Portal</a>.
         </p>
       </Section>
       <Section id="styling" title="Styles and events">
@@ -53,13 +73,6 @@ export default function PortalPage(handle: Handle<PageProps>) {
           not create a stacking context. Inherited CSS and DOM events follow the destination DOM, so
           apply local theme variables and typography to the content and attach DOM listeners within
           the portal. Component context is retained independently of DOM ancestry.
-        </p>
-      </Section>
-      <Section id="accessibility" title="Accessibility">
-        <p>
-          Portal only changes where content renders. Use dialog, popover, menu or another behavior
-          mixin for semantics, focus and dismissal. Moving unrelated content into a portal does not
-          make it part of an open modal dialog's focus scope.
         </p>
       </Section>
       <Section id="api-reference" title="API reference">
