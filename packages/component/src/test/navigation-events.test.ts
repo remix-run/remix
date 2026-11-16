@@ -112,6 +112,47 @@ describe('rmx:navigation', () => {
     expect((await events[1]?.finished)?.aborted).toBe(false)
   })
 
+  it('resolves cancelled redirect handoffs but rejects failed redirect handlers', async (t) => {
+    let finalUrl = new URL('?navigation=final', window.location.href).href
+    let { events } = await setup(t, () => {
+      let response = new Response(
+        '<!doctype html><html><head></head><body><main>Redirect destination</main></body></html><!-- rmx:flush document -->',
+      )
+      Object.defineProperties(response, {
+        url: { value: finalUrl },
+        redirected: { value: true },
+      })
+      return response
+    })
+    let failure: Error | undefined
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        if (event.destination.url !== finalUrl) return
+        if (!failure) event.preventDefault()
+        else {
+          event.intercept({
+            handler() {
+              return Promise.reject(failure)
+            },
+          })
+        }
+      },
+      { signal: t.signal },
+    )
+
+    let cancelled = navigate('?navigation=cancelled-redirect').catch(() => {})
+    expect((await events[0]?.finished)?.aborted).toBe(true)
+    await cancelled
+    expect(events).toHaveLength(1)
+
+    failure = new DOMException('Redirect handler failed', 'AbortError')
+    let failed = navigate('?navigation=failed-redirect').catch(() => {})
+    await expect(events[1]?.finished).rejects.toBe(failure)
+    await failed
+    expect(events).toHaveLength(2)
+  })
+
   it('does not clear a replacement started by a window navigation listener', async (t) => {
     let { events } = await setup(t, () => '<html><head></head><body>Latest</body></html>')
     let replacement: Promise<void> | undefined
