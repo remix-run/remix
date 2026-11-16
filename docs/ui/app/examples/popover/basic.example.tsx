@@ -1,4 +1,3 @@
-import { Portal } from '@remix-run/ui/portal'
 import * as popover from '@remix-run/ui/popover'
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
@@ -56,85 +55,87 @@ export default function ExamplePopover(handle: Handle) {
         >
           <FilterIcon />
         </button>
-        <Portal>
-          <div
-            id={`${handle.id}-surface`}
-            role="dialog"
-            aria-label="Filter pull requests"
-            mix={[
-              popover.surface({
-                open,
-                onHide() {
-                  open = false
-                  handle.update()
-                },
-              }),
-              themeStyle,
-              css({
-                margin: 0,
-                padding: '12px',
-                width: '196px',
-                maxWidth: 'calc(100vw - 32px)',
-                border: '1px solid light-dark(#e0e0e6, #393940)',
-                borderRadius: '10px',
-                background: 'light-dark(#fff, #1b1b20)',
-                boxShadow: '0 12px 32px #00000024',
-                opacity: 0,
-                transform: 'scale(0.98)',
-                transformOrigin: 'top center',
-                transition: 'opacity 140ms ease, transform 140ms ease',
-                '&[data-anchor-placement^="top"]': {
-                  transformOrigin: 'bottom center',
-                },
-                '&[data-state="open"]': {
-                  opacity: 1,
-                  transform: 'scale(1)',
-                  '@starting-style': {
-                    opacity: 0,
-                    transform: 'scale(0.98)',
+        <popover.Portal>
+          <popover.SurfaceContext>
+            <div
+              id={`${handle.id}-surface`}
+              role="dialog"
+              aria-label="Filter pull requests"
+              mix={[
+                popover.surface({
+                  open,
+                  onHide() {
+                    open = false
+                    handle.update()
                   },
-                },
-                '@media (prefers-reduced-motion: reduce)': {
-                  transition: 'none',
-                },
-              }),
-            ]}
-          >
-            <fieldset
-              mix={css({
-                margin: 0,
-                padding: 0,
-                border: 0,
-                '& legend': {
-                  padding: '0 8px 6px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: 'light-dark(#62626c, #b0b0bb)',
-                },
-              })}
+                }),
+                themeStyle,
+                css({
+                  margin: 0,
+                  padding: '12px',
+                  width: '196px',
+                  maxWidth: 'calc(100vw - 32px)',
+                  border: '1px solid light-dark(#e0e0e6, #393940)',
+                  borderRadius: '10px',
+                  background: 'light-dark(#fff, #1b1b20)',
+                  boxShadow: '0 12px 32px #00000024',
+                  opacity: 0,
+                  transform: 'scale(0.98)',
+                  transformOrigin: 'top center',
+                  transition: 'opacity 140ms ease, transform 140ms ease',
+                  '&[data-anchor-placement^="top"]': {
+                    transformOrigin: 'bottom center',
+                  },
+                  '&[data-state="open"]': {
+                    opacity: 1,
+                    transform: 'scale(1)',
+                    '@starting-style': {
+                      opacity: 0,
+                      transform: 'scale(0.98)',
+                    },
+                  },
+                  '@media (prefers-reduced-motion: reduce)': {
+                    transition: 'none',
+                  },
+                }),
+              ]}
             >
-              <legend>Status</legend>
-              <label mix={checkboxStyle}>
-                <input
-                  type="checkbox"
-                  name="status"
-                  value="open"
-                  defaultChecked
-                  mix={popover.focusOnShow()}
-                />
-                Open
-              </label>
-              <label mix={checkboxStyle}>
-                <input type="checkbox" name="status" value="merged" />
-                Merged
-              </label>
-              <label mix={checkboxStyle}>
-                <input type="checkbox" name="status" value="closed" />
-                Closed
-              </label>
-            </fieldset>
-          </div>
-        </Portal>
+              <fieldset
+                mix={css({
+                  margin: 0,
+                  padding: 0,
+                  border: 0,
+                  '& legend': {
+                    padding: '0 8px 6px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: 'light-dark(#62626c, #b0b0bb)',
+                  },
+                })}
+              >
+                <legend>Status</legend>
+                <label mix={checkboxStyle}>
+                  <input
+                    type="checkbox"
+                    name="status"
+                    value="open"
+                    defaultChecked
+                    mix={popover.focusOnShow()}
+                  />
+                  Open
+                </label>
+                <label mix={checkboxStyle}>
+                  <input type="checkbox" name="status" value="merged" />
+                  Merged
+                </label>
+                <label mix={checkboxStyle}>
+                  <input type="checkbox" name="status" value="closed" />
+                  Closed
+                </label>
+              </fieldset>
+            </div>
+          </popover.SurfaceContext>
+        </popover.Portal>
       </popover.Context>
     </div>
   )

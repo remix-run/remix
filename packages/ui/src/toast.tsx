@@ -1,5 +1,6 @@
 import { attrs, createMixin, css, on, ref, TypedEventTarget } from '@remix-run/component'
 import type { ElementProps, Handle, RemixNode } from '@remix-run/component'
+import { FocusGuard } from './lib/focus.tsx'
 
 /** Content published to a toast manager. */
 export interface ToastAddOptions<data = unknown> {
@@ -502,37 +503,6 @@ export const root = createMixin<HTMLElement, [options: ToastRootOptions], Elemen
   },
 )
 
-function FocusGuard(handle: Handle<{ active: boolean }>) {
-  let context = handle.context.get(ToastScope)
-  let voiceOverWebKit = false
-  return () => {
-    let role: 'button' | undefined = handle.props.active && voiceOverWebKit ? 'button' : undefined
-    return (
-      <span
-        tabIndex={handle.props.active ? 0 : -1}
-        role={role}
-        aria-hidden={role ? undefined : 'true'}
-        data-toast-focus-guard=""
-        mix={[
-          hidden,
-          ref((node: HTMLElement) => {
-            let win = node.ownerDocument.defaultView
-            let platform = win?.navigator.platform.toLowerCase() ?? ''
-            // WebKit needs role-button guards for VoiceOver's virtual cursor to dispatch focus.
-            let next =
-              (platform.startsWith('mac') || /^i(os$|p)/.test(platform)) &&
-              Boolean(win?.CSS.supports?.('-webkit-backdrop-filter:none'))
-            if (voiceOverWebKit === next) return
-            voiceOverWebKit = next
-            void handle.update()
-          }),
-          on('focus', (event) => context.focusGuard(event.relatedTarget)),
-        ]}
-      />
-    )
-  }
-}
-
 /**
  * Scopes a notification's content and controls and coordinates keyboard boundary guards.
  * @param handle Notification identity and consumer-owned markup.
@@ -597,9 +567,17 @@ export function ItemContext(handle: Handle<ToastItemContextProps, ItemState>): (
     let last = available.at(-1)?.id === handle.props.value
     return (
       <>
-        <FocusGuard active={context.hasReturnTarget && first} />
+        <FocusGuard
+          active={context.hasReturnTarget && first}
+          data-toast-focus-guard=""
+          onFocus={(event) => context.focusGuard(event.relatedTarget)}
+        />
         {handle.props.children}
-        <FocusGuard active={context.hasReturnTarget && last} />
+        <FocusGuard
+          active={context.hasReturnTarget && last}
+          data-toast-focus-guard=""
+          onFocus={(event) => context.focusGuard(event.relatedTarget)}
+        />
       </>
     )
   }

@@ -60,6 +60,79 @@ export function observeDismissableLayers(document: Document, callback: () => voi
   }
 }
 
+type ModalExemptRegion = {
+  node: HTMLElement
+  onScopeClose?(branch: HTMLElement[], returnTarget: Element | false | null): void
+}
+
+const modalExemptRegions = new WeakMap<Document, Set<ModalExemptRegion>>()
+const modalExemptRegionObservers = new WeakMap<
+  Document,
+  Set<(node: HTMLElement, registered: boolean) => void>
+>()
+
+// These regions stay available outside modal containment. Closing an originating layer
+// notifies them so controls such as notifications can update their return-focus target.
+export function registerModalExemptRegion(region: ModalExemptRegion): () => void {
+  let doc = region.node.ownerDocument
+  let registered = modalExemptRegions.get(doc)
+  if (!registered) {
+    registered = new Set()
+    modalExemptRegions.set(doc, registered)
+  }
+  registered.add(region)
+  notifyModalExemptRegionObservers(doc, region.node, true)
+  return () => {
+    registered.delete(region)
+    if (registered.size === 0) modalExemptRegions.delete(doc)
+    notifyModalExemptRegionObservers(doc, region.node, false)
+  }
+}
+
+export function getModalExemptRegions(doc: Document): HTMLElement[] {
+  return Array.from(modalExemptRegions.get(doc) ?? [], ({ node }) => node).filter(
+    (node) => node.isConnected,
+  )
+}
+
+export function isInModalExemptRegion(doc: Document, target: Node | null): boolean {
+  return getModalExemptRegions(doc).some((node) => contains(node, target))
+}
+
+export function notifyModalExemptRegionsOfScopeClose(
+  scope: HTMLElement,
+  branch: HTMLElement[],
+  returnTarget: Element | false | null,
+): void {
+  for (let region of modalExemptRegions.get(scope.ownerDocument) ?? []) {
+    region.onScopeClose?.(branch, returnTarget)
+  }
+}
+
+export function observeModalExemptRegions(
+  doc: Document,
+  callback: (node: HTMLElement, registered: boolean) => void,
+): () => void {
+  let registered = modalExemptRegionObservers.get(doc)
+  if (!registered) {
+    registered = new Set()
+    modalExemptRegionObservers.set(doc, registered)
+  }
+  registered.add(callback)
+  return () => {
+    registered.delete(callback)
+    if (registered.size === 0) modalExemptRegionObservers.delete(doc)
+  }
+}
+
+function notifyModalExemptRegionObservers(
+  doc: Document,
+  node: HTMLElement,
+  registered: boolean,
+): void {
+  for (let callback of modalExemptRegionObservers.get(doc) ?? []) callback(node, registered)
+}
+
 function updateLayerOrder(layers: DismissableLayer[]) {
   for (let [index, layer] of layers.entries()) {
     let backdrop = layer.options.getBackdrop?.()
@@ -134,19 +207,21 @@ function createDocumentLayers(document: Document) {
     let origin = pointerOrigin
     clearPointerOrigin()
     let layer = layers.at(-1)
+    let interaction = eventNodes(event, document).some((target) =>
+      isInModalExemptRegion(document, target),
+    )
     if (
       !layer ||
       event.button !== 0 ||
       (origin && (origin.layer !== layer || origin.inside)) ||
       isInside(layer, event) ||
-      // Toast actions and similar live-region controls must keep working while a layer is open.
-      isInLiveRegion(event, document) ||
+      (isInLiveRegion(event, document) && !interaction) ||
       layer.options.dismissOnOutsideClick?.() === false
     ) {
       return
     }
 
-    if (layer.options.stopOutsideClickPropagation?.() !== false) {
+    if (!interaction && layer.options.stopOutsideClickPropagation?.() !== false) {
       event.stopPropagation()
     }
     layer.options.onDismiss({

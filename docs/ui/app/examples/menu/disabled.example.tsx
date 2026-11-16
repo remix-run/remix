@@ -1,4 +1,3 @@
-import { Portal } from '@remix-run/ui/portal'
 import * as menu from '@remix-run/ui/menu'
 import { css } from 'remix/component'
 
@@ -49,111 +48,113 @@ export default function ExampleMenu() {
         >
           Edit <ChevronDownIcon />
         </button>
-        <Portal>
-          <div
-            mix={[
-              menu.popover(),
-              themeStyle,
-              css({
-                margin: 0,
-                padding: '6px',
-                minWidth: '220px',
-                maxWidth: 'calc(100vw - 32px)',
-                border: '1px solid var(--border)',
-                borderRadius: '10px',
-                background: 'light-dark(#fff, #1b1b20)',
-                boxShadow: '0 12px 32px #00000024',
-                opacity: 0,
-                transition: 'opacity 140ms ease',
-                '&[data-close-animation="none"]': {
-                  transition: 'none',
-                },
-                '&[data-state="open"]': {
-                  opacity: 1,
-                  '@starting-style': {
-                    opacity: 0,
-                  },
-                },
-                '@media (prefers-reduced-motion: reduce)': {
-                  transition: 'none',
-                },
-              }),
-            ]}
-          >
+        <menu.Portal>
+          <menu.PopoverContext>
             <div
               mix={[
-                menu.list(),
+                menu.popover(),
+                themeStyle,
                 css({
-                  display: 'grid',
-                  gap: '2px',
-                  maxHeight: '240px',
-                  overflow: 'auto',
-                  outline: 0,
+                  margin: 0,
+                  padding: '6px',
+                  minWidth: '220px',
+                  maxWidth: 'calc(100vw - 32px)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  background: 'light-dark(#fff, #1b1b20)',
+                  boxShadow: '0 12px 32px #00000024',
+                  opacity: 0,
+                  transition: 'opacity 140ms ease',
+                  '&[data-close-animation="none"]': {
+                    transition: 'none',
+                  },
+                  '&[data-state="open"]': {
+                    opacity: 1,
+                    '@starting-style': {
+                      opacity: 0,
+                    },
+                  },
+                  '@media (prefers-reduced-motion: reduce)': {
+                    transition: 'none',
+                  },
                 }),
               ]}
             >
               <div
                 mix={[
-                  menu.item({
-                    name: 'undo',
-                    disabled: true,
+                  menu.list(),
+                  css({
+                    display: 'grid',
+                    gap: '2px',
+                    maxHeight: '240px',
+                    overflow: 'auto',
+                    outline: 0,
                   }),
-                  itemStyle,
                 ]}
               >
-                Undo
-              </div>
-              <div
-                mix={[
-                  menu.item({
-                    name: 'redo',
-                  }),
-                  itemStyle,
-                ]}
-              >
-                Redo
-              </div>
-              <div
-                role="separator"
-                mix={css({
-                  height: '1px',
-                  margin: '4px 6px',
-                  background: 'var(--border)',
-                })}
-              />
-              <div
-                mix={[
-                  menu.item({
-                    name: 'cut',
-                  }),
-                  itemStyle,
-                ]}
-              >
-                Cut
-              </div>
-              <div
-                mix={[
-                  menu.item({
-                    name: 'copy',
-                  }),
-                  itemStyle,
-                ]}
-              >
-                Copy
-              </div>
-              <div
-                mix={[
-                  menu.item({
-                    name: 'paste',
-                  }),
-                  itemStyle,
-                ]}
-              >
-                Paste
+                <div
+                  mix={[
+                    menu.item({
+                      name: 'undo',
+                      disabled: true,
+                    }),
+                    itemStyle,
+                  ]}
+                >
+                  Undo
+                </div>
+                <div
+                  mix={[
+                    menu.item({
+                      name: 'redo',
+                    }),
+                    itemStyle,
+                  ]}
+                >
+                  Redo
+                </div>
+                <div
+                  role="separator"
+                  mix={css({
+                    height: '1px',
+                    margin: '4px 6px',
+                    background: 'var(--border)',
+                  })}
+                />
+                <div
+                  mix={[
+                    menu.item({
+                      name: 'cut',
+                    }),
+                    itemStyle,
+                  ]}
+                >
+                  Cut
+                </div>
+                <div
+                  mix={[
+                    menu.item({
+                      name: 'copy',
+                    }),
+                    itemStyle,
+                  ]}
+                >
+                  Copy
+                </div>
+                <div
+                  mix={[
+                    menu.item({
+                      name: 'paste',
+                    }),
+                    itemStyle,
+                  ]}
+                >
+                  Paste
+                </div>
               </div>
             </div>
-          </div>
-        </Portal>
+          </menu.PopoverContext>
+        </menu.Portal>
       </menu.Context>
     </div>
   )

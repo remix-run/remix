@@ -1,6 +1,4 @@
-import { Portal } from '@remix-run/ui/portal'
 import { css, type Handle } from '@remix-run/component'
-import * as popover from '@remix-run/ui/popover'
 import * as select from '@remix-run/ui/select'
 
 /**
@@ -59,8 +57,8 @@ export default function Example(handle: Handle) {
           <SelectLabel />
         </button>
 
-        <popover.Context>
-          <Portal>
+        <select.Portal>
+          <select.PopoverContext>
             <div
               mix={[
                 select.popover(),
@@ -119,8 +117,8 @@ export default function Example(handle: Handle) {
                 ))}
               </div>
             </div>
-          </Portal>
-        </popover.Context>
+          </select.PopoverContext>
+        </select.Portal>
 
         <input
           mix={[

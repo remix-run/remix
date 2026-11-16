@@ -1,3 +1,6 @@
+import { SurfacePortalOwner } from './lib/focus.tsx'
+import { FocusPortal, leaveFocusPortal } from './lib/focus-portal.tsx'
+import type { PortalProps } from './portal.tsx'
 import {
   attrs,
   createMixin,
@@ -135,6 +138,7 @@ interface MenuContextValue {
   readonly root: MenuContextValue
   readonly state: State
   readonly surfaceNode: HTMLElement | undefined
+  readonly triggerNode: HTMLElement | undefined
   readonly triggerId: string | undefined
   activateActive: () => Promise<void>
   activateItem: (id: string) => Promise<void>
@@ -666,6 +670,9 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>): () =
       return surfaceRef
     },
 
+    get triggerNode() {
+      return triggerRef
+    },
     get triggerId() {
       return triggerId
     },
@@ -914,6 +921,9 @@ const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
   ElementProps
 >((handle) => {
   let context = handle.context.get(MenuProvider)
+  let scoped = handle.context.get(PopoverContext)
+  if (!context || scoped?.owner !== context)
+    throw new Error('menu.popover() requires a matching menu.PopoverContext ancestor')
 
   return () => [
     attrs({
@@ -1041,6 +1051,18 @@ const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
           void context.closeBranch({ focusTrigger: true })
           return
         case 'Tab':
+          if (leaveFocusPortal(context.root, event, () => context.closeAll({ focusRoot: false })))
+            return
+          if (
+            context !== context.root &&
+            leaveFocusPortal(
+              context,
+              event,
+              () => context.closeAll({ focusRoot: false }),
+              context.root.triggerNode,
+            )
+          )
+            return
           void context.closeAll({ focusRoot: false })
       }
     }),
@@ -1283,6 +1305,32 @@ const submenuTriggerMixin: MixinFactory<
 })
 
 export const Context = MenuProvider
+
+/** Content and focus boundaries for one menu popup. */
+export interface MenuPopoverContextProps {
+  /** One element with `menu.popover()` and its content. */
+  children?: RemixNode
+}
+
+/**
+ * Renders focus guards beside a menu popup at its DOM destination.
+ * Required around `menu.popover()` within the same `menu.Context` instance.
+ * Place it inside `menu.Portal` when the popup is portaled.
+ * @param handle Popup content and the owning menu context.
+ * @returns The popup content with declarative focus boundaries.
+ */
+export function PopoverContext(
+  handle: Handle<MenuPopoverContextProps, { owner: MenuContextValue }>,
+): () => RemixNode {
+  let owner = handle.context.get(MenuProvider)
+  if (!owner) throw new Error('menu.PopoverContext requires a menu.Context ancestor')
+  handle.context.set({ owner })
+  return () => (
+    <SurfacePortalOwner owner={owner} surfaceOwner={handle.context.get(popover.Context)}>
+      <popover.SurfaceContext>{handle.props.children}</popover.SurfaceContext>
+    </SurfacePortalOwner>
+  )
+}
 export const contextTrigger = contextTriggerMixin
 export const item = itemMixin
 export const list = listMixin
@@ -1295,4 +1343,34 @@ export function onMenuSelect<target extends HTMLElement>(
   captureBoolean?: boolean,
 ): ReturnType<typeof on<target, typeof MENU_SELECT_EVENT>> {
   return on(MENU_SELECT_EVENT, handler, captureBoolean)
+}
+
+/** Options for rendering the menu surface outside its authored DOM ancestors. */
+export type MenuPortalProps = PortalProps
+
+/**
+ * Portals one menu surface while coordinating its focus navigation.
+ * Keep its matching surface context inside this component. Omit it for inline rendering.
+ * The origin and container must be in the document light DOM.
+ * Non-modal Tab order follows this component's declaration position. Place it beside
+ * the trigger when popup content should follow the trigger in sequential navigation.
+ * @param handle Surface content, destination, and the owning menu context.
+ * @returns The transported content with its origin focus boundaries.
+ */
+export function Portal(handle: Handle<MenuPortalProps>): () => RemixNode {
+  let owner = handle.context.get(MenuProvider)
+  if (!owner) throw new Error('menu.Portal requires a menu.Context ancestor')
+  return () => (
+    <FocusPortal
+      componentName="menu.Portal"
+      owner={owner}
+      open={() => owner.isOpen}
+      reference={() => owner.triggerNode}
+      mode={'navigate'}
+      ownerRole={owner.parent ? 'group' : undefined}
+      container={handle.props.container}
+    >
+      {handle.props.children}
+    </FocusPortal>
+  )
 }

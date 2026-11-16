@@ -1,5 +1,8 @@
+import { FocusPortal } from './lib/focus-portal.tsx'
+import type { PortalProps } from './portal.tsx'
 import {
   attrs,
+  createElement,
   createMixin,
   css,
   on,
@@ -11,8 +14,13 @@ import {
   type MixinHandle,
   type RemixNode,
 } from '@remix-run/component'
+import { SurfaceBoundary } from './lib/focus.tsx'
 import { activateFocusScope } from './dialog/focus.ts'
-import { registerDismissableLayer } from './lib/dismissable-layer.ts'
+import {
+  getDismissableLayerBranch,
+  registerDismissableLayer,
+  isInModalExemptRegion,
+} from './lib/dismissable-layer.ts'
 import { finishAnimations } from './lib/finish-animations.ts'
 import { lockScroll } from './lib/scroll-lock.ts'
 
@@ -217,6 +225,24 @@ function DialogProvider(handle: Handle<DialogContextProps, DialogContextValue>):
   }
 }
 
+/** Content and focus boundaries for one dialog surface. */
+export interface DialogSurfaceContextProps {
+  /** One element with `dialog.surface()`, rendered between declarative focus guards. */
+  children?: RemixNode
+}
+
+/**
+ * Renders focus guards beside a dialog surface at its DOM destination.
+ * Place it inside `dialog.Portal` when the surface is portaled.
+ * @param handle Surface content and the owning dialog context.
+ * @returns The surface content with declarative focus boundaries.
+ */
+export function SurfaceContext(handle: Handle<DialogSurfaceContextProps>): () => RemixNode {
+  let owner = handle.context.get(DialogProvider)
+  if (!owner) throw new Error('dialog.SurfaceContext requires a dialog.Context ancestor')
+  return () => createElement(SurfaceBoundary, { owner }, handle.props.children)
+}
+
 function getDialogContext(handle: MixinHandle) {
   let context = handle.context.get(DialogProvider)
   if (!context) throw new Error('Dialog mixins require a dialog.Context ancestor')
@@ -261,6 +287,10 @@ function resolveFocus(target: DialogFocusTarget | undefined): HTMLElement | fals
 const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], ElementProps> =
   createMixin<HTMLElement, [options?: DialogSurfaceOptions], ElementProps>((handle) => {
     let context = getDialogContext(handle)
+    let boundary = handle.context.get(SurfaceBoundary)
+    if (!boundary || boundary.owner !== context)
+      throw new Error('dialog.surface() requires a dialog.SurfaceContext ancestor')
+    let surfaceLifetime = new AbortController()
     let previousOpen = false
     let transition = 0
     let surfaceNode: HTMLElement | null = null
@@ -277,9 +307,12 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
     }
 
     function release() {
+      // Layer disposal removes portaled descendants from the ownership tree.
+      let closingBranch = surfaceNode ? getDismissableLayerBranch(surfaceNode) : []
       layer?.dispose()
       layer = undefined
       focusScope?.dispose({
+        closingBranch,
         restoreFocus:
           context.closingReason !== 'focus-out' &&
           !(context.modal === false && context.closingReason === 'outside-click'),
@@ -307,6 +340,7 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
       }
       let openingEvent = context.openingEvent
       let touch = openingEvent instanceof PointerEvent && openingEvent.pointerType === 'touch'
+      let explicitReturnFocus = false
       focusScope = activateFocusScope(node, {
         modal: context.modal,
         initialFocus: initial
@@ -314,11 +348,12 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
             context.showFocusTarget ??
             (touch ? node : null))
           : false,
-        returnFocus: () =>
-          resolveFocus(latestOptions.finalFocus) ??
-          context.hideFocusTarget ??
-          context.trigger ??
-          previouslyFocused,
+        returnFocus() {
+          let target = resolveFocus(latestOptions.finalFocus) ?? context.hideFocusTarget
+          explicitReturnFocus = target != null
+          return target ?? context.trigger ?? previouslyFocused
+        },
+        hasExplicitReturnFocus: () => explicitReturnFocus,
         getBackdrop: () => context.backdrop,
         onFocusOutside(event) {
           if (event.target instanceof Node && context.isTrigger(event.target)) return
@@ -330,10 +365,13 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
     handle.addEventListener('insert', ({ node }) => {
       if (context.surface && context.surface !== node)
         throw new Error('dialog.Context supports one dialog.surface()')
+      surfaceLifetime = new AbortController()
       context.surface = node
       surfaceNode = node
+      boundary.registerSurface(node, surfaceLifetime.signal)
     })
     handle.addEventListener('remove', () => {
+      surfaceLifetime.abort()
       transition++
       let node = surfaceNode
       surfaceNode = null
@@ -385,7 +423,9 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
               dismissOnEscape: () => context.open && context.closeOnEscape,
               dismissOnOutsideClick: () => context.open && context.closeOnOutsideClick,
               stopOutsideClickPropagation: () => context.modal === true,
-              isInside: (target) => context.isTrigger(target),
+              isInside: (target) =>
+                context.isTrigger(target) ||
+                (context.modal !== false && isInModalExemptRegion(node.ownerDocument, target)),
               onDismiss(request) {
                 context.request(false, request.reason, request.event)
               },
@@ -545,4 +585,34 @@ export function onDialogChange<target extends HTMLElement>(
   captureBoolean?: boolean,
 ): ReturnType<typeof on<target, typeof DIALOG_CHANGE_EVENT>> {
   return on(DIALOG_CHANGE_EVENT, handler, captureBoolean)
+}
+
+/** Options for rendering the dialog surface outside its authored DOM ancestors. */
+export type DialogPortalProps = PortalProps
+
+/**
+ * Portals one dialog surface while coordinating its focus navigation.
+ * Keep its matching surface context inside this component. Omit it for inline rendering.
+ * The origin and container must be in the document light DOM.
+ * Non-modal Tab order follows this component's declaration position. Place it beside
+ * the trigger when popup content should follow the trigger in sequential navigation.
+ * @param handle Surface content, destination, and the owning dialog context.
+ * @returns The transported content with its origin focus boundaries.
+ */
+export function Portal(handle: Handle<DialogPortalProps>): () => RemixNode {
+  let owner = handle.context.get(DialogProvider)
+  if (!owner) throw new Error('dialog.Portal requires a dialog.Context ancestor')
+  return () =>
+    createElement(
+      FocusPortal,
+      {
+        componentName: 'dialog.Portal',
+        owner,
+        open: () => owner.open,
+        reference: () => owner.trigger ?? owner.triggers.values().next().value,
+        mode: owner.modal === false ? 'navigate' : 'trap',
+        container: handle.props.container,
+      },
+      handle.props.children,
+    )
 }

@@ -6,36 +6,38 @@ Custom dialogs with controlled or uncontrolled state, nested dismissal, focus ma
 
 ```tsx
 import * as dialog from '@remix-run/ui/dialog'
-import { Portal } from '@remix-run/ui/portal'
 
 function Profile() {
   return () => (
     <dialog.Context>
       <button mix={dialog.trigger()}>Edit profile</button>
-      <Portal>
+      <dialog.Portal>
         <div mix={dialog.backdrop()} />
-        <section mix={dialog.surface()}>
-          <h2 mix={dialog.title()}>Edit profile</h2>
-          <p mix={dialog.description()}>Choose the name shown on your profile.</p>
-          <label>
-            Display name
-            <input name="name" mix={dialog.focusOnShow()} />
-          </label>
-          <button mix={dialog.close()}>Done</button>
-        </section>
-      </Portal>
+        <dialog.SurfaceContext>
+          <section mix={dialog.surface()}>
+            <h2 mix={dialog.title()}>Edit profile</h2>
+            <p mix={dialog.description()}>Choose the name shown on your profile.</p>
+            <label>
+              Display name
+              <input name="name" mix={dialog.focusOnShow()} />
+            </label>
+            <button mix={dialog.close()}>Done</button>
+          </section>
+        </dialog.SurfaceContext>
+      </dialog.Portal>
     </dialog.Context>
   )
 }
 ```
 
-Style the surface and optional backdrop yourself. Both render ordinary DOM elements with fixed positioning. Wrap them in `Portal` to escape clipping and transformed ancestors while preserving their component context. The default destination is the document body. Inline rendering is also supported when the authored ancestors permit it.
+Style the surface and optional backdrop yourself. Both render ordinary DOM elements with fixed positioning. Wrap them in `dialog.Portal` to escape clipping and transformed ancestors while preserving their component context. The default destination is the document body. Inline rendering is also supported when the authored ancestors permit it.
 
 The backdrop covers its containing viewport. Give the surface its own placement, dimensions, background, and spacing. For a centered panel, use `inset: 0`, `margin: auto`, a bounded width, and `height: max-content`. Set a viewport-relative maximum height and `overflow: auto` for long content. Put inherited theme variables and typography on the portal destination or the surface itself.
 
 ## Parts and state
 
 - `dialog.Context` scopes one surface, optional backdrop, and any number of triggers. `defaultOpen` sets initial uncontrolled state. Supply `open` and update it in `onOpenChange(open, event)` for controlled state.
+- `dialog.SurfaceContext` wraps the element with `dialog.surface()`. Put it inside `dialog.Portal` when portaled, or omit the Portal for inline rendering.
 - `dialog.trigger()` adapts a native button. It toggles the dialog and records the opener for focus return. Disabled and `aria-disabled="true"` buttons do not toggle. Its default type is `button`.
 - `dialog.surface({ initialFocus, finalFocus })` adapts an element with `role="dialog"`, a programmatic focus target, and accessible labeling. Supply `role="alertdialog"` for an alert dialog. Keep the surface rendered while it closes if you want exit motion.
 - `dialog.backdrop()` registers an optional element below the surface. Put it beside the surface, inside the same context.
@@ -67,7 +69,6 @@ For imperative opening, `ref` receives a stable `DialogRef` with `open`, `show(t
 ```tsx
 import type { Handle } from 'remix/component'
 import * as dialog from '@remix-run/ui/dialog'
-import { Portal } from '@remix-run/ui/portal'
 
 function Preferences(handle: Handle) {
   let open = false
@@ -80,11 +81,13 @@ function Preferences(handle: Handle) {
       }}
     >
       <button mix={dialog.trigger()}>Preferences</button>
-      <Portal>
-        <div aria-label="Preferences" mix={dialog.surface()}>
-          <button mix={dialog.close()}>Done</button>
-        </div>
-      </Portal>
+      <dialog.Portal>
+        <dialog.SurfaceContext>
+          <div aria-label="Preferences" mix={dialog.surface()}>
+            <button mix={dialog.close()}>Done</button>
+          </div>
+        </dialog.SurfaceContext>
+      </dialog.Portal>
     </dialog.Context>
   )
 }
@@ -102,8 +105,14 @@ The `data-open` attribute remains on surfaces and backdrops while they are visib
 
 ## Integration limits
 
+A global `toast.root()` remains interactive while a modal dialog is open. Toast actions keep the modal open and dismiss transient popups as outside clicks normally would. Toast handles Escape within a notification without dismissing underlying layers. Render the notification region outside the dialog so notifications can remain visible after closing it, and give the region a `z-index` above the dialog stack. By default, closing a dialog preserves notification focus and updates its remembered return target, including for portaled popup controls. An explicit `finalFocus` or `focusOnHide()` target takes effect immediately instead. If the focused notification region unmounts, an active modal restores focus within its boundary.
+
 Dialogs and popovers share visual and dismissal order. A backdrop sits immediately below its dialog and above lower layers. Set `--rmx-layer-base` on the document root to offset the stack relative to application chrome. Keep the same base for participating overlays. Use portals to avoid ancestor stacking contexts that would otherwise constrain this order.
 
 Ordinary third-party overlays can appear above these elements using `z-index`. They do not automatically join modal focus, inertness, or dismissal ownership. Use Remix popover mixins for coordinated detached content. Native modal dialogs and native popovers still occupy the browser's separate top layer.
 
 Escape handling does not currently implement device Back dismissal through `CloseWatcher`. Browser coverage includes Chromium, Firefox, and WebKit; physical mobile Safari and assistive-technology combinations require separate validation.
+
+## Portal
+
+`dialog.Portal` renders the surface in the document body and coordinates focus with its originating controls. Pass `container` to choose another element in the same document's light DOM. `dialog.Portal` must be declared outside a shadow root and use a container outside shadow roots. Keep `dialog.SurfaceContext` inside it. You can omit the Portal for inline rendering while keeping the surface context.

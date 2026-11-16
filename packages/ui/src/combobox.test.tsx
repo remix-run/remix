@@ -41,9 +41,11 @@ function TestCombobox(handle: Handle<TestComboboxProps>): () => RemixNode {
             mix={combobox.input()}
             placeholder={placeholder}
           />
-          <div mix={combobox.popover()}>
-            <div mix={combobox.list()}>{children}</div>
-          </div>
+          <combobox.PopoverContext>
+            <div mix={combobox.popover()}>
+              <div mix={combobox.list()}>{children}</div>
+            </div>
+          </combobox.PopoverContext>
           {name && <input mix={combobox.hiddenInput()} />}
         </div>
       </combobox.Context>
@@ -234,19 +236,21 @@ describe('Combobox', () => {
         }}
       >
         <input id="framework" mix={combobox.input()} placeholder="Search a framework" />
-        <div mix={combobox.popover()}>
-          <div mix={combobox.list()}>
-            <TestComboboxOption label="Remix framework" value="remix">
-              Remix
-            </TestComboboxOption>
-            <TestComboboxOption disabled label="React Router framework" value="react-router">
-              React Router
-            </TestComboboxOption>
-            <TestComboboxOption label="React framework" value="react">
-              React
-            </TestComboboxOption>
+        <combobox.PopoverContext>
+          <div mix={combobox.popover()}>
+            <div mix={combobox.list()}>
+              <TestComboboxOption label="Remix framework" value="remix">
+                Remix
+              </TestComboboxOption>
+              <TestComboboxOption disabled label="React Router framework" value="react-router">
+                React Router
+              </TestComboboxOption>
+              <TestComboboxOption label="React framework" value="react">
+                React
+              </TestComboboxOption>
+            </div>
           </div>
-        </div>
+        </combobox.PopoverContext>
       </combobox.Context>,
     )
     let input = container.querySelector('input[type="text"]') as HTMLInputElement

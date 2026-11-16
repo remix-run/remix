@@ -1,4 +1,3 @@
-import { Portal } from '@remix-run/ui/portal'
 import * as menu from '@remix-run/ui/menu'
 import { css } from 'remix/component'
 import type { Handle } from 'remix/component'
@@ -51,103 +50,105 @@ export default function ExampleMenu(handle: Handle) {
         >
           Sort by <ChevronDownIcon />
         </button>
-        <Portal>
-          <div
-            mix={[
-              menu.onMenuSelect((event) => {
-                if (event.item.name === 'sort' && event.item.value) {
-                  sort = event.item.value
-                  handle.update()
-                }
-              }),
-              menu.popover(),
-              themeStyle,
-              css({
-                margin: 0,
-                padding: '6px',
-                minWidth: '220px',
-                maxWidth: 'calc(100vw - 32px)',
-                border: '1px solid light-dark(#e0e0e6, #393940)',
-                borderRadius: '10px',
-                background: 'light-dark(#fff, #1b1b20)',
-                boxShadow: '0 12px 32px #00000024',
-                opacity: 0,
-                transition: 'opacity 140ms ease',
-                '&[data-close-animation="none"]': {
-                  transition: 'none',
-                },
-                '&[data-state="open"]': {
-                  opacity: 1,
-                  '@starting-style': {
-                    opacity: 0,
-                  },
-                },
-                '@media (prefers-reduced-motion: reduce)': {
-                  transition: 'none',
-                },
-              }),
-            ]}
-          >
+        <menu.Portal>
+          <menu.PopoverContext>
             <div
               mix={[
-                menu.list(),
+                menu.onMenuSelect((event) => {
+                  if (event.item.name === 'sort' && event.item.value) {
+                    sort = event.item.value
+                    handle.update()
+                  }
+                }),
+                menu.popover(),
+                themeStyle,
                 css({
-                  display: 'grid',
-                  gap: '2px',
-                  maxHeight: '240px',
-                  overflow: 'auto',
-                  outline: 0,
+                  margin: 0,
+                  padding: '6px',
+                  minWidth: '220px',
+                  maxWidth: 'calc(100vw - 32px)',
+                  border: '1px solid light-dark(#e0e0e6, #393940)',
+                  borderRadius: '10px',
+                  background: 'light-dark(#fff, #1b1b20)',
+                  boxShadow: '0 12px 32px #00000024',
+                  opacity: 0,
+                  transition: 'opacity 140ms ease',
+                  '&[data-close-animation="none"]': {
+                    transition: 'none',
+                  },
+                  '&[data-state="open"]': {
+                    opacity: 1,
+                    '@starting-style': {
+                      opacity: 0,
+                    },
+                  },
+                  '@media (prefers-reduced-motion: reduce)': {
+                    transition: 'none',
+                  },
                 }),
               ]}
             >
-              <div role="group" aria-label="Sort by">
-                {options.map((option) => (
-                  <div
-                    key={option.value}
-                    mix={[
-                      menu.item({
-                        name: 'sort',
-                        value: option.value,
-                        type: 'radio',
-                        checked: sort === option.value,
-                      }),
-                      css({
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '20px',
-                        padding: '9px 12px',
-                        borderRadius: '6px',
-                        outline: 0,
-                        cursor: 'default',
-                        '&[data-highlighted]': {
-                          background: 'light-dark(#eeeef3, #303038)',
-                        },
-                        '&[data-menu-flash]': {
-                          background: 'light-dark(#dedee7, #454550)',
-                          color: 'light-dark(#202027, #eeeef2)',
-                        },
-                        '&[aria-disabled]': {
-                          opacity: 0.4,
-                        },
-                      }),
-                    ]}
-                  >
-                    {option.label}
-                    <span
-                      aria-hidden="true"
-                      mix={css({
-                        opacity: sort === option.value ? 1 : 0,
-                      })}
+              <div
+                mix={[
+                  menu.list(),
+                  css({
+                    display: 'grid',
+                    gap: '2px',
+                    maxHeight: '240px',
+                    overflow: 'auto',
+                    outline: 0,
+                  }),
+                ]}
+              >
+                <div role="group" aria-label="Sort by">
+                  {options.map((option) => (
+                    <div
+                      key={option.value}
+                      mix={[
+                        menu.item({
+                          name: 'sort',
+                          value: option.value,
+                          type: 'radio',
+                          checked: sort === option.value,
+                        }),
+                        css({
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '20px',
+                          padding: '9px 12px',
+                          borderRadius: '6px',
+                          outline: 0,
+                          cursor: 'default',
+                          '&[data-highlighted]': {
+                            background: 'light-dark(#eeeef3, #303038)',
+                          },
+                          '&[data-menu-flash]': {
+                            background: 'light-dark(#dedee7, #454550)',
+                            color: 'light-dark(#202027, #eeeef2)',
+                          },
+                          '&[aria-disabled]': {
+                            opacity: 0.4,
+                          },
+                        }),
+                      ]}
                     >
-                      <CheckIcon />
-                    </span>
-                  </div>
-                ))}
+                      {option.label}
+                      <span
+                        aria-hidden="true"
+                        mix={css({
+                          opacity: sort === option.value ? 1 : 0,
+                        })}
+                      >
+                        <CheckIcon />
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        </Portal>
+          </menu.PopoverContext>
+        </menu.Portal>
       </menu.Context>
     </div>
   )

@@ -1,6 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 import { activateFocusScope } from './focus.ts'
+import { registerModalExemptRegion } from '../lib/dismissable-layer.ts'
 
 let scopes: ReturnType<typeof activateFocusScope>[] = []
 
@@ -38,7 +39,7 @@ afterEach(() => {
 })
 
 describe('dialog focus scope', () => {
-  it('focuses the first tabbable control, wraps at each end, and restores the opener', () => {
+  it('focuses the first tabbable control and restores the opener', () => {
     document.body.innerHTML = `
       <button id="opener">Open</button>
       <div id="dialog" tabindex="-1"><button id="first">First</button><button id="last">Last</button></div>
@@ -46,10 +47,9 @@ describe('dialog focus scope', () => {
     get('#opener').focus()
     let scope = activate(get('#dialog'))
     expect(document.activeElement).toBe(get('#first'))
-    expect(tab(get('#first'), true).defaultPrevented).toBe(true)
-    expect(document.activeElement).toBe(get('#last'))
-    tab(get('#last'))
-    expect(document.activeElement).toBe(get('#first'))
+    expect(tab(get('#first'), true).defaultPrevented).toBe(false)
+    get('#last').focus()
+    expect(tab(get('#last')).defaultPrevented).toBe(false)
     scope.dispose()
     expect(document.activeElement).toBe(get('#opener'))
   })
@@ -72,36 +72,28 @@ describe('dialog focus scope', () => {
     expect(tab(get('#last'), true).defaultPrevented).toBe(false)
   })
 
-  it('scrolls wrapped keyboard focus into view in an overflowing dialog', async () => {
-    document.body.innerHTML = `
-      <div id="dialog" tabindex="-1" style="height: 120px; width: 200px; overflow: auto">
-        <input id="first" />
-        <div style="height: 600px"></div>
-        <button id="last">Save</button>
-      </div>
-    `
-    let dialog = get('#dialog')
-    activate(dialog)
-    expect(dialog.scrollTop).toBe(0)
-    tab(get('#first'), true)
-    expect(document.activeElement).toBe(get('#last'))
-    // WebKit applies native focus scrolling after the first render callback.
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    )
-    expect(dialog.scrollTop > 0).toBe(true)
-    // WebKit can leave a fractional pixel of overshoot depending on the frame's offset.
-    expect(
-      get('#last').getBoundingClientRect().bottom <= dialog.getBoundingClientRect().bottom + 1,
-    ).toBe(true)
-    tab(get('#last'))
-    expect(document.activeElement).toBe(get('#first'))
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    )
-    expect(get('#first').getBoundingClientRect().top >= dialog.getBoundingClientRect().top).toBe(
-      true,
-    )
+  it('leaves Tab from programmatically focused interior content to the browser', () => {
+    document.body.innerHTML =
+      '<div id="dialog" tabindex="-1"><button>First</button><h2 id="heading" tabindex="-1">Heading</h2><input /></div>'
+    activate(get('#dialog'))
+    get('#heading').focus()
+    expect(tab(get('#heading')).defaultPrevented).toBe(false)
+    expect(document.activeElement).toBe(get('#heading'))
+  })
+
+  it('keeps automatic focus disabled when a modal-exempt region registers later', () => {
+    document.body.innerHTML =
+      '<button id="opener">Open</button><div id="dialog" tabindex="-1"><button>Inside</button></div><div id="notifications"></div>'
+    get('#opener').focus()
+    activate(get('#dialog'), { modal: true, initialFocus: false })
+    let active = document.activeElement
+    let unregister = registerModalExemptRegion({ node: get('#notifications') })
+    try {
+      expect(document.activeElement).toBe(active)
+      expect(get('#notifications').closest('[inert]')).toBe(null)
+    } finally {
+      unregister()
+    }
   })
 
   it('skips disabled fieldsets, hidden controls, and unchecked radios in a selected group', () => {
@@ -117,8 +109,7 @@ describe('dialog focus scope', () => {
     activate(get('#dialog'))
     expect(document.activeElement).toBe(get('#selected'))
     get('#last').focus()
-    tab(get('#last'))
-    expect(document.activeElement).toBe(get('#selected'))
+    expect(tab(get('#last')).defaultPrevented).toBe(false)
   })
 
   it('restores exact background attributes and keeps the backdrop and live regions available', () => {
@@ -154,11 +145,13 @@ describe('dialog focus scope', () => {
     expect(background.hasAttribute('aria-hidden')).toBe(false)
   })
 
-  it('rescans the document only for changes outside the dialog and live regions', async () => {
+  it('rescans the document only for changes outside the dialog, live regions and modal-exempt regions', async () => {
     document.body.innerHTML = `
       <div id="toast" role="status"></div>
+      <div id="notifications"></div>
       <div id="dialog" tabindex="-1"><ul id="list"></ul></div>
     `
+    let unregister = registerModalExemptRegion({ node: get('#notifications') })
     activate(get('#dialog'))
     let scans = 0
     let querySelectorAll = document.body.querySelectorAll
@@ -169,6 +162,7 @@ describe('dialog focus scope', () => {
     try {
       get('#list').append(document.createElement('li'))
       get('#toast').textContent = 'Saved'
+      get('#notifications').textContent = 'Notification'
       await Promise.resolve()
       expect(scans).toBe(0)
 
@@ -179,6 +173,7 @@ describe('dialog focus scope', () => {
       expect(background.inert).toBe(true)
     } finally {
       delete (document.body as Partial<HTMLElement>).querySelectorAll
+      unregister()
     }
   })
 
@@ -393,10 +388,9 @@ describe('dialog focus scope', () => {
     get('#last').focus()
     expect(document.activeElement).toBe(get('#last'))
     expect(outsideTarget).toBe(get('#last'))
-    tab(get('#last'))
-    expect(document.activeElement).toBe(get('#first'))
-    tab(get('#first'), true)
-    expect(document.activeElement).toBe(get('#last'))
+    expect(tab(get('#last')).defaultPrevented).toBe(false)
+    get('#first').focus()
+    expect(tab(get('#first'), true).defaultPrevented).toBe(false)
   })
 
   it('keeps modal pointer isolation while a child traps focus more narrowly', async () => {
@@ -470,8 +464,8 @@ describe('dialog focus scope', () => {
     expect(get('#parent-control').inert).toBe(false)
     expect(get('#parent-control').getAttribute('aria-hidden')).toBe('true')
     expect(get('#child-control').hasAttribute('aria-hidden')).toBe(false)
-    tab(get('#inside'))
-    expect(document.activeElement).toBe(get('#child-control'))
+    expect(tab(get('#inside')).defaultPrevented).toBe(false)
+    get('#child-control').focus()
     get('#parent-control').focus()
     expect(document.activeElement).toBe(get('#child-control'))
   })
@@ -487,25 +481,9 @@ describe('dialog focus scope', () => {
     expect(get('#outside').inert).toBe(true)
     expect(get('#child').inert).toBe(false)
     expect(document.activeElement).toBe(get('#last'))
-    tab(get('#last'))
-    expect(document.activeElement).toBe(get('#first'))
-    tab(get('#first'), true)
-    expect(document.activeElement).toBe(get('#last'))
-  })
-
-  it('skips background controls between separate regions of a focus trap', () => {
-    document.body.innerHTML = `
-      <div id="parent" tabindex="-1"><button id="first">First</button></div>
-      <button>Background between dialogs</button>
-      <div id="child" tabindex="-1"><button id="last">Last</button></div>
-    `
-    activate(get('#parent'), { modal: 'trap-focus' })
-    activate(get('#child'), { modal: false })
+    expect(tab(get('#last')).defaultPrevented).toBe(false)
     get('#first').focus()
-    expect(tab(get('#first')).defaultPrevented).toBe(true)
-    expect(document.activeElement).toBe(get('#last'))
-    expect(tab(get('#last'), true).defaultPrevented).toBe(true)
-    expect(document.activeElement).toBe(get('#first'))
+    expect(tab(get('#first'), true).defaultPrevented).toBe(false)
   })
 
   it('keeps ancestor constraints when the active child mode becomes nonmodal', () => {
@@ -572,7 +550,7 @@ describe('dialog focus scope', () => {
     expect(document.activeElement).toBe(get('#second-control'))
     expect(get('#first-dialog').inert).toBe(true)
     expect(get('#second-dialog').inert).toBe(false)
-    expect(tab(get('#second-control')).defaultPrevented).toBe(true)
+    expect(tab(get('#second-control')).defaultPrevented).toBe(false)
     second.dispose()
     expect(document.activeElement).toBe(get('#first-control'))
     expect(get('#opener').inert).toBe(false)
@@ -697,7 +675,7 @@ describe('dialog focus scope', () => {
     expect(document.activeElement).toBe(get('#outside'))
   })
 
-  it('includes shadow-root controls in autofocus and focus wrapping', () => {
+  it('includes shadow-root controls in autofocus and leaves Tab to the browser', () => {
     document.body.innerHTML =
       '<div id="dialog" tabindex="-1"><div id="host"></div><button id="last">Last</button></div>'
     let shadow = get('#host').attachShadow({ mode: 'open' })
@@ -706,10 +684,9 @@ describe('dialog focus scope', () => {
     shadow.append(control)
     activate(get('#dialog'))
     expect(shadow.activeElement).toBe(control)
-    tab(control, true)
-    expect(document.activeElement).toBe(get('#last'))
-    tab(get('#last'))
-    expect(shadow.activeElement).toBe(control)
+    expect(tab(control, true).defaultPrevented).toBe(false)
+    get('#last').focus()
+    expect(tab(get('#last')).defaultPrevented).toBe(false)
   })
 
   it('recovers focus when the focused control is removed from a shadow root', async () => {

@@ -1,27 +1,15 @@
 # Portal
 
-Render overlay content outside clipping or transformed ancestors while keeping its Remix component context and frame.
+Render content outside its authored DOM ancestors while keeping its Remix component context and frame.
 
 ```tsx
 import { Portal } from '@remix-run/ui/portal'
-import * as dialog from '@remix-run/ui/dialog'
-
-function Preferences() {
-  return () => (
-    <dialog.Context>
-      <button mix={dialog.trigger()}>Preferences</button>
-      <Portal>
-        <div mix={dialog.backdrop()} />
-        <section aria-label="Preferences" mix={dialog.surface()}>
-          <button mix={dialog.close()}>Done</button>
-        </section>
-      </Portal>
-    </dialog.Context>
-  )
-}
+;<Portal container={container}>{children}</Portal>
 ```
 
-Apply your panel styles to the section and backdrop. `Portal` adds no positioning or stacking context. Dialog and popover mixins manage their own layer order.
+`Portal` adds no positioning or stacking context. Component context is preserved, while keyboard navigation, DOM events and inherited styles follow the destination DOM.
+
+`Portal` is a generic rendering utility. For focus management, use the corresponding component: `dialog.Portal`, `popover.Portal`, `menu.Portal`, `select.Portal`, and `combobox.Portal`. Follow each pattern's examples for the required structure.
 
 ## `Portal`
 

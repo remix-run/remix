@@ -52,11 +52,11 @@ function TestSelect(
         <button id={id} type={type ?? 'button'} mix={[select.trigger(), mix]}>
           <SelectLabel />
         </button>
-        <popover.Context>
+        <select.PopoverContext>
           <div mix={select.popover()}>
             <div mix={select.list()}>{children}</div>
           </div>
-        </popover.Context>
+        </select.PopoverContext>
         {name && <input mix={select.hiddenInput()} />}
       </select.Context>
     )
@@ -148,8 +148,10 @@ async function openSelect(
 }
 
 async function finishCloseTransition(surface: HTMLElement) {
+  await timers.advanceAsync(0)
   surface.dispatchEvent(new TransitionEvent('transitionrun', { propertyName: 'opacity' }))
   surface.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }))
+  await timers.advanceAsync(0)
 }
 
 let timers!: FakeTimers
@@ -160,6 +162,7 @@ async function finishSelectUpdate(
   root: ReturnType<typeof createRoot>,
   labelSwapDelayMs = defaultLabelSwapDelayMs,
 ) {
+  await timers.advanceAsync(0)
   await timers.advanceAsync(flashDurationMs)
   await finishCloseTransition(surface)
   await settle(root)
@@ -222,13 +225,13 @@ describe('Select', () => {
         <button type="button" mix={select.trigger()}>
           <SelectValue />
         </button>
-        <popover.Context>
+        <select.PopoverContext>
           <div mix={select.popover()}>
             <div mix={select.list()}>
               <Indirection />
             </div>
           </div>
-        </popover.Context>
+        </select.PopoverContext>
       </select.Context>,
     )
     let trigger = getTrigger(container)
@@ -306,6 +309,7 @@ describe('Select', () => {
     let react = getOptionByText(container, 'React')
     click(react)
     await settle(root)
+    await timers.advanceAsync(0)
     await timers.advanceAsync(flashDurationMs)
     await finishCloseTransition(surface)
     await settle(root)
@@ -373,27 +377,29 @@ describe('Select', () => {
             Open filters
           </button>
 
-          <div
-            id="outer-surface"
-            mix={popover.surface({
-              open,
-              onHide() {
-                open = false
-                void handle.update()
-              },
-            })}
-          >
-            <TestSelect
-              id="grouping"
-              defaultLabel="No grouping"
-              defaultValue="none"
-              mix={popover.focusOnShow()}
+          <popover.SurfaceContext>
+            <div
+              id="outer-surface"
+              mix={popover.surface({
+                open,
+                onHide() {
+                  open = false
+                  void handle.update()
+                },
+              })}
             >
-              <TestOption label="No grouping" value="none" />
-              <TestOption label="Status" value="status" />
-              <TestOption label="Priority" value="priority" />
-            </TestSelect>
-          </div>
+              <TestSelect
+                id="grouping"
+                defaultLabel="No grouping"
+                defaultValue="none"
+                mix={popover.focusOnShow()}
+              >
+                <TestOption label="No grouping" value="none" />
+                <TestOption label="Status" value="status" />
+                <TestOption label="Priority" value="priority" />
+              </TestSelect>
+            </div>
+          </popover.SurfaceContext>
         </popover.Context>
       )
     }

@@ -34,9 +34,11 @@ describe('browser-only mixins during server rendering', () => {
     let html = await renderToString(
       <popover.Context>
         <button mix={[popover.anchor({}), popover.focusOnHide()]}>Open</button>
-        <div mix={[popover.surface({ open: false, onHide() {} }), popover.focusOnShow()]}>
-          Content
-        </div>
+        <popover.SurfaceContext>
+          <div mix={[popover.surface({ open: false, onHide() {} }), popover.focusOnShow()]}>
+            Content
+          </div>
+        </popover.SurfaceContext>
       </popover.Context>,
     )
 

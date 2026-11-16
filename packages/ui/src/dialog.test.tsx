@@ -39,14 +39,16 @@ function Example(handle: Handle<dialog.DialogContextProps>) {
       <button id="trigger" mix={dialog.trigger()}>
         Edit profile
       </button>
-      <div mix={dialog.surface()}>
-        <h2 mix={dialog.title()}>Profile</h2>
-        <p mix={dialog.description()}>Your public information.</p>
-        <input id="name" aria-label="Name" />
-        <button id="close" mix={dialog.close()}>
-          Done
-        </button>
-      </div>
+      <dialog.SurfaceContext>
+        <div mix={dialog.surface()}>
+          <h2 mix={dialog.title()}>Profile</h2>
+          <p mix={dialog.description()}>Your public information.</p>
+          <input id="name" aria-label="Name" />
+          <button id="close" mix={dialog.close()}>
+            Done
+          </button>
+        </div>
+      </dialog.SurfaceContext>
     </dialog.Context>
   )
 }
@@ -59,35 +61,39 @@ function DetachedPopup(handle: Handle<dialog.DialogContextProps>) {
         <button id="trigger" mix={dialog.trigger()}>
           Open dialog
         </button>
-        <div mix={dialog.surface()}>
-          <button
-            id="popup-trigger"
-            mix={[
-              popover.anchor({ placement: 'bottom-start' }),
-              popover.focusOnHide(),
-              on('click', () => {
-                open = true
+        <dialog.SurfaceContext>
+          <div mix={dialog.surface()}>
+            <button
+              id="popup-trigger"
+              mix={[
+                popover.anchor({ placement: 'bottom-start' }),
+                popover.focusOnHide(),
+                on('click', () => {
+                  open = true
+                  void handle.update()
+                }),
+              ]}
+            >
+              Open popup
+            </button>
+          </div>
+        </dialog.SurfaceContext>
+        <popover.SurfaceContext>
+          <div
+            data-popup
+            mix={popover.surface({
+              open,
+              onHide() {
+                open = false
                 void handle.update()
-              }),
-            ]}
+              },
+            })}
           >
-            Open popup
-          </button>
-        </div>
-        <div
-          data-popup
-          mix={popover.surface({
-            open,
-            onHide() {
-              open = false
-              void handle.update()
-            },
-          })}
-        >
-          <button id="popup-action" mix={popover.focusOnShow()}>
-            Popup action
-          </button>
-        </div>
+            <button id="popup-action" mix={popover.focusOnShow()}>
+              Popup action
+            </button>
+          </div>
+        </popover.SurfaceContext>
       </dialog.Context>
     </popover.Context>
   )
@@ -104,11 +110,13 @@ describe('dialog', () => {
     let { root } = render(
       <dialog.Context defaultOpen>
         <Portal>
-          <div data-surface mix={dialog.surface()}>
-            <button id="close-late" mix={dialog.close()}>
-              Close
-            </button>
-          </div>
+          <dialog.SurfaceContext>
+            <div data-surface mix={dialog.surface()}>
+              <button id="close-late" mix={dialog.close()}>
+                Close
+              </button>
+            </div>
+          </dialog.SurfaceContext>
         </Portal>
         <Portal>
           <div data-backdrop mix={dialog.backdrop()} />
@@ -131,17 +139,21 @@ describe('dialog', () => {
     let { root } = render(
       <dialog.Context defaultOpen>
         <Portal>
-          <div data-parent mix={dialog.surface()}>
-            <button id="parent-action">Parent action</button>
-            <dialog.Context defaultOpen>
-              <Portal>
-                <div data-child-backdrop mix={dialog.backdrop()} />
-                <div data-child mix={dialog.surface()}>
-                  <button id="child-action">Child action</button>
-                </div>
-              </Portal>
-            </dialog.Context>
-          </div>
+          <dialog.SurfaceContext>
+            <div data-parent mix={dialog.surface()}>
+              <button id="parent-action">Parent action</button>
+              <dialog.Context defaultOpen>
+                <Portal>
+                  <div data-child-backdrop mix={dialog.backdrop()} />
+                  <dialog.SurfaceContext>
+                    <div data-child mix={dialog.surface()}>
+                      <button id="child-action">Child action</button>
+                    </div>
+                  </dialog.SurfaceContext>
+                </Portal>
+              </dialog.Context>
+            </div>
+          </dialog.SurfaceContext>
         </Portal>
       </dialog.Context>,
     )
@@ -186,13 +198,15 @@ describe('dialog', () => {
         <button id="second" mix={dialog.trigger()}>
           Second
         </button>
-        <div mix={dialog.surface()}>
-          <input id="unselected" />
-          <input id="selected" mix={dialog.focusOnShow()} />
-          <button id="close" mix={dialog.close()}>
-            Close
-          </button>
-        </div>
+        <dialog.SurfaceContext>
+          <div mix={dialog.surface()}>
+            <input id="unselected" />
+            <input id="selected" mix={dialog.focusOnShow()} />
+            <button id="close" mix={dialog.close()}>
+              Close
+            </button>
+          </div>
+        </dialog.SurfaceContext>
       </dialog.Context>,
     )
     let second = get<HTMLButtonElement>(container, '#second')
@@ -235,17 +249,19 @@ describe('dialog', () => {
           <button id="return" mix={dialog.focusOnHide()}>
             Return here
           </button>
-          <div mix={dialog.surface()}>
-            <button
-              id="remove-trigger"
-              mix={on('click', () => {
-                visible = false
-                void handle.update()
-              })}
-            >
-              Remove opener
-            </button>
-          </div>
+          <dialog.SurfaceContext>
+            <div mix={dialog.surface()}>
+              <button
+                id="remove-trigger"
+                mix={on('click', () => {
+                  visible = false
+                  void handle.update()
+                })}
+              >
+                Remove opener
+              </button>
+            </div>
+          </dialog.SurfaceContext>
         </dialog.Context>
       )
     }
@@ -273,18 +289,22 @@ describe('dialog', () => {
   it('keeps the parent modal and its scroll lock when a nested dialog closes', async () => {
     let { container, root } = render(
       <dialog.Context defaultOpen>
-        <div data-parent mix={dialog.surface()}>
-          <dialog.Context>
-            <button id="child-trigger" mix={dialog.trigger()}>
-              Open child
-            </button>
-            <div data-child mix={dialog.surface()}>
-              <button id="child-close" mix={dialog.close()}>
-                Close child
+        <dialog.SurfaceContext>
+          <div data-parent mix={dialog.surface()}>
+            <dialog.Context>
+              <button id="child-trigger" mix={dialog.trigger()}>
+                Open child
               </button>
-            </div>
-          </dialog.Context>
-        </div>
+              <dialog.SurfaceContext>
+                <div data-child mix={dialog.surface()}>
+                  <button id="child-close" mix={dialog.close()}>
+                    Close child
+                  </button>
+                </div>
+              </dialog.SurfaceContext>
+            </dialog.Context>
+          </div>
+        </dialog.SurfaceContext>
       </dialog.Context>,
     )
     await settle(root)
@@ -351,9 +371,11 @@ describe('dialog', () => {
           <button id="enabled" mix={dialog.trigger()}>
             Open
           </button>
-          <div mix={dialog.surface()}>
-            <button mix={dialog.close()}>Close</button>
-          </div>
+          <dialog.SurfaceContext>
+            <div mix={dialog.surface()}>
+              <button mix={dialog.close()}>Close</button>
+            </div>
+          </dialog.SurfaceContext>
         </dialog.Context>
       </form>,
     )
@@ -371,23 +393,25 @@ describe('dialog', () => {
       let visible = true
       return () => (
         <dialog.Context defaultOpen>
-          <div mix={dialog.surface()}>
-            {visible ? (
-              <>
-                <h2 mix={dialog.title()}>Title</h2>
-                <p mix={dialog.description()}>Description</p>
-              </>
-            ) : null}
-            <button
-              id="remove-labels"
-              mix={on('click', () => {
-                visible = false
-                void handle.update()
-              })}
-            >
-              Remove
-            </button>
-          </div>
+          <dialog.SurfaceContext>
+            <div mix={dialog.surface()}>
+              {visible ? (
+                <>
+                  <h2 mix={dialog.title()}>Title</h2>
+                  <p mix={dialog.description()}>Description</p>
+                </>
+              ) : null}
+              <button
+                id="remove-labels"
+                mix={on('click', () => {
+                  visible = false
+                  void handle.update()
+                })}
+              >
+                Remove
+              </button>
+            </div>
+          </dialog.SurfaceContext>
         </dialog.Context>
       )
     }
@@ -578,16 +602,18 @@ describe('dialog', () => {
   it('supports alert dialogs and explicit accessible labels', async () => {
     let { container, root } = render(
       <dialog.Context defaultOpen>
-        <div
-          role="alertdialog"
-          aria-label="Confirm deletion"
-          aria-describedby="custom-description"
-          mix={dialog.surface()}
-        >
-          <h2 mix={dialog.title()}>Delete</h2>
-          <p id="custom-description">This cannot be undone.</p>
-          <button mix={dialog.close()}>Cancel</button>
-        </div>
+        <dialog.SurfaceContext>
+          <div
+            role="alertdialog"
+            aria-label="Confirm deletion"
+            aria-describedby="custom-description"
+            mix={dialog.surface()}
+          >
+            <h2 mix={dialog.title()}>Delete</h2>
+            <p id="custom-description">This cannot be undone.</p>
+            <button mix={dialog.close()}>Cancel</button>
+          </div>
+        </dialog.SurfaceContext>
       </dialog.Context>,
     )
     await settle(root)
@@ -603,9 +629,11 @@ describe('dialog', () => {
         <button id="trigger" mix={dialog.trigger()}>
           Open
         </button>
-        <div mix={dialog.surface({ initialFocus: false })}>
-          <input autofocus id="autofocus" />
-        </div>
+        <dialog.SurfaceContext>
+          <div mix={dialog.surface({ initialFocus: false })}>
+            <input autofocus id="autofocus" />
+          </div>
+        </dialog.SurfaceContext>
       </dialog.Context>,
     )
     await settle(root)
@@ -627,9 +655,11 @@ describe('dialog', () => {
             api = value
           }}
         >
-          <div mix={dialog.surface()}>
-            <input autofocus id="autofocus" />
-          </div>
+          <dialog.SurfaceContext>
+            <div mix={dialog.surface()}>
+              <input autofocus id="autofocus" />
+            </div>
+          </dialog.SurfaceContext>
         </dialog.Context>
       </>,
     )
@@ -656,9 +686,11 @@ describe('dialog', () => {
         <button id="trigger" mix={dialog.trigger()}>
           Open
         </button>
-        <div mix={dialog.surface({ initialFocus: false, finalFocus: false })}>
-          <button id="inside">Inside</button>
-        </div>
+        <dialog.SurfaceContext>
+          <div mix={dialog.surface({ initialFocus: false, finalFocus: false })}>
+            <button id="inside">Inside</button>
+          </div>
+        </dialog.SurfaceContext>
       </dialog.Context>,
     )
     let trigger = get<HTMLButtonElement>(container, '#trigger')
@@ -670,6 +702,56 @@ describe('dialog', () => {
     api?.close()
     await settle(root)
     expect(document.activeElement).not.toBe(trigger)
+  })
+  it('wraps actual guard crossings while skipping disabled, hidden and unchecked controls', async () => {
+    let { container, root } = render(
+      <dialog.Context defaultOpen>
+        <dialog.SurfaceContext>
+          <div aria-label="Dialog" mix={dialog.surface()}>
+            <fieldset disabled>
+              <input />
+            </fieldset>
+            <button hidden>Hidden</button>
+            <input type="radio" name="guard-choice" />
+            <input id="selected" type="radio" name="guard-choice" defaultChecked />
+            <button id="last">Last</button>
+          </div>
+        </dialog.SurfaceContext>
+      </dialog.Context>,
+    )
+    await settle(root)
+    let guards = container.querySelectorAll<HTMLElement>('[data-rmx-focus-guard]')
+    expect(guards.length).toBe(2)
+    get(container, '#selected').focus()
+    guards[0].focus()
+    expect(document.activeElement).toBe(get(container, '#last'))
+    guards[1].focus()
+    expect(document.activeElement).toBe(get(container, '#selected'))
+  })
+
+  it('includes shadow-root controls when wrapping an actual guard crossing', async () => {
+    let { container, root } = render(
+      <dialog.Context defaultOpen>
+        <dialog.SurfaceContext>
+          <div aria-label="Dialog" mix={dialog.surface()}>
+            <div id="host" />
+            <button id="last">Last</button>
+          </div>
+        </dialog.SurfaceContext>
+      </dialog.Context>,
+    )
+    await settle(root)
+    let shadow = get(container, '#host').attachShadow({ mode: 'open' })
+    let control = document.createElement('button')
+    control.textContent = 'Shadow control'
+    shadow.append(control)
+    let guards = container.querySelectorAll<HTMLElement>('[data-rmx-focus-guard]')
+    expect(guards.length).toBe(2)
+    control.focus()
+    guards[0].focus()
+    expect(document.activeElement).toBe(get(container, '#last'))
+    guards[1].focus()
+    expect(shadow.activeElement).toBe(control)
   })
 
   it('waits for exit animations and ignores a superseded close when reopened', async () => {
@@ -723,6 +805,44 @@ describe('dialog', () => {
     animation.cancel()
   })
 
+  it('retains keyed content and guard boundaries through updates and surface replacement', async () => {
+    function ChangingSurface(handle: Handle<{ items: string[]; visible: boolean }>) {
+      return () => (
+        <dialog.Context defaultOpen>
+          <dialog.SurfaceContext>
+            {handle.props.visible ? (
+              <section aria-label="Dialog" mix={dialog.surface()}>
+                {handle.props.items.map((id) => (
+                  <button key={id} id={id}>
+                    {id}
+                  </button>
+                ))}
+              </section>
+            ) : null}
+          </dialog.SurfaceContext>
+        </dialog.Context>
+      )
+    }
+    let { container, root } = render(<ChangingSurface items={['first', 'last']} visible />)
+    await settle(root)
+    let first = get(container, '#first')
+    let guards = Array.from(container.querySelectorAll<HTMLElement>('[data-rmx-focus-guard]'))
+    expect(guards.length).toBe(2)
+    expect(guards.every((node) => node.tabIndex === 0)).toBe(true)
+    root.render(<ChangingSurface items={['last', 'first']} visible />)
+    await settle(root)
+    expect(get(container, '#first')).toBe(first)
+    expect(Array.from(container.querySelectorAll('[data-rmx-focus-guard]'))).toEqual(guards)
+    root.render(<ChangingSurface items={[]} visible={false} />)
+    await settle(root)
+    expect(guards.every((node) => node.tabIndex === -1)).toBe(true)
+    expect(document.body.querySelector('[inert]')).toBe(null)
+    root.render(<ChangingSurface items={['replacement']} visible />)
+    await settle(root)
+    expect(guards.every((node) => node.tabIndex === 0)).toBe(true)
+    expect(document.activeElement).toBe(get(container, '#replacement'))
+  })
+
   it('closes nested dialogs and restores outside focus when their parent closes', async () => {
     let parent: dialog.DialogRef | undefined
     let { container, root } = render(
@@ -734,16 +854,20 @@ describe('dialog', () => {
         <button id="parent-trigger" mix={dialog.trigger()}>
           Open
         </button>
-        <div data-parent mix={dialog.surface()}>
-          <dialog.Context>
-            <button id="child-trigger" mix={dialog.trigger()}>
-              Open child
-            </button>
-            <div data-child mix={dialog.surface()}>
-              <button>Child action</button>
-            </div>
-          </dialog.Context>
-        </div>
+        <dialog.SurfaceContext>
+          <div data-parent mix={dialog.surface()}>
+            <dialog.Context>
+              <button id="child-trigger" mix={dialog.trigger()}>
+                Open child
+              </button>
+              <dialog.SurfaceContext>
+                <div data-child mix={dialog.surface()}>
+                  <button>Child action</button>
+                </div>
+              </dialog.SurfaceContext>
+            </dialog.Context>
+          </div>
+        </dialog.SurfaceContext>
       </dialog.Context>,
     )
     get<HTMLButtonElement>(container, '#parent-trigger').click()
@@ -770,34 +894,38 @@ describe('dialog', () => {
           <button id="trigger" mix={dialog.trigger()}>
             Open dialog
           </button>
-          <div mix={dialog.surface()}>
-            <popover.Context>
-              <button
-                id="popup-trigger"
-                mix={[
-                  popover.anchor({ placement: 'bottom-start' }),
-                  on('click', () => {
-                    open = true
-                    void handle.update()
-                  }),
-                ]}
-              >
-                Open popup
-              </button>
-              <div
-                data-popup
-                mix={popover.surface({
-                  open,
-                  onHide() {
-                    open = false
-                    void handle.update()
-                  },
-                })}
-              >
-                <button>Popup action</button>
-              </div>
-            </popover.Context>
-          </div>
+          <dialog.SurfaceContext>
+            <div mix={dialog.surface()}>
+              <popover.Context>
+                <button
+                  id="popup-trigger"
+                  mix={[
+                    popover.anchor({ placement: 'bottom-start' }),
+                    on('click', () => {
+                      open = true
+                      void handle.update()
+                    }),
+                  ]}
+                >
+                  Open popup
+                </button>
+                <popover.SurfaceContext>
+                  <div
+                    data-popup
+                    mix={popover.surface({
+                      open,
+                      onHide() {
+                        open = false
+                        void handle.update()
+                      },
+                    })}
+                  >
+                    <button>Popup action</button>
+                  </div>
+                </popover.SurfaceContext>
+              </popover.Context>
+            </div>
+          </dialog.SurfaceContext>
         </dialog.Context>
       )
     }
@@ -839,6 +967,46 @@ describe('dialog', () => {
     expect(document.activeElement?.id).toBe('trigger')
   })
 
+  it('releases a removed portaled popup while keeping its modal active', async () => {
+    function RemovablePopup(handle: Handle<{ visible: boolean }>) {
+      return () => (
+        <popover.Context>
+          <dialog.Context defaultOpen>
+            <dialog.SurfaceContext>
+              <section aria-label="Dialog" mix={dialog.surface()}>
+                <button id="anchor" mix={popover.anchor({})}>
+                  Anchor
+                </button>
+              </section>
+            </dialog.SurfaceContext>
+            {handle.props.visible ? (
+              <Portal>
+                <popover.SurfaceContext>
+                  <div data-popup mix={popover.surface({ open: true, onHide() {} })}>
+                    <input id="popup-input" mix={popover.focusOnShow()} />
+                  </div>
+                </popover.SurfaceContext>
+              </Portal>
+            ) : null}
+          </dialog.Context>
+        </popover.Context>
+      )
+    }
+    let { container, root } = render(<RemovablePopup visible />)
+    await settle(root)
+    let errors: unknown[] = []
+    root.addEventListener('error', (event) => errors.push(event.error))
+    get(document.body, '#popup-input').focus()
+    root.render(<RemovablePopup visible={false} />)
+    await settle(root)
+    expect(document.querySelector('[data-popup]')).toBe(null)
+    expect(errors).toEqual([])
+    let surface = get(container, '[role="dialog"]')
+    expect(surface.hasAttribute('data-open')).toBe(true)
+    expect(surface.contains(document.activeElement)).toBe(true)
+    expect(document.documentElement.style.overflow).toBe('hidden')
+  })
+
   it('keeps a nonmodal dialog open while focus moves into its detached popup', async () => {
     let { container, root } = render(
       <>
@@ -868,16 +1036,20 @@ describe('dialog', () => {
             api = value
           }}
         >
-          <div mix={dialog.surface()}>
-            <button id="context-trigger" mix={menu.contextTrigger()}>
-              Open actions
-            </button>
-          </div>
-          <div data-menu mix={menu.popover()}>
-            <div id="context-list" mix={menu.list()}>
-              <button mix={menu.item({ name: 'archive' })}>Archive</button>
+          <dialog.SurfaceContext>
+            <div mix={dialog.surface()}>
+              <button id="context-trigger" mix={menu.contextTrigger()}>
+                Open actions
+              </button>
             </div>
-          </div>
+          </dialog.SurfaceContext>
+          <menu.PopoverContext>
+            <div data-menu mix={menu.popover()}>
+              <div id="context-list" mix={menu.list()}>
+                <button mix={menu.item({ name: 'archive' })}>Archive</button>
+              </div>
+            </div>
+          </menu.PopoverContext>
         </dialog.Context>
       </menu.Context>,
     )
@@ -898,22 +1070,26 @@ describe('dialog', () => {
     expect(container.querySelectorAll('[data-open]').length).toBe(0)
   })
 
-  it('keeps Tab from an open menu within the dialog focus boundary', async () => {
+  it('leaves menu Tab navigation to the browser while closing the menu', async () => {
     let { container, root } = render(
       <dialog.Context defaultOpen>
-        <div mix={dialog.surface()}>
-          <input id="first" />
-          <menu.Context label="Actions">
-            <button id="menu-trigger" mix={menu.trigger()}>
-              Actions
-            </button>
-            <div mix={menu.popover()}>
-              <div id="menu-list" mix={menu.list()}>
-                <button mix={menu.item({ name: 'archive' })}>Archive</button>
-              </div>
-            </div>
-          </menu.Context>
-        </div>
+        <dialog.SurfaceContext>
+          <div mix={dialog.surface()}>
+            <input id="first" />
+            <menu.Context label="Actions">
+              <button id="menu-trigger" mix={menu.trigger()}>
+                Actions
+              </button>
+              <menu.PopoverContext>
+                <div mix={menu.popover()}>
+                  <div id="menu-list" mix={menu.list()}>
+                    <button mix={menu.item({ name: 'archive' })}>Archive</button>
+                  </div>
+                </div>
+              </menu.PopoverContext>
+            </menu.Context>
+          </div>
+        </dialog.SurfaceContext>
       </dialog.Context>,
     )
     await settle(root)
@@ -921,8 +1097,10 @@ describe('dialog', () => {
     await settle(root)
     let event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
     get(container, '#menu-list').dispatchEvent(event)
-    expect(event.defaultPrevented).toBe(true)
-    expect(document.activeElement?.id).toBe('first')
+    expect(event.defaultPrevented).toBe(false)
+    await settle(root)
+    expect(get(container, '[data-popover]').hasAttribute('data-open')).toBe(false)
+    expect(get(container, '[role="dialog"]').hasAttribute('data-open')).toBe(true)
   })
 
   it('releases a dialog when its containing popover closes', async () => {
@@ -938,21 +1116,25 @@ describe('dialog', () => {
       return () => (
         <popover.Context>
           <button mix={popover.anchor({ placement: 'bottom-start' })}>Popover opener</button>
-          <div data-parent mix={popover.surface({ open, onHide: closePopover })}>
-            <dialog.Context
-              ref={(value) => {
-                api = value
-              }}
-            >
-              <button id="trigger" mix={dialog.trigger()}>
-                Open dialog
-              </button>
-              <div mix={dialog.backdrop()} />
-              <div mix={dialog.surface()}>
-                <button mix={dialog.close()}>Close</button>
-              </div>
-            </dialog.Context>
-          </div>
+          <popover.SurfaceContext>
+            <div data-parent mix={popover.surface({ open, onHide: closePopover })}>
+              <dialog.Context
+                ref={(value) => {
+                  api = value
+                }}
+              >
+                <button id="trigger" mix={dialog.trigger()}>
+                  Open dialog
+                </button>
+                <div mix={dialog.backdrop()} />
+                <dialog.SurfaceContext>
+                  <div mix={dialog.surface()}>
+                    <button mix={dialog.close()}>Close</button>
+                  </div>
+                </dialog.SurfaceContext>
+              </dialog.Context>
+            </div>
+          </popover.SurfaceContext>
         </popover.Context>
       )
     }
@@ -983,14 +1165,18 @@ describe('dialog', () => {
       return () => (
         <popover.Context>
           <button mix={popover.anchor({ placement: 'bottom-start' })}>Popover opener</button>
-          <div mix={popover.surface({ open, onHide: closePopover })}>
-            <dialog.Context open onOpenChange={(_open, event) => event.preventDefault()}>
-              <div mix={dialog.backdrop()} />
-              <div mix={dialog.surface()}>
-                <button>Inside</button>
-              </div>
-            </dialog.Context>
-          </div>
+          <popover.SurfaceContext>
+            <div mix={popover.surface({ open, onHide: closePopover })}>
+              <dialog.Context open onOpenChange={(_open, event) => event.preventDefault()}>
+                <div mix={dialog.backdrop()} />
+                <dialog.SurfaceContext>
+                  <div mix={dialog.surface()}>
+                    <button>Inside</button>
+                  </div>
+                </dialog.SurfaceContext>
+              </dialog.Context>
+            </div>
+          </popover.SurfaceContext>
         </popover.Context>
       )
     }
@@ -1021,6 +1207,50 @@ describe('dialog', () => {
     await settle(root)
     expect(reasons).toEqual(['trigger'])
     expect(get<HTMLElement>(container, '[role="dialog"]').matches('[data-open]')).toBe(false)
+  })
+
+  it('requires a surface context for declarative focus boundaries', (t) => {
+    t.mock.method(console, 'error', () => {})
+    let container = document.createElement('div')
+    document.body.append(container)
+    let root = createRoot(container)
+    roots.push(root)
+    let errors: unknown[] = []
+    root.addEventListener('error', (event) => errors.push(event.error))
+    root.render(
+      <dialog.Context>
+        <section mix={dialog.surface()} />
+      </dialog.Context>,
+    )
+    root.flush()
+    expect(errors.length).toBe(1)
+    expect(errors[0] instanceof Error && errors[0].message).toBe(
+      'dialog.surface() requires a dialog.SurfaceContext ancestor',
+    )
+  })
+
+  it('requires the surface context at the portal destination', async (t) => {
+    t.mock.method(console, 'error', () => {})
+    let container = document.createElement('div')
+    document.body.append(container)
+    let root = createRoot(container)
+    roots.push(root)
+    let errors: unknown[] = []
+    root.addEventListener('error', (event) => errors.push(event.error))
+    root.render(
+      <dialog.Context>
+        <dialog.SurfaceContext>
+          <Portal>
+            <section mix={dialog.surface()} />
+          </Portal>
+        </dialog.SurfaceContext>
+      </dialog.Context>,
+    )
+    await settle(root)
+    expect(errors.length).toBe(1)
+    expect(errors[0] instanceof Error && errors[0].message).toBe(
+      'SurfaceContext must wrap its surface at the DOM destination. Place it inside Portal.',
+    )
   })
 
   it('renders closed, accessible markup on the server even with defaultOpen', async () => {

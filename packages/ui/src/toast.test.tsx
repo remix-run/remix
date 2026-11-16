@@ -295,6 +295,33 @@ describe('toast.root()', () => {
     assert.equal(result.container.querySelector('[data-toast]'), null)
     assert.ok(id)
   })
+  it('leaves interior Tab navigation to the browser', async (t) => {
+    let toastManager = createToastManager()
+    toastManager.add({ title: 'Notification' })
+    let view = render(
+      <Context manager={toastManager}>
+        {(items) => (
+          <section mix={root({ label: 'Notifications' })}>
+            {items.map((value) => (
+              <ItemContext key={value.id} value={value.id}>
+                <article mix={item()}>
+                  <button id="first">First</button>
+                  <input />
+                </article>
+              </ItemContext>
+            ))}
+          </section>
+        )}
+      </Context>,
+    )
+    t.after(view.cleanup)
+    let first = element(view.container, '#first')
+    await view.act(() => first.focus())
+    let event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
+    first.dispatchEvent(event)
+    assert.equal(event.defaultPrevented, false)
+    assert.equal(document.activeElement, first)
+  })
 
   it('keeps focus pause after hover ends and returns from the region with F6', async (t) => {
     let toastManager = createToastManager()

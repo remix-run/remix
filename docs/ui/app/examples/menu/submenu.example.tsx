@@ -1,4 +1,3 @@
-import { Portal } from '@remix-run/ui/portal'
 import * as menu from '@remix-run/ui/menu'
 import { css } from 'remix/component'
 
@@ -49,93 +48,97 @@ export default function ExampleMenu() {
         >
           File <ChevronDownIcon />
         </button>
-        <Portal>
-          <div mix={[menu.popover(), themeStyle, surfaceStyle]}>
-            <div mix={[menu.list(), listStyle]}>
-              <div
-                mix={[
-                  menu.item({
-                    name: 'new',
-                  }),
-                  itemStyle,
-                ]}
-              >
-                New file
-              </div>
-              <div
-                mix={[
-                  menu.item({
-                    name: 'open',
-                  }),
-                  itemStyle,
-                ]}
-              >
-                Open file
-              </div>
-              <menu.Context label="Export as">
+        <menu.Portal>
+          <menu.PopoverContext>
+            <div mix={[menu.popover(), themeStyle, surfaceStyle]}>
+              <div mix={[menu.list(), listStyle]}>
                 <div
                   mix={[
-                    menu.submenuTrigger({
-                      label: 'Export as',
+                    menu.item({
+                      name: 'new',
                     }),
                     itemStyle,
                   ]}
                 >
-                  Export as <ChevronRightIcon />
+                  New file
                 </div>
-                <Portal>
-                  <div mix={[menu.popover(), themeStyle, surfaceStyle]}>
-                    <div mix={[menu.list(), listStyle]}>
-                      <div
-                        mix={[
-                          menu.item({
-                            name: 'export',
-                            value: 'pdf',
-                          }),
-                          itemStyle,
-                        ]}
-                      >
-                        PDF
-                      </div>
-                      <div
-                        mix={[
-                          menu.item({
-                            name: 'export',
-                            value: 'png',
-                          }),
-                          itemStyle,
-                        ]}
-                      >
-                        PNG
-                      </div>
-                      <div
-                        mix={[
-                          menu.item({
-                            name: 'export',
-                            value: 'svg',
-                          }),
-                          itemStyle,
-                        ]}
-                      >
-                        SVG
-                      </div>
-                    </div>
+                <div
+                  mix={[
+                    menu.item({
+                      name: 'open',
+                    }),
+                    itemStyle,
+                  ]}
+                >
+                  Open file
+                </div>
+                <menu.Context label="Export as">
+                  <div
+                    mix={[
+                      menu.submenuTrigger({
+                        label: 'Export as',
+                      }),
+                      itemStyle,
+                    ]}
+                  >
+                    Export as <ChevronRightIcon />
                   </div>
-                </Portal>
-              </menu.Context>
-              <div
-                mix={[
-                  menu.item({
-                    name: 'print',
-                  }),
-                  itemStyle,
-                ]}
-              >
-                Print
+                  <menu.Portal>
+                    <menu.PopoverContext>
+                      <div mix={[menu.popover(), themeStyle, surfaceStyle]}>
+                        <div mix={[menu.list(), listStyle]}>
+                          <div
+                            mix={[
+                              menu.item({
+                                name: 'export',
+                                value: 'pdf',
+                              }),
+                              itemStyle,
+                            ]}
+                          >
+                            PDF
+                          </div>
+                          <div
+                            mix={[
+                              menu.item({
+                                name: 'export',
+                                value: 'png',
+                              }),
+                              itemStyle,
+                            ]}
+                          >
+                            PNG
+                          </div>
+                          <div
+                            mix={[
+                              menu.item({
+                                name: 'export',
+                                value: 'svg',
+                              }),
+                              itemStyle,
+                            ]}
+                          >
+                            SVG
+                          </div>
+                        </div>
+                      </div>
+                    </menu.PopoverContext>
+                  </menu.Portal>
+                </menu.Context>
+                <div
+                  mix={[
+                    menu.item({
+                      name: 'print',
+                    }),
+                    itemStyle,
+                  ]}
+                >
+                  Print
+                </div>
               </div>
             </div>
-          </div>
-        </Portal>
+          </menu.PopoverContext>
+        </menu.Portal>
       </menu.Context>
     </div>
   )

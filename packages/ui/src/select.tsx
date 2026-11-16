@@ -1,3 +1,6 @@
+import { SurfacePortalOwner } from './lib/focus.tsx'
+import { FocusPortal } from './lib/focus-portal.tsx'
+import type { PortalProps } from './portal.tsx'
 import {
   attrs,
   createMixin,
@@ -75,6 +78,7 @@ interface SelectContextValue {
   readonly disabled: boolean
   readonly displayedLabel: string
   readonly isExpanded: boolean
+  readonly triggerNode: HTMLButtonElement | undefined
   readonly isOpen: boolean
   readonly listId: string
   readonly name: string | undefined
@@ -272,6 +276,9 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>):
       return state === 'open' || state === 'selecting'
     },
 
+    get triggerNode() {
+      return triggerRef
+    },
     get isOpen() {
       return state === 'open'
     },
@@ -424,6 +431,9 @@ const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
   ElementProps
 >((handle) => {
   let context = getSelectContext(handle)
+  let scoped = handle.context.get(PopoverContext)
+  if (!context || scoped?.owner !== context)
+    throw new Error('select.popover() requires a matching select.PopoverContext ancestor')
   let popoverState = handle.context.get(popover.Context)
 
   return () => {
@@ -479,6 +489,32 @@ const hiddenInputMixin: MixinFactory<HTMLInputElement, [], ElementProps> = creat
 })
 
 export const Context = SelectProvider
+
+/** Content and focus boundaries for one select popup. */
+export interface SelectPopoverContextProps {
+  /** One element with `select.popover()` and its content. */
+  children?: RemixNode
+}
+
+/**
+ * Provides the popup context and renders focus guards beside a select surface.
+ * Required around `select.popover()` within the same `select.Context` instance.
+ * Place it inside `select.Portal` when the popup is portaled.
+ * @param handle Popup content and the owning select context.
+ * @returns The popup content with declarative focus boundaries.
+ */
+export function PopoverContext(
+  handle: Handle<SelectPopoverContextProps, { owner: SelectContextValue }>,
+): () => RemixNode {
+  let owner = handle.context.get(SelectProvider)
+  if (!owner) throw new Error('select.PopoverContext requires a select.Context ancestor')
+  handle.context.set({ owner })
+  return () => (
+    <popover.Context>
+      <SelectSurfaceBoundary>{handle.props.children}</SelectSurfaceBoundary>
+    </popover.Context>
+  )
+}
 export const hiddenInput = hiddenInputMixin
 export const list = listMixin
 export const option = listbox.option
@@ -490,4 +526,43 @@ export function onSelectChange<target extends HTMLElement>(
   captureBoolean?: boolean,
 ): ReturnType<typeof on<target, typeof SELECT_CHANGE_EVENT>> {
   return on(SELECT_CHANGE_EVENT, handler, captureBoolean)
+}
+
+function SelectSurfaceBoundary(handle: Handle<{ children?: RemixNode }>): () => RemixNode {
+  let owner = handle.context.get(SelectProvider)
+  let surfaceOwner = handle.context.get(popover.Context)
+  return () => (
+    <SurfacePortalOwner owner={owner} surfaceOwner={surfaceOwner}>
+      <popover.SurfaceContext>{handle.props.children}</popover.SurfaceContext>
+    </SurfacePortalOwner>
+  )
+}
+
+/** Options for rendering the select surface outside its authored DOM ancestors. */
+export type SelectPortalProps = PortalProps
+
+/**
+ * Portals one select surface while coordinating its focus navigation.
+ * Keep its matching surface context inside this component. Omit it for inline rendering.
+ * The origin and container must be in the document light DOM.
+ * Non-modal Tab order follows this component's declaration position. Place it beside
+ * the trigger when popup content should follow the trigger in sequential navigation.
+ * @param handle Surface content, destination, and the owning select context.
+ * @returns The transported content with its origin focus boundaries.
+ */
+export function Portal(handle: Handle<SelectPortalProps>): () => RemixNode {
+  let owner = handle.context.get(SelectProvider)
+  if (!owner) throw new Error('select.Portal requires a select.Context ancestor')
+  return () => (
+    <FocusPortal
+      componentName="select.Portal"
+      owner={owner}
+      open={() => owner.isOpen}
+      reference={() => owner.triggerNode}
+      mode={'navigate'}
+      container={handle.props.container}
+    >
+      {handle.props.children}
+    </FocusPortal>
+  )
 }

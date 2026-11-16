@@ -1,6 +1,4 @@
-import { Portal } from '@remix-run/ui/portal'
 import * as select from '@remix-run/ui/select'
-import * as popover from '@remix-run/ui/popover'
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
@@ -51,8 +49,8 @@ export default function ExampleSelect(handle: Handle) {
             <SelectedLabel />
             <ChevronDownIcon />
           </button>
-          <popover.Context>
-            <Portal>
+          <select.Portal>
+            <select.PopoverContext>
               <div
                 mix={[
                   select.popover(),
@@ -133,8 +131,8 @@ export default function ExampleSelect(handle: Handle) {
                   ))}
                 </div>
               </div>
-            </Portal>
-          </popover.Context>
+            </select.PopoverContext>
+          </select.Portal>
           <input mix={select.hiddenInput()} />
         </select.Context>
         <button type="submit" mix={buttonStyle}>

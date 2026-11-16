@@ -32,61 +32,65 @@ export default function Example(handle: Handle) {
         <Portal>
           <div mix={[backdropCss, dialog.backdrop()]} />
         </Portal>
-        <Portal>
-          <section mix={[surfaceCss, dialog.surface()]}>
-            <h2 mix={dialog.title()}>Edit profile</h2>
-            <p mix={dialog.description()}>Choose the name shown on your profile.</p>
-            <form
-              mix={on('submit', (event) => {
-                event.preventDefault()
-                name = draft.trim()
-                close()
-              })}
-            >
-              <label>
-                Display name
-                <input
-                  name="name"
-                  required
-                  value={draft}
-                  mix={[
-                    dialog.focusOnShow(),
-                    on('input', (event) => {
-                      draft = event.currentTarget.value
-                    }),
-                  ]}
-                />
-              </label>
-              <div mix={actionsCss}>
-                <dialog.Context>
-                  <button mix={[buttonCss, dialog.trigger()]}>Discard changes</button>
-                  <Portal>
-                    <div mix={[backdropCss, dialog.backdrop()]} />
-                  </Portal>
-                  <Portal>
-                    <section role="alertdialog" mix={[surfaceCss, dialog.surface()]}>
-                      <h2 mix={dialog.title()}>Discard changes?</h2>
-                      <p mix={dialog.description()}>
-                        Your profile will keep its saved display name.
-                      </p>
-                      <div mix={actionsCss}>
-                        <button mix={[buttonCss, dialog.close(), dialog.focusOnShow()]}>
-                          Keep editing
-                        </button>
-                        <button type="button" mix={[buttonCss, on('click', close)]}>
-                          Discard
-                        </button>
-                      </div>
-                    </section>
-                  </Portal>
-                </dialog.Context>
-                <button type="submit" mix={buttonCss}>
-                  Save
-                </button>
-              </div>
-            </form>
-          </section>
-        </Portal>
+        <dialog.Portal>
+          <dialog.SurfaceContext>
+            <section mix={[surfaceCss, dialog.surface()]}>
+              <h2 mix={dialog.title()}>Edit profile</h2>
+              <p mix={dialog.description()}>Choose the name shown on your profile.</p>
+              <form
+                mix={on('submit', (event) => {
+                  event.preventDefault()
+                  name = draft.trim()
+                  close()
+                })}
+              >
+                <label>
+                  Display name
+                  <input
+                    name="name"
+                    required
+                    value={draft}
+                    mix={[
+                      dialog.focusOnShow(),
+                      on('input', (event) => {
+                        draft = event.currentTarget.value
+                      }),
+                    ]}
+                  />
+                </label>
+                <div mix={actionsCss}>
+                  <dialog.Context>
+                    <button mix={[buttonCss, dialog.trigger()]}>Discard changes</button>
+                    <Portal>
+                      <div mix={[backdropCss, dialog.backdrop()]} />
+                    </Portal>
+                    <dialog.Portal>
+                      <dialog.SurfaceContext>
+                        <section role="alertdialog" mix={[surfaceCss, dialog.surface()]}>
+                          <h2 mix={dialog.title()}>Discard changes?</h2>
+                          <p mix={dialog.description()}>
+                            Your profile will keep its saved display name.
+                          </p>
+                          <div mix={actionsCss}>
+                            <button mix={[buttonCss, dialog.close(), dialog.focusOnShow()]}>
+                              Keep editing
+                            </button>
+                            <button type="button" mix={[buttonCss, on('click', close)]}>
+                              Discard
+                            </button>
+                          </div>
+                        </section>
+                      </dialog.SurfaceContext>
+                    </dialog.Portal>
+                  </dialog.Context>
+                  <button type="submit" mix={buttonCss}>
+                    Save
+                  </button>
+                </div>
+              </form>
+            </section>
+          </dialog.SurfaceContext>
+        </dialog.Portal>
       </dialog.Context>
     </div>
   )

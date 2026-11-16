@@ -17,7 +17,8 @@ export type PortalProps = {
 /**
  * Renders children into a separate DOM container while preserving component context and state.
  * Server rendering emits an inert marker; children mount on the client. DOM events bubble through
- * the destination container. Child render errors are forwarded to the owning root.
+ * the destination container, and Tab navigation follows destination DOM order. Use the corresponding component, such as `dialog.Portal`
+ * or `popover.Portal`, for coordinated popup focus navigation. Child render errors are forwarded to the owning root.
  *
  * @param handle Component handle for the portal.
  * @returns A render function for the portal's inert marker.
