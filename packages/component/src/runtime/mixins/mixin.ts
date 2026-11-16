@@ -710,11 +710,58 @@ class MixinHandleImpl
     let count = Math.max(0, this.#phaseListenerCounts[type] + delta)
     this.#phaseListenerCounts[type] = count
     if (delta > 0) {
-      if (count === 1) this.#scheduler.addEventListener(type, this.#onSchedulerPhase)
+      if (count === 1) addSchedulerPhaseListener(this.#scheduler, type, this.#onSchedulerPhase)
     } else if (count === 0) {
-      this.#scheduler.removeEventListener(type, this.#onSchedulerPhase)
+      removeSchedulerPhaseListener(this.#scheduler, type, this.#onSchedulerPhase)
     }
   }
+}
+
+type SchedulerPhaseListeners = Record<SchedulerPhaseType, Set<EventListener>> & {
+  dispatch: EventListener
+}
+
+// Browser EventTarget add/remove scan every registered listener, so handles share
+// one scheduler listener per phase instead of each registering their own.
+const schedulerPhaseListeners = new WeakMap<Scheduler, SchedulerPhaseListeners>()
+
+function addSchedulerPhaseListener(
+  scheduler: Scheduler,
+  type: SchedulerPhaseType,
+  listener: EventListener,
+) {
+  let record = schedulerPhaseListeners.get(scheduler)
+  if (!record) {
+    let created: SchedulerPhaseListeners = {
+      beforeUpdate: new Set(),
+      commit: new Set(),
+      dispatch(event) {
+        let listeners = created[event.type as SchedulerPhaseType]
+        for (let listener of Array.from(listeners)) {
+          if (!listeners.has(listener)) continue
+          try {
+            listener(event)
+          } catch (error) {
+            reportError(error)
+          }
+        }
+      },
+    }
+    record = created
+    schedulerPhaseListeners.set(scheduler, record)
+  }
+  record[type].add(listener)
+  if (record[type].size === 1) scheduler.addEventListener(type, record.dispatch)
+}
+
+function removeSchedulerPhaseListener(
+  scheduler: Scheduler,
+  type: SchedulerPhaseType,
+  listener: EventListener,
+) {
+  let record = schedulerPhaseListeners.get(scheduler)
+  if (!record?.[type].delete(listener)) return
+  if (record[type].size === 0) scheduler.removeEventListener(type, record.dispatch)
 }
 
 export function getMixinRuntimeSignal(state: MixinRuntimeState): AbortSignal {
