@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import type { FrameHandle, FrameReloadStartEvent, Handle, RemixNode } from '../runtime/component.ts'
-import type { NavigationEvent } from '../runtime/navigation-event.ts'
+import type { NavigationEvent } from '../runtime/navigation.ts'
 import { Fragment } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import { Frame, getNamedFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
@@ -11,7 +11,7 @@ import type { ResolveFrame } from '../runtime/frame-runtime.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
-import { css, navigate, on } from '../index.ts'
+import { css, navigate, on, updateUrl } from '../index.ts'
 import { jsx } from '../runtime/core/vnode.ts'
 import {
   drain,
@@ -1118,17 +1118,27 @@ describe('run', () => {
     await events[0]?.finished
   })
 
-  it('notifies the owning form after a POST submitter is detached', async (t) => {
-    let { app } = await setupReloadBodyTest(t)
+  it('notifies window, the detached POST submitter, and its disconnected form', async (t) => {
     let form = document.createElement('form')
+    window.navigation.addEventListener('navigate', () => form.remove(), {
+      once: true,
+      signal: t.signal,
+    })
+    let { app } = await setupReloadBodyTest(t)
     form.method = 'post'
+    let input = document.createElement('input')
+    input.name = 'intent'
+    input.value = 'save'
     let button = document.createElement('button')
-    button.name = 'intent'
-    button.value = 'save'
-    form.append(button)
+    form.append(input, button)
     document.body.append(form)
     form.addEventListener('submit', () => button.remove())
     let events: NavigationEvent[] = []
+    window.addEventListener('rmx:navigation', (event) => events.push(event), {
+      capture: true,
+      signal: t.signal,
+    })
+    button.addEventListener('rmx:navigation', (event) => events.push(event))
     form.addEventListener('rmx:navigation', (event) => events.push(event))
     let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
     app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
@@ -1137,24 +1147,38 @@ describe('run', () => {
     let reload = await reloaded.promise
     await reload.finished
 
-    expect(events).toHaveLength(1)
+    expect(events.map((event) => event.target)).toEqual([window, button, form])
     expect(events[0]?.element).toBe(form)
     expect(events[0]?.submitter).toBe(button)
-    expect(events[0]?.finished).not.toBe(reload.finished)
+    expect(events[0]?.formData?.get('intent')).toBe('save')
+    expect(events[1]?.finished).toBe(events[0]?.finished)
+    expect(events[2]?.finished).toBe(events[0]?.finished)
     await events[0]?.finished
   })
 
-  it('dispatches rmx:navigation for programmatic navigation but excludes independent reloads', async (t) => {
+  it('announces programmatic navigation synchronously but excludes independent reloads and URL updates', async (t) => {
     let { app } = await setupReloadBodyTest(t)
-    let events: Event[] = []
+    let events: NavigationEvent[] = []
     window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
+    let seen: NavigationEvent | undefined
+    window.navigation.addEventListener('navigate', () => (seen = events.at(-1)), {
+      once: true,
+      signal: t.signal,
+    })
 
     await app.frames.top.reload({ method: 'post', body: new FormData() })
     expect(events).toHaveLength(0)
-    await navigate(window.location.href)
-
+    let loading = navigate(window.location.href)
     expect(events).toHaveLength(1)
+    expect(seen).toBe(events[0])
     expect(events[0]?.target).toBe(window)
+    expect(events[0]?.element).toBe(null)
+    expect(events[0]?.frameTarget).toBe(undefined)
+    await loading
+    await events[0]?.finished
+    await updateUrl('?navigation=url-only')
+    expect(events).toHaveLength(1)
+    expect(events[0]?.signal.aborted).toBe(false)
   })
 
   it('resolves finished as aborted when the frame is disposed mid-reload', async (t) => {
@@ -1212,6 +1236,17 @@ describe('run', () => {
     failure = null
     await expect(app.frames.top.reload()).rejects.toBe(null)
     await expect(events[1]!.finished).rejects.toBe(null)
+
+    let navigationEvent = Promise.withResolvers<NavigationEvent>()
+    window.addEventListener('rmx:navigation', navigationEvent.resolve, {
+      once: true,
+      signal: t.signal,
+    })
+    let loading = navigate('?navigation=failure').catch(() => {})
+    let event = await navigationEvent.promise
+    await expect(event.finished).rejects.toBe(null)
+    await loading
+    expect(event.signal.aborted).toBe(true)
   })
 
   it('preserves a client child frame’s failure normally and when an error listener retries', async (t) => {
@@ -4454,6 +4489,8 @@ describe('run', () => {
     let fixture = await setupFrameNavigationTest(t)
     let destinationUrl = new URL('/destination', window.location.href).href
     let targetSrc = '/target-frame'
+    let events: NavigationEvent[] = []
+    window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
 
     await navigateWithLink(destinationUrl, { target: 'target', src: targetSrc })
 
@@ -4462,12 +4499,16 @@ describe('run', () => {
     expect(frames.top.src).toBe(window.location.href)
     expect(frames.target.src).toBe(targetSrc)
     expect(fixture.requests).toEqual([{ src: targetSrc, target: 'target' }])
+    expect(events[0]?.frameSrc).toBe(targetSrc)
+    expect(events[0]?.to).toBe(destinationUrl)
+    expect(events[0]?.frameTarget).toBe('target')
 
     await frames.top.reload()
     expect(fixture.requests).toEqual([
       { src: targetSrc, target: 'target' },
       { src: destinationUrl, target: undefined },
     ])
+    expect(events).toHaveLength(1)
   })
 
   it('restores top and targeted frame sources during back and forward traversal', async (t) => {

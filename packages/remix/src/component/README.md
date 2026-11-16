@@ -1331,7 +1331,8 @@ The event extends `Event` with the [initiating reload request details](#followin
 - Remix dispatches the event when it accepts the navigation, before `reloadStart`. It starts on the link or submit button and bubbles, or starts on the form when there is no submitter, including `requestSubmit()` and `form.submit()` without one.
 - An external or detached submitter receives a non-bubbling event, followed by a separate bubbling event on its owning form. Capture listeners on shared ancestors can receive both; bubbling listeners receive the form's event once.
 - The event is noncancelable. Cancel through native `click` or `submit`; `stopPropagation()` still controls delivery of `rmx:navigation`.
-- `navigate()` and Back/Forward dispatch on `window` with `element: null`. Independent `frame.reload()`, `updateUrl()`, initial hydration, and links or forms that load a new document don't dispatch it.
+- Navigations without a triggering element, such as `navigate()` and Back/Forward, dispatch directly on `window` with `element: null`. Listen on `window` in capture mode to observe all frame navigations.
+- Independent `frame.reload()`, `updateUrl()`, initial hydration, and links or forms that load a new document don't dispatch it.
 
 For a link-adjacent loading indicator, use the same pattern on an anchor:
 
@@ -1354,54 +1355,6 @@ For a link-adjacent loading indicator, use the same pattern on an anchor:
   Products {pending ? 'Loading…' : ''}
 </a>
 ```
-
-### Observing Application Navigation
-
-Listen for `rmx:navigation` on `window` in capture mode to observe links, forms, `navigate()`, and Back/Forward across all frame targets. Remix dispatches the event synchronously when it accepts a navigation, before later browser `navigate` listeners run. Capture observes connected sources before their handlers can stop propagation; events cross shadow roots. A disconnected source also gets a direct window notification.
-
-```ts
-import type { NavigationEvent } from 'remix/component'
-
-let pending: NavigationEvent | undefined
-
-window.addEventListener(
-  'rmx:navigation',
-  (event) => {
-    // External submitters and their forms can notify a capture listener separately.
-    if (pending?.finished === event.finished && pending.to === event.to) return
-    pending = event
-    renderPendingUI(pending)
-
-    function clear() {
-      if (pending?.finished !== event.finished) return
-      pending = undefined
-      renderPendingUI(pending)
-    }
-
-    void event.finished.then(clear, clear)
-  },
-  { capture: true },
-)
-```
-
-The event carries the request fields described above, plus:
-
-| Property         | Value                                                                                     |
-| ---------------- | ----------------------------------------------------------------------------------------- |
-| `frameSrc`       | The originally requested frame URL, always present, including GET submission values.      |
-| `element`        | The initiating link or form, or `null` for programmatic navigation and history traversal. |
-| `to`             | The browser destination, which can differ from `frameSrc` for a targeted frame.           |
-| `navigationType` | The original operation's effective `push`, `replace`, `reload`, or `traverse` behavior.   |
-| `frameTarget`    | The named destination frame, or `undefined` for the top frame.                            |
-| `from`           | The native history entry being left when the original operation started.                  |
-| `signal`         | Aborts on cancellation, replacement, or failure. Remains active after success.            |
-| `finished`       | Waits through rendering, redirected URL updates, scroll, and focus.                       |
-
-Each event is a snapshot. A top-frame redirect dispatches another `rmx:navigation` on `window` with the updated `to` and the same `signal`, `finished`, and initiating request fields. Its `navigationType` and `from` stay unchanged and match `resolveFrame` options. `frameSrc` and `frameTarget` correspond to its `src` argument and `target` option. Native `event.target` remains the DOM dispatch target. The source element receives only its original event. Compare `finished` identity to maintain one pending operation through redirects, and compare `to` to distinguish destination changes from duplicate source/form notifications.
-
-The completion promise does not wait for post-commit view-transition animations or deferred lazy frames.
-
-Install a global observer in the browser entry before navigation begins so newly hydrated components can read its state. An application can build `current`, `change`, and `settled()` on this event; `settled()` should follow replacement operations until idle and also check browser transitions owned by other interceptors.
 
 ### Resolving Frames
 

@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock } from '@remix-run/test'
 
 import { defaultResolveFrame, Frame, navigate, run } from '../index.ts'
-import type { ResolveFrameOptions } from '../index.ts'
+import type { NavigationEvent, ResolveFrameOptions } from '../index.ts'
 import { jsx } from '../jsx-runtime.ts'
 
 describe('defaultResolveFrame', () => {
@@ -145,6 +145,8 @@ describe('defaultResolveFrame', () => {
     let initialKey = window.navigation.currentEntry?.key
     let requests: Request[] = []
     let loads: Array<Pick<ResolveFrameOptions, 'navigationType' | 'from'>> = []
+    let events: NavigationEvent[] = []
+    window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
     document.body.innerHTML = '<main>Initial</main>'
     t.mock.method(globalThis, 'fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
       requests.push(
@@ -199,6 +201,9 @@ describe('defaultResolveFrame', () => {
       undefined,
     ])
     expect(loads[0]?.from?.url).toBe(initialUrl)
+    expect(events.map(({ navigationType, from }) => ({ navigationType, from }))).toEqual(
+      loads.slice(0, 5),
+    )
     expect(requests.map((request) => request.cache)).toEqual([
       'default',
       'default',
