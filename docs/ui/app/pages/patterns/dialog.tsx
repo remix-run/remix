@@ -15,6 +15,12 @@ export const meta = {
 } satisfies PageMeta
 
 const basic = await loadExample('dialog/basic')
+const nonModal = await loadExample('dialog/non-modal')
+const trapFocus = await loadExample('dialog/trap-focus')
+const nested = await loadExample('dialog/nested')
+const preventingDismissal = await loadExample('dialog/preventing-dismissal')
+const imperative = await loadExample('dialog/imperative')
+const initialFocus = await loadExample('dialog/initial-focus')
 const anatomyCode = await highlightSource(`
   import * as dialog from '@remix-run/ui/dialog'
   import { css } from 'remix/component'
@@ -125,6 +131,7 @@ export default function DialogPage(handle: Handle<PageProps>) {
           Apply <code>focusOnShow()</code> to choose which control receives focus when the dialog
           opens. For example, focus Cancel so pressing Enter immediately does not confirm an action.
         </p>
+        <Example id="initial-focus-example" example={initialFocus} />
       </Section>
       <Section id="unsaved-changes" title="Preventing dismissal">
         <p>
@@ -132,6 +139,7 @@ export default function DialogPage(handle: Handle<PageProps>) {
           <code>onOpenChange</code> or an <code>onDialogChange()</code> listener to keep the dialog
           open, for example when there are unsaved changes.
         </p>
+        <Example id="unsaved-changes-example" example={preventingDismissal} />
       </Section>
       <Section id="non-modal" title="Non-modal">
         <p>
@@ -139,6 +147,7 @@ export default function DialogPage(handle: Handle<PageProps>) {
           interactive. Set <code>{'closeOnOutsideClick={false}'}</code> to keep the dialog open
           while interacting with the page.
         </p>
+        <Example id="non-modal-example" example={nonModal} />
       </Section>
       <Section id="imperative" title="Imperative control">
         <p>
@@ -146,6 +155,7 @@ export default function DialogPage(handle: Handle<PageProps>) {
           Pass the opening control to <code>show(opener)</code> so focus returns to it when the
           dialog closes.
         </p>
+        <Example id="imperative-example" example={imperative} />
       </Section>
       <Section id="trap-focus" title="Focus trapping without blocking pointers">
         <p>
@@ -156,9 +166,11 @@ export default function DialogPage(handle: Handle<PageProps>) {
           This mode still hides background content from assistive technology. Choose non-modal
           behavior when keyboard and screen reader users need to move freely between both areas.
         </p>
+        <Example id="trap-focus-example" example={trapFocus} />
       </Section>
       <Section id="composition" title="Nesting">
         <p>Put a child dialog context inside its parent's surface.</p>
+        <Example id="nested-example" example={nested} />
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>

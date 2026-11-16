@@ -146,4 +146,29 @@ describe('Pattern docs keyboard navigation', () => {
     let following = tabsButtons ? submit : page.locator('#events pre[tabindex="0"]').first()
     assert.equal(await following.evaluate((node) => node === document.activeElement), true)
   })
+
+  it('continues beside the non-modal Dialog declaration instead of the document footer', async (t) => {
+    let { page } = await openDocs(t, 'dialog')
+    let trigger = page
+      .locator('#non-modal')
+      .getByRole('button', { name: 'Open dialog', exact: true })
+    await waitForDestination(page, '#non-modal button[aria-haspopup="dialog"]')
+    await trigger.press('Enter')
+    let dialog = page.getByRole('dialog', { name: 'Non-modal dialog', exact: true })
+    await dialog.getByRole('button', { name: 'Close', exact: true }).press('Tab')
+    let following = page
+      .locator('#non-modal')
+      .getByRole('button', { name: 'Show code', exact: true })
+    assert.equal(await following.evaluate((node) => node === document.activeElement), true)
+    assert.equal(await dialog.isVisible(), true)
+    await page.keyboard.press('Shift+Tab')
+    assert.equal(
+      await dialog
+        .getByRole('button', { name: 'Close', exact: true })
+        .evaluate((node) => node === document.activeElement),
+      true,
+    )
+    await page.keyboard.press('Shift+Tab')
+    assert.equal(await trigger.evaluate((node) => node === document.activeElement), true)
+  })
 })

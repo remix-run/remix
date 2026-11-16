@@ -1,11 +1,7 @@
 import * as dialog from '@remix-run/ui/dialog'
-import { css, on, type Handle } from 'remix/component'
+import { css } from 'remix/component'
 
-export default function ExampleDialog(handle: Handle) {
-  let name = 'Project notes'
-  let draft = name
-  let open = false
-
+export default function ExampleDialog() {
   return () => (
     <div
       mix={css({
@@ -16,19 +12,12 @@ export default function ExampleDialog(handle: Handle) {
         flexWrap: 'wrap',
         gap: '16px',
         font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+        colorScheme: 'light dark',
         color: 'light-dark(#202027, #eeeef2)',
       })}
     >
-      <span>{name}</span>
-      <dialog.Context
-        open={open}
-        onOpenChange={(nextOpen) => {
-          if (nextOpen) draft = name
-          open = nextOpen
-          handle.update()
-        }}
-      >
-        <button mix={[dialog.trigger(), buttonStyle]}>Rename</button>
+      <dialog.Context>
+        <button mix={[dialog.trigger(), buttonStyle]}>Open dialog</button>
         <dialog.Portal>
           <div
             mix={[
@@ -88,65 +77,15 @@ export default function ExampleDialog(handle: Handle) {
                   '& p': {
                     margin: '8px 0 20px',
                   },
-                  '& label': {
-                    display: 'grid',
-                    gap: '8px',
-                  },
                 }),
               ]}
             >
-              <h2 mix={dialog.title()}>Rename file</h2>
-              <p mix={dialog.description()}>Choose a name for this file.</p>
-              <form
-                autocomplete="off"
-                mix={on('submit', (event) => {
-                  event.preventDefault()
-                  if (!draft.trim()) return
-                  name = draft.trim()
-                  open = false
-                  handle.update()
-                })}
-              >
-                <label>
-                  File name
-                  <input
-                    name="name"
-                    required
-                    value={draft}
-                    mix={[
-                      dialog.focusOnShow(),
-                      on('input', (event) => {
-                        draft = event.currentTarget.value
-                      }),
-                      css({
-                        boxSizing: 'border-box',
-                        minWidth: 0,
-                        width: '100%',
-                        padding: '10px 12px',
-                        border: '1px solid light-dark(#d8d8df, #44444c)',
-                        borderRadius: '8px',
-                        background: 'transparent',
-                        color: 'inherit',
-                        font: 'inherit',
-                      }),
-                    ]}
-                  />
-                </label>
-                <div
-                  mix={css({
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    flexWrap: 'wrap',
-                    gap: '8px',
-                    marginTop: '24px',
-                  })}
-                >
-                  <button mix={[dialog.close(), buttonStyle]}>Cancel</button>
-                  <button type="submit" mix={buttonStyle}>
-                    Save
-                  </button>
-                </div>
-              </form>
+              <h2 mix={dialog.title()}>Dialog</h2>
+              <p mix={dialog.description()}>
+                Focus stays within this dialog while background page interaction and scrolling are
+                blocked.
+              </p>
+              <button mix={[dialog.close(), buttonStyle]}>Close</button>
             </section>
           </dialog.SurfaceContext>
         </dialog.Portal>
@@ -164,7 +103,7 @@ const buttonStyle = css({
   color: 'inherit',
   font: 'inherit',
   cursor: 'pointer',
-  '&:focus-visible': {
+  '&:focus': {
     outline: '2px solid light-dark(#70707c, #a0a0ac)',
     outlineOffset: '3px',
   },
