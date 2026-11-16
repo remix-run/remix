@@ -11,7 +11,6 @@ async function openDocs(t: TestContext, pattern: string) {
     else process.env.NODE_ENV = previous
   })
   let page = await t.serve(await createTestServer(router.fetch))
-  page.setDefaultTimeout(5000)
   // Measure native Tab preferences rather than assuming every control is a stop.
   await page.setContent(
     '<input id="start"><input type="checkbox" id="checkbox"><button id="button">Button</button><input id="end">',

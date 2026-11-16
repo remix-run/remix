@@ -11,7 +11,6 @@ async function openDocs(t: TestContext) {
     else process.env.NODE_ENV = previous
   })
   let page = await t.serve(await createTestServer(router.fetch))
-  page.setDefaultTimeout(5000)
   await page.goto('/patterns/dialog/')
   return page
 }
