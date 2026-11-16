@@ -295,6 +295,40 @@ describe('toast.root()', () => {
     assert.equal(result.container.querySelector('[data-toast]'), null)
     assert.ok(id)
   })
+  it('remembers ordinary Tab entry when the last notification closes', async (t) => {
+    let toastManager = createToastManager()
+    let id = toastManager.add({ title: 'Notification' })
+    let view = render(
+      <>
+        <button id="origin">Origin</button>
+        <Context manager={toastManager}>
+          {(items) => (
+            <section mix={root({ label: 'Notifications' })}>
+              {items.map((value) => (
+                <ItemContext key={value.id} value={value.id}>
+                  <article mix={item()}>
+                    <button id="action">Action</button>
+                  </article>
+                </ItemContext>
+              ))}
+            </section>
+          )}
+        </Context>
+      </>,
+    )
+    t.after(view.cleanup)
+    let origin = element(view.container, '#origin')
+    let action = element(view.container, '#action')
+    await view.act(() => {
+      origin.focus()
+      origin.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }),
+      )
+      action.focus()
+    })
+    await view.act(() => toastManager.close(id))
+    assert.equal(document.activeElement, origin)
+  })
   it('leaves interior Tab navigation to the browser', async (t) => {
     let toastManager = createToastManager()
     toastManager.add({ title: 'Notification' })

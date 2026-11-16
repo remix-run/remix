@@ -272,6 +272,34 @@ describe('Portal focus navigation', () => {
     ).toBe(true)
   })
 
+  it('restores the toast origin after ordinary keyboard entry and dismissal', async (t) => {
+    let page = await openFixture(t, '/scoped?scenario=toast')
+    await page.locator('#toast-origin').press('Enter')
+    await page.keyboard.press('Tab')
+    expect(
+      await page
+        .locator('#notifications')
+        .evaluate((node) => node.contains(document.activeElement)),
+    ).toBe(true)
+    await page.locator('#toast-action').press('Enter')
+    expect(
+      await page.locator('#toast-origin').evaluate((node) => node === document.activeElement),
+    ).toBe(true)
+  })
+  it('does not establish a toast return target from pointer entry', async (t) => {
+    let page = await openFixture(t, '/scoped?scenario=toast')
+    await page.locator('#toast-origin').click()
+    await page.locator('#toast-action').click()
+    expect(
+      await page.locator('#toast-origin').evaluate((node) => node === document.activeElement),
+    ).toBe(false)
+    expect(
+      await page
+        .locator('#notifications')
+        .evaluate((node) => node.contains(document.activeElement)),
+    ).toBe(false)
+  })
+
   it('keeps toast focus when its action dismisses a popup and returns to the popup trigger', async (t) => {
     let page = await openFixture(t, '/scoped?scenario=toast-dialog')
     await page.locator('#notification-dialog-trigger').press('Enter')
