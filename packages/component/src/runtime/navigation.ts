@@ -478,21 +478,7 @@ export function startNavigationListener(
       }
 
       if (isFrameRedirectNavigationInfo(event.info)) {
-        if (redirectCommit) {
-          setFrameCommitNavigation(event.signal, redirectCommit)
-          let { controller } = redirectCommit
-          let cancel = () => {
-            // Failed interceptors also abort this signal; keep their rejections as failures.
-            if (event.defaultPrevented) controller.abort(event.signal.reason)
-          }
-          if (event.signal.aborted) cancel()
-          else {
-            event.signal.addEventListener('abort', cancel, {
-              once: true,
-              signal: controller.signal,
-            })
-          }
-        }
+        if (redirectCommit) setFrameCommitNavigation(event.signal, redirectCommit)
         interceptNavigation(navigation, event, event.info.resetScroll !== 'manual', {
           async handler() {},
           scroll: 'manual',
