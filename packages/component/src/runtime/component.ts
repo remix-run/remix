@@ -268,7 +268,7 @@ export type FrameContent = ReadableStream<Uint8Array> | string | RemixNode
  */
 export type FrameResolution = FrameContent | Response
 
-/** Request and lifecycle details shared by frame reload and form submission events. */
+/** Request and lifecycle details for a frame reload. */
 export interface ReloadDetails {
   /**
    * Source of the initiating reload, including any GET submission query. Inherited reloads keep
@@ -301,10 +301,10 @@ export interface ReloadDetails {
 export type FrameReloadStartEvent = Event &
   ReloadDetails & {
     /**
-     * The initiating HTML anchor, area, or owning form. `null` for SVG links, programmatic reloads,
+     * The initiating HTML or SVG anchor, area, or owning form. `null` for programmatic reloads,
      * programmatic navigations, and history traversal.
      */
-    readonly element: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement | null
+    readonly element: HTMLAnchorElement | HTMLAreaElement | SVGAElement | HTMLFormElement | null
   }
 
 /**
@@ -316,7 +316,7 @@ export type FrameReloadStartEventInit = {
   method: string
   encType: string | null
   formData?: FormData
-  element?: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
+  element?: HTMLAnchorElement | HTMLAreaElement | SVGAElement | HTMLFormElement
   submitter?: HTMLElement | null
   finished: ReloadDetails['finished']
 }

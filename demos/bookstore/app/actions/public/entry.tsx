@@ -24,15 +24,15 @@ export const app = run({
       fetch(url, init) {
         return fetch(url, {
           ...init,
-          cache: options?.transition?.navigationType === 'traverse' ? 'force-cache' : 'default',
+          cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
         })
       },
       async commit(commitFrame, { signal, to }) {
-        let transition = options?.transition
+        let navigationType = options?.navigationType
         if (
           options?.target ||
-          !transition ||
-          transition.navigationType === 'reload' ||
+          !navigationType ||
+          navigationType === 'reload' ||
           !document.startViewTransition ||
           matchMedia('(prefers-reduced-motion: reduce)').matches ||
           signal.aborted
@@ -41,8 +41,8 @@ export const app = run({
         }
 
         let viewTransition = document.startViewTransition(commitFrame)
-        let from = transition.from.url
-        if (bookDetailsMatcher.match(to) || (from !== null && bookDetailsMatcher.match(from))) {
+        let from = options?.from?.url
+        if (bookDetailsMatcher.match(to) || (from != null && bookDetailsMatcher.match(from))) {
           viewTransition.types?.add('book-details')
         }
         let skip = () => viewTransition.skipTransition()

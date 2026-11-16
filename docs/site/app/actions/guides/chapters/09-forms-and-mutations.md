@@ -220,7 +220,7 @@ To show "Album saved" on the destination page, store the message as [session fla
 Once the page [boots the browser runtime with `run()`](/interactivity/#browser-entry-with-run), Remix handles the form submission as a [frame navigation](/streaming-ui-with-frames/#navigate-a-frame-with-a-form). It renders validation responses into the page and follows redirects after a successful save.
 
 Hydrate the submit button and use
-[`on('rmx:submission', handler)`](/api/component/#following-a-form-submission) to show when its save is in progress.
+[`on('rmx:navigation', handler)`](/api/component/#following-a-form-submission) to show when its save is in progress.
 The rest of the form stays server-rendered. The handler runs for submissions using that button,
 including Enter when it is the form's default button. Links and other forms don't start its pending
 state. Following the event's `finished` promise allows validation responses that keep the same
@@ -240,7 +240,7 @@ export const SaveButton = clientEntry(import.meta.url, function SaveButton(handl
     <>
       <button
         type="submit"
-        mix={on("rmx:submission", async (event, signal) => {
+        mix={on("rmx:navigation", async (event, signal) => {
           saving = true;
           failed = false;
           handle.update();
@@ -274,15 +274,15 @@ import { SaveButton } from "./public/save-button.tsx";
 </form>;
 ```
 
-`finished` follows the same contract as `frame.reload()`. It resolves with an `AbortSignal` when
-the response renders, including validation responses, and rejects when the reload fails. Cancellation
-resolves with an aborted signal, so it clears “Saving…” without showing a failure. Before showing
-success feedback such as “Saved!”, check the returned signal's `aborted` flag.
+`finished` resolves with an `AbortSignal` after the response renders and navigation completes,
+including redirects, scroll, and focus handling. Rendering a validation response counts as completion.
+Failures reject. Cancellation resolves with an aborted signal, so it clears “Saving…” without showing a
+failure. Before showing success feedback such as “Saved!”, check the returned signal's `aborted` flag.
 
 The button stays enabled so the visitor can submit again. The next submission, or removal of the
 button, aborts the earlier handler's signal and prevents it from overwriting newer state.
 
-`rmx:submission` reports a reload that already started. Cancel a submission in native `submit`.
+`rmx:navigation` reports a navigation Remix has accepted. Cancel a submission in native `submit`.
 For submitted values and optimistic rendering, see [pending and optimistic UI](/interactivity/#optimistic-ui).
 
 ## Use other HTTP methods when the route calls for them

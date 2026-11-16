@@ -1,10 +1,10 @@
-Follow a form's submissions with the typed `rmx:submission` event to show pending or optimistic UI. See [following a form submission](https://github.com/remix-run/remix/tree/main/packages/component#following-a-form-submission) for details.
+Follow navigations with the typed `rmx:navigation` event to show pending or optimistic UI. See [following a navigation](https://github.com/remix-run/remix/tree/main/packages/component#following-a-navigation) for details.
 
 ```tsx
 // Inside a hydrated component:
 <button
   type="submit"
-  mix={on('rmx:submission', async (event, signal) => {
+  mix={on('rmx:navigation', async (event, signal) => {
     saving = true
     handle.update()
     await event.finished.catch(console.error)
