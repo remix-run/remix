@@ -1,6 +1,7 @@
 import { attrs, createMixin, css, on, ref, TypedEventTarget } from '@remix-run/component'
 import type { ElementProps, Handle, RemixNode } from '@remix-run/component'
 import { FocusGuard } from './lib/focus.tsx'
+import { registerModalExemptRegion } from './lib/dismissable-layer.ts'
 
 /** Content published to a toast manager. */
 export interface ToastAddOptions<data = unknown> {
@@ -295,6 +296,21 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       region = node
       let doc = node.ownerDocument
       let win = doc.defaultView
+      let unregisterRegion = registerModalExemptRegion({
+        node,
+        onScopeClose(branch, returnTarget) {
+          if (returnTo && branch.some((node) => contains(node, returnTo ?? null))) {
+            returnTo = isElement(returnTarget) ? returnTarget : doc.body
+          }
+        },
+      })
+      signal.addEventListener(
+        'abort',
+        () => {
+          unregisterRegion()
+        },
+        { once: true },
+      )
       node.addEventListener(
         'pointerdown',
         (event) => {
@@ -368,14 +384,9 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
             if (restoreFocus()) event.preventDefault()
             return
           }
-          if (
-            event.key === 'Tab' &&
-            event.shiftKey &&
-            activeElement(doc) === node &&
-            restoreFocus()
-          ) {
+          if (event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey) return
+          if (event.shiftKey && activeElement(doc) === node && restoreFocus())
             event.preventDefault()
-          }
         },
         { signal },
       )
@@ -676,6 +687,8 @@ export const item = createMixin<HTMLElement, [options?: ToastItemOptions], Eleme
             !contains(host, activeElement(host.ownerDocument))
           )
             return
+          event.preventDefault()
+          event.stopPropagation()
           context.toastManager.close(scoped.id)
         }),
       ]

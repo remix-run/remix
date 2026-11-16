@@ -272,6 +272,39 @@ describe('Portal focus navigation', () => {
     ).toBe(true)
   })
 
+  it('keeps toast focus when its action dismisses a popup and returns to the popup trigger', async (t) => {
+    let page = await openFixture(t, '/scoped?scenario=toast-dialog')
+    await page.locator('#notification-dialog-trigger').press('Enter')
+    await page.locator('#notification-publish').press('Enter')
+    await page.locator('#notification-popup-trigger').press('Enter')
+    await page.locator('#notification-popup-first').focus()
+    await page.keyboard.press('F6')
+    await page.locator('#notification-region:focus').waitFor()
+    await page.locator('#notification-action').press('Enter')
+    await page.locator('#notification-popup-surface[data-open]').waitFor({ state: 'hidden' })
+    expect(await page.locator('#notification-dialog').getAttribute('data-state')).toBe('open')
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('notification-action')
+    await page.keyboard.press('F6')
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('notification-popup-trigger')
+  })
+  it('returns to the dialog opener after a toast action closes its popup and owner', async (t) => {
+    let page = await openFixture(t, '/scoped?scenario=toast-dialog')
+    await page.locator('#notification-dialog-trigger').press('Enter')
+    await page.locator('#notification-publish').press('Enter')
+    await page.locator('#notification-popup-trigger').press('Enter')
+    await page.locator('#notification-popup-first').focus()
+    await page.keyboard.press('F6')
+    await page.locator('#notification-region:focus').waitFor()
+    await page.locator('#notification-close-owner').press('Enter')
+    await page.locator('#notification-dialog[data-open]').waitFor({ state: 'hidden' })
+    await page.locator('#notification-popup-surface[data-open]').waitFor({ state: 'hidden' })
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('notification-close-owner')
+    await page.keyboard.press('F6')
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe(
+      'notification-dialog-trigger',
+    )
+  })
+
   it('keeps modal guards active through closing motion and reopening', async (t) => {
     let page = await openFixture(t, '/scoped?scenario=modal')
     await page.locator('#modal-trigger').press('Enter')
