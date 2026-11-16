@@ -851,6 +851,7 @@ describe('run', () => {
     expect(event.formData).toBeNull()
     expect(submissions).toHaveLength(1)
     expect(submissions[0]?.element).toBe(anchor)
+    expect(submissions[0]?.frameSrc).toBe(anchor.href)
     expect(submissions[0]?.target).toBe(anchor)
     expect(submissions[0]?.submitter).toBe(undefined)
     expect(submissions[0]?.formData).toBe(undefined)
@@ -871,7 +872,7 @@ describe('run', () => {
     await event.finished
 
     expect(event.element).toBe(area)
-    expect(event.src).toBe(area.href)
+    expect(event.frameSrc).toBe(area.href)
     expect(event.method).toBe('get')
   })
 
@@ -952,7 +953,7 @@ describe('run', () => {
     expect(submission.cancelable).toBe(false)
     expect(submission.defaultPrevented).toBe(false)
     expect('form' in submission).toBe(false)
-    expect(submission.src).toBe(event.src)
+    expect(submission.frameSrc).toBe(event.src)
     expect(submission.method).toBe('post')
     expect(submission.encType).toBe('text/plain')
     expect(submission.formData).toBe(event.formData)
@@ -1092,7 +1093,7 @@ describe('run', () => {
     expect(events).toHaveLength(1)
     expect(events[0]?.element).toBe(form)
     expect(events[0]?.submitter).toBe(button)
-    expect(events[0]?.src).toBe(reload.src)
+    expect(events[0]?.frameSrc).toBe(reload.src)
     expect(new URL(reload.src).searchParams.get('q')).toBe('Ada')
     expect(events[0]?.method).toBe('get')
     expect(events[0]?.encType).toBe(undefined)

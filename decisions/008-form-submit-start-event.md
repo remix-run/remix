@@ -18,7 +18,7 @@ Registering `rmx:navigation` in `GlobalEventHandlersEventMap` gives `on()` a typ
 
 ## Shared request and origin details
 
-The [reload event contract](https://github.com/remix-run/remix/tree/main/packages/component#following-a-reload) defines `src`, `method`, `encType`, `formData`, `element`, `submitter`, and `finished`. Request fields align with `frame.reload()` options, with `body` exposed as `formData`. GET entries are encoded in `src`; `formData` and `encType` are null on `reloadStart` and absent on `rmx:navigation`. Other body formats remain out of scope, and future encodings can have separate `json` or `text` fields.
+The [reload event contract](https://github.com/remix-run/remix/tree/main/packages/component#following-a-reload) defines `src`, `method`, `encType`, `formData`, `element`, `submitter`, and `finished`. Request fields align with `frame.reload()` options, with `body` exposed as `formData`. The navigation event calls the requested frame URL `frameSrc`; GET entries are encoded in that URL; `formData` and `encType` are null on `reloadStart` and absent on `rmx:navigation`. Other body formats remain out of scope, and future encodings can have separate `json` or `text` fields.
 
 Both events identify the initiating HTML or SVG anchor, image-map area, or owning form as `element`. `reloadStart.element` is null for programmatic calls and history traversal. `rmx:navigation` starts on the link or submitter, but its `element` always identifies the link or owning form. Its optional `submitter` identifies the actual submit button, including for GET forms. Descendant frame events inherit the initiating details while tracking their own completion.
 

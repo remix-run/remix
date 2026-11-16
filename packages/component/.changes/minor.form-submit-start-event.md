@@ -17,4 +17,4 @@ Follow links and form submissions with the typed `rmx:navigation` event to show 
 </button>
 ```
 
-`NavigationEvent.element` identifies the initiating HTML or SVG anchor, image-map area, or owning form. `submitter` is optional, and `encType` and `formData` are only present for POST submissions.
+`NavigationEvent.frameSrc` is the requested frame URL, including GET submission values. `element` identifies the initiating HTML or SVG anchor, image-map area, or owning form. `submitter` is optional, and `encType` and `formData` are only present for POST submissions.

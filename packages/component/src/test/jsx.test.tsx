@@ -479,6 +479,7 @@ describe('jsx', () => {
               Equal<typeof event.element, Exclude<FrameReloadStartEvent['element'], null>>
             >
             type noForm = Assert<Equal<Extract<'form', keyof typeof event>, never>>
+            type inferredFrameSrc = Assert<Equal<typeof event.frameSrc, string>>
             type inferredData = Assert<Equal<typeof event.formData, FormData | undefined>>
             type inferredFinished = Assert<Equal<typeof event.finished, Promise<AbortSignal>>>
             type inferredAborted = Assert<Equal<Awaited<typeof event.finished>['aborted'], boolean>>

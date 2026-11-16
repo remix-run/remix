@@ -7,7 +7,7 @@ import type { FrameReloadStartEventInit } from './component.ts'
  */
 export interface NavigationEvent extends Event {
   /** Requested frame source, including GET submission values in the query. */
-  readonly src: string
+  readonly frameSrc: string
   /** Effective HTTP method in lowercase. */
   readonly method: string
   /** Initiating HTML or SVG link, image-map area, or owning form. */
@@ -29,7 +29,7 @@ export function createNavigationEvent(
   init: FrameReloadStartEventInit & { element: NavigationEvent['element']; bubbles?: boolean },
 ): NavigationEvent {
   return Object.assign(new Event('rmx:navigation', { bubbles: init.bubbles ?? true }), {
-    src: init.src,
+    frameSrc: init.src,
     method: init.method,
     element: init.element,
     ...(init.submitter ? { submitter: init.submitter } : {}),
