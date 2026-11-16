@@ -1,1 +1,0 @@
-The browser runtime is smaller and creates components and mixins faster, with no behavior changes. Every component graph is about 1.9 KB smaller minified, and creating a component or a mixin allocates less, which made each about 10-15% faster in a microbenchmark.
