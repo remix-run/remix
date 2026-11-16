@@ -18,7 +18,15 @@ const cartErrorSchema = s.object({
   status: s.number(),
   message: s.string(),
   bookId: s.optional(s.number()),
-  submission: s.optional(CartItemUpdateForm.submissionSchema),
+  submission: s.optional(
+    s.object({
+      values: s.record(s.string(), s.union([s.string(), s.boolean(), s.array(s.string())])),
+      errors: s.object({
+        fields: s.record(s.string(), s.array(s.string())),
+        form: s.optional(s.array(s.string())),
+      }),
+    }),
+  ),
 })
 
 export default createController(routes.cart.fragments, {
