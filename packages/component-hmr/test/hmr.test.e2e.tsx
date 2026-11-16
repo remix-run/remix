@@ -579,14 +579,12 @@ describe('component-hmr e2e', { skip: isBun }, () => {
 
       let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
       let entrySource = await fs.readFile(entryPath, 'utf-8')
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await fs.writeFile(
         entryPath,
         entrySource.replace('Frame adoption failed:', 'Updated frame adoption failed:'),
       )
       await reloaded
-      await adopted
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
@@ -651,8 +649,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
 
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await fs.writeFile(
         clientFieldPath,
         [
@@ -665,7 +662,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: after export add')
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
@@ -745,8 +741,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
 
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await fs.writeFile(
         clientFieldPath,
         [
@@ -759,7 +754,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -789,8 +783,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -798,7 +791,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -859,8 +851,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
         await route.continue()
       })
       let updateRequested = page.waitForRequest((request) => isClientUpdate(new URL(request.url())))
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -871,7 +862,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('html[data-server-update-received="true"]').waitFor()
       update.resolve()
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -907,8 +897,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -919,7 +908,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1064,8 +1052,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
 
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await fs.writeFile(
         clientFieldPath,
         [
@@ -1076,7 +1063,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1104,8 +1090,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -1113,7 +1098,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1141,8 +1125,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -1153,7 +1136,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1223,8 +1205,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/ClientField.tsx',
@@ -1235,7 +1216,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: after object export')
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
@@ -1291,8 +1271,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
       await page.locator('[data-testid="document-field"]').fill('document before reload')
 
-      let reloaded = waitForNavigation(page)
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let reloaded = waitForReloadedApp(page)
       await write(
         fixture.rootDir,
         'app/client-message.tsx',
@@ -1306,7 +1285,6 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       )
 
       await reloaded
-      await adopted
       await waitForText(
         page,
         '[data-testid="server-client-label"]',
@@ -1337,8 +1315,6 @@ type HmrTestServer = {
   baseUrl: string
   close(): Promise<void>
   restartAssets(): Promise<void>
-  startAssets(): Promise<void>
-  stopAssets(): Promise<void>
 }
 
 type BrowserHmrFileEvent = {
@@ -1378,19 +1354,16 @@ type NodeHmrTestServer = {
   close(): Promise<void>
   output: string
   readyCount: number
+  waitForOutput(pattern: RegExp): Promise<void>
   waitForReady(index: number): Promise<{ pid: number; port: number }>
 }
 
 type TestPage = Awaited<ReturnType<TestContext['serve']>>
 
 type PageDiagnostics = {
-  consoleMessages: string[]
+  events: string[]
   getServerOutput?: () => string
-  navigations: string[]
-  pageErrors: string[]
   pendingRequests: Map<PlaywrightRequest, string>
-  requestFailures: string[]
-  responseFailures: string[]
 }
 
 const pageDiagnostics = new WeakMap<TestPage, PageDiagnostics>()
@@ -1408,70 +1381,45 @@ function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): 
     return diagnostics
   }
 
-  diagnostics = {
-    consoleMessages: [],
-    getServerOutput,
-    navigations: [],
-    pageErrors: [],
-    pendingRequests: new Map(),
-    requestFailures: [],
-    responseFailures: [],
-  }
+  let events: string[] = []
+  let pendingRequests = new Map<PlaywrightRequest, string>()
+  diagnostics = { events, getServerOutput, pendingRequests }
   pageDiagnostics.set(page, diagnostics)
 
-  page.on('console', (message) => {
-    diagnostics.consoleMessages.push(`${message.type()}: ${message.text()}`)
-  })
-  page.on('pageerror', (error) => {
-    diagnostics.pageErrors.push(error.stack ?? error.message)
-  })
+  // Elapsed times show which step a timed out wait was stuck on.
+  let startedAt = performance.now()
+  let at = (event: string) => `+${Math.round(performance.now() - startedAt)}ms ${event}`
+
+  page.on('console', (message) => events.push(at(`${message.type()}: ${message.text()}`)))
+  page.on('pageerror', (error) => events.push(at(`pageerror: ${error.stack ?? error.message}`)))
   page.on('framenavigated', (frame) => {
-    if (frame.parentFrame() !== null) return
-    diagnostics.navigations.push(frame.url())
+    if (frame.parentFrame() === null) events.push(at(`navigated: ${frame.url()}`))
   })
+  page.on('load', () => events.push(at('load')))
   page.on('request', (request) => {
-    diagnostics.pendingRequests.set(request, `${request.method()} ${request.url()}`)
+    pendingRequests.set(request, at(`${request.method()} ${request.url()}`))
   })
-  page.on('requestfinished', (request) => {
-    diagnostics.pendingRequests.delete(request)
-  })
+  page.on('requestfinished', (request) => pendingRequests.delete(request))
   page.on('requestfailed', (request) => {
-    diagnostics.pendingRequests.delete(request)
-    let failureText = request.failure()?.errorText
-    diagnostics.requestFailures.push(
-      `${request.method()} ${request.url()}${failureText ? ` (${failureText})` : ''}`,
-    )
+    pendingRequests.delete(request)
+    let reason = request.failure()?.errorText ?? 'unknown'
+    events.push(at(`requestfailed: ${request.method()} ${request.url()} (${reason})`))
   })
   page.on('response', (response) => {
     if (response.status() < 400) return
-    diagnostics.responseFailures.push(`${response.status()} ${response.url()}`)
+    events.push(at(`response: ${response.status()} ${response.url()}`))
   })
 
   return diagnostics
 }
 
 function formatPageDiagnostics(page: TestPage): string {
-  let diagnostics = attachPageDiagnostics(page)
-  let sections = [
-    formatDiagnosticsSection('console', diagnostics.consoleMessages),
-    formatDiagnosticsSection('pageerror', diagnostics.pageErrors),
-    formatDiagnosticsSection('navigation', diagnostics.navigations),
-    formatDiagnosticsSection('pending requests', [...diagnostics.pendingRequests.values()]),
-    formatDiagnosticsSection('requestfailed', diagnostics.requestFailures),
-    formatDiagnosticsSection('response >= 400', diagnostics.responseFailures),
-  ].filter(Boolean)
-
-  let serverOutput = diagnostics.getServerOutput?.()
-  if (serverOutput) {
-    sections.push(`server output:\n${serverOutput}`)
-  }
-
-  return sections.join('\n\n')
-}
-
-function formatDiagnosticsSection(label: string, values: string[]): string {
-  if (values.length === 0) return ''
-  return `${label}:\n${values.slice(-30).join('\n')}`
+  let { events, getServerOutput, pendingRequests } = attachPageDiagnostics(page)
+  return [
+    `page events:\n${events.slice(-60).join('\n')}`,
+    `pending requests:\n${[...pendingRequests.values()].join('\n')}`,
+    `server output:\n${getServerOutput?.() ?? ''}`,
+  ].join('\n\n')
 }
 
 async function createHmrFixture(
@@ -1734,9 +1682,6 @@ async function createNodeHmrFixture(
   options: {
     clientFieldExtraExports?: string
     serverImportsClientField?: boolean
-    slowAssetMs?: number
-    slowDisposeMs?: number
-    slowDocumentMs?: number
   } = {},
 ): Promise<NodeHmrFixture> {
   await fs.mkdir(fixtureTmpDir, { recursive: true })
@@ -1873,29 +1818,13 @@ async function editClientField(
 ): Promise<void> {
   let filePath = path.join(fixture.rootDir, 'app/ClientField.tsx')
   let temporaryPath = `${filePath}.tmp`
+  // node-hmr logs the change after marking itself not ready, and the proxy holds requests until
+  // the runner is ready again, so responses after this log reflect the edit.
+  let observed = server.waitForOutput(/(hmr update|restart) .*app\/ClientField\.tsx/)
   await fs.writeFile(temporaryPath, getClientFieldSource({ child: text, clientEntry }))
   await fs.rename(temporaryPath, filePath)
+  await observed
 
-  await waitFor(
-    async () => {
-      try {
-        let response = await fetch(server.baseUrl, { signal: AbortSignal.timeout(5000) })
-        let html = await response.text()
-        return response.ok && html.includes(text)
-      } catch (error) {
-        // A request can reach the previous child while HMR is restarting it.
-        if (
-          error instanceof TypeError ||
-          (error instanceof Error && error.name === 'TimeoutError')
-        ) {
-          return false
-        }
-        throw error
-      }
-    },
-    () => `Timed out waiting for fresh response containing ${text}.\n${server.output}`,
-    browserStartupTimeout,
-  )
   await assertFreshClientFieldResponses(server, text, clientEntry)
 }
 
@@ -1906,7 +1835,10 @@ async function assertFreshClientFieldResponses(
 ): Promise<void> {
   // Check a second request too: stale wrapper metadata persists beyond the first response.
   for (let request = 0; request < 2; request++) {
-    let response = await fetch(server.baseUrl, { signal: AbortSignal.timeout(5000) })
+    // The proxy holds this request until a restart finishes, so allow the startup budget.
+    let response = await fetch(server.baseUrl, {
+      signal: AbortSignal.timeout(browserStartupTimeout),
+    })
     let html = await response.text()
     assert.equal(response.status, 200, html)
     assert.ok(html.includes(text), html)
@@ -1944,9 +1876,10 @@ function getNodeHmrProxyDevSource(): string {
     'let proxyFetch = createFetchProxy("http://127.0.0.1:0", {',
     '  xForwardedHeaders: true,',
     '  async fetch(input, init) {',
-    '    let childPort = await waitForPort(process.env.CHILD_PORT_FILE)',
     '    let url = new URL(String(input))',
-    '    url.port = String(childPort)',
+    '    // The child writes this file before it reports ready, and createHmrReadyFetch only calls',
+    '    // this after the runner is ready.',
+    '    url.port = await readFile(process.env.CHILD_PORT_FILE, "utf8")',
     '    return await fetch(url, init)',
     '  },',
     '})',
@@ -1983,16 +1916,6 @@ function getNodeHmrProxyDevSource(): string {
     '  if (process.connected) process.disconnect()',
     '}',
     '',
-    'async function waitForPort(filePath) {',
-    '  while (true) {',
-    '    try {',
-    '      let port = Number(await readFile(filePath, "utf8"))',
-    '      if (port > 0) return port',
-    '    } catch {}',
-    '    await new Promise((resolve) => setTimeout(resolve, 25))',
-    '  }',
-    '}',
-    '',
     'function formatError(error) {',
     '  if (!(error instanceof Error)) return String(error)',
     '  return JSON.stringify({',
@@ -2014,9 +1937,6 @@ function getNodeHmrServerSource(
   rootDir: string,
   options: {
     serverImportsClientField?: boolean
-    slowAssetMs?: number
-    slowDisposeMs?: number
-    slowDocumentMs?: number
     title?: string
   } = {},
 ): string {
@@ -2038,9 +1958,6 @@ function getNodeHmrServerSource(
       : []),
     '',
     "let title = '" + (options.title ?? 'Initial') + "'",
-    `let slowAssetMs = ${JSON.stringify(options.slowAssetMs ?? 0)}`,
-    `let slowDisposeMs = ${JSON.stringify(options.slowDisposeMs ?? 0)}`,
-    `let slowDocumentMs = ${JSON.stringify(options.slowDocumentMs ?? 0)}`,
     'void sideEffect',
     'let assetServer = createAssetServer({',
     `  allowFiles: [${JSON.stringify(`${appDir}/**`)}, 'packages/remix/**', 'packages/component/**', 'packages/component-hmr/**'],`,
@@ -2131,7 +2048,6 @@ function getNodeHmrServerSource(
     "    let url = new URL(request.url ?? '/', `http://${host}`)",
     '',
     "    if (url.pathname === '/') {",
-    '      await delay(slowDocumentMs)',
     '      await writeFetchResponse(',
     '        response,',
     '        createHtmlResponse(await renderDocument(), {',
@@ -2145,7 +2061,6 @@ function getNodeHmrServerSource(
     '    }',
     '',
     "    if (url.pathname.startsWith('/assets/')) {",
-    '      await delay(slowAssetMs)',
     '      let assetResponse = await assetServer.fetch(',
     '        new Request(url, {',
     '          headers: toFetchHeaders(request.headers),',
@@ -2185,7 +2100,6 @@ function getNodeHmrServerSource(
     '    await assetServer.close()',
     '    server.closeAllConnections()',
     '    await new Promise((resolve) => server.close(resolve))',
-    '    await delay(slowDisposeMs)',
     '  })',
     '}',
     '',
@@ -2219,10 +2133,6 @@ function getNodeHmrServerSource(
     '    response.end()',
     '    reader.releaseLock()',
     '  }',
-    '}',
-    '',
-    'async function delay(ms) {',
-    '  if (ms > 0) await new Promise((resolve) => setTimeout(resolve, ms))',
     '}',
     '',
   ].join('\n')
@@ -2352,8 +2262,6 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
       await stopAssets()
       await startAssets()
     },
-    startAssets,
-    stopAssets,
     async close() {
       await stopAssets()
       server.closeAllConnections()
@@ -2450,19 +2358,23 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
       ...env,
       NODE_ENV: 'development',
       CHILD_PORT_FILE: childPortFile,
+      NO_COLOR: '1',
       TEST_SERVER_PORT: '0',
     },
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   })
   let closed = new Promise<void>((resolve) => child.once('close', () => resolve()))
   let readyEvents: Array<{ pid: number; port: number }> = []
-  let readyWaiters: Array<() => void> = []
-  let proxyReadyEvents: Array<{ pid: number; port: number }> = []
-  let proxyReadyWaiters: Array<() => void> = []
+  let proxyPort: number | undefined
   let lineBuffer = ''
   let processOutput = ''
   let exit: { code: number | null; signal: NodeJS.Signals | null } | null = null
   let closePromise: Promise<void> | undefined
+  let stateWaiters = new Set<() => void>()
+
+  function notifyStateWaiters() {
+    for (let waiter of stateWaiters) waiter()
+  }
 
   child.stdout?.setEncoding('utf-8')
   child.stdout?.on('data', (chunk: string) => {
@@ -2473,37 +2385,29 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     lineBuffer = lines.pop() ?? ''
 
     for (let line of lines) {
-      let event = parseReadyEvent(line)
-      if (event !== null) {
-        readyEvents.push(event)
-        for (let waiter of readyWaiters) waiter()
-        readyWaiters = []
-        continue
-      }
-
-      let proxyEvent = parseProxyReadyEvent(line)
-      if (proxyEvent !== null) {
-        proxyReadyEvents.push(proxyEvent)
-        for (let waiter of proxyReadyWaiters) waiter()
-        proxyReadyWaiters = []
-      }
+      let event = parseReadyEvent(line, 'ready')
+      if (event !== null) readyEvents.push(event)
+      proxyPort ??= parseReadyEvent(line, 'proxy-ready')?.port
     }
+    notifyStateWaiters()
   })
 
   child.stderr?.setEncoding('utf-8')
   child.stderr?.on('data', (chunk: string) => {
     processOutput += chunk
+    notifyStateWaiters()
   })
 
   child.once('exit', (code, signal) => {
     exit = { code, signal }
+    notifyStateWaiters()
   })
 
-  let ready = await waitForProxyReady()
+  await waitForState(() => proxyPort !== undefined, 'Timed out waiting for node-hmr proxy server.')
   await waitForReadyEvent(0)
 
   return {
-    baseUrl: `http://127.0.0.1:${ready.port}`,
+    baseUrl: `http://127.0.0.1:${proxyPort}`,
     async close() {
       closePromise ??= stopProcess(child, closed)
       await closePromise
@@ -2514,31 +2418,45 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     get readyCount() {
       return readyEvents.length
     },
+    waitForOutput(pattern) {
+      let fromIndex = processOutput.length
+      return waitForState(
+        () => pattern.test(processOutput.slice(fromIndex)),
+        `Timed out waiting for fixture output matching ${pattern}`,
+      )
+    },
     waitForReady: waitForReadyEvent,
   }
 
+  // Resolves once `check()` passes after process output, and rejects if the process exits first.
+  function waitForState(check: () => boolean, message: string): Promise<void> {
+    let { promise, resolve, reject } = Promise.withResolvers<void>()
+    let fail = () => {
+      let exitText = exit ? ` Process exited with code ${exit.code} and signal ${exit.signal}.` : ''
+      reject(new Error(`${message}${exitText}\n${processOutput}`))
+    }
+    let update = () => {
+      if (check()) resolve()
+      else if (exit) fail()
+    }
+    let timeout = setTimeout(fail, consoleMessageTimeout)
+    stateWaiters.add(update)
+    update()
+    let result = promise.finally(() => {
+      clearTimeout(timeout)
+      stateWaiters.delete(update)
+    })
+    void result.catch(() => {})
+    return result
+  }
+
   async function waitForReadyEvent(index: number): Promise<{ pid: number; port: number }> {
-    await waitFor(
+    await waitForState(
       () => readyEvents[index] !== undefined,
-      () => {
-        let exitText = exit
-          ? ` Process exited with code ${exit.code} and signal ${exit.signal}.`
-          : ''
-        return `Timed out waiting for node-hmr fixture server.${exitText}\n${processOutput}`
-      },
+      'Timed out waiting for node-hmr fixture server.',
     )
 
     let event = readyEvents[index]
-    assert.ok(event)
-    return event
-  }
-
-  async function waitForProxyReady(): Promise<{ pid: number; port: number }> {
-    await waitFor(
-      () => proxyReadyEvents[0] !== undefined,
-      () => `Timed out waiting for node-hmr proxy server.\n${processOutput}`,
-    )
-    let event = proxyReadyEvents[0]
     assert.ok(event)
     return event
   }
@@ -2746,45 +2664,36 @@ async function openHmrPage(page: TestPage, options: { hydrate?: boolean } = {}):
 function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
   attachPageDiagnostics(page)
   let result = new Promise<void>((resolve, reject) => {
-    let consoleMessages: string[] = []
-    let pageErrors: string[] = []
     let timeoutMs =
       text === '[remix] HMR connected' || text === 'Frame adoption complete'
         ? browserStartupTimeout
         : consoleMessageTimeout
     let timeout = setTimeout(() => {
       page.off('console', handleConsole)
-      page.off('pageerror', handlePageError)
       reject(
-        new Error(
-          [
-            `Timed out waiting for console message: ${text}`,
-            ...consoleMessages.map((message) => `console: ${message}`),
-            ...pageErrors.map((message) => `pageerror: ${message}`),
-            formatPageDiagnostics(page),
-          ].join('\n'),
-        ),
+        new Error(`Timed out waiting for console message: ${text}\n${formatPageDiagnostics(page)}`),
       )
     }, timeoutMs)
 
     page.on('console', handleConsole)
-    page.on('pageerror', handlePageError)
 
     function handleConsole(message: { text(): string }) {
-      consoleMessages.push(message.text())
-      if (message.text().includes(text)) {
-        clearTimeout(timeout)
-        page.off('console', handleConsole)
-        page.off('pageerror', handlePageError)
-        resolve()
-      }
-    }
-
-    function handlePageError(error: Error) {
-      pageErrors.push(error.stack ?? error.message)
+      if (!message.text().includes(text)) return
+      clearTimeout(timeout)
+      page.off('console', handleConsole)
+      resolve()
     }
   })
   // The triggering navigation can reject before the caller awaits this event.
+  void result.catch(() => {})
+  return result
+}
+
+// Resolves once the page has reloaded and the new document's client entries have hydrated.
+function waitForReloadedApp(page: TestPage): Promise<void> {
+  let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+  let result = waitForNavigation(page).then(() => adopted)
+  // A failed update can leave this unawaited while the page is cleaned up.
   void result.catch(() => {})
   return result
 }
@@ -2815,15 +2724,6 @@ function waitForNavigation(
   // A failed update can leave this event unawaited while the page is cleaned up.
   void result.catch(() => {})
   return result
-}
-
-async function ignoreAbortedNavigation(navigation: Promise<unknown>): Promise<void> {
-  try {
-    await navigation
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('net::ERR_ABORTED')) return
-    throw error
-  }
 }
 
 function monitorLocalRequestFailures(
@@ -2949,59 +2849,17 @@ function waitForStylesheetResponse(
   )
 }
 
-async function get(page: TestPage, pathname: string): Promise<void> {
-  let response = await page.request.get(pathname)
-  assert.ok(response.ok())
-}
-
-async function waitFor(
-  check: () => boolean | Promise<boolean>,
-  getTimeoutMessage: () => string = () => 'Timed out waiting for condition',
-  timeoutMs = 5_000,
-): Promise<void> {
-  let start = Date.now()
-
-  while (Date.now() - start < timeoutMs) {
-    if (await check()) return
-    await new Promise((resolve) => setTimeout(resolve, 25))
-  }
-
-  throw new Error(getTimeoutMessage())
-}
-
-function parseReadyEvent(line: string): { pid: number; port: number } | null {
+function parseReadyEvent(
+  line: string,
+  type: 'ready' | 'proxy-ready',
+): { pid: number; port: number } | null {
   try {
     let event: unknown = JSON.parse(line)
     if (
       typeof event === 'object' &&
       event !== null &&
       'type' in event &&
-      event.type === 'ready' &&
-      'port' in event &&
-      typeof event.port === 'number' &&
-      'pid' in event &&
-      typeof event.pid === 'number'
-    ) {
-      return {
-        pid: event.pid,
-        port: event.port,
-      }
-    }
-  } catch {
-    // Ignore non-JSON process output.
-  }
-
-  return null
-}
-
-function parseProxyReadyEvent(line: string): { pid: number; port: number } | null {
-  try {
-    let event: unknown = JSON.parse(line)
-    if (
-      typeof event === 'object' &&
-      event !== null &&
-      'type' in event &&
-      event.type === 'proxy-ready' &&
+      event.type === type &&
       'port' in event &&
       typeof event.port === 'number' &&
       'pid' in event &&

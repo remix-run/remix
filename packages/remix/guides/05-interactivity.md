@@ -1019,20 +1019,69 @@ without navigating the whole document.
 
 ## Pending and optimistic UI {#optimistic-ui}
 
-Keep a `pending` flag in setup scope when the render output reads it. Set it in the submit handler
-before the request and clear it when the request settles, as in the
-[enhanced album form](#enhancing-forms-with-fetch-and-navigation). That is enough for disabled
-controls, pending labels, progress indicators, and duplicate-submission prevention.
+When a component sends the request itself, keep a `pending` flag in setup scope when the render
+output reads it. Set it in the submit handler before the request and clear it when the request
+settles, as in the [enhanced album form](#enhancing-forms-with-fetch-and-navigation). That is enough
+for disabled controls, pending labels, progress indicators, and duplicate-submission prevention.
 
-Optimistic UI renders the expected result before the request completes. Put the optimistic operation
-and its recovery policy in the model that owns the data. The component can render the model's current
-state while keeping UI concerns such as a pending label, open menu, or focused control locally.
+For forms Remix handles as [frame navigations](#client-navigation), use
+[`on('rmx:submission', handler)`](../src/component/README.md#following-a-form-submission) to follow a button's or form's own
+submissions. The handler receives the submitted `formData` and a `finished` promise that follows
+the same `Promise<AbortSignal>` contract as `frame.reload()`.
+[Add pending feedback](/forms-and-mutations/#add-pending-feedback) shows how to use it for a save button.
+
+Optimistic UI renders the expected result before the request completes. A hydrated form can render
+what it just submitted, and let the response replace it:
+
+```tsx filename=app/actions/albums/public/favorite-form.tsx
+import { clientEntry, on } from "remix/component";
+import type { Handle } from "remix/component";
+
+export const FavoriteForm = clientEntry(
+  import.meta.url,
+  function FavoriteForm(handle: Handle<{ action: string; favorite: boolean }>) {
+    let submitted: boolean | undefined;
+    let failed = false;
+
+    return () => {
+      let favorite = submitted ?? handle.props.favorite;
+      return (
+        <form
+          method="post"
+          action={handle.props.action}
+          mix={on("rmx:submission", async (event, signal) => {
+            submitted = event.formData?.get("favorite") === "true";
+            failed = false;
+            handle.update();
+            try {
+              await event.finished;
+            } catch {
+              if (!signal.aborted) failed = true;
+            }
+            if (signal.aborted) return;
+            submitted = undefined;
+            handle.update();
+          })}
+        >
+          <input type="hidden" name="favorite" value={String(!favorite)} />
+          <button type="submit" aria-pressed={favorite ? "true" : "false"}>
+            Favorite
+          </button>
+          <span role="status">{failed ? "Couldn’t save. Try again." : ""}</span>
+        </form>
+      );
+    };
+  },
+);
+```
 
 Optimistic state works best for reversible, predictable changes such as toggles, reordering, and
 adding a known item. Wait for the response when the server chooses the final value, performs a
-destructive operation, or can reject the request in ways the user must resolve first. If an
-optimistic request fails, the model can restore its previous state or adopt the server response, and
-the component can render the resulting error or retry control.
+destructive operation, or can reject the request in ways the user must resolve first. When a
+browser-side model owns the data, put the optimistic operation and its recovery policy in that
+model, and keep UI concerns such as a pending label, open menu, or focused control in the component.
+If an optimistic request fails, restore the previous state or adopt the server response, and render
+the resulting error or retry control.
 
 ## When to create a custom event mixin {#creating-custom-mixins}
 

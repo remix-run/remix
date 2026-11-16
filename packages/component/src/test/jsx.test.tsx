@@ -1,10 +1,18 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { Assert, Equal } from './utils.ts'
-import type { Handle, RemixNode } from '../runtime/component.ts'
-import { createMixin, on, ref, unsafeHTML } from '../index.ts'
+import type { FrameProps, Handle, RemixNode } from '../runtime/component.ts'
+import { createMixin, Frame, on, ref, unsafeHTML } from '../index.ts'
 
-import type { Dispatched, MixInput, MixinDescriptor, MixinHandle, Props } from '../index.ts'
+import type {
+  Dispatched,
+  FormSubmissionEvent,
+  FrameReloadStartEvent,
+  MixInput,
+  MixinDescriptor,
+  MixinHandle,
+  Props,
+} from '../index.ts'
 
 type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix
 type FalsyMixValue = false | 0 | 0n | '' | null | undefined
@@ -16,6 +24,23 @@ describe('jsx', () => {
     let element = <div>Hello, world!</div>
     expect(element.type).toBe('div')
     expect(element.props.children).toEqual('Hello, world!')
+  })
+
+  it('supports extending and forwarding FrameProps', () => {
+    interface CustomFrameProps extends FrameProps {
+      label: string
+    }
+    let props: CustomFrameProps = { src: '/frame', label: 'Frame', loading: 'lazy' }
+    let forwarded = <Frame {...props} />
+    let eager = <Frame src="/frame" />
+    let eagerText = <Frame src="/frame" loading="eager" fallback="Loading" />
+    let lazy = <Frame src="/frame" loading="lazy" fallback={<p>Loading</p>} />
+    let missing = <Frame src="/frame" loading="lazy" />
+    let text = <Frame src="/frame" loading="lazy" fallback="Loading" />
+    let empty = <Frame src="/frame" loading="lazy" fallback={null} />
+
+    expect(forwarded.props).toEqual(props)
+    expect([eager, eagerText, lazy, missing, text, empty]).toHaveLength(6)
   })
 
   it('preserves generic component prop types in JSX', () => {
@@ -426,6 +451,45 @@ describe('jsx', () => {
       ))
 
       let applied = <div mix={[withOnMixin()]} />
+    })
+
+    it('infers submission event and currentTarget types from the host', () => {
+      type reloadElement = Assert<
+        Equal<
+          FrameReloadStartEvent['element'],
+          HTMLAnchorElement | HTMLAreaElement | HTMLFormElement | null
+        >
+      >
+      let button = (
+        <button
+          mix={on('rmx:submission', (event, signal) => {
+            type inferredEvent = Assert<
+              Equal<typeof event, Dispatched<FormSubmissionEvent, HTMLButtonElement>>
+            >
+            type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
+            type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+          })}
+        />
+      )
+      let form = (
+        <form
+          mix={on('rmx:submission', (event) => {
+            type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLFormElement>>
+            type inferredForm = Assert<Equal<typeof event.form, HTMLFormElement>>
+            type noElement = Assert<Equal<Extract<'element', keyof typeof event>, never>>
+            type inferredData = Assert<Equal<typeof event.formData, FormData | null>>
+            type inferredFinished = Assert<Equal<typeof event.finished, Promise<AbortSignal>>>
+            type inferredAborted = Assert<Equal<Awaited<typeof event.finished>['aborted'], boolean>>
+          })}
+        />
+      )
+      let ancestor = (
+        <section
+          mix={on('rmx:submission', (event) => {
+            type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLElement>>
+          })}
+        />
+      )
     })
 
     it('infers ref mixin node type from host context', () => {

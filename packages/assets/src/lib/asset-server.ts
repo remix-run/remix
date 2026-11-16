@@ -22,16 +22,17 @@ import type { ModuleLoader } from './loaders.ts'
 import { normalizeFilePath, normalizePathname } from './paths.ts'
 import { compileRoutes } from './routes.ts'
 import type { CompiledRoutes } from './routes.ts'
-import { createResponseForScript, createScriptCompiler } from './scripts/compiler.ts'
+import { createScriptCompiler } from './scripts/compiler.ts'
 import type { ScriptHmrUpdate, ScriptImportMap } from './scripts/compiler.ts'
 import { supportedScriptExtensions } from './scripts/resolve.ts'
-import { createResponseForStyle, createStyleCompiler, isStyleFilePath } from './styles/compiler.ts'
+import { createStyleCompiler, isStyleFilePath } from './styles/compiler.ts'
 import { resolveScriptTarget, resolveStyleTarget } from './target.ts'
 import type { AssetTarget, ResolvedScriptTarget, ResolvedStyleTarget } from './target.ts'
 import { createAssetServerWatcher } from './watch.ts'
 import { createAssetInspector, type AssetDetails } from './inspection.ts'
 import type { AssetServerWatcher, ChokidarWatcher } from './watch.ts'
 import { getVirtualStoreMountConfigs } from './virtual-store.ts'
+import { createCompiledAssetResponse } from './compiler-utils.ts'
 
 interface AssetServerWatchOptions {
   /**
@@ -737,7 +738,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
             if (fingerprint !== parsedRequestPathname.requestedFingerprint) return null
           }
 
-          return createResponseForStyle(compiledStyle, {
+          return createCompiledAssetResponse(compiledStyle, 'text/css; charset=utf-8', {
             cacheControl: parsedRequestPathname.cacheControl,
             ifNoneMatch,
             isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
@@ -804,12 +805,16 @@ export function createAssetServer<const transforms extends AssetRequestTransform
           if (fingerprint !== parsedRequestPathname.requestedFingerprint) return null
         }
 
-        return createResponseForScript(compiledScript, {
-          cacheControl: parsedRequestPathname.cacheControl,
-          ifNoneMatch,
-          isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
-          method: request.method,
-        })
+        return createCompiledAssetResponse(
+          compiledScript,
+          'application/javascript; charset=utf-8',
+          {
+            cacheControl: parsedRequestPathname.cacheControl,
+            ifNoneMatch,
+            isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
+            method: request.method,
+          },
+        )
       } catch (error) {
         // A direct request can race with the filesystem or fail a deeper allowFiles check while
         // compiling imports. In this fetch context, both cases should fall through as "not

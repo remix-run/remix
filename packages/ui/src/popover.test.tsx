@@ -6,6 +6,7 @@ import { createRoot, on, type Handle, type RemixNode } from '@remix-run/componen
 import * as popover from './popover.ts'
 import * as menu from './menu.tsx'
 import type { PopoverHideRequest } from './popover.ts'
+import { settle } from './test/settle.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
 
@@ -69,19 +70,6 @@ function key(target: HTMLElement, keyValue: string) {
   })
   target.dispatchEvent(event)
   return event
-}
-
-async function settle(root: ReturnType<typeof createRoot>) {
-  root.flush()
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        resolve()
-      })
-    })
-  })
-  await Promise.resolve()
-  root.flush()
 }
 
 function PopoverHarness(handle: Handle<RenderPopoverOptions>) {

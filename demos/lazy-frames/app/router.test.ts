@@ -2,6 +2,7 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
 import { motionArtifact } from './data/exhibits.ts'
+import { latency } from './middleware/demo-latency.ts'
 import { router } from './router.ts'
 import { routes } from './routes.ts'
 import { themeCookieName } from './ui/public/theme.ts'
@@ -25,7 +26,8 @@ describe('lazy frame routes', () => {
     assert.match(await response.text(), /<html[^>]+data-theme="dark"/)
   })
 
-  it('applies the latency cookie to subsequent requests', async () => {
+  it('applies the latency cookie to subsequent requests', async (t) => {
+    t.mock.method(latency, 'wait', async () => {})
     let toggleResponse = await router.fetch(
       new Request(`http://localhost${routes.latency.href()}`, {
         method: 'POST',
@@ -46,8 +48,8 @@ describe('lazy frame routes', () => {
       }),
     )
 
-    assert.equal(homeResponse.headers.get('Server-Timing'), 'demo-latency;dur=20')
-    assert.equal(frameResponse.headers.get('Server-Timing'), 'demo-latency;dur=20')
+    assert.equal(homeResponse.headers.get('Server-Timing'), 'demo-latency;dur=520')
+    assert.equal(frameResponse.headers.get('Server-Timing'), 'demo-latency;dur=520')
   })
 
   it('serves each Frame response type as HTML', async () => {

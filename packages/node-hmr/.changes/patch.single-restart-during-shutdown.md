@@ -1,1 +1,1 @@
-Spawn a single replacement server when files change while the previous child process is still shutting down. Previously a second restart could start an extra child process that kept running in the background.
+Changing files while the previous server process is still shutting down no longer starts an extra server process that keeps running in the background. The runner now spawns a single replacement once the previous process exits.

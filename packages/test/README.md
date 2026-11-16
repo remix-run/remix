@@ -8,8 +8,9 @@ A test framework for JavaScript and TypeScript projects.
 - Server-side unit testing
 - Playwright E2E testing via `t.serve`
 - In-browser component testing (pair with `render` from `remix/component/test`)
-- Mock functions and method spies via `t.mock.fn` / `t.mock.method`
+- Mock functions, methods, accessors, and data properties via `t.mock`
 - Per-test and hook timeouts with `t.signal` abort support
+- Polling assertions with `t.waitFor()`
 - Unified code coverage reporting across unit and E2E tests
 - Watch mode
 - Static CLI configuration through `remix.json`
@@ -276,21 +277,17 @@ interface TestContext {
   // Register a cleanup function to run after the test completes
   after(fn: () => void): void
 
-  // Mock tracker, mirroring the shape of Node's `t.mock` from `node:test`
-  mock: {
-    // Create a mock function with an optional implementation
-    fn<T extends (...args: any[]) => any>(impl?: T): MockFunction<T>
+  // Retry assertions and return the first result that does not throw or reject
+  waitFor<result>(
+    condition: () => result | PromiseLike<result>,
+    options?: { interval?: number; timeout?: number },
+  ): Promise<Awaited<result>>
 
-    // Mock an object method with an optional implementation override
-    method<T extends object, K extends keyof T>(
-      obj: T,
-      methodName: K,
-      impl?: Function,
-    ): MockFunction
-  }
+  // Mock functions, methods, accessors, and data properties
+  mock: MockTracker // import type { MockTracker } from 'remix/test'
 
-  // Replace global timer functions with controllable fakes
-  useFakeTimers(): FakeTimers
+  // Replace global timers, Date, and performance.now() with controllable fakes
+  useFakeTimers(options?: { now?: number | Date }): FakeTimers
 
   // E2E only: connect a running test server to a Playwright Page
   serve(server: { baseUrl: string; close(): Promise<void> }): Promise<Page>
@@ -299,7 +296,7 @@ interface TestContext {
 
 #### Mocks and Spies
 
-Use `t.mock.fn()`/`t.mock.method()` to set up mocks and method spies. Mock restoration and `t.after()` callbacks run in registration order, including when the test or an earlier cleanup callback fails.
+Use `t.mock` to create mocks and spies through the [MockTracker API](https://docs.remix.run/api/test/interface/MockTracker/). Function and method mock restoration runs in registration order with `t.after()` callbacks. Accessor and property mocks restore in reverse installation order after those callbacks, even when a test or cleanup callback throws.
 
 ```ts
 it('mocks and spies', (t) => {
@@ -352,7 +349,79 @@ Call indices must be safe integers at or after the next call index. `resetCalls(
 
 These controls follow the selected [Node `MockFunctionContext` APIs](https://nodejs.org/download/release/v24.3.0/docs/api/test.html#class-mockfunctioncontext). Remix keeps a live `mock.calls` array and records calls before invoking the implementation; Node returns array snapshots and records calls after it returns or throws. Inside the first invocation, Remix's `callCount()` returns `1`, while Node's returns `0`. Reentrant history inspection and override scheduling can therefore differ. Node's additional `mock.fn()` overloads and `times` options are not supported.
 
-Method spies use assignment to install replacements, including through setters. Restoring a method spy skips previously restored spies on the same property. A retained spy remains callable with its current implementation.
+Method spies use assignment to install replacements, including through setters. When layered over a getter spy, they temporarily install a data property without changing the accessor's backing value. Restoring a method spy skips previously restored spies on the same property. A retained spy remains callable with its current implementation.
+
+##### Data properties
+
+Use `t.mock.property()` to override a data property and track reads and writes on the original object:
+
+```ts
+import * as assert from 'remix/assert'
+import { it } from 'remix/test'
+
+it('overrides a feature setting for one read', (t) => {
+  let settings = { enabled: true }
+  let property = t.mock.property(settings, 'enabled', false)
+
+  assert.equal(settings.enabled, false)
+  property.mock.mockImplementationOnce(true)
+  assert.equal(settings.enabled, true)
+  assert.equal(settings.enabled, false)
+  assert.equal(property.mock.accessCount(), 3)
+})
+```
+
+The returned proxy exposes the property context through `.mock`. The property must be a configurable own data property on a non-array object; functions are not supported. Omitting the replacement value retains the original, while explicitly passing `undefined` replaces it with `undefined`.
+
+| Property context member                    | Behavior                                         |
+| ------------------------------------------ | ------------------------------------------------ |
+| `accesses`                                 | Returns a snapshot of recorded reads and writes. |
+| `accessCount()`                            | Counts recorded accesses.                        |
+| `mockImplementation(value)`                | Writes a new value and records the write.        |
+| `mockImplementationOnce(value, onAccess?)` | Overrides one access, defaulting to the next.    |
+| `resetAccesses()`                          | Clears history and restarts access indices.      |
+| `restore()`                                | Restores the original descriptor and value.      |
+
+A one-access override affects a read or a write. If a write consumes it, the override becomes the stored value. See the [property context reference](https://docs.remix.run/api/test/interface/MockPropertyContext/) for scheduling, read-only properties, and history resets.
+
+Reading `.mock` on the proxy returns the context even if the target has a field with that name. Read the original field on the original object. See the [proxy reference](https://docs.remix.run/api/test/type/MockProperty/) for descriptor restrictions.
+
+##### Getters and setters
+
+Use `t.mock.getter()` or `t.mock.setter()` to replace an accessor while preserving its paired setter or getter. Omitting the implementation spies on the original accessor with its receiver.
+
+For browser properties, target the prototype that owns the descriptor. In a browser test (`*.test.browser.ts`):
+
+```ts
+import * as assert from 'remix/assert'
+import { it } from 'remix/test'
+
+it('reads the offline browser state', (t) => {
+  let getter = t.mock.getter(Navigator.prototype, 'onLine', () => false)
+  assert.equal(navigator.onLine, false)
+  assert.equal(getter.mock.calls.length, 1)
+})
+```
+
+The equivalent method forms pass `{ getter: true }` or `{ setter: true }` as the fourth argument to `t.mock.method()`; they cannot be combined. Pass `undefined` as the third argument to keep the original implementation.
+
+These APIs use [Node 24.3's property and accessor API names](https://nodejs.org/download/release/v24.3.0/docs/api/test.html#class-mocktracker). Remix restricts `property()` to own data properties so it can restore their descriptors. Node's third-argument options shorthand and `times` option are not supported, and error codes and access stacks vary by runtime.
+
+For environment variables in server tests, assign `process.env` directly: Node rejects the accessor descriptor used by `property()`. This partial example registers restoration before assigning `TZ`:
+
+```ts
+import { it } from 'remix/test'
+
+it('uses UTC', (t) => {
+  let original = process.env.TZ
+  t.after(() => {
+    if (original === undefined) delete process.env.TZ
+    else process.env.TZ = original
+  })
+  process.env.TZ = 'UTC'
+  // Exercise code that reads process.env.TZ
+})
+```
 
 #### Cleanup
 
@@ -386,9 +455,41 @@ beforeEach(
 )
 ```
 
+#### Polling Assertions
+
+Use `t.waitFor()` to wait for a form's save confirmation in a browser test (`*.test.browser.ts`). Rendering setup is omitted:
+
+```ts
+import * as assert from 'remix/assert'
+import { it } from 'remix/test'
+
+it('shows the saved status', async (t) => {
+  // Render your form here.
+  let submitButton = document.querySelector<HTMLButtonElement>('button[type="submit"]')
+  assert.ok(submitButton)
+  submitButton.click()
+
+  await t.waitFor(() =>
+    assert.equal(document.querySelector('[role="status"]')?.textContent, 'Saved'),
+  )
+})
+```
+
+The callback runs immediately and retries after throws or rejections, waiting `interval` milliseconds after each failure settles (default: 50). It returns the first successful result; even `false` or `undefined` ends polling, so use assertions to express what must be true.
+
+The overall `timeout` defaults to 1000 milliseconds, including pending attempts. Timeout errors retain the last assertion failure as `cause`, if any.
+
+Polling uses real timers even when fake timers are enabled. It follows [Node 24.3's `waitFor()`](https://github.com/nodejs/node/blob/v24.3.0/lib/internal/test_runner/test.js), with cancellation when its test aborts or finishes. See the [`TestContext.waitFor` reference](https://github.com/remix-run/remix/blob/main/packages/test/src/lib/context.ts) for delay validation and cancellation details.
+
 #### Fake Timers
 
-`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, etc.) with controllable fakes that are automatically restored after the test. It works in any test environment — server unit tests, browser tests, or E2E setup code.
+`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, `setImmediate`, and their clear functions), `AbortSignal.timeout()`, `Date`, and `performance.now()` with controllable fakes that are automatically restored after the test. Time only moves when the test advances the clock. It works in any test environment — server unit tests, browser tests, or E2E setup code.
+
+Calling `t.useFakeTimers()` again restores the previous clock, discards its pending timers, and starts a new clock with the supplied options. After a successful `restore()`, calling it again has no effect.
+
+Timers are restored synchronously when the test aborts, or before registered cleanup callbacks run when the test finishes. Calling `t.useFakeTimers()` after either event throws, so unfinished async work cannot install a clock in a later test. Runner timeouts keep using real timers while fake timers are active.
+
+Only one fake clock can be active in a global environment. An overlapping clock from another test context is rejected before globals change. Failed installation rolls back earlier replacements. Restoration preserves the original property descriptors and attempts every replacement even after a failure; it reports the errors, and another `restore()` call retries failed properties.
 
 ```ts
 it('debounces a callback', (t) => {
@@ -404,10 +505,27 @@ it('debounces a callback', (t) => {
 })
 ```
 
-| Method        | Description                                                                 |
-| ------------- | --------------------------------------------------------------------------- |
-| `advance(ms)` | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
-| `restore()`   | Restore the original timer functions (called automatically after each test) |
+| Method             | Description                                                                 |
+| ------------------ | --------------------------------------------------------------------------- |
+| `advance(ms)`      | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
+| `advanceAsync(ms)` | Like `advance`, but lets promise continuations settle between timer firings |
+| `restore()`        | Restore the original timer functions (called automatically after each test) |
+
+`Date.now()` and `new Date()` start at the Unix epoch (`0`), like Node's mock timers, and `performance.now()` starts at `0`. Vitest and Jest start at the real current time instead; a fixed start keeps tests from depending on when they run. Pass `now` to start the fake `Date` at a specific time. `new Date(value)`, `Date.parse()`, `Date.UTC()`, and `instanceof Date` keep working as usual.
+
+```ts
+it('expires a session after one hour', (t) => {
+  let timers = t.useFakeTimers({ now: new Date('2030-01-01T00:00:00Z') })
+  let session = createSession()
+
+  timers.advance(60 * 60 * 1000)
+  assert.equal(session.isExpired(), true)
+})
+```
+
+Immediates fire on the next advance, including `advance(0)`, and signals from `AbortSignal.timeout(ms)` abort with a `TimeoutError` once the clock reaches `ms`. Timers created before `t.useFakeTimers()` stay real, and the clear functions still cancel them. In Node, fake timers return handles that support `ref()`, `unref()`, `hasRef()`, and `refresh()`.
+
+Fake `AbortSignal.timeout(ms)` uses Node's validation in every runtime: `ms` must be a number and an integer from `0` through `4294967295`. Other types throw a `TypeError`; invalid numbers throw a `RangeError` synchronously.
 
 #### E2E
 
@@ -426,7 +544,7 @@ it('navigates to home', async (t) => {
 
 ### Standalone mocks (module scope)
 
-When you need a mock outside of a test body, import `mock` directly and call `restore()` manually:
+The standalone `mock` import exposes the same methods as `t.mock`. Restore function, method, and accessor mocks manually with `spy.mock.restore()`, or data properties with `property.mock.restore()`:
 
 ```ts
 import { mock } from 'remix/test'

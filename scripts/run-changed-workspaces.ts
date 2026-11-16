@@ -31,7 +31,12 @@ function main() {
       console.log(`- ${reason}`)
     }
     console.log()
-    runRootScript(options.scriptName)
+    if (options.scriptName === 'test') {
+      // No filters runs every workspace, like the root script, with platform-specific scheduling.
+      runWorkspaceScript(options.scriptName, [])
+    } else {
+      runRootScript(options.scriptName)
+    }
     return
   }
 
@@ -157,7 +162,10 @@ function runRootScript(scriptName: string) {
 function runWorkspaceScript(scriptName: string, workspaceDirs: string[]) {
   let args = workspaceDirs.flatMap((workspaceDir) => ['--filter', `./${workspaceDir}`])
   if (scriptName === 'test') {
-    args.unshift('--recursive', '--no-sort', '--workspace-concurrency=4', '--stream')
+    // Keep dependency ordering on Windows. Unsorted scheduling overlaps the browser-heavy
+    // workspaces, which overloads the Windows CI runner and times out e2e navigations.
+    let sortArgs = process.platform === 'win32' ? [] : ['--no-sort']
+    args.unshift('--recursive', ...sortArgs, '--workspace-concurrency=4', '--stream')
   }
   args.push('run', scriptName)
 

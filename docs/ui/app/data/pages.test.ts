@@ -20,6 +20,7 @@ describe('UI docs pages', () => {
         'patterns/portal',
         'patterns/select',
         'patterns/tabs',
+        'patterns/toast',
         'patterns/toggle',
         'animation/entrance-exit',
         'animation/layout',

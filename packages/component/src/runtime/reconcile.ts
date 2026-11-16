@@ -1,10 +1,14 @@
 import { getNonceManager, type ResourceNonces } from './nonce.ts'
 import type { Component, ComponentHandle, FrameHandle, FrameProps } from './component.ts'
 import { createComponent, Fragment, FRAME_NODE } from './component.ts'
-import { getFrameRuntime, type FrameMountState } from './frame-runtime.ts'
+import {
+  disposeClientEntryBoundary,
+  getClientEntryBoundaryOwner,
+  getFrameRuntime,
+  type FrameMountState,
+} from './frame-runtime.ts'
 import { invariant } from './invariant.ts'
-import { patchHostProps } from './core/props.ts'
-import { setSelectDefaultValue, setSelectValue } from './core/select.ts'
+import { patchHostProps, setSelectDefaultValue, setSelectValue } from './core/props.ts'
 import { isMixinDescriptor } from './core/mix.ts'
 import {
   isEmptyChild,
@@ -35,12 +39,12 @@ import {
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
-import { disposeClientEntryBoundary, getClientEntryBoundaryOwner } from './client-entry-boundary.ts'
-import { createStyleManager } from '../style/index.ts'
-import type { StyleManager } from '../style/index.ts'
+import { isCommentNode, isFrameStart, isHydrationStart } from './stream-protocol.ts'
+import { createStyleManager } from '../style/stylesheet.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
 
 export const TEXT_NODE = Symbol('TEXT_NODE')
-export const NON_RENDER_NODE = Symbol('NON_RENDER_NODE')
+const NON_RENDER_NODE = Symbol('NON_RENDER_NODE')
 export const ROOT_VNODE = Symbol('ROOT_VNODE')
 
 export type VNodeKind =
@@ -122,12 +126,11 @@ export type CommittedTextNode = CommittedNodeBase<'text', typeof TEXT_NODE> & {
 }
 
 export type ControlledReflectionState = {
-  disposed: boolean
-  listenersAttached: boolean
+  // Listeners attach in a post-commit task, so a host can be disposed before they attach.
+  status: 'attaching' | 'attached' | 'disposed'
   pendingRestoreVersion: number
-  hasControlledValue: boolean
+  // Each is undefined when that prop isn't controlled. null is a controlled value.
   controlledValue: unknown
-  hasControlledChecked: boolean
   controlledChecked: unknown
   onInput(): void
   onChange(): void
@@ -260,15 +263,15 @@ function isFrameComponent(type: ElementFunction): type is FrameComponent {
   return Object.hasOwn(type, FRAME_NODE)
 }
 
-export function isFragmentNode(node: VNode): node is FragmentNode | CommittedFragmentNode {
+function isFragmentNode(node: VNode): node is FragmentNode | CommittedFragmentNode {
   return node.kind === 'fragment'
 }
 
-export function isCommittedTextNode(node: CommittedVNode): node is CommittedTextNode {
+function isCommittedTextNode(node: CommittedVNode): node is CommittedTextNode {
   return node.kind === 'text'
 }
 
-export function isCommittedHostNode(node: CommittedVNode): node is CommittedHostNode {
+function isCommittedHostNode(node: CommittedVNode): node is CommittedHostNode {
   return node.kind === 'host'
 }
 
@@ -276,7 +279,7 @@ export function isCommittedComponentNode(node: VNode): node is CommittedComponen
   return node.kind === 'component' && '_content' in node
 }
 
-export function isCommittedClientEntryNode(node: CommittedVNode): node is CommittedClientEntryNode {
+function isCommittedClientEntryNode(node: CommittedVNode): node is CommittedClientEntryNode {
   return node.kind === 'client-entry'
 }
 
@@ -386,23 +389,8 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
-let globalStyleManager =
+export const defaultStyleManager: StyleManager =
   typeof window !== 'undefined' ? createStyleManager() : (null as unknown as StyleManager)
-
-export let defaultStyleManager: StyleManager = globalStyleManager
-
-/**
- * Reset the global style state. For testing only - not exported from index.ts.
- */
-export function resetStyleState() {
-  invariant(
-    typeof window !== 'undefined',
-    'resetStyleState() is only available in a browser environment',
-  )
-  globalStyleManager.dispose()
-  globalStyleManager = createStyleManager()
-  defaultStyleManager = globalStyleManager
-}
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -465,7 +453,7 @@ function shouldRestoreControlledReflectionOnInput(
   // Some controls dispatch `input` before `change` for the same interaction.
   // When checked/value state is typically handled on `change`, restoring on the
   // earlier `input` can race and clobber the value observed by app handlers.
-  if (state.hasControlledChecked) return false
+  if (state.controlledChecked !== undefined) return false
   if (node.type === 'select') return false
   return true
 }
@@ -478,12 +466,9 @@ function ensureControlledReflection(
   if (existing) return existing
 
   let state: ControlledReflectionState = {
-    disposed: false,
-    listenersAttached: false,
+    status: 'attaching',
     pendingRestoreVersion: 0,
-    hasControlledValue: false,
     controlledValue: undefined,
-    hasControlledChecked: false,
     controlledChecked: undefined,
     onInput: () => {
       if (!shouldRestoreControlledReflectionOnInput(node, state)) return
@@ -497,10 +482,10 @@ function ensureControlledReflection(
   node._controlledState = state
   scheduler.enqueueTasks([
     () => {
-      if (state.disposed) return
+      if (state.status !== 'attaching') return
       node._dom.addEventListener('input', state.onInput)
       node._dom.addEventListener('change', state.onChange)
-      state.listenersAttached = true
+      state.status = 'attached'
     },
   ])
   return state
@@ -513,21 +498,18 @@ function syncControlledReflection(node: CommittedHostNode, scheduler: Scheduler)
   if (!node._controlledState && props.value === undefined && props.checked === undefined) return
 
   let state = ensureControlledReflection(node, scheduler)
-  if (state.disposed) return
+  if (state.status === 'disposed') return
 
-  state.hasControlledValue = canManageValue(node.type, node._dom) && props.value !== undefined
-  state.controlledValue = props.value
+  state.controlledValue = canManageValue(node.type, node._dom) ? props.value : undefined
   if (node._dom instanceof HTMLSelectElement) {
-    if (state.hasControlledValue) {
+    if (state.controlledValue !== undefined) {
       controlledSelectStates.set(node._dom, state)
       setSelectValue(node._dom, props.value)
     } else {
       controlledSelectStates.delete(node._dom)
     }
   }
-  state.hasControlledChecked =
-    canReflectProperty(node._dom, 'checked') && props.checked !== undefined
-  state.controlledChecked = props.checked
+  state.controlledChecked = canReflectProperty(node._dom, 'checked') ? props.checked : undefined
   state.pendingRestoreVersion++
 }
 
@@ -536,17 +518,17 @@ export function restoreAncestorSelect(parent: ParentNode): void {
   let select = parent instanceof Element ? parent.closest('select') : null
   if (!(select instanceof HTMLSelectElement)) return
   let state = controlledSelectStates.get(select)
-  if (state && !state.disposed) setSelectValue(select, state.controlledValue)
+  if (state && state.status !== 'disposed') setSelectValue(select, state.controlledValue)
 }
 
 function scheduleControlledRestore(
   node: CommittedHostNode,
   state: ControlledReflectionState,
 ): void {
-  if (state.disposed) return
+  if (state.status === 'disposed') return
   let version = ++state.pendingRestoreVersion
   queueMicrotask(() => {
-    if (state.disposed) return
+    if (state.status === 'disposed') return
     if (state.pendingRestoreVersion !== version) return
     restoreControlledReflections(node, state)
   })
@@ -557,10 +539,16 @@ function restoreControlledReflections(
   state: ControlledReflectionState,
 ): void {
   let element = node._dom
-  if (state.hasControlledValue && readDomProp(element, 'value') !== state.controlledValue) {
+  if (
+    state.controlledValue !== undefined &&
+    readDomProp(element, 'value') !== state.controlledValue
+  ) {
     setPropertyReflection(element, 'value', state.controlledValue)
   }
-  if (state.hasControlledChecked && readDomProp(element, 'checked') !== state.controlledChecked) {
+  if (
+    state.controlledChecked !== undefined &&
+    readDomProp(element, 'checked') !== state.controlledChecked
+  ) {
     setPropertyReflection(element, 'checked', state.controlledChecked)
   }
 }
@@ -569,14 +557,14 @@ function restoreControlledReflections(
 function disposeControlledReflection(node: CommittedHostNode, detach: boolean): void {
   let state = node._controlledState
   if (!state) return
-  state.disposed = true
+  let attached = state.status === 'attached'
+  state.status = 'disposed'
   if (node._dom instanceof HTMLSelectElement) controlledSelectStates.delete(node._dom)
   state.pendingRestoreVersion++
-  if (detach && state.listenersAttached) {
+  if (detach && attached) {
     node._dom.removeEventListener('input', state.onInput)
     node._dom.removeEventListener('change', state.onChange)
   }
-  state.listenersAttached = false
 }
 
 function canManageValue(type: string, element: Element): boolean {
@@ -863,6 +851,15 @@ export function diffVNodes(
     }
     case 'fragment': {
       let childInputs = next._children
+      // `anchor` marks the end of the parent's child list, not the end of this
+      // fragment, so new children would land after the fragment's siblings.
+      // Insert them right after the fragment's current DOM instead, which keeps
+      // its range contiguous for a later keyed move.
+      let currLastDom = findLastDomAnchor(curr)
+      let fragmentAnchor =
+        currLastDom && currLastDom.parentNode === domParent
+          ? (currLastDom.nextSibling ?? undefined)
+          : (findNextSiblingDomAnchor(curr, true) ?? anchor)
       let committed = beginFragmentNode(next, vParent, svg)
       committed._children = diffChildren(
         (curr as CommittedFragmentNode)._children,
@@ -871,7 +868,7 @@ export function diffVNodes(
         committed,
         context,
         undefined,
-        anchor,
+        fragmentAnchor,
       )
       return committed
     }
@@ -921,7 +918,7 @@ function replace(
     }
   }
 
-  let replacementAnchor = findNextSiblingDomAnchor(curr) ?? anchor
+  let replacementAnchor = findNextSiblingDomAnchor(curr, true) ?? anchor
   remove(curr, domParent, context)
   return insert(next, domParent, vParent, context, replacementAnchor)
 }
@@ -1193,7 +1190,7 @@ function insert(
     vParent.kind !== 'root' &&
     node.kind === 'component' &&
     isEntry(node.type) &&
-    hydrationNode instanceof Comment
+    isCommentNode(hydrationNode)
   ) {
     let runtime = getFrameRuntime(frame)
     let pending = runtime?.pendingClientEntries.get(hydrationNode)
@@ -1382,21 +1379,11 @@ function skipCommentsExceptBoundaryStart(
   preserveClientEntry: boolean,
 ): Node | null {
   while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
-    if (isFrameStartComment(cursor)) return cursor
-    if (preserveClientEntry && isCommentNode(cursor) && cursor.data.trim().startsWith('rmx:h:')) {
-      return cursor
-    }
+    if (isFrameStart(cursor)) return cursor
+    if (preserveClientEntry && isHydrationStart(cursor)) return cursor
     cursor = cursor.nextSibling
   }
   return cursor
-}
-
-export function isFrameStartComment(node: Node | null | undefined): node is Comment {
-  return isCommentNode(node) && node.data.trim().startsWith('rmx:f:')
-}
-
-function isCommentNode(node: Node | null | undefined): node is Comment {
-  return node?.nodeType === Node.COMMENT_NODE
 }
 
 export function renderComponent(
@@ -1648,11 +1635,13 @@ function diffChildren(
     return committed as CommittedVNode[]
   }
 
-  // Only bulk-clear when at least one committed child is being removed.
+  // Only bulk-clear when at least one committed child is being removed. A
+  // fragment shares its DOM parent with its siblings, so it can't clear it.
   if (
     curr.length > 0 &&
     next.length === 0 &&
     anchor === undefined &&
+    vParent.kind !== 'fragment' &&
     !parentUsesInnerHTML(vParent) &&
     canBulkClearChildren(curr)
   ) {
@@ -1784,19 +1773,53 @@ function patchKeyedChildren(
     }
   }
 
+  // Stable children keep their DOM position, so a new child can be inserted
+  // directly before the next stable sibling instead of at the end of the list
+  // and moved by the placement pass. Hydration keeps the list end anchor
+  // because it marks where adoption stops.
+  let stableIndexes = matchAnalysis.canSkipPlacement ? null : lisMatches(matches, curr)
+  let nextStableCursor = 0
+  // The cached anchor stays valid for new children before `stableAnchorIndex`
+  // because that stable child has not been diffed yet
+  let stableAnchorIndex = -1
+  let stableAnchor = anchor
+
   for (let index = 0; index < next.length; index++) {
     let oldIndex = matches[index]
     let oldNode = oldIndex >= 0 ? curr[oldIndex] : null
+    let insertAnchor = anchor
 
-    committed[index] = diffVNodes(oldNode, next[index], domParent, vParent, context, anchor, cursor)
+    if (!oldNode && stableIndexes && !cursor) {
+      if (stableAnchorIndex < index) {
+        stableAnchorIndex = next.length
+        stableAnchor = anchor
+        while (nextStableCursor < stableIndexes.length) {
+          let stableIndex = stableIndexes[nextStableCursor++]
+          if (stableIndex < index) continue
+          stableAnchorIndex = stableIndex
+          stableAnchor = findFirstDomAnchor(curr[matches[stableIndex]]) ?? anchor
+          break
+        }
+      }
+      insertAnchor = stableAnchor
+    }
+
+    committed[index] = diffVNodes(
+      oldNode,
+      next[index],
+      domParent,
+      vParent,
+      context,
+      insertAnchor,
+      cursor,
+    )
   }
   let committedChildren = committed as CommittedVNode[]
 
-  if (matchAnalysis.canSkipPlacement) {
+  if (!stableIndexes) {
     return committedChildren
   }
 
-  let stableIndexes = lisMatches(matches)
   let stableCursor = stableIndexes.length - 1
   let placementAnchor: Node | null = anchor ?? null
 
@@ -2002,13 +2025,16 @@ function analyzeKeyedChildMatches(
   return { hasRemovals, canSkipPlacement }
 }
 
-function lisMatches(matches: readonly number[]): number[] {
+function lisMatches(matches: readonly number[], curr: CommittedVNode[]): number[] {
   let predecessors = Array.from<number>({ length: matches.length })
   let tails: number[] = []
 
   for (let index = 0; index < matches.length; index++) {
     let value = matches[index] + 1
-    if (value === 0) continue
+    // A matched child with no DOM yet can't be stable: if it starts rendering
+    // DOM, `replace()` finds an insertion point from the old child order, which
+    // a reorder has already invalidated, so the placement pass has to move it.
+    if (value === 0 || !findFirstDomAnchor(curr[matches[index]])) continue
 
     let low = 0
     let high = tails.length
@@ -2045,15 +2071,18 @@ function placeVNode(node: CommittedVNode, domParent: ParentNode, anchor: Node | 
   if (!lastDom) return
   if (anchor && domRangeContainsNode(firstDom, lastDom, anchor)) return
   if (firstDom === anchor) return
+  // Re-inserting a node that is already in place still disconnects and
+  // reconnects it, which runs custom element callbacks and resets state
+  if (lastDom.nextSibling === anchor) return
 
   moveDomRange(domParent, firstDom, lastDom, anchor)
 }
 
-export function findFirstDomAnchor(node: CommittedVNode | null | undefined): Node | null {
+function findFirstDomAnchor(node: CommittedVNode | null | undefined): Node | null {
   return findEdgeDomNode(node, false)
 }
 
-export function findLastDomAnchor(node: CommittedVNode | null | undefined): Node | null {
+function findLastDomAnchor(node: CommittedVNode | null | undefined): Node | null {
   return findEdgeDomNode(node, true)
 }
 
@@ -2107,15 +2136,21 @@ function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
   return true
 }
 
+// During a diff the caller already has the end anchor of the enclosing
+// fragment, so `stopAtFragmentEnd` returns null there instead of walking the
+// fragment's old siblings, which a keyed diff may have reordered or grown
 export function findNextSiblingDomAnchor(
   curr: CommittedVNode | MountingComponentNode,
+  stopAtFragmentEnd = false,
 ): Node | null {
   let vParent = curr._parent
-  if (vParent.kind === 'component') return findNextSiblingDomAnchor(vParent)
+  if (vParent.kind === 'component') return findNextSiblingDomAnchor(vParent, stopAtFragmentEnd)
   let children = vParent._children
   if (children.length === 0) {
     if (vParent.kind === 'root') return vParent._rangeEnd ?? null
-    if (vParent.kind === 'fragment') return findNextSiblingDomAnchor(vParent)
+    if (vParent.kind === 'fragment') {
+      return stopAtFragmentEnd ? null : findNextSiblingDomAnchor(vParent)
+    }
     return null
   }
 
@@ -2123,11 +2158,13 @@ export function findNextSiblingDomAnchor(
   if (idx === -1) return null
   for (let i = idx + 1; i < children.length; i++) {
     let dom = findFirstDomAnchor(children[i])
-    if (dom) return dom
+    // During a keyed diff `children` is still the old list, so a sibling may
+    // already have been removed from the DOM
+    if (dom?.parentNode) return dom
   }
 
   if (isFragmentNode(vParent)) {
-    return findNextSiblingDomAnchor(vParent)
+    return stopAtFragmentEnd ? null : findNextSiblingDomAnchor(vParent)
   }
 
   return vParent.kind === 'root' ? (vParent._rangeEnd ?? null) : null

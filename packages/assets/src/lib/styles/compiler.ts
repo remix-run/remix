@@ -1,21 +1,28 @@
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { IfNoneMatch } from '@remix-run/headers/if-none-match'
 import { createAssetServerCompilationError } from '../compilation-error.ts'
 import { createFileMatcher } from '../file-matcher.ts'
 import { formatFingerprintedPathname } from '../fingerprint.ts'
+import type { EmittedAsset } from '../fingerprint.ts'
 import { createModuleStore } from '../module-store.ts'
 import type { ModuleRecord, ModuleStore } from '../module-store.ts'
-import { normalizeFilePath, resolveFilePath } from '../paths.ts'
+import { normalizeFilePath, resolveInputFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ResolvedStyleTarget } from '../target.ts'
 import { emitResolvedStyle } from './emit.ts'
-import type { EmittedAsset, EmittedStyle } from './emit.ts'
+import type { EmittedStyle } from './emit.ts'
 import { resolveServedStyleOrThrow, resolveStyle } from './resolve.ts'
 import type { ResolveArgs, ResolvedStyle } from './resolve.ts'
 import { transformStyle } from './transform.ts'
 import type { TransformArgs, TransformedStyle } from './transform.ts'
+import {
+  appendTimestampQuery,
+  getCacheKey,
+  getEmittedAssetForRequest,
+  getNotModifiedResult,
+  isFresh,
+  mapWithConcurrency,
+} from '../compiler-utils.ts'
 
 type StyleRecord = ModuleRecord<TransformedStyle, ResolvedStyle, EmittedStyle>
 type StyleStore = ModuleStore<TransformedStyle, ResolvedStyle, EmittedStyle>
@@ -124,7 +131,10 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
 
   return {
     async getHref(filePath) {
-      let resolvedStyle = resolveServedStyleOrThrow(resolveInputFilePath(filePath), resolveArgs)
+      let resolvedStyle = resolveServedStyleOrThrow(
+        resolveInputFilePath(resolvedOptions.rootDir, filePath),
+        resolveArgs,
+      )
       let graph = await resolveStyleGraph(resolvedStyle.identityPath)
       return getServedUrlFromGraph(resolvedStyle.identityPath, graph)
     },
@@ -134,7 +144,10 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       let seen = new Set<string>()
 
       for (let resolvedStyle of (Array.isArray(filePath) ? filePath : [filePath]).map((nextPath) =>
-        resolveServedStyleOrThrow(resolveInputFilePath(nextPath), resolveArgs),
+        resolveServedStyleOrThrow(
+          resolveInputFilePath(resolvedOptions.rootDir, nextPath),
+          resolveArgs,
+        ),
       )) {
         if (seen.has(resolvedStyle.identityPath)) continue
         seen.add(resolvedStyle.identityPath)
@@ -171,15 +184,22 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     },
 
     async getStyle(filePath, getOptions) {
-      let resolvedStyle = resolveServedStyleOrThrow(resolveInputFilePath(filePath), resolveArgs)
-      let record = styleStore.get(resolvedStyle.identityPath)
-      let notModified = getNotModifiedStyle(
-        record,
-        styleStore,
-        getOptions,
-        hasHmrTimestampedDependency,
+      let resolvedStyle = resolveServedStyleOrThrow(
+        resolveInputFilePath(resolvedOptions.rootDir, filePath),
+        resolveArgs,
       )
-      if (notModified) return notModified
+      let record = styleStore.get(resolvedStyle.identityPath)
+      if (
+        record.emitted &&
+        !hasHmrTimestampedDependency(record.resolved) &&
+        styleStore.isEmittedFresh(record)
+      ) {
+        let notModified = getNotModifiedResult(
+          getEmittedAssetForRequest(record.emitted, getOptions.isSourceMapRequest),
+          getOptions,
+        )
+        if (notModified) return notModified
+      }
 
       let emitted = await getOrCreateEmittedStyle(record)
       return {
@@ -214,22 +234,10 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     },
   }
 
-  function resolveInputFilePath(filePath: string): string {
-    if (filePath.startsWith('file://')) {
-      return normalizeFilePath(fileURLToPath(new URL(filePath)))
-    }
-
-    if (filePath.includes('://')) {
-      throw new TypeError(`Expected a file path or file:// URL, received "${filePath}"`)
-    }
-
-    return resolveFilePath(resolvedOptions.rootDir, filePath)
-  }
-
   async function getOrCreateResolvedStyle(record: StyleRecord): Promise<ResolvedStyle> {
     if (record.resolved && styleStore.isResolvedFresh(record)) return record.resolved
 
-    let cacheKey = getRecordCacheKey(record)
+    let cacheKey = getCacheKey(record.identityPath, record.invalidationVersion)
     let existing = resolveInFlightByCacheKey.get(cacheKey)
     if (existing) return existing
 
@@ -371,7 +379,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     }
 
     let timestamp = styleStore.getHmrUpdateTimestamp(graphEntry.resolvedStyle.identityPath)
-    return timestamp ? appendTimestamp(pathname, timestamp) : pathname
+    return timestamp ? appendTimestampQuery(pathname, timestamp) : pathname
   }
 
   async function resolveStyleGraph(
@@ -485,74 +493,8 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
   }
 }
 
-function getRecordCacheKey(record: StyleRecord): string {
-  return getCacheKey(record.identityPath, record.invalidationVersion)
-}
-
-function getCacheKey(identityPath: string, version: number): string {
-  return `${identityPath}\0${version}`
-}
-
-function isFresh(record: StyleRecord, version: number): boolean {
-  return record.invalidationVersion === version
-}
-
-function getNotModifiedStyle(
-  record: StyleRecord,
-  styleStore: StyleStore,
-  options: StyleGetOptions,
-  hasHmrTimestampedDependency: (resolvedStyle: ResolvedStyle | undefined) => boolean,
-): StyleGetResult | null {
-  if (hasHmrTimestampedDependency(record.resolved)) return null
-  if (!styleStore.isEmittedFresh(record)) return null
-  let emittedStyle = record.emitted
-  if (!emittedStyle || options.ifNoneMatch === null) return null
-
-  let asset = getEmittedAssetForRequest(emittedStyle, options.isSourceMapRequest)
-  if (!asset) return null
-
-  if (options.requestedFingerprint !== null && asset.fingerprint !== options.requestedFingerprint) {
-    return null
-  }
-
-  if (!IfNoneMatch.from(options.ifNoneMatch).matches(asset.etag)) return null
-  return { etag: asset.etag, type: 'not-modified' }
-}
-
-function appendTimestamp(pathname: string, timestamp: number): string {
-  return `${pathname}${pathname.includes('?') ? '&' : '?'}t=${timestamp}`
-}
-
 function dedupeHmrUpdatePathnames(pathnames: string[]): string[] {
   return [...new Set(pathnames)]
-}
-
-function getEmittedAssetForRequest(
-  emittedStyle: EmittedStyle,
-  isSourceMapRequest: boolean,
-): EmittedAsset | null {
-  return isSourceMapRequest ? emittedStyle.sourceMap : emittedStyle.code
-}
-
-async function mapWithConcurrency<item, result>(
-  items: item[],
-  concurrency: number,
-  mapper: (item: item, index: number) => Promise<result>,
-): Promise<result[]> {
-  if (items.length === 0) return []
-
-  let results = new Array<result>(items.length)
-  let nextIndex = 0
-
-  async function worker() {
-    while (nextIndex < items.length) {
-      let index = nextIndex++
-      results[index] = await mapper(items[index], index)
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => worker()))
-  return results
 }
 
 function toStyleCompileResult(emittedStyle: EmittedStyle): StyleCompileResult {
@@ -565,43 +507,4 @@ function toStyleCompileResult(emittedStyle: EmittedStyle): StyleCompileResult {
 
 export function isStyleFilePath(filePath: string): boolean {
   return path.extname(filePath).toLowerCase() === styleExtension
-}
-
-export function createResponseForStyle(
-  result: StyleCompileResult,
-  options: {
-    cacheControl: string
-    ifNoneMatch: string | null
-    isSourceMapRequest: boolean
-    method: string
-  },
-): Response {
-  let body: string | null
-  let etag: string
-  let contentType: string
-
-  if (options.isSourceMapRequest) {
-    if (!result.sourceMap) {
-      return new Response('Not found', { status: 404 })
-    }
-    body = options.method === 'HEAD' ? null : result.sourceMap.content
-    etag = result.sourceMap.etag
-    contentType = 'application/json; charset=utf-8'
-  } else {
-    body = options.method === 'HEAD' ? null : result.code.content
-    etag = result.code.etag
-    contentType = 'text/css; charset=utf-8'
-  }
-
-  if (IfNoneMatch.from(options.ifNoneMatch).matches(etag)) {
-    return new Response(null, { status: 304, headers: { ETag: etag } })
-  }
-
-  return new Response(body, {
-    headers: {
-      'Cache-Control': options.cacheControl,
-      'Content-Type': contentType,
-      ETag: etag,
-    },
-  })
 }

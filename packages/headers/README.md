@@ -69,7 +69,7 @@ headers.apply({
 })
 
 headers.get('Content-Type') // 'application/json'
-headers.get('Vary') // 'accept-encoding, accept-language'
+headers.get('Vary') // 'Accept-Encoding, Accept-Language'
 headers.getSetCookie() // ['session=abc', 'theme=dark']
 ```
 
@@ -122,7 +122,7 @@ accept.weights // [1, 0.9]
 accept.accepts('text/html') // true
 accept.accepts('text/plain') // true (matches text/*)
 accept.accepts('image/jpeg') // false
-accept.getWeight('text/plain') // 1 (matches text/*)
+accept.getWeight('text/plain') // 0.9 (matches text/*)
 accept.getPreferred(['text/html', 'text/plain']) // 'text/html'
 
 // Iterate
@@ -200,7 +200,7 @@ acceptLanguage.languages // ['en-us', 'en']
 acceptLanguage.weights // [1, 0.9]
 acceptLanguage.accepts('en-US') // true
 acceptLanguage.accepts('en-GB') // true (matches en)
-acceptLanguage.getWeight('en-GB') // 1 (matches en)
+acceptLanguage.getWeight('en-GB') // 0.9 (matches en)
 acceptLanguage.getPreferred(['en-US', 'en-GB', 'fr']) // 'en-US'
 
 // Modify and set header
@@ -637,7 +637,7 @@ import { Vary } from 'remix/headers'
 // Parse from headers
 let vary = Vary.from(response.headers.get('Vary'))
 
-vary.headerNames // ['accept-encoding', 'accept-language']
+vary.headerNames // ['Accept-Encoding', 'Accept-Language']
 vary.has('Accept-Encoding') // true (case-insensitive)
 vary.size // 2
 
@@ -650,6 +650,9 @@ headers.set('Vary', vary.toString())
 new Vary('Accept-Encoding, Accept-Language')
 new Vary(['Accept-Encoding', 'Accept-Language'])
 new Vary({ headerNames: ['Accept-Encoding', 'Accept-Language'] })
+
+// `*` means the response varies on everything, so it replaces other names
+new Vary('Cookie, *').toString() // '*'
 
 // Use class for type safety when setting Headers values
 // via Vary's `.toString()` method

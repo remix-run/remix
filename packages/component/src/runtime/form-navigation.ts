@@ -1,3 +1,47 @@
+import type { FrameReloadStartEventInit, ReloadDetails } from './component.ts'
+
+/**
+ * Noncancelable `SubmitEvent` dispatched when a form submission starts a frame reload, after the
+ * frame's `reloadStart`. It shares that event's request details, `formData`, and `finished` promise.
+ * The event targets the submit button and bubbles through its owning form, or targets the form
+ * when there is no submitter. External or detached submitters receive a non-bubbling event before
+ * a separate bubbling event on the form. Cancel submissions with the native `submit` event.
+ */
+export type FormSubmissionEvent = SubmitEvent &
+  ReloadDetails & {
+    /** The owning form, including when the submitter is external or detached. */
+    readonly form: HTMLFormElement
+  }
+
+export type FormSubmissionEventInit = Omit<FrameReloadStartEventInit, 'element'> & {
+  form: HTMLFormElement
+  bubbles?: boolean
+}
+
+export function createFormSubmissionEvent(init: FormSubmissionEventInit): FormSubmissionEvent {
+  return Object.assign(
+    new SubmitEvent('rmx:submission', {
+      bubbles: init.bubbles ?? true,
+      cancelable: false,
+      submitter: init.submitter ?? null,
+    }),
+    {
+      src: init.src,
+      method: init.method,
+      encType: init.encType,
+      formData: init.formData ?? null,
+      form: init.form,
+      finished: init.finished,
+    },
+  )
+}
+
+declare global {
+  interface HTMLElementEventMap {
+    'rmx:submission': FormSubmissionEvent
+  }
+}
+
 type SourceElementNavigateEvent = NavigateEvent & {
   sourceElement?: Element | null
 }
@@ -28,6 +72,10 @@ export interface FormSubmission {
 
 /** Metadata and deferred submission data for an intercepted form navigation. */
 export interface FormNavigation {
+  /** The owning form captured before its submitter can be detached. */
+  form: HTMLFormElement
+  /** The native submit event's submitter, or `null` for a submission without one. */
+  submitter: SubmitterElement | null
   /** Checks the submitter before the form for a submission attribute. */
   hasAttribute(name: string): boolean
   /** Reads a submission attribute, preferring the submitter-specific name when provided. */
@@ -107,7 +155,12 @@ export function createFormNavigationResolver(
     if (!form) return
 
     let pending = pendingSubmissions.get(form)
-    let submitter = pending?.submitter ?? null
+    // Some browsers dispatch `navigate` before `formdata` records the pending submission.
+    let submitter = pending
+      ? pending.submitter
+      : sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement
+        ? sourceElement
+        : null
     let method = getFormMethod(form, submitter)
     let encType = getFormEncType(form, submitter)
     let target = getSubmissionAttribute(form, submitter, 'target', 'formtarget')
@@ -128,6 +181,8 @@ export function createFormNavigationResolver(
       }
     }
     return {
+      form,
+      submitter,
       hasAttribute(name) {
         return submitter?.hasAttribute(name) === true || form.hasAttribute(name)
       },
@@ -179,4 +234,21 @@ function getFormEncType(form: HTMLFormElement, submitter: SubmitterElement | nul
     return submitter.formEnctype
   }
   return form.enctype
+}
+
+// Encodes form entries the way browsers do for `application/x-www-form-urlencoded` submissions:
+// line breaks become CRLF and files are replaced by their names.
+export function encodeFormDataAsSearchParams(formData: FormData): URLSearchParams {
+  let params = new URLSearchParams()
+  for (let [name, value] of formData) {
+    params.append(
+      normalizeFormLineBreaks(name),
+      normalizeFormLineBreaks(typeof value === 'string' ? value : value.name),
+    )
+  }
+  return params
+}
+
+export function normalizeFormLineBreaks(value: string): string {
+  return value.replace(/\r\n|\r|\n/g, '\r\n')
 }

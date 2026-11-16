@@ -249,6 +249,7 @@ describe('vdom error handling', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
       let calls = 0
+      let handled = Promise.withResolvers<void>()
 
       root.render(
         <button
@@ -256,6 +257,7 @@ describe('vdom error handling', () => {
             on('click', async () => {
               await Promise.resolve()
               calls++
+              handled.resolve()
             }),
           ]}
         >
@@ -266,10 +268,7 @@ describe('vdom error handling', () => {
 
       let button = container.querySelector('button')!
       button.click()
-
-      // Let the async handler complete
-      await Promise.resolve()
-      await Promise.resolve()
+      await handled.promise
 
       expect(calls).toBe(1)
     })
@@ -440,7 +439,8 @@ describe('vdom error handling', () => {
     it('dispatches error for a cascading queued update loop', async (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = t.mock.fn()
+      let errorDispatched = Promise.withResolvers<void>()
+      let errorHandler = t.mock.fn((_event: Event) => errorDispatched.resolve())
       root.addEventListener('error', errorHandler)
 
       let renderCount = 0
@@ -467,9 +467,8 @@ describe('vdom error handling', () => {
 
       shouldLoop = true
       triggerUpdate!()
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await errorDispatched.promise
 
-      expect(errorHandler).toHaveBeenCalled()
       let error = (errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error as Error
       expect(error.message).toContain('infinite loop detected')
       expect(renderCount).toBeLessThan(100)

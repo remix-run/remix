@@ -176,6 +176,7 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   }
   .book-card img {
+    display: block;
     width: 100%;
     height: 300px;
     object-fit: cover;
@@ -239,5 +240,71 @@
   .badge-info {
     background: #d1ecf1;
     color: #0c5460;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+
+  ::view-transition-group(bookstore-page) {
+    animation-duration: 260ms;
+    animation-timing-function: ease-out;
+  }
+
+  ::view-transition-group(.book-cover),
+  ::view-transition-group(.book-title) {
+    z-index: 1;
+    animation-duration: 420ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  ::view-transition-group(.book-cover) {
+    border-radius: 8px;
+    overflow: clip;
+  }
+
+  ::view-transition-old(.book-cover),
+  ::view-transition-new(.book-cover) {
+    height: 100%;
+    object-fit: cover;
+  }
+
+  ::view-transition-old(.book-title),
+  ::view-transition-new(.book-title) {
+    height: 100%;
+    object-fit: contain;
+    object-position: left top;
+  }
+
+  ::view-transition-old(bookstore-page) {
+    animation: bookstore-page-out 160ms ease-in both;
+  }
+
+  ::view-transition-new(bookstore-page) {
+    animation: bookstore-page-in 260ms ease-out both;
+  }
+
+  @keyframes bookstore-page-out {
+    to {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+
+  @keyframes bookstore-page-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none;
+    }
   }
 }

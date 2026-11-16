@@ -1,0 +1,1 @@
+Fix a client-rendered `<Frame>` remounting with its `fallback` when its `src` changed after its content appeared but while frames or client entries inside it were still loading. Once a frame's content is visible, changing `src` now always reloads the frame in place, keeping the current content until the new source resolves.
