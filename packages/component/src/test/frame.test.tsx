@@ -4458,11 +4458,15 @@ describe('run', () => {
     app.dispose()
   })
 
-  it('updates and reloads the top frame for ordinary navigation', async (t) => {
+  it('uses the absolute destination for relative programmatic navigation', async (t) => {
     let fixture = await setupFrameNavigationTest(t)
     let destinationUrl = new URL('/next', window.location.href).href
+    let events: NavigationEvent[] = []
+    window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
+    let reloads: FrameReloadStartEvent[] = []
+    fixture.frames().top.addEventListener('reloadStart', (event) => reloads.push(event))
 
-    await navigate(destinationUrl, {
+    await navigate('/next', {
       history: 'replace',
       resetScroll: false,
     })
@@ -4470,6 +4474,8 @@ describe('run', () => {
     expect(window.location.href).toBe(destinationUrl)
     expect(fixture.frames().top.src).toBe(window.location.href)
     expect(fixture.requests).toEqual([{ src: destinationUrl, target: undefined }])
+    expect(events[0]?.frameSrc).toBe(fixture.requests[0]?.src)
+    expect(reloads[0]?.src).toBe(events[0]?.frameSrc)
   })
 
   it('reloads only the target frame using the public destination without data-rmx-src', async (t) => {
@@ -4488,7 +4494,7 @@ describe('run', () => {
   it('preserves a targeted src while later top frame reloads use the public destination', async (t) => {
     let fixture = await setupFrameNavigationTest(t)
     let destinationUrl = new URL('/destination', window.location.href).href
-    let targetSrc = '/target-frame'
+    let targetSrc = '../target-frame?tab=one#summary'
     let events: NavigationEvent[] = []
     window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
 

@@ -19,7 +19,7 @@ import {
  * one operation share `signal` and `finished`, including external submitter and form copies.
  */
 export interface NavigationEvent extends Event {
-  /** Originally requested frame source, including GET submission values in the query. */
+  /** Source passed to `resolveFrame` for the initiating load, unchanged through redirects. */
   readonly frameSrc: string
   /** Effective HTTP method in lowercase. */
   readonly method: string
@@ -566,7 +566,7 @@ export function startNavigationListener(
           redirecting: false,
           pendingCommits: 0,
           navigation: {
-            frameSrc: state.src,
+            frameSrc: frame === topFrame ? event.destination.url : state.src,
             to: event.destination.url,
             navigationType: replaceHistory ? 'replace' : event.navigationType,
             from,

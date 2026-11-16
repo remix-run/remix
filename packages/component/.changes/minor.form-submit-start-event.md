@@ -17,7 +17,7 @@ Follow links, form submissions, programmatic navigation, and Back/Forward with t
 </button>
 ```
 
-`NavigationEvent.frameSrc` is the originally requested frame URL, including GET submission values. `element` identifies the initiating HTML or SVG anchor, image-map area, or owning form, and is null for programmatic navigation and history traversal. `submitter` is optional, and `encType` and `formData` are only present for POST submissions.
+`NavigationEvent.frameSrc` matches the initiating `resolveFrame` call's `src` argument, including GET submission values, and stays unchanged through redirects. `element` identifies the initiating HTML or SVG anchor, image-map area, or owning form, and is null for programmatic navigation and history traversal. `submitter` is optional, and `encType` and `formData` are only present for POST submissions.
 
 `finished` waits through rendering, followed redirects, and navigation scroll and focus handling. It resolves with an aborted signal on cancellation or replacement and rejects on failure.
 

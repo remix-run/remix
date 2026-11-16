@@ -2425,11 +2425,14 @@ describe('frame navigation sources', () => {
     let { anchor, event, dispatch, intercept, topFrame, namedFrame } = setup(t)
     anchor.removeAttribute('data-rmx-target')
     anchor.setAttribute('data-rmx-src', '/partial')
+    let events: NavigationEvent[] = []
+    window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
     let transition = dispatch(event)
     await transition.runHandler()
     await transition.succeed()
     expect(intercept).toHaveBeenCalledTimes(1)
     expect(topFrame.src).toBe(anchor.href)
+    expect(events[0]?.frameSrc).toBe(topFrame.src)
     expect(namedFrame.src).toBe('/initial-frame')
   })
 
