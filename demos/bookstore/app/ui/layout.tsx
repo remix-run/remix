@@ -4,6 +4,8 @@ import { css } from 'remix/component'
 import { routes } from '../routes.ts'
 import { getCurrentUserSafely } from '../utils/context.ts'
 import { Document } from './document.tsx'
+import { NavigationProgress } from './public/navigation-progress.tsx'
+import { PendingLink } from './public/pending-link.tsx'
 
 export interface LayoutProps {
   title?: string
@@ -18,38 +20,39 @@ export function Layout(handle: Handle<LayoutProps>) {
 
     return (
       <Document title={title} head={head}>
+        <NavigationProgress />
         <header>
           <div class="container">
             <h1>
-              <a data-rmx-prefetch="intent" href={routes.home.href()}>
+              <PendingLink prefetch="intent" href={routes.home.href()}>
                 📚 Bookstore
-              </a>
+              </PendingLink>
             </h1>
             <nav>
-              <a data-rmx-prefetch="intent" href={routes.home.href()}>
+              <PendingLink prefetch="intent" href={routes.home.href()}>
                 Home
-              </a>
-              <a data-rmx-prefetch="intent" href={routes.books.index.href()}>
+              </PendingLink>
+              <PendingLink prefetch="intent" href={routes.books.index.href()}>
                 Books
-              </a>
-              <a data-rmx-prefetch="intent" href={routes.about.href()}>
+              </PendingLink>
+              <PendingLink prefetch="intent" href={routes.about.href()}>
                 About
-              </a>
-              <a data-rmx-prefetch="intent" href={routes.contact.index.href()}>
+              </PendingLink>
+              <PendingLink prefetch="intent" href={routes.contact.index.href()}>
                 Contact
-              </a>
-              <a data-rmx-prefetch="intent" href={routes.cart.index.href()}>
+              </PendingLink>
+              <PendingLink prefetch="intent" href={routes.cart.index.href()}>
                 Cart
-              </a>
+              </PendingLink>
               {user ? (
                 <>
-                  <a data-rmx-prefetch="intent" href={routes.account.index.href()}>
+                  <PendingLink prefetch="intent" href={routes.account.index.href()}>
                     Account
-                  </a>
+                  </PendingLink>
                   {user.role === 'admin' ? (
-                    <a data-rmx-prefetch="intent" href={routes.admin.index.href()}>
+                    <PendingLink prefetch="intent" href={routes.admin.index.href()}>
                       Admin
-                    </a>
+                    </PendingLink>
                   ) : null}
                   <form
                     method="POST"
@@ -67,10 +70,10 @@ export function Layout(handle: Handle<LayoutProps>) {
                 </>
               ) : (
                 <>
-                  <a href={routes.auth.login.index.href()}>Login</a>
-                  <a data-rmx-prefetch="intent" href={routes.auth.register.index.href()}>
+                  <PendingLink href={routes.auth.login.index.href()}>Login</PendingLink>
+                  <PendingLink prefetch="intent" href={routes.auth.register.index.href()}>
                     Register
-                  </a>
+                  </PendingLink>
                 </>
               )}
             </nav>

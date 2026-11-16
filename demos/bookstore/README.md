@@ -28,6 +28,40 @@ The home, books, genre, search, about, contact, and registration pages use `Cach
 
 The [browser entry](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/entry.tsx) delegates to `defaultResolveFrame` with a `fetch` override that sets `cache: 'force-cache'` for `options.navigationType === 'traverse'`. Back/Forward can reuse browsing HTML past its 30-second freshness window, including older cart counts. Other loads use the default Fetch cache mode, and `no-store` responses still require a network request.
 
+## Navigation State and Pending UI
+
+The [navigation helper](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/public/navigation.ts) is application code built on a window capture listener for `rmx:navigation`. The browser entry calls `navigation.start()` immediately after `run()`, before any navigation, so newly hydrated components can read the current operation.
+
+```ts
+import { navigation } from './app/ui/public/navigation.ts'
+
+navigation.supported
+navigation.current // null, or { url, type, target, submission, signal }
+navigation.addEventListener('change', update, { signal })
+await navigation.settled()
+```
+
+`current` starts when Remix accepts a navigation. A redirect preserves its identity and original `type`, updates `url`, and emits `change`. A new navigation replaces it without an intermediate idle notification. External submitter/form copies with the same completion promise and URL are ignored. Cancellation and failure abort its signal; success clears `current` without aborting that signal. GET forms have a `submission` with `method: 'GET'`; POST submissions also carry optional `encType` and `formData`. Independent frame reloads and URL-only updates do not appear in `current`.
+
+`settled()` never rejects. It follows redirects and replacement navigations until Remix is idle, then also waits for any browser transition another interceptor owns. On the server and when frame navigation is unsupported, it resolves immediately. For tasks that change the URL or scroll after a navigation renders a component:
+
+```ts
+handle.queueTask(async (signal) => {
+  await navigation.settled()
+  if (signal.aborted) return
+  // It is now safe to apply this component's URL or scroll update.
+})
+```
+
+The [page-loading indicator](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/public/navigation-progress.tsx) subscribes to `change` and tracks top-frame navigation. Named frame updates can have their own pending UI. Header and book-detail [links](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/public/pending-link.tsx) use `on('rmx:navigation', ...)` directly to show a spinner beside the initiating link, using the same navigation lifecycle as the global observer. Both clear on cancellation or failure, and the spinner respects reduced motion.
+
+The framework supplies the lifecycle details this helper cannot reliably reconstruct:
+
+- `rmx:navigation` fires at acceptance for links, forms, programmatic navigation, and history traversal, before frame work starts. Its fields include `navigationType`, the original `from` history entry, `frameSrc`, `frameTarget`, `to`, and captured submission data. The helper maps `to` to `current.url` and `frameTarget` to `current.target`. `navigationType` and `from` align with `resolveFrame` options. Source-less navigations, disconnected sources, and redirect updates notify window directly.
+- One completion promise and cancellation signal follow the existing redirect coordinator through final URL, scroll, and focus handling. A redirect updates the URL without becoming a new pending operation; the browser's original transition ends at that handoff.
+
+The helper checks browser support itself and owns the state object, subscriptions, duplicate filtering, and idle-wait loop.
+
 ## View Transitions
 
 Click a book cover on the homepage or catalog, then use Back and Forward. The cover and title move and resize into the product image and heading, and return to their card on Back. Shared book animations run when either end of the navigation is a product page; navigating between lists uses only the page slide and fade. The header and footer stay steady. These transitions apply to push, replace, and traverse navigations, including followed redirects.

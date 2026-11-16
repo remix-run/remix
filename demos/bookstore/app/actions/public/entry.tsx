@@ -7,6 +7,7 @@ import {
 import { createMatcher } from 'remix/route-pattern/match'
 
 import { routes } from '../../routes.ts'
+import { navigation } from '../../ui/public/navigation.ts'
 
 const bookDetailsMatcher = createMatcher(routes.books.show.pattern)
 
@@ -66,6 +67,8 @@ export const app = run({
     return []
   },
 })
+
+navigation.start()
 
 if (import.meta.hot) {
   import.meta.hot.on('server:update', async () => {

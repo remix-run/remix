@@ -3,6 +3,7 @@ import { Frame, css } from 'remix/component'
 
 import type { Book } from '../data/schema.ts'
 import { routes } from '../routes.ts'
+import { PendingLink } from './public/pending-link.tsx'
 import { bookCoverTransition, bookTitleTransition } from './book-transitions.ts'
 
 export interface BookCardProps {
@@ -24,13 +25,13 @@ export function BookCard(handle: Handle<BookCardProps>) {
           <p class="author">by {book.author}</p>
           <p class="price">${book.price.toFixed(2)}</p>
           <div mix={css({ display: 'flex', gap: '0.5rem', alignItems: 'center' })}>
-            <a
+            <PendingLink
               href={routes.books.show.href({ slug: book.slug })}
-              data-rmx-prefetch="viewport"
+              prefetch="viewport"
               class="btn"
             >
               View Details
-            </a>
+            </PendingLink>
 
             <Frame
               name={`cart-button-${book.id}`}
