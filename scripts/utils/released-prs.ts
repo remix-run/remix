@@ -1,7 +1,6 @@
-/** Collect PRs between consecutive Remix release tags for the roadmap workflow. */
+/** Collect PRs between consecutive Remix release tags. */
 import * as cp from 'node:child_process'
-import * as fs from 'node:fs'
-import { parsePrNumber } from './utils/git.ts'
+import { parsePrNumber } from './git.ts'
 
 export function getReleasedPrNumbers(tag: string, cwd?: string): Set<number> {
   if (!tag.startsWith('remix@')) throw new Error(`Expected a Remix release tag, got ${tag}.`)
@@ -23,13 +22,4 @@ export function getReleasedPrNumbers(tag: string, cwd?: string): Set<number> {
     if (number !== null) numbers.add(number)
   }
   return numbers
-}
-
-if (import.meta.main) {
-  let tag = process.env.RELEASE_TAG
-  if (!tag) throw new Error('RELEASE_TAG is required.')
-  let numbers = [...getReleasedPrNumbers(tag)]
-  console.log(`Found ${numbers.length} PRs included in ${tag}.`)
-  if (!process.env.GITHUB_OUTPUT) throw new Error('GITHUB_OUTPUT is required.')
-  fs.appendFileSync(process.env.GITHUB_OUTPUT, `numbers=${JSON.stringify(numbers)}\n`)
 }

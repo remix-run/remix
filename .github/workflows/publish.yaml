@@ -90,113 +90,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Find released pull requests
-        id: released-prs
-        run: node scripts/released-prs.ts
+      - name: Archive released roadmap items
+        run: node scripts/archive-roadmap.ts
         env:
           RELEASE_TAG: ${{ needs.publish.outputs.tag }}
-
-      - name: Archive the Remix Roadmap's Merged column
-        uses: actions/github-script@v8
-        env:
-          RELEASED_PRS: ${{ steps.released-prs.outputs.numbers }}
-        with:
           # Requires organization Projects read/write access.
-          github-token: ${{ secrets.GH_REMIX_PAT }}
-          script: |
-            let numbers = JSON.parse(process.env.RELEASED_PRS);
-            if (!Array.isArray(numbers) || !numbers.every(Number.isSafeInteger)) {
-              throw new Error('Could not determine the released pull requests.');
-            }
-            let releasedPrs = new Set(numbers);
-
-            async function isReleasedIssue(id) {
-              let cursor = null;
-              do {
-                let { node } = await github.graphql(`
-                  query($id: ID!, $cursor: String) {
-                    node(id: $id) {
-                      ... on Issue {
-                        closedByPullRequestsReferences(first: 100, after: $cursor, includeClosedPrs: true) {
-                          nodes { number merged repository { nameWithOwner } }
-                          pageInfo { hasNextPage endCursor }
-                        }
-                      }
-                    }
-                  }
-                `, { id, cursor });
-                let references = node?.closedByPullRequestsReferences;
-                if (!references) throw new Error(`Could not read closing PRs for ${id}.`);
-                if (references.nodes.some((pr) => pr?.merged &&
-                    pr.repository.nameWithOwner === 'remix-run/remix' && releasedPrs.has(pr.number))) {
-                  return true;
-                }
-                cursor = references.pageInfo.hasNextPage ? references.pageInfo.endCursor : null;
-              } while (cursor);
-              return false;
-            }
-
-            let cursor = null;
-            let projectId;
-            let itemIds = [];
-            do {
-              let { organization } = await github.graphql(`
-                query($cursor: String) {
-                  organization(login: "remix-run") {
-                    projectV2(number: 31) {
-                      id
-                      items(first: 100, after: $cursor) {
-                        nodes {
-                          id
-                          isArchived
-                          content {
-                            __typename
-                            ... on PullRequest { number merged repository { nameWithOwner } }
-                            ... on Issue { id }
-                          }
-                          fieldValueByName(name: "Status") {
-                            ... on ProjectV2ItemFieldSingleSelectValue {
-                              name
-                            }
-                          }
-                        }
-                        pageInfo { hasNextPage endCursor }
-                      }
-                    }
-                  }
-                }
-              `, { cursor });
-              let project = organization?.projectV2;
-              if (!project) throw new Error('Could not find the Remix Roadmap.');
-              projectId = project.id;
-              for (let item of project.items.nodes) {
-                let status = item?.fieldValueByName;
-                if (item?.isArchived || status?.name !== 'Merged') continue;
-                let content = item.content;
-                if (content?.__typename === 'PullRequest' && content.merged &&
-                    content.repository.nameWithOwner === 'remix-run/remix' &&
-                    releasedPrs.has(content.number)) {
-                  itemIds.push(item.id);
-                } else if (content?.__typename === 'Issue' && await isReleasedIssue(content.id)) {
-                  itemIds.push(item.id);
-                }
-              }
-              cursor = project.items.pageInfo.hasNextPage
-                ? project.items.pageInfo.endCursor
-                : null;
-            } while (cursor);
-
-            // Read every page before archiving so mutations cannot shift pagination.
-            for (let itemId of itemIds) {
-              await github.graphql(`
-                mutation($projectId: ID!, $itemId: ID!) {
-                  archiveProjectV2Item(input: { projectId: $projectId, itemId: $itemId }) {
-                    item { id }
-                  }
-                }
-              `, { projectId, itemId });
-            }
-            core.info(`Archived ${itemIds.length} released items from the Remix Roadmap.`);
+          GH_TOKEN: ${{ secrets.GH_REMIX_PAT }}
 
   docs:
     name: Deploy docs

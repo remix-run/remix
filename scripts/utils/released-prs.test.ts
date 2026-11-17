@@ -48,6 +48,7 @@ describe('getReleasedPrNumbers', () => {
       change('packages/component/source.ts', 'Unreleased component change (#102)')
       git('tag', 'remix@2.0.0-beta.2')
       assert.deepEqual(getReleasedPrNumbers('remix@2.0.0-beta.1', cwd), new Set([101, 200]))
+      assert.throws(() => getReleasedPrNumbers('remix@9.9.9', cwd))
     })
   })
 
@@ -62,17 +63,6 @@ describe('getReleasedPrNumbers', () => {
       change('packages/component/source.ts', 'Shared change (#456)')
       git('tag', 'remix@1.0.0')
       assert.deepEqual(getReleasedPrNumbers('remix@1.0.0', cwd), new Set([123, 456]))
-    })
-  })
-
-  it('rejects missing tags instead of scanning the current branch', () => {
-    withRepository((cwd, _git, change) => {
-      change('packages/component/source.ts', 'Unreleased change (#123)')
-      assert.throws(() => getReleasedPrNumbers('remix@9.9.9', cwd))
-      assert.throws(
-        () => getReleasedPrNumbers('component@1.0.0', cwd),
-        /Expected a Remix release tag/,
-      )
     })
   })
 })

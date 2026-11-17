@@ -29,6 +29,12 @@ The roadmap cleanup uses the `GH_REMIX_PAT` Actions secret, which must have orga
 Projects read/write access. If cleanup fails after publishing, rerun the failed roadmap job;
 already archived cards are skipped.
 
+To preview the cleanup locally, authenticate with `gh` and run:
+
+```sh
+RELEASE_TAG=remix@3.2.0 node scripts/archive-roadmap.ts --dry-run
+```
+
 Release detection reads PR numbers from squash-merge and merge-commit subjects, using the same
 convention as change-file attribution. The previous tag is the closest ancestor `remix@*` tag;
 the first Remix release scans all package history up to its tag. Cleanup covers one release range,
