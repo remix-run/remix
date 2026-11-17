@@ -74,8 +74,9 @@ export function getExpiredPreviewReleases(
           .filter((release) => !release.draft)
           .toSorted(
             (a, b) =>
+              getPreviewCommitTime(b) - getPreviewCommitTime(a) ||
               Date.parse(b.published_at ?? b.created_at) -
-              Date.parse(a.published_at ?? a.created_at),
+                Date.parse(a.published_at ?? a.created_at),
           )[0]
       : undefined
   let cutoff = now - (channel === 'main' ? 7 : 30) * 24 * 60 * 60 * 1000
@@ -93,9 +94,8 @@ export function getPreviewTag(channel: string, sha: string, timestamp: string): 
   let utc = new Date(timestamp).toISOString()
   let date = utc.slice(0, 10).replaceAll('-', '')
   if (channel === 'nightly') return `v0.${date}.0-nightly`
-  let time = channel === 'main' ? Number(utc.slice(11, 19).replaceAll(':', '')) : 0
   let suffix = channel.startsWith('pr-') ? channel : `${channel}-${sha.slice(0, 8)}`
-  return `v0.${date}.${time}-${suffix}`
+  return `v0.${date}.0-${suffix}`
 }
 
 export function getPreviewReleaseTitle(
@@ -109,9 +109,20 @@ export function getPreviewReleaseTitle(
   return `${build.channel} (${build.sha.slice(0, 8)})`
 }
 
-function getPreviewTagTime(tag: string): number {
-  let match = /^v0\.(\d{8})\.(\d{1,6})-/.exec(tag)
-  return match ? Number(match[1]) * 1_000_000 + Number(match[2]) : 0
+function getPreviewCommitTime(release: PreviewRelease): number {
+  let timestamp = /<!-- remix-preview-commit-time: (\S+) -->/.exec(release.body)?.[1]
+  if (timestamp) {
+    let time = Date.parse(timestamp)
+    if (!Number.isFinite(time)) throw new Error('Invalid preview commit timestamp')
+    return time
+  }
+  // Releases published before date-only tags keep the source time in their tag.
+  let match = /^v0\.(\d{4})(\d{2})(\d{2})\.(\d{1,6})-/.exec(release.tag_name)
+  if (!match) return 0
+  let time = match[4].padStart(6, '0')
+  return Date.parse(
+    `${match[1]}-${match[2]}-${match[3]}T${time.slice(0, 2)}:${time.slice(2, 4)}:${time.slice(4)}Z`,
+  )
 }
 
 export function validatePreviewRepository(repository: string): string {
@@ -455,6 +466,26 @@ export function publishPreview(
     console.log(`Reusing published preview: ${url}`)
     return url
   }
+  let body =
+    release?.body ??
+    `${PREVIEW_RELEASE_MARKER}\n${source}.\n\nInstall:\n\n\`\`\`sh\npnpm add "${getPreviewTarballUrl(build, 'remix', github.repository)}"\n\`\`\`\n`
+  let committedAt = 0
+  if (build.channel === 'main') {
+    let sourceGitHub = new PreviewGitHub(
+      sourceRepository,
+      createGitHubRunner(process.env.GITHUB_TOKEN),
+    )
+    let commit = sourceGitHub.api('GET', `git/commits/${build.sha}`)
+    if (
+      !isRecord(commit) ||
+      !isRecord(commit.committer) ||
+      typeof commit.committer.date !== 'string' ||
+      !Number.isFinite(Date.parse(commit.committer.date))
+    )
+      throw new Error('Invalid source commit timestamp')
+    committedAt = Date.parse(commit.committer.date)
+    body = `${body.replace(/\n<!-- remix-preview-commit-time: \S+ -->/g, '')}\n<!-- remix-preview-commit-time: ${new Date(committedAt).toISOString()} -->\n`
+  }
   if (!release) {
     release = readRelease(
       github.api('POST', 'releases', {
@@ -463,7 +494,7 @@ export function publishPreview(
         draft: true,
         prerelease: true,
         make_latest: 'false',
-        body: `${PREVIEW_RELEASE_MARKER}\n${source}.\n\nInstall:\n\n\`\`\`sh\npnpm add "${getPreviewTarballUrl(build, 'remix', github.repository)}"\n\`\`\`\n`,
+        body,
       }),
     )
   }
@@ -480,13 +511,14 @@ export function publishPreview(
         (item) =>
           item.draft ||
           getPreviewChannel(item.tag_name) !== 'main' ||
-          getPreviewTagTime(item.tag_name) <= getPreviewTagTime(build.tag),
+          getPreviewCommitTime(item) <= committedAt,
       )
   github.api('PATCH', `releases/${release.id}`, {
     name: title,
     draft: false,
     prerelease: build.channel !== 'main',
     make_latest: String(latest),
+    body,
   })
   console.log(`Published preview: ${url}`)
   return url

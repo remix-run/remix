@@ -100,16 +100,17 @@ commit's date. The Remix asset is `v0.YYYYMMDD.0-nightly.tgz`; other package ass
 latest main preview. Reruns reuse a completed nightly for the same source SHA; publishing a
 different SHA under an existing nightly tag is rejected.
 
-Main release tags use `v0.YYYYMMDD.HHMMSS-main-<8-character-sha>`, with the source commit's
-UTC date and time so builds sort chronologically within a day. Leading zeros are removed from
-the numeric time component for valid SemVer. Experimental tags use
+Main release tags use `v0.YYYYMMDD.0-main-<8-character-sha>`, with the source commit's
+UTC date. Experimental tags use
 `v0.YYYYMMDD.0-experimental-<8-character-sha>`, with the source commit's UTC date.
 PRs share a `v0.YYYYMMDD.0-pr-<number>` release, using the PR's
 UTC creation date so every build uses the same tag, with `<package>-<full-source-sha>.tgz` assets.
 After verifying every asset for a SHA, publishing labels its `remix` asset as complete,
 updates the release's install table, and retains the latest 5 complete builds by completion time.
 Main releases are published as the repository's latest release when they are the newest main
-build, and include a `remix.url` asset containing their `remix.tgz` URL.
+build by source commit timestamp, and include a `remix.url` asset containing their `remix.tgz` URL.
+The source timestamp is stored in release metadata so older builds finishing late cannot replace
+the latest build. GitHub lists releases by publication time.
 Retries preserve completed assets and replace partial uploads. Closing the PR deletes its release
 and any older per-SHA preview releases.
 
