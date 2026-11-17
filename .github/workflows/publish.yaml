@@ -68,8 +68,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  roadmap:
-    name: Archive released roadmap items
+  post_release:
+    name: Comment on and archive released items
     needs: publish
     if: startsWith(needs.publish.outputs.tag, 'remix@')
     runs-on: ubuntu-latest
@@ -86,11 +86,11 @@ jobs:
         with:
           node-version-file: package.json
 
-      - name: Archive released roadmap items
-        run: node scripts/archive-roadmap.ts
+      - name: Comment on and archive released items
+        run: node scripts/post-release.ts
         env:
           RELEASE_TAG: ${{ needs.publish.outputs.tag }}
-          # Requires organization Projects read/write access.
+          # Requires organization Projects and repository Issues/Pull requests read/write access.
           GH_TOKEN: ${{ secrets.GH_REMIX_PAT }}
 
   docs:
