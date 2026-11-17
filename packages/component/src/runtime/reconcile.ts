@@ -1157,8 +1157,12 @@ function mountHostNode(
           return
         }
         dom.dispatchEvent(new Event('input', { bubbles: true }))
-        // A focused text control still fires its own `change` when it loses focus.
-        if (editedBeforeHydration === 'checked' || dom.ownerDocument.activeElement !== dom) {
+        // Text fields commit `change` on blur; other controls can commit while still focused.
+        if (
+          dom.ownerDocument.activeElement !== dom ||
+          (dom instanceof HTMLInputElement &&
+            !['text', 'search', 'tel', 'url', 'email', 'password'].includes(dom.type))
+        ) {
           dom.dispatchEvent(new Event('change', { bubbles: true }))
         }
       },

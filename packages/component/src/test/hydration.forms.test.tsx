@@ -1,5 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
+import { on } from '../index.ts'
 import type { Handle } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { createRoot } from '../runtime/vdom.ts'
@@ -19,6 +20,67 @@ describe('hydration', () => {
   })
 
   describe('form elements', () => {
+    it('replays change for a focused range edited before hydration', async (t) => {
+      let update: Promise<AbortSignal> | undefined
+      let RangeInput = clientEntry('/range.js#RangeInput', function RangeInput(handle: Handle) {
+        let value = '25'
+        return () => (
+          <>
+            <input
+              type="range"
+              value={value}
+              mix={on('change', (event) => {
+                value = event.currentTarget.value
+                update = handle.update()
+              })}
+            />
+            <output>{value}</output>
+          </>
+        )
+      })
+      container.innerHTML = await renderToString(<RangeInput />)
+      let input = container.querySelector('input')
+      invariant(input)
+      input.value = '75'
+      input.focus()
+      expect(document.activeElement).toBe(input)
+
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(<RangeInput />)
+
+      expect(container.querySelector('output')?.textContent).toBe('75')
+      invariant(update)
+      await update
+      expect(input.value).toBe('75')
+      expect(document.activeElement).toBe(input)
+    })
+
+    it('defers change for a focused text input edited before hydration', async (t) => {
+      let changes = 0
+      let field = (
+        <input
+          defaultValue=""
+          mix={on('change', () => {
+            changes++
+          })}
+        />
+      )
+      container.innerHTML = await renderToString(field)
+      let input = container.querySelector('input')
+      invariant(input)
+      input.value = 'edited'
+      input.focus()
+      expect(document.activeElement).toBe(input)
+
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(field)
+
+      expect(input.value).toBe('edited')
+      expect(changes).toBe(0)
+    })
+
     it('hydrates input with value attribute', async () => {
       let html = await renderToString(<input type="text" value="server value" readOnly />)
       container.innerHTML = html
