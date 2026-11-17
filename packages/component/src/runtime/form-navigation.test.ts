@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
+import { createFormNavigationResolver, type FormSubmission } from './frame.ts'
 
 describe('form navigation', () => {
   it('retains the navigation submitter when formdata was not observed', async () => {

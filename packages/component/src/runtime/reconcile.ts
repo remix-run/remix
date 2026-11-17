@@ -9,7 +9,6 @@ import {
 } from './frame-runtime.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps, setSelectDefaultValue, setSelectValue } from './core/props.ts'
-import { isMixinDescriptor } from './core/mix.ts'
 import {
   isEmptyChild,
   isPrimitiveChild,
@@ -23,13 +22,14 @@ import { normalizeUnsafeHTMLProps } from './unsafe-html.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
 import { isEntry, skipComments, logHydrationMismatch } from './client-entries.ts'
-import type { Scheduler } from './scheduler.ts'
+import type { Scheduler } from './vdom.ts'
 import {
   bindMixinRuntime,
   cancelPendingMixinRemoval,
   dispatchMixinBeforeUpdate,
   dispatchMixinCommit,
   getMixinRuntimeSignal,
+  isMixinDescriptor,
   prepareMixinRemoval,
   resolveMixedProps,
   teardownMixins,
