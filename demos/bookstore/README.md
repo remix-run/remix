@@ -42,7 +42,14 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 
 ## Frames
 
-- Cart buttons and cart items reload their own frames after updates, keeping changes local to the affected UI. Quantity updates use PATCH and removals use DELETE at `/cart/items`, returning updated HTML in one enhanced request.
+The cart demonstrates these application conventions for keeping mutations local while supporting ordinary document submissions:
+
+- Each frame keeps its `src` pinned to one URL. Cart items load from `/cart/items`, and mutations leave both that source and the document URL unchanged, so a hard reload still loads `/cart`.
+- HTTP methods select separate handlers at the frame URL: GET renders cart items, PATCH updates quantity, and DELETE removes an item. Cart buttons use GET and POST at `/fragments/cart-button/:bookId`.
+- Enhanced cart forms intercept submission and call `handle.frame.reload({ method: 'post', body })`. The mutation handler returns updated fragment HTML in the same request, avoiding a separate GET. PATCH and DELETE travel as POST with a hidden `_method` field, which the server's method-override middleware interprets.
+
+Navigation and prefetching use frames too:
+
 - Header links prefetch on hover or focus, while book details prefetch as their links enter the viewport. Login is excluded because rendering it consumes session flash messages.
 - The [browser entry](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/entry.tsx) uses `defaultResolveFrame` to customize caching and wrap page updates in view transitions. Prefetching uses Remix's built-in strategy.
 
@@ -55,9 +62,12 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 
 ## Forms
 
-- Shared schemas validate input in the browser and on the server. Controllers parse submissions with `fd.parseSafe` from `remix/data-schema/experimental/form`, and browser forms use `form.Context` from `@remix-run/ui/form`.
+- Shared schemas validate input in the browser and on the server. Controllers parse submissions with `fd.parseSafe` from `remix/data-schema/experimental/form`, then pass validated, typed data to mutation helpers. Browser forms use `form.Context` from `@remix-run/ui/form`.
+- Native cart forms target the same frame URLs used by enhanced submissions. Each mutation has one handler; only the response branches between fragment HTML and a document redirect, keeping mutation logic in one place.
 - Failed submissions preserve entered values and show field and form errors. Rejected cart quantities show feedback on the affected row.
-- Native cart forms redirect back to the cart and use session flash messages for validation feedback.
+- Document submissions use post/redirect/get (PRG). Cart item handlers redirect with 303 to `/cart`; cart buttons redirect to the same-origin initiating page. Errors and submitted values survive the redirect in session flash messages, which the frame GET reads to render contextual feedback.
+- Cart items use ordinary `session.flash()`. Cart-button errors use the custom [flashUntilRead middleware](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/middleware/flash-until-read.ts), keyed by book, because parallel sibling frames can expire an ordinary flash before the intended button frame reads it.
+- Cart buttons submit an explicit add or remove intent, and quantity forms submit the desired quantity. Retrying after a lost response preserves the requested result instead of toggling it back.
 - The shared [Field component](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/public/field.tsx) keeps labels, controls, and validation messages consistent.
 
 ## UI
@@ -65,7 +75,9 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 - Page navigations slide and fade by default, while the header and footer stay steady.
 - Navigating to or from a product page animates the book cover and title between their card and detail views, including on Back and Forward. Shared [book transition mixins](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/book-transitions.ts) give both views matching transition names.
 - Animations respect reduced-motion preferences and fall back to ordinary updates in browsers without view transition support.
-- Cart rows stay visible while saving, with pending indicators on buttons and saved totals. Failed requests restore the previous quantity and offer retry or reload.
+- Remix lifecycle events drive interaction feedback: cart components listen for frame `reloadStart`, while the shared [PendingButton](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/public/pending-button.tsx) also supports `rmx:navigation`. Their `finished` promises determine completion. Abort and active-operation checks keep superseded work from overwriting current UI state.
+- Small state machines model pending and failure feedback in cart items and `PendingButton`. The cart currently demonstrates pending UI: rows and saved prices stay visible, with faded content, button labels, and price spinners while requests run. Failed requests restore the previous quantity and offer retry or reload.
+- Failure feedback remains visible independently of animation events, including with reduced motion. Enhanced cart failures use button feedback and inline field errors; document failures also show contextual error messages after the redirect.
 - Removing a focused cart row moves focus to the cart region, including when the cart becomes empty.
 
 ## Development
