@@ -1,7 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it, type TestContext } from '@remix-run/test'
 
-import { navigate, updateUrl } from '../runtime/navigation.ts'
+import { navigate } from '../runtime/navigation.ts'
+import { updateUrl } from '../runtime/update-url.ts'
 import { run } from '../runtime/run.ts'
 import { Frame } from '../runtime/frame.ts'
 import { jsx } from '../runtime/core/vnode.ts'

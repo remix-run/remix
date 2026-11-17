@@ -1,12 +1,10 @@
 import type { Context, FrameHandle } from '../component.ts'
 import type { ElementProps, RemixElement } from '../core/vnode.ts'
 import type { Key } from '../key.ts'
-import type { Scheduler } from '../scheduler.ts'
-import type { SchedulerPhaseEvent } from '../scheduler.ts'
-import { jsx } from '../core/vnode.ts'
+import type { Scheduler, SchedulerPhaseEvent } from '../vdom.ts'
+import { isRemixElement, jsx } from '../core/vnode.ts'
 import { TypedEventTarget } from '../component.ts'
 import { invariant } from '../invariant.ts'
-import { composeMixedProps, isMixinElementFunction } from '../core/mix.ts'
 
 type RebindNode<value, baseNode, boundNode> = value extends (
   ...args: infer fnArgs
@@ -520,15 +518,8 @@ function createMixinRuntimeState(): MixinRuntimeState {
 
 type SchedulerPhaseType = 'beforeUpdate' | 'commit'
 
-type PhaseListener = EventListenerOrEventListenerObject
-
 type MixinScope = {
   target: TypedEventTarget<MixinHandleEventMap<Element>>
-  // EventTarget identifies a listener by its callback and capture flag.
-  phaseListeners: Record<
-    SchedulerPhaseType,
-    [bubble: Set<PhaseListener>, capture: Set<PhaseListener>]
-  >
   controller?: AbortController
 }
 
@@ -542,10 +533,9 @@ class MixinHandleImpl
   element: MixinElement<Element, ElementProps>
   #state: MixinRuntimeState
   #scheduler: Scheduler
-  #phaseListenerCounts: Record<SchedulerPhaseType, number> = {
-    beforeUpdate: 0,
-    commit: 0,
-  }
+  // Phase types received from the scheduler. Removing a listener keeps the subscription until
+  // every scope is released; dispatching to a scope without listeners has no effect.
+  #phaseTypes = new Set<SchedulerPhaseType>()
   #activeScope?: symbol
   #scopes = new Map<symbol, MixinScope>()
   #onSchedulerPhase = (event: Event) => {
@@ -598,17 +588,15 @@ class MixinHandleImpl
     listener: EventListenerOrEventListenerObject | null,
     options?: AddEventListenerOptions | boolean,
   ): void {
-    let scope = this.#getActiveScope()
-    scope.target.addEventListener(
+    this.#getActiveScope().target.addEventListener(
       type as keyof MixinHandleEventMap<Element>,
       listener as EventListener,
       options,
     )
-    if (!listener || !isSchedulerPhaseType(type)) return
-    let listeners = scope.phaseListeners[type][Number(isCapture(options))]
-    if (listeners.has(listener)) return
-    listeners.add(listener)
-    this.#updatePhaseListenerCount(type, 1)
+    if (!listener || (type !== 'beforeUpdate' && type !== 'commit')) return
+    if (this.#phaseTypes.has(type)) return
+    this.#phaseTypes.add(type)
+    addSchedulerPhaseListener(this.#scheduler, type, this.#onSchedulerPhase)
   }
 
   removeEventListener(
@@ -616,15 +604,11 @@ class MixinHandleImpl
     listener: EventListenerOrEventListenerObject | null,
     options?: EventListenerOptions | boolean,
   ): void {
-    let scope = this.#getActiveScope()
-    scope.target.removeEventListener(
+    this.#getActiveScope().target.removeEventListener(
       type as keyof MixinHandleEventMap<Element>,
       listener as EventListener,
       typeof options === 'boolean' ? { capture: options } : options,
     )
-    if (!listener || !isSchedulerPhaseType(type)) return
-    if (!scope.phaseListeners[type][Number(isCapture(options))].delete(listener)) return
-    this.#updatePhaseListenerCount(type, -1)
   }
 
   update(): Promise<AbortSignal> {
@@ -658,17 +642,14 @@ class MixinHandleImpl
   }
 
   hasPhaseListeners(type: SchedulerPhaseType): boolean {
-    return this.#phaseListenerCounts[type] > 0
+    return this.#phaseTypes.has(type)
   }
 
   setActiveScope(scope?: symbol): void {
     this.#activeScope = scope
     if (!scope) return
     if (this.#scopes.has(scope)) return
-    this.#scopes.set(scope, {
-      target: new TypedEventTarget<MixinHandleEventMap<Element>>(),
-      phaseListeners: { beforeUpdate: [new Set(), new Set()], commit: [new Set(), new Set()] },
-    })
+    this.#scopes.set(scope, { target: new TypedEventTarget<MixinHandleEventMap<Element>>() })
   }
 
   dispatchScopedEvent(scope: symbol, event: Event): void {
@@ -683,16 +664,17 @@ class MixinHandleImpl
   releaseScope(scope: symbol): void {
     let record = this.#scopes.get(scope)
     if (record) {
-      for (let type of ['beforeUpdate', 'commit'] as const) {
-        let [bubble, capture] = record.phaseListeners[type]
-        this.#updatePhaseListenerCount(type, -(bubble.size + capture.size))
-      }
       record.controller?.abort()
       this.#scopes.delete(scope)
     }
     if (this.#activeScope === scope) {
       this.#activeScope = undefined
     }
+    if (this.#scopes.size > 0) return
+    for (let type of this.#phaseTypes) {
+      removeSchedulerPhaseListener(this.#scheduler, type, this.#onSchedulerPhase)
+    }
+    this.#phaseTypes.clear()
   }
 
   #getActiveScope(): MixinScope {
@@ -702,19 +684,53 @@ class MixinHandleImpl
     invariant(record)
     return record
   }
+}
 
-  // Subscribes to the scheduler phase when the first listener is added and
-  // unsubscribes whenever the count reaches zero on removal.
-  #updatePhaseListenerCount(type: SchedulerPhaseType, delta: number) {
-    if (delta === 0) return
-    let count = Math.max(0, this.#phaseListenerCounts[type] + delta)
-    this.#phaseListenerCounts[type] = count
-    if (delta > 0) {
-      if (count === 1) this.#scheduler.addEventListener(type, this.#onSchedulerPhase)
-    } else if (count === 0) {
-      this.#scheduler.removeEventListener(type, this.#onSchedulerPhase)
+type SchedulerPhaseListeners = Record<SchedulerPhaseType, Set<EventListener>> & {
+  dispatch: EventListener
+}
+
+// Browser EventTarget add/remove scan every registered listener, so handles share
+// one scheduler listener per phase instead of each registering their own.
+const schedulerPhaseListeners = new WeakMap<Scheduler, SchedulerPhaseListeners>()
+
+function addSchedulerPhaseListener(
+  scheduler: Scheduler,
+  type: SchedulerPhaseType,
+  listener: EventListener,
+) {
+  let record = schedulerPhaseListeners.get(scheduler)
+  if (!record) {
+    let created: SchedulerPhaseListeners = {
+      beforeUpdate: new Set(),
+      commit: new Set(),
+      dispatch(event) {
+        let listeners = created[event.type as SchedulerPhaseType]
+        for (let listener of Array.from(listeners)) {
+          if (!listeners.has(listener)) continue
+          try {
+            listener(event)
+          } catch (error) {
+            reportError(error)
+          }
+        }
+      },
     }
+    record = created
+    schedulerPhaseListeners.set(scheduler, record)
   }
+  record[type].add(listener)
+  if (record[type].size === 1) scheduler.addEventListener(type, record.dispatch)
+}
+
+function removeSchedulerPhaseListener(
+  scheduler: Scheduler,
+  type: SchedulerPhaseType,
+  listener: EventListener,
+) {
+  let record = schedulerPhaseListeners.get(scheduler)
+  if (!record?.[type].delete(listener)) return
+  if (record[type].size === 0) scheduler.removeEventListener(type, record.dispatch)
 }
 
 export function getMixinRuntimeSignal(state: MixinRuntimeState): AbortSignal {
@@ -795,14 +811,6 @@ function dispatchMixinUpdateEvent(state: MixinRuntimeState | undefined, type: Sc
   })
 }
 
-function isSchedulerPhaseType(type: string): type is SchedulerPhaseType {
-  return type === 'beforeUpdate' || type === 'commit'
-}
-
-function isCapture(options?: EventListenerOptions | boolean): boolean {
-  return typeof options === 'boolean' ? options : options?.capture === true
-}
-
 function isBindingInUpdateScope(binding: MixinRuntimeBinding, parents: ParentNode[]): boolean {
   for (let parent of parents) {
     if (parent.contains(binding.node)) return true
@@ -818,4 +826,171 @@ function normalizeMixinRunner(result: AnyMixinSetupResult, handle: AnyMixinHandl
     return () => handle.element
   }
   return () => result as AnyMixinRunnerResult
+}
+
+// Stop mixins that return themselves from expanding forever.
+const MAX_MIX_DESCRIPTORS = 1024
+
+interface MixDescriptor {
+  type: (...args: any[]) => unknown
+  args: readonly unknown[]
+}
+
+type MixDescriptorRunner = (
+  descriptor: MixDescriptor,
+  index: number,
+  mixinProps: ElementProps,
+) => unknown
+
+/**
+ * Composes an element's `mix` descriptors into its final props.
+ *
+ * @param hostType Host element tag name the mixins are composed for.
+ * @param props Original element props, including `mix`.
+ * @param runDescriptor Runs each mixin using the caller's state and error handling.
+ * @returns The composed props.
+ */
+export function composeMixedProps(
+  hostType: string,
+  props: ElementProps,
+  runDescriptor: MixDescriptorRunner,
+): ElementProps {
+  let descriptors = resolveMixDescriptors(props)
+  let composedProps = withoutMix(props)
+  let mixinProps: ElementProps | undefined
+
+  for (let index = 0; index < descriptors.length && index < MAX_MIX_DESCRIPTORS; index++) {
+    mixinProps ??= withoutMixinContentProps(composedProps)
+    let result = runDescriptor(descriptors[index], index, mixinProps)
+    if (!result) continue
+    if (isMixinElementFunction(result)) continue
+
+    let returnedDescriptors = resolveReturnedMixDescriptors(result)
+    if (returnedDescriptors) {
+      for (let returned of returnedDescriptors) descriptors.push(returned)
+      continue
+    }
+
+    if (!isRemixElement(result)) {
+      console.error(new Error('mixins must return a remix element'))
+      continue
+    }
+
+    let resultType =
+      typeof result.type === 'string'
+        ? result.type
+        : isMixinElementFunction(result.type)
+          ? result.type.__rmxMixinElementType
+          : null
+    if (resultType !== hostType) {
+      console.error(new Error('mixins must return an element with the same host type'))
+      continue
+    }
+
+    let nextProps = sanitizeReturnedMixinProps(result.props)
+    for (let nested of resolveMixDescriptors(nextProps)) descriptors.push(nested)
+    composedProps = { ...composedProps, ...withoutMix(nextProps) }
+    mixinProps = undefined
+  }
+
+  let nextMix = props.mix
+  // A mixin can retain its input props. Do not add `mix` to that same object.
+  if (nextMix !== undefined && composedProps === mixinProps) {
+    return { ...composedProps, mix: nextMix }
+  }
+  if (nextMix !== undefined) composedProps.mix = nextMix
+  return composedProps
+}
+
+// JSX creation flattens nested mix arrays before composition.
+function resolveMixDescriptors(props: ElementProps): MixDescriptor[] {
+  let mix = props.mix
+  if (!mix) return []
+  if (Array.isArray(mix)) {
+    if (mix.length === 0) return []
+    return mix.filter(Boolean) as MixDescriptor[]
+  }
+  return [mix] as MixDescriptor[]
+}
+
+function withoutMix(props: ElementProps): ElementProps {
+  if (!('mix' in props)) return props
+  let { mix: _mix, ...output } = props
+  return output
+}
+
+function withoutMixinContentProps(props: ElementProps): ElementProps {
+  if (!hasMixinContentProps(props)) return props
+  let {
+    children: _children,
+    innerHTML: _innerHTML,
+    srcDoc: _srcDoc,
+    srcdoc: _srcdoc,
+    outerHTML: _outerHTML,
+    ...output
+  } = props
+  return output
+}
+
+function sanitizeReturnedMixinProps(props: ElementProps): ElementProps {
+  if (!hasMixinContentProps(props)) return props
+  console.error(new Error('mixins must not return children or raw HTML props'))
+  return withoutMixinContentProps(props)
+}
+
+function hasMixinContentProps(props: ElementProps): boolean {
+  return (
+    'children' in props ||
+    'innerHTML' in props ||
+    'srcDoc' in props ||
+    'srcdoc' in props ||
+    'outerHTML' in props
+  )
+}
+
+export function isMixinDescriptor(value: unknown): value is MixDescriptor {
+  if (!value || typeof value !== 'object' || isRemixElement(value)) {
+    return false
+  }
+
+  let descriptor = value as { type?: unknown; args?: unknown }
+  return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
+}
+
+export function isMixinElementFunction(
+  value: unknown,
+): value is ((...args: unknown[]) => unknown) & { __rmxMixinElementType: string } {
+  if (typeof value !== 'function') return false
+  return '__rmxMixinElementType' in value
+}
+
+function resolveReturnedMixDescriptors(value: unknown): MixDescriptor[] | null {
+  let descriptors: MixDescriptor[] = []
+  if (!collectReturnedMixDescriptors(value, descriptors)) {
+    return null
+  }
+
+  return descriptors
+}
+
+function collectReturnedMixDescriptors(value: unknown, output: MixDescriptor[]): boolean {
+  if (!value) {
+    return true
+  }
+
+  if (Array.isArray(value)) {
+    for (let item of value) {
+      if (!collectReturnedMixDescriptors(item, output)) {
+        return false
+      }
+    }
+    return true
+  }
+
+  if (!isMixinDescriptor(value)) {
+    return false
+  }
+
+  output.push(value)
+  return true
 }

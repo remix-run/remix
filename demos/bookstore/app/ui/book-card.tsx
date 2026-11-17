@@ -3,6 +3,7 @@ import { Frame, css } from 'remix/component'
 
 import type { Book } from '../data/schema.ts'
 import { routes } from '../routes.ts'
+import { bookCoverTransition, bookTitleTransition } from './book-transitions.ts'
 
 export interface BookCardProps {
   book: Book
@@ -15,9 +16,11 @@ export function BookCard(handle: Handle<BookCardProps>) {
 
     return (
       <div class="book-card" data-test-slug={book.slug}>
-        <img src={book.cover_url} alt={book.title} />
+        <a href={routes.books.show.href({ slug: book.slug })}>
+          <img src={book.cover_url} alt={book.title} mix={bookCoverTransition(book.id)} />
+        </a>
         <div class="book-card-body">
-          <h3>{book.title}</h3>
+          <h3 mix={bookTitleTransition(book.id)}>{book.title}</h3>
           <p class="author">by {book.author}</p>
           <p class="price">${book.price.toFixed(2)}</p>
           <div mix={css({ display: 'flex', gap: '0.5rem', alignItems: 'center' })}>
@@ -29,7 +32,10 @@ export function BookCard(handle: Handle<BookCardProps>) {
               View Details
             </a>
 
-            <Frame src={routes.fragments.cartButton.href({ bookId: book.id })} />
+            <Frame
+              name={`cart-button-${book.id}`}
+              src={routes.fragments.cartButton.href({ bookId: book.id })}
+            />
           </div>
         </div>
       </div>

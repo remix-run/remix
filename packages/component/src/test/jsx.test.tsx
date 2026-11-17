@@ -4,7 +4,15 @@ import type { Assert, Equal } from './utils.ts'
 import type { FrameProps, Handle, RemixNode } from '../runtime/component.ts'
 import { createMixin, Frame, on, ref, unsafeHTML } from '../index.ts'
 
-import type { Dispatched, MixInput, MixinDescriptor, MixinHandle, Props } from '../index.ts'
+import type {
+  Dispatched,
+  NavigationEvent,
+  FrameReloadStartEvent,
+  MixInput,
+  MixinDescriptor,
+  MixinHandle,
+  Props,
+} from '../index.ts'
 
 type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix
 type FalsyMixValue = false | 0 | 0n | '' | null | undefined
@@ -443,6 +451,55 @@ describe('jsx', () => {
       ))
 
       let applied = <div mix={[withOnMixin()]} />
+    })
+
+    it('infers navigation event and currentTarget types from the host', () => {
+      type reloadElement = Assert<
+        Equal<
+          FrameReloadStartEvent['element'],
+          HTMLAnchorElement | HTMLAreaElement | SVGAElement | HTMLFormElement | null
+        >
+      >
+      let button = (
+        <button
+          mix={on('rmx:navigation', (event, signal) => {
+            type inferredEvent = Assert<
+              Equal<typeof event, Dispatched<NavigationEvent, HTMLButtonElement>>
+            >
+            type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
+            type inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+          })}
+        />
+      )
+      let form = (
+        <form
+          mix={on('rmx:navigation', (event) => {
+            type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLFormElement>>
+            type inferredElement = Assert<
+              Equal<typeof event.element, FrameReloadStartEvent['element']>
+            >
+            type noForm = Assert<Equal<Extract<'form', keyof typeof event>, never>>
+            type noDetail = Assert<Equal<Extract<'detail', keyof typeof event>, never>>
+            type inferredFrameSrc = Assert<Equal<typeof event.frameSrc, string>>
+            type inferredTo = Assert<Equal<typeof event.to, string>>
+            type noSignal = Assert<Equal<Extract<'signal', keyof typeof event>, never>>
+            type inferredFrameTarget = Assert<Equal<typeof event.frameTarget, string | undefined>>
+            type inferredFrom = Assert<Equal<typeof event.from, NavigationHistoryEntry>>
+            type inferredNavigationType = Assert<Equal<typeof event.navigationType, NavigationType>>
+            type inferredNativeTarget = Assert<Equal<typeof event.target, EventTarget | null>>
+            type inferredData = Assert<Equal<typeof event.formData, FormData | undefined>>
+            type inferredFinished = Assert<Equal<typeof event.finished, Promise<AbortSignal>>>
+            type inferredAborted = Assert<Equal<Awaited<typeof event.finished>['aborted'], boolean>>
+          })}
+        />
+      )
+      let ancestor = (
+        <section
+          mix={on('rmx:navigation', (event) => {
+            type inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLElement>>
+          })}
+        />
+      )
     })
 
     it('infers ref mixin node type from host context', () => {
