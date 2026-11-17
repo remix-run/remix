@@ -478,20 +478,6 @@ describe('shared PR preview releases', () => {
       [1, 2],
     )
   })
-
-  it('expires a legacy build after its full SHA replacement completes', () => {
-    let sha = 'a'.repeat(40)
-    let assets = [
-      previewAsset(1, `remix-${sha.slice(0, 8)}.tgz`, now, `Complete preview build: ${sha}`),
-      previewAsset(2, `assert-${sha.slice(0, 8)}.tgz`, now),
-      previewAsset(3, `remix-${sha}.tgz`, now + 1000, `Complete preview build: ${sha}`),
-      previewAsset(4, `assert-${sha}.tgz`, now + 1000),
-    ]
-    assert.deepEqual(
-      getExpiredPrPreviewAssets(assets).map((asset) => asset.id),
-      [1, 2],
-    )
-  })
 })
 
 function release(id: number, channel: string, timestamp: string): PreviewRelease {

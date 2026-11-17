@@ -250,7 +250,7 @@ export interface PreviewAsset {
 function getCompletedPrPreviewBuilds(
   assets: PreviewAsset[],
 ): { sha: string; suffix: string; asset: PreviewAsset }[] {
-  let builds = assets
+  return assets
     .flatMap((asset) => {
       let sha = /^Complete preview build: ([a-f0-9]{40})$/.exec(asset.label ?? '')?.[1]
       if (!sha || asset.state !== 'uploaded' || asset.size <= 0) return []
@@ -266,10 +266,6 @@ function getCompletedPrPreviewBuilds(
       (a, b) =>
         Date.parse(b.asset.updated_at) - Date.parse(a.asset.updated_at) || b.asset.id - a.asset.id,
     )
-  let fullShas = new Set(
-    builds.filter((build) => build.suffix === build.sha).map((build) => build.sha),
-  )
-  return builds.filter((build) => build.suffix === build.sha || !fullShas.has(build.sha))
 }
 
 export function getExpiredPrPreviewAssets(assets: PreviewAsset[]): PreviewAsset[] {
@@ -497,10 +493,8 @@ function publishPrPreview(
     )
   }
   let assets = github.listAssets(release)
-  let completed = getCompletedPrPreviewBuilds(assets)
-  let complete = completed.find((item) => item.sha === build.sha && item.suffix === build.sha)
-  let legacy = completed.find(
-    (item) => item.sha === build.sha && item.suffix === build.sha.slice(0, 8),
+  let complete = getCompletedPrPreviewBuilds(assets).find(
+    (item) => item.sha === build.sha && item.suffix === build.sha,
   )
   if (complete) {
     verifyAssets(
@@ -511,10 +505,8 @@ function publishPrPreview(
     console.log(`Reusing published preview SHA: ${build.sha}`)
   } else {
     // Publishing is serialized per PR, so unmarked SHA groups are interrupted uploads.
-    for (let asset of getExpiredPrPreviewAssets(assets)) {
-      if (legacy && asset.name.endsWith(`-${legacy.suffix}.tgz`)) continue
+    for (let asset of getExpiredPrPreviewAssets(assets))
       github.delete(`releases/assets/${asset.id}`)
-    }
     assets = github.listAssets(release)
     if (assets.length + files.length > 1000) throw new Error('Preview release asset limit exceeded')
     for (let filename of files) github.upload(release, filename)
@@ -529,12 +521,6 @@ function publishPrPreview(
     github.api('PATCH', `releases/assets/${remix.id}`, {
       label: `${PR_BUILD_COMPLETE}: ${build.sha}`,
     })
-  }
-  // Keep an existing short-SHA build installable until its full-SHA replacement is complete.
-  if (legacy) {
-    for (let asset of assets.filter((asset) => asset.name.endsWith(`-${legacy.suffix}.tgz`))) {
-      github.delete(`releases/assets/${asset.id}`)
-    }
   }
   assets = github.listAssets(release)
   for (let asset of getExpiredPrPreviewAssets(assets)) github.delete(`releases/assets/${asset.id}`)
