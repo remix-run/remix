@@ -90,7 +90,7 @@ export function getPreviewTag(channel: string, sha: string, timestamp: string): 
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error(`Invalid source SHA: ${sha}`)
   let utc = new Date(timestamp).toISOString()
   let date = utc.slice(0, 10).replaceAll('-', '')
-  let time = Number(utc.slice(11, 19).replaceAll(':', ''))
+  let time = channel.startsWith('pr-') ? 0 : Number(utc.slice(11, 19).replaceAll(':', ''))
   let suffix = channel.startsWith('pr-') ? channel : `${channel}-${sha.slice(0, 8)}`
   return `v0.${date}.${time}-${suffix}`
 }
