@@ -6,7 +6,6 @@ import {
   renderComponent,
   setActiveSchedulerUpdateParents,
 } from './reconcile.ts'
-import type { StyleManager } from '../style/stylesheet.ts'
 
 type EmptyFn = () => void
 type SchedulerPhaseType = 'beforeUpdate' | 'commit'
@@ -55,22 +54,6 @@ function formatComponentCounts(counts: Map<string, number>): string {
  * @param rootTarget Event target that receives runtime errors.
  * @returns A scheduler instance.
  */
-export function createScheduler(doc: Document, rootTarget: EventTarget): Scheduler
-/**
- * Creates the DOM update scheduler used by the component runtime.
- *
- * @deprecated The `styles` argument is ignored and will be removed in the next major version.
- * Each root uses the style manager from its frame context, so call `createScheduler(doc, rootTarget)`.
- * @param doc Document associated with the rendered tree.
- * @param rootTarget Event target that receives runtime errors.
- * @param styles Ignored.
- * @returns A scheduler instance.
- */
-export function createScheduler(
-  doc: Document,
-  rootTarget: EventTarget,
-  styles: StyleManager,
-): Scheduler
 export function createScheduler(doc: Document, rootTarget: EventTarget): Scheduler {
   let documentState = createDocumentState(doc)
   let scheduled = new Map<CommittedComponentNode, ParentNode>()

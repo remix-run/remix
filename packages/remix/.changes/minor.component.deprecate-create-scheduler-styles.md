@@ -1,1 +1,0 @@
-The third `styles` argument to `createScheduler()` from `remix/component` is deprecated. It is already ignored and will be removed in the next major version, so call `createScheduler(document, errorTarget)` instead.
