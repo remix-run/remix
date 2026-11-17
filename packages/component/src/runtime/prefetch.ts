@@ -938,13 +938,13 @@ function getResponseElements(source: DocumentFragment): Element[] {
   return elements
 }
 
+const javaScriptTypes = new Set(['', 'module', 'text/javascript', 'application/javascript'])
+
 function isAssetReference(element: Element, baseURL: string): boolean {
   if (element instanceof HTMLScriptElement) {
     return (
       getAssetHref(element.getAttribute('src'), baseURL) !== undefined &&
-      ['', 'module', 'text/javascript', 'application/javascript'].includes(
-        element.type.toLowerCase(),
-      )
+      javaScriptTypes.has(element.type.toLowerCase())
     )
   }
   return (
@@ -1031,11 +1031,7 @@ function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement
       return
     }
   } else if (element instanceof HTMLScriptElement) {
-    if (
-      !['', 'module', 'text/javascript', 'application/javascript'].includes(
-        element.type.toLowerCase(),
-      )
-    ) {
+    if (!javaScriptTypes.has(element.type.toLowerCase())) {
       return
     }
   } else if (!(element instanceof HTMLImageElement) || element.srcset) {

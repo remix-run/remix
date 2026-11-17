@@ -2,6 +2,7 @@ import { parseArgs } from 'node:util'
 
 import {
   PREVIEW_REPOSITORY,
+  PR_PREVIEW_BUILD_LIMIT,
   PreviewGitHub,
   createGitHubRunner,
   getPreviewTarballUrl,
@@ -49,7 +50,7 @@ A [preview build](https://github.com/${PREVIEW_REPOSITORY}/releases/tag/${previe
 pnpm add "${getPreviewTarballUrl(preview, 'remix')}"
 \`\`\`
 
-Each SHA has its own build URL. The latest 10 successful SHA builds are retained. Closing or merging this PR deletes its preview release and tag.
+Each SHA has its own build URL. The latest ${PR_PREVIEW_BUILD_LIMIT} successful SHA builds are retained. Closing or merging this PR deletes its preview release and tag.
 
 If your pnpm version blocks transitive Git or tarball dependencies, set \`blockExoticSubdeps: false\` in your \`pnpm-workspace.yaml\`.`
 } else {

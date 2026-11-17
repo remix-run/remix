@@ -36,16 +36,16 @@ export const app = run({
       fetch(url, init) {
         let reuseBrowsingHtml =
           (init.method ?? 'GET').toUpperCase() === 'GET' &&
-          options?.transition?.navigationType === 'traverse' &&
+          options?.navigationType === 'traverse' &&
           browsingPageMatchers.some((matcher) => matcher.match(url) !== null)
         return fetch(url, { ...init, cache: reuseBrowsingHtml ? 'force-cache' : undefined })
       },
       async commit(commitFrame, { signal, to }) {
-        let transition = options?.transition
+        let navigationType = options?.navigationType
         if (
           options?.target ||
-          !transition ||
-          transition.navigationType === 'reload' ||
+          !navigationType ||
+          navigationType === 'reload' ||
           !document.startViewTransition ||
           matchMedia('(prefers-reduced-motion: reduce)').matches ||
           signal.aborted
@@ -54,8 +54,8 @@ export const app = run({
         }
 
         let viewTransition = document.startViewTransition(commitFrame)
-        let from = transition.from.url
-        if (bookDetailsMatcher.match(to) || (from !== null && bookDetailsMatcher.match(from))) {
+        let from = options?.from?.url
+        if (bookDetailsMatcher.match(to) || (from != null && bookDetailsMatcher.match(from))) {
           viewTransition.types?.add('book-details')
         }
         let skip = () => viewTransition.skipTransition()

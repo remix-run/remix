@@ -31,7 +31,7 @@ export function PendingButton(handle: Handle<PendingButtonProps>) {
           type={type}
           class={className}
           mix={[
-            on('rmx:submission', async (event, signal) => {
+            on('rmx:navigation', async (event, signal) => {
               state = 'pending'
               handle.update()
               try {

@@ -68,6 +68,31 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  post_release:
+    name: Comment on and archive released items
+    needs: publish
+    if: startsWith(needs.publish.outputs.tag, 'remix@')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+
+      - name: Comment on and archive released items
+        run: node scripts/post-release.ts
+        env:
+          RELEASE_TAG: ${{ needs.publish.outputs.tag }}
+          # Requires organization Projects and repository Issues/Pull requests read/write access.
+          GH_TOKEN: ${{ secrets.GH_REMIX_PAT }}
+
   docs:
     name: Deploy docs
     needs: publish

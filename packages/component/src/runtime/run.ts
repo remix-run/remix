@@ -1,5 +1,13 @@
 import { getNonceManager } from './nonce.ts'
-import { createFrame, setAppFrames } from './frame.ts'
+import {
+  createFrame,
+  encodeFormDataAsSearchParams,
+  normalizeFormLineBreaks,
+  setAppFrames,
+  setFrameCommit,
+  type FrameCommit,
+  type ProcessClientEntryPreloads,
+} from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
 import type { ComponentErrorEvent, Handle } from './component.ts'
@@ -10,11 +18,8 @@ import {
   type ResolveFrameOptions,
 } from './frame-runtime.ts'
 import { startNavigationListener } from './navigation.ts'
-import { encodeFormDataAsSearchParams, normalizeFormLineBreaks } from './form-navigation.ts'
 import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
 import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
-import type { ProcessClientEntryPreloads } from './module-preloader.ts'
-import { setFrameCommit, type FrameCommit } from './frame-commit.ts'
 
 /**
  * Options for starting the client runtime with {@link run}.
@@ -167,7 +172,7 @@ export function run(init: RunInit): AppRuntime {
   getNonceManager()
   let styleManager = createStyleManager()
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
-  let scheduler = createScheduler(document, errorTarget, styleManager)
+  let scheduler = createScheduler(document, errorTarget)
 
   let resolveFrame = init.resolveFrame ?? defaultResolveFrame
   let namedFrames = new NamedFrameRegistry()

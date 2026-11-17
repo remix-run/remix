@@ -18,6 +18,9 @@ and the
 3. Merging the Release pull request triggers the publish workflow
    - Since the change files have been deleted, it publishes all unpublished packages to npm
    - It then creates Git tags and GitHub releases for the packages that were published
+   - After publishing a `remix@` tag, it comments on PRs that landed since the previous stable
+     Remix tag and issues closed by those PRs, then archives their `Merged` cards in the
+     [Remix Roadmap](https://github.com/orgs/remix-run/projects/31).
 
 Each change-file entry links to the pull request that introduced the file, using the PR number in
 the introducing commit's subject. If there is no PR number, it links to that commit instead. Later
@@ -93,26 +96,11 @@ updates, then uploads and verifies them before publishing releases in
 for an experimental preview. Previewed refs must include the preview scripts from
 `main`.
 
-Main and experimental release names and tags use `v0.YYYYMMDD.HHMMSS-<channel>-<8-character-sha>`,
-with the source commit's UTC date and time. Leading zeros are removed from the numeric time
-component for valid SemVer. PRs share a `v0.YYYYMMDD.HHMMSS-pr-<number>` release, using the PR's
-creation timestamp so every build uses the same tag, with `<package>-<8-character-sha>.tgz` assets.
-After verifying every asset for a SHA, publishing labels its `remix` asset as complete,
-updates the release's install table, and retains the latest 10 complete builds by completion time.
-Main releases are published as the repository's latest release when they are the newest main
-build, and include a `remix.url` asset containing their `remix.tgz` URL.
-Retries preserve completed assets and replace partial uploads. Closing the PR deletes its release
-and any older per-SHA preview releases.
+- Main release tags use `v0.YYYYMMDD.0-main-<8-character-sha>` (retained for 30 days, with the latest successful publication retained indefinitely). The `remix.url` asset contains that build's tarball URL for one-line installation.
+- PRs share a `v0.YYYYMMDD.0-pr-<number>` release, using the PR's UTC creation date so every build uses the same tag, with `<package>-<full-source-sha>.tgz` assets (last 5 SHAs retained)
+- Experimental tags use `v0.YYYYMMDD.0-experimental-<8-character-sha>` (retained for 30 days)
 
-Successful PR publication deletes the corresponding legacy `preview/pr-<number>` branch.
-Closing a PR also deletes its legacy branch, including when its head predates this workflow.
-These deletions use the source repository's `GITHUB_TOKEN`.
-
-The destination must be public, initialized with a commit, and have release immutability disabled.
-Set `REMIX_PREVIEWS_PAT` in this repository's Actions secrets to a fine-grained PAT with Contents
-read/write access to the destination. See the
-[README](https://github.com/remix-run/remix/blob/main/README.md#installation) for installation and
-retention details.
+Set `REMIX_PREVIEWS_PAT` in this repository's Actions secrets to a fine-grained PAT with Contents read/write access to `remix-run/previews`. The destination must be public, initialized with a commit, and have release immutability disabled.
 
 ## Agentic Workflows
 
