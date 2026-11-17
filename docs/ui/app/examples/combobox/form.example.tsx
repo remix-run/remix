@@ -16,128 +16,24 @@ export default function ExampleCombobox(handle: Handle) {
           confirmation = state ? `State saved as ${state.label}` : 'Choose a state'
           handle.update()
         }),
-        themeStyle,
-        css({
-          width: '320px',
-          maxWidth: '100%',
-          display: 'grid',
-          gap: '16px',
-        }),
+        styles.theme,
+        styles.form,
       ]}
     >
-      <div
-        mix={css({
-          padding: '20px',
-          border: '1px solid var(--border)',
-          borderRadius: '12px',
-          background: 'var(--surface)',
-          display: 'grid',
-          gap: '16px',
-        })}
-      >
+      <div mix={styles.field}>
         <combobox.Context name="state">
           <label for={`${handle.id}-state`}>State</label>
           <input
             id={`${handle.id}-state`}
             placeholder="Search states"
-            mix={[
-              combobox.input(),
-              css({
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid var(--control-border)',
-                borderRadius: '8px',
-                background: 'var(--surface)',
-                color: 'inherit',
-                font: 'inherit',
-                '&:focus-visible': {
-                  outline: '2px solid var(--focus-ring)',
-                  outlineOffset: '2px',
-                },
-                '&:disabled': {
-                  opacity: 0.45,
-                  cursor: 'not-allowed',
-                },
-              }),
-            ]}
+            mix={[combobox.input(), styles.input]}
           />
           <combobox.Portal>
             <combobox.PopoverContext>
-              <div
-                mix={[
-                  combobox.popover(),
-                  themeStyle,
-                  css({
-                    margin: 0,
-                    padding: '6px',
-                    minWidth: '220px',
-                    maxWidth: 'calc(100vw - 32px)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '10px',
-                    background: 'var(--surface)',
-                    boxShadow: '0 12px 32px #00000024',
-                    opacity: 0,
-                    transition: 'opacity 140ms ease',
-                    '&[data-state="open"]': {
-                      opacity: 1,
-                      '@starting-style': {
-                        opacity: 0,
-                      },
-                    },
-                    '&[data-show-reason="hint"]': {
-                      transition: 'none',
-                    },
-                    '@media (prefers-reduced-motion: reduce)': {
-                      transition: 'none',
-                    },
-                  }),
-                ]}
-              >
-                <div
-                  aria-label="US states"
-                  mix={[
-                    combobox.list(),
-                    css({
-                      display: 'grid',
-                      gap: '2px',
-                      maxHeight: '240px',
-                      overflow: 'auto',
-                      outline: 0,
-                    }),
-                  ]}
-                >
+              <div mix={[combobox.popover(), styles.theme, styles.popover]}>
+                <div aria-label="US states" mix={[combobox.list(), styles.list]}>
                   {options.map((option) => (
-                    <div
-                      key={option.value}
-                      mix={[
-                        combobox.option(option),
-                        css({
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '12px',
-                          padding: '10px 12px',
-                          borderRadius: '6px',
-                          cursor: 'default',
-                          '&[hidden]': {
-                            display: 'none',
-                          },
-                          '&[data-highlighted="true"]': {
-                            background: 'light-dark(#eeeef3, #303038)',
-                          },
-                          '&[aria-selected="true"]': {
-                            background: 'light-dark(#e4e4eb, #3b3b44)',
-                          },
-                          '&[aria-disabled="true"]': {
-                            opacity: 0.4,
-                            cursor: 'not-allowed',
-                          },
-                          '&[data-combobox-flash]': {
-                            background: 'light-dark(#d6d6e0, #4b4b56)',
-                          },
-                        }),
-                      ]}
-                    >
+                    <div key={option.value} mix={[combobox.option(option), styles.option]}>
                       <span>
                         <HighlightMatch text={option.label} />
                       </span>
@@ -149,45 +45,11 @@ export default function ExampleCombobox(handle: Handle) {
           </combobox.Portal>
           <input mix={combobox.hiddenInput()} />
         </combobox.Context>
-        <button
-          type="submit"
-          mix={css({
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '9px 14px',
-            border: '1px solid var(--control-border)',
-            borderRadius: '8px',
-            background: 'light-dark(#fff, #25252b)',
-            color: 'inherit',
-            font: 'inherit',
-            fontWeight: 600,
-            cursor: 'pointer',
-            '&:hover:not(:disabled)': {
-              background: 'light-dark(#f0f0f5, #303038)',
-            },
-            '&:focus-visible': {
-              outline: '2px solid var(--focus-ring)',
-              outlineOffset: '3px',
-            },
-            '&:disabled': {
-              opacity: 0.45,
-              cursor: 'not-allowed',
-            },
-          })}
-        >
+        <button type="submit" mix={styles.button}>
           Save
         </button>
         {confirmation && (
-          <p
-            role="status"
-            mix={css({
-              margin: 0,
-              fontSize: '12px',
-              color: 'light-dark(#62626c, #b0b0bb)',
-            })}
-          >
+          <p role="status" mix={styles.description}>
             {confirmation}
           </p>
         )}
@@ -195,20 +57,6 @@ export default function ExampleCombobox(handle: Handle) {
     </form>
   )
 }
-
-const themeStyle = css({
-  '--text': 'light-dark(#202027, #eeeef2)',
-  '--surface': 'light-dark(#fff, #1b1b20)',
-  '--border': 'light-dark(#e0e0e6, #393940)',
-  '--control-border': 'light-dark(#d8d8df, #44444c)',
-  '--focus-ring': 'light-dark(#70707c, #a0a0ac)',
-  colorScheme: 'light dark',
-  '&, & *, &::before, &::after, & *::before, & *::after': {
-    boxSizing: 'border-box',
-  },
-  color: 'var(--text)',
-  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-})
 
 function HighlightMatch(handle: Handle<{ text: string }>) {
   let context = handle.context.get(combobox.Context)
@@ -226,15 +74,7 @@ function HighlightMatch(handle: Handle<{ text: string }>) {
     return (
       <>
         {text.slice(0, start)}
-        <mark
-          mix={css({
-            background: 'none',
-            color: 'inherit',
-            fontWeight: 650,
-          })}
-        >
-          {text.slice(start, end)}
-        </mark>
+        <mark mix={styles.highlight}>{text.slice(start, end)}</mark>
         {text.slice(end)}
       </>
     )
@@ -293,3 +133,141 @@ const options = [
   { value: 'WI', label: 'Wisconsin' },
   { value: 'WY', label: 'Wyoming' },
 ]
+
+const styles = {
+  theme: css({
+    '--text': 'light-dark(#202027, #eeeef2)',
+    '--surface': 'light-dark(#fff, #1b1b20)',
+    '--border': 'light-dark(#e0e0e6, #393940)',
+    '--control-border': 'light-dark(#d8d8df, #44444c)',
+    '--focus-ring': 'light-dark(#70707c, #a0a0ac)',
+    colorScheme: 'light dark',
+    '&, & *, &::before, &::after, & *::before, & *::after': {
+      boxSizing: 'border-box',
+    },
+    color: 'var(--text)',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
+  form: css({
+    width: '320px',
+    maxWidth: '100%',
+    display: 'grid',
+    gap: '16px',
+  }),
+  field: css({
+    padding: '20px',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    background: 'var(--surface)',
+    display: 'grid',
+    gap: '16px',
+  }),
+  input: css({
+    width: '100%',
+    padding: '10px 12px',
+    border: '1px solid var(--control-border)',
+    borderRadius: '8px',
+    background: 'var(--surface)',
+    color: 'inherit',
+    font: 'inherit',
+    '&:focus-visible': {
+      outline: '2px solid var(--focus-ring)',
+      outlineOffset: '2px',
+    },
+    '&:disabled': {
+      opacity: 0.45,
+      cursor: 'not-allowed',
+    },
+  }),
+  popover: css({
+    margin: 0,
+    padding: '6px',
+    minWidth: '220px',
+    maxWidth: 'calc(100vw - 32px)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    background: 'var(--surface)',
+    boxShadow: '0 12px 32px #00000024',
+    opacity: 0,
+    transition: 'opacity 140ms ease',
+    '&[data-state="open"]': {
+      opacity: 1,
+      '@starting-style': {
+        opacity: 0,
+      },
+    },
+    '&[data-show-reason="hint"]': {
+      transition: 'none',
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  }),
+  list: css({
+    display: 'grid',
+    gap: '2px',
+    maxHeight: '240px',
+    overflow: 'auto',
+    outline: 0,
+  }),
+  option: css({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    padding: '10px 12px',
+    borderRadius: '6px',
+    cursor: 'default',
+    '&[hidden]': {
+      display: 'none',
+    },
+    '&[data-highlighted="true"]': {
+      background: 'light-dark(#eeeef3, #303038)',
+    },
+    '&[aria-selected="true"]': {
+      background: 'light-dark(#e4e4eb, #3b3b44)',
+    },
+    '&[aria-disabled="true"]': {
+      opacity: 0.4,
+      cursor: 'not-allowed',
+    },
+    '&[data-combobox-flash]': {
+      background: 'light-dark(#d6d6e0, #4b4b56)',
+    },
+  }),
+  button: css({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '9px 14px',
+    border: '1px solid var(--control-border)',
+    borderRadius: '8px',
+    background: 'light-dark(#fff, #25252b)',
+    color: 'inherit',
+    font: 'inherit',
+    fontWeight: 600,
+    cursor: 'pointer',
+    '&:hover:not(:disabled)': {
+      background: 'light-dark(#f0f0f5, #303038)',
+    },
+    '&:focus-visible': {
+      outline: '2px solid var(--focus-ring)',
+      outlineOffset: '3px',
+    },
+    '&:disabled': {
+      opacity: 0.45,
+      cursor: 'not-allowed',
+    },
+  }),
+  description: css({
+    margin: 0,
+    fontSize: '12px',
+    color: 'light-dark(#62626c, #b0b0bb)',
+  }),
+  highlight: css({
+    background: 'none',
+    color: 'inherit',
+    fontWeight: 650,
+  }),
+}

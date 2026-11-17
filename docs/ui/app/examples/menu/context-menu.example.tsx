@@ -3,87 +3,22 @@ import { css } from 'remix/component'
 
 export default function ExampleMenu() {
   return () => (
-    <div
-      mix={[
-        themeStyle,
-        css({
-          width: '300px',
-          maxWidth: '100%',
-        }),
-      ]}
-    >
+    <div mix={[styles.theme, styles.root]}>
       <menu.Context label="File actions">
-        <div
-          tabIndex={0}
-          mix={[
-            menu.contextTrigger(),
-            css({
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '16px',
-              border: '1px solid var(--border)',
-              borderRadius: '10px',
-              background: 'light-dark(#fff, #25252b)',
-              fontWeight: 500,
-              '&:focus-visible': {
-                outline: '2px solid light-dark(#70707c, #a0a0ac)',
-                outlineOffset: '3px',
-              },
-            }),
-          ]}
-        >
+        <div tabIndex={0} mix={[menu.contextTrigger(), styles.contextTrigger]}>
           <FileIcon />
           <span>Notes.txt</span>
         </div>
         <menu.Portal>
           <menu.PopoverContext>
-            <div
-              mix={[
-                menu.popover(),
-                themeStyle,
-                css({
-                  margin: 0,
-                  padding: '6px',
-                  minWidth: '220px',
-                  maxWidth: 'calc(100vw - 32px)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '10px',
-                  background: 'light-dark(#fff, #1b1b20)',
-                  boxShadow: '0 12px 32px #00000024',
-                  opacity: 0,
-                  transition: 'opacity 140ms ease',
-                  '&[data-close-animation="none"]': {
-                    transition: 'none',
-                  },
-                  '&[data-state="open"]': {
-                    opacity: 1,
-                    '@starting-style': {
-                      opacity: 0,
-                    },
-                  },
-                  '@media (prefers-reduced-motion: reduce)': {
-                    transition: 'none',
-                  },
-                }),
-              ]}
-            >
-              <div
-                mix={[
-                  menu.list(),
-                  css({
-                    display: 'grid',
-                    gap: '2px',
-                    outline: 0,
-                  }),
-                ]}
-              >
+            <div mix={[menu.popover(), styles.theme, styles.popover]}>
+              <div mix={[menu.list(), styles.list]}>
                 <div
                   mix={[
                     menu.item({
                       name: 'rename',
                     }),
-                    itemStyle,
+                    styles.item,
                   ]}
                 >
                   Rename
@@ -93,7 +28,7 @@ export default function ExampleMenu() {
                     menu.item({
                       name: 'duplicate',
                     }),
-                    itemStyle,
+                    styles.item,
                   ]}
                 >
                   Duplicate
@@ -103,7 +38,7 @@ export default function ExampleMenu() {
                     menu.item({
                       name: 'move-to-trash',
                     }),
-                    itemStyle,
+                    styles.item,
                   ]}
                 >
                   Move to trash
@@ -117,31 +52,6 @@ export default function ExampleMenu() {
   )
 }
 
-const themeStyle = css({
-  '--text': 'light-dark(#202027, #eeeef2)',
-  '--border': 'light-dark(#e0e0e6, #393940)',
-  colorScheme: 'light dark',
-  '&, & *, &::before, &::after, & *::before, & *::after': {
-    boxSizing: 'border-box',
-  },
-  color: 'var(--text)',
-  font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
-})
-
-const itemStyle = css({
-  padding: '9px 12px',
-  borderRadius: '6px',
-  outline: 0,
-  cursor: 'default',
-  '&[data-highlighted]': {
-    background: 'light-dark(#eeeef3, #303038)',
-  },
-  '&[data-menu-flash]': {
-    background: 'light-dark(#dedee7, #454550)',
-    color: 'light-dark(#202027, #eeeef2)',
-  },
-})
-
 function FileIcon() {
   return () => (
     <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -153,4 +63,77 @@ function FileIcon() {
       />
     </svg>
   )
+}
+
+const styles = {
+  theme: css({
+    '--text': 'light-dark(#202027, #eeeef2)',
+    '--border': 'light-dark(#e0e0e6, #393940)',
+    colorScheme: 'light dark',
+    '&, & *, &::before, &::after, & *::before, & *::after': {
+      boxSizing: 'border-box',
+    },
+    color: 'var(--text)',
+    font: '14px/1.6 "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  }),
+  item: css({
+    padding: '9px 12px',
+    borderRadius: '6px',
+    outline: 0,
+    cursor: 'default',
+    '&[data-highlighted]': {
+      background: 'light-dark(#eeeef3, #303038)',
+    },
+    '&[data-menu-flash]': {
+      background: 'light-dark(#dedee7, #454550)',
+      color: 'light-dark(#202027, #eeeef2)',
+    },
+  }),
+  root: css({
+    width: '300px',
+    maxWidth: '100%',
+  }),
+  contextTrigger: css({
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '16px',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    background: 'light-dark(#fff, #25252b)',
+    fontWeight: 500,
+    '&:focus-visible': {
+      outline: '2px solid light-dark(#70707c, #a0a0ac)',
+      outlineOffset: '3px',
+    },
+  }),
+  popover: css({
+    margin: 0,
+    padding: '6px',
+    minWidth: '220px',
+    maxWidth: 'calc(100vw - 32px)',
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    background: 'light-dark(#fff, #1b1b20)',
+    boxShadow: '0 12px 32px #00000024',
+    opacity: 0,
+    transition: 'opacity 140ms ease',
+    '&[data-close-animation="none"]': {
+      transition: 'none',
+    },
+    '&[data-state="open"]': {
+      opacity: 1,
+      '@starting-style': {
+        opacity: 0,
+      },
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  }),
+  list: css({
+    display: 'grid',
+    gap: '2px',
+    outline: 0,
+  }),
 }

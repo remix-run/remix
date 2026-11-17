@@ -21,28 +21,24 @@ export default function ExampleDialogToast(handle: Handle) {
           <dialog.SurfaceContext>
             <section mix={[dialog.surface(), styles.surface]}>
               <h2 mix={dialog.title()}>Dialog with other patterns</h2>
-              <p mix={[dialog.description(), css({ margin: '0 0 24px' })]}>
+              <p mix={[dialog.description(), styles.description]}>
                 Open different patterns inside the dialog to try their stacking, focus and dismissal
                 together.
               </p>
-              <div mix={css({ display: 'grid', gap: '24px', marginBottom: '24px' })}>
+              <div mix={styles.patterns}>
                 <ExampleSelect label="Select" />
                 <combobox.Context>
-                  <div mix={css({ display: 'grid', gap: '10px' })}>
+                  <div mix={styles.field}>
                     <label for={`${handle.id}-combobox`}>Combobox</label>
                     <input
                       id={`${handle.id}-combobox`}
                       placeholder="Search options"
-                      mix={[
-                        combobox.input(),
-                        styles.button,
-                        css({ width: '100%', boxSizing: 'border-box' }),
-                      ]}
+                      mix={[combobox.input(), styles.button, styles.input]}
                     />
                   </div>
                   <combobox.Portal>
                     <combobox.PopoverContext>
-                      <div mix={[combobox.popover(), styles.theme, styles.popup]}>
+                      <div mix={[combobox.popover(), styles.theme, styles.popover]}>
                         <div aria-label="Combobox options" mix={[combobox.list(), styles.list]}>
                           {options.map((option) => (
                             <div key={option.value} mix={[combobox.option(option), styles.option]}>
@@ -59,7 +55,7 @@ export default function ExampleDialogToast(handle: Handle) {
                     <button mix={[menu.trigger({ offset: 8 }), styles.button]}>Menu</button>
                     <menu.Portal>
                       <menu.PopoverContext>
-                        <div mix={[menu.popover(), styles.theme, styles.popup]}>
+                        <div mix={[menu.popover(), styles.theme, styles.popover]}>
                           <div mix={[menu.list(), styles.list]}>
                             <div mix={[menu.item({ name: 'action-a' }), styles.menuItem]}>
                               Action A
@@ -72,7 +68,7 @@ export default function ExampleDialogToast(handle: Handle) {
                               </div>
                               <menu.Portal>
                                 <menu.PopoverContext>
-                                  <div mix={[menu.popover(), styles.theme, styles.popup]}>
+                                  <div mix={[menu.popover(), styles.theme, styles.popover]}>
                                     <div mix={[menu.list(), styles.list]}>
                                       <div mix={[menu.item({ name: 'action-b' }), styles.menuItem]}>
                                         Action B
@@ -106,10 +102,10 @@ export default function ExampleDialogToast(handle: Handle) {
                   <button
                     type="button"
                     mix={[
-                      styles.button,
                       on('click', () => {
                         toastManager.add({ id: 'action', title: 'Action completed' })
                       }),
+                      styles.button,
                     ]}
                   >
                     Toast
@@ -132,7 +128,7 @@ export default function ExampleDialogToast(handle: Handle) {
 
 function ExampleSelect(handle: Handle<{ label: string; focusOnShow?: boolean }>) {
   return () => (
-    <div mix={css({ display: 'grid', gap: '10px' })}>
+    <div mix={styles.field}>
       <span id={`${handle.id}-label`}>{handle.props.label}</span>
       <select.Context defaultLabel="Option A" defaultValue="a">
         <button
@@ -141,7 +137,7 @@ function ExampleSelect(handle: Handle<{ label: string; focusOnShow?: boolean }>)
             select.trigger(),
             handle.props.focusOnShow ? popover.focusOnShow() : undefined,
             styles.button,
-            css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }),
+            styles.selectTrigger,
           ]}
         >
           <SelectedLabel />
@@ -152,7 +148,7 @@ function ExampleSelect(handle: Handle<{ label: string; focusOnShow?: boolean }>)
 
         <select.Portal>
           <select.PopoverContext>
-            <div mix={[select.popover(), styles.theme, styles.popup]}>
+            <div mix={[select.popover(), styles.theme, styles.popover]}>
               <div aria-label={handle.props.label} mix={[select.list(), styles.list]}>
                 {options.map((option) => (
                   <div key={option.value} mix={[select.option(option), styles.option]}>
@@ -178,11 +174,11 @@ function ExamplePopover(handle: Handle) {
         mix={[
           popover.anchor({ placement: 'bottom', offset: 8 }),
           popover.focusOnHide(),
-          styles.button,
           on('click', () => {
             open = !open
             handle.update()
           }),
+          styles.button,
         ]}
       >
         Popover
@@ -202,8 +198,8 @@ function ExamplePopover(handle: Handle) {
                 },
               }),
               styles.theme,
-              styles.popup,
-              css({ padding: '16px', width: '240px' }),
+              styles.popover,
+              styles.popoverContent,
             ]}
           >
             <ExampleSelect label="Nested Select" focusOnShow />
@@ -246,7 +242,6 @@ function ToastRegion() {
                   }}
                   mix={[
                     toast.item(),
-                    styles.toast,
                     animateEntrance({
                       translate: '0 calc(100% + max(16px, env(safe-area-inset-bottom)))',
                       duration: reducedMotion ? 0 : 160,
@@ -258,6 +253,7 @@ function ToastRegion() {
                       duration: reducedMotion ? 0 : 140,
                       easing: 'ease-out',
                     }),
+                    styles.toast,
                   ]}
                 >
                   <h2 mix={[toast.title(), styles.toastTitle]}>{toastItem.title}</h2>
@@ -295,7 +291,7 @@ const styles = {
     cursor: 'pointer',
     '&:focus': { outline: '2px solid currentColor', outlineOffset: '3px' },
   }),
-  popup: css({
+  popover: css({
     boxSizing: 'border-box',
     margin: 0,
     padding: '6px',
@@ -409,4 +405,11 @@ const styles = {
     '&:hover': { background: 'light-dark(#f0f0f5, #34343d)' },
     '&:focus': { outline: '2px solid currentColor', outlineOffset: '2px' },
   }),
+
+  description: css({ margin: '0 0 24px' }),
+  patterns: css({ display: 'grid', gap: '24px', marginBottom: '24px' }),
+  field: css({ display: 'grid', gap: '10px' }),
+  input: css({ width: '100%', boxSizing: 'border-box' }),
+  selectTrigger: css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }),
+  popoverContent: css({ padding: '16px', width: '240px' }),
 }
