@@ -90,6 +90,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ needs.build.outputs.sha }}
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
