@@ -31,6 +31,9 @@ describe('bookstore prefetching', () => {
     await page.evaluate(async () => window.navigation.transition?.finished)
 
     await page.getByRole('button', { name: 'Logout', exact: true }).click()
+    // The redirected page renders before the replacement navigation to `/` aborts the logout
+    // transition, so wait for that navigation before awaiting the current transition.
+    await page.waitForURL((url) => url.pathname === '/')
     await page.getByRole('heading', { name: 'Welcome to the Bookstore', exact: true }).waitFor()
     await page.evaluate(async () => window.navigation.transition?.finished)
     await page.evaluate(async () => {
