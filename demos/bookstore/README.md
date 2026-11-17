@@ -42,7 +42,7 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 
 ## Frames
 
-- Cart buttons and cart items reload their own frames after updates, keeping changes local to the affected UI. Quantity updates and removals submit to the cart frame and return updated HTML in one request.
+- Cart buttons and cart items reload their own frames after updates, keeping changes local to the affected UI. Quantity updates use PATCH and removals use DELETE at `/cart/items`, returning updated HTML in one enhanced request.
 - Header links prefetch on hover or focus, while book details prefetch as their links enter the viewport. Login is excluded from prefetching.
 - The [browser entry](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/entry.tsx) uses `defaultResolveFrame` to customize caching and wrap page updates in view transitions. Prefetching uses Remix's built-in strategy.
 
@@ -57,7 +57,7 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 
 - Shared schemas validate input in the browser and on the server.
 - Failed submissions preserve entered values and show field and form errors. Rejected cart quantities show feedback on the affected row.
-- Native cart forms redirect back to the cart, preserving validation feedback until the cart frame reads it.
+- Native cart forms redirect back to the cart and use session flash messages for validation feedback.
 - Shared field components keep labels, controls, and validation messages consistent.
 
 ## UI

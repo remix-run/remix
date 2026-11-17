@@ -32,7 +32,7 @@ const cartErrorSchema = s.object({
 export default createController(routes.cart.fragments, {
   actions: {
     items(context) {
-      let error = s.parseSafe(cartErrorSchema, context.flashUntilRead.get('cartError'))
+      let error = s.parseSafe(cartErrorSchema, context.session.get('cartError'))
       return renderCartItems(context, error.success ? error.value : undefined)
     },
 
@@ -73,7 +73,7 @@ function mutationResponse(context: RouterTypes['context'], error?: CartError): R
     return renderCartItems(context, error)
   }
   if (error) {
-    context.flashUntilRead.set('cartError', error)
+    context.session.flash('cartError', error)
   }
   return redirect(routes.cart.index.href(), 303)
 }

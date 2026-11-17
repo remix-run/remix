@@ -34,6 +34,8 @@ export default createController(routes.fragments, {
         return renderCartButton(context, bookId, error)
       }
       if (error) {
+        // Sibling button frames can race to save the session and expire normal flashes
+        // before this book's frame reads its error. Keep it until that frame reads it.
         context.flashUntilRead.set(`cartButtonError:${bookId}`, error)
       }
       let referrer = URL.parse(request.headers.get('Referer') ?? '')

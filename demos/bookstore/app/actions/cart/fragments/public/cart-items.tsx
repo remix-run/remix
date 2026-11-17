@@ -178,8 +178,8 @@ export const CartItems = clientEntry(
                         submission={itemSubmission}
                       >
                         {({ fields }) => (
-                          <form
-                            method="POST"
+                          <RestfulForm
+                            method="PATCH"
                             action={routes.cart.fragments.itemsUpdate.href()}
                             mix={[
                               form.root(),
@@ -255,7 +255,7 @@ export const CartItems = clientEntry(
                                 {fields.quantity.errors.join(' ')}
                               </p>
                             ) : null}
-                          </form>
+                          </RestfulForm>
                         )}
                       </form.Context>
                     </td>

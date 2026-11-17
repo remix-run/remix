@@ -116,11 +116,11 @@ describe('cart handlers', () => {
     assertContains(html, 'Browse Books')
   })
 
-  it('POST /cart/items returns the updated HTML directly for frame submissions', async () => {
+  it('PATCH /cart/items returns the updated HTML directly for frame submissions', async () => {
     let session = await cartSession()
     let response = await router.fetch(
       requestWithSession('https://remix.run/cart/items', session, {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'X-Remix-Frame': 'true' },
         body: new URLSearchParams({ bookId: '1', quantity: '1e2' }),
       }),
@@ -139,7 +139,7 @@ describe('cart handlers', () => {
     for (let quantity of ['', '0', '-1', '1.5', '2abc', '9007199254740992']) {
       let response = await router.fetch(
         requestWithSession('https://remix.run/cart/items', session, {
-          method: 'POST',
+          method: 'PATCH',
           headers: { 'X-Remix-Frame': 'true' },
           body: new URLSearchParams({ bookId: '1', quantity }),
         }),
@@ -149,7 +149,7 @@ describe('cart handlers', () => {
     }
     let missing = await router.fetch(
       requestWithSession('https://remix.run/cart/items', session, {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'X-Remix-Frame': 'true' },
         body: new URLSearchParams({ bookId: '2', quantity: '3' }),
       }),
@@ -188,7 +188,7 @@ describe('cart handlers', () => {
 
   it('rejects malformed item IDs and missing books before changing the cart', async () => {
     let session = await cartSession()
-    for (let method of ['POST', 'DELETE']) {
+    for (let method of ['PATCH', 'DELETE']) {
       for (let bookId of ['', '0', '-1', '1.5', '1abc', '9007199254740992']) {
         let response = await router.fetch(
           requestWithSession('https://remix.run/cart/items', session, {

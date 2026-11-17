@@ -110,9 +110,22 @@ describe('cart submissions', () => {
     await card.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
     await page.reload()
     assert.equal(await page.getByRole('alert').count(), 0)
+
+    rejecting = false
+    await card.getByRole('button', { name: 'Add to Cart', exact: true }).click()
+    await card.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
+    await page.goto('/?from=native')
+    rejecting = true
+    await card.getByRole('button', { name: 'Remove from Cart', exact: true }).click()
+    await card.getByRole('alert').getByText('Couldn’t update this book. Try again.').waitFor()
+    assert.equal(new URL(page.url()).pathname + new URL(page.url()).search, '/?from=native')
+    assert.equal(await page.getByRole('alert').count(), 1)
+    await page.reload()
+    assert.equal(await page.getByRole('alert').count(), 0)
+    await card.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
   })
 
-  it('posts once to the frame source with pending prices and stable focus', async (t) => {
+  it('updates once through a PATCH override with pending prices and stable focus', async (t) => {
     let received = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
     t.after(() => release.resolve())
@@ -120,7 +133,11 @@ describe('cart submissions', () => {
     let page = await serveCart(t, async (request) => {
       let pathname = new URL(request.url).pathname
       if (!pathname.startsWith('/cart/items')) return
-      requests.push(`${request.method} ${pathname}`)
+      requests.push(
+        request.method === 'POST'
+          ? `POST ${(await request.clone().formData()).get('_method')} ${pathname}`
+          : `${request.method} ${pathname}`,
+      )
       if (request.method !== 'POST') return
       received.resolve()
       await release.promise
@@ -167,7 +184,7 @@ describe('cart submissions', () => {
     await page.getByText('Total: $50.97', { exact: true }).waitFor()
     assert.equal(await row.getByRole('cell').nth(3).textContent(), '$50.97')
     assert.equal(await page.locator('[aria-busy="true"]').count(), 0)
-    assert.deepEqual(requests, ['POST /cart/items'])
+    assert.deepEqual(requests, ['POST PATCH /cart/items'])
     assert.deepEqual(await frameState(page), initial)
     assert.equal(
       await page.evaluate(() => document.activeElement?.getAttribute('name')),
@@ -326,7 +343,7 @@ describe('cart submissions', () => {
     assert.equal(await removing.evaluate((button) => button === document.activeElement), true)
     assert.deepEqual(await frameState(page), initial)
     await row
-      .locator('form:has(input[name="_method"])')
+      .locator('form:has(input[name="_method"][value="DELETE"])')
       .evaluate((form: HTMLFormElement) => form.requestSubmit())
     release.resolve()
     await row.waitFor({ state: 'detached' })
@@ -407,13 +424,18 @@ describe('cart submissions', () => {
     assert.equal(new URL(page.url()).pathname, '/cart')
   })
 
-  it('keeps native submissions on their document URLs and displays cart errors once', async (t) => {
+  it('flashes native quantity validation through the cart frame once', async (t) => {
     let router = await createTestRouter()
     let mutations: string[] = []
     let server = await createTestServer(async (request) => {
+      let method =
+        request.method === 'POST'
+          ? ((await request.clone().formData()).get('_method') ?? 'POST')
+          : request.method
       let response = await router.fetch(request)
-      if (request.method === 'POST')
-        mutations.push(`${new URL(request.url).pathname} ${response.status}`)
+      if (request.method === 'POST') {
+        mutations.push(`${method} ${new URL(request.url).pathname} ${response.status}`)
+      }
       return response
     })
     let runtimePage = await t.serve(server)
@@ -433,7 +455,7 @@ describe('cart submissions', () => {
     })
     await page.getByRole('button', { name: 'Update', exact: true }).click()
     await page.getByRole('alert').filter({ hasText: 'Invalid quantity' }).waitFor()
-    assert.deepEqual(mutations, ['/cart/items 303'])
+    assert.deepEqual(mutations, ['PATCH /cart/items 303'])
     assert.equal(new URL(page.url()).pathname, '/cart')
     assert.equal(await quantity.inputValue(), '1.5')
     assert.equal(await quantity.getAttribute('aria-invalid'), 'true')
@@ -451,15 +473,41 @@ describe('cart submissions', () => {
     assert.equal(await quantity.inputValue(), '1')
     assert.equal(await quantity.getAttribute('aria-invalid'), null)
     assert.equal(await page.getByRole('alert').count(), 0)
+    assert.deepEqual(mutations, ['PATCH /cart/items 303'])
+  })
+
+  it('keeps native mutations on /cart and flashes action errors once', async (t) => {
+    let router = await createTestRouter()
+    let mutations: string[] = []
+    let server = await createTestServer(async (request) => {
+      let method =
+        request.method === 'POST'
+          ? ((await request.clone().formData()).get('_method') ?? 'POST')
+          : request.method
+      let response = await router.fetch(request)
+      if (request.method === 'POST') {
+        mutations.push(`${method} ${new URL(request.url).pathname} ${response.status}`)
+      }
+      return response
+    })
+    let runtimePage = await t.serve(server)
+    let browser = runtimePage.context().browser()
+    assert.ok(browser)
+    let context = await browser.newContext({ baseURL: server.baseUrl, javaScriptEnabled: false })
+    t.after(() => context.close())
+    let page = await context.newPage()
+    await page.request.post('/cart/api/add', { form: { bookId: '1' } })
     mutations.length = 0
+    await page.goto('/cart')
+    let quantity = page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' })
     await quantity.fill('2')
     await page.getByRole('button', { name: 'Update', exact: true }).click()
     await page.getByText('Total: $33.98', { exact: true }).waitFor()
-    assert.deepEqual(mutations, ['/cart/items 303'])
+    assert.deepEqual(mutations, ['PATCH /cart/items 303'])
     assert.equal(new URL(page.url()).pathname, '/cart')
     await page.getByRole('button', { name: 'Remove', exact: true }).click()
     await page.getByText('Your cart is empty.', { exact: true }).waitFor()
-    assert.deepEqual(mutations, ['/cart/items 303', '/cart/items 303'])
+    assert.deepEqual(mutations, ['PATCH /cart/items 303', 'DELETE /cart/items 303'])
     assert.equal(new URL(page.url()).pathname, '/cart')
 
     await page.request.post('/cart/api/add', { form: { bookId: '3' } })

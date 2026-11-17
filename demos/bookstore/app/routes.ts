@@ -1,4 +1,4 @@
-import { get, post, del, route, form, resources } from 'remix/routes'
+import { get, post, patch, del, route, form, resources } from 'remix/routes'
 
 export const assetsBase = '/assets'
 
@@ -55,7 +55,7 @@ export const routes = route({
 
     fragments: {
       items: get('/items'),
-      itemsUpdate: post('/items'),
+      itemsUpdate: patch('/items'),
       itemsRemove: del('/items'),
     },
 
