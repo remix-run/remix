@@ -1,3 +1,6 @@
+import * as fs from 'node:fs'
+import * as os from 'node:os'
+import * as path from 'node:path'
 import assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { gt, valid } from 'semver'
@@ -14,6 +17,7 @@ import {
   getPreviewTarballUrl,
   parsePreviewBuild,
   preparePreviewPackage,
+  publishPreviewBuild,
   readPullRequest,
 } from './preview.ts'
 import type { PreviewAsset, PreviewRelease } from './preview.ts'
@@ -72,6 +76,26 @@ describe('preview packages', () => {
       sha: 'b'.repeat(40),
       tag,
     })
+  })
+
+  it('uses one nightly tag per UTC build date with dated tarball URLs', () => {
+    let sha = 'a'.repeat(40)
+    let tag = getPreviewTag('nightly', sha, '2026-11-02T06:00:00-05:00')
+    assert.equal(tag, 'v0.20261102.0-nightly')
+    assert.ok(valid(tag))
+    let build = parsePreviewBuild(tag, sha)
+    assert.deepEqual(build, { channel: 'nightly', sha, tag })
+    assert.equal(
+      getPreviewTarballUrl(build, 'remix'),
+      `https://github.com/remix-run/previews/releases/download/${tag}/${tag}.tgz`,
+    )
+    assert.equal(
+      getPreviewTarballUrl(build, 'headers'),
+      `https://github.com/remix-run/previews/releases/download/${tag}/headers-${tag}.tgz`,
+    )
+    assert.equal(getPreviewTag('nightly', sha, '2026-11-02T20:00:00Z'), tag)
+    assert.notEqual(getPreviewTag('nightly', sha, '2026-11-03T11:00:00Z'), tag)
+    assert.equal(getPreviewChannel('v0.20261102.1-nightly'), null)
   })
 
   it('uses concise display titles for each preview channel', () => {
@@ -252,6 +276,19 @@ describe('preview release retention', () => {
     )
   })
 
+  it('expires nightly builds after thirty days without keeping an old latest build', () => {
+    let expired = release(1, 'nightly', '2026-10-03T11:59:59Z')
+    let cutoff = release(2, 'nightly', '2026-10-03T12:00:00Z')
+    let recent = release(3, 'nightly', '2026-11-02T00:00:00Z')
+    let main = release(4, 'main', '2020-01-01T00:00:00Z')
+    let experimental = release(5, 'experimental', '2020-01-01T00:00:00Z')
+    assert.deepEqual(
+      getExpiredPreviewReleases([expired, cutoff, recent, main, experimental], 'nightly', now),
+      [expired],
+    )
+    assert.deepEqual(getExpiredPreviewReleases([expired], 'nightly', now), [expired])
+  })
+
   it('keeps PR cleanup scoped to its PR and ignores unrelated releases', () => {
     let build = release(1, 'pr-12', '2020-01-01T00:00:00Z')
     let draft = { ...release(6, 'pr-12', '2020-01-01T00:00:00Z'), draft: true, published_at: null }
@@ -270,6 +307,79 @@ describe('preview release retention', () => {
       [build, draft, legacyShared, legacySha],
     )
     assert.deepEqual(getExpiredPreviewReleases([build, other, experimental], 'main', now), [])
+  })
+})
+
+describe('nightly publication', () => {
+  it('publishes dated assets without replacing latest and rejects a different SHA on rerun', (t) => {
+    t.useFakeTimers().advance(now)
+    let directory = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-nightly-test-'))
+    t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+    let nightly = release(1, 'nightly', '2026-11-02T12:00:00Z')
+    nightly.draft = true
+    let build = parsePreviewBuild(nightly.tag_name, 'a'.repeat(40))
+    fs.writeFileSync(path.join(directory, `${build.tag}.tgz`), 'remix')
+    fs.writeFileSync(path.join(directory, `headers-${build.tag}.tgz`), 'headers')
+    let created = false
+    let expired = release(2, 'nightly', '2026-10-02T12:00:00Z')
+    let deleted: string[] = []
+    let assets: PreviewAsset[] = []
+    let publication: Record<string, unknown> | undefined
+    let github = new PreviewGitHub('remix-run/previews', () => {
+      throw new Error('Unexpected GitHub command')
+    })
+    t.mock.method(
+      github,
+      'api',
+      (method: string, endpoint: string, body?: Record<string, unknown>) => {
+        if (method === 'GET' && endpoint.startsWith('releases?')) {
+          return [...(created ? [nightly] : []), ...(deleted.length === 0 ? [expired] : [])]
+        }
+        if (method === 'GET' && endpoint.startsWith('releases/1/assets?')) return assets
+        if (method === 'POST' && endpoint === 'releases') {
+          assert.equal(body?.tag_name, build.tag)
+          if (typeof body?.body !== 'string') throw new Error('Missing release body')
+          nightly.body = body.body
+          created = true
+          return nightly
+        }
+        if (method === 'PATCH' && endpoint === 'releases/1') {
+          if (body?.draft === false) {
+            publication = body
+            nightly.draft = false
+          }
+          return null
+        }
+        if (
+          method === 'DELETE' &&
+          (endpoint === `git/refs/tags/${expired.tag_name}` || endpoint === 'releases/2')
+        ) {
+          deleted.push(endpoint)
+          return null
+        }
+        throw new Error(`Unexpected GitHub API call: ${method} ${endpoint}`)
+      },
+    )
+    let upload = t.mock.method(github, 'upload', (_release: PreviewRelease, filename: string) => {
+      assets.push({
+        ...previewAsset(assets.length + 1, path.basename(filename), now),
+        size: fs.readFileSync(filename).length,
+      })
+    })
+    assert.equal(publishPreviewBuild(github, build, directory), true)
+    assert.equal(publication?.make_latest, 'false')
+    assert.equal(publication?.prerelease, true)
+    assert.deepEqual(deleted, [`git/refs/tags/${expired.tag_name}`, 'releases/2'])
+    assert.ok(nightly.body.includes('Nightly build from the `main` branch'))
+    assert.ok(nightly.body.includes(getPreviewTarballUrl(build, 'remix')))
+    assert.equal(upload.mock.calls.length, 2)
+    assert.equal(publishPreviewBuild(github, build, directory), true)
+    assert.equal(upload.mock.calls.length, 2)
+    assert.throws(
+      () => publishPreviewBuild(github, { ...build, sha: 'b'.repeat(40) }, directory),
+      /Preview release does not match the source commit/,
+    )
+    assert.equal(upload.mock.calls.length, 2)
   })
 })
 

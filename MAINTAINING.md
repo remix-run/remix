@@ -93,6 +93,13 @@ updates, then uploads and verifies them before publishing releases in
 for an experimental preview. Previewed refs must include the preview scripts from
 `main`.
 
+The workflow also builds `main` nightly at 6:00 AM Eastern, following daylight saving time.
+Nightly releases use `v0.YYYYMMDD.0-nightly`, with the UTC build date rather than the source
+commit's date. The Remix asset is `v0.YYYYMMDD.0-nightly.tgz`; other package assets use
+`<package>-v0.YYYYMMDD.0-nightly.tgz`. Nightlies expire after 30 days and do not replace the
+latest main preview. Reruns reuse a completed nightly for the same source SHA; publishing a
+different SHA under an existing nightly tag is rejected.
+
 Main and experimental release names and tags use `v0.YYYYMMDD.HHMMSS-<channel>-<8-character-sha>`,
 with the source commit's UTC date and time. Leading zeros are removed from the numeric time
 component for valid SemVer. PRs share a `v0.YYYYMMDD.0-pr-<number>` release, using the PR's

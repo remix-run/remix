@@ -38,6 +38,7 @@ const SHARED_PR_TAG = /(?:^|-)pr-[1-9]\d*$/
 
 export function getPreviewChannel(tag: string): string | null {
   if (/^pr-[1-9]\d*$/.test(tag)) return tag
+  if (/^v0\.[1-9]\d{7}\.0-nightly$/.test(tag)) return 'nightly'
   let match =
     /^v0\.[1-9]\d{7}\.(?:0|[1-9]\d{0,5})-(?:(main|experimental)-[a-f0-9]{8}|(pr-[1-9]\d*))$/.exec(
       tag,
@@ -65,7 +66,7 @@ export function getExpiredPreviewReleases(
     )
   })
   if (/^pr-[1-9]\d*$/.test(channel)) return builds
-  if (channel !== 'main' && channel !== 'experimental') return []
+  if (channel !== 'main' && channel !== 'experimental' && channel !== 'nightly') return []
 
   let latest =
     channel === 'main'
@@ -85,12 +86,13 @@ export function getExpiredPreviewReleases(
 }
 
 export function getPreviewTag(channel: string, sha: string, timestamp: string): string {
-  if (!/^(main|pr-[1-9]\d*|experimental)$/.test(channel)) {
+  if (!/^(main|pr-[1-9]\d*|experimental|nightly)$/.test(channel)) {
     throw new Error(`Invalid preview channel: ${channel}`)
   }
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error(`Invalid source SHA: ${sha}`)
   let utc = new Date(timestamp).toISOString()
   let date = utc.slice(0, 10).replaceAll('-', '')
+  if (channel === 'nightly') return `v0.${date}.0-nightly`
   let time = channel.startsWith('pr-') ? 0 : Number(utc.slice(11, 19).replaceAll(':', ''))
   let suffix = channel.startsWith('pr-') ? channel : `${channel}-${sha.slice(0, 8)}`
   return `v0.${date}.${time}-${suffix}`
@@ -132,6 +134,9 @@ export function getPreviewTarballUrl(
 }
 
 function getPreviewAssetName(build: PreviewBuild, packageDirName: string): string {
+  if (build.channel === 'nightly') {
+    return packageDirName === 'remix' ? `${build.tag}.tgz` : `${packageDirName}-${build.tag}.tgz`
+  }
   return SHARED_PR_TAG.test(build.tag)
     ? `${packageDirName}-${build.sha}.tgz`
     : `${packageDirName}.tgz`
@@ -142,7 +147,7 @@ export function parsePreviewBuild(tag: string, sha: string): PreviewBuild {
   if (
     !channel ||
     !/^[a-f0-9]{40}$/.test(sha) ||
-    (!SHARED_PR_TAG.test(tag) && !tag.endsWith(`-${sha.slice(0, 8)}`))
+    (channel !== 'nightly' && !SHARED_PR_TAG.test(tag) && !tag.endsWith(`-${sha.slice(0, 8)}`))
   )
     throw new Error('Invalid preview tag or source SHA')
   return { channel, sha, tag }
@@ -187,7 +192,9 @@ export async function buildPreview(
   let timestamp = prNumber
     ? readPullRequest(process.env.GITHUB_REPOSITORY ?? 'remix-run/remix', Number(prNumber))
         .createdAt
-    : logAndExec('git', ['show', '--no-patch', '--format=%cI', 'HEAD'], true)
+    : channel === 'nightly'
+      ? new Date().toISOString()
+      : logAndExec('git', ['show', '--no-patch', '--format=%cI', 'HEAD'], true)
   let tag = getPreviewTag(channel, sha, timestamp)
   let build = { channel, sha, tag }
   let entries = await fsp.readdir('packages', { withFileTypes: true })
@@ -430,6 +437,8 @@ export function publishPreview(
   let source = `Experimental build from sha ${shaLink}`
   if (build.channel === 'main') {
     source = `Built from the \`main\` branch at sha ${shaLink}`
+  } else if (build.channel === 'nightly') {
+    source = `Nightly build from the \`main\` branch at sha ${shaLink}`
   } else if (prNumber) {
     source = `Built from SHA ${shaLink} in PR [#${prNumber}](${repositoryUrl}/pull/${prNumber})`
   }
@@ -590,7 +599,10 @@ export function publishPreviewBuild(
       publishPreview(github, build, directory, dryRun)
       published = true
       if (!dryRun && !prNumber)
-        cleanupPreviews(github, build.channel === 'main' ? 'main' : 'experimental')
+        cleanupPreviews(
+          github,
+          build.channel.startsWith('experimental-') ? 'experimental' : build.channel,
+        )
     }
   } finally {
     if (!dryRun && closed()) {
