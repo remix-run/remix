@@ -22,19 +22,21 @@ describe('bootstrapProject', () => {
     await cleanCliTemplate(ROOT_DIR)
   })
 
-  it('uses cross-env-shell for NODE_ENV scripts on Windows', async () => {
+  it('uses cross-env for NODE_ENV scripts on Windows', async () => {
     let packageJson = await scaffoldPackageJson('win32')
 
+    // cross-env-shell normalizes the whole command string as a path on Windows, which rewrites
+    // `remix/node-tsx` to `remix\node-tsx`. cross-env leaves arguments untouched.
     assert.equal(
       packageJson.scripts.dev,
-      'cross-env-shell NODE_ENV=development "node --watch --import remix/node-tsx server.ts"',
+      'cross-env NODE_ENV=development node --watch --import remix/node-tsx server.ts',
     )
-    assert.equal(packageJson.scripts.hmr, 'cross-env-shell NODE_ENV=development "node hmr.ts"')
+    assert.equal(packageJson.scripts.hmr, 'cross-env NODE_ENV=development node hmr.ts')
     assert.equal(
       packageJson.scripts.start,
-      'cross-env-shell NODE_ENV=production "node --import remix/node-tsx server.ts"',
+      'cross-env NODE_ENV=production node --import remix/node-tsx server.ts',
     )
-    assert.equal(packageJson.scripts.test, 'cross-env-shell NODE_ENV=test "remix test"')
+    assert.equal(packageJson.scripts.test, 'cross-env NODE_ENV=test remix test')
     assert.equal(packageJson.dependencies['cross-env'], '^10.1.0')
   })
 
