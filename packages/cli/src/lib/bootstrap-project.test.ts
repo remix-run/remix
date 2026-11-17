@@ -1,3 +1,4 @@
+import type { ChildProcess } from 'node:child_process'
 import { spawn, spawnSync } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
@@ -51,17 +52,13 @@ describe('bootstrapProject', () => {
   })
 
   it('runs server.ts with the generated dev script', { timeout: 30_000 }, async (t) => {
-    let appDir = await scaffoldRunnableApp(t)
-
-    let output = await runScriptUntil(t, appDir, 'dev', /server\.ts ran/)
+    let output = await runGeneratedScript(t, 'dev')
 
     assert.match(output, /server\.ts ran with NODE_ENV=development/)
   })
 
   it('runs server.ts with the generated start script', { timeout: 30_000 }, async (t) => {
-    let appDir = await scaffoldRunnableApp(t)
-
-    let output = await runScriptUntil(t, appDir, 'start', /server\.ts ran/)
+    let output = await runGeneratedScript(t, 'start')
 
     assert.match(output, /server\.ts ran with NODE_ENV=production/)
   })
@@ -91,12 +88,28 @@ async function scaffoldPackageJson(platform: NodeJS.Platform): Promise<ScaffoldP
   }
 }
 
-// Scaffolds an app for the current platform and links the workspace `remix` and `cross-env`
-// packages in place of `npm install`. `server.ts` is replaced with a stub so the test covers how
-// the scripts launch Node, not the app itself.
-async function scaffoldRunnableApp(t: TestContext): Promise<string> {
+// Scaffolds an app for the current platform, links the workspace `remix` and `cross-env` packages
+// in place of `npm install`, and runs `npm run <script>` the way users do. `server.ts` is replaced
+// with a stub so the test covers how the scripts launch Node, not the app itself.
+async function runGeneratedScript(t: TestContext, script: string): Promise<string> {
+  let isWindows = process.platform === 'win32'
   let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-bootstrap-'))
-  t.after(() => fs.rm(tmpDir, { recursive: true, force: true }))
+  let child: ChildProcess | undefined
+  let closed: Promise<void> | undefined
+
+  // One cleanup callback so the process tree is stopped before its working directory is removed,
+  // which Windows otherwise rejects with EBUSY.
+  t.after(async () => {
+    if (child != null && child.exitCode === null && child.signalCode === null) {
+      if (isWindows) {
+        spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'])
+      } else {
+        process.kill(-child.pid!, 'SIGTERM')
+      }
+    }
+    await closed
+    await fs.rm(tmpDir, { recursive: true, force: true })
+  })
 
   let { targetDir } = await bootstrapProject({
     appName: null,
@@ -122,55 +135,36 @@ async function scaffoldRunnableApp(t: TestContext): Promise<string> {
     'console.log(`server.ts ran with NODE_ENV=${process.env.NODE_ENV}`)\n',
   )
 
-  return targetDir
-}
-
-// Runs `npm run <script>` the way users do, resolves with the output once it matches `pattern`,
-// then stops the whole process tree.
-async function runScriptUntil(
-  t: TestContext,
-  cwd: string,
-  script: string,
-  pattern: RegExp,
-): Promise<string> {
-  let isWindows = process.platform === 'win32'
-  let env: NodeJS.ProcessEnv = { ...process.env, PORT: '0' }
+  let env: NodeJS.ProcessEnv = { ...process.env }
   let pathKey = Object.keys(env).find((key) => key.toLowerCase() === 'path') ?? 'PATH'
   env[pathKey] = [path.join(ROOT_DIR, 'packages/cli/node_modules/.bin'), env[pathKey]].join(
     path.delimiter,
   )
 
-  let child = spawn(`npm run ${script}`, {
-    cwd,
+  let spawned = spawn(`npm run ${script}`, {
+    cwd: targetDir,
     detached: !isWindows,
     env,
     shell: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
-  let closed = new Promise<void>((resolve) => child.once('close', () => resolve()))
-
-  t.after(async () => {
-    if (child.exitCode === null && child.signalCode === null) {
-      if (isWindows) {
-        spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'])
-      } else {
-        process.kill(-child.pid!, 'SIGTERM')
-      }
-    }
-    await closed
-  })
+  let spawnedClosed = new Promise<void>((resolve) => spawned.once('close', () => resolve()))
+  child = spawned
+  closed = spawnedClosed
 
   let output = ''
 
   return new Promise<string>((resolve, reject) => {
     function onData(chunk: Buffer) {
       output += chunk.toString()
-      if (pattern.test(output)) resolve(output)
+      if (/server\.ts ran.*\n/.test(output)) resolve(output)
     }
 
-    child.stdout.on('data', onData)
-    child.stderr.on('data', onData)
-    child.once('error', reject)
-    closed.then(() => reject(new Error(`npm run ${script} exited without matching:\n${output}`)))
+    spawned.stdout.on('data', onData)
+    spawned.stderr.on('data', onData)
+    spawned.once('error', reject)
+    spawnedClosed.then(() =>
+      reject(new Error(`npm run ${script} exited without running server.ts:\n${output}`)),
+    )
   })
 }
