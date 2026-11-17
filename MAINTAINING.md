@@ -18,6 +18,9 @@ and the
 3. Merging the Release pull request triggers the publish workflow
    - Since the change files have been deleted, it publishes all unpublished packages to npm
    - It then creates Git tags and GitHub releases for the packages that were published
+   - After publishing a `remix@` tag, it comments on PRs that landed since the previous stable
+     Remix tag and issues closed by those PRs, then archives their `Merged` cards in the
+     [Remix Roadmap](https://github.com/orgs/remix-run/projects/31).
 
 Each change-file entry links to the pull request that introduced the file, using the PR number in
 the introducing commit's subject. If there is no PR number, it links to that commit instead. Later
