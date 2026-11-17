@@ -39,7 +39,7 @@ const SHARED_PR_TAG = /(?:^|-)pr-[1-9]\d*$/
 export function getPreviewChannel(tag: string): string | null {
   if (/^pr-[1-9]\d*$/.test(tag)) return tag
   let match =
-    /^v0\.[1-9]\d{7}\.(?:0|[1-9]\d{0,5})-(?:(main|experimental)-[a-f0-9]{8}|(pr-[1-9]\d*))$/.exec(
+    /^v0\.(?:0\.[1-9]\d{7}|[1-9]\d{7}\.(?:0|[1-9]\d{0,5}))-(?:(main|experimental)-[a-f0-9]{8}|(pr-[1-9]\d*))$/.exec(
       tag,
     )
   if (match) return match[1] ?? match[2]
@@ -92,7 +92,7 @@ export function getPreviewTag(channel: string, sha: string, timestamp: string): 
   let utc = new Date(timestamp).toISOString()
   let date = utc.slice(0, 10).replaceAll('-', '')
   let suffix = channel.startsWith('pr-') ? channel : `${channel}-${sha.slice(0, 8)}`
-  return `v0.${date}.0-${suffix}`
+  return `v0.0.${date}-${suffix}`
 }
 
 export function getPreviewReleaseTitle(
