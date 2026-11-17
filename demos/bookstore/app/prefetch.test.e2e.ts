@@ -450,7 +450,7 @@ describe('bookstore prefetching', () => {
     assert.equal(requests, reusesCachedHtml(page) ? 1 : 2)
   })
 
-  it('observes links added by frame navigation and does not repeat on viewport reentry', async (t) => {
+  it('prefetches visible book covers before their details buttons and does not repeat on viewport reentry', async (t) => {
     let requests: string[] = []
     let page = await t.serve(
       await createTestServer((request) => {
@@ -470,14 +470,15 @@ describe('bookstore prefetching', () => {
     await page.getByRole('banner').getByRole('link', { name: 'Books', exact: true }).click()
     await page.getByRole('heading', { name: 'Browse Books', exact: true }).waitFor()
 
-    let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
+    let link = page.getByRole('link', { name: 'Ash & Smoke', exact: true })
     assert.equal(await isInViewport(link), false)
     assert.equal(requests.includes('/books/bbq'), false)
 
     let prefetched = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/books/bbq',
     )
-    await link.scrollIntoViewIfNeeded()
+    await link.evaluate((anchor) => anchor.scrollIntoView({ block: 'start' }))
+    assert.equal(await isInViewport(page.locator('a.btn[href="/books/bbq"]')), false)
     await (await prefetched).finished()
     await page.waitForFunction(() => !document.querySelector('head link[rel="prefetch"]'))
     await page.getByRole('banner').scrollIntoViewIfNeeded()

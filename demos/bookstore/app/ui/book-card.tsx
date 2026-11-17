@@ -16,7 +16,7 @@ export function BookCard(handle: Handle<BookCardProps>) {
 
     return (
       <div class="book-card" data-test-slug={book.slug}>
-        <a href={routes.books.show.href({ slug: book.slug })}>
+        <a data-rmx-prefetch="viewport" href={routes.books.show.href({ slug: book.slug })}>
           <img src={book.cover_url} alt={book.title} mix={bookCoverTransition(book.id)} />
         </a>
         <div class="book-card-body">
