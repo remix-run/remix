@@ -10,6 +10,16 @@ import { routes } from '../../routes.ts'
 import { installDebugBoundaries } from './debug-boundaries.ts'
 
 const bookDetailsMatcher = createMatcher(routes.books.show.pattern)
+const browsingPageMatchers = [
+  routes.home.pattern,
+  routes.books.index.pattern,
+  routes.books.genre.pattern,
+  routes.books.show.pattern,
+  routes.search.pattern,
+  routes.about.pattern,
+  routes.contact.index.pattern,
+  routes.auth.register.index.pattern,
+].map((pattern) => createMatcher(pattern))
 const disposeDebugBoundaries = installDebugBoundaries()
 
 export const app = run({
@@ -24,10 +34,11 @@ export const app = run({
   resolveFrame(src, options) {
     return defaultResolveFrame(src, options, {
       fetch(url, init) {
-        return fetch(url, {
-          ...init,
-          cache: options?.transition?.navigationType === 'traverse' ? 'force-cache' : 'default',
-        })
+        let reuseBrowsingHtml =
+          (init.method ?? 'GET').toUpperCase() === 'GET' &&
+          options?.transition?.navigationType === 'traverse' &&
+          browsingPageMatchers.some((matcher) => matcher.match(url) !== null)
+        return fetch(url, { ...init, cache: reuseBrowsingHtml ? 'force-cache' : undefined })
       },
       async commit(commitFrame, { signal, to }) {
         let transition = options?.transition

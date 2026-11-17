@@ -11,6 +11,43 @@ import { assets } from './utils/assets.ts'
 const router = await createTestRouter()
 
 describe('bookstore prefetching', () => {
+  it('returns to login on Back after logout', async (t) => {
+    let accountStatuses: number[] = []
+    let page = await t.serve(
+      await createTestServer(async (request) => {
+        let response = await router.fetch(request)
+        if (new URL(request.url).pathname === '/account') {
+          accountStatuses.push(response.status)
+        }
+        return response
+      }),
+    )
+    await page.goto('/login')
+    await waitForNavigationRuntime(page)
+    await page.getByRole('textbox', { name: 'Email', exact: true }).fill('customer@example.com')
+    await page.getByLabel('Password', { exact: true }).fill('password123')
+    await page.getByRole('button', { name: 'Login', exact: true }).click()
+    await page.getByRole('heading', { name: 'My Account', exact: true }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+
+    await page.getByRole('button', { name: 'Logout', exact: true }).click()
+    await page.getByRole('heading', { name: 'Welcome to the Bookstore', exact: true }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    await page.evaluate(async () => {
+      try {
+        await window.navigation.back().finished
+      } catch (error) {
+        // The login redirect replaces the traversal that requested the account page.
+        if (!(error instanceof DOMException) || error.name !== 'AbortError') throw error
+      }
+    })
+
+    await page.getByRole('heading', { name: 'Login', exact: true }).waitFor()
+    assert.equal(new URL(page.url()).pathname, '/login')
+    assert.equal(accountStatuses.at(-1), 302)
+    assert.equal((await page.locator('body').textContent())?.includes('John Doe'), false)
+  })
+
   it('reuses stale frame HTML on Back/Forward and fetches again on ordinary navigation', async (t) => {
     let requests: string[] = []
     let page = await t.serve(
