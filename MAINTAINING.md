@@ -93,13 +93,6 @@ updates, then uploads and verifies them before publishing releases in
 for an experimental preview. Previewed refs must include the preview scripts from
 `main`.
 
-The workflow also builds `main` nightly at 6:00 AM Eastern, following daylight saving time.
-Nightly releases use `v0.YYYYMMDD.0-nightly`, with the UTC build date rather than the source
-commit's date. The Remix asset is `v0.YYYYMMDD.0-nightly.tgz`; other package assets use
-`<package>-v0.YYYYMMDD.0-nightly.tgz`. Nightlies expire after 30 days and do not replace the
-latest main preview. Reruns reuse a completed nightly for the same source SHA; publishing a
-different SHA under an existing nightly tag is rejected.
-
 Main release tags use `v0.YYYYMMDD.0-main-<8-character-sha>`, with the source commit's
 UTC date. Experimental tags use
 `v0.YYYYMMDD.0-experimental-<8-character-sha>`, with the source commit's UTC date.
@@ -108,10 +101,12 @@ UTC creation date so every build uses the same tag, with `<package>-<full-source
 After verifying every asset for a SHA, publishing labels its `remix` asset as complete,
 updates the release's install table, and retains the latest 5 complete builds by completion time.
 Each newly published main build becomes the repository's latest release and includes a
-`remix.url` asset containing its `remix.tgz` URL. Main releases expire seven days after publication,
+`remix.url` asset containing its `remix.tgz` URL. Main releases expire 30 days after publication,
 except the most recently published successful main build, which is always retained.
 Reruns reuse completed releases without promoting them to latest. GitHub lists releases by
 publication time.
+Experimental releases also expire 30 days after publication. The workflow runs daily cleanup
+for both channels.
 Retries preserve completed assets and replace partial uploads. Closing the PR deletes its release
 and any older per-SHA preview releases.
 

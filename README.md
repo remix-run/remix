@@ -111,6 +111,12 @@ To create a new Remix app with the CLI, use `npx remix new`:
 npx remix new my-remix-app
 ```
 
+Remix also generates preview builds at various stages for alpha testing prior to a stable release. These are published as release artifact tarballs in the [previews](https://github.com/remix-run/previews/releases) repo:
+
+- `main` commits are built and retained for 30 days, with the most recently published successful build always retained
+- PR commits are built and the latest 5 SHA builds are retained
+- Experimental builds are kicked off manually and retained for 30 days
+
 To try a PR preview, use the installation command posted on the PR. To install the [latest `main` build](https://github.com/remix-run/previews/releases/latest):
 
 ```sh
@@ -121,9 +127,7 @@ This resolves to the build's SHA-specific tarball URL, so your lockfile stays pi
 
 To install an individual package, use its tarball URL from the same release. The release notes link to the full source commit.
 
-Each PR has one release containing its latest 5 successful SHA builds, with a separate install URL for each SHA. Older SHA builds are deleted as new builds finish. Closing or merging a PR deletes its preview releases and tags. Main previews use `v0.YYYYMMDD.0-main-<sha8>` tags, with a separate release per SHA, and are kept for seven days, with the most recently published successful build always retained. Reopening a PR triggers a new preview build. Experimental previews use `v0.YYYYMMDD.0-experimental-<sha8>` tags and expire after 30 days. Installs using deleted builds need a newer preview URL and an updated lockfile.
-
-Nightly builds of `main` run at 6:00 AM Eastern and are kept for 30 days. Each has a `v0.YYYYMMDD.0-nightly` release with a `v0.YYYYMMDD.0-nightly.tgz` Remix asset. Use its installation command from [the releases page](https://github.com/remix-run/previews/releases).
+Each PR has one release containing its latest 5 successful SHA builds, with a separate install URL for each SHA. Older SHA builds are deleted as new builds finish. Closing or merging a PR deletes its preview releases and tags. Main previews use `v0.YYYYMMDD.0-main-<sha8>` tags, with a separate release per SHA, and are kept for 30 days, with the most recently published successful build always retained. Reopening a PR triggers a new preview build. Experimental previews use `v0.YYYYMMDD.0-experimental-<sha8>` tags and expire after 30 days. Installs using deleted builds need a newer preview URL and an updated lockfile.
 
 If your pnpm version blocks transitive Git or tarball dependencies, add this to your `pnpm-workspace.yaml`:
 

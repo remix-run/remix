@@ -48,7 +48,7 @@ if (command === 'build' && target && positionals.length === 2) {
   command === 'cleanup' &&
   target &&
   positionals.length === 2 &&
-  /^(main|experimental|nightly|pr-[1-9]\d*)$/.test(target)
+  /^(main|experimental|pr-[1-9]\d*)$/.test(target)
 ) {
   let pr = /^pr-([1-9]\d*)$/.exec(target)?.[1]
   if (
@@ -61,7 +61,7 @@ if (command === 'build' && target && positionals.length === 2) {
   }
 } else {
   throw new Error(
-    'Usage: pnpm preview <build <main|pr-N|experimental|nightly>|publish <tag> <source-sha>|cleanup <main|experimental|nightly|pr-N>|cleanup-branch <pr-N>> [--dry-run] [--output <directory>]',
+    'Usage: pnpm preview <build <main|pr-N|experimental>|publish <tag> <source-sha>|cleanup <main|experimental|pr-N>|cleanup-branch <pr-N>> [--dry-run] [--output <directory>]',
   )
 }
 

@@ -10,8 +10,6 @@ on:
     types: [opened, synchronize, reopened, closed]
   schedule:
     - cron: '23 4 * * *'
-    - cron: '0 6 * * *'
-      timezone: America/New_York
   workflow_dispatch:
     inputs:
       baseBranch:
@@ -26,7 +24,6 @@ jobs:
     if: >-
       github.repository == 'remix-run/remix' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.event.schedule == '0 6 * * *') ||
       (github.event_name == 'pull_request' && github.event.pull_request.state == 'open' &&
       github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-latest
@@ -41,9 +38,7 @@ jobs:
       tag: ${{ steps.metadata.outputs.tag }}
       sha: ${{ steps.metadata.outputs.sha }}
     env:
-      PREVIEW_CHANNEL: >-
-        ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) ||
-        github.event_name == 'push' && 'main' || github.event_name == 'schedule' && 'nightly' || 'experimental' }}
+      PREVIEW_CHANNEL: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.event_name == 'push' && 'main' || 'experimental' }}
     steps:
       - name: Checkout source
         uses: actions/checkout@v6
@@ -126,8 +121,7 @@ jobs:
   cleanup:
     if: >-
       github.repository == 'remix-run/remix' &&
-      ((github.event_name == 'schedule' && github.event.schedule == '23 4 * * *') ||
-      (github.event_name == 'pull_request' &&
+      (github.event_name == 'schedule' || (github.event_name == 'pull_request' &&
       github.event.action == 'closed' &&
       github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-latest
@@ -137,7 +131,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        channel: ${{ github.event_name == 'schedule' && fromJSON('["main", "experimental", "nightly"]') || fromJSON(format('["pr-{0}"]', github.event.pull_request.number)) }}
+        channel: ${{ github.event_name == 'schedule' && fromJSON('["main", "experimental"]') || fromJSON(format('["pr-{0}"]', github.event.pull_request.number)) }}
     concurrency:
       group: preview-${{ matrix.channel }}
       queue: max
