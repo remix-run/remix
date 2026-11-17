@@ -371,13 +371,13 @@ describe('bookstore prefetching', () => {
         return router.fetch(request)
       }),
     )
+    let prefetched = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/books/bbq',
+    )
     await page.goto('/')
     await waitForNavigationRuntime(page)
     let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
     let prefetchesScript = await prefetchesAssets(page)
-    let prefetched = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/books/bbq',
-    )
     await link.scrollIntoViewIfNeeded()
     if (prefetchesScript) {
       await started.promise
