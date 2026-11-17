@@ -35,7 +35,7 @@ export function installDebugBoundaries(): () => void {
   `)
   shadow.adoptedStyleSheets = [styles]
 
-  let enabled = false
+  let enabled = new URLSearchParams(location.search).has('debug')
   let animationFrame = 0
   let boxes: HTMLDivElement[] = []
   let controller = new AbortController()
@@ -139,6 +139,8 @@ export function installDebugBoundaries(): () => void {
     },
     { capture: true, signal: controller.signal },
   )
+
+  if (enabled) draw()
 
   return () => {
     controller.abort()
