@@ -32,6 +32,7 @@ export interface PreviewRelease {
 
 export const PREVIEW_REPOSITORY = 'remix-run/previews'
 export const PREVIEW_RELEASE_MARKER = '<!-- remix-preview -->'
+export const PR_PREVIEW_BUILD_LIMIT = 5
 const PR_BUILD_COMPLETE = 'Complete preview build'
 const SHARED_PR_TAG = /(?:^|-)pr-[1-9]\d*$/
 
@@ -280,7 +281,7 @@ function getCompletedPrPreviewBuilds(
 export function getExpiredPrPreviewAssets(assets: PreviewAsset[]): PreviewAsset[] {
   let retained = new Set(
     getCompletedPrPreviewBuilds(assets)
-      .slice(0, 10)
+      .slice(0, PR_PREVIEW_BUILD_LIMIT)
       .map((build) => build.suffix),
   )
   return assets.filter((asset) => {
@@ -493,7 +494,7 @@ function publishPrPreview(
 ): string {
   let prNumber = build.channel.slice('pr-'.length)
   let prUrl = `${repositoryUrl}/pull/${prNumber}`
-  let header = `${PREVIEW_RELEASE_MARKER}\nPreview builds for [PR #${prNumber}](${prUrl}).\n\nThe latest 10 successful SHA builds are retained until this PR closes.\n`
+  let header = `${PREVIEW_RELEASE_MARKER}\nPreview builds for [PR #${prNumber}](${prUrl}).\n\nThe latest ${PR_PREVIEW_BUILD_LIMIT} successful SHA builds are retained until this PR closes.\n`
   if (
     release &&
     (!release.body.startsWith(PREVIEW_RELEASE_MARKER) || !release.body.includes(`](${prUrl})`))
@@ -554,7 +555,7 @@ function publishPrPreview(
   }
   assets = github.listAssets(release)
   for (let asset of getExpiredPrPreviewAssets(assets)) github.delete(`releases/assets/${asset.id}`)
-  let retained = getCompletedPrPreviewBuilds(assets).slice(0, 10)
+  let retained = getCompletedPrPreviewBuilds(assets).slice(0, PR_PREVIEW_BUILD_LIMIT)
   let rows = retained.map(({ sha, asset }) => {
     let url = `https://github.com/${github.repository}/releases/download/${encodeURIComponent(build.tag)}/${asset.name}`
     return `| [${sha.slice(0, 8)}](${prUrl}/commits/${sha}) | ${asset.updated_at} | \`pnpm add "${url}"\` |`

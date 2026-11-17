@@ -98,7 +98,7 @@ with the source commit's UTC date and time. Leading zeros are removed from the n
 component for valid SemVer. PRs share a `v0.YYYYMMDD.0-pr-<number>` release, using the PR's
 UTC creation date so every build uses the same tag, with `<package>-<full-source-sha>.tgz` assets.
 After verifying every asset for a SHA, publishing labels its `remix` asset as complete,
-updates the release's install table, and retains the latest 10 complete builds by completion time.
+updates the release's install table, and retains the latest 5 complete builds by completion time.
 Main releases are published as the repository's latest release when they are the newest main
 build, and include a `remix.url` asset containing their `remix.tgz` URL.
 Retries preserve completed assets and replace partial uploads. Closing the PR deletes its release

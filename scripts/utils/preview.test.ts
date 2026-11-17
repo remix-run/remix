@@ -314,8 +314,8 @@ describe('preview ref cleanup', () => {
 })
 
 describe('shared PR preview releases', () => {
-  it('retains ten complete SHA groups by completion time and removes incomplete uploads', () => {
-    let builds = Array.from({ length: 12 }, (_, index) => {
+  it('retains five complete SHA groups by completion time and removes incomplete uploads', () => {
+    let builds = Array.from({ length: 7 }, (_, index) => {
       let sha = index.toString(16).padStart(8, '0').padEnd(40, '0')
       let updated_at = new Date(now + index * 1000).toISOString()
       return [
@@ -365,7 +365,7 @@ describe('shared PR preview releases', () => {
     ]
     assert.deepEqual(getExpiredPrPreviewAssets(assets), [])
 
-    let newer = Array.from({ length: 9 }, (_, index) => {
+    let newer = Array.from({ length: 4 }, (_, index) => {
       let sha = index.toString(16).padStart(40, '0')
       let updatedAt = now + (index + 2) * 1000
       return [
