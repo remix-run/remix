@@ -43,27 +43,27 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 ## Frames
 
 - Cart buttons and cart items reload their own frames after updates, keeping changes local to the affected UI. Quantity updates use PATCH and removals use DELETE at `/cart/items`, returning updated HTML in one enhanced request.
-- Header links prefetch on hover or focus, while book details prefetch as their links enter the viewport. Login is excluded from prefetching.
+- Header links prefetch on hover or focus, while book details prefetch as their links enter the viewport. Login is excluded because rendering it consumes session flash messages.
 - The [browser entry](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/entry.tsx) uses `defaultResolveFrame` to customize caching and wrap page updates in view transitions. Prefetching uses Remix's built-in strategy.
 
 ## Caching
 
-- Browsing frame responses can be reused for 30 seconds, including prefetched HTML. Full document responses to those pages disable caching.
+- Browsing frame responses can be reused for 30 seconds, including prefetched HTML. Cached responses are private and vary by cookie and frame headers. Full document responses to those pages disable caching.
 - Cart mutations update the session cookie, preventing subsequent browsing navigations from reusing HTML cached for the previous cookie.
 - Cart documents and fragments explicitly disable caching. Checkout, account, admin, and auth handlers other than registration do not set the 30-second browsing cache policy.
 - Back and Forward can reuse stale browsing HTML from the browser cache beyond the 30-second window.
 
 ## Forms
 
-- Shared schemas validate input in the browser and on the server.
+- Shared schemas validate input in the browser and on the server. Controllers parse submissions with `fd.parseSafe` from `remix/data-schema/experimental/form`, and browser forms use `form.Context` from `@remix-run/ui/form`.
 - Failed submissions preserve entered values and show field and form errors. Rejected cart quantities show feedback on the affected row.
 - Native cart forms redirect back to the cart and use session flash messages for validation feedback.
-- Shared field components keep labels, controls, and validation messages consistent.
+- The shared [Field component](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/public/field.tsx) keeps labels, controls, and validation messages consistent.
 
 ## UI
 
 - Page navigations slide and fade by default, while the header and footer stay steady.
-- Navigating to or from a product page animates the book cover and title between their card and detail views, including on Back and Forward.
+- Navigating to or from a product page animates the book cover and title between their card and detail views, including on Back and Forward. Shared [book transition mixins](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/book-transitions.ts) give both views matching transition names.
 - Animations respect reduced-motion preferences and fall back to ordinary updates in browsers without view transition support.
 - Cart rows stay visible while saving, with pending indicators on buttons and saved totals. Failed requests restore the previous quantity and offer retry or reload.
 - Removing a focused cart row moves focus to the cart region, including when the cart becomes empty.
