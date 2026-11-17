@@ -81,14 +81,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
       - name: Install Node.js
-        uses: ./.github/actions/setup-node-pnpm-cache
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
 
       - name: Archive released roadmap items
         run: node scripts/archive-roadmap.ts

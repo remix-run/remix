@@ -18,29 +18,9 @@ and the
 3. Merging the Release pull request triggers the publish workflow
    - Since the change files have been deleted, it publishes all unpublished packages to npm
    - It then creates Git tags and GitHub releases for the packages that were published
-   - After a successful release, it archives cards in the
-     [Remix Roadmap](https://github.com/orgs/remix-run/projects/31)'s `Merged` column when their
-     PR changed `packages/` between the previous and current `remix` release tags. Issues
-     linked to those PRs through GitHub's closing references are also archived. Unreleased PRs,
-     unlinked issues, and draft cards stay visible. Runs with nothing to publish or recover
-     leave the roadmap alone.
-
-The roadmap cleanup uses the `GH_REMIX_PAT` Actions secret, which must have organization
-Projects read/write access. If cleanup fails after publishing, rerun the failed roadmap job;
-already archived cards are skipped.
-
-To preview the cleanup locally, authenticate with `gh` and run:
-
-```sh
-RELEASE_TAG=remix@3.2.0 node scripts/archive-roadmap.ts --dry-run
-```
-
-Release detection reads PR numbers from squash-merge and merge-commit subjects, using the same
-convention as change-file attribution. The previous tag is the closest ancestor `remix@*` tag;
-the first Remix release scans all package history up to its tag. Cleanup covers one release range,
-so cards from older ranges need separate cleanup. Cleanup uses the publish workflow's `tag` output
-and skips tags that do not start with `remix@`. Git history, rather than a card's status update time,
-determines whether its PR was released.
+   - After publishing a `remix@` tag, it archives `Merged` cards in the
+     [Remix Roadmap](https://github.com/orgs/remix-run/projects/31) for PRs that landed since the
+     previous stable Remix tag, including issues closed by those PRs.
 
 Each change-file entry links to the pull request that introduced the file, using the PR number in
 the introducing commit's subject. If there is no PR number, it links to that commit instead. Later
