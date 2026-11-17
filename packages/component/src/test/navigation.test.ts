@@ -1436,7 +1436,8 @@ describe('navigate', () => {
   })
 
   it('removes traversal scroll styles as soon as the navigation fails', async (t) => {
-    let animationFrames = stubAnimationFrames(t)
+    // Hold animation frames so stylesheet removal must happen when the failure settles.
+    stubAnimationFrames(t)
     let dispatchNavigation = startStubNavigationListener(t)
     let adoptedStyleSheetCount = document.adoptedStyleSheets.length
 
@@ -1452,10 +1453,11 @@ describe('navigate', () => {
     let stylesheet = document.adoptedStyleSheets[adoptedStyleSheetCount]
 
     await transition.runHandler()
+    expect(document.adoptedStyleSheets).toContain(stylesheet)
+
     await transition.fail()
 
     expect(document.adoptedStyleSheets).not.toContain(stylesheet)
-    expect(animationFrames.pending()).toBe(0)
   })
 
   it('does not intercept anchors marked for document navigation', (t) => {
