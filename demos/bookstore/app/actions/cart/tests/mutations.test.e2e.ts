@@ -6,7 +6,7 @@ import type { Page } from 'playwright'
 import { createTestRouter } from '../../../../test/helpers.ts'
 
 describe('cart submissions', () => {
-  it('toggles in one frame submission and recovers a lost response with a page reload', async (t) => {
+  it('submits once and safely retries add and remove after lost responses', async (t) => {
     let received = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
     t.after(() => release.resolve())
@@ -32,7 +32,7 @@ describe('cart submissions', () => {
     )
     requests.length = 0
     let initial = await frameState(page)
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).click()
+    await page.getByRole('button', { name: 'Add to Cart', exact: true }).press('Enter')
     await received.promise
     let pending = page.getByRole('button', { name: 'Saving...', exact: true })
     await pending.waitFor()
@@ -58,13 +58,22 @@ describe('cart submissions', () => {
       'POST /fragments/cart-button/1',
       'POST /fragments/cart-button/1',
     ])
-    await page.reload()
+    rejecting = false
+    await failed.press('Enter')
     await remove.waitFor()
+    rejecting = true
+    await remove.press('Enter')
+    await failed.waitFor()
+    rejecting = false
+    await failed.press('Enter')
+    await page.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
+    await page.reload()
+    await page.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
     assert.equal(await page.getByRole('alert').count(), 0)
-    assert.equal(requests.filter((request) => request.startsWith('POST')).length, 3)
+    assert.equal(requests.filter((request) => request.startsWith('POST')).length, 6)
     assert.deepEqual(await frameState(page), initial)
     await page.goto('/cart')
-    await page.getByRole('row').filter({ hasText: 'Ash & Smoke' }).waitFor()
+    await page.getByText('Your cart is empty.', { exact: true }).waitFor()
   })
 
   it('redirects native toggles to the initiating page and flashes errors on the matching book once', async (t) => {
@@ -250,7 +259,7 @@ describe('cart submissions', () => {
     assert.equal(mutations, 3)
   })
 
-  it('rolls back a failed update and allows a direct retry', async (t) => {
+  it('shows reduced-motion failure feedback, rolls back, and allows a direct retry', async (t) => {
     let reject = true
     let mutations = 0
     let page = await serveCart(t, (request) => {
@@ -260,12 +269,26 @@ describe('cart submissions', () => {
         return new Response('Unavailable', { status: 503 })
       }
     })
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     let quantity = page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' })
     let row = page.getByRole('row').filter({ hasText: 'Ash & Smoke' })
     let initialRow = await row.boundingBox()
     await quantity.fill('4')
     await quantity.press('Enter')
-    await row.getByRole('button', { name: 'Failed!', exact: true }).waitFor()
+    let failed = row.getByRole('button', { name: 'Failed!', exact: true })
+    await failed.waitFor()
+    let appearance = await failed.evaluate((button) => {
+      for (let animation of button.getAnimations()) animation.finish()
+      let style = getComputedStyle(button)
+      return {
+        color: style.backgroundColor,
+        animation: style.animationName,
+        transform: style.transform,
+      }
+    })
+    assert.equal(appearance.color, 'rgb(220, 38, 38)')
+    assert.equal(appearance.animation, 'none')
+    assert.equal(appearance.transform, 'none')
     assert.equal(await page.getByRole('alert').count(), 0)
     await page.getByText('Total: $16.99', { exact: true }).waitFor()
     assert.deepEqual(await row.boundingBox(), initialRow)

@@ -1,5 +1,6 @@
 import { createController, type RouterTypes } from 'remix/router'
 import * as s from 'remix/data-schema'
+import * as fd from 'remix/data-schema/experimental/form'
 import { redirect } from 'remix/response/redirect'
 
 import { CartButton } from './public/cart-button.tsx'
@@ -23,12 +24,18 @@ export default createController(routes.fragments, {
     },
 
     async cartToggle(context) {
-      let { db, params, request, session } = context
+      let { db, formData, params, request, session } = context
       let bookId = parseId(params.bookId)
+      let submission = fd.parseSafe(
+        fd.object({ intent: fd.text(s.union([s.literal('add'), s.literal('remove')])) }),
+        formData,
+      )
       let error =
         bookId === undefined
           ? { status: 404, message: 'Book not found.' }
-          : await toggleCart({ db, session, bookId })
+          : !submission.success
+            ? { status: 400, message: 'Invalid cart action.' }
+            : await toggleCart({ db, session, bookId, intent: submission.value.intent })
 
       if (request.headers.get('X-Remix-Frame') === 'true') {
         return renderCartButton(context, bookId, error)

@@ -50,6 +50,7 @@ export const CartButton = clientEntry(
             }),
           ]}
         >
+          <input type="hidden" name="intent" value={inCart ? 'remove' : 'add'} />
           <PendingButton
             pending={pending}
             failed={!pending && (failed || !!error)}

@@ -9,13 +9,16 @@ interface PendingButtonProps extends Props<'button'> {
 }
 
 export function PendingButton(handle: Handle<PendingButtonProps>) {
-  let state: 'idle' | 'pending' | 'failed' | 'animatingFailure' = 'idle'
+  let state: 'idle' | 'pending' | 'failed' | 'showingFailure' = 'idle'
+  let wasFailed = false
+  let failureTimer: ReturnType<typeof setTimeout> | undefined
+  handle.signal.addEventListener('abort', () => clearTimeout(failureTimer), { once: true })
 
   return () => {
     let {
       children,
       pending = state === 'pending',
-      failed = state === 'failed' || state === 'animatingFailure',
+      failed = state === 'failed' || state === 'showingFailure',
       pendingLabel = 'Saving…',
       errorMessage,
       type = 'submit',
@@ -23,6 +26,23 @@ export function PendingButton(handle: Handle<PendingButtonProps>) {
       mix = [],
       ...props
     } = handle.props
+
+    if (failed && !wasFailed) {
+      handle.queueTask((signal) => {
+        if (signal.aborted) return
+        state = 'showingFailure'
+        failureTimer = setTimeout(() => {
+          state = 'failed'
+          handle.update()
+        }, 2000)
+        handle.update()
+      })
+    } else if (!failed) {
+      clearTimeout(failureTimer)
+      if (state === 'showingFailure' || state === 'failed') state = pending ? 'pending' : 'idle'
+    }
+    wasFailed = failed
+    let showingFailure = state === 'showingFailure'
 
     return (
       <>
@@ -44,45 +64,22 @@ export function PendingButton(handle: Handle<PendingButtonProps>) {
               }
               handle.update()
             }),
-            on('animationstart', async (event, signal) => {
-              if (
-                event.target !== event.currentTarget ||
-                event.animationName !== 'pending-button-failure'
-              ) {
-                return
-              }
-              let animation = event.currentTarget
-                .getAnimations()
-                .find(
-                  (animation) =>
-                    animation instanceof CSSAnimation &&
-                    animation.animationName === event.animationName,
-                )
-              if (!animation) return
-              state = 'animatingFailure'
-              handle.update()
-              await animation.finished.catch(() => {})
-              if (signal.aborted || state !== 'animatingFailure') return
-              state = 'failed'
-              handle.update()
-            }),
             css({
-              animation: failed ? 'pending-button-failure 2000ms ease-in-out' : 'none',
+              backgroundColor: showingFailure ? '#dc2626' : undefined,
+              color: showingFailure ? '#fff' : undefined,
+              transition: 'background-color 150ms, color 150ms',
+              animation: showingFailure ? 'pending-button-failure 400ms ease-in-out' : 'none',
               '@keyframes pending-button-failure': {
-                '0%, 20%, 100%': { transform: 'translateX(0) scale(1)' },
-                '4%, 100%': {
-                  backgroundColor: '#dc2626',
-                  color: '#fff',
-                },
-                '4%, 12%': { transform: 'translateX(-3px) scale(1.04)' },
-                '8%, 16%': { transform: 'translateX(3px) scale(1.04)' },
+                '0%, 100%': { transform: 'translateX(0) scale(1)' },
+                '20%, 60%': { transform: 'translateX(-3px) scale(1.04)' },
+                '40%, 80%': { transform: 'translateX(3px) scale(1.04)' },
               },
               '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
             }),
             ...mix,
           ]}
         >
-          {pending ? pendingLabel : state === 'animatingFailure' ? 'Failed!' : children}
+          {pending ? pendingLabel : showingFailure ? 'Failed!' : children}
         </button>
         {errorMessage ? (
           <span

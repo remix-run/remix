@@ -17,7 +17,8 @@ export async function toggleCart({
   db,
   session,
   bookId,
-}: CartItemOptions): Promise<CartError | undefined> {
+  intent,
+}: CartItemOptions & { intent: 'add' | 'remove' }): Promise<CartError | undefined> {
   if (process.env.NODE_ENV !== 'test') {
     await new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 701)))
   }
@@ -29,12 +30,13 @@ export async function toggleCart({
   }
 
   let cart = getCurrentCart(session)
-  let inCart = cart.items.some((item) => item.bookId === book.id)
-  let next = inCart
-    ? removeFromCart(cart, book.id)
-    : addToCart(cart, book.id, book.slug, book.title, book.price, 1)
+  if (intent === 'remove') {
+    cart = removeFromCart(cart, book.id)
+  } else if (!cart.items.some((item) => item.bookId === book.id)) {
+    cart = addToCart(cart, book.id, book.slug, book.title, book.price, 1)
+  }
 
-  session.set('cart', next)
+  session.set('cart', cart)
 }
 
 export async function updateCart({

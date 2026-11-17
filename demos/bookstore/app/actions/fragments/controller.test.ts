@@ -11,6 +11,7 @@ describe('cart button handlers', () => {
       let response = await router.fetch('https://remix.run/fragments/cart-button/1', {
         method: 'POST',
         headers: { Referer: referrer },
+        body: new URLSearchParams({ intent: 'add' }),
       })
       assert.equal(response.status, 303)
       assert.equal(response.headers.get('Location'), '/')
@@ -19,6 +20,7 @@ describe('cart button handlers', () => {
     let response = await router.fetch('https://remix.run/fragments/cart-button/1', {
       method: 'POST',
       headers: { Referer: 'https://remix.run//other.example/books?from=catalog' },
+      body: new URLSearchParams({ intent: 'add' }),
     })
     assert.equal(response.status, 303)
     assert.equal(
@@ -27,15 +29,28 @@ describe('cart button handlers', () => {
     )
   })
 
-  it('rejects missing books before mutating the cart', async () => {
-    let added = await router.fetch('https://remix.run/fragments/cart-button/1', { method: 'POST' })
+  it('rejects invalid intents and missing books before mutating the cart', async () => {
+    let added = await router.fetch('https://remix.run/fragments/cart-button/1', {
+      method: 'POST',
+      body: new URLSearchParams({ intent: 'add' }),
+    })
     let session = getSessionCookie(added)
     assert.ok(session)
+    let invalid = await router.fetch(
+      requestWithSession('https://remix.run/fragments/cart-button/1', session, {
+        method: 'POST',
+        headers: { 'X-Remix-Frame': 'true' },
+        body: new URLSearchParams({ intent: 'toggle' }),
+      }),
+    )
+    assert.equal(invalid.status, 400)
+    assert.match(await invalid.text(), /Invalid cart action/)
     for (let bookId of ['invalid', '999999']) {
       let response = await router.fetch(
         requestWithSession(`https://remix.run/fragments/cart-button/${bookId}`, session, {
           method: 'POST',
           headers: { 'X-Remix-Frame': 'true' },
+          body: new URLSearchParams({ intent: 'add' }),
         }),
       )
       assert.equal(response.status, 404)
