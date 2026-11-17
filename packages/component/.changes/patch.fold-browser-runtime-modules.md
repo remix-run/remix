@@ -1,0 +1,1 @@
+The browser runtime loads fewer modules, with no behavior changes. Pages that hydrate with `run()` load 23 component modules instead of 31 and about 5% less gzipped code, and apps that only use `createRoot()` or `createRangeRoot()` load 16 instead of 19. `updateUrl()` and `spaResponse` now load only in apps that import them.

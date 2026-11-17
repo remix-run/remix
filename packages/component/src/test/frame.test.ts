@@ -7,8 +7,10 @@ import {
   consumeFrameTemplate,
   createFrame,
   Frame,
+  getDocumentModulePreloader,
   publishFrameTemplate,
   reloadFrameForNavigation,
+  resetDocumentImportMapManager,
 } from '../runtime/frame.ts'
 import {
   NamedFrameRegistry,
@@ -16,10 +18,8 @@ import {
   type ResolveFrameOptions,
 } from '../runtime/frame-runtime.ts'
 import { jsx } from '../runtime/core/vnode.ts'
-import { resetDocumentImportMapManager } from '../runtime/import-map-manager.ts'
 import { resetNonceManager } from '../runtime/nonce.ts'
-import { getDocumentModulePreloader } from '../runtime/module-preloader.ts'
-import { createScheduler } from '../runtime/scheduler.ts'
+import { createScheduler } from '../runtime/vdom.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
 import { ImportMap, renderToString, renderToStream } from '../server/stream.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
