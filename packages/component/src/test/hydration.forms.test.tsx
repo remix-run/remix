@@ -56,11 +56,12 @@ describe('hydration', () => {
       expect(document.activeElement).toBe(input)
     })
 
-    it('defers change for a focused text input edited before hydration', async (t) => {
+    it('defers change for a focused number input edited before hydration', async (t) => {
       let changes = 0
       let field = (
         <input
-          defaultValue=""
+          type="number"
+          defaultValue="1"
           mix={on('change', () => {
             changes++
           })}
@@ -69,7 +70,7 @@ describe('hydration', () => {
       container.innerHTML = await renderToString(field)
       let input = container.querySelector('input')
       invariant(input)
-      input.value = 'edited'
+      input.value = '5'
       input.focus()
       expect(document.activeElement).toBe(input)
 
@@ -77,7 +78,7 @@ describe('hydration', () => {
       t.after(() => root.dispose())
       root.render(field)
 
-      expect(input.value).toBe('edited')
+      expect(input.value).toBe('5')
       expect(changes).toBe(0)
     })
 

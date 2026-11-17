@@ -1170,11 +1170,12 @@ function mountHostNode(
           return
         }
         dom.dispatchEvent(new Event('input', { bubbles: true }))
-        // Text fields commit `change` on blur; other controls can commit while still focused.
+        // These controls commit `change` while still focused. Others, like text, number, and
+        // textarea, still fire their own `change` on blur.
         if (
           dom.ownerDocument.activeElement !== dom ||
           (dom instanceof HTMLInputElement &&
-            !['text', 'search', 'tel', 'url', 'email', 'password'].includes(dom.type))
+            ['checkbox', 'radio', 'range', 'color', 'file'].includes(dom.type))
         ) {
           dom.dispatchEvent(new Event('change', { bubbles: true }))
         }
