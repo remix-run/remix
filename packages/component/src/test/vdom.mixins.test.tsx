@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createElement } from '../runtime/create-element.ts'
-import { createRoot } from '../runtime/vdom.ts'
+import { createRoot, createScheduler } from '../runtime/vdom.ts'
 import { createMixin, on, ref, unsafeHTML } from '../index.ts'
 import { invariant } from '../runtime/invariant.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
@@ -496,6 +496,65 @@ describe('vnode mixins', () => {
     root.flush()
 
     expect(commits).toBe(1)
+  })
+
+  it('runs beforeUpdate and commit for every mixin handle in render order', () => {
+    let calls: string[] = []
+    let withPhases = createMixin((handle) => {
+      handle.addEventListener('beforeUpdate', (event) => calls.push(`before:${event.node.id}`))
+      handle.addEventListener('commit', (event) => calls.push(`commit:${event.node.id}`))
+    })
+
+    let update = () => {}
+    function List(handle: Handle<{ items: string[] }>) {
+      update = () => handle.update()
+      return () => (
+        <div>
+          {handle.props.items.map((id) => (
+            <span key={id} id={id} mix={withPhases()} />
+          ))}
+        </div>
+      )
+    }
+
+    let root = createRoot(document.createElement('div'))
+    root.render(<List items={['a', 'b', 'c']} />)
+    root.flush()
+    update()
+    root.flush()
+    expect(calls).toEqual(['before:a', 'before:b', 'before:c', 'commit:a', 'commit:b', 'commit:c'])
+
+    root.render(<List items={['a']} />)
+    root.flush()
+    calls = []
+    update()
+    root.flush()
+    expect(calls).toEqual(['before:a', 'commit:a'])
+  })
+
+  it('adds one scheduler listener per phase however many mixin handles subscribe', (t) => {
+    let scheduler = createScheduler(document, new EventTarget())
+    let add = t.mock.method(scheduler, 'addEventListener')
+    let remove = t.mock.method(scheduler, 'removeEventListener')
+    let withPhases = createMixin((handle) => {
+      handle.addEventListener('beforeUpdate', () => {})
+      handle.addEventListener('commit', () => {})
+    })
+
+    let root = createRoot(document.createElement('div'), { scheduler })
+    root.render(
+      <div>
+        <span mix={withPhases()} />
+        <span mix={withPhases()} />
+        <span mix={withPhases()} />
+      </div>,
+    )
+    root.flush()
+    expect(add.mock.calls.map((call) => call.arguments[0])).toEqual(['beforeUpdate', 'commit'])
+
+    root.render(null)
+    root.flush()
+    expect(remove.mock.calls.map((call) => call.arguments[0])).toEqual(['beforeUpdate', 'commit'])
   })
 
   it('composes ref callbacks across mixins and base mix', () => {

@@ -1,6 +1,6 @@
 import chokidar from 'chokidar'
 
-import { getFilePathDirectory, normalizeFilePath } from './paths.ts'
+import { getFilePathDirectory, normalizeFilePath, isSameOrDescendantPath } from './paths.ts'
 
 type AssetServerWatcherOptions = {
   ignore?: readonly string[]
@@ -149,10 +149,4 @@ function getAncestorPaths(directoryPath: string, rootDir: string): string[] {
   }
 
   return ancestors
-}
-
-function isSameOrDescendantPath(filePath: string, directoryPath: string): boolean {
-  let normalizedDirectoryPath = directoryPath.replace(/\/+$/, '')
-
-  return filePath === normalizedDirectoryPath || filePath.startsWith(`${normalizedDirectoryPath}/`)
 }

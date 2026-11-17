@@ -1,7 +1,5 @@
-import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { IfNoneMatch } from '@remix-run/headers/if-none-match'
 import { detectContentType } from '@remix-run/mime'
 import {
@@ -10,7 +8,7 @@ import {
 } from '../compilation-error.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
 import { formatFingerprintedPathname, hashContent } from '../fingerprint.ts'
-import { normalizeFilePath, resolveFilePath } from '../paths.ts'
+import { resolveInputFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { AssetFileTransformResult, ResolvedAssetRequestTransformMap } from './config.ts'
 import { parseAssetTransformInvocations } from './config.ts'
@@ -24,6 +22,12 @@ import type {
   SourceFileStore,
 } from './store.ts'
 import { isNoEntityError } from '../fs-errors.ts'
+import {
+  getCacheKey,
+  getFileSnapshot,
+  getNotModifiedResult,
+  resolveRealFilePath,
+} from '../compiler-utils.ts'
 
 type EmittedFile = {
   body: Uint8Array
@@ -138,7 +142,10 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
 
   return {
     async getFile(filePath, getOptions) {
-      let resolvedFile = resolveServedFileOrThrow(resolveInputFilePath(filePath), resolveArgs)
+      let resolvedFile = resolveServedFileOrThrow(
+        resolveInputFilePath(resolvedOptions.rootDir, filePath),
+        resolveArgs,
+      )
       let record = getFreshSourceFileRecord(resolvedFile.identityPath)
       if (shouldUseTransformPipeline(getOptions.transform)) {
         let parsedTransforms = parseRequestTransforms(
@@ -156,7 +163,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
           parsedTransforms,
           transformedCacheKey,
         )
-        let notModified = getNotModifiedFile(toEmittedFileMetadata(transformedFile), getOptions)
+        let notModified = getNotModifiedResult(toEmittedFileMetadata(transformedFile), getOptions)
         if (notModified) return notModified
 
         return {
@@ -165,7 +172,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
         }
       }
 
-      let notModified = getNotModifiedFile(record.metadata, getOptions)
+      let notModified = getNotModifiedResult(record.metadata, getOptions)
       if (notModified) return notModified
 
       if (
@@ -173,7 +180,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
         record.staleMetadataSnapshot &&
         isFileSnapshotFresh(record.staleMetadataSnapshot)
       ) {
-        let staleNotModified = getNotModifiedFile(record.staleMetadata, getOptions)
+        let staleNotModified = getNotModifiedResult(record.staleMetadata, getOptions)
         if (staleNotModified) return staleNotModified
       }
 
@@ -185,7 +192,10 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     },
 
     async getHref(filePath, hrefOptions) {
-      let resolvedFile = resolveServedFileOrThrow(resolveInputFilePath(filePath), resolveArgs)
+      let resolvedFile = resolveServedFileOrThrow(
+        resolveInputFilePath(resolvedOptions.rootDir, filePath),
+        resolveArgs,
+      )
       let record = getFreshSourceFileRecord(resolvedFile.identityPath)
       let href = resolvedFile.stableUrlPathname
       if (resolvedOptions.fingerprintAssets) {
@@ -236,18 +246,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     },
   }
 
-  function resolveInputFilePath(filePath: string): string {
-    if (filePath.startsWith('file://')) {
-      return normalizeFilePath(fileURLToPath(new URL(filePath)))
-    }
-
-    if (filePath.includes('://')) {
-      throw new TypeError(`Expected a file path or file:// URL, received "${filePath}"`)
-    }
-
-    return resolveFilePath(resolvedOptions.rootDir, filePath)
-  }
-
   function shouldUseTransformPipeline(transformQuery: readonly string[] | null): boolean {
     return (
       (transformQuery !== null && transformQuery.length > 0) ||
@@ -266,7 +264,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   }
 
   async function getOrCreateSourceFile(record: SourceFileRecord): Promise<EmittedFile> {
-    let cacheKey = getRecordCacheKey(record)
+    let cacheKey = getCacheKey(record.identityPath, record.invalidationVersion)
     let existing = sourceFileInFlightByCacheKey.get(cacheKey)
     if (existing) return existing
 
@@ -278,10 +276,11 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
         : await createSourceFile(body, record.identityPath)
 
       if (record.invalidationVersion === startedVersion && !record.metadata) {
+        let snapshot = getFileSnapshot(record.identityPath)
         sourceFileStore.set(
           record.identityPath,
           toEmittedFileMetadata(sourceFile),
-          getFileSnapshot(record.identityPath),
+          snapshot && { filePath: record.identityPath, ...snapshot },
         )
       }
 
@@ -498,7 +497,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
 }
 
 export function resolveServedFileOrThrow(filePath: string, args: ResolveArgs): ResolvedFile {
-  let identityPath = resolveExistingFilePath(filePath)
+  let identityPath = resolveRealFilePath(filePath)
   if (!identityPath) {
     throw createAssetServerCompilationError(`File not found: ${filePath}`, {
       code: 'FILE_NOT_FOUND',
@@ -569,10 +568,6 @@ export function isServedFilePath(filePath: string, extensions: ReadonlySet<strin
   return extensions.has(path.extname(filePath).toLowerCase())
 }
 
-function getRecordCacheKey(record: SourceFileRecord): string {
-  return `${record.identityPath}\0${record.invalidationVersion}`
-}
-
 function getTransformedRecordCacheKey(
   namespace: string,
   record: SourceFileRecord,
@@ -582,38 +577,6 @@ function getTransformedRecordCacheKey(
     namespace,
     JSON.stringify([record.identityPath, record.invalidationVersion, transforms]),
   )
-}
-
-function getFileSnapshot(filePath: string): FileSnapshot | null {
-  try {
-    let stats = fs.statSync(filePath, { bigint: true })
-    if (!stats.isFile()) return null
-    return {
-      filePath,
-      mtimeNs: stats.mtimeNs,
-      size: stats.size,
-    }
-  } catch (error) {
-    if (isNoEntityError(error)) return null
-    throw error
-  }
-}
-
-function getNotModifiedFile(
-  emittedFile: EmittedFileMetadata | undefined,
-  options: FileGetOptions,
-): FileGetResult | null {
-  if (!emittedFile || options.ifNoneMatch === null) return null
-
-  if (
-    options.requestedFingerprint !== null &&
-    emittedFile.fingerprint !== options.requestedFingerprint
-  ) {
-    return null
-  }
-
-  if (!IfNoneMatch.from(options.ifNoneMatch).matches(emittedFile.etag)) return null
-  return { etag: emittedFile.etag, type: 'not-modified' }
 }
 
 function toEmittedFileMetadata(emittedFile: EmittedFile): EmittedFileMetadata {
@@ -797,15 +760,6 @@ function parseRequestTransforms(
         code: 'FILE_TRANSFORM_QUERY_INVALID',
       },
     )
-  }
-}
-
-function resolveExistingFilePath(filePath: string): string | null {
-  try {
-    return normalizeFilePath(fs.realpathSync(filePath))
-  } catch (error) {
-    if (isNoEntityError(error)) return null
-    throw error
   }
 }
 

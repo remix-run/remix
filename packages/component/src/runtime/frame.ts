@@ -5,14 +5,16 @@ import {
   FRAME_NODE,
   createComponentErrorEvent,
   createFrameHandle,
+  createFrameReloadStartEvent,
   getComponentError,
   type FrameContent,
   type FrameProps,
+  type FrameResolution,
   type Handle,
   type RenderFn,
+  type ReloadOrigin,
 } from './component.ts'
 import { invariant } from './invariant.ts'
-import { encodeFormDataAsSearchParams } from './form-navigation.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
@@ -41,7 +43,6 @@ import {
 import {
   findContextFromAncestry,
   insertDomNode,
-  isFrameStartComment,
   remove,
   type CommittedFrameNode,
   type FrameNode,
@@ -56,21 +57,24 @@ import {
   diffNodes,
   findEndMarker,
   getClientEntryKey,
-  getFrameId,
-  isCommentNode,
-  isFrameEnd,
-  isFrameStart,
-  isHydrationEnd,
-  isHydrationStart,
 } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
 import { css } from '../style/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
 import type { CSSProps } from '../style/style.ts'
-import { findFlushMarker, FRAME_TEMPLATE_END_MARKER, type FlushKind } from './stream-protocol.ts'
-import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
-import { unwrapFrameResolution } from './spa-response.ts'
-import { getDocumentImportMapManager } from './import-map-manager.ts'
+import {
+  createFrameStartMarker,
+  findFlushMarker,
+  FRAME_END_MARKER,
+  type FlushKind,
+  getFrameId,
+  getHydrationId,
+  isFrameEnd,
+  isFrameStart,
+  isFrameTemplateEnd,
+  isHydrationEnd,
+  isHydrationStart,
+} from './stream-protocol.ts'
 import { ESCAPED_OBJECT } from './props-serialization.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
@@ -126,6 +130,10 @@ export function getNamedFrame(name: string): FrameHandle | undefined {
 }
 
 type InternalFrameContent = FrameContent | DocumentFragment
+
+type ReloadFailure = { error: unknown; aborted?: false } | { aborted: true }
+
+type ReloadFinished = PromiseWithResolvers<AbortSignal> & { controller: AbortController }
 
 type FrameTemplateListener = (fragment: DocumentFragment) => void
 
@@ -271,7 +279,10 @@ export function reloadFrameForNavigation(
 }
 
 export type FrameContext = {
+  reloadOrigin?: ReloadOrigin
   nonce?: string
+  navigationType?: NavigationType
+  from?: NavigationHistoryEntry
   topFrame?: FrameHandle
   getContext: (type: ElementFunction) => unknown
   errorTarget: EventTarget
@@ -298,6 +309,9 @@ export type FrameContext = {
 
 type FrameInit = {
   nonce?: string
+  navigationType?: NavigationType
+  from?: NavigationHistoryEntry
+  signal?: AbortSignal
   name?: string
   loading?: FrameProps['loading']
   topFrame?: FrameHandle
@@ -319,35 +333,61 @@ type FrameInit = {
   disposeFallback?: () => void
 }
 
-// Whether reloadStart has been dispatched without a matching reloadComplete, and why. Each frame
-// dispatches exactly one reloadComplete per reloadStart.
+// The active reload and its completion outcome. Superseded requests finish as aborted without
+// dispatching reloadComplete; ancestor resolution can continue an inherited reload.
 type FrameReloadState =
   | { status: 'idle' }
   // An ancestor reload is replacing this frame's content. It completes when that content renders
   // or the ancestor's signal aborts.
-  | { status: 'inherited'; disconnect: (() => void) | undefined }
+  | {
+      status: 'inherited'
+      disconnect: (() => void) | undefined
+      finished: ReloadFinished
+      origin?: ReloadOrigin
+    }
   // This frame is resolving its own source, either for `frame.reload()` or because an ancestor
   // reload re-resolves this client frame.
-  | { status: 'direct' | 'ancestor'; controller: AbortController; disconnect: () => void }
+  | {
+      status: 'direct' | 'ancestor'
+      controller: AbortController
+      disconnect: () => void
+      finished: ReloadFinished
+      origin?: ReloadOrigin
+    }
 
 type FrameLoadOrigin = 'initial' | 'direct' | 'ancestor'
 
 // These regions are independent: resolved content can remain visible during a request, and a
-// settled request retains its controller while waiting for visibility again.
+// settled request retains its controller while waiting for visibility again. Commit wrappers can
+// remain active after rendering while they await navigation completion or animation.
 type FrameLoadState = {
+  reload: FrameReloadState
+  eventController: AbortController | undefined
   lifecycle: 'active' | 'disposed'
   policy: 'eager' | 'lazy'
   content: 'pending' | 'started' | 'resolved'
   request: { status: 'idle' } | { status: 'loading' | 'settled'; controller: AbortController }
+  commit: { status: 'idle' } | { status: 'active'; controller: AbortController }
   observation:
     | { status: 'inactive' }
     | { status: 'observing'; load: () => void; disconnect: () => void }
 }
 
 type FrameLoadEvent =
-  | { type: 'start'; origin: FrameLoadOrigin; signal?: AbortSignal }
-  | { type: 'settle'; controller: AbortController }
-  | { type: 'release-request' }
+  | {
+      type: 'start'
+      origin: FrameLoadOrigin
+      signal?: AbortSignal
+      reloadOrigin?: ReloadOrigin
+      form?: HTMLFormElement
+    }
+  | { type: 'settle'; controller: AbortController; failure?: ReloadFailure }
+  | { type: 'reject'; controller: AbortController; error: unknown }
+  | { type: 'inherit'; signal?: AbortSignal; origin?: ReloadOrigin; takeOverRequest: boolean }
+  | { type: 'complete-inherited'; failure?: ReloadFailure }
+  | { type: 'reject-inherited'; error: unknown }
+  | { type: 'start-commit' }
+  | { type: 'cancel-commit' }
   | { type: 'render-start' }
   | { type: 'render-complete' }
   | { type: 'defer'; load?: () => void }
@@ -358,10 +398,19 @@ type FrameLoadEvent =
 
 type PendingTemplateWatch = {
   markerId: string
+  signal: AbortSignal | undefined
+  onResolved?: () => void
   dispose?: () => void
 }
 
 export type FrameInstance = {
+  commitResponse: (
+    response: Response,
+    commit: FrameCommit,
+    render: () => Promise<void>,
+    signal: AbortSignal,
+    to: string,
+  ) => Promise<void>
   render: (content: InternalFrameContent, options?: RenderOptions) => Promise<void>
   ready: () => Promise<void>
   flush: () => void
@@ -371,10 +420,20 @@ export type FrameInstance = {
   updateLoading: (loading: FrameProps['loading']) => void
   deferLoad: (load?: () => void) => void
   startDeferredLoad: () => void
-  startLoad: (origin: FrameLoadOrigin, signal?: AbortSignal) => AbortController
-  completeLoad: (controller: AbortController) => void
-  startInheritedReload: (signal?: AbortSignal) => void
-  completeInheritedReload: () => void
+  startLoad: (
+    origin: FrameLoadOrigin,
+    signal?: AbortSignal,
+    reloadOrigin?: ReloadOrigin,
+  ) => AbortController
+  rejectLoad: (controller: AbortController, error: unknown) => void
+  completeLoad: (controller: AbortController, failure?: ReloadFailure) => void
+  startInheritedReload: (
+    signal?: AbortSignal,
+    origin?: ReloadOrigin,
+    takeOverRequest?: boolean,
+  ) => void
+  rejectInheritedReloadFinished: (error: unknown) => void
+  completeInheritedReload: (failure?: ReloadFailure) => void
   updateMarker: (marker: FrameMarkerData, options?: RenderOptions) => Promise<void>
   renderMarkerContent: (
     marker: FrameMarkerData,
@@ -387,7 +446,10 @@ export type FrameInstance = {
 }
 
 type RenderOptions = {
+  reloadOrigin?: ReloadOrigin
   nonce?: string
+  navigationType?: NavigationType
+  from?: NavigationHistoryEntry
   documentHref?: string
   flushKind?: FlushKind
   reconciliationTracker?: ReconciliationTracker
@@ -405,7 +467,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   let container = createContainer(root)
   let nonceManager = getNonceManager()
   let contentRoot: VirtualRoot | undefined
-  let reloadState: FrameReloadState = { status: 'idle' }
   // The style registry is document-level and shared by every frame; only the
   // frame that created it (the runtime root) disposes it.
   let ownsStyleManager = !init.styleManager
@@ -414,13 +475,19 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   let importMapManager = getDocumentImportMapManager(container.doc)
   let currentMarker = init.marker
   let loadState: FrameLoadState = {
+    reload: { status: 'idle' },
+    eventController: undefined,
     lifecycle: 'active',
     policy: init.loading ?? (init.marker?.status === 'lazy' ? 'lazy' : 'eager'),
     content: init.marker?.status === 'resolved' ? 'resolved' : 'pending',
     request: { status: 'idle' },
+    commit: { status: 'idle' },
     observation: { status: 'inactive' },
   }
   let pendingTemplateWatch: PendingTemplateWatch | undefined
+  let pendingTemplateRender:
+    | { markerId: string; controller: AbortController | undefined; ready: Promise<void> }
+    | undefined
   let lifecycleController = new AbortController()
 
   async function consumeClientEntryResources(
@@ -469,6 +536,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     $runtime: runtime,
     reload: async (options) => (await reload(options)).signal,
     replace: async (content: FrameContent) => {
+      transitionLoad({ type: 'cancel-commit' })
       await render(content)
     },
   })
@@ -481,6 +549,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   let context: FrameContext = {
     nonce: init.nonce,
+    navigationType: init.navigationType,
+    from: init.from,
     topFrame: runtime.topFrame,
     getContext: (type) => runtime.getContext?.(type),
     ...getSharedFrameRuntime(runtime),
@@ -552,6 +622,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       if (options.signal) {
         runtime.serverFrameReload = {
           signal: options.signal,
+          origin: options.reloadOrigin,
+          navigationType: options.navigationType,
+          from: options.from,
           reconciliationTracker: options.reconciliationTracker,
           blockingFrameTracker: options.blockingFrameTracker,
         }
@@ -602,7 +675,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     mergeRmxDataFrom(options.data, source)
     let responseContext = {
       ...context,
+      reloadOrigin: options.reloadOrigin,
       nonce: options.nonce,
+      navigationType: options.navigationType,
+      from: options.from,
       data: options.data,
       reconciliationTracker: options.reconciliationTracker,
       blockingFrameTracker: options.blockingFrameTracker,
@@ -671,22 +747,28 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let reconciliationTracker = createReconciliationTracker()
 
     if ((await initialClientEntryResources) === false) return
-    if (isRenderAborted()) return
+    if (isRenderAborted(init.signal)) return
     adoptFrameServerStyles(container, context.styleManager)
     let subFramesReady = hydrateContainer(container, context, {
       reconciliationTracker,
       nonce: context.nonce,
+      navigationType: context.navigationType,
+      from: context.from,
+      signal: init.signal,
     })
 
     try {
       await subFramesReady
 
-      if (isRenderAborted()) return
+      if (isRenderAborted(init.signal)) return
 
       if (currentMarker?.status === 'pending') {
         await watchPendingFrameTemplate(currentMarker, {
           reconciliationTracker,
           nonce: context.nonce,
+          navigationType: context.navigationType,
+          from: context.from,
+          signal: init.signal,
         })
       } else if (currentMarker?.status === 'lazy' && loadState.content === 'pending') {
         deferLoad(loadLazyFrame)
@@ -706,6 +788,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   let readyPromise = hydrateInitial()
 
   return {
+    commitResponse,
     render,
     ready: () => readyPromise,
     flush: () => context.scheduler.dequeue(),
@@ -718,8 +801,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     deferLoad,
     startDeferredLoad,
     startLoad,
+    rejectLoad,
     completeLoad,
     startInheritedReload,
+    rejectInheritedReloadFinished,
     completeInheritedReload,
     updateMarker,
     renderMarkerContent,
@@ -737,16 +822,23 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     return loadState.policy !== 'lazy' || loadState.content !== 'pending'
   }
 
-  function loadLazyFrame(signal?: AbortSignal): void {
+  function loadLazyFrame(
+    signal?: AbortSignal,
+    navigationType?: NavigationType,
+    from?: NavigationHistoryEntry,
+  ): void {
     // Viewport loading completes initial content; active reloads keep their lifecycle.
     let controller = startLoad(
-      !signal && reloadState.status === 'idle' && loadState.content !== 'resolved'
+      !signal && loadState.reload.status === 'idle' && loadState.content !== 'resolved'
         ? 'initial'
-        : 'direct',
+        : signal
+          ? 'ancestor'
+          : 'direct',
       signal,
+      loadState.reload.status === 'idle' ? undefined : loadState.reload.origin,
     )
     // Resolution reports errors before rejecting.
-    void resolveAndRenderReload(controller).catch(() => {})
+    void resolveAndRenderReload(controller, undefined, { navigationType, from }).catch(() => {})
   }
 
   function startDeferredLoad(): void {
@@ -757,7 +849,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     transitionLoad({ type: 'defer', load })
   }
 
-  function transitionLoad(event: Extract<FrameLoadEvent, { type: 'start' }>): AbortController
+  function transitionLoad(
+    event: Extract<FrameLoadEvent, { type: 'start' | 'start-commit' }>,
+  ): AbortController
   function transitionLoad(event: FrameLoadEvent): void
   function transitionLoad(event: FrameLoadEvent): AbortController | void {
     switch (event.type) {
@@ -831,6 +925,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         return
       }
       case 'start': {
+        transitionLoad({ type: 'cancel-commit' })
         transitionLoad({ type: 'render-start' })
         if (event.origin === 'initial') {
           let previous = currentLoadController()
@@ -838,36 +933,98 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
           loadState.request = { status: 'loading', controller }
           if (previous) {
             previous.abort()
-            completeReload(previous)
+            completeLoad(previous)
           }
           return controller
         }
 
-        // Superseding an owned reload or taking over an inherited reload continues its event pair.
-        let previousStatus = reloadState.status
+        let origin = event.reloadOrigin
+        let previous = loadState.reload
         currentLoadController()?.abort()
         leaveReloadState()
 
         let { controller, disconnect } = createLinkedAbortController(event.signal)
-        loadState.request = { status: 'loading', controller }
-        reloadState = { status: event.origin, controller, disconnect }
-
-        if (previousStatus === 'idle') {
-          frame.dispatchEvent(new Event('reloadStart'))
+        let navigation = getFrameCommitNavigation(event.signal)
+        if (navigation) setFrameCommitNavigation(controller.signal, navigation)
+        // Ancestor resolution continues the reload announced while waiting for its response.
+        // Direct requests each need an event carrying their own request details and outcome.
+        let continued =
+          event.origin === 'ancestor' &&
+          (previous.status === 'inherited' || previous.status === 'ancestor')
+            ? previous
+            : undefined
+        let finished = continued?.finished
+        if (!finished) {
+          let previousEventController = loadState.eventController
+          previousEventController?.abort()
+          // Abort listeners can synchronously start a newer reload or dispose the frame.
+          if (loadState.eventController !== previousEventController) {
+            disconnect()
+            controller.abort()
+            return controller
+          }
+          let eventReload =
+            event.origin === 'direct'
+              ? { controller, disconnect: undefined }
+              : createLinkedAbortController(event.signal)
+          finished = createReloadFinished(eventReload.controller, eventReload.disconnect)
         }
-        // An ancestor reload re-resolves client sub-frames itself, so sub-frames only inherit it
-        // when it doesn't continue an earlier ancestor-driven reload.
-        if (event.origin === 'direct' || previousStatus === 'idle' || previousStatus === 'direct') {
-          startSubFrameInheritedReloads(getContentNodes(), controller.signal)
+        loadState.eventController = finished.controller
+        if (!continued && previous.status !== 'idle') {
+          settleReloadFinished(previous.finished, { aborted: true })
+        }
+        if (event.origin === 'ancestor' && previous.status !== 'idle') origin ??= previous.origin
+        loadState.request = { status: 'loading', controller }
+        loadState.reload = { status: event.origin, controller, disconnect, finished, origin }
+
+        if (!continued) {
+          frame.dispatchEvent(
+            createFrameReloadStartEvent({
+              src: frame.src,
+              method: 'get',
+              encType: null,
+              ...origin,
+              finished: finished.promise,
+            }),
+          )
+        }
+        if (
+          event.origin === 'direct' ||
+          previous.status === 'idle' ||
+          previous.status === 'direct'
+        ) {
+          startSubFrameInheritedReloads(getContentNodes(), controller.signal, origin)
         }
         return controller
       }
-      case 'release-request':
-        loadState.request = { status: 'idle' }
+      case 'start-commit': {
+        transitionLoad({ type: 'cancel-commit' })
+        let controller = new AbortController()
+        loadState.commit = { status: 'active', controller }
+        return controller
+      }
+      case 'cancel-commit': {
+        let commit = loadState.commit
+        loadState.commit = { status: 'idle' }
+        if (commit.status === 'active') commit.controller.abort()
         return
+      }
       case 'settle': {
         let { controller } = event
-        completeReload(controller)
+        if (
+          (loadState.reload.status === 'direct' || loadState.reload.status === 'ancestor') &&
+          loadState.reload.controller === controller
+        ) {
+          let finished = loadState.reload.finished
+          let outcome: ReloadFailure | undefined =
+            event.failure ?? (controller.signal.aborted ? { aborted: true } : undefined)
+          settleReloadFinished(finished, outcome)
+          leaveReloadState()
+          if (outcome !== undefined)
+            completeSubFrameInheritedReloads(getContentNodes(), outcome, finished)
+          if (loadState.eventController === finished.controller)
+            frame.dispatchEvent(new Event('reloadComplete'))
+        }
         // reloadComplete listeners can synchronously start another request or dispose the frame.
         if (currentLoadController() !== controller) return
         loadState.request = { status: 'settled', controller }
@@ -881,19 +1038,101 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         }
         return
       }
+      case 'reject':
+        if (loadState.reload.status !== 'direct' && loadState.reload.status !== 'ancestor') return
+        if (loadState.reload.controller !== event.controller) return
+        loadState.reload.finished.reject(event.error)
+        rejectSubFrameInheritedReloadFinished(getContentNodes(), event.error)
+        return
+      case 'reject-inherited':
+        if (loadState.reload.status !== 'inherited') return
+        loadState.reload.finished.reject(event.error)
+        rejectSubFrameInheritedReloadFinished(getContentNodes(), event.error)
+        return
+      case 'inherit': {
+        let { signal, origin, takeOverRequest } = event
+        if (signal?.aborted) return
+        if (
+          !takeOverRequest &&
+          (loadState.reload.status === 'direct' || loadState.reload.status === 'ancestor')
+        ) {
+          loadState.reload.origin = origin
+          startSubFrameInheritedReloads(getContentNodes(), signal, origin)
+          return
+        }
+        let previous = loadState.reload
+        let previousController = takeOverRequest ? currentLoadController() : undefined
+        if (takeOverRequest) loadState.request = { status: 'idle' }
+        leaveReloadState()
+        let disconnect: (() => void) | undefined
+        if (signal) {
+          let abort = () => completeInheritedReload({ aborted: true })
+          signal.addEventListener('abort', abort, { once: true })
+          disconnect = () => signal.removeEventListener('abort', abort)
+        }
+        let continued = previous.status === 'idle' ? undefined : previous
+        let finished = continued?.finished
+        if (!finished) {
+          let previousEventController = loadState.eventController
+          previousEventController?.abort()
+          if (loadState.eventController !== previousEventController) {
+            disconnect?.()
+            previousController?.abort()
+            return
+          }
+          let eventReload = createLinkedAbortController(signal)
+          finished = createReloadFinished(eventReload.controller, eventReload.disconnect)
+        }
+        loadState.eventController = finished.controller
+        loadState.reload = { status: 'inherited', disconnect, finished, origin }
+        if (!continued) {
+          frame.dispatchEvent(
+            createFrameReloadStartEvent({
+              src: frame.src,
+              method: 'get',
+              encType: null,
+              ...origin,
+              finished: finished.promise,
+            }),
+          )
+        }
+        if (previous.status !== 'inherited')
+          startSubFrameInheritedReloads(getContentNodes(), signal, origin)
+        // Publish inherited ownership before aborting the request it supersedes.
+        previousController?.abort()
+        if (takeOverRequest) transitionLoad({ type: 'cancel-commit' })
+        return
+      }
+      case 'complete-inherited': {
+        if (loadState.reload.status !== 'inherited') return
+        let finished = loadState.reload.finished
+        settleReloadFinished(finished, event.failure)
+        leaveReloadState()
+        if (event.failure !== undefined)
+          completeSubFrameInheritedReloads(getContentNodes(), event.failure, finished)
+        if (loadState.eventController === finished.controller)
+          frame.dispatchEvent(new Event('reloadComplete'))
+        return
+      }
       case 'dispose':
         if (loadState.lifecycle === 'disposed') return
         loadState.lifecycle = 'disposed'
         transitionLoad({ type: 'cancel-deferral' })
         lifecycleController.abort()
+        transitionLoad({ type: 'cancel-commit' })
         clearRmxData(context.data)
         currentLoadController()?.abort()
         loadState.request = { status: 'idle' }
+        loadState.eventController?.abort()
+        loadState.eventController = undefined
+        if (loadState.reload.status !== 'idle')
+          settleReloadFinished(loadState.reload.finished, { aborted: true })
         leaveReloadState()
         init.disposeFallback?.()
         contentRoot?.dispose()
         contentRoot = undefined
         clearPendingFrameTemplateWatch()
+        pendingTemplateRender = undefined
 
         // Remove hydrated virtual roots in this frame's region.
         removeVirtualRoots(container.childNodes)
@@ -913,14 +1152,18 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
   }
 
-  function setCurrentMarker(marker: FrameMarkerData, signal?: AbortSignal): boolean {
+  function setCurrentMarker(
+    marker: FrameMarkerData,
+    signal?: AbortSignal,
+    origin?: ReloadOrigin,
+  ): boolean {
     transitionLoad({ type: 'policy', loading: marker.status === 'lazy' ? 'lazy' : 'eager' })
     if (marker.status !== 'lazy') transitionLoad({ type: 'cancel-deferral' })
     let isInheritedReload = currentMarker !== undefined && currentMarker.id !== marker.id
     currentMarker = marker
 
     if (isInheritedReload) {
-      startInheritedReload(signal, marker.status !== 'lazy')
+      startInheritedReload(signal, origin, marker.status !== 'lazy')
     }
 
     return isInheritedReload
@@ -928,13 +1171,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   async function updateMarker(marker: FrameMarkerData, options?: RenderOptions): Promise<void> {
     if (isRenderAborted(options?.signal)) return
-    let isInheritedReload = setCurrentMarker(marker, options?.signal)
+    let isInheritedReload = setCurrentMarker(marker, options?.signal, options?.reloadOrigin)
 
     if (marker.status === 'pending') {
       await watchPendingFrameTemplate(
         marker,
         options,
-        isInheritedReload
+        isInheritedReload || loadState.reload.status === 'inherited'
           ? () => {
               completeInheritedReload()
             }
@@ -944,7 +1187,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       clearPendingFrameTemplateWatch()
       if (marker.status === 'lazy') {
         if (isInheritedReload && shouldLoadForAncestorReload()) {
-          loadLazyFrame(options?.signal)
+          loadLazyFrame(options?.signal, options?.navigationType, options?.from)
         } else if (loadState.content !== 'resolved' && !currentLoadController()) {
           deferLoad(loadLazyFrame)
         }
@@ -961,7 +1204,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     options?: RenderOptions,
   ): Promise<void> {
     if (isRenderAborted(options?.signal)) return
-    let isInheritedReload = setCurrentMarker(marker, options?.signal)
+    let isInheritedReload =
+      setCurrentMarker(marker, options?.signal, options?.reloadOrigin) ||
+      loadState.reload.status === 'inherited'
 
     clearPendingFrameTemplateWatch()
     await render(content, options)
@@ -1001,7 +1246,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function startReloadTransition(options?: FrameNavigationOptions): FrameReloadTransition {
-    let controller = startLoad('direct', options?.signal)
+    let controller = startReload(options)
     let committed = Promise.withResolvers<void>()
     let finished = resolveAndRenderReload(controller, committed, options)
 
@@ -1011,13 +1256,52 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     return { signal: controller.signal, committed: committed.promise, finished }
   }
 
-  function startLoad(origin: FrameLoadOrigin, signal?: AbortSignal): AbortController {
-    return transitionLoad({ type: 'start', origin, signal })
+  function commitResponse(
+    response: Response,
+    commit: FrameCommit,
+    swap: () => Promise<void>,
+    signal: AbortSignal,
+    to: string,
+  ): Promise<void> {
+    let controller = transitionLoad({ type: 'start-commit' })
+    return commitFrameResponse(response, commit, swap, {
+      to,
+      signal,
+      commitSignal: AbortSignal.any([controller.signal, lifecycleController.signal]),
+      onError: (error) => init.errorTarget.dispatchEvent(createComponentErrorEvent(error)),
+    })
+  }
+
+  function startReload(options?: FrameNavigationOptions): AbortController {
+    let method = options?.method?.toLowerCase() ?? 'get'
+    return transitionLoad({
+      type: 'start',
+      origin: 'direct',
+      signal: options?.signal,
+      form: options?.form,
+      reloadOrigin: {
+        src: frame.src,
+        method,
+        encType:
+          method === 'post' ? (options?.encType ?? 'application/x-www-form-urlencoded') : null,
+        formData: method === 'post' ? options?.formData : undefined,
+        element: options?.element,
+        submitter: options?.submitter,
+      },
+    })
+  }
+
+  function startLoad(
+    origin: FrameLoadOrigin,
+    signal?: AbortSignal,
+    reloadOrigin?: ReloadOrigin,
+  ): AbortController {
+    return transitionLoad({ type: 'start', origin, signal, reloadOrigin })
   }
 
   function leaveReloadState(): void {
-    if (reloadState.status !== 'idle') reloadState.disconnect?.()
-    reloadState = { status: 'idle' }
+    if (loadState.reload.status !== 'idle') loadState.reload.disconnect?.()
+    loadState.reload = { status: 'idle' }
   }
 
   async function resolveAndRenderReload(
@@ -1026,111 +1310,131 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     options?: FrameNavigationOptions,
   ): Promise<FrameReloadResult> {
     let isStale = () => currentLoadController() !== controller || controller.signal.aborted
+    let origin =
+      (loadState.reload.status === 'direct' || loadState.reload.status === 'ancestor') &&
+      loadState.reload.controller === controller
+        ? loadState.reload.origin
+        : undefined
+    let failure: ReloadFailure | undefined
     try {
+      let { element: _, submitter: __, form: ___, ...resolveOptions } = options ?? {}
       let resolution = await init.resolveFrame(frame.src, {
-        ...options,
+        ...resolveOptions,
         signal: controller.signal,
         target: frameName,
       })
+      let commit = takeFrameCommit(resolution)
       if (isStale()) return { signal: controller.signal }
       let { content, redirectedTo, nonce } = await unwrapFrameResolution(resolution)
       if (isStale()) return { signal: controller.signal }
-      let reconciliationTracker = createReconciliationTracker()
-      let blockingFrameTracker = createReconciliationTracker()
-      let commitStarted = false
-      await render(content, {
-        nonce,
-        documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
-        signal: controller.signal,
-        reconciliationTracker,
-        blockingFrameTracker,
-        onCommit() {
-          if (commitStarted) return
-          commitStarted = true
-          blockingFrameTracker.finalize()
-          if (committed) {
-            void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
-          }
-        },
-      })
-      reconciliationTracker.finalize()
-      await reconciliationTracker.ready()
+      let swap = async () => {
+        let reconciliationTracker = createReconciliationTracker()
+        let blockingFrameTracker = createReconciliationTracker()
+        let commitStarted = false
+        await render(content, {
+          reloadOrigin: origin,
+          nonce,
+          navigationType: options?.navigationType,
+          from: options?.from,
+          documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
+          signal: controller.signal,
+          reconciliationTracker,
+          blockingFrameTracker,
+          onCommit() {
+            if (commitStarted) return
+            commitStarted = true
+            blockingFrameTracker.finalize()
+            if (committed) {
+              void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
+            }
+          },
+        })
+        reconciliationTracker.finalize()
+        await reconciliationTracker.ready()
+      }
+      if (commit && resolution instanceof Response) {
+        await commitResponse(resolution, commit, swap, controller.signal, redirectedTo ?? frame.src)
+      } else {
+        await swap()
+      }
       return {
         signal: controller.signal,
         redirectedTo: isStale() ? undefined : redirectedTo,
       }
     } catch (error) {
       if (isStale()) return { signal: controller.signal }
+      failure = { error }
+      rejectLoad(controller, error)
       init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       throw error
     } finally {
-      completeLoad(controller)
+      completeLoad(controller, failure)
     }
   }
 
-  function completeLoad(controller: AbortController): void {
-    transitionLoad({ type: 'settle', controller })
+  function completeLoad(controller: AbortController, failure?: ReloadFailure): void {
+    transitionLoad({ type: 'settle', controller, failure })
   }
 
-  function completeReload(controller: AbortController): void {
-    if (reloadState.status !== 'direct' && reloadState.status !== 'ancestor') return
-    if (reloadState.controller !== controller) return
-    leaveReloadState()
-    frame.dispatchEvent(new Event('reloadComplete'))
+  function rejectLoad(controller: AbortController, error: unknown): void {
+    transitionLoad({ type: 'reject', controller, error })
   }
 
-  function startInheritedReload(signal?: AbortSignal, takeOverRequest = false): void {
-    if (signal?.aborted) return
-
-    // A reload this frame owns already reports progress, and it completes on its own schedule.
-    if (
-      !takeOverRequest &&
-      (reloadState.status === 'direct' || reloadState.status === 'ancestor')
-    ) {
-      startSubFrameInheritedReloads(getContentNodes(), signal)
-      return
-    }
-
-    let previousStatus = reloadState.status
-    let previousController = takeOverRequest ? currentLoadController() : undefined
-    if (takeOverRequest) transitionLoad({ type: 'release-request' })
-    leaveReloadState()
-
-    let disconnect: (() => void) | undefined
-    if (signal) {
-      let abort = () => completeInheritedReload()
-      signal.addEventListener('abort', abort, { once: true })
-      disconnect = () => signal.removeEventListener('abort', abort)
-    }
-    reloadState = { status: 'inherited', disconnect }
-
-    if (previousStatus === 'idle') {
-      frame.dispatchEvent(new Event('reloadStart'))
-    }
-    if (previousStatus !== 'inherited') {
-      startSubFrameInheritedReloads(getContentNodes(), signal)
-    }
-    // Publish inherited ownership before aborting the request it supersedes.
-    previousController?.abort()
+  function startInheritedReload(
+    signal?: AbortSignal,
+    origin?: ReloadOrigin,
+    takeOverRequest = false,
+  ): void {
+    transitionLoad({ type: 'inherit', signal, origin, takeOverRequest })
   }
 
-  function completeInheritedReload(): void {
-    if (reloadState.status !== 'inherited') return
-    leaveReloadState()
-    frame.dispatchEvent(new Event('reloadComplete'))
+  function rejectInheritedReloadFinished(error: unknown): void {
+    transitionLoad({ type: 'reject-inherited', error })
   }
 
-  function startSubFrameInheritedReloads(nodes: Node[], signal?: AbortSignal): void {
+  function completeInheritedReload(failure?: ReloadFailure): void {
+    transitionLoad({ type: 'complete-inherited', failure })
+  }
+
+  function startSubFrameInheritedReloads(
+    nodes: Node[],
+    signal?: AbortSignal,
+    origin?: ReloadOrigin,
+  ): void {
     walkNodes(
       nodes,
       (node) => {
         if (!isFrameStart(node)) return
         let end = findFrameEndMarker(node)
-        context.frameInstances.get(node)?.startInheritedReload(signal)
+        context.frameInstances.get(node)?.startInheritedReload(signal, origin)
         return end
       },
       signal,
     )
+  }
+
+  function rejectSubFrameInheritedReloadFinished(nodes: Node[], error: unknown): void {
+    walkNodes(nodes, (node) => {
+      if (!isFrameStart(node)) return
+      let end = findFrameEndMarker(node)
+      context.frameInstances.get(node)?.rejectInheritedReloadFinished(error)
+      return end
+    })
+  }
+
+  function completeSubFrameInheritedReloads(
+    nodes: Node[],
+    failure: ReloadFailure,
+    finished: ReloadFinished,
+  ): void {
+    walkNodes(nodes, (node) => {
+      // A completion listener can synchronously start a new ancestor reload.
+      if (loadState.eventController !== finished.controller) return
+      if (!isFrameStart(node)) return
+      let end = findFrameEndMarker(node)
+      context.frameInstances.get(node)?.completeInheritedReload(failure)
+      return end
+    })
   }
 
   function clearPendingFrameTemplateWatch(): void {
@@ -1144,12 +1448,36 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     options: RenderOptions = {},
     onResolved?: () => void,
   ): Promise<void> {
-    let { reconciliationTracker, signal, nonce } = options
+    let { reconciliationTracker, signal, nonce, reloadOrigin, navigationType, from } = options
     if (isRenderAborted(signal)) return
-    if (pendingTemplateWatch?.markerId === marker.id) return
+    // A replayed template can reach the initial watcher before its shell accepts the marker.
+    let rendering = pendingTemplateRender
+    if (
+      onResolved &&
+      rendering?.markerId === marker.id &&
+      rendering.controller === loadState.eventController
+    ) {
+      await rendering.ready
+      if (!isRenderAborted(signal) && rendering.controller === loadState.eventController)
+        onResolved?.()
+      return
+    }
+    if (
+      pendingTemplateWatch?.markerId === marker.id &&
+      (pendingTemplateWatch.signal === signal || pendingTemplateWatch.signal === undefined)
+    ) {
+      // Initial streamed content must survive cancellation of a later navigation.
+      let controller = loadState.eventController
+      pendingTemplateWatch.onResolved = onResolved
+        ? () => {
+            if (!isRenderAborted(signal) && loadState.eventController === controller) onResolved()
+          }
+        : undefined
+      return
+    }
 
     clearPendingFrameTemplateWatch()
-    let watch: PendingTemplateWatch = { markerId: marker.id }
+    let watch: PendingTemplateWatch = { markerId: marker.id, signal, onResolved }
     pendingTemplateWatch = watch
 
     let template = consumeFrameTemplate(marker.id) ?? getEarlyFrameContent(marker.id)
@@ -1164,8 +1492,33 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         if (isRenderAborted(signal)) return
         if (pendingTemplateWatch !== watch) return
         clearPendingFrameTemplateWatch()
-        await render(fragment, { nonce, signal })
-        if (!isRenderAborted(signal)) onResolved?.()
+        let inheritedReload = loadState.reload
+        let renderOrigin =
+          inheritedReload.status === 'inherited' ? inheritedReload.origin : reloadOrigin
+        let ready = Promise.withResolvers<void>()
+        pendingTemplateRender = {
+          markerId: marker.id,
+          controller: loadState.eventController,
+          ready: ready.promise,
+        }
+        try {
+          await render(fragment, {
+            navigationType,
+            from,
+            nonce,
+            signal,
+            reloadOrigin: renderOrigin,
+          })
+        } catch (error) {
+          if (isRenderAborted(signal) || loadState.reload !== inheritedReload) return
+          rejectInheritedReloadFinished(error)
+          init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
+          if (loadState.reload === inheritedReload) completeInheritedReload({ error })
+          return
+        } finally {
+          ready.resolve()
+        }
+        if (!isRenderAborted(signal) && loadState.reload === inheritedReload) watch.onResolved?.()
       })
       let abort = () => {
         if (pendingTemplateWatch === watch) clearPendingFrameTemplateWatch()
@@ -1182,7 +1535,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
 
     clearPendingFrameTemplateWatch()
-    await render(template, { nonce, reconciliationTracker, signal })
+    await render(template, {
+      nonce,
+      navigationType,
+      from,
+      reconciliationTracker,
+      signal,
+      reloadOrigin,
+    })
     if (!isRenderAborted(signal)) onResolved?.()
   }
 }
@@ -1291,7 +1651,7 @@ function insertFrame(
 
   // Hydration path: adopt server-rendered frame markers and reuse the existing
   // frame instance created during createSubFrames().
-  if (isFrameStartComment(cursor?.current)) {
+  if (isFrameStart(cursor?.current)) {
     let start = cursor.current
     let end = findFrameEndComment(start)
     if (end) {
@@ -1310,8 +1670,8 @@ function insertFrame(
     }
   }
 
-  let start = document.createComment(` rmx:f:${randomFrameId()} `)
-  let end = document.createComment(' /rmx:f ')
+  let start = document.createComment(createFrameStartMarker(randomFrameId()))
+  let end = document.createComment(FRAME_END_MARKER)
   insertDomNode(start, domParent, anchor)
   insertDomNode(end, domParent, anchor)
 
@@ -1343,6 +1703,34 @@ function insertFrame(
   return committed
 }
 
+function createReloadFinished(
+  controller: AbortController,
+  disconnect?: () => void,
+): ReloadFinished {
+  let finished = Promise.withResolvers<AbortSignal>()
+  let abort = () => finished.resolve(controller.signal)
+  if (controller.signal.aborted) abort()
+  else controller.signal.addEventListener('abort', abort, { once: true })
+  let cleanup = () => {
+    controller.signal.removeEventListener('abort', abort)
+    disconnect?.()
+  }
+  // Events are notifications: a failure still reaches the app's error target even with no listener.
+  void finished.promise.then(cleanup, cleanup)
+  return Object.assign(finished, { controller })
+}
+
+function settleReloadFinished(finished: ReloadFinished | undefined, failure?: ReloadFailure): void {
+  if (!finished) return
+  if (failure?.aborted) {
+    finished.controller.abort()
+  } else if (failure === undefined) {
+    finished.resolve(finished.controller.signal)
+  } else {
+    finished.reject(failure.error)
+  }
+}
+
 function createFrameInstance(
   node: FrameNode,
   start: Comment,
@@ -1356,18 +1744,8 @@ function createFrameInstance(
     loading: node.props.loading,
     src: getFrameSrc(node),
     getContext,
-    errorTarget: runtime.errorTarget,
-    loadModule: runtime.loadModule,
-    resolveFrame: runtime.resolveFrame,
-    pendingClientEntries: runtime.pendingClientEntries,
-    scheduler: runtime.scheduler,
-    styleManager: runtime.styleManager,
+    ...getSharedFrameRuntime(runtime),
     data: {},
-    moduleCache: runtime.moduleCache,
-    moduleLoads: runtime.moduleLoads,
-    frameInstances: runtime.frameInstances,
-    namedFrames: runtime.namedFrames,
-    processClientEntryPreloads: runtime.processClientEntryPreloads,
     disposeFallback,
   })
   runtime.frameInstances.set(start, instance)
@@ -1401,38 +1779,56 @@ function resolveClientFrame(
   let controller = instance.startLoad(
     serverFrameReload ? 'ancestor' : 'initial',
     serverFrameReload?.signal,
+    serverFrameReload?.origin,
   )
   let { signal } = controller
   let frameCommitted = Promise.withResolvers<void>()
+  let failure: ReloadFailure | undefined
 
   let resolve = Promise.resolve()
     .then(() =>
       runtime.resolveFrame(frameSrc, {
         signal,
         target: getFrameName(node),
+        ...(serverFrameReload?.navigationType
+          ? { navigationType: serverFrameReload.navigationType, from: serverFrameReload.from }
+          : {}),
       }),
     )
     .then(async (resolution) => {
+      let commit = takeFrameCommit(resolution)
       if (signal.aborted) return
-      let { content, nonce } = await unwrapFrameResolution(resolution)
+      let { content, nonce, redirectedTo } = await unwrapFrameResolution(resolution)
       if (signal.aborted) return
-      let nextContent = asAbortableFrameContent(content, signal)
-      await instance.render(nextContent, {
-        nonce,
-        signal,
-        reconciliationTracker: serverFrameReload?.reconciliationTracker,
-        blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
-        onCommit: frameCommitted.resolve,
-      })
+      let swap = async () => {
+        let nextContent = asAbortableFrameContent(content, signal)
+        await instance.render(nextContent, {
+          reloadOrigin: serverFrameReload?.origin,
+          nonce,
+          navigationType: serverFrameReload?.navigationType,
+          from: serverFrameReload?.from,
+          signal,
+          reconciliationTracker: serverFrameReload?.reconciliationTracker,
+          blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
+          onCommit: frameCommitted.resolve,
+        })
+      }
+      if (commit && resolution instanceof Response) {
+        await instance.commitResponse(resolution, commit, swap, signal, redirectedTo ?? frameSrc)
+      } else {
+        await swap()
+      }
     })
     .catch((error) => {
       if ((serverFrameReload || node.props.loading === 'lazy') && !signal.aborted) {
+        failure = { error }
+        instance.rejectLoad(controller, error)
         runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       }
     })
     .finally(() => {
       frameCommitted.resolve()
-      instance.completeLoad(controller)
+      instance.completeLoad(controller, failure)
     })
 
   if (serverFrameReload?.reconciliationTracker && !node.props.fallback) {
@@ -1913,7 +2309,7 @@ function hydrateRegion(
     let nonceManager = getNonceManager()
     nonceManager.addRootResourceNonces(root, resourceNonces)
     nonceManager.addRootResponseNonce(root, context.nonce)
-    if (!signal) {
+    if (!signal && !context.navigationType) {
       root.render(vElement)
       return
     }
@@ -1927,7 +2323,10 @@ function hydrateRegion(
     let previousServerFrameReload = frameRuntime.serverFrameReload
 
     frameRuntime.serverFrameReload = {
-      signal,
+      signal: signal ?? context.lifecycleSignal,
+      navigationType: context.navigationType,
+      from: context.from,
+      origin: context.reloadOrigin,
       reconciliationTracker: context.reconciliationTracker,
       blockingFrameTracker: context.blockingFrameTracker,
     }
@@ -2000,6 +2399,9 @@ async function createSubFrames(
           let frameMarker: FrameMarkerData = { ...marker, id }
           let subFrame = createFrame([node, end], {
             nonce: context.nonce,
+            navigationType: context.navigationType,
+            from: context.from,
+            signal: options?.signal,
             src: frameMarker.src,
             marker: frameMarker,
             topFrame: context.topFrame,
@@ -2030,8 +2432,8 @@ function isHydrationMarkerLive(marker: HydrationMarker, context: FrameContext): 
   if (!marker.start.isConnected || !marker.end.isConnected) return false
   if (marker.start.parentNode !== marker.end.parentNode) return false
 
-  if (marker.start.data.trim() !== `rmx:h:${marker.id}`) return false
-  if (marker.end.data.trim() !== '/rmx:h') return false
+  if (!isHydrationStart(marker.start) || getHydrationId(marker.start) !== marker.id) return false
+  if (!isHydrationEnd(marker.end)) return false
 
   if (context.regionTailRef) {
     let startPosition = marker.start.compareDocumentPosition(context.regionTailRef)
@@ -2075,16 +2477,13 @@ function getEarlyFrameContent(id: string): DocumentFragment | null {
 
 function isFrameTemplateComplete(template: HTMLTemplateElement): boolean {
   let end = template.content.lastChild
-  return (
-    (isCommentNode(end) && end.data === FRAME_TEMPLATE_END_MARKER) ||
-    template.ownerDocument.readyState !== 'loading'
-  )
+  return isFrameTemplateEnd(end) || template.ownerDocument.readyState !== 'loading'
 }
 
 function takeFrameTemplateContent(template: HTMLTemplateElement): DocumentFragment {
   let fragment = template.content
   let end = fragment.lastChild
-  if (isCommentNode(end) && end.data === FRAME_TEMPLATE_END_MARKER) end.remove()
+  if (isFrameTemplateEnd(end)) end.remove()
   template.remove()
   return fragment
 }
@@ -2430,19 +2829,17 @@ function findHydrationMarkers(container: FrameContainer, data: RmxData['h']): Hy
         continue
       }
 
-      if (isCommentNode(node)) {
-        if (isHydrationStart(node)) {
-          let id = node.data.trim().slice('rmx:h:'.length)
-          let boundary = { id, start: node, parent }
-          markers.push(boundary)
-          boundaries.push(boundary)
-          if (data?.[id] || pendingClientEntryHydrations.has(node)) parent = node
-        } else if (isHydrationEnd(node)) {
-          let boundary = boundaries.pop()
-          if (boundary) {
-            boundary.end = node
-            parent = boundary.parent
-          }
+      if (isHydrationStart(node)) {
+        let id = getHydrationId(node)
+        let boundary = { id, start: node, parent }
+        markers.push(boundary)
+        boundaries.push(boundary)
+        if (data?.[id] || pendingClientEntryHydrations.has(node)) parent = node
+      } else if (isHydrationEnd(node)) {
+        let boundary = boundaries.pop()
+        if (boundary) {
+          boundary.end = node
+          parent = boundary.parent
         }
       }
       if (node.childNodes.length > 0) {
@@ -2550,4 +2947,861 @@ function removeNoscriptContents(source: ParentNode): void {
   for (let template of source.querySelectorAll('template')) {
     removeNoscriptContents(template.content)
   }
+}
+
+type SourceElementNavigateEvent = NavigateEvent & {
+  sourceElement?: Element | null
+}
+
+type FormNavigateEvent = SourceElementNavigateEvent & {
+  formData?: FormData | null
+}
+
+type SubmitterElement = HTMLButtonElement | HTMLInputElement
+
+type PendingFormSubmission = {
+  form: HTMLFormElement
+  submitter: SubmitterElement | null
+  formData?: FormData
+  timeout: ReturnType<typeof setTimeout>
+  removeFormDataListener(): void
+}
+
+/** Browser-provided data for an intercepted form submission. */
+export interface FormSubmission {
+  /** Submitted form entries for non-GET submissions, when available. */
+  formData: FormData | undefined
+  /** Effective form method, including submitter overrides. */
+  method: string
+  /** Effective form encoding type, including submitter overrides. */
+  encType: string
+}
+
+/** Metadata and deferred submission data for an intercepted form navigation. */
+export interface FormNavigation {
+  /** The owning form captured before its submitter can be detached. */
+  form: HTMLFormElement
+  /** The native submit event's submitter, or `null` for a submission without one. */
+  submitter: SubmitterElement | null
+  /** Checks the submitter before the form for a submission attribute. */
+  hasAttribute(name: string): boolean
+  /** Reads a submission attribute, preferring the submitter-specific name when provided. */
+  getAttribute(name: string, submitterName?: string): string | null
+  /** Resolves browser-generated data for a non-GET submission. */
+  getSubmission: (() => Promise<FormSubmission>) | undefined
+  /** Submission details available synchronously when the navigation is accepted. */
+  submission: FormSubmission
+}
+
+const PENDING_FORM_SUBMISSION_TIMEOUT = 1000
+
+/**
+ * Tracks native form events and resolves their corresponding Navigation API events.
+ *
+ * @param signal Signal used to stop tracking form events.
+ * @returns A function that resolves form metadata for a navigation event.
+ */
+export function createFormNavigationResolver(
+  signal: AbortSignal,
+): (event: NavigateEvent) => FormNavigation | undefined {
+  // Index each submission by its form and submitter so detached submitters can still find their form.
+  let pendingSubmissions = new WeakMap<HTMLFormElement | SubmitterElement, PendingFormSubmission>()
+
+  function clearPending(pending: PendingFormSubmission) {
+    clearTimeout(pending.timeout)
+    pending.removeFormDataListener()
+    if (pendingSubmissions.get(pending.form) === pending) {
+      pendingSubmissions.delete(pending.form)
+    }
+    if (pending.submitter && pendingSubmissions.get(pending.submitter) === pending) {
+      pendingSubmissions.delete(pending.submitter)
+    }
+  }
+
+  // Cache the authoritative submitter and native data for the matching `navigate` event.
+  // Unmatched submits expire.
+  document.addEventListener(
+    'submit',
+    (event) => {
+      let form = event.target
+      if (!(form instanceof HTMLFormElement)) return
+
+      let eventSubmitter = event instanceof SubmitEvent ? event.submitter : null
+      let submitter =
+        eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
+          ? eventSubmitter
+          : null
+      function onFormData(formDataEvent: FormDataEvent) {
+        // Native formdata follows an uncanceled submit. Ignore snapshots made in submit handlers
+        // or after cancellation, and stop listening before later snapshots can replace this data.
+        if (event.eventPhase !== Event.NONE || event.defaultPrevented) return
+        // A canceled retry must not replace a submission whose navigation is still pending.
+        let existing = pendingSubmissions.get(pending.form)
+        if (existing) clearPending(existing)
+        pending.formData = formDataEvent.formData
+        pendingSubmissions.set(pending.form, pending)
+        if (submitter) pendingSubmissions.set(submitter, pending)
+        pending.removeFormDataListener()
+      }
+      let pending: PendingFormSubmission = {
+        form,
+        submitter,
+        timeout: setTimeout(() => clearPending(pending), PENDING_FORM_SUBMISSION_TIMEOUT),
+        removeFormDataListener() {
+          form.removeEventListener('formdata', onFormData)
+        },
+      }
+      form.addEventListener('formdata', onFormData, { signal })
+    },
+    { capture: true, signal },
+  )
+
+  return (event) => {
+    let sourceElement = (event as SourceElementNavigateEvent).sourceElement
+    if (!(sourceElement instanceof Element)) return
+
+    let form = getSourceForm(sourceElement, pendingSubmissions)
+    if (!form) return
+
+    let pending = pendingSubmissions.get(form)
+    // Some browsers dispatch `navigate` before `formdata` records the pending submission.
+    let submitter = pending
+      ? pending.submitter
+      : sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement
+        ? sourceElement
+        : null
+    let method = getFormMethod(form, submitter)
+    let encType = getFormEncType(form, submitter)
+    let target = getSubmissionAttribute(form, submitter, 'target', 'formtarget')
+    if (method === 'dialog' || target?.toLowerCase() === '_blank') return
+
+    let formEvent = event as FormNavigateEvent
+    let getSubmission: FormNavigation['getSubmission']
+    if (method.toLowerCase() === 'get') {
+      if (pending) clearPending(pending)
+    } else {
+      getSubmission = async () => {
+        if (pending) clearPending(pending)
+        return {
+          formData: formEvent.formData ?? pending?.formData,
+          method,
+          encType,
+        }
+      }
+    }
+    return {
+      form,
+      submitter,
+      submission: {
+        method,
+        encType,
+        formData: method === 'get' ? undefined : (formEvent.formData ?? pending?.formData),
+      },
+      hasAttribute(name) {
+        return submitter?.hasAttribute(name) === true || form.hasAttribute(name)
+      },
+      getAttribute(name, submitterName) {
+        return getSubmissionAttribute(form, submitter, name, submitterName)
+      },
+      getSubmission,
+    }
+  }
+}
+
+function getSourceForm(
+  sourceElement: Element,
+  pendingSubmissions: WeakMap<HTMLFormElement | SubmitterElement, PendingFormSubmission>,
+): HTMLFormElement | undefined {
+  // A form navigation's source element is the submitted form or its submit button.
+  // https://html.spec.whatwg.org/multipage/nav-history-apis.html#dom-navigateevent-sourceelement
+  if (sourceElement instanceof HTMLFormElement) return sourceElement
+  if (sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement) {
+    // `sourceElement.form` is null when the button was detached before the `navigate` event fired
+    // (e.g. a temporary button appended, clicked, and immediately removed). Fall back to the form
+    // reference captured at `submit` time when the button was still attached.
+    return sourceElement.form ?? pendingSubmissions.get(sourceElement)?.form
+  }
+}
+
+function getSubmissionAttribute(
+  form: HTMLFormElement,
+  submitter: SubmitterElement | null,
+  name: string,
+  submitterName?: string,
+): string | null {
+  submitterName ??= name
+  if (submitter?.hasAttribute(submitterName)) {
+    return submitter.getAttribute(submitterName)
+  }
+  return form.getAttribute(name)
+}
+
+function getFormMethod(form: HTMLFormElement, submitter: SubmitterElement | null): string {
+  if (submitter?.hasAttribute('formmethod')) {
+    return submitter.formMethod
+  }
+  return form.method
+}
+
+function getFormEncType(form: HTMLFormElement, submitter: SubmitterElement | null): string {
+  if (submitter?.hasAttribute('formenctype')) {
+    return submitter.formEnctype
+  }
+  return form.enctype
+}
+
+// Encodes form entries the way browsers do for `application/x-www-form-urlencoded` submissions:
+// line breaks become CRLF and files are replaced by their names.
+export function encodeFormDataAsSearchParams(formData: FormData): URLSearchParams {
+  let params = new URLSearchParams()
+  for (let [name, value] of formData) {
+    params.append(
+      normalizeFormLineBreaks(name),
+      normalizeFormLineBreaks(typeof value === 'string' ? value : value.name),
+    )
+  }
+  return params
+}
+
+export function normalizeFormLineBreaks(value: string): string {
+  return value.replace(/\r\n|\r|\n/g, '\r\n')
+}
+
+/** Context for a custom frame commit callback. */
+export interface FrameCommitContext {
+  /** Resolved frame destination after redirects, or the requested source when not redirected. */
+  to: string
+  /** Original frame response, still unconsumed when the callback starts. */
+  response: Response
+  /** Aborts when this frame update is cancelled, superseded, or disposed. */
+  signal: AbortSignal
+}
+
+/**
+ * Wraps the rendering of a resolved frame response.
+ *
+ * Calling `commitFrame()` starts rendering once. Its promise waits for rendering and any enclosing
+ * navigation, including followed redirects, scroll, and focus handling. Navigation does not wait
+ * for the callback's post-commit work.
+ *
+ * Cancellation resolves without a stale render; rendering failures reject. Returning or throwing
+ * without calling `commitFrame()` falls back to the default commit. Callback errors are reported
+ * on the runtime.
+ *
+ * @param commitFrame Starts the default frame commit and waits for the completed update.
+ * @param context Resolved destination, response, and cancellation context for this update.
+ * @returns Optional asynchronous work surrounding the commit, such as an animation.
+ */
+export type FrameCommit = (
+  commitFrame: () => Promise<void>,
+  context: FrameCommitContext,
+) => void | Promise<void>
+
+export interface FrameCommitNavigation {
+  signal: AbortSignal
+  finished: Promise<void>
+  pendingCommits: number
+}
+
+const frameCommits = new WeakMap<Response, FrameCommit>()
+const frameNavigations = new WeakMap<AbortSignal, FrameCommitNavigation>()
+
+export function setFrameCommit(response: Response, commit: FrameCommit): void {
+  frameCommits.set(response, commit)
+}
+
+export function takeFrameCommit(response: unknown): FrameCommit | undefined {
+  if (!(response instanceof Response)) return
+  let commit = frameCommits.get(response)
+  frameCommits.delete(response)
+  return commit
+}
+
+export function setFrameCommitNavigation(
+  signal: AbortSignal,
+  navigation: FrameCommitNavigation,
+): void {
+  frameNavigations.set(signal, navigation)
+}
+
+export function getFrameCommitNavigation(signal?: AbortSignal): FrameCommitNavigation | undefined {
+  return signal ? frameNavigations.get(signal) : undefined
+}
+
+export async function commitFrameResponse(
+  response: Response,
+  commit: FrameCommit,
+  render: () => Promise<void>,
+  options: {
+    to: string
+    signal: AbortSignal
+    commitSignal: AbortSignal
+    onError(error: unknown): void
+  },
+): Promise<void> {
+  let navigation = getFrameCommitNavigation(options.signal)
+  let signal = AbortSignal.any([
+    options.signal,
+    options.commitSignal,
+    ...(navigation ? [navigation.signal] : []),
+  ])
+  if (signal.aborted) return
+
+  if (navigation) {
+    navigation.pendingCommits++
+  }
+  let listeners = new AbortController()
+  let aborted = new Promise<void>((resolve) => {
+    signal.addEventListener('abort', () => resolve(), { once: true, signal: listeners.signal })
+  })
+  let started = Promise.withResolvers<void>()
+  let rendered: Promise<void> | undefined
+  let completed: Promise<void> | undefined
+  let renderFailure: { error: unknown } | undefined
+
+  function commitFrame(): Promise<void> {
+    if (!rendered) {
+      rendered = Promise.resolve()
+        .then(() => {
+          if (!signal.aborted) return render()
+        })
+        .catch((error) => {
+          renderFailure = { error }
+          throw error
+        })
+      completed = Promise.race([rendered.then(() => navigation?.finished), aborted])
+      // A callback can start the commit without awaiting its result.
+      void completed.catch(() => {})
+      started.resolve()
+    }
+    return completed ?? Promise.resolve()
+  }
+
+  let callback = Promise.resolve()
+    .then(() => {
+      if (!signal.aborted) return commit(commitFrame, { to: options.to, response, signal })
+    })
+    .catch((error) => {
+      if (!signal.aborted && (!renderFailure || renderFailure.error !== error)) {
+        options.onError(error)
+      }
+    })
+
+  // The wrapper can wait for navigation or animation completion after the renderer is released.
+  await Promise.race([started.promise, callback, aborted])
+  void commitFrame()
+  void Promise.allSettled([Promise.race([callback, aborted]), completed]).then(() => {
+    listeners.abort()
+    if (navigation) navigation.pendingCommits--
+  })
+  await Promise.race([rendered, aborted])
+}
+
+type ImportMap = {
+  imports?: ImportMapImports
+  scopes?: Record<string, ImportMapImports>
+  integrity?: Record<string, string>
+}
+
+type ImportMapAddress = string | null
+type ImportMapImports = Record<string, ImportMapAddress>
+type InstalledImportMapEntry = { href: ImportMapAddress; normalizedHref: ImportMapAddress }
+
+type InstalledImportMap = {
+  imports: Map<string, InstalledImportMapEntry>
+  scopes: Map<string, Map<string, InstalledImportMapEntry>>
+  integrity: Map<string, string>
+}
+
+interface ImportMapManager {
+  consumeImportMaps(source: ParentNode): 'ready' | 'conflict' | 'blocked'
+  disconnect(): void
+  shouldPreserveHeadNode(node: Node): boolean
+}
+
+const MANAGED_IMPORT_MAP_SELECTOR = 'script[data-rmx-import-map][type="importmap"]'
+const IMPORT_MAP_SELECTOR = 'script[type="importmap"]'
+const importMapManagers = new WeakMap<Document, ImportMapManager>()
+
+class ImportMapConflictError extends Error {}
+
+export function getDocumentImportMapManager(doc: Document): ImportMapManager {
+  let manager = importMapManagers.get(doc)
+  if (!manager) {
+    manager = createImportMapManager(doc)
+    importMapManagers.set(doc, manager)
+  }
+  return manager
+}
+
+export function resetDocumentImportMapManager(doc: Document): void {
+  importMapManagers.get(doc)?.disconnect()
+  importMapManagers.delete(doc)
+}
+
+function createImportMapManager(doc: Document): ImportMapManager {
+  let nonce = getNonceManager().moduleNonce
+  let installedImportMap = createInstalledImportMap()
+  let processedScripts = new WeakSet<HTMLScriptElement>()
+  let conflicted = false
+
+  function processImportMap(script: HTMLScriptElement): void {
+    if (processedScripts.has(script)) return
+    processedScripts.add(script)
+
+    let importMap = parseImportMap(script.textContent ?? '')
+    if (importMap) installImportMap(installedImportMap, importMap, script.baseURI)
+  }
+
+  function processImportMaps(): void {
+    for (let script of doc.querySelectorAll<HTMLScriptElement>(IMPORT_MAP_SELECTOR)) {
+      processImportMap(script)
+    }
+  }
+
+  function processMutations(mutations: MutationRecord[]): void {
+    for (let mutation of mutations) {
+      if (mutation.type !== 'childList') continue
+      for (let node of mutation.addedNodes) {
+        if (node instanceof HTMLScriptElement && node.matches(IMPORT_MAP_SELECTOR)) {
+          processImportMap(node)
+        }
+      }
+    }
+  }
+
+  let observer = new MutationObserver(processMutations)
+  observer.observe(doc, { childList: true })
+  observer.observe(doc.head, { childList: true })
+  processImportMaps()
+
+  return {
+    consumeImportMaps(source) {
+      if (conflicted) return 'blocked'
+      processMutations(observer.takeRecords())
+      processImportMaps()
+      let scripts = Array.from(
+        source.querySelectorAll<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR),
+      )
+      if (scripts.length === 0) return 'ready'
+
+      let pendingImportMap = cloneInstalledImportMap(installedImportMap)
+      let deltas: ImportMap[] = []
+      let baseUrl = doc.baseURI
+      try {
+        for (let script of scripts) {
+          let importMap = parseImportMap(script.textContent ?? '')
+          if (!importMap) continue
+          let delta = installImportMap(
+            pendingImportMap,
+            importMap,
+            baseUrl,
+            cloneInstalledImportMap(pendingImportMap),
+          )
+          if (delta) deltas.push(delta)
+        }
+      } catch (error) {
+        if (!(error instanceof ImportMapConflictError)) throw error
+        console.warn(error.message)
+        conflicted = true
+        return 'conflict'
+      }
+
+      for (let delta of deltas) {
+        let installedScript = appendImportMapScript(doc, delta, nonce)
+        processedScripts.add(installedScript)
+      }
+      installedImportMap = pendingImportMap
+      for (let script of scripts) script.remove()
+      return 'ready'
+    },
+    disconnect() {
+      observer.disconnect()
+    },
+    shouldPreserveHeadNode(node) {
+      return (
+        node.isConnected &&
+        node instanceof HTMLScriptElement &&
+        node.matches(MANAGED_IMPORT_MAP_SELECTOR)
+      )
+    },
+  }
+}
+
+function createInstalledImportMap(): InstalledImportMap {
+  return {
+    imports: new Map(),
+    scopes: new Map(),
+    integrity: new Map(),
+  }
+}
+
+function cloneInstalledImportMap(importMap: InstalledImportMap): InstalledImportMap {
+  return {
+    imports: new Map(importMap.imports),
+    scopes: new Map(Array.from(importMap.scopes, ([scope, imports]) => [scope, new Map(imports)])),
+    integrity: new Map(importMap.integrity),
+  }
+}
+
+// Adds entries that are new to `installed` (defaults to `target`) to `target` and returns them.
+// When `installed` is passed, entries it already maps to a different value throw a conflict.
+function installImportMap(
+  target: InstalledImportMap,
+  importMap: ImportMap,
+  baseUrl: string,
+  installed?: InstalledImportMap,
+): ImportMap | undefined {
+  let imports = installImports(target.imports, installed?.imports, importMap.imports, baseUrl)
+
+  let scopes: Record<string, ImportMapImports> = {}
+  for (let [scope, scopeImports] of Object.entries(importMap.scopes ?? {})) {
+    let normalizedScope = normalizeImportMapUrl(scope, baseUrl)
+    if (normalizedScope === null) continue
+    let targetScopeImports = target.scopes.get(normalizedScope)
+    if (!targetScopeImports) {
+      targetScopeImports = new Map()
+      target.scopes.set(normalizedScope, targetScopeImports)
+    }
+    let importsDelta = installImports(
+      targetScopeImports,
+      installed && (installed.scopes.get(normalizedScope) ?? new Map()),
+      scopeImports,
+      baseUrl,
+      scope,
+    )
+    if (importsDelta) scopes[scope] = importsDelta
+  }
+
+  let integrity: Record<string, string> = {}
+  for (let [url, metadata] of Object.entries(importMap.integrity ?? {})) {
+    let normalizedUrl = normalizeImportMapUrl(url, baseUrl)
+    if (normalizedUrl === null) continue
+    let installedMetadata = (installed ?? target).integrity.get(normalizedUrl)
+    if (installedMetadata !== undefined) {
+      if (installed && installedMetadata !== metadata) {
+        throw new ImportMapConflictError(
+          `[remix] Reloading page after import map integrity conflict for "${url}": ` +
+            `"${installedMetadata}" is already installed, but the new map points to "${metadata}"`,
+        )
+      }
+      continue
+    }
+    integrity[url] = metadata
+    if (!target.integrity.has(normalizedUrl)) target.integrity.set(normalizedUrl, metadata)
+  }
+
+  let delta: ImportMap = {}
+  if (imports) delta.imports = imports
+  if (hasEntries(scopes)) delta.scopes = scopes
+  if (hasEntries(integrity)) delta.integrity = integrity
+  return hasEntries(delta) ? delta : undefined
+}
+
+function installImports(
+  target: Map<string, InstalledImportMapEntry>,
+  installed: Map<string, InstalledImportMapEntry> | undefined,
+  imports: ImportMapImports | undefined,
+  baseUrl: string,
+  scope?: string,
+): ImportMapImports | undefined {
+  let delta: ImportMapImports = {}
+  for (let [specifier, href] of Object.entries(imports ?? {})) {
+    let normalizedSpecifier = normalizeImportMapSpecifier(specifier, baseUrl)
+    if (normalizedSpecifier === null) continue
+    let normalizedHref = normalizeImportMapAddress(href, baseUrl)
+    let installedEntry = (installed ?? target).get(normalizedSpecifier)
+    if (installedEntry) {
+      if (installed && installedEntry.normalizedHref !== normalizedHref) {
+        let scopeDescription = scope ? ` in scope "${scope}"` : ''
+        throw new ImportMapConflictError(
+          `[remix] Reloading page after import map conflict for "${specifier}"${scopeDescription}: ` +
+            `${formatImportMapAddress(installedEntry.href)} is already installed, but the new map points to ${formatImportMapAddress(href)}`,
+        )
+      }
+      continue
+    }
+    delta[specifier] = href
+    if (!target.has(normalizedSpecifier)) target.set(normalizedSpecifier, { href, normalizedHref })
+  }
+
+  return hasEntries(delta) ? delta : undefined
+}
+
+function hasEntries(record: object): boolean {
+  return Object.keys(record).length > 0
+}
+
+function appendImportMapScript(
+  doc: Document,
+  importMap: ImportMap,
+  nonce: string | undefined,
+): HTMLScriptElement {
+  let script = doc.createElement('script')
+  script.setAttribute('data-rmx-import-map', '')
+  script.type = 'importmap'
+  if (nonce) script.nonce = nonce
+  script.textContent = JSON.stringify(importMap)
+  doc.head.appendChild(script)
+  return script
+}
+
+function parseImportMap(json: string): ImportMap | null {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(json)
+  } catch {
+    return null
+  }
+
+  if (!parsed || typeof parsed !== 'object') return null
+  let importMap: ImportMap = {}
+
+  if ('imports' in parsed) {
+    let imports = parsed.imports
+    if (!isImportMapImports(imports)) return null
+    importMap.imports = imports
+  }
+
+  if ('scopes' in parsed) {
+    let scopes = parsed.scopes
+    if (!isScopedImportMapRecord(scopes)) return null
+    importMap.scopes = scopes
+  }
+
+  if ('integrity' in parsed) {
+    let integrity = parsed.integrity
+    if (!isImportMapIntegrity(integrity)) return null
+    importMap.integrity = integrity
+  }
+
+  return importMap
+}
+
+function isImportMapImports(value: unknown): value is ImportMapImports {
+  if (!value || typeof value !== 'object') return false
+  return Object.values(value).every((entry) => entry === null || typeof entry === 'string')
+}
+
+function isScopedImportMapRecord(value: unknown): value is Record<string, ImportMapImports> {
+  if (!value || typeof value !== 'object') return false
+  return Object.values(value).every(isImportMapImports)
+}
+
+function isImportMapIntegrity(value: unknown): value is Record<string, string> {
+  if (!value || typeof value !== 'object') return false
+  return Object.values(value).every((entry) => typeof entry === 'string')
+}
+
+function normalizeImportMapSpecifier(specifier: string, baseUrl: string): string | null {
+  if (
+    specifier.startsWith('/') ||
+    specifier.startsWith('./') ||
+    specifier.startsWith('../') ||
+    URL.canParse(specifier)
+  ) {
+    return normalizeImportMapUrl(specifier, baseUrl)
+  }
+  return specifier
+}
+
+function normalizeImportMapAddress(address: ImportMapAddress, baseUrl: string): ImportMapAddress {
+  if (address === null) return null
+  return normalizeImportMapUrl(address, baseUrl)
+}
+
+function normalizeImportMapUrl(value: string, baseUrl: string): string | null {
+  try {
+    return new URL(value, baseUrl).href
+  } catch {
+    return null
+  }
+}
+
+function formatImportMapAddress(address: ImportMapAddress | undefined): string {
+  return address === null ? 'null' : `"${address}"`
+}
+
+const SERVER_MODULE_PRELOAD_SELECTOR = 'link[data-rmx-module-preload][rel~="modulepreload" i][href]'
+
+interface ModulePreloader {
+  adoptInitialPreloadLinks(source: ParentNode): void
+  consumePreloadLinks(source: ParentNode, process?: ProcessClientEntryPreloads): Promise<void>
+  hasActivePreloads(): boolean
+  isActivePreload(node: Node): boolean
+}
+
+export type ProcessClientEntryPreloads = (preloads: string[]) => string[] | Promise<string[]>
+
+const modulePreloaders = new WeakMap<Document, ModulePreloader>()
+
+export function getDocumentModulePreloader(doc: Document): ModulePreloader {
+  let preloader = modulePreloaders.get(doc)
+  if (!preloader) {
+    preloader = createModulePreloader(doc)
+    modulePreloaders.set(doc, preloader)
+  }
+  return preloader
+}
+
+function createModulePreloader(doc: Document): ModulePreloader {
+  let nonce = getNonceManager().moduleNonce
+  let requestedUrls = new Set<string>()
+  let activeLinks = new WeakSet<HTMLLinkElement>()
+  let activeLinkCount = 0
+
+  function activateLink(link: HTMLLinkElement): void {
+    activeLinks.add(link)
+    activeLinkCount++
+  }
+
+  function deactivateLink(link: HTMLLinkElement): void {
+    if (activeLinks.delete(link)) activeLinkCount--
+  }
+
+  function preload(href: string): void {
+    let link = doc.createElement('link')
+    link.rel = 'modulepreload'
+    link.href = href
+    link.setAttribute('data-rmx-module-preload', '')
+    if (nonce) link.nonce = nonce
+    let url = link.href
+    if (requestedUrls.has(url)) return
+    requestedUrls.add(url)
+
+    activateLink(link)
+    link.addEventListener(
+      'load',
+      () => {
+        deactivateLink(link)
+        link.remove()
+      },
+      { once: true },
+    )
+    link.addEventListener(
+      'error',
+      () => {
+        deactivateLink(link)
+        link.remove()
+        requestedUrls.delete(url)
+      },
+      { once: true },
+    )
+    doc.head.append(link)
+  }
+
+  return {
+    adoptInitialPreloadLinks(source) {
+      for (let initialLink of source.querySelectorAll<HTMLLinkElement>(
+        SERVER_MODULE_PRELOAD_SELECTOR,
+      )) {
+        if (activeLinks.has(initialLink)) continue
+
+        // An identical link joins the document's existing module-map request and receives its own
+        // terminal event, even when the parser-created link settled before runtime startup.
+        let observerLink = doc.createElement('link')
+        observerLink.rel = 'modulepreload'
+        observerLink.href = initialLink.href
+        observerLink.setAttribute('data-rmx-module-preload', '')
+        if (initialLink.nonce) observerLink.nonce = initialLink.nonce
+        let url = initialLink.href
+        requestedUrls.add(url)
+        activateLink(initialLink)
+        activateLink(observerLink)
+
+        let settled = false
+        function settle(succeeded: boolean): void {
+          if (settled) return
+          settled = true
+          deactivateLink(initialLink)
+          deactivateLink(observerLink)
+          initialLink.remove()
+          observerLink.remove()
+          if (!succeeded) requestedUrls.delete(url)
+        }
+
+        observerLink.addEventListener('load', () => settle(true), { once: true })
+        observerLink.addEventListener('error', () => settle(false), { once: true })
+        doc.head.append(observerLink)
+      }
+    },
+    async consumePreloadLinks(source, process) {
+      let hrefs: string[] = []
+      for (let link of source.querySelectorAll<HTMLLinkElement>(SERVER_MODULE_PRELOAD_SELECTOR)) {
+        let href = link.getAttribute('href')
+        link.remove()
+        if (href) hrefs.push(href)
+      }
+      let processedHrefs = process ? await process(hrefs) : hrefs
+      for (let href of processedHrefs) preload(href)
+    },
+    hasActivePreloads() {
+      return activeLinkCount > 0
+    },
+    isActivePreload(node) {
+      return node instanceof HTMLLinkElement && activeLinks.has(node)
+    },
+  }
+}
+
+type SPAResponseData = {
+  node: RemixNode
+  redirectedTo?: string
+}
+
+export const spaResponses = new WeakMap<Response, SPAResponseData>()
+
+export async function unwrapFrameResolution(
+  resolution: FrameResolution,
+): Promise<{ content: FrameContent; redirectedTo?: string; nonce?: string }> {
+  if (!(resolution instanceof Response)) return { content: resolution }
+
+  let data = spaResponses.get(resolution)
+  if (data) {
+    return {
+      content: data.node,
+      redirectedTo: data.redirectedTo,
+    }
+  }
+
+  let content = resolution.body ?? (await resolution.text())
+  return {
+    content,
+    nonce: getResponseNonce(resolution),
+    redirectedTo: resolution.redirected && resolution.url ? resolution.url : undefined,
+  }
+}
+
+function getResponseNonce(response: Response): string | undefined {
+  let header =
+    response.headers.get('Content-Security-Policy') ??
+    response.headers.get('Content-Security-Policy-Report-Only')
+  let nonce: string | undefined
+  for (let policy of header?.split(',') ?? []) {
+    let directives = new Map<string, string[]>()
+    for (let directive of policy.split(';')) {
+      let tokens = directive.split(/[\t\n\f\r ]+/).filter(Boolean)
+      let name = tokens.shift()?.toLowerCase()
+      // CSP uses the first occurrence, even when its source list is empty.
+      if (name && !directives.has(name)) directives.set(name, tokens)
+    }
+    let scriptSources =
+      directives.get('script-src-elem') ??
+      directives.get('script-src') ??
+      directives.get('default-src')
+    let styleSources =
+      directives.get('style-src-elem') ??
+      directives.get('style-src') ??
+      directives.get('default-src')
+    for (let sources of [scriptSources, styleSources]) {
+      for (let source of sources ?? []) {
+        let value = /^'nonce-([a-z0-9+/_-]+={0,2})'$/i.exec(source)?.[1]
+        if (value === undefined) continue
+        // Only translate a single shared render nonce; differing values are ambiguous.
+        if (nonce !== undefined && nonce !== value) return undefined
+        nonce = value
+      }
+    }
+  }
+  return nonce
 }

@@ -306,6 +306,246 @@ describe('vnode rendering (keys)', () => {
     })
   })
 
+  describe('keyed insertions', () => {
+    function Empty(_handle: Handle<{ value: string }>) {
+      return () => null
+    }
+
+    // The value 'empty' renders a keyed component with no DOM
+    function List(handle: Handle<{ values: string[] }>) {
+      return () => (
+        <ul>
+          {handle.props.values.map((value) =>
+            value === 'empty' ? <Empty key={value} value={value} /> : <li key={value}>{value}</li>,
+          )}
+        </ul>
+      )
+    }
+
+    function renderAndCountInsertions(
+      root: ReturnType<typeof createRoot>,
+      list: Element,
+      values: string[],
+    ): { added: number; removed: number } {
+      let observer = new MutationObserver(() => {})
+      observer.observe(list, { childList: true })
+      root.render(<List values={values} />)
+      let records = observer.takeRecords()
+      observer.disconnect()
+      return {
+        added: records.reduce((count, record) => count + record.addedNodes.length, 0),
+        removed: records.reduce((count, record) => count + record.removedNodes.length, 0),
+      }
+    }
+
+    it('inserts restored keyed children once at their final position', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let all = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+      root.render(<List values={all.filter((value) => Number(value) % 2 === 0)} />)
+      let list = container.querySelector('ul')
+      invariant(list)
+      expect(list.textContent).toBe('02468')
+
+      expect(renderAndCountInsertions(root, list, all)).toEqual({ added: 5, removed: 0 })
+      expect(list.textContent).toBe('0123456789')
+    })
+
+    it('inserts new keyed children once when existing children also move', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'b', 'c', 'd']} />)
+      let list = container.querySelector('ul')
+      invariant(list)
+
+      // d moves to the front, x and y are new
+      let counts = renderAndCountInsertions(root, list, ['d', 'x', 'a', 'b', 'y', 'c'])
+      expect(list.textContent).toBe('dxabyc')
+      expect(counts).toEqual({ added: 3, removed: 1 })
+    })
+
+    it('inserts new keyed children before the next stable child that renders DOM', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'b', 'empty', 'c']} />)
+      let list = container.querySelector('ul')
+      invariant(list)
+
+      // b moves to the end, x is new and the stable child after it renders no DOM
+      let counts = renderAndCountInsertions(root, list, ['a', 'x', 'empty', 'c', 'b'])
+      expect(list.textContent).toBe('axcb')
+      expect(counts).toEqual({ added: 2, removed: 1 })
+    })
+  })
+
+  describe('keyed children that change their DOM', () => {
+    function List(handle: Handle<{ values: string[]; fragment: string[] }>) {
+      return () => (
+        <ul>
+          {handle.props.values.map((value) =>
+            value === 'f' ? (
+              <Fragment key="f">
+                {handle.props.fragment.map((child) => (
+                  <li key={child}>{child}</li>
+                ))}
+              </Fragment>
+            ) : (
+              <li key={value}>{value}</li>
+            ),
+          )}
+        </ul>
+      )
+    }
+
+    it('inserts new fragment children inside the fragment when siblings follow it', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'f', 'b']} fragment={['1']} />)
+      expect(container.textContent).toBe('a1b')
+
+      root.render(<List values={['a', 'f', 'b']} fragment={['1', '2']} />)
+      expect(container.textContent).toBe('a12b')
+    })
+
+    it('keeps new fragment children with the fragment when other siblings move', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'f', 'b', 'c']} fragment={['1']} />)
+      expect(container.textContent).toBe('a1bc')
+
+      root.render(<List values={['a', 'f', 'c', 'b']} fragment={['1', '2']} />)
+      expect(container.textContent).toBe('a12cb')
+    })
+
+    it('inserts children into an empty fragment before the siblings that follow it', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'f', 'b']} fragment={[]} />)
+      expect(container.textContent).toBe('ab')
+
+      root.render(<List values={['a', 'f', 'b']} fragment={['1']} />)
+      expect(container.textContent).toBe('a1b')
+    })
+
+    it('keeps siblings when a fragment at the end of the list loses all its children', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'f']} fragment={['1']} />)
+      expect(container.textContent).toBe('a1')
+
+      root.render(<List values={['a', 'f']} fragment={[]} />)
+      expect(container.textContent).toBe('a')
+    })
+
+    it('places a keyed component that starts rendering DOM while its siblings move', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function Maybe(handle: Handle<{ show: boolean }>) {
+        return () => (handle.props.show ? <li>g</li> : null)
+      }
+
+      function Items(handle: Handle<{ show: boolean; order: string[]; fragment: string[] }>) {
+        return () => (
+          <ul>
+            {handle.props.order.map((key) =>
+              key === 'g' ? (
+                <Maybe key="g" show={handle.props.show} />
+              ) : key === 'f' ? (
+                <Fragment key="f">
+                  {handle.props.fragment.map((child) => (
+                    <li key={child}>{child}</li>
+                  ))}
+                </Fragment>
+              ) : (
+                <li key={key}>{key}</li>
+              ),
+            )}
+          </ul>
+        )
+      }
+
+      root.render(<Items show={false} order={['g', 'f', 'c']} fragment={['2']} />)
+      expect(container.textContent).toBe('2c')
+
+      // f moves ahead of g and gains a child before its old first child, so g's
+      // old next sibling no longer marks where g belongs
+      root.render(<Items show={true} order={['f', 'g', 'c']} fragment={['1', '2']} />)
+      expect(container.textContent).toBe('12gc')
+    })
+
+    it('places a component inside a fragment that starts rendering DOM while siblings move', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function Maybe(handle: Handle<{ show: boolean }>) {
+        return () => (handle.props.show ? <li>g</li> : null)
+      }
+
+      function Items(handle: Handle<{ show: boolean; order: string[]; fragment: string[] }>) {
+        return () => (
+          <ul>
+            {handle.props.order.map((key) =>
+              key === 'e' ? (
+                <Fragment key="e">
+                  <li>x</li>
+                  <Maybe show={handle.props.show} />
+                </Fragment>
+              ) : (
+                <Fragment key="f">
+                  {handle.props.fragment.map((child) => (
+                    <li key={child}>{child}</li>
+                  ))}
+                </Fragment>
+              ),
+            )}
+          </ul>
+        )
+      }
+
+      root.render(<Items show={false} order={['e', 'f']} fragment={['2']} />)
+      expect(container.textContent).toBe('x2')
+
+      // f moves ahead of e and gains a child before its old first child, so the
+      // sibling after e in the old order no longer marks where e ends
+      root.render(<Items show={true} order={['f', 'e']} fragment={['1', '2']} />)
+      expect(container.textContent).toBe('12xg')
+    })
+
+    it('renders a keyed component that starts rendering DOM while a later sibling is removed', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function Maybe(handle: Handle<{ show: boolean }>) {
+        return () => (handle.props.show ? <li>g</li> : null)
+      }
+
+      function Items(handle: Handle<{ show: boolean; values: string[] }>) {
+        return () => (
+          <ul>
+            <Maybe key="g" show={handle.props.show} />
+            {handle.props.values.map((value) => (
+              <li key={value}>{value}</li>
+            ))}
+          </ul>
+        )
+      }
+
+      root.render(<Items show={false} values={['b', 'j']} />)
+      expect(container.textContent).toBe('bj')
+
+      root.render(<Items show={true} values={['j']} />)
+      expect(container.textContent).toBe('gj')
+    })
+  })
+
   describe('key semantics', () => {
     it('replaces nodes when keys match but type differs', () => {
       let container = document.createElement('div')

@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { isAllowedHostPropName } from './attributes.ts'
+import { isAllowedHostPropName } from './props.ts'
 
 describe('isAllowedHostPropName', () => {
   it('blocks event prop names in every ASCII letter case', () => {
