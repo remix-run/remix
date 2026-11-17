@@ -148,12 +148,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Get Playwright version and runner image
+      - name: Get Playwright Version
         id: playwright-version
         shell: bash
-        run: |
-          echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> "$GITHUB_OUTPUT"
-          echo "image=${ImageOS:?Runner image is required}" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
         id: cache-browsers
@@ -162,7 +160,7 @@ jobs:
         with:
           path: |
             ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.image }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
@@ -204,12 +202,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Get Playwright version and runner image
+      - name: Get Playwright Version
         id: playwright-version
         shell: bash
-        run: |
-          echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> "$GITHUB_OUTPUT"
-          echo "image=${ImageOS:?Runner image is required}" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
         id: cache-browsers
@@ -218,7 +214,7 @@ jobs:
         with:
           path: |
             ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.image }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
@@ -261,12 +257,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Get Playwright version and runner image
+      - name: Get Playwright Version
         id: playwright-version
         shell: bash
-        run: |
-          echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> "$GITHUB_OUTPUT"
-          echo "image=${ImageOS:?Runner image is required}" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
         id: cache-browsers
@@ -274,7 +268,7 @@ jobs:
         continue-on-error: true
         with:
           path: ~/AppData/Local/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.image }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
