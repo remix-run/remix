@@ -93,7 +93,7 @@ export function getPreviewTag(channel: string, sha: string, timestamp: string): 
   let utc = new Date(timestamp).toISOString()
   let date = utc.slice(0, 10).replaceAll('-', '')
   if (channel === 'nightly') return `v0.${date}.0-nightly`
-  let time = channel.startsWith('pr-') ? 0 : Number(utc.slice(11, 19).replaceAll(':', ''))
+  let time = channel === 'main' ? Number(utc.slice(11, 19).replaceAll(':', '')) : 0
   let suffix = channel.startsWith('pr-') ? channel : `${channel}-${sha.slice(0, 8)}`
   return `v0.${date}.${time}-${suffix}`
 }

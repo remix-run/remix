@@ -100,9 +100,11 @@ commit's date. The Remix asset is `v0.YYYYMMDD.0-nightly.tgz`; other package ass
 latest main preview. Reruns reuse a completed nightly for the same source SHA; publishing a
 different SHA under an existing nightly tag is rejected.
 
-Main and experimental release names and tags use `v0.YYYYMMDD.HHMMSS-<channel>-<8-character-sha>`,
-with the source commit's UTC date and time. Leading zeros are removed from the numeric time
-component for valid SemVer. PRs share a `v0.YYYYMMDD.0-pr-<number>` release, using the PR's
+Main release tags use `v0.YYYYMMDD.HHMMSS-main-<8-character-sha>`, with the source commit's
+UTC date and time so builds sort chronologically within a day. Leading zeros are removed from
+the numeric time component for valid SemVer. Experimental tags use
+`v0.YYYYMMDD.0-experimental-<8-character-sha>`, with the source commit's UTC date.
+PRs share a `v0.YYYYMMDD.0-pr-<number>` release, using the PR's
 UTC creation date so every build uses the same tag, with `<package>-<full-source-sha>.tgz` assets.
 After verifying every asset for a SHA, publishing labels its `remix` asset as complete,
 updates the release's install table, and retains the latest 5 complete builds by completion time.

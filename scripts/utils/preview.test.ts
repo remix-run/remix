@@ -37,8 +37,9 @@ describe('preview packages', () => {
     assert.equal(getPreviewTag('pr-123', sha, '2026-11-03T12:00:00Z'), pr)
     assert.equal(getPreviewChannel('pr-123'), 'pr-123')
     let experimental = getPreviewTag('experimental', sha, committedAt)
-    assert.equal(experimental, 'v0.20261103.43000-experimental-abcdef12')
+    assert.equal(experimental, 'v0.20261103.0-experimental-abcdef12')
     assert.ok(valid(experimental))
+    assert.equal(getPreviewTag('experimental', sha, '2026-11-03T12:00:00Z'), experimental)
     assert.equal(getPreviewChannel(tag), 'main')
     assert.equal(getPreviewChannel('pr-123-20261103-abcdef12'), 'pr-123')
     assert.equal(getPreviewChannel(experimental), 'experimental')
@@ -51,7 +52,7 @@ describe('preview packages', () => {
     )
     assert.ok(
       gt(
-        getPreviewTag('experimental', sha, '2026-11-03T17:53:10Z'),
+        getPreviewTag('main', sha, '2026-11-03T17:53:10Z'),
         getPreviewTag('main', sha, '2026-11-03T17:53:09Z'),
       ),
     )
