@@ -32,6 +32,7 @@ export interface PreviewRelease {
 
 export const PREVIEW_REPOSITORY = 'remix-run/previews'
 export const PREVIEW_RELEASE_MARKER = '<!-- remix-preview -->'
+export const PR_PREVIEW_BUILD_LIMIT = 5
 const PR_BUILD_COMPLETE = 'Complete preview build'
 const SHARED_PR_TAG = /(?:^|-)pr-[1-9]\d*$/
 
@@ -76,7 +77,7 @@ export function getExpiredPreviewReleases(
               Date.parse(a.published_at ?? a.created_at),
           )[0]
       : undefined
-  let cutoff = now - (channel === 'main' ? 7 : 30) * 24 * 60 * 60 * 1000
+  let cutoff = now - 30 * 24 * 60 * 60 * 1000
   return builds.filter(
     (release) =>
       release.id !== latest?.id && Date.parse(release.published_at ?? release.created_at) < cutoff,
@@ -90,9 +91,8 @@ export function getPreviewTag(channel: string, sha: string, timestamp: string): 
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error(`Invalid source SHA: ${sha}`)
   let utc = new Date(timestamp).toISOString()
   let date = utc.slice(0, 10).replaceAll('-', '')
-  let time = Number(utc.slice(11, 19).replaceAll(':', ''))
   let suffix = channel.startsWith('pr-') ? channel : `${channel}-${sha.slice(0, 8)}`
-  return `v0.${date}.${time}-${suffix}`
+  return `v0.${date}.0-${suffix}`
 }
 
 export function getPreviewReleaseTitle(
@@ -104,11 +104,6 @@ export function getPreviewReleaseTitle(
     return version ? `Remix ${version} preview` : `PR #${build.channel.slice(3)}`
   }
   return `${build.channel} (${build.sha.slice(0, 8)})`
-}
-
-function getPreviewTagTime(tag: string): number {
-  let match = /^v0\.(\d{8})\.(\d{1,6})-/.exec(tag)
-  return match ? Number(match[1]) * 1_000_000 + Number(match[2]) : 0
 }
 
 export function validatePreviewRepository(repository: string): string {
@@ -255,7 +250,7 @@ export interface PreviewAsset {
 function getCompletedPrPreviewBuilds(
   assets: PreviewAsset[],
 ): { sha: string; suffix: string; asset: PreviewAsset }[] {
-  let builds = assets
+  return assets
     .flatMap((asset) => {
       let sha = /^Complete preview build: ([a-f0-9]{40})$/.exec(asset.label ?? '')?.[1]
       if (!sha || asset.state !== 'uploaded' || asset.size <= 0) return []
@@ -271,16 +266,12 @@ function getCompletedPrPreviewBuilds(
       (a, b) =>
         Date.parse(b.asset.updated_at) - Date.parse(a.asset.updated_at) || b.asset.id - a.asset.id,
     )
-  let fullShas = new Set(
-    builds.filter((build) => build.suffix === build.sha).map((build) => build.sha),
-  )
-  return builds.filter((build) => build.suffix === build.sha || !fullShas.has(build.sha))
 }
 
 export function getExpiredPrPreviewAssets(assets: PreviewAsset[]): PreviewAsset[] {
   let retained = new Set(
     getCompletedPrPreviewBuilds(assets)
-      .slice(0, 10)
+      .slice(0, PR_PREVIEW_BUILD_LIMIT)
       .map((build) => build.suffix),
   )
   return assets.filter((asset) => {
@@ -461,22 +452,11 @@ export function publishPreview(
   for (let asset of github.listAssets(release)) github.delete(`releases/assets/${asset.id}`)
   for (let filename of files) github.upload(release, filename)
   verifyAssets(github.listAssets(release), expected, true)
-  // Builds can finish out of order, so only the newest main commit becomes the latest release.
-  let latest =
-    build.channel === 'main' &&
-    github
-      .listReleases()
-      .every(
-        (item) =>
-          item.draft ||
-          getPreviewChannel(item.tag_name) !== 'main' ||
-          getPreviewTagTime(item.tag_name) <= getPreviewTagTime(build.tag),
-      )
   github.api('PATCH', `releases/${release.id}`, {
     name: title,
     draft: false,
     prerelease: build.channel !== 'main',
-    make_latest: String(latest),
+    make_latest: String(build.channel === 'main'),
   })
   console.log(`Published preview: ${url}`)
   return url
@@ -493,7 +473,7 @@ function publishPrPreview(
 ): string {
   let prNumber = build.channel.slice('pr-'.length)
   let prUrl = `${repositoryUrl}/pull/${prNumber}`
-  let header = `${PREVIEW_RELEASE_MARKER}\nPreview builds for [PR #${prNumber}](${prUrl}).\n\nThe latest 10 successful SHA builds are retained until this PR closes.\n`
+  let header = `${PREVIEW_RELEASE_MARKER}\nPreview builds for [PR #${prNumber}](${prUrl}).\n\nThe latest ${PR_PREVIEW_BUILD_LIMIT} successful SHA builds are retained until this PR closes.\n`
   if (
     release &&
     (!release.body.startsWith(PREVIEW_RELEASE_MARKER) || !release.body.includes(`](${prUrl})`))
@@ -513,10 +493,8 @@ function publishPrPreview(
     )
   }
   let assets = github.listAssets(release)
-  let completed = getCompletedPrPreviewBuilds(assets)
-  let complete = completed.find((item) => item.sha === build.sha && item.suffix === build.sha)
-  let legacy = completed.find(
-    (item) => item.sha === build.sha && item.suffix === build.sha.slice(0, 8),
+  let complete = getCompletedPrPreviewBuilds(assets).find(
+    (item) => item.sha === build.sha && item.suffix === build.sha,
   )
   if (complete) {
     verifyAssets(
@@ -527,10 +505,8 @@ function publishPrPreview(
     console.log(`Reusing published preview SHA: ${build.sha}`)
   } else {
     // Publishing is serialized per PR, so unmarked SHA groups are interrupted uploads.
-    for (let asset of getExpiredPrPreviewAssets(assets)) {
-      if (legacy && asset.name.endsWith(`-${legacy.suffix}.tgz`)) continue
+    for (let asset of getExpiredPrPreviewAssets(assets))
       github.delete(`releases/assets/${asset.id}`)
-    }
     assets = github.listAssets(release)
     if (assets.length + files.length > 1000) throw new Error('Preview release asset limit exceeded')
     for (let filename of files) github.upload(release, filename)
@@ -546,15 +522,9 @@ function publishPrPreview(
       label: `${PR_BUILD_COMPLETE}: ${build.sha}`,
     })
   }
-  // Keep an existing short-SHA build installable until its full-SHA replacement is complete.
-  if (legacy) {
-    for (let asset of assets.filter((asset) => asset.name.endsWith(`-${legacy.suffix}.tgz`))) {
-      github.delete(`releases/assets/${asset.id}`)
-    }
-  }
   assets = github.listAssets(release)
   for (let asset of getExpiredPrPreviewAssets(assets)) github.delete(`releases/assets/${asset.id}`)
-  let retained = getCompletedPrPreviewBuilds(assets).slice(0, 10)
+  let retained = getCompletedPrPreviewBuilds(assets).slice(0, PR_PREVIEW_BUILD_LIMIT)
   let rows = retained.map(({ sha, asset }) => {
     let url = `https://github.com/${github.repository}/releases/download/${encodeURIComponent(build.tag)}/${asset.name}`
     return `| [${sha.slice(0, 8)}](${prUrl}/commits/${sha}) | ${asset.updated_at} | \`pnpm add "${url}"\` |`
@@ -589,7 +559,10 @@ export function publishPreviewBuild(
       publishPreview(github, build, directory, dryRun)
       published = true
       if (!dryRun && !prNumber)
-        cleanupPreviews(github, build.channel === 'main' ? 'main' : 'experimental')
+        cleanupPreviews(
+          github,
+          build.channel.startsWith('experimental-') ? 'experimental' : build.channel,
+        )
     }
   } finally {
     if (!dryRun && closed()) {

@@ -1,3 +1,6 @@
+import * as fs from 'node:fs'
+import * as os from 'node:os'
+import * as path from 'node:path'
 import assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { gt, valid } from 'semver'
@@ -14,26 +17,29 @@ import {
   getPreviewTarballUrl,
   parsePreviewBuild,
   preparePreviewPackage,
+  publishPreview,
   readPullRequest,
 } from './preview.ts'
 import type { PreviewAsset, PreviewRelease } from './preview.ts'
 
 describe('preview packages', () => {
-  it('uses UTC date and time as SemVer, with a fixed tag per PR', () => {
+  it('uses the UTC date as SemVer, with a fixed tag per PR', () => {
     let sha = 'abcdef1234567890'.padEnd(40, '0')
     let committedAt = '2026-11-02T23:30:00-05:00'
     let tag = getPreviewTag('main', sha, committedAt)
-    assert.equal(tag, 'v0.20261103.43000-main-abcdef12')
+    assert.equal(tag, 'v0.20261103.0-main-abcdef12')
     assert.ok(valid(tag))
     let pr = getPreviewTag('pr-123', sha, committedAt)
-    assert.equal(pr, 'v0.20261103.43000-pr-123')
+    assert.equal(pr, 'v0.20261103.0-pr-123')
     assert.ok(valid(pr))
     assert.equal(getPreviewChannel(pr), 'pr-123')
     assert.equal(getPreviewTag('pr-123', 'b'.repeat(40), committedAt), pr)
+    assert.equal(getPreviewTag('pr-123', sha, '2026-11-03T12:00:00Z'), pr)
     assert.equal(getPreviewChannel('pr-123'), 'pr-123')
     let experimental = getPreviewTag('experimental', sha, committedAt)
-    assert.equal(experimental, 'v0.20261103.43000-experimental-abcdef12')
+    assert.equal(experimental, 'v0.20261103.0-experimental-abcdef12')
     assert.ok(valid(experimental))
+    assert.equal(getPreviewTag('experimental', sha, '2026-11-03T12:00:00Z'), experimental)
     assert.equal(getPreviewChannel(tag), 'main')
     assert.equal(getPreviewChannel('pr-123-20261103-abcdef12'), 'pr-123')
     assert.equal(getPreviewChannel(experimental), 'experimental')
@@ -44,12 +50,8 @@ describe('preview packages', () => {
         getPreviewTag('main', sha, '2026-12-31T23:59:59Z'),
       ),
     )
-    assert.ok(
-      gt(
-        getPreviewTag('experimental', sha, '2026-11-03T17:53:10Z'),
-        getPreviewTag('main', sha, '2026-11-03T17:53:09Z'),
-      ),
-    )
+    assert.equal(getPreviewTag('main', sha, '2026-11-03T17:53:10Z'), tag)
+    assert.notEqual(getPreviewTag('main', 'b'.repeat(40), '2026-11-03T17:53:10Z'), tag)
   })
 
   it('uses full SHA filenames within the shared PR release', () => {
@@ -120,6 +122,14 @@ describe('preview packages', () => {
     assert.throws(() => parsePreviewBuild(tag, 'b'.repeat(40)), /Invalid preview tag or source SHA/)
     assert.throws(
       () => parsePreviewBuild(tag, sha.slice(0, 8)),
+      /Invalid preview tag or source SHA/,
+    )
+    assert.throws(
+      () => getPreviewTag('nightly', sha, '2026-11-02T12:00:00Z'),
+      /Invalid preview channel/,
+    )
+    assert.throws(
+      () => parsePreviewBuild('v0.20261102.0-nightly', sha),
       /Invalid preview tag or source SHA/,
     )
   })
@@ -195,20 +205,22 @@ describe('preview release retention', () => {
     )
   })
 
-  it('expires main builds older than seven days, keeping the exact cutoff', () => {
-    let expired = release(1, 'main', '2026-10-26T11:59:59Z')
-    let cutoff = release(2, 'main', '2026-10-26T12:00:00Z')
+  it('expires main builds older than thirty days, keeping the exact cutoff', () => {
+    let expired = release(1, 'main', '2026-10-03T11:59:59Z')
+    let cutoff = release(2, 'main', '2026-10-03T12:00:00Z')
+    let recent = release(5, 'main', '2026-10-25T12:00:00Z')
     let latest = release(3, 'main', '2026-11-02T00:00:00Z')
     let draft = { ...release(4, 'main', '2020-01-01T00:00:00Z'), draft: true, published_at: null }
-    assert.deepEqual(getExpiredPreviewReleases([latest, expired, cutoff, draft], 'main', now), [
-      expired,
-      draft,
-    ])
+    assert.deepEqual(
+      getExpiredPreviewReleases([latest, expired, cutoff, recent, draft], 'main', now),
+      [expired, draft],
+    )
   })
 
-  it('always keeps the newest successful main build, even if every build is old', () => {
-    let older = release(1, 'main', '2020-01-01T00:00:00Z')
-    let latest = release(2, 'main', '2020-02-01T00:00:00Z')
+  it('always keeps the most recently published main build, even if every build is old', () => {
+    let older = release(1, 'main', '2020-02-02T13:00:00Z')
+    let latest = release(2, 'main', '2020-02-01T12:00:00Z')
+    latest.published_at = '2020-02-03T12:00:00Z'
     let draft = { ...release(3, 'main', '2026-11-02T00:00:00Z'), draft: true, published_at: null }
     assert.deepEqual(getExpiredPreviewReleases([older, draft, latest], 'main', now), [older])
   })
@@ -272,6 +284,90 @@ describe('preview release retention', () => {
   })
 })
 
+describe('main publication', () => {
+  it('marks new main publications latest regardless of source order, without promoting reruns', (t) => {
+    let directory = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-main-test-'))
+    t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+    fs.writeFileSync(path.join(directory, 'remix.tgz'), 'remix')
+    let legacy = release(1, 'main', '2026-11-02T12:00:00Z')
+    legacy.tag_name = 'v0.20261102.120000-main-00000001'
+    let releases = [legacy]
+    let assets = new Map<number, PreviewAsset[]>()
+    let publications: boolean[] = []
+    let sourceTime = '2026-11-02T11:00:00Z'
+    let github = new PreviewGitHub('remix-run/previews', () => {
+      throw new Error('Unexpected GitHub command')
+    })
+    t.mock.method(
+      github,
+      'api',
+      (method: string, endpoint: string, body?: Record<string, unknown>) => {
+        if (method === 'GET' && endpoint.startsWith('releases?')) return releases
+        if (method === 'POST' && endpoint === 'releases') {
+          if (typeof body?.tag_name !== 'string' || typeof body.body !== 'string')
+            throw new Error('Missing release metadata')
+          let draft = {
+            ...release(releases.length + 1, 'main', sourceTime),
+            tag_name: body.tag_name,
+            body: body.body,
+            draft: true,
+          }
+          releases.push(draft)
+          return draft
+        }
+        let id = Number(/^releases\/(\d+)/.exec(endpoint)?.[1])
+        if (method === 'GET' && endpoint.startsWith(`releases/${id}/assets?`))
+          return assets.get(id) ?? []
+        if (method === 'PATCH' && endpoint === `releases/${id}`) {
+          let published = releases.find((item) => item.id === id)
+          if (!published) throw new Error('Missing release')
+          if (body?.draft === false) {
+            published.draft = false
+          }
+          if (body?.make_latest !== undefined) publications.push(body.make_latest === 'true')
+          return null
+        }
+        throw new Error(`Unexpected GitHub API call: ${method} ${endpoint}`)
+      },
+    )
+    t.mock.method(github, 'upload', (draft: PreviewRelease, filename: string) => {
+      let uploaded = assets.get(draft.id) ?? []
+      uploaded.push({
+        ...previewAsset(uploaded.length + 1, path.basename(filename), now),
+        size: fs.readFileSync(filename).length,
+      })
+      assets.set(draft.id, uploaded)
+    })
+    let sha = 'a'.repeat(40)
+    publishPreview(
+      github,
+      parsePreviewBuild(getPreviewTag('main', sha, sourceTime), sha),
+      directory,
+    )
+    sourceTime = '2026-11-02T14:00:00Z'
+    sha = 'b'.repeat(40)
+    publishPreview(
+      github,
+      parsePreviewBuild(getPreviewTag('main', sha, sourceTime), sha),
+      directory,
+    )
+    sourceTime = '2026-11-02T13:00:00Z'
+    sha = 'c'.repeat(40)
+    publishPreview(
+      github,
+      parsePreviewBuild(getPreviewTag('main', sha, sourceTime), sha),
+      directory,
+    )
+    sha = 'a'.repeat(40)
+    publishPreview(
+      github,
+      parsePreviewBuild(getPreviewTag('main', sha, sourceTime), sha),
+      directory,
+    )
+    assert.deepEqual(publications, [true, true, true])
+  })
+})
+
 describe('preview ref cleanup', () => {
   it('deletes only the matching legacy PR branch', () => {
     let calls: string[][] = []
@@ -313,8 +409,8 @@ describe('preview ref cleanup', () => {
 })
 
 describe('shared PR preview releases', () => {
-  it('retains ten complete SHA groups by completion time and removes incomplete uploads', () => {
-    let builds = Array.from({ length: 12 }, (_, index) => {
+  it('retains five complete SHA groups by completion time and removes incomplete uploads', () => {
+    let builds = Array.from({ length: 7 }, (_, index) => {
       let sha = index.toString(16).padStart(8, '0').padEnd(40, '0')
       let updated_at = new Date(now + index * 1000).toISOString()
       return [
@@ -364,7 +460,7 @@ describe('shared PR preview releases', () => {
     ]
     assert.deepEqual(getExpiredPrPreviewAssets(assets), [])
 
-    let newer = Array.from({ length: 9 }, (_, index) => {
+    let newer = Array.from({ length: 4 }, (_, index) => {
       let sha = index.toString(16).padStart(40, '0')
       let updatedAt = now + (index + 2) * 1000
       return [
@@ -379,20 +475,6 @@ describe('shared PR preview releases', () => {
     })
     assert.deepEqual(
       getExpiredPrPreviewAssets([...assets, ...newer.flat()]).map((asset) => asset.id),
-      [1, 2],
-    )
-  })
-
-  it('expires a legacy build after its full SHA replacement completes', () => {
-    let sha = 'a'.repeat(40)
-    let assets = [
-      previewAsset(1, `remix-${sha.slice(0, 8)}.tgz`, now, `Complete preview build: ${sha}`),
-      previewAsset(2, `assert-${sha.slice(0, 8)}.tgz`, now),
-      previewAsset(3, `remix-${sha}.tgz`, now + 1000, `Complete preview build: ${sha}`),
-      previewAsset(4, `assert-${sha}.tgz`, now + 1000),
-    ]
-    assert.deepEqual(
-      getExpiredPrPreviewAssets(assets).map((asset) => asset.id),
       [1, 2],
     )
   })
