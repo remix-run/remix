@@ -93,32 +93,11 @@ updates, then uploads and verifies them before publishing releases in
 for an experimental preview. Previewed refs must include the preview scripts from
 `main`.
 
-Main release tags use `v0.YYYYMMDD.0-main-<8-character-sha>`, with the source commit's
-UTC date. Experimental tags use
-`v0.YYYYMMDD.0-experimental-<8-character-sha>`, with the source commit's UTC date.
-PRs share a `v0.YYYYMMDD.0-pr-<number>` release, using the PR's
-UTC creation date so every build uses the same tag, with `<package>-<full-source-sha>.tgz` assets.
-After verifying every asset for a SHA, publishing labels its `remix` asset as complete,
-updates the release's install table, and retains the latest 5 complete builds by completion time.
-Each newly published main build becomes the repository's latest release and includes a
-`remix.url` asset containing its `remix.tgz` URL. Main releases expire 30 days after publication,
-except the most recently published successful main build, which is always retained.
-Reruns reuse completed releases without promoting them to latest. GitHub lists releases by
-publication time.
-Experimental releases also expire 30 days after publication. The workflow runs daily cleanup
-for both channels.
-Retries preserve completed assets and replace partial uploads. Closing the PR deletes its release
-and any older per-SHA preview releases.
+- Main release tags use `v0.YYYYMMDD.0-main-<8-character-sha>` (retained for 30 days, with the latest successful publication retained indefinitely). The `remix.url` asset contains that build's tarball URL for one-line installation.
+- PRs share a `v0.YYYYMMDD.0-pr-<number>` release, using the PR's UTC creation date so every build uses the same tag, with `<package>-<full-source-sha>.tgz` assets (last 5 SHAs retained)
+- Experimental tags use `v0.YYYYMMDD.0-experimental-<8-character-sha>` (retained for 30 days)
 
-Successful PR publication deletes the corresponding legacy `preview/pr-<number>` branch.
-Closing a PR also deletes its legacy branch, including when its head predates this workflow.
-These deletions use the source repository's `GITHUB_TOKEN`.
-
-The destination must be public, initialized with a commit, and have release immutability disabled.
-Set `REMIX_PREVIEWS_PAT` in this repository's Actions secrets to a fine-grained PAT with Contents
-read/write access to the destination. See the
-[README](https://github.com/remix-run/remix/blob/main/README.md#installation) for installation and
-retention details.
+Set `REMIX_PREVIEWS_PAT` in this repository's Actions secrets to a fine-grained PAT with Contents read/write access to `remix-run/previews`. The destination must be public, initialized with a commit, and have release immutability disabled.
 
 ## Agentic Workflows
 
