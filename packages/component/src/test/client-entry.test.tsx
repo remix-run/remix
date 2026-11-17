@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { Handle } from '../runtime/component.ts'
-import { clientEntry, isEntry } from '../runtime/client-entries.ts'
+import { clientEntry, isEntry, type SerializableObject } from '../runtime/client-entries.ts'
 
 describe('clientEntry', () => {
   /* oxlint-disable eslint/no-unused-vars */
@@ -185,6 +185,26 @@ describe('clientEntry', () => {
 
       let EntryComponent = clientEntry('/js/game.js#Game', Game)
       expect(isEntry(EntryComponent)).toBe(true)
+    })
+
+    it('accepts SerializableObject props alongside readonly values', () => {
+      type Market = SerializableObject & { country: string }
+
+      // Shaped like `FormSubmission` from `@remix-run/data-schema/experimental/form`
+      type Submission = {
+        values: Readonly<Record<string, string | boolean | ReadonlyArray<string>>>
+        errors: {
+          fields: Readonly<Record<string, ReadonlyArray<string>>>
+          form?: ReadonlyArray<string>
+        }
+      }
+
+      function Signup(handle: Handle<{ market: Market; submission?: Submission }>) {
+        return () => <div>{handle.props.market.country}</div>
+      }
+
+      let EntrySignup = clientEntry('/js/signup.js#Signup', Signup)
+      expect(isEntry(EntrySignup)).toBe(true)
     })
 
     // Type-level rejection: non-serializable props should be disallowed

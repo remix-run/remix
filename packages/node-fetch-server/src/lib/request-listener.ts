@@ -135,32 +135,28 @@ export function createRequestListener(
       try {
         request = createRequest(req, res, options)
       } catch (error) {
-        void sendResponseForCreationError(res, onError, error, isResponseClosed)
-        return
+        return sendResponseForCreationError(res, onError, error, isResponseClosed)
       }
 
       let response: Response | Promise<Response>
       try {
         response = requestHandler(request)
       } catch (error) {
-        if (isRequestAbortError(request, error)) return
-        void sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
-        return
+        if (isRequestAbortError(request, error)) return Promise.resolve()
+        return sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
       }
 
       if (isPromiseLike(response)) {
-        void response.then(
-          (response) => {
-            void sendResponseForRequest(res, response, request, onError, isResponseClosed)
-          },
+        return response.then(
+          (response) => sendResponseForRequest(res, response, request, onError, isResponseClosed),
           (error) => {
             if (isRequestAbortError(request, error)) return
-            void sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
+            return sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
           },
         )
-      } else {
-        void sendResponseForRequest(res, response, request, onError, isResponseClosed)
       }
+
+      return sendResponseForRequest(res, response, request, onError, isResponseClosed)
     }
   }
 

@@ -19,7 +19,6 @@ export const ThemeToggle = clientEntry(
           type="button"
           aria-label={`Switch to ${nextTheme} mode`}
           mix={[
-            themeToggleStyle,
             on('click', () => {
               theme = nextTheme
               document.documentElement.dataset.theme = theme
@@ -27,9 +26,42 @@ export const ThemeToggle = clientEntry(
               document.cookie = `${themeCookieName}=${theme}; Max-Age=${themeCookieMaxAge}; Path=/; SameSite=Lax`
               handle.update()
             }),
+            css({
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              minHeight: '36px',
+              border: '1px solid var(--control-border)',
+              borderRadius: '6px',
+              padding: '7px 12px',
+              backgroundColor: 'var(--control-button-bg)',
+              color: 'var(--control-text)',
+              font: 'inherit',
+              fontSize: '11px',
+              fontWeight: 750,
+              textTransform: 'capitalize',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+              transition: 'background-color 160ms ease, border-color 160ms ease, color 160ms ease',
+              '&:hover': {
+                borderColor: 'var(--control-border-hover)',
+                backgroundColor: 'var(--control-button-hover)',
+              },
+              '&:focus-visible': {
+                outline: '3px solid var(--focus-ring)',
+                outlineOffset: '2px',
+              },
+            }),
           ]}
         >
-          <span aria-hidden="true" mix={themeIconStyle}>
+          <span
+            aria-hidden="true"
+            mix={css({
+              fontSize: '16px',
+              lineHeight: 1,
+            })}
+          >
             {theme === 'light' ? '☾' : '☀'}
           </span>
           <span>{nextTheme} mode</span>
@@ -38,36 +70,3 @@ export const ThemeToggle = clientEntry(
     }
   },
 )
-
-const themeToggleStyle = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px',
-  minHeight: '36px',
-  border: '1px solid var(--control-border)',
-  borderRadius: '6px',
-  padding: '7px 12px',
-  backgroundColor: 'var(--control-button-bg)',
-  color: 'var(--control-text)',
-  font: 'inherit',
-  fontSize: '11px',
-  fontWeight: 750,
-  textTransform: 'capitalize',
-  whiteSpace: 'nowrap',
-  cursor: 'pointer',
-  transition: 'background-color 160ms ease, border-color 160ms ease, color 160ms ease',
-  '&:hover': {
-    borderColor: 'var(--control-border-hover)',
-    backgroundColor: 'var(--control-button-hover)',
-  },
-  '&:focus-visible': {
-    outline: '3px solid var(--focus-ring)',
-    outlineOffset: '2px',
-  },
-})
-
-const themeIconStyle = css({
-  fontSize: '16px',
-  lineHeight: 1,
-})

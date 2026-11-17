@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import * as os from 'node:os'
-import { setImmediate } from 'node:timers/promises'
 
 import { createFsSessionStorage } from './fs.ts'
 
@@ -258,7 +257,7 @@ describe('fs session storage', () => {
     assert.deepEqual(failures, [])
   })
 
-  it('saves while another handle has the session file open', async () => {
+  it('saves while another handle has the session file open', async (t) => {
     let storage = createFsSessionStorage(tmpDir)
     let session = await storage.read(null)
     session.set('count', 1)
@@ -267,10 +266,20 @@ describe('fs session storage', () => {
 
     // Windows can refuse to replace a file that another handle has open; the save must still land.
     let handle = await fsp.open(file, 'r')
-    let closed = new Promise((resolve) => setTimeout(resolve, 50)).then(() => handle.close())
+    let originalRename = fsp.rename
+    // Release the handle once a replace has been refused, so a retry can land.
+    t.mock.method(fsp, 'rename', (...args: Parameters<typeof fsp.rename>) =>
+      originalRename(...args).catch(async (error) => {
+        await handle.close()
+        throw error
+      }),
+    )
     session.set('count', 2)
-    await storage.save(session)
-    await closed
+    try {
+      await storage.save(session)
+    } finally {
+      await handle.close()
+    }
 
     let saved = await storage.read(cookie)
     assert.equal(saved.get('count'), 2)
@@ -355,9 +364,12 @@ describe('fs session storage', () => {
       t.mock.method(fsp, 'open', async (...args: Parameters<typeof fsp.open>) => {
         let handle = await originalOpen(...args)
         let originalClose = handle.close.bind(handle)
-        t.mock.method(handle, 'close', async () => {
-          await originalClose()
-          closed.resolve()
+        t.mock.method(handle, 'close', () => {
+          let closing = originalClose()
+          // Adopting `closing` subscribes after the save's own `await handle.close()`, so `closed`
+          // settles only once the save has gone on to enqueue its replacement.
+          closed.resolve(closing)
+          return closing
         })
         return handle
       })
@@ -366,8 +378,6 @@ describe('fs session storage', () => {
       let saves = Promise.allSettled([firstSave, secondSave])
       try {
         await closed.promise
-        // Let the second save enqueue its replacement after closing its complete temporary file.
-        await setImmediate()
         assert.equal(rename.mock.calls.length, 1)
         let reading = storage.read(cookie)
         let read = Promise.allSettled([reading])

@@ -76,7 +76,7 @@ export function Layout(handle: Handle<LayoutProps>) {
             </nav>
           </div>
         </header>
-        <main>
+        <main mix={css({ viewTransitionName: 'bookstore-page' })}>
           <div class="container">{children}</div>
         </main>
         <footer>

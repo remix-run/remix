@@ -1,13 +1,13 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { Handle, RemixNode } from '../runtime/component.ts'
-import { createMixin, css, on, unsafeHTML } from '../index.ts'
+import { createMixin, createRoot, css, on, unsafeHTML } from '../index.ts'
 import { createElement } from '../runtime/create-element.ts'
 
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import type { SerializableObject } from '../runtime/client-entries.ts'
-import { drain, readChunks, withResolvers } from './utils.ts'
+import { drain, readChunks, trackUnhandledRejections, withResolvers } from './utils.ts'
 import { Fragment } from '../runtime/component.ts'
 import { Frame } from '../runtime/frame.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -47,6 +47,188 @@ describe('stream', () => {
   }
 
   describe('basic nodes', () => {
+    it('gives select props precedence through mount, hydration, and reset', async (t) => {
+      function SelectedChoice() {
+        return () => (
+          <option value="a" selected>
+            A
+          </option>
+        )
+      }
+      function ImplicitChoice() {
+        return () => <option>{'  B & C  '}</option>
+      }
+      let markup = (
+        <form>
+          <select name="single" defaultValue="B & C">
+            <SelectedChoice />
+            <optgroup label="Other">
+              <ImplicitChoice />
+            </optgroup>
+          </select>
+          <select name="later" defaultValue="b">
+            <option value="b">B</option>
+            <SelectedChoice />
+          </select>
+          <select name="multiple" multiple defaultValue={['b', 'B & C']}>
+            <SelectedChoice />
+            <option value="b" selected={false}>
+              B
+            </option>
+            <optgroup label="Other">
+              <ImplicitChoice />
+            </optgroup>
+          </select>
+          <select name="controlled" value="b" defaultValue="c">
+            <SelectedChoice />
+            <option value="b" selected={false}>
+              B
+            </option>
+            <option value="c">C</option>
+          </select>
+          <select name="standalone">
+            <option value="b">B</option>
+            <SelectedChoice />
+          </select>
+        </form>
+      )
+      let initialEntries = [
+        ['single', 'B & C'],
+        ['later', 'b'],
+        ['multiple', 'b'],
+        ['multiple', 'B & C'],
+        ['controlled', 'b'],
+        ['standalone', 'a'],
+      ]
+      let serverContainer = document.createElement('div')
+      serverContainer.innerHTML = await renderToString(markup)
+      expect(serverContainer.innerHTML).not.toContain('defaultvalue=')
+      let serverForm = serverContainer.querySelector('form')
+      if (!serverForm) throw new Error('Missing server form')
+      expect([...new FormData(serverForm)]).toEqual(initialEntries)
+      let serverSelects = serverForm.querySelectorAll('select')
+      serverSelects[0].value = 'a'
+      serverSelects[2].value = 'a'
+      serverSelects[3].value = 'c'
+      serverSelects[4].value = 'b'
+      let hydratedRoot = createRoot(serverContainer)
+      t.after(() => hydratedRoot.dispose())
+      hydratedRoot.render(markup)
+      hydratedRoot.flush()
+      expect(new FormData(serverForm).get('single')).toBe('a')
+      expect(new FormData(serverForm).getAll('multiple')).toEqual(['a'])
+      expect(new FormData(serverForm).get('controlled')).toBe('b')
+      expect(new FormData(serverForm).get('standalone')).toBe('b')
+      serverForm.reset()
+      expect([...new FormData(serverForm)]).toEqual(initialEntries)
+
+      let clientContainer = document.createElement('div')
+      let clientRoot = createRoot(clientContainer)
+      t.after(() => clientRoot.dispose())
+      clientRoot.render(markup)
+      clientRoot.flush()
+      let clientForm = clientContainer.querySelector('form')
+      if (!clientForm) throw new Error('Missing client form')
+      expect([...new FormData(clientForm)]).toEqual(initialEntries)
+      let clientSelects = clientForm.querySelectorAll('select')
+      clientSelects[0].value = 'a'
+      clientSelects[2].value = 'a'
+      clientSelects[3].value = 'c'
+      clientSelects[4].value = 'b'
+      clientForm.reset()
+      expect([...new FormData(clientForm)]).toEqual(initialEntries)
+    })
+
+    it('keeps scalar and array multiple-select submissions consistent through hydration', async (t) => {
+      let markup = (
+        <form>
+          <select name="scalar" multiple value="a">
+            <option value="a">First A</option>
+            <option value="a">Second A</option>
+            <option value="b">B</option>
+          </select>
+          <select name="array" multiple value={['a']}>
+            <option value="a">First A</option>
+            <option value="a">Second A</option>
+            <option value="b">B</option>
+          </select>
+          <select name="empty" multiple value={[]} defaultValue={['a']}>
+            <option value="a" selected>
+              A
+            </option>
+          </select>
+        </form>
+      )
+      let container = document.createElement('div')
+      container.innerHTML = await renderToString(markup)
+      let form = container.querySelector('form')
+      if (!form) throw new Error('Missing form')
+      expect(new FormData(form).getAll('scalar')).toEqual(['a'])
+      expect(new FormData(form).getAll('array')).toEqual(['a', 'a'])
+      expect(new FormData(form).getAll('empty')).toEqual([])
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(markup)
+      root.flush()
+      expect(new FormData(form).getAll('scalar')).toEqual(['a'])
+      expect(new FormData(form).getAll('array')).toEqual(['a', 'a'])
+      expect(new FormData(form).getAll('empty')).toEqual([])
+    })
+
+    it('requires explicit option values to select raw HTML labels', async () => {
+      function markup(value?: string) {
+        return (
+          <select defaultValue="b">
+            <option value="a">A</option>
+            <option value={value} innerHTML={unsafeHTML('  B &amp; &#67;  ')} />
+          </select>
+        )
+      }
+      await expect(drain(renderToStream(markup(), { onError() {} }))).rejects.toThrow(
+        'option elements with innerHTML must have an explicit value when their select has a value or defaultValue',
+      )
+      expect(await renderToString(markup('b'))).toBe(
+        '<select><option value="a">A</option><option value="b" selected>  B &amp; &#67;  </option></select>',
+      )
+    })
+
+    it('requires JSX options when select props determine selection', async () => {
+      let html = '<option value="a">A</option><option value="b" selected>B</option>'
+      let options = unsafeHTML(html)
+      async function rejectsRawOptions(node: RemixNode) {
+        await expect(drain(renderToStream(node, { onError() {} }))).rejects.toThrow(
+          'select value and defaultValue require options rendered as JSX children, not through select or optgroup innerHTML',
+        )
+      }
+
+      await rejectsRawOptions(<select value="" innerHTML={options} />)
+      await rejectsRawOptions(<select defaultValue="b" innerHTML={options} />)
+      await rejectsRawOptions(
+        <select multiple value={[]}>
+          <optgroup label="Choices" innerHTML={options} />
+        </select>,
+      )
+      await rejectsRawOptions(
+        <select defaultValue="b">
+          <option value="b">B</option>
+          <optgroup label="Choices" innerHTML={options} />
+        </select>,
+      )
+
+      expect(
+        await renderToString(
+          <>
+            <select innerHTML={options} />
+            <select>
+              <optgroup label="Choices" innerHTML={options} />
+            </select>
+          </>,
+        ),
+      ).toBe(
+        `<select>${html}</select><select><optgroup label="Choices">${html}</optgroup></select>`,
+      )
+    })
+
     it('should render to a stream', () => {
       let stream = renderToStream(<div>Hello, world!</div>)
       expect(stream).toBeDefined()
@@ -183,6 +365,7 @@ describe('stream', () => {
         return chunk
       })
 
+      // The microtask budget is the contract: awaiting each of the 1000 nodes would exceed it.
       for (let index = 0; index < 20; index++) await Promise.resolve()
       expect(ready).toBe(true)
       let chunk = await firstChunk
@@ -4257,6 +4440,35 @@ describe('stream', () => {
   })
 
   describe('frames', () => {
+    it('renders lazy frame fallbacks without resolving or streaming their content', async () => {
+      let requests: string[] = []
+      let html = await drain(
+        renderToStream(
+          <>
+            <Frame name="later" src="/lazy" loading="lazy" fallback={<p>Later</p>} />
+            <Frame src="/empty" loading="lazy" fallback={<></>} />
+            <Frame src="/eager" loading="eager" />
+          </>,
+          {
+            resolveFrame(src) {
+              requests.push(src)
+              return '<p>Loaded</p>'
+            },
+          },
+        ),
+      )
+
+      expect(requests).toEqual(['/eager'])
+      expect(html).toContain('<p>Later</p>')
+      expect(html).toContain('<p>Loaded</p>')
+      expect(html).not.toContain('<template')
+      expect(Object.values(parseRmxDataFromHtml(html).f)).toEqual([
+        { status: 'lazy', fallback: true, name: 'later', src: '/lazy' },
+        { status: 'lazy', fallback: true, src: '/empty' },
+        { status: 'resolved', src: '/eager' },
+      ])
+    })
+
     it('adds frame scripts for non-blocking frames', async () => {
       // Test non-blocking frame (with fallback)
       let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
@@ -4339,6 +4551,47 @@ describe('stream', () => {
       expect(result).not.toContain('<!DOCTYPE')
       expect(result).not.toContain('</template><div id="resolved">')
       expect(resolvedTemplate?.innerHTML).toContain('<div id="resolved">Resolved</div>')
+    })
+
+    it('keeps multibyte characters split across frame stream chunks', async () => {
+      let bytes = new TextEncoder().encode('<p>café</p>')
+      let split = bytes.indexOf(0xc3) + 1
+      let stream = renderToStream(<Frame src="/x" />, {
+        resolveFrame() {
+          return new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(bytes.slice(0, split))
+              controller.enqueue(bytes.slice(split))
+              controller.close()
+            },
+          })
+        },
+      })
+      let result = await drain(stream)
+
+      // Only the first chunk renders inside the frame; later chunks follow as raw bytes.
+      expect(result).toContain('<p>caf<!-- /rmx:f -->')
+      expect(result).toContain('é</p>')
+      expect(result).not.toContain('\uFFFD')
+    })
+
+    it('keeps multibyte characters that start in a leading whitespace chunk', async () => {
+      let bytes = new TextEncoder().encode(' é<p>Resolved</p>')
+      let stream = renderToStream(<Frame src="/x" />, {
+        resolveFrame() {
+          return new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(bytes.slice(0, 2))
+              controller.enqueue(bytes.slice(2))
+              controller.close()
+            },
+          })
+        },
+      })
+      let result = await drain(stream)
+
+      expect(result).toContain('é<p>Resolved</p>')
+      expect(result).not.toContain('\uFFFD')
     })
 
     it('adds frame scripts for blocking frames', async () => {
@@ -4770,50 +5023,40 @@ describe('stream', () => {
       expect(done.done).toBe(true)
     })
 
-    it('cancels all blocking frames without unhandled rejections', async () => {
+    it('cancels all blocking frames without unhandled rejections', async (t) => {
       let controller = new AbortController()
       let errors: unknown[] = []
       let [frameOne, , rejectFrameOne] = withResolvers<string>()
       let [frameTwo, , rejectFrameTwo] = withResolvers<string>()
-      let unhandledRejections: unknown[] = []
-      let onUnhandledRejection = (event: PromiseRejectionEvent) => {
-        event.preventDefault()
-        unhandledRejections.push(event.reason)
-      }
-      window.addEventListener('unhandledrejection', onUnhandledRejection)
+      let flushUnhandledRejections = trackUnhandledRejections(t)
 
-      try {
-        let stream = renderToStream(
-          <div>
-            <Frame src="/fragments/one" />
-            <Frame src="/fragments/two" />
-          </div>,
-          {
-            onError(error) {
-              errors.push(error)
-            },
-            resolveFrame(src) {
-              return src === '/fragments/one' ? frameOne : frameTwo
-            },
-            signal: controller.signal,
+      let stream = renderToStream(
+        <div>
+          <Frame src="/fragments/one" />
+          <Frame src="/fragments/two" />
+        </div>,
+        {
+          onError(error) {
+            errors.push(error)
           },
-        )
+          resolveFrame(src) {
+            return src === '/fragments/one' ? frameOne : frameTwo
+          },
+          signal: controller.signal,
+        },
+      )
 
-        let reader = stream.getReader()
-        let read = reader.read()
+      let reader = stream.getReader()
+      let read = reader.read()
 
-        let abortError = new DOMException('This operation was aborted', 'AbortError')
-        controller.abort(abortError)
-        rejectFrameOne(abortError)
-        rejectFrameTwo(abortError)
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      controller.abort(abortError)
+      rejectFrameOne(abortError)
+      rejectFrameTwo(abortError)
 
-        await expect(read).resolves.toEqual({ done: true, value: undefined })
-        await new Promise((resolve) => setTimeout(resolve, 50))
-        expect(errors).toEqual([])
-        expect(unhandledRejections).toEqual([])
-      } finally {
-        window.removeEventListener('unhandledrejection', onUnhandledRejection)
-      }
+      await expect(read).resolves.toEqual({ done: true, value: undefined })
+      expect(await flushUnhandledRejections()).toEqual([])
+      expect(errors).toEqual([])
     })
 
     it('cancels non-blocking frame rendering when signal aborts without calling onError', async () => {
@@ -4973,6 +5216,7 @@ describe('stream', () => {
     })
 
     it('renders descendant frames returned from resolveFrame', async () => {
+      let [childReleased, releaseChild] = withResolvers<void>()
       async function resolveFrame(src: string) {
         if (src === '/parent') {
           // Parent frame returns content containing a child frame
@@ -4986,8 +5230,8 @@ describe('stream', () => {
           )
         }
         if (src === '/child') {
-          // Simulate async loading of child
-          await new Promise((resolve) => setTimeout(resolve, 10))
+          // The child resolves only after the parent template has streamed
+          await childReleased
           return '<article>Child Content</article>'
         }
         return '<div></div>'
@@ -5033,6 +5277,7 @@ describe('stream', () => {
       expect(parentTemplate).toContain('</template>')
 
       // Third chunk should contain child's resolved content
+      releaseChild()
       let thirdChunk = await chunks.next()
       expect(thirdChunk.done).toBe(false)
       let childTemplate = thirdChunk.value
@@ -5209,6 +5454,7 @@ describe('stream', () => {
     })
 
     it('handles mixed blocking and non-blocking descendant frames', async () => {
+      let [nonBlockingChildReleased, releaseNonBlockingChild] = withResolvers<void>()
       async function resolveFrame(src: string) {
         if (src === '/parent') {
           // Blocking parent returns content with both blocking and non-blocking children
@@ -5224,8 +5470,8 @@ describe('stream', () => {
           return '<div>Blocking Child</div>'
         }
         if (src === '/non-blocking-child') {
-          // Simulate async
-          await new Promise((resolve) => setTimeout(resolve, 10))
+          // The non-blocking child resolves only after the first chunk has streamed
+          await nonBlockingChildReleased
           return '<div>Non-blocking Child</div>'
         }
         return '<div></div>'
@@ -5259,6 +5505,7 @@ describe('stream', () => {
       expect(Object.values<any>(data.f).some((v) => v.status === 'resolved')).toBe(true)
 
       // Second chunk has non-blocking child resolved
+      releaseNonBlockingChild()
       let secondChunk = await chunks.next()
       console.log('\n\nsecond:\n', secondChunk.value)
       // IDs are local within the returned fragment stream.
@@ -5394,21 +5641,10 @@ describe('stream', () => {
         ),
       )
 
-      // Expect no new chunk yet because the child is blocking
-      let chunkArrived = false
-      let nextChunkPromise = chunks.next().then((result) => {
-        chunkArrived = true
-        return result
-      })
-
-      await Promise.resolve()
-      expect(chunkArrived).toBe(false)
-
-      // Now resolve the blocking child
       resolveChild('<article>Child Content</article>')
 
-      // Next chunk should now contain the parent's template with the child's resolved content
-      let second = await nextChunkPromise
+      // The next chunk contains the parent's template only with the child's resolved content
+      let second = await chunks.next()
       expect(second.done).toBe(false)
       let parentTemplate = second.value!
       expect(parentTemplate).toContain('<template id="f')

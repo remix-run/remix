@@ -314,15 +314,23 @@ type ResolveMixedPropsOutput = {
 export type MixinRuntimeState = {
   id: string
   controller?: AbortController
-  aborted: boolean
+  lifecycle: MixinLifecycle
   handle?: AnyMixinHandle
   runners: RunnerEntry[]
   binding?: MixinRuntimeBinding
-  removePrepared?: boolean
-  pendingRemoval?: {
-    controller: AbortController
-    done: Promise<void>
-  }
+}
+
+type MixinLifecycle =
+  | { status: 'active' }
+  // beforeRemove was dispatched. `persisted` is set while `persistNode` teardowns keep the node
+  // in the DOM, and the removal can still be cancelled by reclaiming the node.
+  | { status: 'removing'; persisted?: PersistedMixinRemoval }
+  // Every scope was released and the runtime signal is aborted.
+  | { status: 'removed' }
+
+type PersistedMixinRemoval = {
+  controller: AbortController
+  done: Promise<void>
 }
 
 let mixinHandleId = 0
@@ -437,7 +445,10 @@ export function teardownMixins(state?: MixinRuntimeState) {
   if (!state) return
   state.binding = undefined
   prepareMixinRemoval(state)
-  cancelPendingMixinRemoval(state)
+  if (state.lifecycle.status === 'removing' && state.lifecycle.persisted) {
+    state.lifecycle.persisted.controller.abort(new DOMException('', 'AbortError'))
+    state.lifecycle = { status: 'removing' }
+  }
   let handle = state.handle as ScopedAnyMixinHandle | undefined
   if (handle) {
     handle.queueCommitTask(() => finalizeMixinTeardown(state))
@@ -463,10 +474,11 @@ export function bindMixinRuntime<target>(
 }
 
 export function prepareMixinRemoval(state?: MixinRuntimeState) {
-  if (!state || state.removePrepared) return state?.pendingRemoval?.done
-  state.removePrepared = true
+  if (!state) return
+  if (state.lifecycle.status === 'removing') return state.lifecycle.persisted?.done
+  if (state.lifecycle.status === 'removed') return
+  state.lifecycle = { status: 'removing' }
 
-  let pendingRemoval: MixinRuntimeState['pendingRemoval']
   let persistTeardowns: Array<(signal: AbortSignal) => void | Promise<void>> = []
   let registerPersistNode = (teardown: (signal: AbortSignal) => void | Promise<void>) => {
     persistTeardowns.push(teardown)
@@ -479,47 +491,37 @@ export function prepareMixinRemoval(state?: MixinRuntimeState) {
     return event
   })
 
-  if (persistTeardowns.length > 0) {
-    let controller = new AbortController()
-    let done = Promise.allSettled(
-      persistTeardowns.map((teardown) => Promise.resolve().then(() => teardown(controller.signal))),
-    ).then(() => {})
-    pendingRemoval = { controller, done }
-  }
+  if (persistTeardowns.length === 0) return
 
-  state.pendingRemoval = pendingRemoval
-  return pendingRemoval?.done
+  let controller = new AbortController()
+  let done = Promise.allSettled(
+    persistTeardowns.map((teardown) => Promise.resolve().then(() => teardown(controller.signal))),
+  ).then(() => {})
+  state.lifecycle = { status: 'removing', persisted: { controller, done } }
+  return done
 }
 
 export function cancelPendingMixinRemoval(
   state?: MixinRuntimeState,
   reason: unknown = new DOMException('', 'AbortError'),
 ) {
-  if (!state?.pendingRemoval) return
-  state.pendingRemoval.controller.abort(reason)
-  state.pendingRemoval = undefined
-  state.removePrepared = false
+  if (state?.lifecycle.status !== 'removing' || !state.lifecycle.persisted) return
+  state.lifecycle.persisted.controller.abort(reason)
+  state.lifecycle = { status: 'active' }
 }
 
 function createMixinRuntimeState(): MixinRuntimeState {
   return {
     id: `m${++mixinHandleId}`,
-    aborted: false,
+    lifecycle: { status: 'active' },
     runners: [],
   }
 }
 
 type SchedulerPhaseType = 'beforeUpdate' | 'commit'
 
-type PhaseListener = EventListenerOrEventListenerObject
-
 type MixinScope = {
   target: TypedEventTarget<MixinHandleEventMap<Element>>
-  // EventTarget identifies a listener by its callback and capture flag.
-  phaseListeners: Record<
-    SchedulerPhaseType,
-    [bubble: Set<PhaseListener>, capture: Set<PhaseListener>]
-  >
   controller?: AbortController
 }
 
@@ -533,10 +535,9 @@ class MixinHandleImpl
   element: MixinElement<Element, ElementProps>
   #state: MixinRuntimeState
   #scheduler: Scheduler
-  #phaseListenerCounts: Record<SchedulerPhaseType, number> = {
-    beforeUpdate: 0,
-    commit: 0,
-  }
+  // Phase types received from the scheduler. Removing a listener keeps the subscription until
+  // every scope is released; dispatching to a scope without listeners has no effect.
+  #phaseTypes = new Set<SchedulerPhaseType>()
   #activeScope?: symbol
   #scopes = new Map<symbol, MixinScope>()
   #onSchedulerPhase = (event: Event) => {
@@ -589,17 +590,15 @@ class MixinHandleImpl
     listener: EventListenerOrEventListenerObject | null,
     options?: AddEventListenerOptions | boolean,
   ): void {
-    let scope = this.#getActiveScope()
-    scope.target.addEventListener(
+    this.#getActiveScope().target.addEventListener(
       type as keyof MixinHandleEventMap<Element>,
       listener as EventListener,
       options,
     )
-    if (!listener || !isSchedulerPhaseType(type)) return
-    let listeners = scope.phaseListeners[type][Number(isCapture(options))]
-    if (listeners.has(listener)) return
-    listeners.add(listener)
-    this.#updatePhaseListenerCount(type, 1)
+    if (!listener || (type !== 'beforeUpdate' && type !== 'commit')) return
+    if (this.#phaseTypes.has(type)) return
+    this.#phaseTypes.add(type)
+    addSchedulerPhaseListener(this.#scheduler, type, this.#onSchedulerPhase)
   }
 
   removeEventListener(
@@ -607,15 +606,11 @@ class MixinHandleImpl
     listener: EventListenerOrEventListenerObject | null,
     options?: EventListenerOptions | boolean,
   ): void {
-    let scope = this.#getActiveScope()
-    scope.target.removeEventListener(
+    this.#getActiveScope().target.removeEventListener(
       type as keyof MixinHandleEventMap<Element>,
       listener as EventListener,
       typeof options === 'boolean' ? { capture: options } : options,
     )
-    if (!listener || !isSchedulerPhaseType(type)) return
-    if (!scope.phaseListeners[type][Number(isCapture(options))].delete(listener)) return
-    this.#updatePhaseListenerCount(type, -1)
   }
 
   update(): Promise<AbortSignal> {
@@ -649,17 +644,14 @@ class MixinHandleImpl
   }
 
   hasPhaseListeners(type: SchedulerPhaseType): boolean {
-    return this.#phaseListenerCounts[type] > 0
+    return this.#phaseTypes.has(type)
   }
 
   setActiveScope(scope?: symbol): void {
     this.#activeScope = scope
     if (!scope) return
     if (this.#scopes.has(scope)) return
-    this.#scopes.set(scope, {
-      target: new TypedEventTarget<MixinHandleEventMap<Element>>(),
-      phaseListeners: { beforeUpdate: [new Set(), new Set()], commit: [new Set(), new Set()] },
-    })
+    this.#scopes.set(scope, { target: new TypedEventTarget<MixinHandleEventMap<Element>>() })
   }
 
   dispatchScopedEvent(scope: symbol, event: Event): void {
@@ -674,16 +666,17 @@ class MixinHandleImpl
   releaseScope(scope: symbol): void {
     let record = this.#scopes.get(scope)
     if (record) {
-      for (let type of ['beforeUpdate', 'commit'] as const) {
-        let [bubble, capture] = record.phaseListeners[type]
-        this.#updatePhaseListenerCount(type, -(bubble.size + capture.size))
-      }
       record.controller?.abort()
       this.#scopes.delete(scope)
     }
     if (this.#activeScope === scope) {
       this.#activeScope = undefined
     }
+    if (this.#scopes.size > 0) return
+    for (let type of this.#phaseTypes) {
+      removeSchedulerPhaseListener(this.#scheduler, type, this.#onSchedulerPhase)
+    }
+    this.#phaseTypes.clear()
   }
 
   #getActiveScope(): MixinScope {
@@ -693,26 +686,60 @@ class MixinHandleImpl
     invariant(record)
     return record
   }
+}
 
-  // Subscribes to the scheduler phase when the first listener is added and
-  // unsubscribes whenever the count reaches zero on removal.
-  #updatePhaseListenerCount(type: SchedulerPhaseType, delta: number) {
-    if (delta === 0) return
-    let count = Math.max(0, this.#phaseListenerCounts[type] + delta)
-    this.#phaseListenerCounts[type] = count
-    if (delta > 0) {
-      if (count === 1) this.#scheduler.addEventListener(type, this.#onSchedulerPhase)
-    } else if (count === 0) {
-      this.#scheduler.removeEventListener(type, this.#onSchedulerPhase)
+type SchedulerPhaseListeners = Record<SchedulerPhaseType, Set<EventListener>> & {
+  dispatch: EventListener
+}
+
+// Browser EventTarget add/remove scan every registered listener, so handles share
+// one scheduler listener per phase instead of each registering their own.
+const schedulerPhaseListeners = new WeakMap<Scheduler, SchedulerPhaseListeners>()
+
+function addSchedulerPhaseListener(
+  scheduler: Scheduler,
+  type: SchedulerPhaseType,
+  listener: EventListener,
+) {
+  let record = schedulerPhaseListeners.get(scheduler)
+  if (!record) {
+    let created: SchedulerPhaseListeners = {
+      beforeUpdate: new Set(),
+      commit: new Set(),
+      dispatch(event) {
+        let listeners = created[event.type as SchedulerPhaseType]
+        for (let listener of Array.from(listeners)) {
+          if (!listeners.has(listener)) continue
+          try {
+            listener(event)
+          } catch (error) {
+            reportError(error)
+          }
+        }
+      },
     }
+    record = created
+    schedulerPhaseListeners.set(scheduler, record)
   }
+  record[type].add(listener)
+  if (record[type].size === 1) scheduler.addEventListener(type, record.dispatch)
+}
+
+function removeSchedulerPhaseListener(
+  scheduler: Scheduler,
+  type: SchedulerPhaseType,
+  listener: EventListener,
+) {
+  let record = schedulerPhaseListeners.get(scheduler)
+  if (!record?.[type].delete(listener)) return
+  if (record[type].size === 0) scheduler.removeEventListener(type, record.dispatch)
 }
 
 export function getMixinRuntimeSignal(state: MixinRuntimeState): AbortSignal {
   let controller = state.controller
   if (!controller) {
     controller = new AbortController()
-    if (state.aborted) {
+    if (state.lifecycle.status === 'removed') {
       controller.abort()
     }
     state.controller = controller
@@ -770,10 +797,8 @@ function finalizeMixinTeardown(state: MixinRuntimeState) {
     }
   }
   state.runners.length = 0
-  state.aborted = true
+  state.lifecycle = { status: 'removed' }
   state.controller?.abort()
-  state.pendingRemoval = undefined
-  state.removePrepared = true
   state.handle = undefined
 }
 
@@ -786,14 +811,6 @@ function dispatchMixinUpdateEvent(state: MixinRuntimeState | undefined, type: Sc
     event.node = node
     return event
   })
-}
-
-function isSchedulerPhaseType(type: string): type is SchedulerPhaseType {
-  return type === 'beforeUpdate' || type === 'commit'
-}
-
-function isCapture(options?: EventListenerOptions | boolean): boolean {
-  return typeof options === 'boolean' ? options : options?.capture === true
 }
 
 function isBindingInUpdateScope(binding: MixinRuntimeBinding, parents: ParentNode[]): boolean {

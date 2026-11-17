@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict'
+import type { TestFn, TestMeta } from '../index.ts'
 import {
   afterAll,
   afterEach,
@@ -220,9 +221,11 @@ describe('it', () => {
 
   it('registers timeout and signal options', () => {
     let signal = new AbortController().signal
+    let meta: TestMeta = { timeout: 100, signal }
+    let fn: TestFn = () => {}
     let [s] = captureRegistration(() =>
       describe('suite', () => {
-        it('my test', { timeout: 100, signal }, () => {})
+        it('my test', meta, fn)
       }),
     )
     assert.equal(s.tests[0].timeout, 100)

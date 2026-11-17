@@ -3,10 +3,7 @@ import { describe, it } from '@remix-run/test'
 import { invariant } from '../runtime/invariant.ts'
 import { diffNodes } from '../runtime/diff-dom.ts'
 import type { FrameContext } from '../runtime/frame.ts'
-import {
-  setClientEntryBoundaryOwner,
-  type ClientEntryIdentity,
-} from '../runtime/client-entry-boundary.ts'
+import { setClientEntryBoundaryOwner, type ClientEntryIdentity } from '../runtime/frame-runtime.ts'
 
 function attachClientEntryOwner(
   marker: Comment,

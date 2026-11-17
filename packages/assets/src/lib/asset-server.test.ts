@@ -29,6 +29,7 @@ import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
 import { hashContent } from './fingerprint.ts'
 import type { ModuleLoader } from './loaders.ts'
+import { isNoEntityError } from './fs-errors.ts'
 
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
 
@@ -134,7 +135,6 @@ async function emitWatchEvent(
   let chokidarWatcher = getInternalChokidarWatcher(assetServer)
   assert.ok(chokidarWatcher)
   chokidarWatcher.emit(event, getWatchEventFilePath(filePath))
-  await new Promise((resolve) => setTimeout(resolve, 25))
 }
 
 function createTestBrowserHmrChannel(): BrowserHmrChannel {
@@ -159,15 +159,6 @@ function getWatchEventFilePath(filePath: string): string {
 
 function getBrowserHmrWatchedFilePath(filePath: string): string {
   return normalizeWindowsPath(getWatchEventFilePath(filePath))
-}
-
-function isNoEntityError(error: unknown): error is NodeJS.ErrnoException {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }
 
 async function getCompiledCodeAndSourceMap(
@@ -4193,6 +4184,54 @@ describe('asset-server', () => {
     ])
   })
 
+  it('preserves first evaluation through implementation modules after nested imports are rewritten', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: ['./shared.ts', './other.ts'] })
+    await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { unused } from "./unused.ts"', 'export { value } from "./value.ts"'].join('\n'),
+    )
+    await write(
+      dir,
+      'app/unused.ts',
+      'import { shared } from "./shared-barrel.ts"\nexport const unused = shared',
+    )
+    await write(
+      dir,
+      'app/value.ts',
+      [
+        'import "./other.ts"',
+        'import { shared } from "./shared-barrel.ts"',
+        'export const value = shared',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/shared-barrel.ts',
+      ['export { shared } from "./shared.ts"', 'export { extra } from "./extra.ts"'].join('\n'),
+    )
+    await write(dir, 'app/shared.ts', 'globalThis.order = ["shared"]\nexport let shared = 1')
+    await write(dir, 'app/other.ts', 'globalThis.order.push("other")')
+    await write(dir, 'app/extra.ts', 'export const extra = "extra"')
+    let assetServer = createTestServer(dir)
+
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+    assert.match(body, /import "\/assets\/app\/shared\.ts"/)
+    assert.ok(
+      getLineAndColumn(body, '/assets/app/shared.ts').line <
+        getLineAndColumn(body, '/assets/app/value.ts').line,
+    )
+    assert.doesNotMatch(body, /barrel|unused|extra/)
+    assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+      '/assets/app/entry.ts',
+      '/assets/app/shared.ts',
+      '/assets/app/value.ts',
+      '/assets/app/other.ts',
+    ])
+  })
+
   it('rewrites repeated imports together in re-export dependency order', async () => {
     await writeJson(dir, 'app/package.json', { sideEffects: false })
     await write(
@@ -7288,7 +7327,6 @@ describe('asset-server', () => {
         let chokidarWatcher = getInternalChokidarWatcher(assetServer)
         assert.ok(chokidarWatcher)
         chokidarWatcher.emit('unlink', logoWatchPath)
-        await Promise.resolve()
 
         let after = await get(assetServer, '/assets/app/styles/app.css')
         assert.ok(after)
@@ -10962,6 +11000,28 @@ describe('asset-server', () => {
     assert.equal(receivedError.code, 'IMPORT_RESOLUTION_FAILED')
     assert.match(receivedError.message, /Failed to resolve import/)
     assert.match(receivedError.message, /"\.\/missing\.css"/)
+  })
+
+  it('calls onError for CSS imports that traverse through a file', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      '@import "./theme.css/dark.css";\nbody { color: red; }\n',
+    )
+    await write(dir, 'app/styles/theme.css', 'body { color: blue; }\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'IMPORT_RESOLUTION_FAILED')
+    assert.match(receivedError.message, /"\.\/theme\.css\/dark\.css"/)
   })
 
   it('calls onError for unsupported CSS url dependencies when files are not configured', async () => {

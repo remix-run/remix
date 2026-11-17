@@ -2,6 +2,10 @@ export function raceRequestAbort<T>(promise: Promise<T>, request: Request): Prom
   let signal = request.signal
 
   if (signal.aborted) {
+    promise.then(
+      (value) => cancelAbandonedResponse(value, signal.reason),
+      () => {},
+    )
     throw signal.reason
   }
 
@@ -13,6 +17,8 @@ export function raceRequestAbort<T>(promise: Promise<T>, request: Request): Prom
     promise.then(
       (value) => {
         signal.removeEventListener('abort', onAbort)
+        // The race already rejected, so nothing else will read this response's body
+        if (signal.aborted) cancelAbandonedResponse(value, signal.reason)
         resolve(value)
       },
       (error) => {
@@ -21,4 +27,8 @@ export function raceRequestAbort<T>(promise: Promise<T>, request: Request): Prom
       },
     )
   })
+}
+
+function cancelAbandonedResponse(value: unknown, reason: unknown): void {
+  if (value instanceof Response) value.body?.cancel(reason).catch(() => {})
 }

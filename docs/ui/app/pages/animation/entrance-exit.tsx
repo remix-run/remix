@@ -47,6 +47,25 @@ const timingCode = await highlightSource(`
   </div>
 `)
 
+const propertyTimingCode = await highlightSource(
+  `
+  import { animateExit, spring } from '@remix-run/ui/animation'
+
+  animateExit({
+    position: 'absolute',
+    opacity: 0,
+    translate: '32px 0',
+    duration: 160,
+    easing: 'ease-out',
+    transition: {
+      position: { duration: 0 },
+      translate: spring('snappy'),
+    },
+  })
+`,
+  'ts',
+)
+
 const identityCode = await highlightSource(`
   {visible && (
     <div key="notification" mix={[animateEntrance(), animateExit()]}>
@@ -80,6 +99,13 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
         </p>
 
         <CodeBlock html={timingCode} />
+      </Section>
+      <Section id="property-timing" title="Per-property timing">
+        <p>
+          Use <code>transition</code> to override duration, delay, easing or compositing for
+          individual properties.
+        </p>
+        <CodeBlock html={propertyTimingCode} />
       </Section>
       <Section id="identity" title="Keys and interrupted animations">
         <p>
@@ -120,7 +146,7 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
           </ApiEntry>
           <ApiEntry
             name="Options object"
-            type="{ duration: number, easing?: string, delay?: number, composite?: CompositeOperation, initial?: boolean, [property: string]: unknown }"
+            type="{ duration: number, easing?: string, delay?: number, composite?: CompositeOperation, initial?: boolean, transition?: Record<string, { duration?: number, easing?: string, delay?: number, composite?: CompositeOperation } | undefined>, [property: string]: unknown }"
           >
             Uses the supplied keyframe and timing. Requires <code>duration</code>.
           </ApiEntry>
@@ -141,6 +167,12 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
           <ApiEntry name="composite" type="CompositeOperation" defaultValue="'replace'">
             How the keyframe combines with underlying styles. Accepts <code>'replace'</code>,{' '}
             <code>'add'</code> or <code>'accumulate'</code>.
+          </ApiEntry>
+          <ApiEntry
+            name="transition"
+            type="Record<string, { duration?: number, easing?: string, delay?: number, composite?: CompositeOperation } | undefined>"
+          >
+            Per-property overrides for shared timing and compositing.
           </ApiEntry>
           <ApiEntry name="Style properties" type="string | number">
             Starting values for entrance or destination values for exit. Other value types are
@@ -163,7 +195,7 @@ export default function EntranceExitPage(handle: Handle<PageProps>) {
           </ApiEntry>
           <ApiEntry
             name="Options object"
-            type="{ duration: number, easing?: string, delay?: number, composite?: CompositeOperation, initial?: boolean, [property: string]: unknown }"
+            type="{ duration: number, easing?: string, delay?: number, composite?: CompositeOperation, initial?: boolean, transition?: Record<string, { duration?: number, easing?: string, delay?: number, composite?: CompositeOperation } | undefined>, [property: string]: unknown }"
           >
             Accepts the same timing and style options as <code>animateEntrance()</code>. The style
             values are the destination keyframe. <code>initial</code> has no effect.

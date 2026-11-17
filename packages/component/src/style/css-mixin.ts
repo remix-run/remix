@@ -4,8 +4,8 @@ import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
 import type { ElementProps } from '../runtime/core/vnode.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { isMixinDescriptor } from '../runtime/core/mix.ts'
-import { processStyleClass } from '../style/index.ts'
-import type { CSSProps } from '../style/style.ts'
+import { processStyleClass } from './style.ts'
+import type { CSSProps } from './style.ts'
 
 type StyleEntry = { selector: string; css: string }
 type StyleCache = Map<string, StyleEntry>

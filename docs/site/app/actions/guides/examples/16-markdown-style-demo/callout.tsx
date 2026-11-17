@@ -9,7 +9,13 @@ export async function handler(context: AppContext) {
 
 function Callouts() {
   return () => (
-    <div mix={calloutGridStyles}>
+    <div
+      mix={css({
+        display: "grid",
+        gap: "var(--rmx-space-md)",
+        margin: "var(--rmx-space-xl) 0",
+      })}
+    >
       <Callout tone="brand" title="Start with the route">
         Make the server response correct before adding browser behavior.
       </Callout>
@@ -28,25 +34,37 @@ function Callout(
   }>,
 ) {
   return () => (
-    <article mix={[calloutStyles, calloutToneStyles[handle.props.tone]]}>
-      <h4 mix={calloutTitleStyles}>{handle.props.title}</h4>
-      <p mix={calloutBodyStyles}>{handle.props.children}</p>
+    <article
+      mix={[
+        css({
+          padding: "var(--rmx-space-lg)",
+          border: "var(--rmx-space-px) solid var(--rmx-color-border-subtle)",
+          borderRadius: "var(--rmx-radius-lg)",
+          background: "var(--rmx-surface-lvl0)",
+        }),
+        calloutToneStyles[handle.props.tone],
+      ]}
+    >
+      <h4
+        mix={css({
+          margin: "0 0 var(--rmx-space-xs)",
+          fontSize: "var(--rmx-font-size-md)",
+          lineHeight: "var(--rmx-line-height-tight)",
+        })}
+      >
+        {handle.props.title}
+      </h4>
+      <p
+        mix={css({
+          margin: "0",
+          color: "var(--rmx-color-text-secondary)",
+        })}
+      >
+        {handle.props.children}
+      </p>
     </article>
   );
 }
-
-const calloutGridStyles = css({
-  display: "grid",
-  gap: "var(--rmx-space-md)",
-  margin: "var(--rmx-space-xl) 0",
-});
-
-const calloutStyles = css({
-  padding: "var(--rmx-space-lg)",
-  border: "var(--rmx-space-px) solid var(--rmx-color-border-subtle)",
-  borderRadius: "var(--rmx-radius-lg)",
-  background: "var(--rmx-surface-lvl0)",
-});
 
 const calloutToneStyles = {
   brand: css({
@@ -57,14 +75,3 @@ const calloutToneStyles = {
     boxShadow: "inset var(--rmx-space-xs) 0 0 var(--rmx-color-text-muted)",
   }),
 };
-
-const calloutTitleStyles = css({
-  margin: "0 0 var(--rmx-space-xs)",
-  fontSize: "var(--rmx-font-size-md)",
-  lineHeight: "var(--rmx-line-height-tight)",
-});
-
-const calloutBodyStyles = css({
-  margin: "0",
-  color: "var(--rmx-color-text-secondary)",
-});

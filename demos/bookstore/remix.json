@@ -11,9 +11,13 @@
     "allowFiles": [
       "demos/bookstore/app/routes.ts",
       "demos/bookstore/app/**/public/**",
+      "demos/bookstore/app/actions/auth/login/login-form.ts",
+      "demos/bookstore/app/actions/auth/login/login-schema.ts",
+      "demos/bookstore/app/actions/auth/schemas.ts",
+      "demos/bookstore/app/ui/restful-form.tsx",
       "demos/bookstore/app/images/*.png"
     ],
-    "allowPackages": ["remix"],
+    "allowPackages": ["remix", "@remix-run/ui"],
     "denyFiles": ["demos/bookstore/app/**/*.test.*"],
     "files": { "extensions": [".png"] }
   },

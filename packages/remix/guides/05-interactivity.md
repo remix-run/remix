@@ -345,6 +345,9 @@ export function KeyedList(handle: Handle) {
   ];
 
   let shuffleInterval: ReturnType<typeof setInterval> | null = null;
+  handle.signal.addEventListener("abort", () => {
+    if (shuffleInterval !== null) clearInterval(shuffleInterval);
+  });
 
   let moveUp = (index: number) => {
     if (index === 0) return;
@@ -391,7 +394,8 @@ export function KeyedList(handle: Handle) {
 
   return () => (
     <div>
-      <div class="controls">
+      <p>Type in a field, then shuffle the list. Each field keeps its text.</p>
+      <div>
         <button mix={[on("click", reverse)]}>Reverse List</button>
         <button mix={[on("click", shuffle)]}>Shuffle List</button>
         <button mix={[on("click", toggleAutoShuffle)]}>
@@ -400,20 +404,10 @@ export function KeyedList(handle: Handle) {
       </div>
 
       {items.map((item, index) => (
-        <div key={item.id} class="list-item">
+        <div key={item.id}>
           <input type="text" placeholder={item.label} defaultValue={item.label} />
-          <button
-            // disabled={index === 0}
-            mix={[on("click", () => moveUp(index))]}
-          >
-            ↑
-          </button>
-          <button
-            // disabled={index === items.length - 1}
-            mix={[on("click", () => moveDown(index))]}
-          >
-            ↓
-          </button>
+          <button mix={[on("click", () => moveUp(index))]}>↑</button>
+          <button mix={[on("click", () => moveDown(index))]}>↓</button>
         </div>
       ))}
     </div>
@@ -531,23 +525,21 @@ array when the element needs several:
 import { attrs, css, on, ref } from "remix/component";
 import type { Handle } from "remix/component";
 
-const saveButtonStyle = css({
-  minWidth: "8rem",
-  minHeight: "2.5rem",
-  border: 0,
-  borderRadius: "999px",
-  background: "#111",
-  color: "#fff",
-});
-
 function SaveButton(_handle: Handle) {
   return () => (
     <button
       mix={[
-        saveButtonStyle,
         attrs({ type: "button" }),
         ref((node) => console.log("Mounted", node)),
         on("click", () => console.log("Save album")),
+        css({
+          minWidth: "8rem",
+          minHeight: "2.5rem",
+          border: 0,
+          borderRadius: "999px",
+          background: "#111",
+          color: "#fff",
+        }),
       ]}
     >
       Save
@@ -1027,20 +1019,70 @@ without navigating the whole document.
 
 ## Pending and optimistic UI {#optimistic-ui}
 
-Keep a `pending` flag in setup scope when the render output reads it. Set it in the submit handler
-before the request and clear it when the request settles, as in the
-[enhanced album form](#enhancing-forms-with-fetch-and-navigation). That is enough for disabled
-controls, pending labels, progress indicators, and duplicate-submission prevention.
+When a component sends the request itself, keep a `pending` flag in setup scope when the render
+output reads it. Set it in the submit handler before the request and clear it when the request
+settles, as in the [enhanced album form](#enhancing-forms-with-fetch-and-navigation). That is enough
+for disabled controls, pending labels, progress indicators, and duplicate-submission prevention.
 
-Optimistic UI renders the expected result before the request completes. Put the optimistic operation
-and its recovery policy in the model that owns the data. The component can render the model's current
-state while keeping UI concerns such as a pending label, open menu, or focused control locally.
+For forms Remix handles as [frame navigations](#client-navigation), use
+[`on('rmx:navigation', handler)`](../src/component/README.md#following-a-form-submission) to follow a button's or form's own
+submissions. The event carries the submitted `formData`. Its `finished` promise resolves with an
+`AbortSignal` after rendering and navigation complete, including redirects, and rejects on failure.
+Cancellation resolves with an aborted signal.
+[Add pending feedback](/forms-and-mutations/#add-pending-feedback) shows how to use it for a save button.
+
+Optimistic UI renders the expected result before the request completes. A hydrated form can render
+what it just submitted, and let the response replace it:
+
+```tsx filename=app/actions/albums/public/favorite-form.tsx
+import { clientEntry, on } from "remix/component";
+import type { Handle } from "remix/component";
+
+export const FavoriteForm = clientEntry(
+  import.meta.url,
+  function FavoriteForm(handle: Handle<{ action: string; favorite: boolean }>) {
+    let submitted: boolean | undefined;
+    let failed = false;
+
+    return () => {
+      let favorite = submitted ?? handle.props.favorite;
+      return (
+        <form
+          method="post"
+          action={handle.props.action}
+          mix={on("rmx:navigation", async (event, signal) => {
+            submitted = event.formData?.get("favorite") === "true";
+            failed = false;
+            handle.update();
+            try {
+              await event.finished;
+            } catch {
+              if (!signal.aborted) failed = true;
+            }
+            if (signal.aborted) return;
+            submitted = undefined;
+            handle.update();
+          })}
+        >
+          <input type="hidden" name="favorite" value={String(!favorite)} />
+          <button type="submit" aria-pressed={favorite ? "true" : "false"}>
+            Favorite
+          </button>
+          <span role="status">{failed ? "Couldn’t save. Try again." : ""}</span>
+        </form>
+      );
+    };
+  },
+);
+```
 
 Optimistic state works best for reversible, predictable changes such as toggles, reordering, and
 adding a known item. Wait for the response when the server chooses the final value, performs a
-destructive operation, or can reject the request in ways the user must resolve first. If an
-optimistic request fails, the model can restore its previous state or adopt the server response, and
-the component can render the resulting error or retry control.
+destructive operation, or can reject the request in ways the user must resolve first. When a
+browser-side model owns the data, put the optimistic operation and its recovery policy in that
+model, and keep UI concerns such as a pending label, open menu, or focused control in the component.
+If an optimistic request fails, restore the previous state or adopt the server response, and render
+the resulting error or retry control.
 
 ## When to create a custom event mixin {#creating-custom-mixins}
 

@@ -39,8 +39,9 @@ export default function GettingStarted() {
           <StabilityIcon />
           <p>
             <code>@remix-run/ui</code> is currently unstable and versioned in the v0.x range
-            independently from Remix. APIs may change between minor releases. Pin the version you
-            use and review release notes before upgrading.
+            independently from Remix. APIs may change between minor releases, and experimental APIs
+            may change in patch releases. Pin the version you use and review release notes before
+            upgrading.
           </p>
         </aside>
         <Section id="installation" title="Installation">

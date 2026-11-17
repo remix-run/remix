@@ -97,8 +97,37 @@ type AnimateMixinConfig = {
   delay?: number
   composite?: CompositeOperation
   initial?: boolean
+  transition?: Record<
+    string,
+    | {
+        duration?: number
+        easing?: string
+        delay?: number
+        composite?: CompositeOperation
+      }
+    | undefined
+  >
   [property: string]: unknown
 }
+```
+
+Use `transition` to override duration, delay, easing or compositing for individual properties.
+
+```tsx
+<div
+  key={id}
+  mix={animateExit({
+    position: 'absolute',
+    opacity: 0,
+    translate: '32px 0',
+    duration: 160,
+    easing: 'ease-out',
+    transition: {
+      position: { duration: 0 },
+      translate: spring('snappy'),
+    },
+  })}
+/>
 ```
 
 Pass `initial: false` to skip only the first keyed entrance for an element within a parent. Later insertions for the same key can still animate.

@@ -11,27 +11,26 @@ import type { ElementFunction } from '../runtime/element-function.ts'
 import { Fragment, FRAME_NODE, createComponent, createFrameHandle } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
-  FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
-  SELF_CLOSING_TAGS,
   isAllowedHostPropName,
   normalizeAttributeName,
   sanitizeUrlAttribute,
   serializeStyleObject,
   shouldStringifyBooleanAttribute,
 } from '../runtime/core/attributes.ts'
+import { DOCUMENT_NONCE_META_NAME } from '../runtime/nonce.ts'
 import {
   appendFlushMarker,
-  DOCUMENT_NONCE_META_NAME,
+  createFrameStartMarker,
+  createHydrationStartMarker,
+  FRAME_END_MARKER,
   FRAME_TEMPLATE_END_MARKER,
+  HYDRATION_END_MARKER,
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
-import {
-  composeMixedProps,
-  isBrowserOnlyMixinDescriptor,
-  isMixinDescriptor,
-} from '../runtime/core/mix.ts'
-import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
+import { composeMixedProps, isMixinDescriptor } from '../runtime/core/mix.ts'
+import { getSelectValues } from '../runtime/core/props.ts'
+import { REMIX_UI_STYLE_LAYER } from '../style/stylesheet.ts'
 import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
@@ -199,12 +198,16 @@ interface ClientEntryHeadResources {
 }
 
 interface FrameData {
-  status: 'pending' | 'resolved'
+  status: 'pending' | 'resolved' | 'lazy'
+  fallback?: boolean
   name?: string
   src: string
 }
 
 interface RenderContext {
+  selectValues?: Set<string>
+  selectScalar?: boolean
+  optionText?: string
   insideSvg: boolean
   insideHead: boolean
   elementDepth: number
@@ -254,6 +257,7 @@ const htmlEncodingBuffer = new Uint8Array(MAX_BUFFERED_HTML_LENGTH * 3)
 
 const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
 const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
+const SELECT_VALUE_PROPS = new Set(['value', 'defaultValue'])
 
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 function stripDoctypeMarkup(html: string): string {
@@ -276,7 +280,24 @@ function getStyleLayerName(selector: string, layer: string = REMIX_UI_STYLE_LAYE
   return `${layer}.${selector}`
 }
 
-const SSR_OMITTED_PROPS = RUNTIME_FRAMEWORK_PROPS
+const SSR_OMITTED_PROPS = new Set(['children', 'mix', 'key', 'animate', 'innerHTML', 'on'])
+
+const SELF_CLOSING_TAGS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+])
 
 const ssrSignal = Object.freeze({
   get aborted() {
@@ -476,20 +497,28 @@ async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<Reso
   let reader = stream.getReader()
   let decoder = new TextDecoder()
 
-  let first: Uint8Array | undefined
+  // Decode every chunk up to and including the first renderable one exactly once. The bytes of a
+  // character cut off at the end of that chunk belong to the tail, which is forwarded as raw bytes.
+  let html = ''
+  let pendingBytes: Uint8Array = new Uint8Array(0)
+  let found = false
   while (true) {
     let { value, done } = await reader.read()
     if (done || !value) break
 
-    let text = decoder.decode(value, { stream: true })
-    if (hasRenderableHtml(text)) {
-      first = value
+    html += decoder.decode(value, { stream: true })
+    let bytes = new Uint8Array(pendingBytes.length + value.length)
+    bytes.set(pendingBytes)
+    bytes.set(value, pendingBytes.length)
+    pendingBytes = getIncompleteUtf8Suffix(bytes)
+
+    if (hasRenderableHtml(html)) {
+      found = true
       break
     }
   }
 
-  if (!first) {
-    decoder.decode()
+  if (!found) {
     reader.releaseLock()
     return { html: '', tail: emptyReadableStream() }
   }
@@ -506,6 +535,9 @@ async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<Reso
   }
 
   let tail = new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (pendingBytes.length > 0) controller.enqueue(pendingBytes)
+    },
     async pull(controller) {
       let next = await reader.read()
       if (next.done) {
@@ -521,7 +553,17 @@ async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<Reso
     },
   })
 
-  return { html: stripFlushMarkers(stripDoctypeMarkup(decoder.decode(first))), tail }
+  return { html: stripFlushMarkers(stripDoctypeMarkup(html)), tail }
+}
+
+function getIncompleteUtf8Suffix(bytes: Uint8Array): Uint8Array {
+  for (let index = bytes.length - 1; index >= Math.max(0, bytes.length - 3); index--) {
+    let byte = bytes[index]
+    if ((byte & 0xc0) === 0x80) continue
+    let length = byte >= 0xf0 ? 4 : byte >= 0xe0 ? 3 : byte >= 0xc0 ? 2 : 1
+    return bytes.length - index < length ? bytes.slice(index) : new Uint8Array(0)
+  }
+  return new Uint8Array(0)
 }
 
 async function resolveFrameHtml(
@@ -542,6 +584,7 @@ function buildSegment(
   output: Segment[] = [],
 ): Segment[] {
   if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
+    if (context.optionText !== undefined) context.optionText += String(node)
     output.push(escapeTextContent(String(node)))
     return output
   }
@@ -613,7 +656,8 @@ function buildFrameSegment(
 
   // Store frame data in context for aggregation
   context.frameData.set(frameId, {
-    status: props.fallback ? 'pending' : 'resolved',
+    status: props.loading === 'lazy' ? 'lazy' : props.fallback ? 'pending' : 'resolved',
+    fallback: props.loading === 'lazy' ? !!props.fallback : undefined,
     name: props.name,
     src: props.src,
   })
@@ -622,6 +666,11 @@ function buildFrameSegment(
     kind: 'frame',
     frameId,
     content: null,
+  }
+
+  if (props.loading === 'lazy') {
+    seg.content = buildSegment(props.fallback, context, frameState)
+    return seg
   }
 
   let resolveFrameContext = getResolveFrameContext(frameState, context.nonce)
@@ -673,10 +722,20 @@ function buildElementSegment(
     return
   }
 
+  if (!currentIsSvg && tag === 'option' && context.selectValues !== undefined) {
+    buildSelectedOptionSegment(processedProps, context, frameState, output)
+    return
+  }
+
   let attrs =
     !currentIsSvg && tag === 'input'
       ? renderInputAttributes(processedProps)
-      : renderAttributes(tag, processedProps, currentIsSvg)
+      : renderAttributes(
+          tag,
+          processedProps,
+          currentIsSvg,
+          !currentIsSvg && tag === 'select' ? SELECT_VALUE_PROPS : undefined,
+        )
 
   if (SELF_CLOSING_TAGS.has(tag)) {
     output.push(`<${tag}${attrs} />`)
@@ -691,6 +750,14 @@ function buildElementSegment(
   let close = documentElement?.close ?? `</${tag}>`
 
   if (innerHTML !== undefined) {
+    if (!currentIsSvg && (tag === 'select' || tag === 'optgroup')) {
+      invariant(
+        tag === 'select'
+          ? processedProps.value == null && processedProps.defaultValue == null
+          : context.selectValues === undefined,
+        'select value and defaultValue require options rendered as JSX children, not through select or optgroup innerHTML',
+      )
+    }
     output.push(open, innerHTML, close)
     return
   }
@@ -714,11 +781,50 @@ function buildElementSegment(
   // Adjust svg context for children: foreignObject switches back to HTML
   let previousInsideSvg = context.insideSvg
   context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
+  let previousSelectValues = context.selectValues
+  let previousSelectScalar = context.selectScalar
+  if (!currentIsSvg && tag === 'select') {
+    let value = processedProps.value ?? processedProps.defaultValue
+    context.selectValues = getSelectValues(value)
+    context.selectScalar =
+      !processedProps.multiple || (processedProps.value != null && !Array.isArray(value))
+  }
   context.elementDepth++
   if (props.children != null) buildSegment(props.children, context, frameState, output)
   context.elementDepth--
+  context.selectValues = previousSelectValues
+  context.selectScalar = previousSelectScalar
   context.insideSvg = previousInsideSvg
   output.push(close)
+}
+
+function buildSelectedOptionSegment(
+  props: ElementProps,
+  context: RenderContext,
+  frameState: SsrFrameState,
+  output: Segment[],
+): void {
+  invariant(
+    props.innerHTML === undefined || props.value != null,
+    'option elements with innerHTML must have an explicit value when their select has a value or defaultValue',
+  )
+  let previousOptionText = context.optionText
+  context.optionText = ''
+  context.elementDepth++
+  let children =
+    props.innerHTML === undefined
+      ? buildSegment(props.children, context, frameState)
+      : [props.innerHTML]
+  context.elementDepth--
+  // Native options without a value use their text with ASCII whitespace collapsed.
+  let value = props.value ?? context.optionText.replace(/[\t\n\f\r ]+/g, ' ').replace(/^ | $/g, '')
+  context.optionText = previousOptionText
+  let selected = context.selectValues?.has(String(value))
+  if (selected && context.selectScalar) context.selectValues?.clear()
+  let attrs = renderAttributes('option', { ...props, selected }, false)
+  output.push(`<option${attrs}>`)
+  output.push(...children)
+  output.push('</option>')
 }
 
 function buildTextareaElementSegment(tag: string, props: any): Segment {
@@ -885,6 +991,12 @@ function renderAttributes(
   }
 
   return attrs
+}
+
+function isBrowserOnlyMixinDescriptor(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || !('type' in value)) return false
+  let type = value.type
+  return typeof type === 'function' && '__rmxMixinSsr' in type && type.__rmxMixinSsr === false
 }
 
 function resolveSsrMixedProps(
@@ -1179,7 +1291,7 @@ function buildEntrySegment(
   output: Segment[],
 ): void {
   let instanceId = randomId('h')
-  output.push(`<!-- rmx:h:${instanceId} -->`)
+  output.push(`<!--${createHydrationStartMarker(instanceId)}-->`)
   buildComponentSegment(type, props, context, instanceId, frameState, output)
 
   // Store hydration data in context for aggregation
@@ -1192,7 +1304,7 @@ function buildEntrySegment(
     propsJson,
   })
 
-  output.push('<!-- /rmx:h -->')
+  output.push(`<!--${HYDRATION_END_MARKER}-->`)
 }
 
 function resolveDefaultClientEntry(
@@ -1325,10 +1437,10 @@ function serializeSegment(segments: Segment[]): string {
     } else if (seg.kind === 'static') {
       parts.push(seg.html)
     } else {
-      parts.push(`<!-- rmx:f:${seg.frameId} -->`)
+      parts.push(`<!--${createFrameStartMarker(seg.frameId)}-->`)
       if (typeof seg.content === 'string') parts.push(seg.content)
       else if (seg.content) parts.push(serializeSegment(seg.content))
-      parts.push('<!-- /rmx:f -->')
+      parts.push(`<!--${FRAME_END_MARKER}-->`)
     }
   }
   return parts.join('')

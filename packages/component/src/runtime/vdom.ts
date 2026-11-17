@@ -11,10 +11,10 @@ import type { RemixNode } from './core/vnode.ts'
 import { createFrameRuntime, NamedFrameRegistry, type ResolveFrame } from './frame-runtime.ts'
 import { createScheduler, type Scheduler } from './scheduler.ts'
 import {
-  defaultStyleManager,
+  getDefaultStyleManager,
   diffVNodes,
+  restoreAncestorSelect,
   remove as removeVNode,
-  resetStyleState,
   ROOT_VNODE,
   toVNode,
   type CommittedVNode,
@@ -22,7 +22,8 @@ import {
   type RootVNode,
 } from './reconcile.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
-import type { StyleManager } from '../style/index.ts'
+import { getHydrationId, isHydrationStart } from './stream-protocol.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
 import type { ElementFunction } from './element-function.ts'
 
 /**
@@ -79,16 +80,6 @@ export type VirtualRootOptions = {
 }
 
 export { createScheduler, type Scheduler }
-export { diffVNodes, toVNode }
-export { resetStyleState }
-
-function getHydrationComponentIdFromRangeStart(start: Node | undefined): string | undefined {
-  if (!(start instanceof Comment)) return undefined
-  let marker = start.data.trim()
-  if (!marker.startsWith('rmx:h:')) return undefined
-  let id = marker.slice('rmx:h:'.length)
-  return id.length > 0 ? id : undefined
-}
 
 /**
  * Creates a virtual root bounded by two DOM nodes.
@@ -116,7 +107,7 @@ export function createRangeRoot(
  * @returns A virtual root controller.
  */
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
-  let styles = options.styleManager ?? defaultStyleManager
+  let styles = options.styleManager ?? getDefaultStyleManager()
   if (container.innerHTML.trim() !== '') {
     // Adopt additively: multiple roots hydrating separate islands may share
     // the default style manager, and adopting a later island must not release
@@ -137,12 +128,12 @@ function createVirtualRoot(
   let nonceManager = getNonceManager()
   let vroot: CommittedVNode | null = null
   let currentElement: RemixNode | undefined
-  let styles = options.styleManager ?? defaultStyleManager
+  let styles = options.styleManager ?? getDefaultStyleManager()
   let hydrationCursor = hydrationStart
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
   let scheduler =
-    options.scheduler ?? createScheduler(parent.ownerDocument ?? document, eventTarget, styles)
+    options.scheduler ?? createScheduler(parent.ownerDocument ?? document, eventTarget)
   let frameStub =
     options.frame ??
     createRootFrameHandle({
@@ -191,7 +182,9 @@ function createVirtualRoot(
         _getContext: options.getContext,
         _rangeStart: rangeStart,
         _rangeEnd: rangeEnd,
-        _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(rangeStart),
+        _pendingHydrationComponentId: isHydrationStart(rangeStart)
+          ? getHydrationId(rangeStart)
+          : undefined,
       }
       scheduler.enqueueWork([
         () => {
@@ -200,6 +193,7 @@ function createVirtualRoot(
           vParent._children = [committed]
           vroot = committed
           hydrationCursor = null
+          restoreAncestorSelect(parent)
         },
       ])
       scheduler.dequeue()
@@ -218,7 +212,12 @@ function createVirtualRoot(
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueWork([() => removeVNode(current, parent, context)])
+      scheduler.enqueueWork([
+        () => {
+          removeVNode(current, parent, context)
+          restoreAncestorSelect(parent)
+        },
+      ])
       scheduler.dequeue()
     },
 

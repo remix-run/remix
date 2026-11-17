@@ -1,4 +1,4 @@
-import { createRouter, type MiddlewareContext } from 'remix/router'
+import { createRouter, type RouterContext } from 'remix/router'
 import { asyncContext } from 'remix/middleware/async-context'
 import { compression } from 'remix/middleware/compression'
 import { csp } from 'remix/middleware/csp'
@@ -39,17 +39,7 @@ import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
 import { assets, browserHmrChannel } from './utils/assets.ts'
 
-type AppContext = MiddlewareContext<
-  [
-    ReturnType<typeof formData>,
-    ReturnType<typeof session>,
-    ReturnType<typeof loadDatabase>,
-    ReturnType<typeof loadAssetEntry>,
-    ReturnType<typeof loadAuth>,
-    ReturnType<typeof csp>,
-    ReturnType<typeof render>,
-  ]
->
+type AppContext = RouterContext<ReturnType<typeof createBookstoreRouter>>
 
 declare module 'remix' {
   interface RouterTypes {
@@ -65,49 +55,42 @@ export interface BookstoreRouterOptions {
 export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   let cookie = options?.sessionCookie ?? sessionCookie
   let storage = options?.sessionStorage ?? sessionStorage
-  let middleware = []
-
-  if (process.env.NODE_ENV === 'development') {
-    middleware.push(logger())
-  }
-
-  middleware.push(compression())
-  middleware.push(
-    staticFiles('./public', {
-      cacheControl: 'no-store, must-revalidate',
-      etag: false,
-      lastModified: false,
-    }),
-  )
-  middleware.push(formData({ uploadHandler }))
-  middleware.push(methodOverride())
-  middleware.push(session(cookie, storage))
-  middleware.push(asyncContext())
-  middleware.push(loadDatabase())
-  middleware.push(loadAssetEntry())
-  middleware.push(loadAuth())
-  middleware.push(
-    csp({
-      policy({ nonce }) {
-        return {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", `'nonce-${nonce}'`],
-          styleSrc: ["'self'", `'nonce-${nonce}'`],
-          styleSrcAttr: ["'none'"],
-          connectSrc: browserHmrChannel
-            ? ["'self'", new URL(browserHmrChannel.url).origin]
-            : ["'self'"],
-          objectSrc: ["'none'"],
-          baseUri: ["'self'"],
-          formAction: ["'self'"],
-          frameAncestors: ["'none'"],
-        }
-      },
-    }),
-  )
-  middleware.push(render({ assets }))
-
-  let router = createRouter<AppContext>({ middleware })
+  let router = createRouter({
+    middleware: [
+      ...(process.env.NODE_ENV === 'development' ? [logger()] : []),
+      compression(),
+      staticFiles('./public', {
+        cacheControl: 'no-store, must-revalidate',
+        etag: false,
+        lastModified: false,
+      }),
+      formData({ uploadHandler }),
+      methodOverride(),
+      session(cookie, storage),
+      asyncContext(),
+      loadDatabase(),
+      loadAssetEntry(),
+      loadAuth(),
+      csp({
+        policy({ nonce }) {
+          return {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", `'nonce-${nonce}'`],
+            styleSrc: ["'self'", `'nonce-${nonce}'`],
+            styleSrcAttr: ["'none'"],
+            connectSrc: browserHmrChannel
+              ? ["'self'", new URL(browserHmrChannel.url).origin]
+              : ["'self'"],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+            frameAncestors: ["'none'"],
+          }
+        },
+      }),
+      render({ assets }),
+    ],
+  })
 
   router.map(routes, rootController)
   router.map(routes.fragments, fragmentsController)

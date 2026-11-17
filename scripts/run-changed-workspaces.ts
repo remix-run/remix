@@ -31,7 +31,12 @@ function main() {
       console.log(`- ${reason}`)
     }
     console.log()
-    runRootScript(options.scriptName)
+    if (options.scriptName === 'test') {
+      // No filters runs every workspace, like the root script, with platform-specific scheduling.
+      runWorkspaceScript(options.scriptName, [])
+    } else {
+      runRootScript(options.scriptName)
+    }
     return
   }
 
@@ -104,16 +109,32 @@ function refExists(ref: string): boolean {
 function getChangedFiles(baseRef: string, headRef: string): string[] {
   let changedFiles = new Set<string>()
 
-  for (let file of runGitLines(['diff', '--name-only', `${baseRef}...${headRef}`, '--', '.'])) {
+  for (let file of runGitFiles([
+    'diff',
+    '--name-only',
+    '--no-renames',
+    '-z',
+    `${baseRef}...${headRef}`,
+    '--',
+    '.',
+  ])) {
     changedFiles.add(file)
   }
 
   if (headRef === 'HEAD') {
-    for (let file of runGitLines(['diff', '--name-only', 'HEAD', '--', '.'])) {
+    for (let file of runGitFiles([
+      'diff',
+      '--name-only',
+      '--no-renames',
+      '-z',
+      'HEAD',
+      '--',
+      '.',
+    ])) {
       changedFiles.add(file)
     }
 
-    for (let file of runGitLines(['ls-files', '--others', '--exclude-standard'])) {
+    for (let file of runGitFiles(['ls-files', '--others', '--exclude-standard', '-z'])) {
       changedFiles.add(file)
     }
   }
@@ -121,13 +142,10 @@ function getChangedFiles(baseRef: string, headRef: string): string[] {
   return [...changedFiles].sort()
 }
 
-function runGitLines(args: string[]): string[] {
+function runGitFiles(args: string[]): string[] {
   let output = cp.execFileSync('git', args, { encoding: 'utf8' })
 
-  return output
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
+  return output.split('\0').filter(Boolean)
 }
 
 function runRootScript(scriptName: string) {
@@ -143,6 +161,12 @@ function runRootScript(scriptName: string) {
 
 function runWorkspaceScript(scriptName: string, workspaceDirs: string[]) {
   let args = workspaceDirs.flatMap((workspaceDir) => ['--filter', `./${workspaceDir}`])
+  if (scriptName === 'test') {
+    // Keep dependency ordering on Windows. Unsorted scheduling overlaps the browser-heavy
+    // workspaces, which overloads the Windows CI runner and times out e2e navigations.
+    let sortArgs = process.platform === 'win32' ? [] : ['--no-sort']
+    args.unshift('--recursive', ...sortArgs, '--workspace-concurrency=4', '--stream')
+  }
   args.push('run', scriptName)
 
   let result = cp.spawnSync('pnpm', args, {
