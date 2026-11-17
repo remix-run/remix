@@ -7,8 +7,20 @@ import {
 import { createMatcher } from 'remix/route-pattern/match'
 
 import { routes } from '../../routes.ts'
+import { installDebugBoundaries } from './debug-boundaries.ts'
 
 const bookDetailsMatcher = createMatcher(routes.books.show.pattern)
+const browsingPageMatchers = [
+  routes.home.pattern,
+  routes.books.index.pattern,
+  routes.books.genre.pattern,
+  routes.books.show.pattern,
+  routes.search.pattern,
+  routes.about.pattern,
+  routes.contact.index.pattern,
+  routes.auth.register.index.pattern,
+].map((pattern) => createMatcher(pattern))
+const disposeDebugBoundaries = installDebugBoundaries()
 
 export const app = run({
   async loadModule(moduleUrl: string, exportName: string) {
@@ -22,10 +34,11 @@ export const app = run({
   resolveFrame(src, options) {
     return defaultResolveFrame(src, options, {
       fetch(url, init) {
-        return fetch(url, {
-          ...init,
-          cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
-        })
+        let reuseBrowsingHtml =
+          (init.method ?? 'GET').toUpperCase() === 'GET' &&
+          options?.navigationType === 'traverse' &&
+          browsingPageMatchers.some((matcher) => matcher.match(url) !== null)
+        return fetch(url, { ...init, cache: reuseBrowsingHtml ? 'force-cache' : undefined })
       },
       async commit(commitFrame, { signal, to }) {
         let navigationType = options?.navigationType
@@ -68,6 +81,7 @@ export const app = run({
 })
 
 if (import.meta.hot) {
+  import.meta.hot.dispose(disposeDebugBoundaries)
   import.meta.hot.on('server:update', async () => {
     try {
       await app.ready()

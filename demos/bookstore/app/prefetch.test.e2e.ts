@@ -11,6 +11,43 @@ import { assets } from './utils/assets.ts'
 const router = await createTestRouter()
 
 describe('bookstore prefetching', () => {
+  it('returns to login on Back after logout', async (t) => {
+    let accountStatuses: number[] = []
+    let page = await t.serve(
+      await createTestServer(async (request) => {
+        let response = await router.fetch(request)
+        if (new URL(request.url).pathname === '/account') {
+          accountStatuses.push(response.status)
+        }
+        return response
+      }),
+    )
+    await page.goto('/login')
+    await waitForNavigationRuntime(page)
+    await page.getByRole('textbox', { name: 'Email', exact: true }).fill('customer@example.com')
+    await page.getByLabel('Password', { exact: true }).fill('password123')
+    await page.getByRole('button', { name: 'Login', exact: true }).click()
+    await page.getByRole('heading', { name: 'My Account', exact: true }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+
+    await page.getByRole('button', { name: 'Logout', exact: true }).click()
+    await page.getByRole('heading', { name: 'Welcome to the Bookstore', exact: true }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    await page.evaluate(async () => {
+      try {
+        await window.navigation.back().finished
+      } catch (error) {
+        // The login redirect replaces the traversal that requested the account page.
+        if (!(error instanceof DOMException) || error.name !== 'AbortError') throw error
+      }
+    })
+
+    await page.getByRole('heading', { name: 'Login', exact: true }).waitFor()
+    assert.equal(new URL(page.url()).pathname, '/login')
+    assert.equal(accountStatuses.at(-1), 302)
+    assert.equal((await page.locator('body').textContent())?.includes('John Doe'), false)
+  })
+
   it('reuses stale frame HTML on Back/Forward and fetches again on ordinary navigation', async (t) => {
     let requests: string[] = []
     let page = await t.serve(
@@ -334,13 +371,13 @@ describe('bookstore prefetching', () => {
         return router.fetch(request)
       }),
     )
+    let prefetched = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/books/bbq',
+    )
     await page.goto('/')
     await waitForNavigationRuntime(page)
     let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
     let prefetchesScript = await prefetchesAssets(page)
-    let prefetched = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/books/bbq',
-    )
     await link.scrollIntoViewIfNeeded()
     if (prefetchesScript) {
       await started.promise
@@ -413,7 +450,7 @@ describe('bookstore prefetching', () => {
     assert.equal(requests, reusesCachedHtml(page) ? 1 : 2)
   })
 
-  it('observes links added by frame navigation and does not repeat on viewport reentry', async (t) => {
+  it('prefetches visible book covers before their details buttons and does not repeat on viewport reentry', async (t) => {
     let requests: string[] = []
     let page = await t.serve(
       await createTestServer((request) => {
@@ -433,14 +470,15 @@ describe('bookstore prefetching', () => {
     await page.getByRole('banner').getByRole('link', { name: 'Books', exact: true }).click()
     await page.getByRole('heading', { name: 'Browse Books', exact: true }).waitFor()
 
-    let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
+    let link = page.getByRole('link', { name: 'Ash & Smoke', exact: true })
     assert.equal(await isInViewport(link), false)
     assert.equal(requests.includes('/books/bbq'), false)
 
     let prefetched = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/books/bbq',
     )
-    await link.scrollIntoViewIfNeeded()
+    await link.evaluate((anchor) => anchor.scrollIntoView({ block: 'start' }))
+    assert.equal(await isInViewport(page.locator('a.btn[href="/books/bbq"]')), false)
     await (await prefetched).finished()
     await page.waitForFunction(() => !document.querySelector('head link[rel="prefetch"]'))
     await page.getByRole('banner').scrollIntoViewIfNeeded()

@@ -5,6 +5,7 @@ import type { Handle } from 'remix/component'
 
 import { routes } from '../../../../routes.ts'
 import { Field } from '../../../../ui/public/field.tsx'
+import { PendingButton } from '../../../../ui/public/pending-button.tsx'
 import { RestfulForm } from '../../../../ui/restful-form.tsx'
 import { AccountSettingsForm } from './schema.ts'
 
@@ -42,9 +43,9 @@ export const AccountSettingsFields = clientEntry(
                 label="New Password (leave blank to keep current)"
                 autoComplete="new-password"
               />
-              <button type="submit" class="btn">
+              <PendingButton errorMessage="Couldn’t save your settings. Try again.">
                 Update Settings
-              </button>
+              </PendingButton>
               <a
                 data-rmx-prefetch="intent"
                 href={routes.account.index.href()}
