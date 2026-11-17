@@ -109,7 +109,6 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
           type="button"
           mix={[
             button(),
-            newScheduleButtonStyle,
             ref((node) => (buttonNode = node)),
             on('click', async () => {
               errorMessage = null
@@ -118,9 +117,19 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
               await handle.update()
               input?.focus()
             }),
+            css({
+              height: '100%',
+              width: '100%',
+            }),
           ]}
         >
-          <AddIcon mix={buttonIconStyle} />
+          <AddIcon
+            mix={css({
+              flexShrink: 0,
+              height: '1em',
+              width: '1em',
+            })}
+          />
           New schedule
         </button>
       )
@@ -130,15 +139,41 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
           aria-live="polite"
           key="new-schedule-loading"
           mix={[
-            creatingStyle,
             animateEntrance({
               opacity: 0,
               transform: 'scale(0.5)',
               ...spring('snappy'),
             }),
+            css({
+              alignItems: 'center',
+              color: theme.colors.text.secondary,
+              display: 'flex',
+              fontSize: theme.fontSize.md,
+              fontWeight: theme.fontWeight.medium,
+              gap: theme.space.sm,
+              height: '100%',
+              justifyContent: 'center',
+              minHeight: 0,
+              paddingInline: theme.space.md,
+              width: '100%',
+            }),
           ]}
         >
-          <SpinnerIcon mix={spinnerStyle} />
+          <SpinnerIcon
+            mix={css({
+              width: '1.25em',
+              height: '1.25em',
+              animation: 'timebox-spin 700ms linear infinite',
+              '@keyframes timebox-spin': {
+                from: {
+                  transform: 'rotate(0deg)',
+                },
+                to: {
+                  transform: 'rotate(360deg)',
+                },
+              },
+            })}
+          />
           <span>Creating</span>
         </div>
       )
@@ -149,7 +184,6 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
           autoComplete="off"
           key="new-schedule-form"
           mix={[
-            newScheduleFormStyle,
             animateExit({
               opacity: 0,
               transform: 'scale(0.5)',
@@ -174,6 +208,9 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
                 cancelCreate()
               }
             }),
+            css({
+              display: 'block',
+            }),
           ]}
         >
           <input
@@ -187,7 +224,6 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
             type="text"
             defaultValue={submittedName}
             mix={[
-              newScheduleInputStyle,
               ref((node) => (input = node)),
               on('input', () => {
                 if (!errorMessage) return
@@ -195,10 +231,35 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
                 errorMessage = null
                 handle.update()
               }),
+              css({
+                border: `1px solid ${theme.colors.border.default}`,
+                borderRadius: theme.radius,
+                boxSizing: 'border-box',
+                color: theme.colors.text.primary,
+                font: 'inherit',
+                fontSize: theme.fontSize.xs,
+                minHeight: '28px',
+                padding: `0 ${theme.space.md}`,
+                width: '100%',
+                '&:focus': {
+                  borderColor: theme.colors.focusRing,
+                  outline: `2px solid ${theme.colors.focusRing}`,
+                  outlineOffset: '2px',
+                },
+              }),
             ]}
           />
           {errorMessage ? (
-            <small id={scheduleNameErrorId} role="alert" mix={newScheduleErrorStyle}>
+            <small
+              id={scheduleNameErrorId}
+              role="alert"
+              mix={css({
+                color: theme.colors.danger,
+                display: 'block',
+                fontSize: theme.fontSize.xs,
+                marginTop: theme.space.xs,
+              })}
+            >
               {errorMessage}
             </small>
           ) : null}
@@ -206,7 +267,21 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
       )
     }
 
-    return <div mix={newScheduleActionStyle}>{content}</div>
+    return (
+      <div
+        mix={css({
+          display: 'grid',
+          height: '100%',
+          minHeight: 0,
+          '& > *': {
+            gridArea: '1 / 1',
+            minHeight: 0,
+          },
+        })}
+      >
+        {content}
+      </div>
+    )
   }
 }
 
@@ -277,80 +352,3 @@ async function createScheduleErrorMessage(response: Response) {
 
   return 'Could not create schedule. Please try again.'
 }
-
-const newScheduleButtonStyle = css({
-  height: '100%',
-  width: '100%',
-})
-
-const buttonIconStyle = css({
-  flexShrink: 0,
-  height: '1em',
-  width: '1em',
-})
-
-const newScheduleActionStyle = css({
-  display: 'grid',
-  height: '100%',
-  minHeight: 0,
-  '& > *': {
-    gridArea: '1 / 1',
-    minHeight: 0,
-  },
-})
-
-const newScheduleFormStyle = css({
-  display: 'block',
-})
-
-const newScheduleInputStyle = css({
-  border: `1px solid ${theme.colors.border.default}`,
-  borderRadius: theme.radius,
-  boxSizing: 'border-box',
-  color: theme.colors.text.primary,
-  font: 'inherit',
-  fontSize: theme.fontSize.xs,
-  minHeight: '28px',
-  padding: `0 ${theme.space.md}`,
-  width: '100%',
-  '&:focus': {
-    borderColor: theme.colors.focusRing,
-    outline: `2px solid ${theme.colors.focusRing}`,
-    outlineOffset: '2px',
-  },
-})
-
-const newScheduleErrorStyle = css({
-  color: theme.colors.danger,
-  display: 'block',
-  fontSize: theme.fontSize.xs,
-  marginTop: theme.space.xs,
-})
-
-const creatingStyle = css({
-  alignItems: 'center',
-  color: theme.colors.text.secondary,
-  display: 'flex',
-  fontSize: theme.fontSize.md,
-  fontWeight: theme.fontWeight.medium,
-  gap: theme.space.sm,
-  height: '100%',
-  justifyContent: 'center',
-  minHeight: 0,
-  paddingInline: theme.space.md,
-  width: '100%',
-})
-
-const spinnerStyle = css({
-  width: '1.25em',
-  height: '1.25em',
-  animation: 'timebox-spin 700ms linear infinite',
-  '@keyframes timebox-spin': {
-    from: {
-      transform: 'rotate(0deg)',
-    },
-    to: {
-      transform: 'rotate(360deg)',
-    },
-  },
-})

@@ -4,6 +4,7 @@ import { Frame, css } from 'remix/component'
 import type { Book } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { ImageCarousel } from './public/image-carousel.tsx'
+import { bookCoverTransition, bookTitleTransition } from '../../ui/book-transitions.ts'
 import { Layout } from '../../ui/layout.tsx'
 
 export interface ShowPageProps {
@@ -20,18 +21,21 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
       <Layout head={mainImage ? <link rel="preload" as="image" href={mainImage} /> : null}>
         <div mix={css({ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' })}>
           <div
-            mix={css({
-              height: '400px',
-              borderRadius: '8px',
-              boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-              overflow: 'hidden',
-            })}
+            mix={[
+              bookCoverTransition(book.id),
+              css({
+                height: '400px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                overflow: 'hidden',
+              }),
+            ]}
           >
             <ImageCarousel images={imageUrls} />
           </div>
 
           <div class="card">
-            <h1>{book.title}</h1>
+            <h1 mix={bookTitleTransition(book.id)}>{book.title}</h1>
             <p class="author" mix={css({ fontSize: '1.2rem', margin: '0.5rem 0' })}>
               by {book.author}
             </p>
@@ -70,7 +74,10 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
 
             {book.in_stock ? (
               <div mix={css({ marginTop: '2rem' })}>
-                <Frame src={routes.fragments.cartButton.href({ bookId: book.id })} />
+                <Frame
+                  name={`cart-button-${book.id}`}
+                  src={routes.fragments.cartButton.href({ bookId: book.id })}
+                />
               </div>
             ) : (
               <p mix={css({ color: '#e74c3c', fontWeight: 500 })}>

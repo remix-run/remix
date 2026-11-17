@@ -1,0 +1,1 @@
+Load below-the-fold content as it approaches the viewport with `<Frame loading="lazy" fallback={<p>Loading…</p>} />` from `remix/component`. Lazy loading observes elements rendered by the fallback. Lazy frames render their fallback on the server and load in the browser, while eager loading remains the default.

@@ -92,7 +92,7 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('Content-Type'), 'application/json; charset=utf-8')
     assert.equal(headers.get('Cookie'), 'session=abc; theme=dark')
     assert.deepEqual(headers.getSetCookie(), ['session=abc', 'theme=dark'])
-    assert.equal(headers.get('Vary'), 'accept-encoding, accept-language')
+    assert.equal(headers.get('Vary'), 'Accept-Encoding, Accept-Language')
   })
 
   it('applies raw header values with header-specific semantics', () => {
@@ -126,7 +126,7 @@ describe('SuperHeaders', () => {
       '</style.css>; rel=preload, </script.js>; rel=preload, </image.png>; rel=preload',
     )
     assert.deepEqual(headers.getSetCookie(), ['session=abc', 'theme=dark', 'locale=en'])
-    assert.equal(headers.get('Vary'), 'accept-encoding, accept-language, user-agent')
+    assert.equal(headers.get('Vary'), 'Accept-Encoding, Accept-Language, User-Agent')
     assert.equal(headers.get('X-Test'), 'new')
   })
 
@@ -328,7 +328,7 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('Accept'), 'text/html,application/json;q=0.8')
     assert.equal(headers.get('Cookie'), 'theme=dark; theme=light')
     assert.deepEqual(headers.cookie.getAll('theme'), ['dark', 'light'])
-    assert.equal(headers.get('Vary'), 'accept-encoding')
+    assert.equal(headers.get('Vary'), 'Accept-Encoding')
     assert.equal(getResponseHeaders(headers).get('Accept'), 'text/html,application/json;q=0.8')
 
     headers.accept.delete('text/html')

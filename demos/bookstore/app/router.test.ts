@@ -69,8 +69,8 @@ describe('router', () => {
       assert.equal(response.status, 200)
       assert.equal(response.headers.get('Cache-Control'), 'private, max-age=30')
       assert.equal(
-        response.headers.get('Vary')?.toLowerCase(),
-        'cookie, x-remix-frame, x-remix-target, x-remix-top-frame-src, accept-encoding',
+        response.headers.get('Vary'),
+        'Cookie, X-Remix-Frame, X-Remix-Target, X-Remix-Top-Frame-Src, Accept-Encoding',
       )
       await response.text()
     }
@@ -91,7 +91,7 @@ describe('router', () => {
 
       assert.equal(response.status, 200)
       assert.equal(response.headers.get('Cache-Control'), 'no-store')
-      assert.equal(response.headers.get('Vary')?.toLowerCase(), 'accept-encoding')
+      assert.equal(response.headers.get('Vary'), 'Accept-Encoding')
       await response.text()
     }
   })

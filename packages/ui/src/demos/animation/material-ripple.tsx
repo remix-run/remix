@@ -50,6 +50,24 @@ export function MaterialRipple(handle: Handle) {
         ref((el) => {
           buttonEl = el
         }),
+        on('pointerdown', (event) => {
+          if (event.isPrimary === false) return
+          createRipple(event.clientX, event.clientY)
+        }),
+        on('pointerup', removeAllRipples),
+        on('pointercancel', removeAllRipples),
+        on('pointerleave', removeAllRipples),
+        on('keydown', (event) => {
+          if (!(event.key === 'Enter' || event.key === ' ') || event.repeat) return
+          event.preventDefault()
+          createCenteredRipple()
+        }),
+        on('keyup', (event) => {
+          if (!(event.key === 'Enter' || event.key === ' ')) return
+          event.preventDefault()
+          removeAllRipples()
+        }),
+        on('blur', removeAllRipples),
         css({
           position: 'relative',
           display: 'inline-flex',
@@ -76,24 +94,6 @@ export function MaterialRipple(handle: Handle) {
             outlineOffset: 2,
           },
         }),
-        on('pointerdown', (event) => {
-          if (event.isPrimary === false) return
-          createRipple(event.clientX, event.clientY)
-        }),
-        on('pointerup', removeAllRipples),
-        on('pointercancel', removeAllRipples),
-        on('pointerleave', removeAllRipples),
-        on('keydown', (event) => {
-          if (!(event.key === 'Enter' || event.key === ' ') || event.repeat) return
-          event.preventDefault()
-          createCenteredRipple()
-        }),
-        on('keyup', (event) => {
-          if (!(event.key === 'Enter' || event.key === ' ')) return
-          event.preventDefault()
-          removeAllRipples()
-        }),
-        on('blur', removeAllRipples),
       ]}
     >
       Click me
@@ -114,14 +114,14 @@ export function MaterialRipple(handle: Handle) {
           <span
             key={ripple.id}
             mix={[
-              css({
-                position: 'absolute',
-                borderRadius: '50%',
-              }),
               animateExit({
                 opacity: 0,
                 duration: 550,
                 easing: 'ease-out',
+              }),
+              css({
+                position: 'absolute',
+                borderRadius: '50%',
               }),
             ]}
             style={{
@@ -134,6 +134,12 @@ export function MaterialRipple(handle: Handle) {
             {/* Inner span: handles enter (scale) so it doesn't get reversed when removed */}
             <span
               mix={[
+                animateEntrance({
+                  opacity: 0,
+                  transform: 'scale(0)',
+                  duration: 300,
+                  easing: 'ease-out',
+                }),
                 css({
                   display: 'block',
                   width: '100%',
@@ -141,12 +147,6 @@ export function MaterialRipple(handle: Handle) {
                   borderRadius: 'inherit',
                   backgroundColor: 'currentColor',
                   opacity: 0.4,
-                }),
-                animateEntrance({
-                  opacity: 0,
-                  transform: 'scale(0)',
-                  duration: 300,
-                  easing: 'ease-out',
                 }),
               ]}
             />

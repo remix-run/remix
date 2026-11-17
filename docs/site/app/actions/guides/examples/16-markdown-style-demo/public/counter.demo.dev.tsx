@@ -5,16 +5,39 @@ export function Counter(handle: Handle) {
   let count = 3;
 
   return () => (
-    <div mix={counterStyles}>
-      <p mix={countStyles}>{count}</p>
-      <div mix={actionsStyles}>
+    <div
+      mix={css({
+        display: "grid",
+        gap: "var(--rmx-space-lg)",
+        placeItems: "center",
+      })}
+    >
+      <p
+        mix={css({
+          margin: "0",
+          color: "var(--rmx-color-accent)",
+          fontSize: "calc(var(--rmx-font-size-page-title) * 2)",
+          fontWeight: "var(--rmx-font-weight-bold)",
+          lineHeight: "var(--rmx-line-height-tight)",
+          letterSpacing: "var(--rmx-letter-spacing-tight)",
+        })}
+      >
+        {count}
+      </p>
+      <div
+        mix={css({
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "var(--rmx-space-md)",
+        })}
+      >
         <button
           mix={[
-            buttonStyles,
             on("click", () => {
               count--;
               handle.update();
             }),
+            buttonStyles,
           ]}
           type="button"
         >
@@ -22,11 +45,11 @@ export function Counter(handle: Handle) {
         </button>
         <button
           mix={[
-            buttonStyles,
             on("click", () => {
               count++;
               handle.update();
             }),
+            buttonStyles,
           ]}
           type="button"
         >
@@ -36,27 +59,6 @@ export function Counter(handle: Handle) {
     </div>
   );
 }
-
-const counterStyles = css({
-  display: "grid",
-  gap: "var(--rmx-space-lg)",
-  placeItems: "center",
-});
-
-const countStyles = css({
-  margin: "0",
-  color: "var(--rmx-color-accent)",
-  fontSize: "calc(var(--rmx-font-size-page-title) * 2)",
-  fontWeight: "var(--rmx-font-weight-bold)",
-  lineHeight: "var(--rmx-line-height-tight)",
-  letterSpacing: "var(--rmx-letter-spacing-tight)",
-});
-
-const actionsStyles = css({
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "var(--rmx-space-md)",
-});
 
 const buttonStyles = css({
   appearance: "none",

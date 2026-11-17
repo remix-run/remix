@@ -27,10 +27,10 @@ export const ReloadTime = clientEntry(import.meta.url, function ReloadTime(handl
     <button
       type="button"
       mix={[
-        reloadButtonStyle,
         on('click', () => {
           void handle.frame.reload()
         }),
+        reloadButtonStyle,
       ]}
       style={pending ? { background: 'rgba(255,255,255,0.04)' } : undefined}
     >

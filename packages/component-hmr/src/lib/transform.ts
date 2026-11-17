@@ -889,7 +889,7 @@ function createSetupSource(
           }
           lines.push(
             init
-              ? `__s__.${name} = ${rewriteReferences(init, initializedStateNames, source)};`
+              ? `__s__.${name} = ${rewriteReferences(init, initializedStateNames, source, setupStateNames)};`
               : `__s__.${name} = undefined;`,
           )
           initializedStateNames.add(name)
@@ -897,10 +897,15 @@ function createSetupSource(
         }
 
         lines.push(`{`)
-        let patternSource = rewriteBindingPatternReferences(pattern, initializedStateNames, source)
+        let patternSource = rewriteBindingPatternReferences(
+          pattern,
+          initializedStateNames,
+          setupStateNames,
+          source,
+        )
         lines.push(
           init
-            ? `  let ${patternSource} = ${rewriteReferences(init, initializedStateNames, source)};`
+            ? `  let ${patternSource} = ${rewriteReferences(init, initializedStateNames, source, setupStateNames)};`
             : `  let ${patternSource};`,
         )
         for (let name of names) {
@@ -912,23 +917,40 @@ function createSetupSource(
       continue
     }
 
-    lines.push(rewriteReferences(statement, initializedStateNames, source))
+    lines.push(rewriteReferences(statement, initializedStateNames, source, setupStateNames))
   }
 
   return lines.join('\n')
 }
 
-function rewriteReferences(root: AstNode, stateNames: ReadonlySet<string>, source: string): string {
+function rewriteReferences(
+  root: AstNode,
+  stateNames: ReadonlySet<string>,
+  source: string,
+  deferredStateNames: ReadonlySet<string> = stateNames,
+): string {
   let snippet = source.slice(root.start, root.end)
-  if (stateNames.size === 0) return snippet
+  if (stateNames.size === 0 && deferredStateNames.size === 0) return snippet
 
   let rewritten = new MagicString(snippet)
   let rewrittenRanges = new Set<string>()
+  let functions: AstNode[] = []
 
   visitWithScope(root, null, new Set(), (node, parent, shadowedNames) => {
+    if (
+      node.type === 'FunctionDeclaration' ||
+      node.type === 'FunctionExpression' ||
+      node.type === 'ArrowFunctionExpression'
+    ) {
+      functions.push(node)
+    }
     if (node.type !== 'Identifier' && node.type !== 'JSXIdentifier') return
     let name = getIdentifierName(node)
-    if (!name || !stateNames.has(name)) return
+    if (!name) return
+    // Code inside a nested function can't run until it's called, so it may reference setup
+    // variables declared after it.
+    let isDeferred = functions.some((fn) => fn.start <= node.start && node.end <= fn.end)
+    if (!(isDeferred ? deferredStateNames : stateNames).has(name)) return
     if (shadowedNames.has(name)) return
     if (!shouldRewriteIdentifier(node, parent)) return
 
@@ -953,15 +975,16 @@ function rewriteReferences(root: AstNode, stateNames: ReadonlySet<string>, sourc
 function rewriteBindingPatternReferences(
   pattern: AstNode,
   stateNames: ReadonlySet<string>,
+  deferredStateNames: ReadonlySet<string>,
   source: string,
 ): string {
   let snippet = source.slice(pattern.start, pattern.end)
-  if (stateNames.size === 0) return snippet
+  if (stateNames.size === 0 && deferredStateNames.size === 0) return snippet
 
   let rewritten = new MagicString(snippet)
 
   visitBindingPattern(pattern, (node) => {
-    let replacement = rewriteReferences(node, stateNames, source)
+    let replacement = rewriteReferences(node, stateNames, source, deferredStateNames)
     rewritten.overwrite(node.start - pattern.start, node.end - pattern.start, replacement)
   })
 

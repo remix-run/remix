@@ -1,11 +1,12 @@
-import type { FrameHandle, FrameResolution } from './component.ts'
+import type { FrameHandle, FrameResolution, ReloadOrigin } from './component.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameInstance } from './frame.ts'
 import type { ProcessClientEntryPreloads } from './module-preloader.ts'
 import type { Scheduler } from './scheduler.ts'
-import type { StyleManager } from '../style/index.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
 import type { ResourceNonces } from './nonce.ts'
+import type { VirtualRoot } from './vdom.ts'
 
 /**
  * Loads a named client-entry export for hydration.
@@ -49,6 +50,16 @@ export type ResolveFrame = (
  * Information available while resolving browser-loaded frame content.
  */
 export interface ResolveFrameOptions {
+  /**
+   * Effective history behavior of the navigation that caused this load.
+   * Inherited by client frames within its response; absent for independent loads and reloads.
+   */
+  navigationType?: NavigationType
+  /**
+   * Original history entry being left, inherited by client frames within the response.
+   * Absent for independent loads and reloads. Redirects preserve the original entry.
+   */
+  from?: NavigationHistoryEntry
   /** Frame name, absent for both the top-level document and unnamed `<Frame>` loads. */
   target?: string
   /** Form values submitted to the frame source for a POST reload or navigation. */
@@ -66,7 +77,14 @@ export type PendingClientEntries = Map<
   [Comment, RemixElement | undefined, ResourceNonces?]
 >
 
-export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'>
+export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
+  /** The initiating anchor, area, or owning form. */
+  element?: HTMLAnchorElement | HTMLAreaElement | SVGAElement | HTMLFormElement
+  /** The actual submitter captured by the native submit event. */
+  submitter?: HTMLElement | null
+  /** The owning form for a submission, even when its submitter has been detached. */
+  form?: HTMLFormElement
+}
 
 export type FrameReloadResult = {
   signal: AbortSignal
@@ -93,10 +111,8 @@ export interface FrameFallbackRoot {
 
 export type FrameMountState = {
   instance: FrameInstance
+  // Only client-inserted frames own a fallback root, until replacement content starts rendering.
   fallbackRoot?: FrameFallbackRoot
-  resolveToken: number
-  resolveController?: AbortController
-  resolved: boolean
 }
 
 export class NamedFrameRegistry {
@@ -150,6 +166,9 @@ export type FrameRuntime = {
   serverFrameReload:
     | {
         signal: AbortSignal
+        origin?: ReloadOrigin
+        navigationType?: NavigationType
+        from?: NavigationHistoryEntry
         reconciliationTracker?: ReconciliationTracker
         blockingFrameTracker?: ReconciliationTracker
       }
@@ -226,4 +245,59 @@ export function createFrameRuntime(init: {
     serverFrameReload: undefined,
     reloadForNavigation: init.reloadForNavigation,
   }
+}
+
+export type ClientEntryIdentity = {
+  moduleUrl: string
+  exportName: string
+}
+
+type ClientEntryRoot = Pick<VirtualRoot, 'dispose' | 'render'>
+
+export type ClientEntryBoundaryOwner = {
+  end: Comment
+  identity: ClientEntryIdentity
+  root: ClientEntryRoot
+}
+
+const CLIENT_ENTRY_BOUNDARY_OWNER = Symbol('ClientEntryBoundaryOwner')
+
+type ClientEntryBoundaryMarker = Comment & {
+  [CLIENT_ENTRY_BOUNDARY_OWNER]?: ClientEntryBoundaryOwner
+  $rmx?: ClientEntryRoot
+}
+
+export function getClientEntryBoundaryOwner(marker: Comment): ClientEntryBoundaryOwner | undefined {
+  return (marker as ClientEntryBoundaryMarker)[CLIENT_ENTRY_BOUNDARY_OWNER]
+}
+
+export function setClientEntryBoundaryOwner(
+  marker: Comment,
+  end: Comment,
+  identity: ClientEntryIdentity,
+  root: ClientEntryRoot,
+): ClientEntryBoundaryOwner {
+  let owner = { end, identity, root }
+  Object.defineProperties(marker, {
+    [CLIENT_ENTRY_BOUNDARY_OWNER]: {
+      configurable: true,
+      value: owner,
+    },
+    $rmx: {
+      configurable: true,
+      value: root,
+    },
+  })
+  return owner
+}
+
+export function disposeClientEntryBoundary(marker: Comment): boolean {
+  let boundaryMarker = marker as ClientEntryBoundaryMarker
+  let owner = boundaryMarker[CLIENT_ENTRY_BOUNDARY_OWNER]
+  if (!owner) return false
+
+  delete boundaryMarker[CLIENT_ENTRY_BOUNDARY_OWNER]
+  delete boundaryMarker.$rmx
+  owner.root.dispose()
+  return true
 }

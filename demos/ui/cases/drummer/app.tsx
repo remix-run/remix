@@ -165,18 +165,18 @@ function TempoDisplay(handle: Handle) {
         <TempoButton
           orientation="up"
           mix={[
-            css({ borderTopRightRadius: '18px' }),
             onPressDown(() => {
               drummer.setTempo(drummer.bpm + 1)
             }),
+            css({ borderTopRightRadius: '18px' }),
           ]}
         />
         <TempoButton
           mix={[
-            css({ borderBottomRightRadius: '18px' }),
             onPressDown(() => {
               drummer.setTempo(drummer.bpm - 1)
             }),
+            css({ borderBottomRightRadius: '18px' }),
           ]}
           orientation="down"
         />

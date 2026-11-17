@@ -211,12 +211,14 @@ describe('css mixin', () => {
     // transitions). The css rule must keep styling the node until the
     // persistence teardown settles — only then may the refcount drop.
     let exitGate = Promise.withResolvers<void>()
+    let removed = Promise.withResolvers<void>()
     let persistOnRemove = createMixin<Element>((handle) => {
       handle.addEventListener('beforeRemove', (event) => {
         ;(event as MixinBeforeRemoveEvent).persistNode(async () => {
           await exitGate.promise
         })
       })
+      handle.addEventListener('remove', () => removed.resolve())
     })
 
     let container = document.createElement('div')
@@ -242,7 +244,7 @@ describe('css mixin', () => {
 
     // Finish the exit: node is removed and the dynamic rule is released.
     exitGate.resolve()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await removed.promise
     root.flush()
 
     expect(container.querySelector('#exiting')).toBe(null)

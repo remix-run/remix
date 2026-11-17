@@ -7,6 +7,10 @@ export function FlipToggle(handle: Handle) {
   return () => (
     <button
       mix={[
+        on('click', () => {
+          isOn = !isOn
+          handle.update()
+        }),
         css({
           width: 90,
           height: 50,
@@ -17,10 +21,6 @@ export function FlipToggle(handle: Handle) {
           padding: 10,
           border: 'none',
         }),
-        on('click', () => {
-          isOn = !isOn
-          handle.update()
-        }),
       ]}
       style={{
         // The actual layout property that changes
@@ -29,15 +29,15 @@ export function FlipToggle(handle: Handle) {
     >
       <div
         mix={[
+          animateLayout({
+            duration: 200,
+            easing: 'ease-in-out',
+          }),
           css({
             width: 30,
             height: 30,
             backgroundColor: '#9911ff',
             borderRadius: '50%',
-          }),
-          animateLayout({
-            duration: 200,
-            easing: 'ease-in-out',
           }),
         ]}
       />

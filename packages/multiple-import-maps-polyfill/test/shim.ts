@@ -1,4 +1,5 @@
 // Adapted from ES Module Shims 2.8.4 test/shim.js.
+import { preloadShim } from '../src/lib/core.ts'
 import type { ImportMap } from '../src/lib/resolve.ts'
 
 import { assert, getLoad, importShim, suite, test } from './test-adapter.ts'
@@ -320,23 +321,29 @@ suite('Errors', function () {
   })
 
   test('Dynamic import map shim with override to the same mapping is allowed', async function () {
-    let expectingNoError = new Promise((resolve, reject) => {
-      window.addEventListener('error', (event) => {
-        reject(event.error)
+    let errors: unknown[] = []
+    let onError = (event: ErrorEvent) => {
+      errors.push(event.error)
+    }
+    window.addEventListener('error', onError)
+
+    try {
+      let removeImportMap = insertDynamicImportMap({
+        imports: {
+          global1: fixtureURL('es-modules/global1.js'),
+        },
       })
-      // waiting for 1 sec should be enough to make sure the error didn't happen.
-      setTimeout(resolve, 1000)
-    })
 
-    let removeImportMap = insertDynamicImportMap({
-      imports: {
-        global1: fixtureURL('es-modules/global1.js'),
-      },
-    })
+      // Import map errors are reported while the queued import maps are composed, which
+      // preloadShim() awaits before it resolves.
+      await preloadShim('global1')
 
-    await expectingNoError
+      removeImportMap()
+    } finally {
+      window.removeEventListener('error', onError)
+    }
 
-    removeImportMap()
+    assert.deepEqual(errors, [])
   })
 })
 

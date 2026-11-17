@@ -3,6 +3,10 @@ import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
 import type { SerializedOnlyPattern } from './config.ts'
 
+// Test code may replace global timers before hooks or subsequent deadlines run.
+const realSetTimeout = globalThis.setTimeout.bind(globalThis)
+const realClearTimeout = globalThis.clearTimeout.bind(globalThis)
+
 type PendingMeta = boolean | string
 
 interface RunnableOptions {
@@ -357,7 +361,7 @@ async function runRunnable(
   let timeoutPromise =
     timeout && timeout > 0
       ? new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => {
+          timeoutId = realSetTimeout(() => {
             let error = createTimeoutError(label, timeout)
             reject(error)
             abortController?.abort(error)
@@ -372,7 +376,7 @@ async function runRunnable(
       ...(timeoutPromise ? [timeoutPromise] : []),
     ])
   } finally {
-    if (timeoutId) clearTimeout(timeoutId)
+    if (timeoutId !== undefined) realClearTimeout(timeoutId)
     for (let cleanup of abortCleanups) cleanup()
   }
 }

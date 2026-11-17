@@ -14,6 +14,12 @@ export function Press(handle: Handle) {
     <div
       tabIndex={0}
       mix={[
+        onPressDown(() => {
+          setPressed(true)
+        }),
+        onPressUp(() => {
+          setPressed(false)
+        }),
         css({
           width: 100,
           height: 100,
@@ -31,12 +37,6 @@ export function Press(handle: Handle) {
           // '&:active': {
           //   transform: 'scale(0.8)',
           // },
-        }),
-        onPressDown(() => {
-          setPressed(true)
-        }),
-        onPressUp(() => {
-          setPressed(false)
         }),
       ]}
     />

@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/session-storage-redis",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Redis session storage for remix/session",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

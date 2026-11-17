@@ -1,0 +1,1 @@
+Inline `{ middleware, handler }` actions in `createController()` and `router.map()` controllers now type their handler with their own action middleware, the same as actions passed to `router.get()` or created with `createAction()`. Previously only controller middleware reached the handler's context type, even though the action's middleware ran.

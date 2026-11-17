@@ -22,6 +22,7 @@ interface UiDocumentProps {
   pages: UiPage[]
   currentPage?: PageMeta
   headings?: DocsHeadingLink[]
+  outlet?: RemixNode
   children: RemixNode
 }
 
@@ -103,6 +104,7 @@ export function UiDocument(handle: Handle<UiDocumentProps>) {
               ) : null}
             </div>
           </DocsShell>
+          {handle.props.outlet}
           {searchEnabled ? <PagefindElements baseUrl="/" bundlePath="/assets/pagefind/" /> : null}
         </body>
       </html>

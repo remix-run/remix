@@ -1,0 +1,1 @@
+Add a 150ms scroll delay to viewport-driven prefetching, to avoid unnecessary prefetches during scrolls through a list of prefetch-eligible links. Links the visitor stops on are prefetched as before, and links that enter the viewport without a scroll, such as on page load, still prefetch right away.

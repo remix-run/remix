@@ -5,6 +5,8 @@ import { build, createServer, preview, type PreviewServer, type ViteDevServer } 
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const mode: 'development' | 'production' = 'production'
+// Matches the simulated latency in the route actions, which run in the browser.
+const loaderDelay = 700
 
 async function createViteTestServer() {
   let options: Parameters<typeof createServer>[0] | Parameters<typeof preview>[0] = {
@@ -45,9 +47,11 @@ describe(`SPA (${mode})`, () => {
 
   it('loads a client route directly through the Vite history fallback', async (t) => {
     let page = await t.serve(await createViteTestServer())
+    await page.clock.install()
 
     await page.goto('/about')
     await page.getByRole('status').waitFor()
+    await page.clock.runFor(loaderDelay)
     await page.getByRole('heading', { name: 'URLs in, rendered UI out' }).waitFor()
 
     assert.equal(new URL(page.url()).pathname, '/about')
@@ -59,27 +63,34 @@ describe(`SPA (${mode})`, () => {
 
   it('navigates between routes and cancels a superseded load', async (t) => {
     let page = await t.serve(await createViteTestServer())
+    await page.clock.install()
 
     await page.goto('/')
+    await page.clock.runFor(loaderDelay)
     await page.getByRole('heading', { name: 'A client-only Remix app' }).waitFor()
 
     void page.getByRole('link', { name: 'About' }).click()
     await page.getByRole('status').waitFor()
     await page.getByRole('link', { name: 'Home' }).click()
+    await page.clock.runFor(loaderDelay)
     await page.getByRole('heading', { name: 'A client-only Remix app' }).waitFor()
 
     assert.equal(new URL(page.url()).pathname, '/')
+    assert.equal(await page.getByRole('heading', { name: 'URLs in, rendered UI out' }).count(), 0)
   })
 
   it('pushes new form destinations and replaces submissions to the active URL', async (t) => {
     let page = await t.serve(await createViteTestServer())
+    await page.clock.install()
 
     await page.goto('/')
+    await page.clock.runFor(loaderDelay)
     await page.getByRole('heading', { name: 'A client-only Remix app' }).waitFor()
 
     await page.getByLabel('What should we call you?').fill('Ada')
     await page.getByRole('button', { name: 'Submit' }).click()
     await page.getByRole('status').waitFor()
+    await page.clock.runFor(loaderDelay)
     await page.getByRole('heading', { name: 'Hello, Ada!' }).waitFor()
     assert.equal(new URL(page.url()).pathname, '/greet')
 
@@ -90,12 +101,15 @@ describe(`SPA (${mode})`, () => {
     assert.equal(await pendingButton.getAttribute('disabled'), '')
     assert.equal(await page.getByRole('status').count(), 0)
     assert.equal(await page.getByRole('heading', { name: 'Hello, Ada!' }).count(), 1)
+    await page.clock.runFor(loaderDelay)
     await page.getByRole('heading', { name: 'Hello, Grace!' }).waitFor()
     let readyButton = page.getByRole('button', { name: 'Submit again' })
     await readyButton.waitFor()
     assert.equal(await readyButton.getAttribute('disabled'), null)
 
     await page.goBack()
+    await page.getByRole('status').waitFor()
+    await page.clock.runFor(loaderDelay)
     await page.getByRole('heading', { name: 'A client-only Remix app' }).waitFor()
     assert.equal(new URL(page.url()).pathname, '/')
   })

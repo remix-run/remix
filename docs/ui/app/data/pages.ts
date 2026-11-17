@@ -16,11 +16,13 @@ import ReducedMotionPage, { meta as reducedMotion } from '../pages/animation/red
 import SpringPage, { meta as spring } from '../pages/animation/spring.tsx'
 import TweenPage, { meta as tween } from '../pages/animation/tween.tsx'
 import ComboboxPage, { meta as combobox } from '../pages/patterns/combobox.tsx'
+import FormPage, { meta as form } from '../pages/patterns/form.tsx'
 import ListboxPage, { meta as listbox } from '../pages/patterns/listbox.tsx'
 import MenuPage, { meta as menu } from '../pages/patterns/menu.tsx'
 import PopoverPage, { meta as popover } from '../pages/patterns/popover.tsx'
 import SelectPage, { meta as select } from '../pages/patterns/select.tsx'
 import TabsPage, { meta as tabs } from '../pages/patterns/tabs.tsx'
+import ToastPage, { meta as toast } from '../pages/patterns/toast.tsx'
 import TogglePage, { meta as toggle } from '../pages/patterns/toggle.tsx'
 
 export interface PageMeta {
@@ -49,11 +51,13 @@ export const pages: UiPage[] = [
   { ...spring, Component: SpringPage },
   { ...tween, Component: TweenPage },
   { ...combobox, Component: ComboboxPage },
+  { ...form, Component: FormPage },
   { ...listbox, Component: ListboxPage },
   { ...menu, Component: MenuPage },
   { ...popover, Component: PopoverPage },
   { ...select, Component: SelectPage },
   { ...tabs, Component: TabsPage },
+  { ...toast, Component: ToastPage },
   { ...toggle, Component: TogglePage },
 ].sort(
   (a, b) =>

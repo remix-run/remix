@@ -259,24 +259,20 @@ describe('crawl(router)', () => {
 
   it('fetches pages concurrently when concurrency > 1', async () => {
     let router = createRouter()
-    let inflight = 0
-    let maxInflight = 0
+    let held: (() => void)[] = []
 
-    function slowHtml(content: string): Promise<Response> {
-      inflight++
-      maxInflight = Math.max(maxInflight, inflight)
-      return new Promise((resolve) =>
-        setTimeout(() => {
-          inflight--
-          resolve(html(content))
-        }, 20),
-      )
+    // Hold each child page until all three are in flight at once. A crawler that fetched them one
+    // at a time would never release the first one.
+    function heldHtml(content: string): Promise<Response> {
+      let response = new Promise<Response>((resolve) => held.push(() => resolve(html(content))))
+      if (held.length === 3) held.splice(0).forEach((release) => release())
+      return response
     }
 
-    router.get('/', () => slowHtml('<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a>'))
-    router.get('/a', () => slowHtml('<html></html>'))
-    router.get('/b', () => slowHtml('<html></html>'))
-    router.get('/c', () => slowHtml('<html></html>'))
+    router.get('/', () => html('<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a>'))
+    router.get('/a', () => heldHtml('<html></html>'))
+    router.get('/b', () => heldHtml('<html></html>'))
+    router.get('/c', () => heldHtml('<html></html>'))
 
     let visited: string[] = []
     for await (let { pathname } of crawl(router, { concurrency: 3 })) {
@@ -284,7 +280,6 @@ describe('crawl(router)', () => {
     }
 
     assert.deepEqual(visited.toSorted(), ['/', '/a', '/b', '/c'])
-    assert.ok(maxInflight > 1, `expected concurrent requests, got max inflight: ${maxInflight}`)
   })
 
   it('does not visit the same path twice', async () => {

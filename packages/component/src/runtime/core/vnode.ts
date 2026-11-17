@@ -220,25 +220,6 @@ export function isRemixNode(value: unknown): value is RemixNode {
   return true
 }
 
-export function packChildren(children: readonly RemixNode[]): RemixNode | undefined {
-  if (children.length === 0) {
-    return undefined
-  }
-
-  if (children.length === 1) {
-    let child = children[0]
-
-    if (child === undefined || isEmptyChild(child)) {
-      return undefined
-    }
-
-    return Array.isArray(child) ? normalizeChildren(child) : child
-  }
-
-  let normalized = normalizeChildren(children)
-  return normalized.length === 0 ? undefined : normalized
-}
-
 declare global {
   namespace JSX {
     export interface IntrinsicAttributes {

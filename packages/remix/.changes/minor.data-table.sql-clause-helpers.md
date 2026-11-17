@@ -1,0 +1,1 @@
+`remix/data-table/sql-helpers` now includes shared SQL clause compilers, such as `compilePredicate()` and `compileWhereClause()`, for building custom `data-table` adapters. See the [`data-table` changelog](https://github.com/remix-run/remix/blob/main/packages/data-table/CHANGELOG.md) for details.

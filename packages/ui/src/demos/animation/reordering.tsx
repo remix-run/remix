@@ -51,13 +51,13 @@ export function Reordering(handle: Handle) {
         <li
           key={backgroundColor}
           mix={[
+            animateLayout({
+              ...spring({ duration: 600, bounce: 0.2 }),
+            }),
             css({
               width: 100,
               height: 100,
               borderRadius: 10,
-            }),
-            animateLayout({
-              ...spring({ duration: 600, bounce: 0.2 }),
             }),
           ]}
           style={{ backgroundColor }}
