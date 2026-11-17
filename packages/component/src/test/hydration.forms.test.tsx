@@ -56,6 +56,32 @@ describe('hydration', () => {
       expect(document.activeElement).toBe(input)
     })
 
+    it('replays change for a focused checkbox toggled before hydration', async (t) => {
+      let changes = 0
+      let field = (
+        <input
+          type="checkbox"
+          defaultChecked={false}
+          mix={on('change', () => {
+            changes++
+          })}
+        />
+      )
+      container.innerHTML = await renderToString(field)
+      let input = container.querySelector('input')
+      invariant(input)
+      input.checked = true
+      input.focus()
+      expect(document.activeElement).toBe(input)
+
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(field)
+
+      expect(input.checked).toBe(true)
+      expect(changes).toBe(1)
+    })
+
     it('defers change for a focused number input edited before hydration', async (t) => {
       let changes = 0
       let field = (
