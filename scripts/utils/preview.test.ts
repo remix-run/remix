@@ -229,11 +229,10 @@ describe('preview release retention', () => {
     ])
   })
 
-  it('always keeps the newest successful main build, even if every build is old', () => {
-    let older = release(1, 'main', '2020-02-01T13:00:00Z')
-    older.body += '\n<!-- remix-preview-commit-time: 2020-02-01T10:00:00Z -->'
+  it('always keeps the most recently published main build, even if every build is old', () => {
+    let older = release(1, 'main', '2020-02-02T13:00:00Z')
     let latest = release(2, 'main', '2020-02-01T12:00:00Z')
-    latest.body += '\n<!-- remix-preview-commit-time: 2020-02-01T11:00:00Z -->'
+    latest.published_at = '2020-02-03T12:00:00Z'
     let draft = { ...release(3, 'main', '2026-11-02T00:00:00Z'), draft: true, published_at: null }
     assert.deepEqual(getExpiredPreviewReleases([older, draft, latest], 'main', now), [older])
   })
@@ -311,7 +310,7 @@ describe('preview release retention', () => {
 })
 
 describe('main publication', () => {
-  it('selects latest by source time across date-only and timestamped releases', (t) => {
+  it('marks new main publications latest regardless of source order, without promoting reruns', (t) => {
     let directory = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-main-test-'))
     t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
     fs.writeFileSync(path.join(directory, 'remix.tgz'), 'remix')
@@ -321,19 +320,13 @@ describe('main publication', () => {
     let assets = new Map<number, PreviewAsset[]>()
     let publications: boolean[] = []
     let sourceTime = '2026-11-02T11:00:00Z'
+    let github = new PreviewGitHub('remix-run/previews', () => {
+      throw new Error('Unexpected GitHub command')
+    })
     t.mock.method(
-      PreviewGitHub.prototype,
+      github,
       'api',
-      function (
-        this: PreviewGitHub,
-        method: string,
-        endpoint: string,
-        body?: Record<string, unknown>,
-      ) {
-        if (method === 'GET' && endpoint.startsWith('git/commits/')) {
-          assert.equal(this.repository, process.env.GITHUB_REPOSITORY ?? 'remix-run/remix')
-          return { committer: { date: sourceTime } }
-        }
+      (method: string, endpoint: string, body?: Record<string, unknown>) => {
         if (method === 'GET' && endpoint.startsWith('releases?')) return releases
         if (method === 'POST' && endpoint === 'releases') {
           if (typeof body?.tag_name !== 'string' || typeof body.body !== 'string')
@@ -353,19 +346,15 @@ describe('main publication', () => {
         if (method === 'PATCH' && endpoint === `releases/${id}`) {
           let published = releases.find((item) => item.id === id)
           if (!published) throw new Error('Missing release')
-          published.draft = false
-          publications.push(body?.make_latest === 'true')
-          assert.ok(
-            published.body.includes(`remix-preview-commit-time: ${sourceTime.slice(0, -1)}.000Z`),
-          )
+          if (body?.draft === false) {
+            published.draft = false
+          }
+          if (body?.make_latest !== undefined) publications.push(body.make_latest === 'true')
           return null
         }
         throw new Error(`Unexpected GitHub API call: ${method} ${endpoint}`)
       },
     )
-    let github = new PreviewGitHub('remix-run/previews', () => {
-      throw new Error('Unexpected GitHub command')
-    })
     t.mock.method(github, 'upload', (draft: PreviewRelease, filename: string) => {
       let uploaded = assets.get(draft.id) ?? []
       uploaded.push({
@@ -394,7 +383,13 @@ describe('main publication', () => {
       parsePreviewBuild(getPreviewTag('main', sha, sourceTime), sha),
       directory,
     )
-    assert.deepEqual(publications, [false, true, false])
+    sha = 'a'.repeat(40)
+    publishPreview(
+      github,
+      parsePreviewBuild(getPreviewTag('main', sha, sourceTime), sha),
+      directory,
+    )
+    assert.deepEqual(publications, [true, true, true])
   })
 })
 

@@ -107,10 +107,11 @@ PRs share a `v0.YYYYMMDD.0-pr-<number>` release, using the PR's
 UTC creation date so every build uses the same tag, with `<package>-<full-source-sha>.tgz` assets.
 After verifying every asset for a SHA, publishing labels its `remix` asset as complete,
 updates the release's install table, and retains the latest 5 complete builds by completion time.
-Main releases are published as the repository's latest release when they are the newest main
-build by source commit timestamp, and include a `remix.url` asset containing their `remix.tgz` URL.
-The source timestamp is stored in release metadata so older builds finishing late cannot replace
-the latest build. GitHub lists releases by publication time.
+Each newly published main build becomes the repository's latest release and includes a
+`remix.url` asset containing its `remix.tgz` URL. Main releases expire seven days after publication,
+except the most recently published successful main build, which is always retained.
+Reruns reuse completed releases without promoting them to latest. GitHub lists releases by
+publication time.
 Retries preserve completed assets and replace partial uploads. Closing the PR deletes its release
 and any older per-SHA preview releases.
 
