@@ -5090,6 +5090,88 @@ describe('stream', () => {
       expect(errors).toEqual([])
     })
 
+    it('cancels the rest of a blocking frame stream when the consumer cancels', async (t) => {
+      let errors: unknown[] = []
+      let [frameCancelled, resolveFrameCancelled] = withResolvers<unknown>()
+      let flushUnhandledRejections = trackUnhandledRejections(t)
+
+      let stream = renderToStream(<Frame src="/fragments/reviews" />, {
+        onError(error) {
+          errors.push(error)
+        },
+        resolveFrame() {
+          return new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('<p>Reviews</p>'))
+            },
+            cancel(reason) {
+              resolveFrameCancelled(reason)
+            },
+          })
+        },
+      })
+
+      let reader = stream.getReader()
+      let first = await reader.read()
+      invariant(!first.done)
+      expect(new TextDecoder().decode(first.value)).toContain('<p>Reviews</p>')
+
+      let reason = new Error('Client went away')
+      await reader.cancel(reason)
+
+      expect(await frameCancelled).toBe(reason)
+      expect(await flushUnhandledRejections()).toEqual([])
+      expect(errors).toEqual([])
+    })
+
+    it('cancels the rest of a non-blocking frame stream when the signal aborts', async (t) => {
+      let controller = new AbortController()
+      let errors: unknown[] = []
+      let [frameCancelled, resolveFrameCancelled] = withResolvers<unknown>()
+      let [frameStarted, resolveFrameStarted] = withResolvers<void>()
+      let flushUnhandledRejections = trackUnhandledRejections(t)
+
+      let stream = renderToStream(
+        <Frame src="/fragments/reviews" fallback={<div>Loading...</div>} />,
+        {
+          onError(error) {
+            errors.push(error)
+          },
+          resolveFrame() {
+            return new ReadableStream<Uint8Array>({
+              start(frameController) {
+                frameController.enqueue(new TextEncoder().encode('<p>Reviews</p>'))
+              },
+              pull() {
+                resolveFrameStarted()
+              },
+              cancel(reason) {
+                resolveFrameCancelled(reason)
+              },
+            })
+          },
+          signal: controller.signal,
+        },
+      )
+
+      let chunks = readChunks(stream)
+      let first = await chunks.next()
+      invariant(!first.done)
+      expect(first.value).toContain('Loading...')
+      let second = await chunks.next()
+      invariant(!second.done)
+      expect(second.value).toContain('<p>Reviews</p>')
+      await frameStarted
+
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      controller.abort(abortError)
+
+      expect(await frameCancelled).toBe(abortError)
+      expect(await chunks.next()).toEqual({ done: true, value: undefined })
+      expect(await flushUnhandledRejections()).toEqual([])
+      expect(errors).toEqual([])
+    })
+
     it('calls onError for AbortError when the request was not canceled', async () => {
       let abortError = new DOMException('This operation was aborted', 'AbortError')
       let errors: unknown[] = []

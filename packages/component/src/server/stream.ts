@@ -547,9 +547,12 @@ async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<Reso
       }
       controller.enqueue(next.value)
     },
-    cancel(reason) {
-      release()
-      return reader.cancel(reason)
+    async cancel(reason) {
+      try {
+        await reader.cancel(reason)
+      } finally {
+        release()
+      }
     },
   })
 
@@ -1985,6 +1988,15 @@ async function streamByteStreams(
   await Promise.all(
     streams.map(async (stream) => {
       let reader = stream.getReader()
+      // Cancelling ends a pending read and stops the frame work producing the stream.
+      let cancelOnAbort = () => {
+        reader.cancel(context.signal.reason).catch(() => {})
+      }
+      if (context.signal.aborted) {
+        cancelOnAbort()
+      } else {
+        context.signal.addEventListener('abort', cancelOnAbort, { once: true })
+      }
       try {
         while (true) {
           if (context.signal.aborted) break
@@ -1998,6 +2010,7 @@ async function streamByteStreams(
           context.onError(error)
         }
       } finally {
+        context.signal.removeEventListener('abort', cancelOnAbort)
         reader.releaseLock()
       }
     }),
