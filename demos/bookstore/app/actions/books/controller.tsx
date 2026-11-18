@@ -56,8 +56,16 @@ export default createController(routes.books, {
       let imageUrls = await Promise.all(
         s.parse(s.array(s.string()), JSON.parse(book.image_urls)).map(getBookImageHref),
       )
+      let requestedImage = Number(new URL(request.url).searchParams.get('image'))
+      let startIndex =
+        Number.isInteger(requestedImage) && requestedImage > 0 && requestedImage <= imageUrls.length
+          ? requestedImage - 1
+          : 0
 
-      return render(<ShowPage book={book} imageUrls={imageUrls} />, browsingResponseInit(request))
+      return render(
+        <ShowPage book={book} imageUrls={imageUrls} startIndex={startIndex} />,
+        browsingResponseInit(request),
+      )
     },
   },
 })

@@ -1,20 +1,19 @@
-import { css, type Handle, clientEntry, on } from 'remix/component'
+import { css, type Handle, clientEntry, on, updateUrl } from 'remix/component'
 
 export const ImageCarousel = clientEntry(
   import.meta.url,
   function ImageCarousel(handle: Handle<{ images: string[]; startIndex?: number }>) {
     let index = handle.props.startIndex ?? 0
 
-    let goPrev = () => {
-      if (index <= 0) return
-      index = index - 1
-      handle.update()
-    }
+    async function selectImage(nextIndex: number) {
+      if (nextIndex < 0 || nextIndex >= handle.props.images.length) return
+      index = nextIndex
+      await handle.update()
 
-    let goNext = (total: number) => {
-      if (index >= total - 1) return
-      index = index + 1
-      handle.update()
+      let url = new URL(window.location.href)
+      if (index === 0) url.searchParams.delete('image')
+      else url.searchParams.set('image', String(index + 1))
+      await updateUrl(url.href, { signal: handle.signal })
     }
 
     return () => {
@@ -55,7 +54,7 @@ export const ImageCarousel = clientEntry(
                 <img
                   src={src}
                   alt={`Image ${i + 1} of ${total}`}
-                  loading={i === 0 ? 'eager' : 'lazy'}
+                  loading={i === index ? 'eager' : 'lazy'}
                   mix={css({
                     width: '100%',
                     height: '100%',
@@ -73,7 +72,11 @@ export const ImageCarousel = clientEntry(
           <button
             aria-label="Previous image"
             disabled={index === 0}
-            mix={[on('click', goPrev), carouselButtonStyle, css({ left: '8px' })]}
+            mix={[
+              on('click', () => selectImage(index - 1)),
+              carouselButtonStyle,
+              css({ left: '8px' }),
+            ]}
           >
             <span mix={carouselButtonIconStyle}>{'‹'}</span>
           </button>
@@ -81,7 +84,11 @@ export const ImageCarousel = clientEntry(
           <button
             aria-label="Next image"
             disabled={index === total - 1}
-            mix={[on('click', () => goNext(total)), carouselButtonStyle, css({ right: '8px' })]}
+            mix={[
+              on('click', () => selectImage(index + 1)),
+              carouselButtonStyle,
+              css({ right: '8px' }),
+            ]}
           >
             <span mix={carouselButtonIconStyle}>{'›'}</span>
           </button>

@@ -10,12 +10,13 @@ import { Layout } from '../../ui/layout.tsx'
 export interface ShowPageProps {
   book: Book
   imageUrls: string[]
+  startIndex: number
 }
 
 export function ShowPage(handle: Handle<ShowPageProps>) {
   return () => {
-    let { book, imageUrls } = handle.props
-    let mainImage = imageUrls[0]
+    let { book, imageUrls, startIndex } = handle.props
+    let mainImage = imageUrls[startIndex]
 
     return (
       <Layout head={mainImage ? <link rel="preload" as="image" href={mainImage} /> : null}>
@@ -31,7 +32,7 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
               }),
             ]}
           >
-            <ImageCarousel images={imageUrls} />
+            <ImageCarousel images={imageUrls} startIndex={startIndex} />
           </div>
 
           <div class="card">
