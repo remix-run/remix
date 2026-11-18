@@ -16,19 +16,15 @@ export function BookCard(handle: Handle<BookCardProps>) {
 
     return (
       <div class="book-card" data-test-slug={book.slug}>
-        <a href={routes.books.show.href({ slug: book.slug })}>
+        <a href={routes.books.show.href({ slug: book.slug })} data-rmx-prefetch="viewport">
           <img src={book.cover_url} alt={book.title} mix={bookCoverTransition(book.id)} />
         </a>
         <div class="book-card-body">
           <h3 mix={bookTitleTransition(book.id)}>{book.title}</h3>
           <p class="author">by {book.author}</p>
           <p class="price">${book.price.toFixed(2)}</p>
-          <div mix={css({ display: 'flex', gap: '0.5rem', alignItems: 'center' })}>
-            <a
-              href={routes.books.show.href({ slug: book.slug })}
-              data-rmx-prefetch="viewport"
-              class="btn"
-            >
+          <div mix={css({ display: 'flex', gap: '0.25rem', alignItems: 'center' })}>
+            <a href={routes.books.show.href({ slug: book.slug })} class="btn">
               View Details
             </a>
 

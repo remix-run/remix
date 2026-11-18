@@ -161,10 +161,12 @@
   }
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
     gap: 1.5rem;
   }
   .book-card {
+    display: flex;
+    flex-direction: column;
     background: white;
     border-radius: 8px;
     overflow: hidden;
@@ -183,7 +185,18 @@
     background: #ecf0f1;
   }
   .book-card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
     padding: 1rem;
+  }
+  .book-card .btn {
+    flex: 1;
+    min-width: 0;
+    padding: 0.5rem 0.125rem;
+    font-size: 0.75rem;
+    text-align: center;
+    white-space: nowrap;
   }
   .book-card h3 {
     font-size: 1.1rem;
@@ -198,7 +211,8 @@
     font-size: 1.25rem;
     font-weight: bold;
     color: #27ae60;
-    margin: 0.5rem 0;
+    margin: auto 0 0.5rem;
+    padding-top: 0.5rem;
   }
   table {
     width: 100%;
