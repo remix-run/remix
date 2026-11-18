@@ -1,5 +1,5 @@
 import { createController } from 'remix/router'
-import { ilike } from 'remix/data-table'
+import { and, ilike, ne } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 
 import { books } from '../../data/schema.ts'
@@ -10,6 +10,7 @@ import { browsingResponseInit } from '../browsing-response.ts'
 import { IndexPage } from './index-page.tsx'
 import { GenreNotFoundPage, GenrePage } from './genre-page.tsx'
 import { BookNotFoundPage, ShowPage } from './show-page.tsx'
+import { RelatedBooks } from './related-books.tsx'
 
 export default createController(routes.books, {
   actions: {
@@ -64,6 +65,28 @@ export default createController(routes.books, {
 
       return render(
         <ShowPage book={book} imageUrls={imageUrls} startIndex={startIndex} />,
+        browsingResponseInit(request),
+      )
+    },
+
+    async related({ db, params, render, request, session }) {
+      let book = await db.findOne(books, { where: { slug: params.slug } })
+      if (!book) {
+        return render(<p>Book not found.</p>, {
+          status: 404,
+          headers: { 'Cache-Control': 'no-store' },
+        })
+      }
+
+      let relatedBooks = await db.findMany(books, {
+        where: and(ilike('genre', book.genre), ne('id', book.id)),
+        orderBy: ['id', 'asc'],
+        limit: 3,
+      })
+      relatedBooks = await Promise.all(relatedBooks.map(resolveBookCover))
+
+      return render(
+        <RelatedBooks books={relatedBooks} cart={getCurrentCart(session)} />,
         browsingResponseInit(request),
       )
     },

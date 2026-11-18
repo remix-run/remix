@@ -53,6 +53,7 @@ The cart demonstrates these application conventions for keeping mutations local 
 Navigation and prefetching use frames too:
 
 - Header links prefetch on hover or focus, while book details prefetch as their links enter the viewport. Login is excluded because rendering it consumes session flash messages.
+- Product pages show up to three other books in the same genre below the details. A `loading="lazy"` frame loads them as the Related Books card approaches the viewport; its fallback reserves space and links to the genre while loading.
 - The [browser entry](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/entry.tsx) uses `defaultResolveFrame` to customize caching and wrap page updates in view transitions. Prefetching uses Remix's built-in strategy.
 
 ## Caching

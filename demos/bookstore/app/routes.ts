@@ -21,6 +21,7 @@ export const routes = route({
     index: '/books',
     genre: '/books/genre/:genre',
     show: '/books/:slug',
+    related: '/books/:slug/related',
   },
 
   // Auth routes

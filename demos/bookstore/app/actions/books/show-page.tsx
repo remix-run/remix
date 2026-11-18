@@ -96,6 +96,35 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
               </a>
             </p>
           </div>
+          <section
+            class="card"
+            aria-labelledby="related-books-heading"
+            mix={css({ gridColumn: 2, minWidth: 0 })}
+          >
+            <h2 id="related-books-heading" mix={css({ marginBottom: '1.5rem' })}>
+              Related Books
+            </h2>
+            <Frame
+              name={`related-books-${book.id}`}
+              src={routes.books.related.href({ slug: book.slug })}
+              loading="lazy"
+              fallback={
+                <div
+                  mix={css({
+                    minHeight: '450px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                  })}
+                >
+                  <p role="status">Loading related books…</p>
+                  <a href={routes.books.genre.href({ genre: book.genre })}>Browse this genre</a>
+                </div>
+              }
+            />
+          </section>
         </div>
       </Layout>
     )

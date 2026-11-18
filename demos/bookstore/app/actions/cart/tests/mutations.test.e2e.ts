@@ -30,23 +30,24 @@ describe('cart submissions', () => {
       [],
       '/books/bbq',
     )
+    let bookDetails = page.getByRole('heading', { level: 1, name: 'Ash & Smoke' }).locator('..')
     requests.length = 0
     let initial = await frameState(page)
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).press('Enter')
+    await bookDetails.getByRole('button', { name: 'Add to Cart', exact: true }).press('Enter')
     await received.promise
-    let pending = page.getByRole('button', { name: 'Saving...', exact: true })
+    let pending = bookDetails.getByRole('button', { name: 'Saving...', exact: true })
     await pending.waitFor()
     assert.equal(await pending.getAttribute('aria-disabled'), 'true')
     await pending.evaluate((button: HTMLButtonElement) => button.form?.requestSubmit(button))
     release.resolve()
-    let remove = page.getByRole('button', { name: 'Remove from Cart', exact: true })
+    let remove = bookDetails.getByRole('button', { name: 'Remove from Cart', exact: true })
     await remove.waitFor()
     assert.equal(await remove.evaluate((button) => button === document.activeElement), true)
     await remove.press('Enter')
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
+    await bookDetails.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
     rejecting = true
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).click()
-    let failed = page.getByRole('button', { name: 'Failed!', exact: true })
+    await bookDetails.getByRole('button', { name: 'Add to Cart', exact: true }).click()
+    let failed = bookDetails.getByRole('button', { name: 'Failed!', exact: true })
     await failed.waitFor()
     assert.notEqual(
       await failed.evaluate((button) => getComputedStyle(button).animationName),
@@ -66,9 +67,9 @@ describe('cart submissions', () => {
     await failed.waitFor()
     rejecting = false
     await failed.press('Enter')
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
+    await bookDetails.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
     await page.reload()
-    await page.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
+    await bookDetails.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
     assert.equal(await page.getByRole('alert').count(), 0)
     assert.equal(requests.filter((request) => request.startsWith('POST')).length, 6)
     assert.deepEqual(await frameState(page), initial)
