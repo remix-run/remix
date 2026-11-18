@@ -9,6 +9,8 @@ export function createDocument(title: string, content: SafeHtml): SafeHtml {
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>${title}</title>
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         <style>
           ${styles}
         </style>

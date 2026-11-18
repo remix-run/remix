@@ -26,6 +26,8 @@ export function Document(handle: Handle<DocumentProps>) {
             content="A long-page demo that mounts Remix Frames as they approach the viewport."
           />
           <title>{title}</title>
+          <link rel="icon" href="/favicon.ico" sizes="32x32" />
+          <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
           <ImportMap value={importMap} />
           {preloads.map((preloadHref) => (
             <link key={preloadHref} rel="modulepreload" href={preloadHref} />
