@@ -40,7 +40,7 @@ Request and response bodies stay as Web streams. An action can read `request.bod
 
 ## The Node server entry {#the-node-server-entry}
 
-On Node, `server.ts` creates a `node:http` server and connects it to the app router. A production entry should also [shut down gracefully](/production/#startup-and-shutdown), which this example omits to keep the request path visible.
+On Node, `server.ts` creates a `node:http` server and connects it to the app router. A production entry should also [shut down gracefully](/production/#shutting-down), which this example omits to keep the request path visible.
 
 ```ts filename=server.ts
 import * as http from "node:http";
