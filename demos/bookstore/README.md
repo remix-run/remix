@@ -55,7 +55,8 @@ Navigation and prefetching use frames too:
 
 - Header links prefetch on hover or focus, while book details prefetch as their links enter the viewport. Login is excluded because rendering it consumes session flash messages.
 - Product pages show up to three other books in the same genre below the details. A `loading="lazy"` frame loads them as the Related Books card approaches the viewport; its fallback reserves space and links to the genre while loading.
-- The [browser entry](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/entry.tsx) uses `defaultResolveFrame` to customize caching and wrap page updates in view transitions. Prefetching uses Remix's built-in strategy.
+- The browser entry owns the custom prefetch implementation and calls the [related-book prefetch manager](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/related-book-prefetch-manager.ts) as one part of frame processing. The manager discovers the destination's lazy related-books frame during viewport prefetching and queues its URL and target in a `WeakMap` keyed by the card's existing link. Hover or focus starts that queued request and prefetches its cover images. Intent arriving before discovery shares the pending page request. The queue retains no HTML or callbacks, releases frame references when started, and ignores removed or changed links. This extra prefetch runs once per mounted link and destination and respects Save-Data and slow connections. The entry's shared abort signal removes the manager's listeners and cancels pending prefetches during HMR disposal.
+- The [browser entry](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/actions/public/entry.tsx) uses `defaultResolveFrame` to customize caching and wrap page updates in view transitions. Prefetching delegates to `defaultPrefetch` for HTML and asset discovery.
 
 ## Caching
 

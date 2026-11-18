@@ -433,6 +433,182 @@ describe('bookstore prefetching', () => {
     assert.deepEqual(failedAssets, [])
   })
 
+  it('prefetches related books and their covers on card hover and reuses them on navigation', async (t) => {
+    let requests: Request[] = []
+    let images: string[] = []
+    let page = await t.serve(
+      await createTestServer((request) => {
+        let url = new URL(request.url)
+        if (url.pathname.startsWith('/books/')) requests.push(request)
+        if (url.pathname.startsWith('/assets/app/images/')) images.push(url.pathname + url.search)
+        return router.fetch(request)
+      }),
+    )
+    let errors: string[] = []
+    page.on('pageerror', (error) => errors.push(error.message))
+    let mainPage = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/books/bbq',
+    )
+    await page.goto('/search?q=Ash%20%26%20Smoke')
+    await waitForNavigationRuntime(page)
+    await (await mainPage).finished()
+    await page.waitForFunction(() => !document.querySelector('head link[rel="prefetch"]'))
+    assert.deepEqual(
+      requests.map((request) => new URL(request.url).pathname),
+      ['/books/bbq'],
+    )
+
+    let related = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/books/bbq/related',
+    )
+    let supportsAssetPrefetch = await prefetchesAssets(page)
+    let coverResponses = supportsAssetPrefetch
+      ? ['bread-before-dawn', 'sunday-noodle-shop', 'citrus-and-salt'].map((slug) =>
+          page.waitForResponse((response) =>
+            new URL(response.url()).pathname.includes(`/${slug}-1.`),
+          ),
+        )
+      : []
+    let card = page.locator('[data-test-slug="bbq"]')
+    await card.getByText('by Rusty Char-Broil', { exact: true }).hover()
+    await (await related).finished()
+    await Promise.all(coverResponses.map(async (response) => (await response).finished()))
+    await page.waitForFunction(() => !document.querySelector('head link[rel="prefetch"]'))
+    assert.equal(requests[1].headers.get('X-Remix-Prefetch'), 'true')
+    assert.equal(requests[1].headers.get('X-Remix-Target'), 'related-books-1')
+    assert.equal(await page.locator('[data-test-slug]').count(), 1)
+    assert.deepEqual(
+      requests.map((request) => new URL(request.url).pathname),
+      ['/books/bbq', '/books/bbq/related'],
+    )
+    if (supportsAssetPrefetch) {
+      assert.equal(images.length, 4)
+      assert.ok(images.every((href) => href.endsWith('?transform=book-image')))
+    }
+
+    await card.getByRole('heading', { name: 'Ash & Smoke', exact: true }).hover()
+    await page.mouse.move(0, 0)
+    let details = card.getByRole('link', { name: 'View Details', exact: true })
+    await details.focus()
+    await card.hover()
+    await details.click()
+    await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
+    let section = page.getByRole('region', { name: 'Related Books', exact: true })
+    await section.scrollIntoViewIfNeeded()
+    await section.getByRole('heading', { name: 'Citrus & Salt', exact: true }).waitFor()
+    assert.equal(
+      requests.filter((request) => new URL(request.url).pathname === '/books/bbq/related').length,
+      reusesCachedHtml(page) ? 1 : 2,
+    )
+    if (supportsAssetPrefetch) {
+      assert.equal(images.filter((href) => href.includes('/bread-before-dawn-1.')).length, 1)
+      assert.equal(images.filter((href) => href.includes('/sunday-noodle-shop-1.')).length, 1)
+      assert.equal(images.filter((href) => href.includes('/citrus-and-salt-1.')).length, 1)
+    }
+    assert.deepEqual(errors, [])
+  })
+
+  it('respects Save-Data on card hover and prefetches on keyboard focus when enabled', async (t) => {
+    let requests = 0
+    let page = await t.serve(
+      await createTestServer((request) => {
+        if (new URL(request.url).pathname === '/books/bbq/related') requests++
+        return router.fetch(request)
+      }),
+    )
+    await page.goto('/search?q=Ash%20%26%20Smoke')
+    await waitForNavigationRuntime(page)
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'connection', {
+        configurable: true,
+        value: { saveData: true },
+      })
+    })
+    let card = page.locator('[data-test-slug="bbq"]')
+    await card.getByText('by Rusty Char-Broil', { exact: true }).hover()
+    assert.equal(requests, 0)
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'connection', {
+        configurable: true,
+        value: { saveData: false },
+      })
+    })
+    let related = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/books/bbq/related',
+    )
+    await card.getByRole('link', { name: 'View Details', exact: true }).focus()
+    await (await related).finished()
+    assert.equal(requests, 1)
+  })
+
+  it('queues card intent arriving before viewport HTML finishes without another page request', async (t) => {
+    let requested = Promise.withResolvers<void>()
+    let release = Promise.withResolvers<void>()
+    t.after(() => release.resolve())
+    let requests: Request[] = []
+    let page = await t.serve(
+      await createTestServer(async (request) => {
+        let pathname = new URL(request.url).pathname
+        if (pathname === '/books/bbq') {
+          requests.push(request)
+          requested.resolve()
+          await release.promise
+        }
+        if (pathname === '/books/bbq/related') requests.push(request)
+        return router.fetch(request)
+      }),
+    )
+    await page.goto('/search?q=Ash%20%26%20Smoke')
+    await waitForNavigationRuntime(page)
+    await requested.promise
+    let card = page.locator('[data-test-slug="bbq"]')
+    await card.getByText('by Rusty Char-Broil', { exact: true }).hover()
+    await card.getByRole('link', { name: 'View Details', exact: true }).focus()
+    assert.equal(requests.length, 1)
+    let related = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/books/bbq/related',
+    )
+    release.resolve()
+    await (await related).finished()
+    assert.deepEqual(
+      requests.map((request) => new URL(request.url).pathname),
+      ['/books/bbq', '/books/bbq/related'],
+    )
+    assert.equal(requests[1].headers.get('X-Remix-Target'), 'related-books-1')
+  })
+
+  it('cancels pending card discovery when its link is removed without starting queued frames', async (t) => {
+    let requested = Promise.withResolvers<void>()
+    let release = Promise.withResolvers<void>()
+    t.after(() => release.resolve())
+    let relatedRequests = 0
+    let page = await t.serve(
+      await createTestServer(async (request) => {
+        let pathname = new URL(request.url).pathname
+        if (pathname === '/books/bbq') {
+          requested.resolve()
+          await release.promise
+        }
+        if (pathname === '/books/bbq/related') relatedRequests++
+        return router.fetch(request)
+      }),
+    )
+    await page.goto('/search?q=Ash%20%26%20Smoke')
+    await waitForNavigationRuntime(page)
+    await requested.promise
+    let card = page.locator('[data-test-slug="bbq"]')
+    await card.getByText('by Rusty Char-Broil', { exact: true }).hover()
+    let canceled = page.waitForEvent('requestfailed', {
+      predicate: (request) => new URL(request.url()).pathname === '/books/bbq',
+    })
+    await card.evaluate((card) => card.remove())
+    await canceled
+    release.resolve()
+    await page.goto('/about')
+    await waitForNavigationRuntime(page)
+    assert.equal(relatedRequests, 0)
+  })
+
   it('prefetches header links on intent', async (t) => {
     let requests = 0
     let page = await t.serve(
@@ -505,6 +681,14 @@ describe('bookstore prefetching', () => {
       requests.filter((path) => path === '/books/three-ways?from=changed-link').length,
       1,
     )
+    let related = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/books/three-ways/related',
+    )
+    await link.hover()
+    let relatedResponse = await related
+    await relatedResponse.finished()
+    assert.equal(relatedResponse.request().headers()['x-remix-target'], 'related-books-3')
+    assert.equal(requests.includes('/books/bbq/related'), false)
   })
 })
 

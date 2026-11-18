@@ -1,4 +1,4 @@
-import { defaultResolveFrame, run } from 'remix/component'
+import { defaultPrefetch, defaultResolveFrame, run } from 'remix/component'
 import {
   detectMultipleImportMapSupport,
   importModule,
@@ -8,6 +8,7 @@ import { createMatcher } from 'remix/route-pattern/match'
 
 import { routes } from '../../routes.ts'
 import { installDebugBoundaries } from './debug-boundaries.ts'
+import { createRelatedBookPrefetchManager } from './related-book-prefetch-manager.ts'
 
 const bookDetailsMatcher = createMatcher(routes.books.show.pattern)
 const browsingPageMatchers = [
@@ -21,6 +22,8 @@ const browsingPageMatchers = [
   routes.auth.register.index.pattern,
 ].map((pattern) => createMatcher(pattern))
 const disposeDebugBoundaries = installDebugBoundaries()
+const prefetchController = new AbortController()
+const relatedBookPrefetchManager = createRelatedBookPrefetchManager(prefetchController.signal)
 
 export const app = run({
   async loadModule(moduleUrl: string, exportName: string) {
@@ -30,6 +33,23 @@ export const app = run({
       throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
     }
     return Component
+  },
+  prefetch(src, options) {
+    return defaultPrefetch(
+      src,
+      {
+        ...options,
+        signal: options?.signal
+          ? AbortSignal.any([options.signal, prefetchController.signal])
+          : prefetchController.signal,
+      },
+      {
+        processFrame(prefetchReferences, context) {
+          let relatedBookImages = relatedBookPrefetchManager.processFrame(context)
+          return prefetchReferences({ assets: [...context.assets, ...relatedBookImages] })
+        },
+      },
+    )
   },
   resolveFrame(src, options) {
     return defaultResolveFrame(src, options, {
@@ -81,7 +101,10 @@ export const app = run({
 })
 
 if (import.meta.hot) {
-  import.meta.hot.dispose(disposeDebugBoundaries)
+  import.meta.hot.dispose(() => {
+    prefetchController.abort()
+    disposeDebugBoundaries()
+  })
   import.meta.hot.on('server:update', async () => {
     try {
       await app.ready()
