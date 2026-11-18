@@ -6,6 +6,47 @@ import type { Page } from 'playwright'
 import { createTestRouter } from '../../../../test/helpers.ts'
 
 describe('cart submissions', () => {
+  it('keeps cart buttons idle while Back to Books loads the catalog', async (t) => {
+    let requested = Promise.withResolvers<void>()
+    let release = Promise.withResolvers<void>()
+    t.after(() => release.resolve())
+    let page = await serveCart(
+      t,
+      async (request, respond) => {
+        if (new URL(request.url).pathname !== '/books') return
+        if (request.headers.get('X-Remix-Prefetch') === 'true') {
+          let response = await respond()
+          response.headers.set('Cache-Control', 'no-store')
+          return response
+        }
+        requested.resolve()
+        await release.promise
+      },
+      [],
+      '/books/bbq',
+    )
+    let details = page.getByRole('heading', { level: 1, name: 'Ash & Smoke' }).locator('..')
+    await details
+      .getByRole('link', { name: 'Back to Books', exact: true })
+      .click({ noWaitAfter: true })
+    await requested.promise
+    await page.evaluate(async () => {
+      let script = document.querySelector<HTMLScriptElement>('script[type="module"][src]')
+      if (!script) throw new Error('Missing app entry')
+      let { app } = await import(script.src)
+      app.flush()
+    })
+    assert.equal(await details.getByRole('button', { name: 'Add to Cart', exact: true }).count(), 1)
+    assert.equal(await page.getByRole('button', { name: 'Saving...', exact: true }).count(), 0)
+    release.resolve()
+    await page.getByRole('heading', { name: 'Browse Books', exact: true }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    await page.getByRole('link', { name: 'Ash & Smoke', exact: true }).scrollIntoViewIfNeeded()
+    let card = page.locator('[data-test-slug="bbq"]')
+    await card.getByRole('button', { name: 'Add to Cart', exact: true }).click()
+    await card.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
+  })
+
   it('submits once and safely retries add and remove after lost responses', async (t) => {
     let received = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
