@@ -39,7 +39,17 @@ import {
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
-import { isCommentNode, isFrameStart, isHydrationStart } from './stream-protocol.ts'
+import { ErrorBoundary, renderErrorBoundaryFallback } from './error-boundary.ts'
+import {
+  ERROR_BOUNDARY_END_MARKER,
+  ERROR_BOUNDARY_START_MARKER,
+  isCommentNode,
+  isErrorBoundaryEnd,
+  isErrorBoundaryStart,
+  isFailedErrorBoundaryStart,
+  isFrameStart,
+  isHydrationStart,
+} from './stream-protocol.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 
@@ -784,6 +794,7 @@ function commitHostNode(
   committed._dom = dom
   committed._children = EMPTY_COMMITTED_CHILDREN
   applyResolvedHostProps(committed, resolved)
+  if (resolved.mixState) renderAttempt?.push(committed)
   return committed
 }
 
@@ -876,7 +887,7 @@ export function diffVNodes(
       return committed
     }
     case 'frame': {
-      return next.type[FRAME_NODE].diff(
+      let committed = next.type[FRAME_NODE].diff(
         curr as CommittedFrameNode,
         next,
         domParent,
@@ -885,6 +896,8 @@ export function diffVNodes(
         svg,
         anchor,
       )
+      if (committed._state !== (curr as CommittedFrameNode)._state) renderAttempt?.push(committed)
+      return committed
     }
     case 'component': {
       return diffComponent(
@@ -1241,6 +1254,7 @@ function insert(
     let end = pending?.[0] ?? owner?.end
     if (end) {
       let committed = commitClientEntryBoundary(node, vParent, svg, hydrationNode, end)
+      renderAttempt?.push(committed)
       updateClientEntryBoundary(committed, context)
       if (cursor) cursor.current = end.nextSibling
       return committed
@@ -1399,7 +1413,17 @@ function insert(
   }
 
   if (node.kind === 'frame') {
-    return node.type[FRAME_NODE].insert(node, domParent, vParent, context, svg, anchor, cursor)
+    let committed = node.type[FRAME_NODE].insert(
+      node,
+      domParent,
+      vParent,
+      context,
+      svg,
+      anchor,
+      cursor,
+    )
+    renderAttempt?.push(committed)
+    return committed
   }
 
   invariant(false, 'Unexpected node type')
@@ -1423,7 +1447,9 @@ function skipCommentsExceptBoundaryStart(
 ): Node | null {
   while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
     if (isFrameStart(cursor)) return cursor
-    if (preserveClientEntry && isHydrationStart(cursor)) return cursor
+    if (preserveClientEntry && (isHydrationStart(cursor) || isErrorBoundaryStart(cursor))) {
+      return cursor
+    }
     cursor = cursor.nextSibling
   }
   return cursor
@@ -1442,6 +1468,10 @@ export function renderComponent(
   if (handle.isRemoved()) {
     invariant('_content' in next, 'Expected removed component to be committed')
     return next
+  }
+
+  if (next.type === ErrorBoundary) {
+    return renderErrorBoundary(currContent, next, domParent, context, anchor, cursor)
   }
 
   let [element, tasks] = handle.render(next.props)
@@ -1492,7 +1522,331 @@ function diffComponent(
     handle = curr._handle
   }
   let mounting = beginComponentNode(next, vParent, svg, handle, context)
+  if (curr === null) renderAttempt?.push(mounting)
   return renderComponent(curr && curr._content, mounting, domParent, context, anchor, cursor)
+}
+
+type ErrorBoundaryState = {
+  // Markers around the boundary's content, so a failed render can be removed from the DOM even
+  // when it never committed to the tree.
+  start: Comment
+  end: Comment
+  // Boxed so a thrown `undefined` still counts as a caught error.
+  error: { value: unknown } | undefined
+  showingFallback: boolean
+  node: CommittedComponentNode | undefined
+  domParent: ParentNode | undefined
+  retry: () => void
+}
+
+type AbandonableNode =
+  | MountingComponentNode
+  | CommittedHostNode
+  | CommittedFrameNode
+  | CommittedClientEntryNode
+
+const errorBoundaryStates = new WeakMap<ComponentHandle, ErrorBoundaryState>()
+
+// Nodes that own resources beyond their DOM, created while rendering inside an error boundary.
+// A failed render never commits them to the tree, so the boundary disposes them itself.
+let renderAttempt: AbandonableNode[] | undefined
+
+function getErrorBoundaryState(node: MountingComponentNode): ErrorBoundaryState | undefined {
+  return node.type === ErrorBoundary ? errorBoundaryStates.get(node._handle) : undefined
+}
+
+function renderErrorBoundary(
+  currContent: CommittedVNode | null,
+  next: MountingComponentNode | CommittedComponentNode,
+  domParent: ParentNode,
+  context: ReconcileContext,
+  anchor?: Node,
+  cursor?: HydrationCursor,
+): CommittedComponentNode {
+  let { scheduler } = context
+  let handle = next._handle
+  let state = errorBoundaryStates.get(handle)
+  let contentCursor: HydrationCursor | undefined
+  let endPending = false
+  if (!state) {
+    let mounted = mountErrorBoundary(handle, domParent, context, anchor, cursor)
+    state = mounted.state
+    contentCursor = mounted.cursor
+    endPending = mounted.endPending
+  }
+
+  let showFallback = state.error !== undefined
+  if (currContent && state.showingFallback !== showFallback) {
+    // Switching between the children and the fallback always renders new component instances.
+    remove(currContent, domParent, context)
+    currContent = null
+  }
+
+  let [element, tasks] = handle.render(next.props)
+  if (state.error) {
+    element = renderErrorBoundaryFallback(next.props.fallback, state.error.value, state.retry)
+  }
+
+  let parentAttempt = renderAttempt
+  let attempt: AbandonableNode[] = []
+  let content: CommittedVNode
+  renderAttempt = attempt
+  try {
+    let contentAnchor = state.end.parentNode ? state.end : anchor
+    content = diffVNodes(
+      currContent,
+      toVNode(element),
+      domParent,
+      next,
+      context,
+      contentAnchor,
+      contentCursor,
+    )
+    appendNodes(parentAttempt, attempt)
+    if (endPending) placeErrorBoundaryEnd(state, domParent, anchor, cursor)
+  } catch (error) {
+    renderAttempt = parentAttempt
+    // A fallback that throws is handled by the next boundary up, which disposes its nodes.
+    if (showFallback) {
+      appendNodes(parentAttempt, attempt)
+      throw error
+    }
+
+    if (endPending) placeErrorBoundaryEnd(state, domParent, anchor, cursor)
+    discardErrorBoundaryContent(state, currContent, attempt, context)
+    reportCaughtError(error)
+    state.error = { value: error }
+    state.showingFallback = true
+    let fallback = renderErrorBoundaryFallback(next.props.fallback, error, state.retry)
+    content = diffVNodes(null, toVNode(fallback), domParent, next, context, state.end)
+  } finally {
+    renderAttempt = parentAttempt
+  }
+
+  state.showingFallback = state.error !== undefined
+  let committed = commitComponentNode(next, content)
+  state.node = committed
+  state.domParent = domParent
+  handle.setScheduleUpdate(scheduler, committed, domParent)
+  restoreAncestorSelect(domParent)
+  scheduler.enqueueTasks(tasks)
+  return committed
+}
+
+function mountErrorBoundary(
+  handle: ComponentHandle,
+  domParent: ParentNode,
+  context: ReconcileContext,
+  anchor?: Node,
+  cursor?: HydrationCursor,
+): { state: ErrorBoundaryState; cursor?: HydrationCursor; endPending: boolean } {
+  let hydrationNode = cursor?.current
+  let serverEnd = isErrorBoundaryStart(hydrationNode) ? findErrorBoundaryEnd(hydrationNode) : null
+  let start: Comment
+  let end: Comment
+  let error: ErrorBoundaryState['error']
+  let contentCursor: HydrationCursor | undefined
+  let endPending = false
+
+  if (cursor && isErrorBoundaryStart(hydrationNode) && serverEnd) {
+    start = hydrationNode
+    end = serverEnd
+    if (isFailedErrorBoundaryStart(start)) {
+      // The server does not send error details, so the hydrated fallback gets a generic error.
+      error = { value: new Error('ErrorBoundary content failed to render on the server') }
+    }
+    contentCursor = { current: start.nextSibling }
+    cursor.current = end.nextSibling
+  } else if (cursor && hydrationNode) {
+    // HTML without boundary markers: the content's end is only known after hydrating it.
+    start = document.createComment(ERROR_BOUNDARY_START_MARKER)
+    end = document.createComment(ERROR_BOUNDARY_END_MARKER)
+    domParent.insertBefore(start, hydrationNode)
+    contentCursor = cursor
+    endPending = true
+  } else {
+    start = document.createComment(ERROR_BOUNDARY_START_MARKER)
+    end = document.createComment(ERROR_BOUNDARY_END_MARKER)
+    insertDomNode(start, domParent, anchor)
+    insertDomNode(end, domParent, anchor)
+  }
+
+  let state: ErrorBoundaryState = {
+    start,
+    end,
+    error,
+    showingFallback: false,
+    node: undefined,
+    domParent: undefined,
+    retry() {
+      if (!state.error || handle.isRemoved() || !state.node || !state.domParent) return
+      state.error = undefined
+      context.scheduler.enqueue(state.node, state.domParent)
+    },
+  }
+  errorBoundaryStates.set(handle, state)
+  return { state, cursor: contentCursor, endPending }
+}
+
+function findErrorBoundaryEnd(start: Comment): Comment | null {
+  let depth = 0
+  for (let node = start.nextSibling; node; node = node.nextSibling) {
+    if (isErrorBoundaryStart(node)) {
+      depth++
+    } else if (isErrorBoundaryEnd(node)) {
+      if (depth === 0) return node
+      depth--
+    }
+  }
+  return null
+}
+
+function placeErrorBoundaryEnd(
+  state: ErrorBoundaryState,
+  domParent: ParentNode,
+  anchor?: Node,
+  cursor?: HydrationCursor,
+): void {
+  let next = cursor?.current
+  let before =
+    next?.parentNode === domParent ? next : anchor?.parentNode === domParent ? anchor : null
+  domParent.insertBefore(state.end, before ?? null)
+}
+
+function appendNodes(target: AbandonableNode[] | undefined, nodes: AbandonableNode[]): void {
+  if (!target) return
+  for (let node of nodes) target.push(node)
+}
+
+function reportCaughtError(error: unknown): void {
+  console.error(error)
+}
+
+function discardErrorBoundaryContent(
+  state: ErrorBoundaryState,
+  content: CommittedVNode | null,
+  attempt: AbandonableNode[],
+  context: ReconcileContext,
+): void {
+  for (let node of attempt) {
+    disposeAbandonedNode(node, context)
+  }
+  if (content) remove(content, null, context)
+
+  let { start, end } = state
+  if (end.parentNode !== start.parentNode) return
+  let node = start.nextSibling
+  while (node && node !== end) {
+    let next = node.nextSibling
+    node.parentNode?.removeChild(node)
+    node = next
+  }
+}
+
+function disposeAbandonedNode(node: AbandonableNode, context: ReconcileContext): void {
+  switch (node.kind) {
+    case 'component':
+      context.scheduler.enqueueTasks(node._handle.remove())
+      return
+    case 'host':
+      teardownMixins(node._mixState)
+      disposeDirectEventListeners(node, false)
+      disposeControlledReflection(node, false)
+      return
+    case 'frame':
+      node.type[FRAME_NODE].dispose(node)
+      return
+    case 'client-entry':
+      disposeCommittedClientEntryBoundary(node, context)
+      return
+  }
+}
+
+/**
+ * Renders a component scheduled by `handle.update()`. When the render throws inside an error
+ * boundary, the boundary renders its fallback instead.
+ *
+ * @param vnode Committed component to render.
+ * @param domParent DOM parent of the component's content.
+ * @param anchor DOM node to insert new content before.
+ */
+export function renderComponentUpdate(
+  vnode: CommittedComponentNode,
+  domParent: ParentNode,
+  anchor?: Node,
+): void {
+  let boundary = findErrorBoundary(vnode._parent)
+  if (!boundary) {
+    renderComponent(vnode._content, vnode, domParent, vnode._context, anchor)
+    return
+  }
+
+  let parentAttempt = renderAttempt
+  let attempt: AbandonableNode[] = []
+  renderAttempt = attempt
+  try {
+    renderComponent(vnode._content, vnode, domParent, vnode._context, anchor)
+  } catch (error) {
+    renderAttempt = parentAttempt
+    showErrorBoundaryFallback(boundary, error, attempt)
+  } finally {
+    renderAttempt = parentAttempt
+  }
+}
+
+// Boundaries showing their fallback are skipped: an error from fallback content belongs to the
+// next boundary up.
+function findErrorBoundary(parent: VNodeParent): CommittedComponentNode | undefined {
+  let current = parent
+  while (current.kind !== 'root') {
+    if (current.kind === 'component' && isCommittedComponentNode(current)) {
+      let state = getErrorBoundaryState(current)
+      if (state && !state.showingFallback) return current
+    }
+    current = current._parent
+  }
+  return undefined
+}
+
+function showErrorBoundaryFallback(
+  boundary: CommittedComponentNode,
+  error: unknown,
+  attempt: AbandonableNode[],
+): void {
+  while (true) {
+    let state = getErrorBoundaryState(boundary)
+    let domParent = state?.domParent
+    invariant(state && domParent, 'Expected a committed error boundary')
+    discardErrorBoundaryContent(state, boundary._content, attempt, boundary._context)
+    reportCaughtError(error)
+    state.error = { value: error }
+    state.showingFallback = true
+
+    let parentAttempt = renderAttempt
+    let fallbackAttempt: AbandonableNode[] = []
+    renderAttempt = fallbackAttempt
+    try {
+      let fallback = renderErrorBoundaryFallback(boundary.props.fallback, error, state.retry)
+      let content = diffVNodes(
+        null,
+        toVNode(fallback),
+        domParent,
+        boundary,
+        boundary._context,
+        state.end,
+      )
+      commitComponentNode(boundary, content)
+      return
+    } catch (fallbackError) {
+      let outer = findErrorBoundary(boundary._parent)
+      if (!outer) throw fallbackError
+      boundary = outer
+      error = fallbackError
+      attempt = fallbackAttempt
+    } finally {
+      renderAttempt = parentAttempt
+    }
+  }
 }
 
 function commitClientEntryBoundary(
@@ -1607,6 +1961,11 @@ export function remove(
 
   if (isCommittedComponentNode(node)) {
     remove(node._content, domParent, context)
+    if (domParent) {
+      let boundary = getErrorBoundaryState(node)
+      boundary?.start.remove()
+      boundary?.end.remove()
+    }
     let tasks = node._handle.remove()
     scheduler.enqueueTasks(tasks)
     return
@@ -2132,7 +2491,11 @@ function findLastDomAnchor(node: CommittedVNode | null | undefined): Node | null
 function findEdgeDomNode(node: CommittedVNode | null | undefined, last: boolean): Node | null {
   if (!node) return null
   if (isCommittedTextNode(node) || isCommittedHostNode(node)) return node._dom
-  if (isCommittedComponentNode(node)) return findEdgeDomNode(node._content, last)
+  if (isCommittedComponentNode(node)) {
+    let boundary = getErrorBoundaryState(node)
+    if (boundary) return last ? boundary.end : boundary.start
+    return findEdgeDomNode(node._content, last)
+  }
   if (isCommittedClientEntryNode(node) || node.kind === 'frame') {
     return last ? node._rangeEnd : node._rangeStart
   }
@@ -2187,7 +2550,12 @@ export function findNextSiblingDomAnchor(
   stopAtFragmentEnd = false,
 ): Node | null {
   let vParent = curr._parent
-  if (vParent.kind === 'component') return findNextSiblingDomAnchor(vParent, stopAtFragmentEnd)
+  if (vParent.kind === 'component') {
+    let boundaryEnd = getErrorBoundaryState(vParent)?.end
+    // The end marker stays detached until content hydrated without server markers is in place.
+    if (boundaryEnd?.parentNode) return boundaryEnd
+    return findNextSiblingDomAnchor(vParent, stopAtFragmentEnd)
+  }
   let children = vParent._children
   if (children.length === 0) {
     if (vParent.kind === 'root') return vParent._rangeEnd ?? null

@@ -2,16 +2,23 @@ import { invariant } from './invariant.ts'
 
 export type FlushKind = 'document' | 'fragment'
 
-// Comment markers the server writes around frames and client entries, and the client creates and
-// reads back. Readers trim the comment data, so the padding spaces are cosmetic.
+// Comment markers the server writes around frames, client entries, and error boundaries, and the
+// client creates and reads back. Readers trim the comment data, so the padding spaces are cosmetic.
 const FRAME_START_PREFIX = 'rmx:f:'
 const FRAME_END = '/rmx:f'
 const HYDRATION_START_PREFIX = 'rmx:h:'
 const HYDRATION_END = '/rmx:h'
+const ERROR_BOUNDARY_START = 'rmx:eb'
+// Marks a boundary whose server render failed and that contains its fallback.
+const ERROR_BOUNDARY_FAILED_START = 'rmx:eb:error'
+const ERROR_BOUNDARY_END = '/rmx:eb'
 
 export const FRAME_END_MARKER = ` ${FRAME_END} `
 export const HYDRATION_END_MARKER = ` ${HYDRATION_END} `
 export const FRAME_TEMPLATE_END_MARKER = 'rmx:template-end'
+export const ERROR_BOUNDARY_START_MARKER = ` ${ERROR_BOUNDARY_START} `
+export const ERROR_BOUNDARY_FAILED_START_MARKER = ` ${ERROR_BOUNDARY_FAILED_START} `
+export const ERROR_BOUNDARY_END_MARKER = ` ${ERROR_BOUNDARY_END} `
 
 export function createFrameStartMarker(id: string): string {
   return ` ${FRAME_START_PREFIX}${id} `
@@ -39,6 +46,20 @@ export function isHydrationStart(node: Node | null | undefined): node is Comment
 
 export function isHydrationEnd(node: Node | null | undefined): node is Comment {
   return isCommentNode(node) && node.data.trim() === HYDRATION_END
+}
+
+export function isErrorBoundaryStart(node: Node | null | undefined): node is Comment {
+  if (!isCommentNode(node)) return false
+  let data = node.data.trim()
+  return data === ERROR_BOUNDARY_START || data === ERROR_BOUNDARY_FAILED_START
+}
+
+export function isFailedErrorBoundaryStart(start: Comment): boolean {
+  return start.data.trim() === ERROR_BOUNDARY_FAILED_START
+}
+
+export function isErrorBoundaryEnd(node: Node | null | undefined): node is Comment {
+  return isCommentNode(node) && node.data.trim() === ERROR_BOUNDARY_END
 }
 
 export function isFrameTemplateEnd(node: Node | null | undefined): node is Comment {
