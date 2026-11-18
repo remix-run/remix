@@ -18,6 +18,8 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 
 Use `pnpm dev` for automatic server restarts, or `pnpm hmr` to enable hot module replacement.
 
+The seed catalog contains 20 books. The homepage selects four distinct books at random; `/books` shows the full catalog. Run `pnpm db:seed` to add new seed entries to an existing database without resetting it.
+
 The production server enables minification and asset fingerprinting. Catalog images live in `app/images` and are served through the asset server at `/assets/app/images/…` with content fingerprints and `Cache-Control: public, max-age=31536000, immutable`. Catalog and product pages share the original images. Development uses stable image URLs with `no-cache` and ETags. Stored catalog paths are resolved when rendering, so an existing database does not need to be reseeded. Uploaded covers continue to use `/uploads/…`.
 
 HTML responses use `csp()` with a nonce shared by the document script, module preloads, import maps, and generated CSS. The import-map polyfill's blob imports inherit the module graph's nonce, so the policy does not need an explicit `blob:` script source. The policy blocks unnonced inline scripts, style attributes, plugins, and embedding the bookstore. During HMR, it allows connections to the event channel's origin. The carousel uses `css()` instead of a style attribute.
