@@ -31,7 +31,16 @@ export function Layout(handle: Handle<LayoutProps>) {
           <div
             mix={[
               containerStyle,
-              css({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }),
+              css({
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                '@media (max-width: 768px)': {
+                  flexDirection: 'column',
+                  alignItems: 'stretch',
+                  gap: '0.75rem',
+                },
+              }),
             ]}
           >
             <h1 mix={css({ fontSize: '1.5rem' })}>
@@ -53,6 +62,12 @@ export function Layout(handle: Handle<LayoutProps>) {
                   borderRadius: '4px',
                   transition: 'background 0.2s',
                   '&:hover': { background: 'rgba(255, 255, 255, 0.1)' },
+                },
+                '@media (max-width: 768px)': {
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.25rem',
+                  '& a': { marginLeft: 0 },
                 },
               })}
             >

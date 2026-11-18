@@ -20,22 +20,23 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
 
     return (
       <Layout head={mainImage ? <link rel="preload" as="image" href={mainImage} /> : null}>
-        <div mix={css({ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' })}>
+        <div
+          mix={css({
+            display: 'grid',
+            gridTemplateColumns: '300px minmax(0, 1fr)',
+            gap: '2rem',
+            '@media (max-width: 768px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
+          })}
+        >
           <div
-            mix={[
-              bookCoverTransition(book.id),
-              css({
-                height: '400px',
-                borderRadius: '8px',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                overflow: 'hidden',
-              }),
-            ]}
+            class="card"
+            mix={css({
+              gridColumn: 2,
+              position: 'relative',
+              minHeight: '400px',
+              '@media (max-width: 768px)': { gridColumn: 1 },
+            })}
           >
-            <ImageCarousel images={imageUrls} startIndex={startIndex} />
-          </div>
-
-          <div class="card">
             <h1>{book.title}</h1>
             <p class="author" mix={css({ fontSize: '1.2rem', margin: '0.5rem 0' })}>
               by {book.author}
@@ -50,6 +51,34 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
                 {book.in_stock ? 'In Stock' : 'Out of Stock'}
               </span>
             </p>
+
+            <div
+              mix={[
+                bookCoverTransition(book.id),
+                css({
+                  // Keep one carousel mounted as it moves into the card on small screens.
+                  position: 'absolute',
+                  top: 0,
+                  left: 'calc(-300px - 2rem)',
+                  width: '300px',
+                  height: '400px',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                  overflow: 'hidden',
+                  '@media (max-width: 768px)': {
+                    position: 'relative',
+                    left: 'auto',
+                    width: '100%',
+                    maxWidth: '300px',
+                    height: 'auto',
+                    aspectRatio: '3 / 4',
+                    margin: '1rem 0',
+                  },
+                }),
+              ]}
+            >
+              <ImageCarousel images={imageUrls} startIndex={startIndex} />
+            </div>
 
             <p class="price" mix={css({ fontSize: '2rem', margin: '1rem 0' })}>
               ${book.price.toFixed(2)}
@@ -99,7 +128,11 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
           <section
             class="card"
             aria-labelledby="related-books-heading"
-            mix={css({ gridColumn: 2, minWidth: 0 })}
+            mix={css({
+              gridColumn: 2,
+              minWidth: 0,
+              '@media (max-width: 768px)': { gridColumn: 1 },
+            })}
           >
             <h2 id="related-books-heading" mix={css({ marginBottom: '1.5rem' })}>
               Related Books
