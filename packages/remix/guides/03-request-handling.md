@@ -34,7 +34,7 @@ For each call to `router.fetch(...)`, Remix:
 5. Calls the action and receives its `Response`.
 6. Unwinds the middleware chain, then resolves `router.fetch(...)` with the final response.
 
-If no route matches, the router returns a `404` response. If middleware or an action throws, `router.fetch(...)` rejects. The server entry is the last place to catch that error and turn it into a `500` response.
+If no route matches, the router calls its `defaultHandler`, which returns a `404` response by default. If an action or action middleware throws, the router calls its `errorHandler` when one is configured. Otherwise, and for errors thrown by router middleware, `router.fetch(...)` rejects. The server entry is the last place to catch that error and turn it into a `500` response.
 
 Request and response bodies stay as Web streams. An action can read `request.body`, return a `Response` backed by a [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream), and respond to cancellation through `request.signal`, an [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) that fires when the client goes away, without dropping down to a runtime-specific request object.
 
