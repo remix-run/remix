@@ -125,7 +125,9 @@ async function handler(request: Request) {
 
 ### Custom Hostname Configuration
 
-Request URLs use HTTP/2 `:authority` when present, falling back to `Host`. If both identify different hosts, `createRequestListener()` rejects the request before calling the handler, and `createRequest()` throws. The listener calls `onError` and defaults to 400 when no custom response is returned. Hostnames and default ports are normalized before comparison.
+Request URLs use HTTP/2 `:authority` when present, falling back to `Host`. If both are present, each must be valid and identify the same host, even when deployment options override the request URL. Hostnames and default ports are normalized before comparison.
+
+Use a hostname with an optional port, such as `api.example.com:8080`, or a bracketed IPv6 address such as `[::1]:3000`. Invalid URL hosts make `createRequest()` throw; `createRequestListener()` calls `onError` and defaults to 400 when it returns no response.
 
 Configure custom hostnames for deployment on VPS or custom environments. `node-fetch-server` uses the `host` option when constructing `request.url`.
 
@@ -172,7 +174,7 @@ let server = http.createServer(
 server.listen(3000)
 ```
 
-When `host` or `protocol` are set, those fixed options take precedence over trusted proxy headers.
+When `host` or `protocol` are set, those fixed options take precedence over trusted proxy headers. For the host, `Forwarded` takes precedence over `X-Forwarded-Host`, followed by HTTP/2 `:authority`, `Host`, and finally `localhost`.
 
 ### Accessing Client Information
 
