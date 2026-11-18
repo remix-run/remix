@@ -25,9 +25,8 @@ export function BookCard(handle: Handle<BookCardProps>) {
           borderRadius: '8px',
           overflow: 'hidden',
           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-          transition: 'transform 0.2s',
+          transition: 'box-shadow 0.2s',
           '&:hover': {
-            transform: 'translateY(-4px)',
             boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)',
           },
         })}
