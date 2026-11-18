@@ -1,0 +1,32 @@
+{
+  "name": "renderers-demo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "preact": "^10.29.1",
+    "preact-render-to-string": "^6.7.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "remix": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "catalog:"
+  },
+  "scripts": {
+    "db:migrate": "remix db migrate",
+    "db:reset": "remix db reset --force",
+    "db:rollback": "remix db rollback",
+    "db:seed": "remix db seed",
+    "db:status": "remix db status",
+    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "start": "node --import remix/node-tsx server.ts",
+    "test": "NODE_ENV=test remix test",
+    "typecheck": "tsc --noEmit"
+  }
+}
