@@ -30,10 +30,12 @@ import cartFragmentsController from './actions/cart/fragments/controller.tsx'
 import checkoutController from './actions/checkout/controller.tsx'
 import contactController from './actions/contact/controller.tsx'
 import rootController from './actions/controller.tsx'
+import { NotFoundPage } from './actions/error-pages.tsx'
 import fragmentsController from './actions/fragments/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
+import { errorPage } from './middleware/error-page.tsx'
 import { flashUntilRead } from './middleware/flash-until-read.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { uploadHandler } from './middleware/uploads.ts'
@@ -91,7 +93,15 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
         },
       }),
       render({ assets }),
+      errorPage(),
     ],
+    defaultHandler({ method, render, url }) {
+      if (method !== 'GET' && method !== 'HEAD') {
+        return new Response(`Not Found: ${url.pathname}`, { status: 404 })
+      }
+
+      return render(<NotFoundPage />, { status: 404 })
+    },
   })
 
   router.map(routes, rootController)

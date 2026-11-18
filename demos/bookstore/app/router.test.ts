@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { createTestRouter } from '../test/helpers.ts'
+import { assertContains, assertNotContains, createTestRouter } from '../test/helpers.ts'
 
 const router = await createTestRouter()
 
@@ -17,10 +17,40 @@ describe('router', () => {
     assert.ok(html.includes('Welcome to the Bookstore'))
   })
 
-  it('returns 404 for unknown routes', async () => {
+  it('renders the not found page for unknown routes', async () => {
     let response = await router.fetch('https://remix.run/does-not-exist')
 
     assert.equal(response.status, 404)
+    assert.equal(response.headers.get('Content-Type'), 'text/html; charset=UTF-8')
+
+    let html = await response.text()
+    assertContains(html, '<title>Page Not Found | Bookstore</title>')
+    assertContains(html, 'Back Home')
+    assertContains(html, '📚 Bookstore')
+  })
+
+  it('returns a plain 404 for unknown routes with non-GET methods', async () => {
+    let response = await router.fetch('https://remix.run/does-not-exist', { method: 'POST' })
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Not Found: /does-not-exist')
+  })
+
+  it('renders the error page when an action throws', async (t) => {
+    let consoleError = t.mock.method(console, 'error', () => {})
+    let failingRouter = await createTestRouter()
+    failingRouter.get('/boom', () => {
+      throw new Error('Database exploded')
+    })
+
+    let response = await failingRouter.fetch('https://remix.run/boom')
+
+    assert.equal(response.status, 500)
+    let html = await response.text()
+    assertContains(html, '<title>Something Went Wrong | Bookstore</title>')
+    assertContains(html, '📚 Bookstore')
+    assertNotContains(html, 'Database exploded')
+    assert.equal(consoleError.mock.callCount(), 1)
   })
 
   it('serves fingerprinted, immutable images shared by catalog and product pages', async () => {
