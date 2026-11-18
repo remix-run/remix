@@ -130,7 +130,8 @@ describe('bookstore prefetching', () => {
     let prefetched = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/books/bbq',
     )
-    let documentResponse = await page.goto('/books')
+    // Keep the image working set small as the seed catalog grows.
+    let documentResponse = await page.goto('/books/genre/cookbook')
     assert.equal(documentResponse?.headers()['cache-control'], 'no-store')
     await waitForNavigationRuntime(page)
     let stylesheet = await page.locator('head link[rel="stylesheet"]').elementHandle()
