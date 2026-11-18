@@ -134,18 +134,14 @@
   }
 
   ::view-transition-group(bookstore-page) {
-    animation-duration: 260ms;
-    animation-timing-function: ease-out;
-  }
-
-  ::view-transition-group(.book-cover),
-  ::view-transition-group(.book-title) {
-    z-index: 1;
-    animation-duration: 420ms;
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    /* Page snapshots can differ greatly in height and scroll position. */
+    animation: none;
   }
 
   ::view-transition-group(.book-cover) {
+    z-index: 1;
+    animation-duration: 420ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
     border-radius: 8px;
     overflow: clip;
   }
@@ -154,13 +150,6 @@
   ::view-transition-new(.book-cover) {
     height: 100%;
     object-fit: cover;
-  }
-
-  ::view-transition-old(.book-title),
-  ::view-transition-new(.book-title) {
-    height: 100%;
-    object-fit: contain;
-    object-position: left top;
   }
 
   ::view-transition-old(bookstore-page) {
@@ -174,14 +163,12 @@
   @keyframes bookstore-page-out {
     to {
       opacity: 0;
-      transform: translateY(-8px);
     }
   }
 
   @keyframes bookstore-page-in {
     from {
       opacity: 0;
-      transform: translateY(12px);
     }
   }
 

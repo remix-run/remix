@@ -74,8 +74,8 @@ Navigation and prefetching use frames too:
 
 ## UI
 
-- Page navigations slide and fade by default, while the header and footer stay steady.
-- Navigating to or from a product page animates the book cover and title between their card and detail views, including on Back and Forward. Shared [book transition mixins](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/book-transitions.ts) give both views matching transition names.
+- Page content, including book titles, cross-fades without sliding, while the header and footer stay steady. Page snapshots use the destination’s position and size, keeping the details panel steady when the catalog was scrolled.
+- Navigating to or from a product page moves and resizes only the book cover between its card and detail views, including on Back and Forward. The shared [book transition mixin](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/book-transitions.ts), `bookCoverTransition(book.id)`, gives both views matching names during `book-details` view transitions. Browsers without transition types use only the page cross-fade.
 - Animations respect reduced-motion preferences and fall back to ordinary updates in browsers without view transition support.
 - Remix lifecycle events drive interaction feedback: cart components listen for frame `reloadStart`, while the shared [PendingButton](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/public/pending-button.tsx) also supports `rmx:navigation`. Their `finished` promises determine completion. Abort and active-operation checks keep superseded work from overwriting current UI state.
 - Small state machines model pending and failure feedback in cart items and `PendingButton`. The cart currently demonstrates pending UI: rows and saved prices stay visible, with faded content, button labels, and price spinners while requests run. Failed requests restore the previous quantity and offer retry or reload.

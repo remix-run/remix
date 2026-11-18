@@ -3,7 +3,7 @@ import { Frame, css } from 'remix/component'
 
 import type { Book } from '../data/schema.ts'
 import { routes } from '../routes.ts'
-import { bookCoverTransition, bookTitleTransition } from './book-transitions.ts'
+import { bookCoverTransition } from './book-transitions.ts'
 
 export interface BookCardProps {
   book: Book
@@ -49,14 +49,7 @@ export function BookCard(handle: Handle<BookCardProps>) {
           />
         </a>
         <div mix={css({ display: 'flex', flex: 1, flexDirection: 'column', padding: '1rem' })}>
-          <h3
-            mix={[
-              bookTitleTransition(book.id),
-              css({ fontSize: '1.1rem', marginBottom: '0.5rem' }),
-            ]}
-          >
-            {book.title}
-          </h3>
+          <h3 mix={css({ fontSize: '1.1rem', marginBottom: '0.5rem' })}>{book.title}</h3>
           <p mix={css({ color: '#7f8c8d', fontSize: '0.9rem', marginBottom: '0.5rem' })}>
             by {book.author}
           </p>

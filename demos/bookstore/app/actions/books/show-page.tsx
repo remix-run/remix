@@ -4,7 +4,7 @@ import { Frame, css } from 'remix/component'
 import type { Book } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { ImageCarousel } from './public/image-carousel.tsx'
-import { bookCoverTransition, bookTitleTransition } from '../../ui/book-transitions.ts'
+import { bookCoverTransition } from '../../ui/book-transitions.ts'
 import { Layout } from '../../ui/layout.tsx'
 
 export interface ShowPageProps {
@@ -36,7 +36,7 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
           </div>
 
           <div class="card">
-            <h1 mix={bookTitleTransition(book.id)}>{book.title}</h1>
+            <h1>{book.title}</h1>
             <p class="author" mix={css({ fontSize: '1.2rem', margin: '0.5rem 0' })}>
               by {book.author}
             </p>

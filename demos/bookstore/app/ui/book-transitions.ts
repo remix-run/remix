@@ -11,13 +11,3 @@ export function bookCoverTransition(bookId: Book['id']): CSSMixinDescriptor {
     },
   })
 }
-
-export function bookTitleTransition(bookId: Book['id']): CSSMixinDescriptor {
-  return css({
-    width: 'fit-content',
-    ':root:active-view-transition-type(book-details) &': {
-      viewTransitionName: `book-title-${bookId}`,
-      viewTransitionClass: 'book-title',
-    },
-  })
-}
