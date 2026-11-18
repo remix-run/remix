@@ -13,7 +13,8 @@ export function Document(handle: Handle<DocumentProps>) {
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         <title>{handle.props.title}</title>
       </head>
       <body mix={[styles.pageReset, styles.page]}>{handle.props.children}</body>
