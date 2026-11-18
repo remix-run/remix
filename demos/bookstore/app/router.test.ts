@@ -24,7 +24,7 @@ describe('router', () => {
   })
 
   it('serves fingerprinted, immutable images shared by catalog and product pages', async () => {
-    let response = await router.fetch('https://remix.run/')
+    let response = await router.fetch('https://remix.run/books')
     let html = await response.text()
     let cover = html.match(/src="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png)"/)
     assert.ok(cover)

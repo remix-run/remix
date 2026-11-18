@@ -90,7 +90,7 @@ describe('bookstore prefetching', () => {
     let prefetched = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/books/bbq',
     )
-    let documentResponse = await page.goto('/')
+    let documentResponse = await page.goto('/books')
     assert.equal(documentResponse?.headers()['cache-control'], 'no-store')
     await waitForNavigationRuntime(page)
     let stylesheet = await page.locator('head link[rel="stylesheet"]').elementHandle()
@@ -214,7 +214,7 @@ describe('bookstore prefetching', () => {
     let prefetched = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/books/bbq',
     )
-    await page.goto('/')
+    await page.goto('/books')
     await waitForNavigationRuntime(page)
     let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
     await link.scrollIntoViewIfNeeded()
@@ -334,13 +334,13 @@ describe('bookstore prefetching', () => {
         return router.fetch(request)
       }),
     )
-    await page.goto('/')
-    await waitForNavigationRuntime(page)
-    let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
-    let prefetchesScript = await prefetchesAssets(page)
     let prefetched = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/books/bbq',
     )
+    await page.goto('/books')
+    await waitForNavigationRuntime(page)
+    let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
+    let prefetchesScript = await prefetchesAssets(page)
     await link.scrollIntoViewIfNeeded()
     if (prefetchesScript) {
       await started.promise

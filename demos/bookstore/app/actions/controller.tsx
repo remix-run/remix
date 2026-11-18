@@ -1,5 +1,5 @@
 import { createController } from 'remix/router'
-import { ilike, inList, or } from 'remix/data-table'
+import { ilike, or } from 'remix/data-table'
 import { createFileResponse as sendFile } from 'remix/response/file'
 
 import { books } from '../data/schema.ts'
@@ -32,17 +32,14 @@ export default createController(routes, {
     },
     async home({ db, render, request, session }) {
       let cart = getCurrentCart(session)
-      let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
-      let featuredBookRows = await db.findMany(books, {
-        where: inList('slug', featuredSlugs),
-      })
-      let featuredBooksBySlug = new Map(featuredBookRows.map((book) => [book.slug, book]))
-      let featuredBooks = await Promise.all(
-        featuredSlugs.flatMap((slug) => {
-          let book = featuredBooksBySlug.get(slug)
-          return book ? [resolveBookCover(book)] : []
-        }),
-      )
+      let bookRows = await db.findMany(books)
+      for (let index = bookRows.length - 1; index > 0; index--) {
+        let randomIndex = Math.floor(Math.random() * (index + 1))
+        let book = bookRows[index]
+        bookRows[index] = bookRows[randomIndex]
+        bookRows[randomIndex] = book
+      }
+      let featuredBooks = await Promise.all(bookRows.slice(0, 4).map(resolveBookCover))
 
       return render(
         <HomePage featuredBooks={featuredBooks} cart={cart} />,
