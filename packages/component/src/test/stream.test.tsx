@@ -5090,25 +5090,34 @@ describe('stream', () => {
       expect(errors).toEqual([])
     })
 
-    it('cancels the rest of a blocking frame stream when the consumer cancels', async (t) => {
+    // `pulled` resolves once the render has read the queued chunks and asks for more.
+    function createFrameSource(...chunks: string[]) {
+      let [pulled, resolvePulled] = withResolvers<void>()
+      let [cancelled, resolveCancelled] = withResolvers<unknown>()
+      let stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (let chunk of chunks) controller.enqueue(new TextEncoder().encode(chunk))
+        },
+        pull() {
+          resolvePulled()
+        },
+        cancel(reason) {
+          resolveCancelled(reason)
+        },
+      })
+      return { stream, pulled, cancelled }
+    }
+
+    it('cancels a blocking frame stream that is being forwarded when the consumer cancels', async (t) => {
       let errors: unknown[] = []
-      let [frameCancelled, resolveFrameCancelled] = withResolvers<unknown>()
+      let source = createFrameSource('<p>Reviews</p>')
       let flushUnhandledRejections = trackUnhandledRejections(t)
 
       let stream = renderToStream(<Frame src="/fragments/reviews" />, {
         onError(error) {
           errors.push(error)
         },
-        resolveFrame() {
-          return new ReadableStream<Uint8Array>({
-            start(controller) {
-              controller.enqueue(new TextEncoder().encode('<p>Reviews</p>'))
-            },
-            cancel(reason) {
-              resolveFrameCancelled(reason)
-            },
-          })
-        },
+        resolveFrame: () => source.stream,
       })
 
       let reader = stream.getReader()
@@ -5119,16 +5128,15 @@ describe('stream', () => {
       let reason = new Error('Client went away')
       await reader.cancel(reason)
 
-      expect(await frameCancelled).toBe(reason)
+      expect(await source.cancelled).toBe(reason)
       expect(await flushUnhandledRejections()).toEqual([])
       expect(errors).toEqual([])
     })
 
-    it('cancels the rest of a non-blocking frame stream when the signal aborts', async (t) => {
+    it('cancels a non-blocking frame stream that is being forwarded when the signal aborts', async (t) => {
       let controller = new AbortController()
       let errors: unknown[] = []
-      let [frameCancelled, resolveFrameCancelled] = withResolvers<unknown>()
-      let [frameStarted, resolveFrameStarted] = withResolvers<void>()
+      let source = createFrameSource('<p>Reviews</p>')
       let flushUnhandledRejections = trackUnhandledRejections(t)
 
       let stream = renderToStream(
@@ -5137,19 +5145,7 @@ describe('stream', () => {
           onError(error) {
             errors.push(error)
           },
-          resolveFrame() {
-            return new ReadableStream<Uint8Array>({
-              start(frameController) {
-                frameController.enqueue(new TextEncoder().encode('<p>Reviews</p>'))
-              },
-              pull() {
-                resolveFrameStarted()
-              },
-              cancel(reason) {
-                resolveFrameCancelled(reason)
-              },
-            })
-          },
+          resolveFrame: () => source.stream,
           signal: controller.signal,
         },
       )
@@ -5161,15 +5157,191 @@ describe('stream', () => {
       let second = await chunks.next()
       invariant(!second.done)
       expect(second.value).toContain('<p>Reviews</p>')
-      await frameStarted
 
       let abortError = new DOMException('This operation was aborted', 'AbortError')
       controller.abort(abortError)
 
-      expect(await frameCancelled).toBe(abortError)
+      expect(await source.cancelled).toBe(abortError)
       expect(await chunks.next()).toEqual({ done: true, value: undefined })
       expect(await flushUnhandledRejections()).toEqual([])
       expect(errors).toEqual([])
+    })
+
+    it('cancels a frame stream that has not produced its first chunk when the signal aborts', async () => {
+      let controller = new AbortController()
+      let errors: unknown[] = []
+      let source = createFrameSource()
+
+      let stream = renderToStream(<Frame src="/fragments/reviews" />, {
+        onError(error) {
+          errors.push(error)
+        },
+        resolveFrame: () => source.stream,
+        signal: controller.signal,
+      })
+
+      let read = stream.getReader().read()
+      await source.pulled
+
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      controller.abort(abortError)
+
+      expect(await source.cancelled).toBe(abortError)
+      expect(await read).toEqual({ done: true, value: undefined })
+      expect(errors).toEqual([])
+    })
+
+    it('cancels a resolved blocking frame stream while a sibling frame is still resolving', async () => {
+      let controller = new AbortController()
+      let source = createFrameSource('<p>Reviews</p>')
+      let [sibling, , rejectSibling] = withResolvers<string>()
+
+      let stream = renderToStream(
+        <div>
+          <Frame src="/fragments/reviews" />
+          <Frame src="/fragments/related" />
+        </div>,
+        {
+          resolveFrame: (src) => (src === '/fragments/reviews' ? source.stream : sibling),
+          signal: controller.signal,
+        },
+      )
+
+      let read = stream.getReader().read()
+      await source.pulled
+
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      controller.abort(abortError)
+      rejectSibling(abortError)
+
+      expect(await source.cancelled).toBe(abortError)
+      expect(await read).toEqual({ done: true, value: undefined })
+    })
+
+    it('cancels a frame stream that resolves after the consumer cancels', async () => {
+      let source = createFrameSource('<p>Reviews</p>')
+      let [frame, resolveFrame] = withResolvers<ReadableStream<Uint8Array>>()
+
+      let stream = renderToStream(
+        <Frame src="/fragments/reviews" fallback={<div>Loading...</div>} />,
+        { resolveFrame: () => frame },
+      )
+
+      let reader = stream.getReader()
+      let first = await reader.read()
+      invariant(!first.done)
+      let reason = new Error('Client went away')
+      await reader.cancel(reason)
+      resolveFrame(source.stream)
+
+      expect(await source.cancelled).toBe(reason)
+    })
+
+    it('cancels sibling frame streams when a blocking frame fails', async () => {
+      let errors: unknown[] = []
+      let frameError = new Error('Frame failed')
+      let source = createFrameSource('<p>Reviews</p>')
+
+      let stream = renderToStream(
+        <div>
+          <Frame src="/fragments/reviews" />
+          <Frame src="/fragments/related" />
+        </div>,
+        {
+          onError(error) {
+            errors.push(error)
+          },
+          async resolveFrame(src) {
+            if (src === '/fragments/reviews') return source.stream
+            await source.pulled
+            throw frameError
+          },
+        },
+      )
+
+      await expect(drain(stream)).rejects.toBe(frameError)
+      expect(await source.cancelled).toBe(frameError)
+      expect(errors).toEqual([frameError])
+    })
+
+    it('releases a frame stream that errors before its first chunk', async () => {
+      let errors: unknown[] = []
+      let frameError = new Error('Frame stream failed')
+      let source = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.error(frameError)
+        },
+      })
+
+      let stream = renderToStream(<Frame src="/fragments/reviews" />, {
+        onError(error) {
+          errors.push(error)
+        },
+        resolveFrame: () => source,
+      })
+
+      await expect(drain(stream)).rejects.toBe(frameError)
+      expect(source.locked).toBe(false)
+      expect(errors).toEqual([frameError])
+    })
+
+    it('releases a frame stream that errors while being forwarded', async () => {
+      let errors: unknown[] = []
+      let frameError = new Error('Frame stream failed')
+      let source = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('<p>Reviews</p>'))
+        },
+        pull(controller) {
+          controller.error(frameError)
+        },
+      })
+
+      let stream = renderToStream(<Frame src="/fragments/reviews" />, {
+        onError(error) {
+          errors.push(error)
+        },
+        resolveFrame: () => source,
+      })
+
+      expect(await drain(stream)).toContain('<p>Reviews</p>')
+      expect(source.locked).toBe(false)
+      expect(errors).toEqual([frameError])
+    })
+
+    it('reports a frame stream that fails to cancel', async () => {
+      let controller = new AbortController()
+      let errors: unknown[] = []
+      let cleanupError = new Error('Cleanup failed')
+      let [cancelFailed, , rejectCancel] = withResolvers<void>()
+      let source = new ReadableStream<Uint8Array>({
+        start(frameController) {
+          frameController.enqueue(new TextEncoder().encode('<p>Reviews</p>'))
+        },
+        cancel() {
+          rejectCancel(cleanupError)
+          return cancelFailed
+        },
+      })
+      cancelFailed.catch(() => {})
+      let [errorReported, resolveErrorReported] = withResolvers<void>()
+
+      let stream = renderToStream(<Frame src="/fragments/reviews" />, {
+        onError(error) {
+          errors.push(error)
+          resolveErrorReported()
+        },
+        resolveFrame: () => source,
+        signal: controller.signal,
+      })
+
+      let reader = stream.getReader()
+      let first = await reader.read()
+      invariant(!first.done)
+      controller.abort(new DOMException('This operation was aborted', 'AbortError'))
+
+      await errorReported
+      expect(errors).toEqual([cleanupError])
     })
 
     it('calls onError for AbortError when the request was not canceled', async () => {
@@ -5189,29 +5361,26 @@ describe('stream', () => {
       expect(errors).toEqual([abortError])
     })
 
-    it('closes immediately when signal is already aborted before rendering starts', async () => {
+    it('closes without rendering when signal is already aborted before rendering starts', async () => {
       let controller = new AbortController()
-      let abortError = new DOMException('Already aborted', 'AbortError')
-      controller.abort(abortError)
-
+      controller.abort(new DOMException('Already aborted', 'AbortError'))
       let errors: unknown[] = []
+      let resolveFrameCalls = 0
 
       let stream = renderToStream(<Frame src="/fragments/product" />, {
         onError(error) {
           errors.push(error)
         },
-        resolveFrame: () =>
-          new Promise<string>((_resolve, reject) => {
-            controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
-              once: true,
-            })
-            if (controller.signal.aborted) reject(controller.signal.reason)
-          }),
+        resolveFrame() {
+          resolveFrameCalls++
+          return '<p>Product</p>'
+        },
         signal: controller.signal,
       })
 
       let reader = stream.getReader()
       await expect(reader.read()).resolves.toEqual({ done: true, value: undefined })
+      expect(resolveFrameCalls).toBe(0)
       expect(errors).toEqual([])
     })
 
