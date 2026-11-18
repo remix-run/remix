@@ -1,7 +1,11 @@
+import { readFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
+import sharp from 'sharp'
 
 import { createTestRouter } from '../test/helpers.ts'
+import { assets } from './utils/assets.ts'
 
 const router = await createTestRouter()
 
@@ -23,25 +27,37 @@ describe('router', () => {
     assert.equal(response.status, 404)
   })
 
-  it('serves fingerprinted, immutable images shared by catalog and product pages', async () => {
+  it('serves smaller WebP images shared by catalog and product pages with immutable fingerprints', async () => {
     let response = await router.fetch('https://remix.run/books')
     let html = await response.text()
-    let cover = html.match(/src="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png)"/)
+    let cover = html.match(
+      /src="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=book-image)"/,
+    )
     assert.ok(cover)
 
     let image = await router.fetch(new URL(cover[1], 'https://remix.run'))
     assert.equal(image.status, 200)
-    assert.equal(image.headers.get('Content-Type'), 'image/png')
+    assert.equal(image.headers.get('Content-Type'), 'image/webp')
     assert.equal(image.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
-    assert.deepEqual(
-      new Uint8Array(await image.arrayBuffer()).slice(0, 8),
-      new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+    let transformed = new Uint8Array(await image.arrayBuffer())
+    let metadata = await sharp(transformed).metadata()
+    assert.equal(metadata.format, 'webp')
+    assert.equal(metadata.width, 640)
+    assert.equal(metadata.height, 640)
+    let original = await readFile(new URL('./images/bbq-1.png', import.meta.url))
+    assert.ok(transformed.byteLength < original.byteLength / 4)
+
+    let sourceHref = await assets.getHref(
+      fileURLToPath(new URL('./images/bbq-1.png', import.meta.url)),
     )
+    let source = await router.fetch(new URL(sourceHref, 'https://remix.run'))
+    assert.equal(source.headers.get('Content-Type'), 'image/png')
+    assert.deepEqual(new Uint8Array(await source.arrayBuffer()), new Uint8Array(original))
 
     let product = await router.fetch('https://remix.run/books/bbq')
     let productHtml = await product.text()
     let preload = productHtml.match(
-      /<link rel="preload" as="image" href="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png)"/,
+      /<link rel="preload" as="image" href="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=book-image)"/,
     )
     assert.ok(preload)
     assert.equal(preload[1], cover[1])

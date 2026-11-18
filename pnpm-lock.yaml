@@ -90,6 +90,9 @@ importers:
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
     devDependencies:
       '@types/dom-navigation':
         specifier: ^1.0.7

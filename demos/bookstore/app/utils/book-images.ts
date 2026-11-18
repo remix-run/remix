@@ -6,7 +6,9 @@ import { assets } from './assets.ts'
 export async function getBookImageHref(href: string): Promise<string> {
   if (!href.startsWith('/images/') || href === '/images/placeholder.jpg') return href
 
-  return assets.getHref(path.resolve(import.meta.dirname, '..', href.slice(1)))
+  return assets.getHref(path.resolve(import.meta.dirname, '..', href.slice(1)), {
+    transform: ['book-image'],
+  })
 }
 
 export async function resolveBookCover(book: Book): Promise<Book> {

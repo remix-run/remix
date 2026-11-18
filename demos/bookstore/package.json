@@ -7,7 +7,8 @@
   },
   "dependencies": {
     "@remix-run/ui": "workspace:^",
-    "remix": "workspace:*"
+    "remix": "workspace:*",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/dom-navigation": "^1.0.7",
