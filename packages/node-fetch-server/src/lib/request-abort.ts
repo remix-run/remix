@@ -35,7 +35,29 @@ export function observeResponseForRequestLifecycle(
   // `finish` -> done rendering the response
   // `close` -> response can no longer be written to
   res.once('close', () => lifecycle.abort())
-  res.once('finish', () => lifecycle.finish())
+  onResponseFinished(res, () => lifecycle.finish())
+}
+
+// Calls `callback` once the response has been fully written, or right away if it already has
+export function onResponseFinished(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  callback: () => void,
+): void {
+  if (!('stream' in res)) {
+    if (res.writableFinished) callback()
+    else res.once('finish', callback)
+    return
+  }
+
+  // An HTTP/2 compatibility response emits `finish` whenever its stream closes, and the stream's
+  // writable side can also finish when the client disconnects. So only count the stream finishing
+  // once the response has been ended.
+  let stream = res.stream
+  function onStreamFinish() {
+    if (res.writableEnded) callback()
+  }
+  if (stream.writableFinished) onStreamFinish()
+  else stream.once('finish', onStreamFinish)
 }
 
 export function isRequestAlreadyAborted(
@@ -46,7 +68,7 @@ export function isRequestAlreadyAborted(
   return req.destroyed && !isRequestComplete(req)
 }
 
-function isRequestComplete(req: http.IncomingMessage | http2.Http2ServerRequest): boolean {
+export function isRequestComplete(req: http.IncomingMessage | http2.Http2ServerRequest): boolean {
   if ('complete' in req && req.complete === true) return true
   return req.readableEnded
 }
