@@ -8,11 +8,12 @@ import { bookCoverTransition, bookTitleTransition } from './book-transitions.ts'
 export interface BookCardProps {
   book: Book
   inCart: boolean
+  imageLoading?: 'eager' | 'lazy'
 }
 
 export function BookCard(handle: Handle<BookCardProps>) {
   return () => {
-    let { book } = handle.props
+    let { book, imageLoading = 'eager' } = handle.props
 
     return (
       <div
@@ -35,6 +36,7 @@ export function BookCard(handle: Handle<BookCardProps>) {
           <img
             src={book.cover_url}
             alt={book.title}
+            loading={imageLoading}
             mix={[
               bookCoverTransition(book.id),
               css({

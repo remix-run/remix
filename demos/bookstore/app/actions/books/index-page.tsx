@@ -55,9 +55,11 @@ export function IndexPage(handle: Handle<IndexPageProps>) {
         </div>
 
         <div class="grid">
-          {allBooks.map((book) => {
+          {allBooks.map((book, index) => {
             let inCart = cart.items.some((item) => item.slug === book.slug)
-            return <BookCard book={book} inCart={inCart} />
+            return (
+              <BookCard book={book} inCart={inCart} imageLoading={index < 8 ? 'eager' : 'lazy'} />
+            )
           })}
         </div>
       </Layout>
