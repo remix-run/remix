@@ -168,8 +168,7 @@ async function writeScaffoldPackageJson(
   if (platform === 'win32' && packageJson.scripts != null) {
     for (let [name, script] of Object.entries(packageJson.scripts)) {
       if (script.startsWith('NODE_ENV=')) {
-        let [environment, command] = script.split(/ (.+)/)
-        packageJson.scripts[name] = `cross-env-shell ${environment} "${command}"`
+        packageJson.scripts[name] = `cross-env ${script}`
         packageJson.dependencies['cross-env'] = '^10.1.0'
       }
     }

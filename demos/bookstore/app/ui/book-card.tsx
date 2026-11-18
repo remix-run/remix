@@ -73,6 +73,7 @@ export function BookCard(handle: Handle<BookCardProps>) {
           <div
             mix={css({
               display: 'flex',
+              flexWrap: 'wrap',
               gap: '0.25rem',
               alignItems: 'center',
               '& .btn': {
@@ -83,6 +84,7 @@ export function BookCard(handle: Handle<BookCardProps>) {
                 textAlign: 'center',
                 whiteSpace: 'nowrap',
               },
+              '& [role="alert"]': { flexBasis: '100%' },
             })}
           >
             <a href={routes.books.show.href({ slug: book.slug })} class="btn">

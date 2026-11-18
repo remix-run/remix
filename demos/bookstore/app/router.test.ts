@@ -111,7 +111,7 @@ describe('router', () => {
   })
 
   it('does not opt cart fragments or missing books into caching', async () => {
-    let cart = await router.fetch('https://remix.run/fragments/cart-items', {
+    let cart = await router.fetch('https://remix.run/cart/items', {
       headers: { 'X-Remix-Frame': 'true' },
     })
     assert.equal(cart.status, 200)

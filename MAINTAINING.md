@@ -96,9 +96,9 @@ updates, then uploads and verifies them before publishing releases in
 for an experimental preview. Previewed refs must include the preview scripts from
 `main`.
 
-- Main release tags use `v0.YYYYMMDD.0-main-<8-character-sha>` (retained for 30 days, with the latest successful publication retained indefinitely). The `remix.url` asset contains that build's tarball URL for one-line installation.
-- PRs share a `v0.YYYYMMDD.0-pr-<number>` release, using the PR's UTC creation date so every build uses the same tag, with `<package>-<full-source-sha>.tgz` assets (last 5 SHAs retained)
-- Experimental tags use `v0.YYYYMMDD.0-experimental-<8-character-sha>` (retained for 30 days)
+- Main release tags use `v0.0.YYYYMMDD-main-<8-character-sha>` (retained for 30 days, with the latest successful publication retained indefinitely). The `remix.url` asset contains that build's tarball URL for one-line installation.
+- PRs share a `v0.0.YYYYMMDD-pr-<number>` release, using the PR's UTC creation date so every build uses the same tag, with `<package>-<full-source-sha>.tgz` assets (last 5 SHAs retained)
+- Experimental tags use `v0.0.YYYYMMDD-experimental-<8-character-sha>` (retained for 30 days)
 
 Set `REMIX_PREVIEWS_PAT` in this repository's Actions secrets to a fine-grained PAT with Contents read/write access to `remix-run/previews`. The destination must be public, initialized with a commit, and have release immutability disabled.
 
