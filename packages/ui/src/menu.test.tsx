@@ -5,11 +5,11 @@ import { createRoot, ref, type Handle, type Props, type RemixNode } from '@remix
 
 import * as menu from './menu.tsx'
 import { onMenuSelect, type MenuSelectEvent } from './menu.tsx'
-import { holdAnimationFrames } from './test/animation-frames.ts'
 import { settle } from './test/settle.ts'
 
 const flashDurationMs = 60
 let roots: Array<ReturnType<typeof createRoot>> = []
+const transitionWaits = new WeakMap<HTMLElement, { ready: boolean; resolve?: () => void }>()
 
 interface TestMenuProps extends Omit<Props<'button'>, 'children'> {
   children?: RemixNode
@@ -46,6 +46,23 @@ function renderApp(node: RemixNode) {
   root.render(node)
   root.flush()
   roots.push(root)
+  for (let surface of container.querySelectorAll<HTMLElement>('[data-popover]')) {
+    let state: { ready: boolean; resolve?: () => void } = { ready: false }
+    transitionWaits.set(surface, state)
+    let add = surface.addEventListener.bind(surface)
+    let remove = surface.removeEventListener.bind(surface)
+    mock.method(surface, 'addEventListener', (type, listener, options) => {
+      add(type, listener, options)
+      if (type === 'transitionend') {
+        state.ready = true
+        state.resolve?.()
+      }
+    })
+    mock.method(surface, 'removeEventListener', (type, listener, options) => {
+      remove(type, listener, options)
+      if (type === 'transitionend') state.ready = false
+    })
+  }
   return { container, root }
 }
 
@@ -97,11 +114,13 @@ function TestMenuList(handle: Handle<TestMenuListProps>): () => RemixNode {
     let { children, mix, ...divProps } = handle.props
 
     return (
-      <div mix={menu.popover()}>
-        <div {...divProps} mix={[menu.list(), mix]}>
-          {children}
+      <menu.PopoverContext>
+        <div mix={menu.popover()}>
+          <div {...divProps} mix={[menu.list(), mix]}>
+            {children}
+          </div>
         </div>
-      </div>
+      </menu.PopoverContext>
     )
   }
 }
@@ -246,7 +265,7 @@ function getLists(container: HTMLElement) {
 }
 
 function getSurfaces(container: HTMLElement) {
-  return Array.from(container.querySelectorAll<HTMLElement>('[popover]'))
+  return Array.from(container.querySelectorAll<HTMLElement>('[data-popover]'))
 }
 
 function getSeparator(container: HTMLElement) {
@@ -333,9 +352,15 @@ async function finishDismissal(
   root: ReturnType<typeof createRoot>,
   condition = () => true,
 ) {
-  // The close starts waiting for its transition after the update that hides the surface, so the
-  // transition events have to come after the `toggle` that `settle()` waits for.
   await settle(root)
+  // Ordinary popovers don't emit native toggle events. Wait until Menu is listening
+  // before dispatching the transition events that complete its close.
+  let state = transitionWaits.get(surface)
+  if (state && !state.ready) {
+    await new Promise<void>((resolve) => {
+      state.resolve = resolve
+    })
+  }
   surface.dispatchEvent(new TransitionEvent('transitionrun', { propertyName: 'opacity' }))
   surface.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }))
   await settleUntil(root, condition)
@@ -361,7 +386,6 @@ afterEach(() => {
 
 describe('menu', () => {
   it('opens from click with focus on the list and toggles closed from the trigger', async (t) => {
-    holdAnimationFrames(t)
     let { container, root } = renderMenu()
     let trigger = getButtonByText(container, 'View')
     let [rootSurface] = getSurfaces(container)
@@ -370,14 +394,16 @@ describe('menu', () => {
     click(trigger)
     await settle(root)
 
-    expect(rootSurface.matches(':popover-open')).toBe(true)
+    expect(rootSurface.matches('[data-open]')).toBe(true)
+    await settleUntil(root, () => document.activeElement === rootList)
     expect(document.activeElement).toBe(rootList)
 
     click(trigger)
     await settle(root)
     await finishDismissal(rootSurface, root, () => document.activeElement === trigger)
 
-    expect(rootSurface.matches(':popover-open')).toBe(false)
+    expect(rootSurface.matches('[data-open]')).toBe(false)
+    await settleUntil(root, () => document.activeElement === trigger)
     expect(document.activeElement).toBe(trigger)
   })
 
@@ -393,11 +419,12 @@ describe('menu', () => {
     await settle(root)
 
     expect(event.defaultPrevented).toBe(true)
-    expect(rootSurface.matches(':popover-open')).toBe(true)
+    expect(rootSurface.matches('[data-open]')).toBe(true)
     expect(rootSurface.style.left).toBe('220px')
     expect(rootSurface.style.top).toBe('140px')
     expect(rootSurface.getAttribute('data-anchor-placement')).toBe('bottom-start')
     expect(trigger.getAttribute('aria-expanded')).toBe('true')
+    await settleUntil(root, () => document.activeElement === rootList)
     expect(document.activeElement).toBe(rootList)
   })
 
@@ -418,7 +445,7 @@ describe('menu', () => {
     // anchor.ts repositions an open surface from its requestAnimationFrame position poll.
     await new Promise(requestAnimationFrame)
 
-    expect(rootSurface.matches(':popover-open')).toBe(true)
+    expect(rootSurface.matches('[data-open]')).toBe(true)
     expect(rootSurface.style.left).toBe('260px')
     expect(rootSurface.style.top).toBe('180px')
   })
@@ -436,9 +463,10 @@ describe('menu', () => {
     await settle(root)
 
     expect(event.defaultPrevented).toBe(true)
-    expect(rootSurface.matches(':popover-open')).toBe(true)
+    expect(rootSurface.matches('[data-open]')).toBe(true)
     expect(rootSurface.style.left).toBe('80px')
     expect(rootSurface.style.top).toBe('110px')
+    await settleUntil(root, () => document.activeElement === rootList)
     expect(document.activeElement).toBe(rootList)
   })
 
@@ -449,7 +477,14 @@ describe('menu', () => {
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
+
+    await settleUntil(root, () => document.activeElement === wordWrap)
 
     expect(document.activeElement).toBe(wordWrap)
 
@@ -467,12 +502,21 @@ describe('menu', () => {
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
+
+    await settleUntil(root, () => document.activeElement === wordWrap)
 
     expect(document.activeElement).toBe(wordWrap)
 
     key(wordWrap, 'ArrowUp')
     await settle(root)
+
+    await settleUntil(root, () => document.activeElement === wordWrap)
 
     expect(document.activeElement).toBe(wordWrap)
     expect(wordWrap.getAttribute('data-highlighted')).toBe('true')
@@ -484,6 +528,8 @@ describe('menu', () => {
 
     key(zoom, 'ArrowDown')
     await settle(root)
+
+    await settleUntil(root, () => document.activeElement === zoom)
 
     expect(document.activeElement).toBe(zoom)
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
@@ -497,7 +543,12 @@ describe('menu', () => {
     let zoomIn = getMenuItemByText(container, 'Zoom in')
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
     await settleUntil(root, () => document.activeElement === zoom)
@@ -507,16 +558,18 @@ describe('menu', () => {
     key(zoom, 'ArrowRight')
     await settle(root)
 
-    expect(childSurface.matches(':popover-open')).toBe(true)
+    expect(childSurface.matches('[data-open]')).toBe(true)
+    await settleUntil(root, () => document.activeElement === zoomIn)
     expect(document.activeElement).toBe(zoomIn)
 
     key(zoomIn, 'ArrowLeft')
     await settleUntil(root, () => document.activeElement === zoom)
 
     expect(childSurface.getAttribute('data-close-animation')).toBe('none')
-    expect(childSurface.matches(':popover-open')).toBe(false)
+    expect(childSurface.matches('[data-open]')).toBe(false)
     expect(zoom.getAttribute('data-submenu-state')).toBe(null)
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
+    await settleUntil(root, () => document.activeElement === zoom)
     expect(document.activeElement).toBe(zoom)
   })
 
@@ -528,10 +581,15 @@ describe('menu', () => {
     let zoomIn = getMenuItemByText(container, 'Zoom in')
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     key(zoom, 'ArrowRight')
     await settle(root)
@@ -546,9 +604,10 @@ describe('menu', () => {
     )
 
     expect(submenuDelayCalls).toHaveLength(0)
-    expect(childSurface.matches(':popover-open')).toBe(false)
+    expect(childSurface.matches('[data-open]')).toBe(false)
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
     expect(zoom.getAttribute('aria-expanded')).toBe('false')
+    await settleUntil(root, () => document.activeElement === zoom)
     expect(document.activeElement).toBe(zoom)
   })
 
@@ -564,10 +623,15 @@ describe('menu', () => {
     mockRect(zoomIn, 160, 104, 128, 32)
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     key(zoom, 'ArrowRight')
     await settle(root)
@@ -584,7 +648,12 @@ describe('menu', () => {
     let [, childSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
     await settleUntil(root, () => document.activeElement === zoom)
@@ -594,8 +663,9 @@ describe('menu', () => {
     click(zoom)
     await settle(root)
 
-    expect(childSurface.matches(':popover-open')).toBe(true)
+    expect(childSurface.matches('[data-open]')).toBe(true)
     expect(zoom.getAttribute('aria-expanded')).toBe('true')
+    await settleUntil(root, () => document.activeElement === zoom)
     expect(document.activeElement).toBe(zoom)
   })
 
@@ -608,7 +678,12 @@ describe('menu', () => {
     let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
     await settleUntil(root, () => document.activeElement === zoom)
@@ -624,7 +699,8 @@ describe('menu', () => {
     await timers.advanceAsync(submenuDelay!)
     await settle(root)
 
-    expect(childSurface.matches(':popover-open')).toBe(true)
+    expect(childSurface.matches('[data-open]')).toBe(true)
+    await settleUntil(root, () => document.activeElement === zoom)
     expect(document.activeElement).toBe(zoom)
   })
 
@@ -667,14 +743,16 @@ describe('menu', () => {
       .find((delay): delay is number => typeof delay === 'number' && delay > 0)
 
     expect(submenuDelay).toBeDefined()
+    await settleUntil(root, () => document.activeElement === zoom)
     expect(document.activeElement).toBe(zoom)
 
     pointerLeave(zoom, null, { clientX: 39, clientY: 56 })
     await settle(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe(null)
+    await settleUntil(root, () => document.activeElement === zoom)
     expect(document.activeElement).toBe(zoom)
-    expect(childSurface.matches(':popover-open')).toBe(false)
+    expect(childSurface.matches('[data-open]')).toBe(false)
 
     pointerMove(zoom)
     await settle(root)
@@ -683,7 +761,8 @@ describe('menu', () => {
     await settle(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
-    expect(childSurface.matches(':popover-open')).toBe(true)
+    expect(childSurface.matches('[data-open]')).toBe(true)
+    await settleUntil(root, () => document.activeElement === zoom)
     expect(document.activeElement).toBe(zoom)
   })
 
@@ -708,14 +787,16 @@ describe('menu', () => {
       .find((delay): delay is number => typeof delay === 'number' && delay > 0)
 
     expect(submenuDelay).toBeDefined()
+    await settleUntil(root, () => document.activeElement === zoom)
     expect(document.activeElement).toBe(zoom)
 
     pointerLeave(zoom, separator)
     await settle(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe(null)
+    await settleUntil(root, () => document.activeElement === zoom)
     expect(document.activeElement).toBe(zoom)
-    expect(childSurface.matches(':popover-open')).toBe(false)
+    expect(childSurface.matches('[data-open]')).toBe(false)
 
     pointerMove(zoom)
     await settle(root)
@@ -724,7 +805,8 @@ describe('menu', () => {
     await settle(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
-    expect(childSurface.matches(':popover-open')).toBe(true)
+    expect(childSurface.matches('[data-open]')).toBe(true)
+    await settleUntil(root, () => document.activeElement === zoom)
     expect(document.activeElement).toBe(zoom)
   })
 
@@ -735,10 +817,15 @@ describe('menu', () => {
     let [, childSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     key(document.activeElement as HTMLElement, 'ArrowRight')
     await settle(root)
@@ -747,13 +834,13 @@ describe('menu', () => {
     mockRect(childSurface, 160, 40, 120, 120)
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
-    expect(childSurface.matches(':popover-open')).toBe(true)
+    expect(childSurface.matches('[data-open]')).toBe(true)
 
     pointerLeave(zoom, null, { clientX: 39, clientY: 56 })
     await settle(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe(null)
-    expect(childSurface.matches(':popover-open')).toBe(false)
+    expect(childSurface.matches('[data-open]')).toBe(false)
   })
 
   it('keeps an open submenu trigger active when pointer leaves straight into the child surface', async () => {
@@ -763,10 +850,15 @@ describe('menu', () => {
     let [, childSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     key(document.activeElement as HTMLElement, 'ArrowRight')
     await settle(root)
@@ -775,13 +867,13 @@ describe('menu', () => {
     mockRect(childSurface, 140, 40, 120, 120)
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
-    expect(childSurface.matches(':popover-open')).toBe(true)
+    expect(childSurface.matches('[data-open]')).toBe(true)
 
     pointerLeave(zoom, childSurface, { clientX: 140, clientY: 56 })
     await settle(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
-    expect(childSurface.matches(':popover-open')).toBe(true)
+    expect(childSurface.matches('[data-open]')).toBe(true)
   })
 
   it('keeps the parent submenu trigger highlighted when ArrowLeft closes a child under the pointer', async () => {
@@ -792,10 +884,15 @@ describe('menu', () => {
     let zoomOut = getMenuItemByText(container, 'Zoom out')
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     key(zoom, 'ArrowRight')
     await settle(root)
@@ -814,8 +911,9 @@ describe('menu', () => {
     key(zoomOut, 'ArrowLeft')
     await settleUntil(root, () => document.activeElement === zoom)
 
-    expect(childSurface.matches(':popover-open')).toBe(false)
+    expect(childSurface.matches('[data-open]')).toBe(false)
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
+    await settleUntil(root, () => document.activeElement === zoom)
     expect(document.activeElement).toBe(zoom)
   })
 
@@ -827,22 +925,27 @@ describe('menu', () => {
     let [, childSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     key(document.activeElement as HTMLElement, 'ArrowRight')
     await settle(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
-    expect(childSurface.matches(':popover-open')).toBe(true)
+    expect(childSurface.matches('[data-open]')).toBe(true)
 
     pointerLeave(wordWrap, childSurface)
     await settle(root)
 
     expect(zoom.getAttribute('data-highlighted')).toBe('true')
-    expect(childSurface.matches(':popover-open')).toBe(true)
+    expect(childSurface.matches('[data-open]')).toBe(true)
   })
 
   it('unhighlights items when pointer leaves them for a separator', async () => {
@@ -866,7 +969,6 @@ describe('menu', () => {
   })
 
   it('marks submenu triggers as dismissing while the full menu tree fades out', async (t) => {
-    holdAnimationFrames(t)
     let { container, root } = renderMenu()
     let trigger = getButtonByText(container, 'View')
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
@@ -874,10 +976,15 @@ describe('menu', () => {
     let [rootSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     key(document.activeElement as HTMLElement, 'ArrowRight')
     await settle(root)
@@ -891,12 +998,12 @@ describe('menu', () => {
     await finishDismissal(rootSurface, root, () => !zoom.hasAttribute('data-submenu-state'))
 
     expect(zoom.getAttribute('data-submenu-state')).toBe(null)
-    expect(rootSurface.matches(':popover-open')).toBe(false)
+    expect(rootSurface.matches('[data-open]')).toBe(false)
+    await settleUntil(root, () => document.activeElement === trigger)
     expect(document.activeElement).toBe(trigger)
   })
 
   it('dispatches one bubbled selection event from submenu items and closes the full tree', async (t) => {
-    holdAnimationFrames(t)
     let selections: MenuSelectEvent[] = []
     let { container, root } = renderMenu((event) => {
       selections.push(event)
@@ -907,10 +1014,15 @@ describe('menu', () => {
     let [rootSurface, childSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     key(document.activeElement as HTMLElement, 'ArrowRight')
     await settle(root)
@@ -946,13 +1058,13 @@ describe('menu', () => {
       value: 'zoom-in',
     })
     expect(zoom.getAttribute('data-submenu-state')).toBe(null)
-    expect(rootSurface.matches(':popover-open')).toBe(false)
-    expect(childSurface.matches(':popover-open')).toBe(false)
+    expect(rootSurface.matches('[data-open]')).toBe(false)
+    expect(childSurface.matches('[data-open]')).toBe(false)
+    await settleUntil(root, () => document.activeElement === trigger)
     expect(document.activeElement).toBe(trigger)
   })
 
   it('re-dispatches one selection event from the button so shared ancestors only see it once', async (t) => {
-    holdAnimationFrames(t)
     let buttonSelections: MenuSelectEvent[] = []
     let ancestorSelections: MenuSelectEvent[] = []
     let { container, root } = renderMenu(
@@ -996,20 +1108,25 @@ describe('menu', () => {
   })
 
   it('does not swallow parent item clicks while a child submenu is open', async (t) => {
-    holdAnimationFrames(t)
     let selections: MenuSelectEvent[] = []
     let { container, root } = renderMenu((event) => {
       selections.push(event)
     })
     let trigger = getButtonByText(container, 'View')
     let wordWrap = getMenuItemByText(container, 'Word wrap')
+    let zoom = getMenuItemsByText(container, 'Zoom')[0]
     let [, childSurface] = getSurfaces(container)
 
     key(trigger, 'ArrowDown')
-    await settle(root)
+    await settleUntil(
+      root,
+      () =>
+        document.activeElement ===
+        getLists(container)[0].querySelector('[role^="menuitem"]:not([aria-disabled="true"])'),
+    )
 
     key(document.activeElement as HTMLElement, 'ArrowDown')
-    await settle(root)
+    await settleUntil(root, () => document.activeElement === zoom)
 
     key(document.activeElement as HTMLElement, 'ArrowRight')
     await settle(root)
@@ -1020,7 +1137,7 @@ describe('menu', () => {
     await settle(root)
 
     expect(childSurface.getAttribute('data-close-animation')).toBe('none')
-    expect(childSurface.matches(':popover-open')).toBe(false)
+    expect(childSurface.matches('[data-open]')).toBe(false)
     expect(wordWrap.getAttribute('data-menu-flash')).toBe('true')
     expect(wordWrap.getAttribute('aria-checked')).toBe('true')
 
@@ -1046,6 +1163,44 @@ describe('menu', () => {
       type: 'checkbox',
       value: null,
     })
+    await settleUntil(root, () => document.activeElement === trigger)
     expect(document.activeElement).toBe(trigger)
+  })
+
+  it('closes the full menu tree when clicking outside an open submenu', async () => {
+    let { container, root } = renderMenu()
+    let trigger = getButtonByText(container, 'View')
+    let zoom = getMenuItemByText(container, 'Zoom')
+    let [rootSurface, childSurface] = getSurfaces(container)
+
+    click(trigger)
+    await settle(root)
+    click(zoom)
+    await settle(root)
+    click(document.body)
+    await settleUntil(
+      root,
+      () => !rootSurface.matches('[data-open]') && !childSurface.matches('[data-open]'),
+    )
+
+    expect(rootSurface.matches('[data-open]')).toBe(false)
+    expect(childSurface.matches('[data-open]')).toBe(false)
+  })
+
+  it('ignores Escape during composition in an open submenu', async () => {
+    let { container, root } = renderMenu()
+    let trigger = getButtonByText(container, 'View')
+    let zoom = getMenuItemByText(container, 'Zoom')
+    let [rootSurface, childSurface] = getSurfaces(container)
+
+    click(trigger)
+    await settle(root)
+    click(zoom)
+    await settle(root)
+    key(getMenuItemByText(container, 'Zoom in'), 'Escape', { isComposing: true })
+    await settle(root)
+
+    expect(rootSurface.matches('[data-open]')).toBe(true)
+    expect(childSurface.matches('[data-open]')).toBe(true)
   })
 })

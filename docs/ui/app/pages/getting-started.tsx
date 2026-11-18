@@ -11,6 +11,22 @@ const previews = categories.flatMap((category) => {
 })
 
 const installCode = await highlightSource('npm i remix @remix-run/ui', 'sh')
+const stackingCode = await highlightSource(
+  `
+  :root {
+    --rmx-layer-base: 100;
+  }
+`,
+  'css',
+)
+const notificationStackingCode = await highlightSource(
+  `
+  .Notifications {
+    z-index: calc(var(--rmx-layer-base, 0) + 1000);
+  }
+`,
+  'css',
+)
 const configCode = await highlightSource(
   `
   {
@@ -77,9 +93,45 @@ export default function GettingStarted() {
             API.
           </p>
         </Section>
+        <Section id="stacking" title="Stacking and overlays">
+          <p>
+            Remix UI automatically assigns z-index values to <a href="/patterns/dialog/">dialogs</a>
+            , <a href="/patterns/popover/">popovers</a>, <a href="/patterns/menu/">menus</a>,{' '}
+            <a href="/patterns/select/">selects</a> and <a href="/patterns/combobox/">comboboxes</a>
+            . Backdrops sit below their dialogs, and nested popups appear above their parents. These
+            patterns also coordinate dismissal so Escape closes the active child before its parent.
+            Use the pattern's <a href="/patterns/portal/#focus-boundaries">Portal</a> when ancestors
+            would clip a surface or create a stacking context that constrains its z-index.
+          </p>
+          <p>
+            Each surface's CSS <code>z-index</code> adds its position in the shared stack to{' '}
+            <code>--rmx-layer-base</code>, which defaults to <code>0</code>. For example, if your
+            app has a fixed header with <code>z-index: 100</code>, set the base to <code>100</code>{' '}
+            on the document root so dialogs and their backdrops appear above it. This raises the
+            whole stack while preserving the order of dialogs and nested popups. Setting it once on{' '}
+            <code>:root</code> lets every surface inherit the same value, including content rendered
+            through a portal.
+          </p>
+          <CodeBlock html={stackingCode} />
+          <p>
+            <a href="/patterns/toast/">Toast</a> leaves the notification region's z-index to your
+            styles. Use the same base variable with a larger offset so changing the base moves both
+            dialogs and notifications together. Here, <code>1000</code> reserves space above the
+            dialog and popup layers. This offset is an application styling choice.
+          </p>
+          <CodeBlock html={notificationStackingCode} />
+          <p>
+            <a href="/patterns/dialog/">Dialog</a> and <a href="/patterns/toast/">Toast</a> mixins
+            coordinate focus and dismissal automatically. Assigning a higher z-index to an unrelated
+            widget only changes its visual position. See{' '}
+            <a href="/patterns/dialog/#toasts">Dialog with Toast</a> for a complete example.
+          </p>
+        </Section>
         <Section id="explore" title="Explore the library">
           <p>
-            Explore patterns such as accordions, menus and tabs, or browse the animation utilities.
+            Explore patterns such as <a href="/patterns/accordion/">accordions</a>,{' '}
+            <a href="/patterns/menu/">menus</a> and <a href="/patterns/tabs/">tabs</a>, or browse
+            the animation utilities.
           </p>
           <div class="ui-preview-grid">
             {previews.map(({ category, page, Preview }) => (

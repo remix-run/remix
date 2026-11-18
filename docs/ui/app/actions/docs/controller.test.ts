@@ -28,8 +28,8 @@ describe('UI docs', () => {
     assert.match(html, /<section id="installation"[^>]*><h2>Installation<\/h2>/)
     assert.match(html, /<section id="using-ui"[^>]*><h2>Using the library<\/h2>/)
     assert.match(html, /<section id="explore"[^>]*><h2>Explore the library<\/h2>/)
-    // Three sections is too few for an "On this page" list.
-    assert.doesNotMatch(html, /On this page/)
+    assert.match(html, /<section id="stacking"[^>]*><h2>Stacking and overlays<\/h2>/)
+    assert.match(html, /On this page/)
   })
 
   it('makes landing previews decorative and does not hydrate their examples', async () => {

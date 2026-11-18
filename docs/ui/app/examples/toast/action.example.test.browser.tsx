@@ -28,8 +28,13 @@ describe('Toast action example', () => {
       'Action performed. Press Control Z or Command Z to undo while this notification is open.',
     )
     assert.equal(announcement.querySelector('button'), null)
-    action.focus()
-    await result.act(() => action.click())
+    await result.act(() => {
+      trigger.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }),
+      )
+      action.focus()
+      action.click()
+    })
     assert.equal(document.activeElement, trigger)
     await waitFor(() => assert.equal(toastItem.isConnected, false))
     let confirmation = element(result.container, '[data-toast]')

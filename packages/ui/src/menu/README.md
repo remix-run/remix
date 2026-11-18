@@ -14,12 +14,14 @@ export function ProjectMenu() {
       <button mix={[triggerStyle, menu.trigger()]} type="button">
         Actions
       </button>
-      <div mix={[popoverStyle, menu.popover()]}>
-        <div mix={[listStyle, menu.list()]}>
-          <div mix={[itemStyle, menu.item({ name: 'rename' })]}>Rename</div>
-          <div mix={[itemStyle, menu.item({ disabled: true, name: 'archive' })]}>Archive</div>
+      <menu.PopoverContext>
+        <div mix={[popoverStyle, menu.popover()]}>
+          <div mix={[listStyle, menu.list()]}>
+            <div mix={[itemStyle, menu.item({ name: 'rename' })]}>Rename</div>
+            <div mix={[itemStyle, menu.item({ disabled: true, name: 'archive' })]}>Archive</div>
+          </div>
         </div>
-      </div>
+      </menu.PopoverContext>
     </menu.Context>
   )
 }
@@ -51,12 +53,14 @@ Use `contextTrigger()` when a menu should open at the right-click location of an
   <div mix={menu.contextTrigger()} tabIndex={0}>
     File.txt
   </div>
-  <div mix={[popoverStyle, menu.popover()]}>
-    <div mix={[listStyle, menu.list()]}>
-      <div mix={[itemStyle, menu.item({ name: 'rename' })]}>Rename</div>
-      <div mix={[itemStyle, menu.item({ name: 'delete' })]}>Delete</div>
+  <menu.PopoverContext>
+    <div mix={[popoverStyle, menu.popover()]}>
+      <div mix={[listStyle, menu.list()]}>
+        <div mix={[itemStyle, menu.item({ name: 'rename' })]}>Rename</div>
+        <div mix={[itemStyle, menu.item({ name: 'delete' })]}>Delete</div>
+      </div>
     </div>
-  </div>
+  </menu.PopoverContext>
 </menu.Context>
 ```
 
@@ -85,6 +89,12 @@ Attach `onMenuSelect(...)` to the menu root or a shared ancestor:
 - `MenuSelectEvent`: bubbling event whose `item` describes the selected item.
 - `MenuSelectItem`, `MenuProviderProps`, `MenuTriggerOptions`, `MenuContextTriggerOptions`, `MenuItemOptions`, and `SubmenuTriggerOptions`: public event, prop, and option types.
 
+### `menu.PopoverContext`
+
+Wrap the element with `menu.popover()` in `menu.PopoverContext` within the same `menu.Context` instance. Keep this wrapper inside `menu.Portal` when portaled, or omit the Portal for inline rendering.
+
+`MenuPopoverContextProps` accepts the popup surface as `children`.
+
 ## Behavior Notes
 
 - Click opens the root menu and focuses the list. Clicking the trigger again closes it and restores focus.
@@ -97,3 +107,7 @@ Attach `onMenuSelect(...)` to the menu root or a shared ancestor:
 - Pointer movement highlights enabled items. Submenus open after a short focus or pointer delay and use hover aim so they stay open while moving toward the child surface.
 - Selecting a regular item flashes that item. Selecting a checkbox or radio item flashes the committed checked state.
 - Selection dispatches one bubbled `MenuSelectEvent`, closes the full menu tree, and restores focus to the root trigger.
+
+## Portal
+
+`menu.Portal` renders the surface in the document body and coordinates focus with its originating controls. Pass `container` to choose another element in the same document's light DOM. `menu.Portal` must be declared outside a shadow root and use a container outside shadow roots. Keep `menu.PopoverContext` inside it. You can omit the Portal for inline rendering while keeping the surface context.

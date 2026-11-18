@@ -6,24 +6,27 @@ import { button, element, finishAnimations, mount, waitFor } from '../test-helpe
 describe('Radio menu example', () => {
   it('keeps exactly one sort order selected across reopening', async (t) => {
     let result = await mount(t, <Example />)
-    let trigger = button(result.container, 'Sort by')
+    let trigger = button(document.body, 'Sort by')
     await result.act(() => trigger.click())
-    let name = element(result.container, '[role="menuitemradio"]')
-    let modified = element(result.container, '[role="menuitemradio"]:nth-child(2)')
+    let name = element(document.body, '[role="menuitemradio"]')
+    let modified = element(document.body, '[role="menuitemradio"]:nth-child(2)')
     assert.equal(name.getAttribute('aria-checked'), 'true')
     await result.act(() => modified.click())
     await waitFor(() => assert.equal(modified.getAttribute('aria-checked'), 'true'))
     assert.equal(name.getAttribute('aria-checked'), 'false')
-    assert.equal(result.$$('[role="menuitemradio"][aria-checked="true"]').length, 1)
-    await waitFor(() =>
-      assert.equal(element(result.container, '[popover]').matches(':popover-open'), false),
+    assert.equal(
+      document.body.querySelectorAll('[role="menuitemradio"][aria-checked="true"]').length,
+      1,
     )
-    await waitFor(() => assert.equal(result.$$('[data-menu-flash]').length, 0))
-    await finishAnimations(element(result.container, '[popover]'))
+    await waitFor(() =>
+      assert.equal(element(document.body, '[data-popover]').matches('[data-open]'), false),
+    )
+    await waitFor(() => assert.equal(document.body.querySelectorAll('[data-menu-flash]').length, 0))
+    await finishAnimations(element(document.body, '[data-popover]'))
     await waitFor(() => assert.equal(document.activeElement, trigger))
     await result.act(() => trigger.click())
     await waitFor(() =>
-      assert.equal(element(result.container, '[popover]').matches(':popover-open'), true),
+      assert.equal(element(document.body, '[data-popover]').matches('[data-open]'), true),
     )
     assert.equal(modified.getAttribute('aria-checked'), 'true')
   })

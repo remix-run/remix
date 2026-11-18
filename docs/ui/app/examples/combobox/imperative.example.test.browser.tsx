@@ -6,14 +6,14 @@ import { button, element, input, key, mount, waitFor } from '../test-helpers.ts'
 describe('Imperative combobox example', () => {
   it('opens from Browse states and highlights the first option', async (t) => {
     let result = await mount(t, <Example />)
-    let search = input(result.container, '[role="combobox"]')
-    await result.act(() => button(result.container, 'Browse states').click())
+    let search = input(document.body, '[role="combobox"]')
+    await result.act(() => button(document.body, 'Browse states').click())
     await waitFor(() => assert.equal(search.getAttribute('aria-expanded'), 'true'))
-    let first = element(result.container, '[role="option"]')
+    let first = element(document.body, '[role="option"]')
     assert.equal(first.textContent, 'Alabama')
     assert.equal(search.getAttribute('aria-activedescendant'), first.id)
     await result.act(() => key(search, 'Enter'))
-    await waitFor(() => assert.equal(input(result.container, 'input[type="hidden"]').value, 'AL'))
+    await waitFor(() => assert.equal(input(document.body, 'input[type="hidden"]').value, 'AL'))
     await waitFor(() => assert.equal(search.value, 'Alabama'))
   })
 })

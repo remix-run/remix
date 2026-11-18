@@ -21,7 +21,7 @@ const formExample = await loadExample('select/form')
 
 const anatomyCode = await highlightSource(`
   import * as select from '@remix-run/ui/select'
-  import * as popover from '@remix-run/ui/popover'
+
   import { css } from 'remix/component'
   import type { Handle } from 'remix/component'
 
@@ -32,6 +32,9 @@ const anatomyCode = await highlightSource(`
       aria-labelledby="select-label"
       mix={[
         select.trigger(),
+        select.onSelectChange((event) => {
+          saveSelection(event.value, event.label)
+        }),
         css({
           '&[aria-expanded="true"]': {},
           '&[aria-expanded="false"]': {},
@@ -42,38 +45,42 @@ const anatomyCode = await highlightSource(`
     >
       <SelectedLabel />
     </button>
-    <popover.Context>
-      <div
-        mix={[
-          select.popover(),
-          css({
-            '&:popover-open': {},
-          }),
-        ]}
-      >
-        <div aria-label="Options" mix={select.list()}>
-          <div
-            mix={[
-              select.option({
-                label: 'Option text',
-                value: 'option-value',
-              }),
-              css({
-                '&[data-highlighted="true"]': {},
-                '&[data-highlighted="false"]': {},
-                '&[aria-selected="true"]': {},
-                '&[aria-selected="false"]': {},
-                '&[aria-disabled="true"]': {},
-                '&[aria-disabled="false"]': {},
-                '&[data-select-flash]': {},
-              }),
-            ]}
-          >
-            Option text
+    <select.Portal>
+      <select.PopoverContext>
+        <div
+          mix={[
+            select.popover(),
+            css({
+              '&[data-open]': {},
+              '&[data-state="open"]': {},
+              '&[data-state="closed"]': {},
+            }),
+          ]}
+        >
+          <div aria-label="Options" mix={select.list()}>
+            <div
+              mix={[
+                select.option({
+                  label: 'Option text',
+                  value: 'option-value',
+                }),
+                css({
+                  '&[data-highlighted="true"]': {},
+                  '&[data-highlighted="false"]': {},
+                  '&[aria-selected="true"]': {},
+                  '&[aria-selected="false"]': {},
+                  '&[aria-disabled="true"]': {},
+                  '&[aria-disabled="false"]': {},
+                  '&[data-select-flash]': {},
+                }),
+              ]}
+            >
+              Option text
+            </div>
           </div>
         </div>
-      </div>
-    </popover.Context>
+      </select.PopoverContext>
+    </select.Portal>
     <input mix={select.hiddenInput()} />
   </select.Context>
 
@@ -90,11 +97,17 @@ const initialCode = await highlightSource(`
 `)
 
 const eventsCode = await highlightSource(`
-  <div mix={select.onSelectChange((event) => {
-    saveSelection(event.value, event.label)
-  })}>
-    {/* Select */}
-  </div>
+  <button
+    type="button"
+    mix={[
+      select.trigger(),
+      select.onSelectChange((event) => {
+        saveSelection(event.value, event.label)
+      }),
+    ]}
+  >
+    <SelectedLabel />
+  </button>
 `)
 
 const accessibilityCode = await highlightSource(`
@@ -205,10 +218,14 @@ export default function SelectPage(handle: Handle<PageProps>) {
           <li>Click, ArrowDown and ArrowUp open the popup.</li>
           <li>Enter and Space select the highlighted option.</li>
           <li>Escape and outside clicks close the popup and return focus to the trigger.</li>
+          <li>
+            Tab closes the popup and continues to the next control. Shift+Tab returns to the
+            trigger.
+          </li>
         </ul>
         <p>
-          List navigation follows <a href="/patterns/listbox/#accessibility">Listbox</a>, including
-          its current Tab interception.
+          Arrow-key navigation and typeahead follow{' '}
+          <a href="/patterns/listbox/#accessibility">Listbox</a>.
         </p>
       </Section>
       <Section id="api-reference" title="API reference">
@@ -293,12 +310,40 @@ export default function SelectPage(handle: Handle<PageProps>) {
             Reflects Context disabled state or host disabled.
           </ApiEntry>
         </ApiTable>
+        <h3 id="portal-reference">Portal</h3>
+        <p>
+          Use <code>select.Portal</code> to render outside clipping ancestors. Keep{' '}
+          <code>select.PopoverContext</code> inside it. Omit the Portal for inline rendering.
+        </p>
+        <ApiTable id="portal-options" label="Prop" defaults>
+          <ApiEntry name="children" type="RemixNode">
+            The surface context and its content.
+          </ApiEntry>
+          <ApiEntry name="container" type="HTMLElement | null" defaultValue="document.body">
+            Destination in the same document. Changing it preserves child state.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="portal-types">
+          <ApiEntry id="type-SelectPortalProps" name="SelectPortalProps" type="type">
+            Children and container props accepted by select.Portal.
+          </ApiEntry>
+        </ApiTable>
+        <h3 id="popover-context-reference">PopoverContext</h3>
+        <p>
+          Wrap the element with <code>select.popover()</code> in <code>select.PopoverContext</code>{' '}
+          within the same <code>select.Context</code>. Keep it inside{' '}
+          <a href="#portal-reference">select.Portal</a> when portaled.
+        </p>
+        <ApiTable id="popover-context-options" label="Option">
+          <ApiEntry name="children" type="RemixNode">
+            One popup surface and its content.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="popover-reference">popover()</h3>
         <p>
-          Requires <code>popover.Context</code> from the Popover module. Positions the selected
-          option over the trigger using inset relative alignment. The surface’s minimum width
-          follows the trigger. Adds <code>popover=&quot;manual&quot;</code> through the Popover
-          surface mixin.
+          Use <code>select.PopoverContext</code> around the surface. Positions the selected option
+          over the trigger using inset relative alignment. The surface’s minimum width follows the
+          trigger. Uses the shared ordinary DOM popover behavior and stacking order.
         </p>
         <h3 id="list-reference">list()</h3>
         <ApiTable id="list-attributes" label="Attribute" typeLabel="Value">
@@ -379,6 +424,13 @@ export default function SelectPage(handle: Handle<PageProps>) {
         </p>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable id="types-types">
+          <ApiEntry
+            id="type-SelectPopoverContextProps"
+            name="SelectPopoverContextProps"
+            type="interface"
+          >
+            Children accepted by PopoverContext.
+          </ApiEntry>
           <ApiEntry id="type-SelectContextProps" name="SelectContextProps" type="interface">
             <p>Initial selection, label, timing, disabled state and form name.</p>
             <CodeBlock html={typeDefinitions.SelectContextProps} />

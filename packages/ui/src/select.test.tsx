@@ -52,11 +52,11 @@ function TestSelect(
         <button id={id} type={type ?? 'button'} mix={[select.trigger(), mix]}>
           <SelectLabel />
         </button>
-        <popover.Context>
+        <select.PopoverContext>
           <div mix={select.popover()}>
             <div mix={select.list()}>{children}</div>
           </div>
-        </popover.Context>
+        </select.PopoverContext>
         {name && <input mix={select.hiddenInput()} />}
       </select.Context>
     )
@@ -106,7 +106,7 @@ function getTrigger(container: HTMLElement) {
 }
 
 function getSurface(container: HTMLElement) {
-  return container.querySelector('[popover]') as HTMLElement
+  return container.querySelector('[data-popover]') as HTMLElement
 }
 
 function getHiddenInput(container: HTMLElement) {
@@ -148,8 +148,10 @@ async function openSelect(
 }
 
 async function finishCloseTransition(surface: HTMLElement) {
+  await timers.advanceAsync(0)
   surface.dispatchEvent(new TransitionEvent('transitionrun', { propertyName: 'opacity' }))
   surface.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }))
+  await timers.advanceAsync(0)
 }
 
 let timers!: FakeTimers
@@ -160,6 +162,7 @@ async function finishSelectUpdate(
   root: ReturnType<typeof createRoot>,
   labelSwapDelayMs = defaultLabelSwapDelayMs,
 ) {
+  await timers.advanceAsync(0)
   await timers.advanceAsync(flashDurationMs)
   await finishCloseTransition(surface)
   await settle(root)
@@ -222,13 +225,13 @@ describe('Select', () => {
         <button type="button" mix={select.trigger()}>
           <SelectValue />
         </button>
-        <popover.Context>
+        <select.PopoverContext>
           <div mix={select.popover()}>
             <div mix={select.list()}>
               <Indirection />
             </div>
           </div>
-        </popover.Context>
+        </select.PopoverContext>
       </select.Context>,
     )
     let trigger = getTrigger(container)
@@ -258,7 +261,7 @@ describe('Select', () => {
     let surface = getSurface(container)
 
     expect(trigger.textContent).toContain('Select a framework')
-    expect(surface.matches(':popover-open')).toBe(false)
+    expect(surface.matches('[data-open]')).toBe(false)
 
     await openSelect(container, root)
 
@@ -270,14 +273,14 @@ describe('Select', () => {
 
     expect(react.getAttribute('data-select-flash')).toBe('true')
     expect(trigger.textContent).toContain('Select a framework')
-    expect(surface.matches(':popover-open')).toBe(true)
+    expect(surface.matches('[data-open]')).toBe(true)
 
     await finishSelectUpdate(surface, root)
 
     expect(trigger.textContent).toContain('React framework')
     expect(trigger.textContent).not.toContain('React Router framework')
     expect(trigger.getAttribute('aria-describedby')).toBe(react.id)
-    expect(surface.matches(':popover-open')).toBe(false)
+    expect(surface.matches('[data-open]')).toBe(false)
   })
 
   it('supports a custom label swap delay on the primitive context', async (t) => {
@@ -306,6 +309,7 @@ describe('Select', () => {
     let react = getOptionByText(container, 'React')
     click(react)
     await settle(root)
+    await timers.advanceAsync(0)
     await timers.advanceAsync(flashDurationMs)
     await finishCloseTransition(surface)
     await settle(root)
@@ -342,14 +346,14 @@ describe('Select', () => {
     expect(trigger.getAttribute('aria-controls')).toBe(list.id)
     expect(trigger.getAttribute('aria-expanded')).toBe('true')
     expect(surface.style.minWidth).toBe('212px')
-    expect(surface.matches(':popover-open')).toBe(true)
+    expect(surface.matches('[data-open]')).toBe(true)
     expect(document.activeElement).toBe(list)
 
     key(list, 'Escape')
     await settle(root)
 
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
-    expect(surface.matches(':popover-open')).toBe(false)
+    expect(surface.matches('[data-open]')).toBe(false)
     expect(document.activeElement).toBe(trigger)
   })
 
@@ -373,27 +377,29 @@ describe('Select', () => {
             Open filters
           </button>
 
-          <div
-            id="outer-surface"
-            mix={popover.surface({
-              open,
-              onHide() {
-                open = false
-                void handle.update()
-              },
-            })}
-          >
-            <TestSelect
-              id="grouping"
-              defaultLabel="No grouping"
-              defaultValue="none"
-              mix={popover.focusOnShow()}
+          <popover.SurfaceContext>
+            <div
+              id="outer-surface"
+              mix={popover.surface({
+                open,
+                onHide() {
+                  open = false
+                  void handle.update()
+                },
+              })}
             >
-              <TestOption label="No grouping" value="none" />
-              <TestOption label="Status" value="status" />
-              <TestOption label="Priority" value="priority" />
-            </TestSelect>
-          </div>
+              <TestSelect
+                id="grouping"
+                defaultLabel="No grouping"
+                defaultValue="none"
+                mix={popover.focusOnShow()}
+              >
+                <TestOption label="No grouping" value="none" />
+                <TestOption label="Status" value="status" />
+                <TestOption label="Priority" value="priority" />
+              </TestSelect>
+            </div>
+          </popover.SurfaceContext>
         </popover.Context>
       )
     }
@@ -429,7 +435,7 @@ describe('Select', () => {
     key(trigger, 'r')
     await settle(root)
 
-    expect(surface.matches(':popover-open')).toBe(false)
+    expect(surface.matches('[data-open]')).toBe(false)
     expect(trigger.textContent).toContain('Remix framework')
     expect(trigger.getAttribute('aria-describedby')).toBe(remix.id)
     expect(remix.getAttribute('aria-selected')).toBe('true')

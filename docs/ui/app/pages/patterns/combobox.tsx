@@ -30,6 +30,9 @@ const anatomyCode = await highlightSource(`
       <input
         mix={[
           combobox.input(),
+          combobox.onComboboxChange((event) => {
+            saveSelection(event.value, event.label)
+          }),
           css({
             '&:focus-visible': {},
             '&:disabled': {},
@@ -40,49 +43,58 @@ const anatomyCode = await highlightSource(`
         ]}
       />
     </label>
-    <div
-      mix={[
-        combobox.popover(),
-        css({
-          '&:popover-open': {},
-          '&[data-show-reason="hint"]': {},
-          '&[data-show-reason="nav"]': {},
-        }),
-      ]}
-    >
-      <div aria-label="Options" mix={combobox.list()}>
+    <combobox.Portal>
+      <combobox.PopoverContext>
         <div
           mix={[
-            combobox.option({
-              label: 'Option text',
-              value: 'option-value',
-            }),
+            combobox.popover(),
             css({
-              '&[hidden]': {},
-              '&[data-highlighted="true"]': {},
-              '&[data-highlighted="false"]': {},
-              '&[aria-selected="true"]': {},
-              '&[aria-selected="false"]': {},
-              '&[aria-disabled="true"]': {},
-              '&[aria-disabled="false"]': {},
-              '&[data-combobox-flash]': {},
+              '&[data-open]': {},
+              '&[data-state="open"]': {},
+              '&[data-state="closed"]': {},
+              '&[data-show-reason="hint"]': {},
+              '&[data-show-reason="nav"]': {},
             }),
           ]}
         >
-          Option text
+          <div aria-label="Options" mix={combobox.list()}>
+            <div
+              mix={[
+                combobox.option({
+                  label: 'Option text',
+                  value: 'option-value',
+                }),
+                css({
+                  '&[hidden]': {},
+                  '&[data-highlighted="true"]': {},
+                  '&[data-highlighted="false"]': {},
+                  '&[aria-selected="true"]': {},
+                  '&[aria-selected="false"]': {},
+                  '&[aria-disabled="true"]': {},
+                  '&[aria-disabled="false"]': {},
+                  '&[data-combobox-flash]': {},
+                }),
+              ]}
+            >
+              Option text
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </combobox.PopoverContext>
+    </combobox.Portal>
     <input mix={combobox.hiddenInput()} />
   </combobox.Context>
 `)
 
 const eventsCode = await highlightSource(`
-  <div mix={combobox.onComboboxChange((event) => {
-    saveSelection(event.value, event.label)
-  })}>
-    {/* Combobox */}
-  </div>
+  <input
+    mix={[
+      combobox.input(),
+      combobox.onComboboxChange((event) => {
+        saveSelection(event.value, event.label)
+      }),
+    ]}
+  />
 `)
 
 const accessibilityCode = await highlightSource(`
@@ -312,10 +324,39 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
             Provider or host disabled state.
           </ApiEntry>
         </ApiTable>
+        <h3 id="portal-reference">Portal</h3>
+        <p>
+          Use <code>combobox.Portal</code> to render outside clipping ancestors. Keep{' '}
+          <code>combobox.PopoverContext</code> inside it. Omit the Portal for inline rendering.
+        </p>
+        <ApiTable id="portal-options" label="Prop" defaults>
+          <ApiEntry name="children" type="RemixNode">
+            The surface context and its content.
+          </ApiEntry>
+          <ApiEntry name="container" type="HTMLElement | null" defaultValue="document.body">
+            Destination in the same document. Changing it preserves child state.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="portal-types">
+          <ApiEntry id="type-ComboboxPortalProps" name="ComboboxPortalProps" type="type">
+            Children and container props accepted by combobox.Portal.
+          </ApiEntry>
+        </ApiTable>
+        <h3 id="popover-context-reference">PopoverContext</h3>
+        <p>
+          Wrap the element with <code>combobox.popover()</code> in{' '}
+          <code>combobox.PopoverContext</code> within the same <code>combobox.Context</code>. Keep
+          it inside <a href="#portal-reference">combobox.Portal</a> when portaled.
+        </p>
+        <ApiTable id="popover-context-options" label="Option">
+          <ApiEntry name="children" type="RemixNode">
+            One popup surface and its content.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="popover-reference">popover()</h3>
         <p>
           Synchronizes the popup minimum width to the input and anchors below it. Allows input
-          clicks while open. Adds native <code>popover=&quot;manual&quot;</code> behavior.
+          clicks while open. Uses the shared ordinary DOM popover behavior and stacking order.
         </p>
         <ApiTable id="popover-attributes" label="Attribute" typeLabel="Value">
           <ApiEntry name="data-show-reason" type="hint | nav">
@@ -451,6 +492,13 @@ export default function ComboboxPage(handle: Handle<PageProps>) {
         </p>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable id="types-types">
+          <ApiEntry
+            id="type-ComboboxPopoverContextProps"
+            name="ComboboxPopoverContextProps"
+            type="interface"
+          >
+            Children accepted by PopoverContext.
+          </ApiEntry>
           <ApiEntry id="type-ComboboxContextProps" name="ComboboxContextProps" type="interface">
             <p>Provider options.</p>
             <CodeBlock html={typeDefinitions.ComboboxContextProps} />
