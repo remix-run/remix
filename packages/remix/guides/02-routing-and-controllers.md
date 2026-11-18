@@ -226,7 +226,7 @@ return context.render(<AlbumPage album={album} />);
 
 The result is still an ordinary Web `Response`. An action can render a page, return text or JSON, redirect the browser, send a file, or return an error response.
 
-Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action throws, the router's [`errorHandler`](/errors-and-cancellation/#router-error-handler) can render a `500` page. Without one, or when router middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and [return a `500` response](/errors-and-cancellation/#uncaught-server-errors).
+Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action or middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and [return a `500` response](/errors-and-cancellation/#uncaught-server-errors).
 
 A text response can be as simple as:
 

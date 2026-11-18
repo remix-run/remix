@@ -17,15 +17,11 @@ Validation errors, conflicts, authentication failures, forbidden operations, and
 
 ## Render useful not-found responses {#not-found-and-404-responses}
 
-Return a route-specific `404` page when the action understands what is missing. Let an unmatched URL use the router's `defaultHandler`, and keep internal record identifiers or exception details out of public error bodies.
+Return a route-specific `404` page when the action understands what is missing. Let an unmatched URL use the router's not-found response, and keep internal record identifiers or exception details out of public error bodies.
 
-## Render error pages with the router's error handler {#router-error-handler}
+## Handle uncaught action and middleware errors at the server boundary {#uncaught-server-errors}
 
-Pass `errorHandler` to `createRouter()` to respond when an action, action middleware, or the default handler throws. It runs inside the router middleware with the same context as an action, so it can report the error and render an app-owned `500` page with `context.render(...)`. When a frame's action throws, the error handler's response renders inside that frame.
-
-## Handle uncaught errors at the server boundary {#uncaught-server-errors}
-
-`router.fetch()` rejects when router middleware throws, when a root render fails after the action returns, when there is no `errorHandler`, or when the `errorHandler` itself throws. Catch it around the runtime adapter, or pass an `onError` option to `createRequestListener(handler, options)`, so the exception is reported and a generic `500` response is returned before response bytes start.
+`router.fetch()` rejects when an action or middleware throws. Catch it around the runtime adapter, or pass an `onError` option to `createRequestListener(handler, options)`, so the exception is reported and a generic `500` response is returned before response bytes start.
 
 ## Report streaming render failures {#streaming-render-errors}
 
