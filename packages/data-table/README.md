@@ -572,7 +572,19 @@ let result = await db.exec(sql`
 `)
 ```
 
-`sql` keeps values parameterized for the database dialect, so you can avoid manual string concatenation.
+`sql` binds interpolated values as parameters. To compose reusable SQL fragments, create them with `sql` or `rawSql`:
+
+```ts
+import { rawSql, sql } from 'remix/data-table'
+
+let condition = sql`email = ${email}`
+let limit = rawSql('limit ?', [10])
+let result = await db.exec(sql`select id, email from users where ${condition} ${limit}`)
+```
+
+For hand-built, copied, or deserialized statements, and statements from another loaded copy of the package, use `rawSql(statement.text, statement.values)` imported alongside the composing `sql`. Otherwise, the statement object is passed as a parameter value.
+
+For SQL passed to `rawSql` or directly to `db.exec()`, supply dynamic values through the separate parameter array.
 
 ## Custom Database Drivers
 
