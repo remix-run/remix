@@ -9,7 +9,6 @@ import type {
   TransactionToken,
 } from '@remix-run/data-table'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { isDate } from 'node:util/types'
 
 import { getTablePrimaryKey } from '@remix-run/data-table'
 import mysql from 'mysql2/promise'
@@ -625,13 +624,16 @@ function formatStatement(client: MysqlQueryable, statement: SqlStatement): strin
 
       let value = values[valueIndex]
 
-      if (
+      // mysql2 escapes Buffers as bytes but expands other typed arrays like plain objects.
+      if (ArrayBuffer.isView(value) && !Buffer.isBuffer(value)) {
+        value = Buffer.from(value.buffer, value.byteOffset, value.byteLength)
+      } else if (
         value !== null &&
         typeof value === 'object' &&
-        !isDate(value) &&
+        !(value instanceof Date) &&
         !Buffer.isBuffer(value)
       ) {
-        throw new TypeError('MySQL object parameters must be Date or Buffer instances')
+        throw new TypeError('MySQL object parameters must be Date or typed array instances')
       }
 
       output += client.escape(value)
@@ -645,11 +647,15 @@ function formatStatement(client: MysqlQueryable, statement: SqlStatement): strin
     if (char === "'" || char === '"' || char === '`') {
       end = scanQuoted(text, index, char)
     } else if (
+      // `--` starts a comment only before a space, a control character, or the end of the text.
       char === '#' ||
-      (text.startsWith('--', index) && /\s/.test(text[index + 2] ?? ' '))
+      (text.startsWith('--', index) && !(text.charCodeAt(index + 2) > 32))
     ) {
       let lineEnd = text.indexOf('\n', index)
       end = lineEnd === -1 ? text.length : lineEnd
+    } else if (text.startsWith('/*!', index)) {
+      // MySQL runs the contents of executable comments, so keep scanning them as SQL.
+      end = index + 3
     } else if (text.startsWith('/*', index)) {
       let commentEnd = text.indexOf('*/', index + 2)
       end = commentEnd === -1 ? text.length : commentEnd + 2

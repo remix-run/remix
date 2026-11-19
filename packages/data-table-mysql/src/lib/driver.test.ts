@@ -540,12 +540,12 @@ describe('mysql driver', () => {
   })
 
   it('compiles ilike() with lower() and parses count results', async () => {
-    let statements: Array<{ text: string; values: unknown[] }> = []
+    let statements: string[] = []
 
     let connection = {
       escape: mysql.escape,
-      async query(text: string, values: unknown[] = []) {
-        statements.push({ text, values })
+      async query(text: string) {
+        statements.push(text)
 
         return [[{ count: '3' }], []]
       },
@@ -559,7 +559,7 @@ describe('mysql driver', () => {
     let count = await db.query(accounts).where(ilike('email', '%EXAMPLE%')).count()
 
     assert.equal(count, 3)
-    assert.match(statements[0].text, /lower\(`email`\) like lower\('%EXAMPLE%'\)/)
+    assert.match(statements[0], /lower\(`email`\) like lower\('%EXAMPLE%'\)/)
   })
 
   it('starts and commits transactions on pooled connections', async () => {
@@ -927,12 +927,12 @@ describe('mysql driver', () => {
   })
 
   it('binds dotted strings in explicit column-to-column queries', async () => {
-    let statements: Array<{ text: string; values: unknown[] }> = []
+    let statements: string[] = []
 
     let connection = {
       escape: mysql.escape,
-      async query(text: string, values: unknown[] = []) {
-        statements.push({ text, values })
+      async query(text: string) {
+        statements.push(text)
         return [[{ count: '0' }], []]
       },
       async beginTransaction() {},
@@ -948,16 +948,16 @@ describe('mysql driver', () => {
       .where(eq(accounts.email, 'accounts.email'))
       .count()
 
-    assert.match(statements[0].text, /`accounts`\.`id`\s*=\s*`projects`\.`account_id`/)
-    assert.match(statements[0].text, /`accounts`\.`email`\s*=\s*'accounts\.email'/)
+    assert.match(statements[0], /`accounts`\.`id`\s*=\s*`projects`\.`account_id`/)
+    assert.match(statements[0], /`accounts`\.`email`\s*=\s*'accounts\.email'/)
   })
 
   it('compiles cross-schema table references in joins', async () => {
-    let statements: Array<{ text: string; values: unknown[] }> = []
+    let statements: string[] = []
 
     let connection = {
-      async query(text: string, values: unknown[] = []) {
-        statements.push({ text, values })
+      async query(text: string) {
+        statements.push(text)
         return [[{ count: '0' }], []]
       },
       async beginTransaction() {},
@@ -969,17 +969,17 @@ describe('mysql driver', () => {
 
     await db.query(invoices).join(accounts, eq(accounts.id, invoices.account_id)).count()
 
-    assert.match(statements[0].text, /from `billing`\.`invoices`/)
-    assert.match(statements[0].text, /join `accounts`/)
-    assert.match(statements[0].text, /`accounts`\.`id`\s*=\s*`billing`\.`invoices`\.`account_id`/)
+    assert.match(statements[0], /from `billing`\.`invoices`/)
+    assert.match(statements[0], /join `accounts`/)
+    assert.match(statements[0], /`accounts`\.`id`\s*=\s*`billing`\.`invoices`\.`account_id`/)
   })
 
   it('treats dotted select aliases as single identifiers', async () => {
-    let statements: Array<{ text: string; values: unknown[] }> = []
+    let statements: string[] = []
 
     let connection = {
-      async query(text: string, values: unknown[] = []) {
-        statements.push({ text, values })
+      async query(text: string) {
+        statements.push(text)
         return [[], []]
       },
       async beginTransaction() {},
@@ -991,16 +991,16 @@ describe('mysql driver', () => {
 
     await db.query(accounts).select({ 'account.email': accounts.email }).all()
 
-    assert.match(statements[0].text, /as `account\.email`/)
+    assert.match(statements[0], /as `account\.email`/)
   })
 
   it('does not create dangling bind parameters for inList predicates', async () => {
-    let statements: Array<{ text: string; values: unknown[] }> = []
+    let statements: string[] = []
 
     let connection = {
       escape: mysql.escape,
-      async query(text: string, values: unknown[] = []) {
-        statements.push({ text, values })
+      async query(text: string) {
+        statements.push(text)
         return [[{ count: '0' }], []]
       },
       async beginTransaction() {},
@@ -1015,17 +1015,17 @@ describe('mysql driver', () => {
       .where(inList('id', [1, 3]))
       .count()
 
-    assert.match(statements[0].text, /`id`\s+in\s+\(1,\s*3\)/)
+    assert.match(statements[0], /`id`\s+in\s+\(1,\s*3\)/)
   })
 
   it('loads the inserted row for create({ returnRow: true }) without RETURNING support', async () => {
-    let statements: Array<{ text: string; values: unknown[] }> = []
+    let statements: string[] = []
     let calls = 0
 
     let connection = {
       escape: mysql.escape,
-      async query(text: string, values: unknown[] = []) {
-        statements.push({ text, values })
+      async query(text: string) {
+        statements.push(text)
         calls += 1
 
         if (calls === 1) {
@@ -1056,9 +1056,9 @@ describe('mysql driver', () => {
     assert.equal(created.id, 2)
     assert.equal(created.email, 'fallback@example.com')
     assert.equal(statements.length, 2)
-    assert.match(statements[0].text, /^insert into `accounts`/)
-    assert.match(statements[1].text, /^select \* from `accounts`/)
-    assert.match(statements[1].text, /where \(\(`id` = 2\)\) limit 1$/)
+    assert.match(statements[0], /^insert into `accounts`/)
+    assert.match(statements[1], /^select \* from `accounts`/)
+    assert.match(statements[1], /where \(\(`id` = 2\)\) limit 1$/)
   })
 
   it('normalizes bigint count rows', async () => {

@@ -25,8 +25,11 @@ describe('createMysqlDatabase', () => {
     })
     let db = createMysqlDatabase(pool)
 
-    await assert.rejects(db.exec(sql`select ${{ theme: 'dark' }}`), DataTableDatabaseError)
-    await assert.rejects(db.exec('select ?', [['red', 'blue']]), DataTableDatabaseError)
+    let rejected = (error: unknown) =>
+      error instanceof DataTableDatabaseError && error.cause instanceof TypeError
+
+    await assert.rejects(db.exec(sql`select ${{ theme: 'dark' }}`), rejected)
+    await assert.rejects(db.exec('select ?', [['red', 'blue']]), rejected)
     assert.equal(query.mock.callCount(), 0)
   })
 
@@ -41,12 +44,14 @@ describe('createMysqlDatabase', () => {
     let db = createMysqlDatabase(pool)
 
     await db.exec(
-      "select 'what?', 'it\\'s?', \"say ?\", `col?`, ? -- note ?\n, ? /* ? */, ?, ? # ?",
+      "select 'what?', 'it\\'s?', 'it''s?', \"say ?\", `col?`, ? -- note ?\n, ? /* ? */, ?, ? # ?",
       [1, "x'y", new Date('2026-06-01T12:00:00Z'), Buffer.from([0, 255])],
     )
+    await db.exec('select 1--?, /*!50000 ? */ ?', [2, new Uint8Array([1]), new Uint16Array([1])])
 
     assert.deepEqual(statements, [
-      "select 'what?', 'it\\'s?', \"say ?\", `col?`, 1 -- note ?\n, 'x\\'y' /* ? */, '2026-06-01 12:00:00.000', X'00ff' # ?",
+      "select 'what?', 'it\\'s?', 'it''s?', \"say ?\", `col?`, 1 -- note ?\n, 'x\\'y' /* ? */, '2026-06-01 12:00:00.000', X'00ff' # ?",
+      "select 1--2, /*!50000 X'01' */ X'0100'",
     ])
   })
 
@@ -58,8 +63,15 @@ describe('createMysqlDatabase', () => {
     })
     let db = createMysqlDatabase(pool)
 
-    await assert.rejects(db.exec('select ?, ?', [1]), DataTableDatabaseError)
-    await assert.rejects(db.exec("select '?'", [1]), DataTableDatabaseError)
+    let mismatch = (message: RegExp) => (error: unknown) =>
+      error instanceof DataTableDatabaseError &&
+      error.cause instanceof TypeError &&
+      message.test(error.cause.message)
+
+    await assert.rejects(db.exec('select ?, ?', [1]), mismatch(/more placeholders than values/))
+    await assert.rejects(db.exec("select '?'", [1]), mismatch(/more values than placeholders/))
+    // mysql2's `??` identifier placeholder is two value placeholders here.
+    await assert.rejects(db.exec('select ?? from t', ['c']), mismatch(/more placeholders/))
     assert.equal(query.mock.callCount(), 0)
   })
 })

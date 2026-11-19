@@ -52,17 +52,34 @@ describe('SQL interpolation', () => {
 
     try {
       let result = await db.exec(
-        sql`select ${date} as first, ${true} as flag, ${date} as second, hex(${new Uint8Array([0, 255])}) as bytes`,
+        sql`select ${date} as first, ${true} as flag, ${date} as second, hex(${new Uint8Array([0, 255])}) as bytes, hex(${new Int16Array([1])}) as shorts`,
       )
 
       assert.deepEqual(result.rows, [
         {
-          first: '2026-06-01T12:00:00.000Z',
+          first: '2026-06-01 12:00:00.000',
           flag: 1,
-          second: '2026-06-01T12:00:00.000Z',
+          second: '2026-06-01 12:00:00.000',
           bytes: '00FF',
+          shorts: '0100',
         },
       ])
+    } finally {
+      await db.close()
+    }
+  })
+
+  it('compares bound dates with values stored by current_timestamp', async () => {
+    let db = createSqliteDatabase({ filename: ':memory:' })
+
+    try {
+      await db.exec('create table events (at text)')
+      await db.exec("insert into events values ('2026-06-01 12:00:00')")
+      let result = await db.exec(
+        sql`select count(*) as count from events where at > ${new Date('2026-06-01T06:00:00Z')}`,
+      )
+
+      assert.deepEqual(result.rows, [{ count: 1 }])
     } finally {
       await db.close()
     }
@@ -83,7 +100,7 @@ describe('SQL interpolation', () => {
 
       let result = await db.exec('select * from events')
       assert.deepEqual(result.rows, [
-        { id: 1, at: '2026-06-01T12:00:00.000Z', meta: '{"theme":"dark"}' },
+        { id: 1, at: '2026-06-01 12:00:00.000', meta: '{"theme":"dark"}' },
       ])
     } finally {
       await db.close()
