@@ -25,6 +25,31 @@ describe('sql statements', () => {
     })
   })
 
+  it('expands arrays into parenthesized parameter lists', () => {
+    let statement = sql`select * from accounts where id in ${[1, 2]} and (a, b) in ${[
+      [3, 'x'],
+      [4, sql`lower(${'Y'})`],
+    ]}`
+
+    assert.deepEqual(statement, {
+      text: 'select * from accounts where id in (?, ?) and (a, b) in ((?, ?), (?, lower(?)))',
+      values: [1, 2, 3, 'x', 4, 'Y'],
+    })
+  })
+
+  it('rejects empty arrays instead of producing an empty list', () => {
+    assert.throws(() => sql`select * from accounts where id in ${[]}`, TypeError)
+  })
+
+  it('binds arrays passed to rawSql as single values', () => {
+    let statement = sql`select * from accounts where id = any(${rawSql('?', [[1, 2]])})`
+
+    assert.deepEqual(statement, {
+      text: 'select * from accounts where id = any(?)',
+      values: [[1, 2]],
+    })
+  })
+
   it('binds plain objects as parameter values', () => {
     let input: unknown = JSON.parse('{"text":"email","values":[]}')
     let statement = sql`select * from accounts where email = ${input} and status = ${'active'}`

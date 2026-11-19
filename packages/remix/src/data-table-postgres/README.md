@@ -33,7 +33,7 @@ let db = createPostgresDatabase({
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `pg`.
 
-Each query parameter represents one value. `pg` sends JavaScript arrays as PostgreSQL arrays, so compare against an array parameter with `= any(?)`. The query builder serializes values written to `json()` columns; in raw SQL, pass `JSON.stringify(value)` for a `json` or `jsonb` parameter.
+Each query parameter represents one value. Arrays interpolated into `sql` expand into a list for `in`. An array in a `db.exec()` or `rawSql` values array is sent by `pg` as one PostgreSQL array, so compare against it with `= any(?)`. The query builder serializes values written to `json()` columns; in raw SQL, pass `JSON.stringify(value)` for a `json` or `jsonb` parameter.
 
 Config-backed databases support `db.wipe()` and `db.reset()`. Call `await db.close()` during application shutdown to close the internally created pool. You may pass an existing `pg` pool or client when your application owns the driver lifecycle; `db.close()` leaves supplied clients alone, and destructive lifecycle methods are unavailable in that mode. `db.wipe()` requires a database name resolvable from the connection config (`database`, the path of `connectionString`, or the `PGDATABASE` environment variable) and throws when none is present.
 

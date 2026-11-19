@@ -3,6 +3,7 @@ import { mkdir, rm } from 'node:fs/promises'
 import { setTimeout } from 'node:timers/promises'
 
 import type {
+  ColumnDefinition,
   DataManipulationOperation,
   DataManipulationRequest,
   DataManipulationResult,
@@ -154,6 +155,40 @@ export class SqliteDatabaseDriver implements DatabaseDriver<'sqlite'> {
   compileSql(operation: DataManipulationOperation): SqlStatement[] {
     let compiled = compileSqliteOperation(operation)
     return [{ text: compiled.text, values: compiled.values }]
+  }
+
+  /**
+   * Decodes values SQLite stores in a different form: JSON text, integer booleans, and
+   * timestamp text.
+   * @param value Value read from the database.
+   * @param column Definition of the column the value was read from.
+   * @returns The decoded value.
+   */
+  decodeValue(value: unknown, column: ColumnDefinition): unknown {
+    if (column.type === 'boolean' && (typeof value === 'number' || typeof value === 'bigint')) {
+      return Number(value) !== 0
+    }
+
+    if (column.type === 'json' && typeof value === 'string') {
+      try {
+        return JSON.parse(value)
+      } catch {
+        // Leave text written before JSON columns were serialized as it was stored.
+        return value
+      }
+    }
+
+    if (column.type === 'timestamp' && typeof value === 'string') {
+      // SQLite's own timestamps have no zone and are UTC.
+      let match =
+        /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)(Z|[+-]\d{2}:?\d{2})?$/.exec(
+          value,
+        )
+      let date = match ? new Date(match[1] + 'T' + match[2] + (match[3] ?? 'Z')) : undefined
+      return date && !Number.isNaN(date.getTime()) ? date : value
+    }
+
+    return value
   }
 
   /**

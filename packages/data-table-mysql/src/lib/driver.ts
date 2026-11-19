@@ -1,4 +1,5 @@
 import type {
+  ColumnDefinition,
   DataManipulationOperation,
   DataManipulationRequest,
   DataManipulationResult,
@@ -102,6 +103,20 @@ export class MysqlDatabaseDriver implements DatabaseDriver<'mysql'> {
   compileSql(operation: DataManipulationOperation): SqlStatement[] {
     let compiled = compileMysqlOperation(operation)
     return [{ text: compiled.text, values: compiled.values }]
+  }
+
+  /**
+   * Decodes `boolean` columns, which MySQL stores as `tinyint(1)` and mysql2 returns as numbers.
+   * @param value Value read from the database.
+   * @param column Definition of the column the value was read from.
+   * @returns The decoded value.
+   */
+  decodeValue(value: unknown, column: ColumnDefinition): unknown {
+    if (column.type === 'boolean' && (typeof value === 'number' || typeof value === 'bigint')) {
+      return Number(value) !== 0
+    }
+
+    return value
   }
 
   /**

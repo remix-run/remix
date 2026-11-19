@@ -6,7 +6,7 @@ import { column } from './column.ts'
 import { Database } from './database.ts'
 import { DataTableDatabaseError, DataTableQueryError, DataTableValidationError } from './errors.ts'
 import { table, hasMany, timestamps } from './table.ts'
-import { and, eq, notInList, or } from './operators.ts'
+import { and, eq, inList, notInList, or } from './operators.ts'
 import { createRecordingDriver, TestDatabase } from '../../test/recording-driver.ts'
 
 const accounts = table({
@@ -391,7 +391,7 @@ describe('queries', () => {
 })
 
 describe('writes and validation', () => {
-  it('serializes json column values before sending writes to the driver', async () => {
+  it('serializes every json column value before sending writes to the driver', async () => {
     let written: unknown[] = []
     let settings = table({
       name: 'settings',
@@ -418,7 +418,7 @@ describe('writes and validation', () => {
       { id: 5, data: false },
       { id: 6, data: 42 },
     ])
-    await db.query(settings).where({ id: 1 }).update({ data: '{"theme":"light"}' })
+    await db.query(settings).where({ id: 1 }).update({ data: 'light' })
     await db.query(settings).upsert({ id: 4, data: { a: 1 } }, { update: { data: { b: 2 } } })
 
     let operations = recording.requests.map((request) => request.operation)
@@ -435,7 +435,7 @@ describe('writes and validation', () => {
         { id: 6, data: '42' },
       ],
     })
-    assert.deepEqual(operations[2], { ...operations[2], changes: { data: '{"theme":"light"}' } })
+    assert.deepEqual(operations[2], { ...operations[2], changes: { data: '"light"' } })
     assert.deepEqual(operations[3], {
       ...operations[3],
       values: { id: 4, data: '{"a":1}' },
@@ -447,9 +447,83 @@ describe('writes and validation', () => {
       null,
       false,
       42,
-      '{"theme":"light"}',
+      'light',
       { a: 1 },
       { b: 2 },
+    ])
+  })
+
+  it('serializes json values compared in where clauses', async () => {
+    let settings = table({
+      name: 'settings',
+      columns: { id: column.integer(), name: column.text(), data: column.json() },
+    })
+    let recording = createRecordingDriver({
+      async execute() {
+        return { rows: [] }
+      },
+    })
+    let db = new TestDatabase(recording.driver)
+
+    await db
+      .query(settings)
+      .where(
+        or(
+          eq('data', { theme: 'dark' }),
+          eq('settings.data', 'light'),
+          inList('data', [1, [2]]),
+          eq('name', 'theme'),
+        ),
+      )
+      .all()
+
+    let operation = recording.requests[0].operation
+    assert.equal(operation.kind, 'select')
+    if (operation.kind === 'select') {
+      assert.deepEqual(operation.where, [
+        or(
+          eq('data', '{"theme":"dark"}'),
+          eq('settings.data', '"light"'),
+          inList('data', ['1', '[2]']),
+          eq('name', 'theme'),
+        ),
+      ])
+    }
+  })
+
+  it('decodes table rows with the driver decodeValue hook', async () => {
+    let flags = table({
+      name: 'flags',
+      columns: { id: column.integer(), enabled: column.boolean(), note: column.text() },
+    })
+    let decoded: Array<{ value: unknown; type: string }> = []
+    let recording = createRecordingDriver({
+      async execute(request) {
+        if (request.operation.kind === 'count') return { rows: [{ count: 1 }] }
+        if (request.operation.kind === 'raw') return { rows: [{ enabled: 1 }] }
+        return { rows: [{ id: 1, enabled: 1, note: null, on: 0 }] }
+      },
+    })
+    recording.driver.decodeValue = (value, column) => {
+      decoded.push({ value, type: column.type })
+      return column.type === 'boolean' ? value === 1 : value
+    }
+    let db = new TestDatabase(recording.driver)
+
+    let rows = await db.query(flags).all()
+    let selected = await db.query(flags).select({ on: flags.enabled }).all()
+    await db.query(flags).count()
+    let raw = await db.exec('select 1 as enabled')
+
+    assert.deepEqual(rows, [{ id: 1, enabled: true, note: null, on: 0 }])
+    assert.deepEqual(selected, [{ id: 1, enabled: true, note: null, on: false }])
+    assert.deepEqual(raw.rows, [{ enabled: 1 }])
+    assert.deepEqual(decoded, [
+      { value: 1, type: 'integer' },
+      { value: 1, type: 'boolean' },
+      { value: 1, type: 'integer' },
+      { value: 1, type: 'boolean' },
+      { value: 0, type: 'boolean' },
     ])
   })
 

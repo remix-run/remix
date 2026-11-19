@@ -126,6 +126,47 @@ describe('SQL interpolation', () => {
     }
   })
 
+  it('round-trips json, boolean, and timestamp columns through the query builder', async () => {
+    let db = createSqliteDatabase({ filename: ':memory:' })
+    let settings = table({
+      name: 'settings',
+      columns: {
+        id: column.integer(),
+        data: column.json(),
+        enabled: column.boolean(),
+        at: column.timestamp(),
+      },
+    })
+    let at = new Date('2026-06-01T12:00:00Z')
+
+    try {
+      await db.exec(
+        'create table settings (id integer primary key, data text, enabled integer, at text)',
+      )
+      await db.create(settings, { id: 1, data: { theme: 'dark' }, enabled: true, at })
+      await db.create(settings, { id: 2, data: 'light', enabled: false, at: null })
+      await db.exec("insert into settings values (3, 'not json', 1, '2026-06-01 12:00:00')")
+
+      let rows = await db.query(settings).orderBy('id').all()
+      assert.deepEqual(rows, [
+        { id: 1, data: { theme: 'dark' }, enabled: true, at },
+        { id: 2, data: 'light', enabled: false, at: null },
+        { id: 3, data: 'not json', enabled: true, at },
+      ])
+
+      let matches = await db.query(settings).where({ data: 'light' }).all()
+      assert.deepEqual(
+        matches.map((row) => row.id),
+        [2],
+      )
+
+      let raw = await db.exec('select data, enabled from settings where id = 1')
+      assert.deepEqual(raw.rows, [{ data: '{"theme":"dark"}', enabled: 1 }])
+    } finally {
+      await db.close()
+    }
+  })
+
   it('executes composed fragments and structural raw statements', async () => {
     let db = createSqliteDatabase({ filename: ':memory:' })
 
