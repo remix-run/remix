@@ -12,13 +12,8 @@ describe('cart submissions', () => {
     t.after(() => release.resolve())
     let page = await serveCart(
       t,
-      async (request, respond) => {
+      async (request) => {
         if (new URL(request.url).pathname !== '/books') return
-        if (request.headers.get('X-Remix-Prefetch') === 'true') {
-          let response = await respond()
-          response.headers.set('Cache-Control', 'no-store')
-          return response
-        }
         requested.resolve()
         await release.promise
       },
@@ -28,7 +23,7 @@ describe('cart submissions', () => {
     let details = page.getByRole('heading', { level: 1, name: 'Ash & Smoke' }).locator('..')
     await details
       .getByRole('link', { name: 'Back to Books', exact: true })
-      .click({ noWaitAfter: true })
+      .evaluate((anchor: HTMLAnchorElement) => anchor.click())
     await requested.promise
     await page.evaluate(async () => {
       let script = document.querySelector<HTMLScriptElement>('script[type="module"][src]')

@@ -6,7 +6,7 @@ import { routes } from '../../routes.ts'
 import { shouldEnablePrefetching } from './should-enable-prefetching.ts'
 
 export interface RelatedBookPrefetchManager {
-  processFrame(context: ProcessFrameContext): readonly Element[]
+  queueRelatedBooks(context: ProcessFrameContext): void
 }
 
 interface BookCardPrefetch {
@@ -87,8 +87,8 @@ export function createRelatedBookPrefetchManager(signal: AbortSignal): RelatedBo
   document.addEventListener('focusin', prefetchRelatedBooks, { signal })
 
   return {
-    processFrame({ src, target, element, fragment, frames, signal: frameSignal }) {
-      if (signal.aborted || frameSignal.aborted) return []
+    queueRelatedBooks({ src, target, element, frames, signal: frameSignal }) {
+      if (signal.aborted || frameSignal.aborted) return
       let link = element ? getBookCardLink(element) : undefined
       let queued = link && !target ? getBookCardPrefetch(link) : undefined
       if (link && queued && queued.src === src && !queued.started && link.isConnected) {
@@ -98,9 +98,6 @@ export function createRelatedBookPrefetchManager(signal: AbortSignal): RelatedBo
           .map(({ src, target }) => ({ src, target }))
         prefetchQueuedBookFrames(link, queued)
       }
-
-      // Related covers are ordinary images; leave hidden main-page carousel images lazy.
-      return relatedBooksMatcher.match(src) ? [...fragment.querySelectorAll('img[src]')] : []
     },
   }
 }
