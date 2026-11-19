@@ -176,30 +176,30 @@ describe('cart submissions', () => {
     await card.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
   })
 
-  it('updates once through a PATCH override with pending prices and stable focus', async (t) => {
+  it('optimistically steps quantity through a PATCH override with pending prices and stable focus', async (t) => {
     let received = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
     t.after(() => release.resolve())
     let requests: string[] = []
     let page = await serveCart(t, async (request) => {
-      let pathname = new URL(request.url).pathname
-      if (!pathname.startsWith('/cart/items')) return
-      requests.push(
-        request.method === 'POST'
-          ? `POST ${(await request.clone().formData()).get('_method')} ${pathname}`
-          : `${request.method} ${pathname}`,
-      )
-      if (request.method !== 'POST') return
+      if (new URL(request.url).pathname !== '/cart/items' || request.method !== 'POST') return
+      let body = await request.clone().formData()
+      requests.push(`${body.get('_method')} ${body.get('quantity')}`)
       received.resolve()
       await release.promise
     })
-    requests.length = 0
-    let quantity = page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' })
+    let quantity = page.getByRole('status', { name: 'Quantity of Ash & Smoke' })
+    let increase = page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' })
+    let decrease = page.getByRole('button', { name: 'Decrease quantity of Ash & Smoke' })
     let initial = await frameState(page)
-    await quantity.fill('3')
-    await quantity.press('Enter')
+    assert.equal(await quantity.textContent(), '1')
+    assert.equal(await decrease.isDisabled(), true)
+    assert.equal(await page.getByRole('spinbutton').count(), 0)
+    await increase.press('Enter')
     await received.promise
-    await page.getByRole('button', { name: 'Saving...' }).waitFor()
+    await page.waitForFunction(() => document.querySelector('output')?.textContent === '2')
+    assert.equal(await increase.getAttribute('aria-disabled'), 'true')
+    assert.equal(await increase.evaluate((button) => button === document.activeElement), true)
     await page.locator('[aria-busy="true"]').filter({ hasText: 'Total: $16.99' }).waitFor()
     let row = page.getByRole('row').filter({ hasText: 'Ash & Smoke' })
     let subtotal = row.getByRole('cell').nth(3)
@@ -219,31 +219,27 @@ describe('cart submissions', () => {
     assert.equal(appearance.opacity, '0.3')
     assert.equal(appearance.spinner, 'visible')
     assert.notEqual(appearance.animation, 'none')
-    assert.equal(await quantity.getAttribute('readonly'), '')
-    assert.equal(
-      await page.evaluate(() => document.activeElement?.getAttribute('name')),
-      'quantity',
-    )
     assert.deepEqual(await frameState(page), initial)
 
     // A second submission while saving must not start another session write.
-    await page
-      .locator('form[action="/cart/items"]:has(input[name="quantity"])')
-      .evaluate((form: HTMLFormElement) => form.requestSubmit())
+    await increase.evaluate((button: HTMLButtonElement) => button.form?.requestSubmit(button))
     release.resolve()
-    await page.getByRole('button', { name: 'Update', exact: true }).waitFor()
-    await page.getByText('Total: $50.97', { exact: true }).waitFor()
-    assert.equal(await row.getByRole('cell').nth(3).textContent(), '$50.97')
+    await page.getByText('Total: $33.98', { exact: true }).waitFor()
+    assert.equal(await quantity.textContent(), '2')
+    assert.equal(await increase.getAttribute('aria-disabled'), null)
+    assert.equal(await row.getByRole('cell').nth(3).textContent(), '$33.98')
     assert.equal(await page.locator('[aria-busy="true"]').count(), 0)
-    assert.deepEqual(requests, ['POST PATCH /cart/items'])
+    assert.deepEqual(requests, ['PATCH 2'])
     assert.deepEqual(await frameState(page), initial)
-    assert.equal(
-      await page.evaluate(() => document.activeElement?.getAttribute('name')),
-      'quantity',
-    )
+    assert.equal(await increase.evaluate((button) => button === document.activeElement), true)
+    await decrease.click()
+    await page.getByText('Total: $16.99', { exact: true }).waitFor()
+    assert.equal(await quantity.textContent(), '1')
+    assert.equal(await decrease.isDisabled(), true)
+    assert.deepEqual(requests, ['PATCH 2', 'PATCH 1'])
   })
 
-  it('keeps client and server validation scoped to the submitted cart form', async (t) => {
+  it('scopes rejected quantities to their row and restores the saved number before retry', async (t) => {
     let mutations = 0
     let page = await serveCart(
       t,
@@ -252,99 +248,75 @@ describe('cart submissions', () => {
       },
       ['1', '2'],
     )
-    let first = page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' })
-    let second = page.getByRole('spinbutton', { name: 'Quantity of Heavy Metal Guitar Riffs' })
-    await first.fill('0')
-    await first.blur()
-    await page.waitForFunction(() => {
-      let input = document.querySelector('input[aria-label="Quantity of Ash & Smoke"]')
-      return input?.getAttribute('aria-invalid') === 'true'
+    let first = page.getByRole('status', { name: 'Quantity of Ash & Smoke' })
+    let second = page.getByRole('status', { name: 'Quantity of Heavy Metal Guitar Riffs' })
+    let increase = page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' })
+    // The UI only offers integer steps; the server still rejects a tampered submission.
+    await increase.evaluate((button: HTMLButtonElement) => {
+      button.value = '1.5'
     })
-    let row = page.getByRole('row').filter({ hasText: 'Ash & Smoke' })
-    await row.getByRole('alert').filter({ hasText: 'Invalid quantity' }).waitFor()
-    await row.getByRole('button', { name: 'Update', exact: true }).click()
-    assert.equal(mutations, 0)
-
-    await second.fill('2')
-    await second.press('Enter')
-    await page.getByText('Total: $70.99', { exact: true }).waitFor()
-    assert.equal(mutations, 1)
-
-    await first.fill('1.5')
     let rejected = page.waitForResponse((response) => response.request().method() === 'POST')
-    let nativeForm = page.locator('form:has(input[aria-label="Quantity of Ash & Smoke"])')
-    await nativeForm.evaluate((form: HTMLFormElement) => {
-      form.noValidate = true
-      form.requestSubmit()
-    })
+    await increase.click()
     assert.equal((await rejected).status(), 400)
-    await nativeForm.locator('input[name="quantity"][readonly]').waitFor({ state: 'detached' })
-    assert.equal(await first.inputValue(), '1.5')
-    assert.equal(await first.getAttribute('aria-invalid'), 'true')
-    let errorId = await first.getAttribute('aria-describedby')
-    assert.ok(errorId)
-    let error = page.locator(`[id="${errorId}"][role="alert"]`)
+    let row = page.getByRole('row').filter({ hasText: 'Ash & Smoke' })
+    let error = row.getByRole('alert')
     await error.waitFor()
     assert.equal(await error.textContent(), 'Invalid quantity')
-    await row.getByRole('button', { name: 'Failed!', exact: true }).waitFor()
-    assert.equal(await second.inputValue(), '2')
-    assert.equal(await second.getAttribute('aria-invalid'), null)
-
-    await nativeForm.evaluate((form: HTMLFormElement) => {
-      form.noValidate = false
+    assert.equal(await first.textContent(), '1')
+    assert.equal(await first.getAttribute('aria-describedby'), await error.getAttribute('id'))
+    assert.equal(await second.textContent(), '1')
+    assert.equal(await second.getAttribute('aria-describedby'), null)
+    await page
+      .getByRole('button', { name: 'Increase quantity of Heavy Metal Guitar Riffs' })
+      .click()
+    await page.getByText('Total: $70.99', { exact: true }).waitFor()
+    assert.equal(await second.textContent(), '2')
+    await increase.evaluate((button: HTMLButtonElement) => {
+      button.value = '2'
     })
-    await first.fill('3')
-    await first.press('Enter')
-    await page.getByText('Total: $104.97', { exact: true }).waitFor()
-    assert.equal(await first.getAttribute('aria-invalid'), null)
+    await increase.click()
+    await page.getByText('Total: $87.98', { exact: true }).waitFor()
+    assert.equal(await first.textContent(), '2')
+    assert.equal(await first.getAttribute('aria-describedby'), null)
     await error.waitFor({ state: 'detached' })
     assert.equal(mutations, 3)
   })
 
-  it('shows reduced-motion failure feedback, rolls back, and allows a direct retry', async (t) => {
+  it('rolls back an optimistic quantity on request failure and allows a direct keyboard retry', async (t) => {
     let reject = true
     let mutations = 0
-    let page = await serveCart(t, (request) => {
+    let received = Promise.withResolvers<void>()
+    let release = Promise.withResolvers<void>()
+    t.after(() => release.resolve())
+    let page = await serveCart(t, async (request) => {
       if (new URL(request.url).pathname !== '/cart/items' || request.method !== 'POST') return
       mutations++
-      if (reject) {
-        return new Response('Unavailable', { status: 503 })
-      }
+      received.resolve()
+      await release.promise
+      if (reject) return new Response('Unavailable', { status: 503 })
     })
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    let quantity = page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' })
+    let quantity = page.getByRole('status', { name: 'Quantity of Ash & Smoke' })
+    let increase = page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' })
     let row = page.getByRole('row').filter({ hasText: 'Ash & Smoke' })
     let initialRow = await row.boundingBox()
-    await quantity.fill('4')
-    await quantity.press('Enter')
-    let failed = row.getByRole('button', { name: 'Failed!', exact: true })
-    await failed.waitFor()
-    let appearance = await failed.evaluate((button) => {
-      for (let animation of button.getAnimations()) animation.finish()
-      let style = getComputedStyle(button)
-      return {
-        color: style.backgroundColor,
-        animation: style.animationName,
-        transform: style.transform,
-      }
-    })
-    assert.equal(appearance.color, 'rgb(220, 38, 38)')
-    assert.equal(appearance.animation, 'none')
-    assert.equal(appearance.transform, 'none')
-    assert.equal(await page.getByRole('alert').count(), 0)
-    await page.getByText('Total: $16.99', { exact: true }).waitFor()
+    await increase.click()
+    await received.promise
+    await page.waitForFunction(() => document.querySelector('output')?.textContent === '2')
+    release.resolve()
+    let error = row.getByRole('alert')
+    await error.waitFor()
+    assert.equal(await error.textContent(), 'Couldn’t update quantity. Try again.')
+    assert.equal(await quantity.textContent(), '1')
+    assert.equal(await increase.getAttribute('aria-disabled'), null)
+    assert.equal(await increase.evaluate((button) => button === document.activeElement), true)
     assert.deepEqual(await row.boundingBox(), initialRow)
-    assert.equal(await quantity.inputValue(), '1')
-    assert.equal(await quantity.getAttribute('readonly'), null)
-    assert.equal(
-      await page.evaluate(() => document.activeElement?.getAttribute('name')),
-      'quantity',
-    )
+    await page.getByText('Total: $16.99', { exact: true }).waitFor()
     reject = false
-    await quantity.fill('4')
-    await quantity.press('Enter')
-    await page.getByRole('button', { name: 'Update', exact: true }).waitFor()
-    await page.getByText('Total: $67.96', { exact: true }).waitFor()
+    await increase.press('Enter')
+    await page.getByText('Total: $33.98', { exact: true }).waitFor()
+    assert.equal(await quantity.textContent(), '2')
+    await error.waitFor({ state: 'detached' })
     assert.equal(mutations, 2)
   })
 
@@ -361,17 +333,19 @@ describe('cart submissions', () => {
       }
     })
     methods.length = 0
-    let quantity = page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' })
-    await quantity.fill('3')
-    await quantity.press('Enter')
-    await page.getByRole('button', { name: 'Failed!', exact: true }).waitFor()
-    assert.equal(await page.getByRole('alert').count(), 0)
+    let quantity = page.getByRole('status', { name: 'Quantity of Ash & Smoke' })
+    await page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' }).click()
+    await page
+      .getByRole('alert')
+      .filter({ hasText: 'Couldn’t update quantity. Try again.' })
+      .waitFor()
+    assert.equal(await quantity.textContent(), '1')
     await page.getByText('Total: $16.99', { exact: true }).waitFor()
-    assert.equal(await quantity.inputValue(), '1')
     assert.deepEqual(methods, ['POST'])
     await page.reload()
     assert.equal(await page.getByRole('alert').count(), 0)
-    await page.getByText('Total: $50.97', { exact: true }).waitFor()
+    assert.equal(await quantity.textContent(), '2')
+    await page.getByText('Total: $33.98', { exact: true }).waitFor()
     assert.equal(mutations, 1)
   })
 
@@ -512,31 +486,24 @@ describe('cart submissions', () => {
     await page.request.post('/cart/api/add', { form: { bookId: '1' } })
     mutations.length = 0
     await page.goto('/cart')
-    let quantity = page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' })
-    await quantity.fill('1.5')
-    await quantity.evaluate((input: HTMLInputElement) => {
-      if (!input.form) throw new Error('Missing quantity form')
-      input.form.noValidate = true
+    let quantity = page.getByRole('status', { name: 'Quantity of Ash & Smoke' })
+    let increase = page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' })
+    await increase.evaluate((button: HTMLButtonElement) => {
+      button.value = '1.5'
     })
-    await page.getByRole('button', { name: 'Update', exact: true }).click()
-    await page.getByRole('alert').filter({ hasText: 'Invalid quantity' }).waitFor()
+    await increase.click()
+    let error = page.getByRole('alert').filter({ hasText: 'Invalid quantity' })
+    await error.waitFor()
     assert.deepEqual(mutations, ['PATCH /cart/items 303'])
     assert.equal(new URL(page.url()).pathname, '/cart')
-    assert.equal(await quantity.inputValue(), '1.5')
-    assert.equal(await quantity.getAttribute('aria-invalid'), 'true')
-    let errorId = await quantity.getAttribute('aria-describedby')
-    assert.ok(errorId)
-    assert.equal(await page.locator(`[id="${errorId}"]`).textContent(), 'Invalid quantity')
-    assert.equal(
-      await quantity.evaluate((input) => getComputedStyle(input).borderColor),
-      'rgb(220, 38, 38)',
-    )
+    assert.equal(await quantity.textContent(), '1')
+    assert.equal(await quantity.getAttribute('aria-describedby'), await error.getAttribute('id'))
     await page.getByText('Total: $16.99', { exact: true }).waitFor()
 
     await page.reload()
     assert.equal(new URL(page.url()).pathname, '/cart')
-    assert.equal(await quantity.inputValue(), '1')
-    assert.equal(await quantity.getAttribute('aria-invalid'), null)
+    assert.equal(await quantity.textContent(), '1')
+    assert.equal(await quantity.getAttribute('aria-describedby'), null)
     assert.equal(await page.getByRole('alert').count(), 0)
     assert.deepEqual(mutations, ['PATCH /cart/items 303'])
   })
@@ -564,9 +531,7 @@ describe('cart submissions', () => {
     await page.request.post('/cart/api/add', { form: { bookId: '1' } })
     mutations.length = 0
     await page.goto('/cart')
-    let quantity = page.getByRole('spinbutton', { name: 'Quantity of Ash & Smoke' })
-    await quantity.fill('2')
-    await page.getByRole('button', { name: 'Update', exact: true }).click()
+    await page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' }).click()
     await page.getByText('Total: $33.98', { exact: true }).waitFor()
     assert.deepEqual(mutations, ['PATCH /cart/items 303'])
     assert.equal(new URL(page.url()).pathname, '/cart')
@@ -578,8 +543,9 @@ describe('cart submissions', () => {
     await page.request.post('/cart/api/add', { form: { bookId: '3' } })
     await page.goto('/cart')
     let row = page.getByRole('row').filter({ hasText: 'Three Ways to Change Your Life' })
-    await row.getByRole('spinbutton').fill('2')
-    await row.getByRole('button', { name: 'Update', exact: true }).click()
+    await row
+      .getByRole('button', { name: 'Increase quantity of Three Ways to Change Your Life' })
+      .click()
     await row.getByRole('alert').getByText('Couldn’t update this book. Try again.').waitFor()
     assert.equal(new URL(page.url()).pathname, '/cart')
     await row.getByRole('button', { name: 'Remove', exact: true }).click()

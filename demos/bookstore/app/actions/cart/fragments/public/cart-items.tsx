@@ -6,7 +6,7 @@ import { css, clientEntry, on } from 'remix/component'
 import { routes } from '../../../../routes.ts'
 import { PendingButton } from '../../../../ui/public/pending-button.tsx'
 import { RestfulForm } from '../../../../ui/restful-form.tsx'
-import { CartItemRemoveForm, CartItemUpdateForm } from './schema.ts'
+import { CartItemRemoveForm } from './schema.ts'
 
 type CartItem = {
   bookId: number
@@ -26,10 +26,9 @@ type CartItemsProps = {
   submission?: FormSubmission
 }
 
-type CartAction = {
-  bookId: number
-  type: 'update' | 'remove'
-}
+type CartAction =
+  | { bookId: number; type: 'update'; quantity: number }
+  | { bookId: number; type: 'remove' }
 
 export const CartItems = clientEntry(
   import.meta.url,
@@ -47,7 +46,13 @@ export const CartItems = clientEntry(
         let formData = event.formData
         let removing = formData?.get('_method') === 'DELETE'
         let action: CartAction | undefined = formData?.has('bookId')
-          ? { bookId: Number(formData.get('bookId')), type: removing ? 'remove' : 'update' }
+          ? removing
+            ? { bookId: Number(formData.get('bookId')), type: 'remove' }
+            : {
+                bookId: Number(formData.get('bookId')),
+                type: 'update',
+                quantity: Number(formData.get('quantity')),
+              }
           : undefined
         state = { status: 'pending', reload: event, action }
         handle.update()
@@ -106,12 +111,7 @@ export const CartItems = clientEntry(
               ) {
                 cartRegion.focus()
               }
-            } catch {
-              if (handle.signal.aborted) return
-              // Restore the committed defaults before resetting the edited controls.
-              await handle.update()
-              form.reset()
-            }
+            } catch {}
           })}
         >
           <table>
@@ -132,16 +132,34 @@ export const CartItems = clientEntry(
                   pendingAction?.type === 'remove' && pendingAction.bookId === item.bookId
                 let itemSubmission =
                   Number(submission?.values.bookId) === item.bookId ? submission : undefined
-                let submittedQuantity = itemSubmission?.values.quantity
+                let quantity =
+                  pendingAction?.type === 'update' &&
+                  pendingAction.bookId === item.bookId &&
+                  Number.isSafeInteger(pendingAction.quantity) &&
+                  pendingAction.quantity >= 1
+                    ? pendingAction.quantity
+                    : item.quantity
+                let quantityError = isPending
+                  ? undefined
+                  : (!requestFailed
+                      ? itemSubmission?.errors.fields.quantity?.join(' ')
+                      : undefined) ||
+                    (failedAction?.type === 'update' && failedAction.bookId === item.bookId
+                      ? requestFailed
+                        ? 'Couldn’t update quantity. Try again.'
+                        : (error ?? 'Couldn’t update quantity. Try again.')
+                      : undefined)
+                let quantityErrorId = `${handle.id}-quantity-error-${item.bookId}`
 
                 return (
                   <tr
                     key={item.bookId}
                     mix={css({
+                      '--cart-control-height': '1.9rem',
                       position: 'relative',
                       opacity: isRemoving ? 0.6 : 1,
                       transition: 'opacity 150ms',
-                      '& td': { verticalAlign: 'top', paddingBottom: '3rem' },
+                      '& td': { verticalAlign: 'middle', paddingBottom: '3rem' },
                     })}
                   >
                     <td>
@@ -172,92 +190,116 @@ export const CartItems = clientEntry(
                     <td>${item.price.toFixed(2)}</td>
 
                     <td>
-                      <form.Context
-                        id={`${handle.id}-update-${item.bookId}`}
-                        schema={CartItemUpdateForm}
-                        submission={itemSubmission}
+                      <RestfulForm
+                        method="PATCH"
+                        action={routes.cart.fragments.itemsUpdate.href()}
+                        aria-label={`Update quantity of ${item.title}`}
+                        mix={css({
+                          display: 'inline-grid',
+                          height: 'var(--cart-control-height)',
+                          verticalAlign: 'top',
+                          gridTemplateColumns: '2.5rem minmax(2.5rem, auto) 2.5rem',
+                          alignItems: 'center',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '6px',
+                          '& button': {
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '2.5rem',
+                            height: '100%',
+                            background: '#f8fafc',
+                            '&:first-of-type': { borderRadius: '5px 0 0 5px' },
+                            '&:last-of-type': { borderRadius: '0 5px 5px 0' },
+                            '&:hover:not(:disabled):not([aria-disabled="true"])': {
+                              background: '#e2e8f0',
+                            },
+                            '&:disabled, &[aria-disabled="true"]': {
+                              color: '#94a3b8',
+                              cursor: 'default',
+                            },
+                            '&:focus-visible': {
+                              outline: '2px solid #3498db',
+                              outlineOffset: '2px',
+                            },
+                          },
+                        })}
                       >
-                        {({ fields }) => (
-                          <RestfulForm
-                            method="PATCH"
-                            action={routes.cart.fragments.itemsUpdate.href()}
-                            mix={[
-                              form.root(),
-                              css({
-                                display: 'inline-grid',
-                                gridTemplateColumns: '70px 6.25rem',
-                                gap: '0.5rem',
-                                alignItems: 'center',
-                              }),
-                            ]}
+                        <input type="hidden" name="bookId" value={item.bookId} />
+                        <button
+                          type="submit"
+                          name="quantity"
+                          value={item.quantity - 1}
+                          aria-label={`Decrease quantity of ${item.title}`}
+                          disabled={item.quantity <= 1}
+                          aria-disabled={isPending || undefined}
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            aria-hidden="true"
+                            focusable="false"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
                           >
-                            <input
-                              type="hidden"
-                              value={item.bookId}
-                              mix={form.control(fields.bookId)}
-                            />
-
-                            <input
-                              aria-label={`Quantity of ${item.title}`}
-                              defaultValue={
-                                !requestFailed && typeof submittedQuantity === 'string'
-                                  ? submittedQuantity
-                                  : item.quantity
-                              }
-                              step="1"
-                              readOnly={isPending}
-                              mix={[
-                                form.control(fields.quantity),
-                                css({
-                                  width: '70px',
-                                  '&[aria-invalid="true"]': {
-                                    borderColor: '#dc2626',
-                                    borderStyle: 'solid',
-                                  },
-                                }),
-                              ]}
-                            />
-
-                            <PendingButton
-                              pending={isUpdating}
-                              failed={
-                                failedAction?.type === 'update' &&
-                                failedAction.bookId === item.bookId
-                              }
-                              pendingLabel="Saving..."
-                              aria-disabled={isPending || undefined}
-                              class="btn btn-secondary"
-                              mix={css({
-                                fontSize: '0.875rem',
-                                padding: '0.25rem 0.5rem',
-                                minWidth: '6.25rem',
-                                textAlign: 'center',
-                                opacity: isUpdating ? 0.6 : 1,
-                                transition: 'opacity 150ms',
-                              })}
-                            >
-                              Update
-                            </PendingButton>
-
-                            {fields.quantity.errors.length > 0 ? (
-                              <p
-                                role="alert"
-                                mix={[
-                                  form.error(fields.quantity),
-                                  css({
-                                    gridColumn: '1 / -1',
-                                    color: '#dc2626',
-                                    margin: 0,
-                                    fontSize: '0.875rem',
-                                  }),
-                                ]}
-                              >
-                                {fields.quantity.errors.join(' ')}
-                              </p>
-                            ) : null}
-                          </RestfulForm>
-                        )}
-                      </form.Context>
+                            <path d="M3 8h10" />
+                          </svg>
+                        </button>
+                        <output
+                          aria-label={`Quantity of ${item.title}`}
+                          aria-live="polite"
+                          aria-describedby={quantityError ? quantityErrorId : undefined}
+                          mix={css({
+                            padding: '0 0.5rem',
+                            textAlign: 'center',
+                            fontVariantNumeric: 'tabular-nums',
+                          })}
+                        >
+                          {quantity}
+                        </output>
+                        <button
+                          type="submit"
+                          name="quantity"
+                          value={item.quantity + 1}
+                          aria-label={`Increase quantity of ${item.title}`}
+                          disabled={item.quantity >= Number.MAX_SAFE_INTEGER}
+                          aria-disabled={isPending || undefined}
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            aria-hidden="true"
+                            focusable="false"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          >
+                            <path d="M3 8h10M8 3v10" />
+                          </svg>
+                        </button>
+                        {quantityError ? (
+                          <p
+                            id={quantityErrorId}
+                            role="alert"
+                            mix={css({
+                              position: 'absolute',
+                              bottom: '0.5rem',
+                              left: '0.75rem',
+                              right: '0.75rem',
+                              color: '#dc2626',
+                              margin: 0,
+                              fontSize: '0.875rem',
+                            })}
+                          >
+                            {quantityError}
+                          </p>
+                        ) : null}
+                      </RestfulForm>
                     </td>
 
                     <td>
@@ -292,6 +334,8 @@ export const CartItems = clientEntry(
                               aria-disabled={isPending || undefined}
                               class="btn btn-danger"
                               mix={css({
+                                height: 'var(--cart-control-height)',
+                                verticalAlign: 'top',
                                 fontSize: '0.875rem',
                                 padding: '0.25rem 0.5rem',
                                 minWidth: '7rem',
