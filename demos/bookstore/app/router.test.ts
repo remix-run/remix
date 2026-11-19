@@ -35,31 +35,25 @@ describe('router', () => {
     )
     assert.ok(cover)
 
-    let image = await router.fetch(new URL(cover[1], 'https://remix.run'))
-    assert.equal(image.status, 200)
-    assert.equal(image.headers.get('Content-Type'), 'image/webp')
-    assert.equal(image.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
-    let transformed = new Uint8Array(await image.arrayBuffer())
-    let metadata = await sharp(transformed).metadata()
-    assert.equal(metadata.format, 'webp')
-    assert.equal(metadata.width, 640)
-    assert.equal(metadata.height, 640)
     let original = await readFile(new URL('./images/bbq-1.png', import.meta.url))
-    assert.ok(transformed.byteLength < original.byteLength / 4)
-
     let srcSet = html.match(/<img[^>]+srcset="([^"]+)"/)
     assert.ok(srcSet)
     let candidates = srcSet[1].split(', ')
     assert.equal(candidates.length, 5)
+    assert.ok(candidates.includes(`${cover[1]} 640w`))
     for (let candidate of candidates) {
       let [href, descriptor] = candidate.split(' ')
       let variant = await router.fetch(new URL(href, 'https://remix.run'))
+      assert.equal(variant.status, 200)
       assert.equal(variant.headers.get('Content-Type'), 'image/webp')
       assert.equal(variant.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
       let bytes = new Uint8Array(await variant.arrayBuffer())
       let size = await sharp(bytes).metadata()
+      assert.equal(size.format, 'webp')
       assert.equal(size.width, Number.parseInt(descriptor))
+      assert.equal(size.height, size.width)
       assert.ok(bytes.byteLength < original.byteLength)
+      if (href === cover[1]) assert.ok(bytes.byteLength < original.byteLength / 4)
     }
 
     let sourceHref = await assets.getHref(
@@ -92,7 +86,7 @@ describe('router', () => {
     await staticImage.text()
   })
 
-  it('caches successful browsing frame GETs privately for 30 seconds', async () => {
+  it('caches browsing frames privately for 30 seconds while keeping documents uncached', async () => {
     for (let path of [
       '/',
       '/books',
@@ -114,26 +108,11 @@ describe('router', () => {
         'Cookie, X-Remix-Frame, X-Remix-Target, X-Remix-Top-Frame-Src, Accept-Encoding',
       )
       await response.text()
-    }
-  })
-
-  it('keeps browsing document responses uncached', async () => {
-    for (let path of [
-      '/',
-      '/books',
-      '/books/genre/cookbook',
-      '/books/bbq',
-      '/search?q=smoke',
-      '/about',
-      '/contact',
-      '/register',
-    ]) {
-      let response = await router.fetch(`https://remix.run${path}`)
-
-      assert.equal(response.status, 200)
-      assert.equal(response.headers.get('Cache-Control'), 'no-store')
-      assert.equal(response.headers.get('Vary'), 'Accept-Encoding')
-      await response.text()
+      let document = await router.fetch(`https://remix.run${path}`)
+      assert.equal(document.status, 200)
+      assert.equal(document.headers.get('Cache-Control'), 'no-store')
+      assert.equal(document.headers.get('Vary'), 'Accept-Encoding')
+      await document.text()
     }
   })
 

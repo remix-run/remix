@@ -75,30 +75,7 @@ describe('frame request manager', () => {
     assert.equal(requests, 2)
   })
 
-  it('only looks up existing GETs and leaves invalidated callers running', async () => {
-    let source = Promise.withResolvers<Response>()
-    let requests = 0
-    let manager = createFrameRequestManager(new AbortController().signal, () => {
-      requests++
-      return source.promise
-    })
-    assert.equal(manager.get('https://bookstore.test/books/bbq', {}), undefined)
-    assert.equal(requests, 0)
-    let response = manager.fetch('https://bookstore.test/books/bbq', {})
-    assert.equal(manager.get('https://bookstore.test/books/bbq', { method: 'POST' }), undefined)
-    assert.equal(manager.get('https://bookstore.test/books/bbq', { cache: 'reload' }), undefined)
-    assert.equal(
-      manager.get('https://bookstore.test/books/bbq', { headers: { 'X-Remix-Target': 'other' } }),
-      undefined,
-    )
-    manager.invalidate()
-    assert.equal(manager.get('https://bookstore.test/books/bbq', {}), undefined)
-    source.resolve(new Response('still running'))
-    assert.equal(await (await response).text(), 'still running')
-    assert.equal(requests, 1)
-  })
-
-  it('isolates frame targets and response variants and invalidates sharing across mutations', async () => {
+  it('isolates GET variants and invalidates sharing without canceling callers across mutations', async () => {
     let requests: RequestInit[] = []
     let release = Promise.withResolvers<void>()
     let manager = createFrameRequestManager(new AbortController().signal, async (_url, init) => {
@@ -107,30 +84,43 @@ describe('frame request manager', () => {
       await release.promise
       return new Response('done')
     })
-    let first = manager.fetch('https://bookstore.test/books/bbq/related', {
-      headers: { 'X-Remix-Target': 'first' },
-    })
+    let url = 'https://bookstore.test/books/bbq/related'
+    let init = { headers: { 'X-Remix-Target': 'first' } }
+    assert.equal(manager.get(url, init), undefined)
+    assert.equal(requests.length, 0)
+    let first = manager.fetch(url, init)
+    assert.equal(manager.get(url, { ...init, method: 'POST' }), undefined)
+    assert.equal(manager.get(url, { ...init, cache: 'reload' }), undefined)
+    assert.equal(manager.get(url, { headers: { 'X-Remix-Target': 'second' } }), undefined)
     let second = manager.fetch('https://bookstore.test/books/bbq/related', {
       headers: { 'X-Remix-Target': 'second' },
     })
     let differentCookie = manager.fetch('https://bookstore.test/books/bbq/related', {
       headers: { 'X-Remix-Target': 'first', Cookie: 'session=another' },
     })
+    manager.invalidate()
+    assert.equal(manager.get(url, init), undefined)
+    let beforeMutation = manager.fetch(url, init)
     let mutation = manager.fetch('https://bookstore.test/cart/api/add', { method: 'POST' })
-    let duringMutation = manager.fetch('https://bookstore.test/books/bbq/related', {
-      headers: { 'X-Remix-Target': 'first' },
-    })
-    assert.equal(requests.length, 5)
-    await mutation
-    let afterMutation = manager.fetch('https://bookstore.test/books/bbq/related', {
-      headers: { 'X-Remix-Target': 'first' },
-    })
+    let duringMutation = manager.fetch(url, init)
     assert.equal(requests.length, 6)
+    await mutation
+    let afterMutation = manager.fetch(url, init)
+    assert.equal(requests.length, 7)
     release.resolve()
-    await Promise.all(
-      [first, second, differentCookie, mutation, duringMutation, afterMutation].map(
-        async (response) => (await response).text(),
+    assert.deepEqual(
+      await Promise.all(
+        [
+          first,
+          second,
+          differentCookie,
+          beforeMutation,
+          mutation,
+          duringMutation,
+          afterMutation,
+        ].map(async (response) => (await response).text()),
       ),
+      ['done', 'done', 'done', 'done', 'saved', 'done', 'done'],
     )
   })
 

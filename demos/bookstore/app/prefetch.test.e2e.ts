@@ -360,6 +360,7 @@ describe('bookstore prefetching', () => {
       )
       await page.goto('/about')
       await waitForNavigationRuntime(page)
+      assert.equal(requests, 0)
       let link = page.getByRole('banner').getByRole('link', { name: 'Contact', exact: true })
       let prefetched = page.waitForResponse(
         (response) => new URL(response.url()).pathname === '/contact',
@@ -449,7 +450,7 @@ describe('bookstore prefetching', () => {
     assert.deepEqual(failedAssets, [])
   })
 
-  it('prefetches related books and their covers on card hover and reuses them on navigation', async (t) => {
+  it('prefetches mobile faceout and related covers on card hover and reuses them on navigation', async (t) => {
     let requests: Request[] = []
     let images: string[] = []
     let page = await t.serve(
@@ -462,22 +463,38 @@ describe('bookstore prefetching', () => {
     )
     let errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
+    await page.setViewportSize({ width: 412, height: 823 })
     let mainPage = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/books/bbq',
     )
     await page.goto('/search?q=Ash%20%26%20Smoke')
     await waitForNavigationRuntime(page)
     await (await mainPage).finished()
-    await page.waitForFunction(() => !document.querySelector('head link[rel="prefetch"]'))
+    await page.waitForFunction(
+      () => !document.querySelector('head link[rel="prefetch"], [data-responsive-prefetch]'),
+    )
     assert.deepEqual(
       requests.map((request) => new URL(request.url).pathname),
       ['/books/bbq'],
+    )
+    let supportsAssetPrefetch = await prefetchesAssets(page)
+    if (supportsAssetPrefetch) {
+      assert.deepEqual(
+        images
+          .filter((href) => href.includes('/bbq-1.'))
+          .map((href) => new URL(href, page.url()).search)
+          .sort(),
+        ['?transform=book-image-320', '?transform=book-image-480'],
+      )
+    }
+    assert.equal(
+      images.some((href) => /\/bbq-[23]\./.test(href)),
+      false,
     )
 
     let related = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/books/bbq/related',
     )
-    let supportsAssetPrefetch = await prefetchesAssets(page)
     let coverResponses = supportsAssetPrefetch
       ? ['bread-before-dawn', 'sunday-noodle-shop', 'citrus-and-salt'].map((slug) =>
           page.waitForResponse((response) =>
@@ -489,7 +506,9 @@ describe('bookstore prefetching', () => {
     await card.getByText('by Rusty Char-Broil', { exact: true }).hover()
     await (await related).finished()
     await Promise.all(coverResponses.map(async (response) => (await response).finished()))
-    await page.waitForFunction(() => !document.querySelector('head link[rel="prefetch"]'))
+    await page.waitForFunction(
+      () => !document.querySelector('head link[rel="prefetch"], [data-responsive-prefetch]'),
+    )
     assert.equal(requests[1].headers.get('X-Remix-Prefetch'), 'true')
     assert.equal(requests[1].headers.get('X-Remix-Target'), 'related-books-1')
     assert.equal(await page.locator('[data-test-slug]').count(), 1)
@@ -498,7 +517,7 @@ describe('bookstore prefetching', () => {
       ['/books/bbq', '/books/bbq/related'],
     )
     if (supportsAssetPrefetch) {
-      assert.equal(images.length, 4)
+      assert.equal(images.filter((href) => !href.includes('/bbq-')).length, 3)
       assert.ok(
         images.every((href) => /\?transform=book-image-(?:320|480|640|768|960)$/.test(href)),
       )
@@ -514,14 +533,24 @@ describe('bookstore prefetching', () => {
     let section = page.getByRole('region', { name: 'Related Books', exact: true })
     await section.scrollIntoViewIfNeeded()
     await section.getByRole('heading', { name: 'Citrus & Salt', exact: true }).waitFor()
+    let covers = section.locator('img')
+    await covers.evaluateAll((images) =>
+      Promise.all(images.map((image) => image instanceof HTMLImageElement && image.decode())),
+    )
+    let chosen = await covers.evaluateAll((images) =>
+      images.map((image) => {
+        if (!(image instanceof HTMLImageElement)) throw new Error('Expected a cover image')
+        let url = new URL(image.currentSrc)
+        return url.pathname + url.search
+      }),
+    )
+    assert.ok(chosen.every((href) => href.endsWith('?transform=book-image-480')))
     assert.equal(
       requests.filter((request) => new URL(request.url).pathname === '/books/bbq/related').length,
       reusesCachedHtml(page) ? 1 : 2,
     )
     if (supportsAssetPrefetch) {
-      assert.equal(images.filter((href) => href.includes('/bread-before-dawn-1.')).length, 1)
-      assert.equal(images.filter((href) => href.includes('/sunday-noodle-shop-1.')).length, 1)
-      assert.equal(images.filter((href) => href.includes('/citrus-and-salt-1.')).length, 1)
+      for (let href of chosen) assert.equal(images.filter((request) => request === href).length, 1)
     }
     assert.deepEqual(errors, [])
   })
@@ -575,75 +604,6 @@ describe('bookstore prefetching', () => {
       assert.deepEqual(errors, [])
     },
   )
-
-  it('prefetches the mobile destination candidates without fetching hidden carousel slides', async (t) => {
-    let images: string[] = []
-    let page = await t.serve(
-      await createTestServer((request) => {
-        let url = new URL(request.url)
-        if (url.pathname.startsWith('/assets/app/images/')) images.push(url.pathname + url.search)
-        return router.fetch(request)
-      }),
-    )
-    await page.setViewportSize({ width: 412, height: 823 })
-    let details = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/books/bbq',
-    )
-    await page.goto('/search?q=Ash%20%26%20Smoke')
-    await waitForNavigationRuntime(page)
-    await (await details).finished()
-    await page.waitForFunction(
-      () => !document.querySelector('head link[rel="prefetch"], [data-responsive-prefetch]'),
-    )
-    let supportsAssetPrefetch = await prefetchesAssets(page)
-    if (supportsAssetPrefetch) {
-      assert.deepEqual(
-        images
-          .filter((href) => href.includes('/bbq-1.'))
-          .map((href) => new URL(href, page.url()).search)
-          .sort(),
-        ['?transform=book-image-320', '?transform=book-image-480'],
-      )
-    }
-    assert.equal(
-      images.some((href) => /\/bbq-[23]\./.test(href)),
-      false,
-    )
-
-    let related = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/books/bbq/related',
-    )
-    let card = page.locator('[data-test-slug="bbq"]')
-    await card.getByRole('link', { name: 'View Details', exact: true }).focus()
-    await (await related).finished()
-    await page.waitForFunction(
-      () => !document.querySelector('head link[rel="prefetch"], [data-responsive-prefetch]'),
-    )
-    if (supportsAssetPrefetch) {
-      assert.equal(images.filter((href) => !href.includes('/bbq-')).length, 3)
-    }
-
-    await card.getByRole('link', { name: 'View Details', exact: true }).click()
-    await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
-    let section = page.getByRole('region', { name: 'Related Books', exact: true })
-    await section.scrollIntoViewIfNeeded()
-    await section.getByRole('heading', { name: 'Citrus & Salt', exact: true }).waitFor()
-    let covers = section.locator('img')
-    await covers.evaluateAll((images) =>
-      Promise.all(images.map((image) => image instanceof HTMLImageElement && image.decode())),
-    )
-    let chosen = await covers.evaluateAll((images) =>
-      images.map((image) => {
-        if (!(image instanceof HTMLImageElement)) throw new Error('Expected a cover image')
-        let url = new URL(image.currentSrc)
-        return url.pathname + url.search
-      }),
-    )
-    assert.ok(chosen.every((href) => href.endsWith('?transform=book-image-480')))
-    if (supportsAssetPrefetch) {
-      for (let href of chosen) assert.equal(images.filter((request) => request === href).length, 1)
-    }
-  })
 
   it('respects Save-Data on card hover and prefetches on keyboard focus when enabled', async (t) => {
     let requests = 0
@@ -744,29 +704,6 @@ describe('bookstore prefetching', () => {
     await page.goto('/about')
     await waitForNavigationRuntime(page)
     assert.equal(relatedRequests, 0)
-  })
-
-  it('prefetches header links on intent', async (t) => {
-    let requests = 0
-    let page = await t.serve(
-      await createTestServer((request) => {
-        if (new URL(request.url).pathname === '/about') requests++
-        return router.fetch(request)
-      }),
-    )
-    await page.goto('/')
-    await waitForNavigationRuntime(page)
-    assert.equal(requests, 0)
-
-    let prefetched = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/about',
-    )
-    let link = page.getByRole('banner').getByRole('link', { name: 'About', exact: true })
-    await link.hover()
-    await (await prefetched).finished()
-    await link.click()
-    await page.getByRole('heading', { name: 'About Our Bookstore' }).waitFor()
-    assert.equal(requests, reusesCachedHtml(page) ? 1 : 2)
   })
 
   it('prefetches visible book covers before their details buttons and does not repeat on viewport reentry', async (t) => {

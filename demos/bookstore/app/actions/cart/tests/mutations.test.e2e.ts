@@ -409,7 +409,23 @@ describe('cart submissions', () => {
     await page.getByRole('region', { name: 'Shopping cart', exact: true }).focus()
     await page.clock.fastForward(1999)
     assert.equal(await undo.count(), 1)
+    await row.evaluate((row) => {
+      row.addEventListener('transitionrun', () => {
+        if (!row.hasAttribute('inert')) return
+        for (let animation of row.getAnimations({ subtree: true })) animation.pause()
+      })
+    })
     await page.clock.fastForward(1)
+    await page.waitForFunction(() =>
+      document
+        .querySelector('tbody tr[inert]')
+        ?.getAnimations({ subtree: true })
+        .some((animation) => animation.playState === 'paused'),
+    )
+    assert.equal(await row.count(), 1)
+    await row.evaluate((row) => {
+      for (let animation of row.getAnimations({ subtree: true })) animation.finish()
+    })
     await row.waitFor({ state: 'detached' })
     await page.getByRole('button', { name: 'Remove', exact: true }).waitFor()
     assert.deepEqual(requests, ['POST DELETE'])
@@ -717,34 +733,6 @@ describe('cart submissions', () => {
     )
   })
 
-  it('keeps an expired row mounted until its collapse animation finishes', async (t) => {
-    let page = await serveCart(t, () => {}, ['1', '2'], '/cart', true)
-    await page.evaluate(() => {
-      document.addEventListener('transitionrun', (event) => {
-        if (!(event.target instanceof Element)) return
-        let row = event.target.closest('tbody tr[inert]')
-        if (!row) return
-        for (let animation of row.getAnimations({ subtree: true })) animation.pause()
-      })
-    })
-    let row = page.locator('tbody tr').filter({ hasText: 'Ash & Smoke' })
-    await row.getByRole('button', { name: 'Remove', exact: true }).press('Enter')
-    await page.getByText('Total: $27.00', { exact: true }).waitFor()
-    await page.getByRole('region', { name: 'Shopping cart', exact: true }).focus()
-    await page.clock.fastForward(2000)
-    await page.waitForFunction(() =>
-      document
-        .querySelector('tbody tr[inert]')
-        ?.getAnimations({ subtree: true })
-        .some((animation) => animation.playState === 'paused'),
-    )
-    assert.equal(await row.count(), 1)
-    await row.evaluate((row) => {
-      for (let animation of row.getAnimations({ subtree: true })) animation.finish()
-    })
-    await row.waitFor({ state: 'detached' })
-  })
-
   it('collapses the last row before rendering the confirmed server empty state', async (t) => {
     let received = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
@@ -1018,7 +1006,7 @@ describe('cart submissions', () => {
     assert.equal(restores, 0)
   })
 
-  it('flashes native quantity validation through the cart frame once', async (t) => {
+  it('flashes native validation once, then updates and removes books while staying on /cart', async (t) => {
     let router = await createTestRouter()
     let mutations: string[] = []
     let server = await createTestServer(async (request) => {
@@ -1061,31 +1049,8 @@ describe('cart submissions', () => {
     assert.equal(await quantity.getAttribute('aria-describedby'), null)
     assert.equal(await page.getByRole('alert').count(), 0)
     assert.deepEqual(mutations, ['PATCH /cart/items 303'])
-  })
 
-  it('keeps native mutations on /cart and lets every book update and remove', async (t) => {
-    let router = await createTestRouter()
-    let mutations: string[] = []
-    let server = await createTestServer(async (request) => {
-      let method =
-        request.method === 'POST'
-          ? ((await request.clone().formData()).get('_method') ?? 'POST')
-          : request.method
-      let response = await router.fetch(request)
-      if (request.method === 'POST') {
-        mutations.push(`${method} ${new URL(request.url).pathname} ${response.status}`)
-      }
-      return response
-    })
-    let runtimePage = await t.serve(server)
-    let browser = runtimePage.context().browser()
-    assert.ok(browser)
-    let context = await browser.newContext({ baseURL: server.baseUrl, javaScriptEnabled: false })
-    t.after(() => context.close())
-    let page = await context.newPage()
-    await page.request.post('/cart/api/add', { form: { bookId: '1' } })
     mutations.length = 0
-    await page.goto('/cart')
     await page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' }).click()
     await page.getByText('Total: $33.98', { exact: true }).waitFor()
     assert.deepEqual(mutations, ['PATCH /cart/items 303'])
