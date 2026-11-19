@@ -11,8 +11,6 @@
 <br />
 <br />
 
-# Remix 3
-
 Remix is a full-stack TypeScript framework for building web applications. It comes with everything you need to build fast, safe, modern web applications. We use it to build many of our production applications at Shopify.
 
 ## Get started
