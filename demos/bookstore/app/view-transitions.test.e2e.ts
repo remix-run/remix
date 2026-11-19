@@ -10,29 +10,7 @@ describe('bookstore view transitions', () => {
     let page = await t.serve(await createTestServer((await createTestRouter()).fetch))
     let errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
-    await page.addInitScript(() => {
-      let start = document.startViewTransition.bind(document)
-      document.startViewTransition = (update) => {
-        let transition = start(update)
-        delete document.documentElement.dataset.transitionReady
-        void transition.ready.then(() => {
-          for (let animation of document.getAnimations()) {
-            if (
-              animation.effect instanceof KeyframeEffect &&
-              animation.effect.pseudoElement?.startsWith('::view-transition')
-            ) {
-              animation.pause()
-              animation.currentTime = 0
-            }
-          }
-          document.documentElement.dataset.transitionReady = 'true'
-        })
-        document.addEventListener('finish-test-transition', () => transition.skipTransition(), {
-          once: true,
-        })
-        return transition
-      }
-    })
+    await pauseViewTransitions(page)
     await page.goto('/books')
     let entry = await page.locator('script[type="module"][src]').getAttribute('src')
     assert.ok(entry)
@@ -97,7 +75,72 @@ describe('bookstore view transitions', () => {
     )
     assert.deepEqual(errors, [])
   })
+
+  it('moves only faceout covers when navigating through related cards and back to the catalog', async (t) => {
+    let page = await t.serve(await createTestServer((await createTestRouter()).fetch))
+    let errors: string[] = []
+    page.on('pageerror', (error) => errors.push(error.message))
+    await page.setViewportSize({ width: 1280, height: 1800 })
+    await pauseViewTransitions(page)
+    await page.goto('/books/bbq')
+    await page.evaluate(async () => {
+      let script = document.querySelector<HTMLScriptElement>('script[type="module"][src]')
+      if (!script) throw new Error('Missing app entry')
+      let { app } = await import(script.src)
+      await app.ready()
+    })
+    let related = page.getByRole('region', { name: 'Related Books', exact: true })
+    await related.getByRole('heading', { name: 'Citrus & Salt', exact: true }).waitFor()
+    let bread = related.locator('[data-test-slug="bread-before-dawn"]')
+    await bread
+      .getByRole('link', { name: 'View Details', exact: true })
+      .click({ noWaitAfter: true })
+    await page.waitForFunction(() => document.documentElement.dataset.transitionReady === 'true')
+    assert.deepEqual(await activeCoverTransitions(page), ['book-cover-11'])
+    assert.equal(
+      await page
+        .locator('[data-book-faceout="11"]')
+        .evaluate((faceout) => getComputedStyle(faceout).viewTransitionName),
+      'book-cover-11',
+    )
+    await page.evaluate(() => {
+      document.dispatchEvent(new Event('finish-test-transition'))
+      delete document.documentElement.dataset.transitionReady
+    })
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    await related.getByRole('heading', { name: 'Ash & Smoke', exact: true }).waitFor()
+    let bbq = related.getByRole('img', { name: 'Ash & Smoke', exact: true })
+    assert.equal(await bbq.isVisible(), true)
+
+    await page
+      .getByRole('link', { name: 'Back to Books', exact: true })
+      .click({ noWaitAfter: true })
+    await page.waitForFunction(() => document.documentElement.dataset.transitionReady === 'true')
+    assert.deepEqual(await activeCoverTransitions(page), ['book-cover-11'])
+    let catalogBbq = page.locator('[data-test-slug="bbq"] img')
+    assert.equal(await catalogBbq.isVisible(), true)
+    assert.equal(
+      await catalogBbq.evaluate((cover) => getComputedStyle(cover).viewTransitionName),
+      'none',
+    )
+    await page.evaluate(() => document.dispatchEvent(new Event('finish-test-transition')))
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    assert.deepEqual(errors, [])
+  })
 })
+
+async function activeCoverTransitions(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    let names = document.getAnimations().flatMap((animation) => {
+      if (!(animation.effect instanceof KeyframeEffect)) return []
+      let match = animation.effect.pseudoElement?.match(
+        /^::view-transition-group\((book-cover-\d+)\)$/,
+      )
+      return match ? [match[1]] : []
+    })
+    return [...new Set(names)].sort()
+  })
+}
 
 async function sampleTransition(page: Page, progress: number) {
   return page.evaluate((progress) => {
@@ -134,4 +177,30 @@ async function sampleTransition(page: Page, progress: number) {
       newOpacity: Number(newPage.opacity),
     }
   }, progress)
+}
+
+async function pauseViewTransitions(page: Page) {
+  await page.addInitScript(() => {
+    let start = document.startViewTransition.bind(document)
+    document.startViewTransition = (update) => {
+      let transition = start(update)
+      delete document.documentElement.dataset.transitionReady
+      void transition.ready.then(() => {
+        for (let animation of document.getAnimations()) {
+          if (
+            animation.effect instanceof KeyframeEffect &&
+            animation.effect.pseudoElement?.startsWith('::view-transition')
+          ) {
+            animation.pause()
+            animation.currentTime = 0
+          }
+        }
+        document.documentElement.dataset.transitionReady = 'true'
+      })
+      document.addEventListener('finish-test-transition', () => transition.skipTransition(), {
+        once: true,
+      })
+      return transition
+    }
+  })
 }

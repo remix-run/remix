@@ -4,10 +4,10 @@ import { css } from 'remix/component'
 import type { Book } from '../data/schema.ts'
 
 export function bookCoverTransition(bookId: Book['id']): CSSMixinDescriptor {
-  return css({
-    ':root:active-view-transition-type(book-details) &': {
-      viewTransitionName: `book-cover-${bookId}`,
-      viewTransitionClass: 'book-cover',
-    },
-  })
+  let styles: Parameters<typeof css>[0] = {}
+  styles[`:root:active-view-transition-type(book-cover-${bookId}) &`] = {
+    viewTransitionName: `book-cover-${bookId}`,
+    viewTransitionClass: 'book-cover',
+  }
+  return css(styles)
 }

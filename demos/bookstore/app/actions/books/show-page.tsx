@@ -54,6 +54,7 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
             </p>
 
             <div
+              data-book-faceout={book.id}
               mix={[
                 bookCoverTransition(book.id),
                 css({

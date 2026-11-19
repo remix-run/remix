@@ -18,6 +18,7 @@ export function BookCard(handle: Handle<BookCardProps>) {
     return (
       <div
         data-test-slug={book.slug}
+        data-book-id={book.id}
         mix={css({
           display: 'flex',
           flexDirection: 'column',

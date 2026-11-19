@@ -99,10 +99,25 @@ export const app = run({
           return commitFrame()
         }
 
-        let viewTransition = document.startViewTransition(commitFrame)
         let from = options?.from?.url
-        if (bookDetailsMatcher.match(to) || (from != null && bookDetailsMatcher.match(from))) {
-          viewTransition.types?.add('book-details')
+        let toBook = bookDetailsMatcher.match(to)
+        let fromBook = from != null ? bookDetailsMatcher.match(from) : null
+        let faceout = fromBook ? document.querySelector('[data-book-faceout]') : null
+        let destinationCard = toBook
+          ? document
+              .querySelector(
+                `a[href="${CSS.escape(routes.books.show.href({ slug: toBook.params.slug }))}"]`,
+              )
+              ?.closest('[data-book-id]')
+          : null
+
+        let viewTransition = document.startViewTransition(commitFrame)
+        // Only covers entering or leaving the faceout participate in shared transitions.
+        for (let bookId of [
+          faceout?.getAttribute('data-book-faceout'),
+          destinationCard?.getAttribute('data-book-id'),
+        ]) {
+          if (bookId) viewTransition.types?.add(`book-cover-${bookId}`)
         }
         let skip = () => viewTransition.skipTransition()
         signal.addEventListener('abort', skip, { once: true })
