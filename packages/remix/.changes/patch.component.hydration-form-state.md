@@ -1,0 +1,5 @@
+Form controls in `remix/component` keep what visitors do before they hydrate. Text typed and checkboxes or radios toggled before a control's client entry hydrates are no longer overwritten by the server-rendered `value` or `checked`. Instead, the edit is replayed as `input` and `change` events once the handlers attach. Replayed events have `event.isTrusted` set to `false` and run at hydration time, so a handler that submits a form, saves a draft, or starts a request does so as soon as the control hydrates. Values the browser restores into a form, such as on reload or a Back/Forward navigation not served from the back/forward cache, count as edits too. Add `autocomplete="off"` to a control to opt it out of browser form restoration.
+
+`<select>` initialization now follows the same precedence on the server, on client mount, and during hydration: `value`, then the initial `defaultValue`, then option `selected`.
+
+See the [`@remix-run/component` changelog](https://github.com/remix-run/remix/blob/main/packages/component/CHANGELOG.md) for details.

@@ -5,4 +5,4 @@ Customize frame requests and rendering with `defaultResolveFrame` and its `{ fet
 - `fetch` allows you to override just the `fetch` call for the frame (set custom fetch options/headers, implement an in-memory cache, etc.)
 - `commit` allows you to control the DOM update (trigger a view transition, etc.)
 - `resolveFrame` now receives `options.navigationType` and `options.from` describing the original navigation for navigation-driven frame reloads, allowing you to differentiate navigation versus imperative `frame.reload()` calls
-- See [Resolving Frames](https://github.com/remix-run/remix/tree/main/packages/component#resolving-frames) for more information and the [bookstore demo](https://github.com/remix-run/remix/tree/main/demos/bookstore#view-transitions) for example usages
+- See [Resolving Frames](https://github.com/remix-run/remix/tree/main/packages/component#resolving-frames) for more information and the [bookstore demo](https://github.com/remix-run/remix/tree/main/demos/bookstore#frames) for example usages
