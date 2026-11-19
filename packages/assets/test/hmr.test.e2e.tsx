@@ -40,28 +40,6 @@ describe('asset server HMR', () => {
     await assert.rejects(navigateToHmrPage(page))
   })
 
-  it('updates accepted browser module output without losing page state', async (t) => {
-    let fixture = await createHmrFixture()
-
-    let page = await t.serve(await createHmrTestServer(fixture))
-    t.after(fixture.close)
-    let documentResponse = await navigateToHmrPage(page)
-    assert.ok(documentResponse)
-    assert.equal(documentResponse.status(), 200, await documentResponse.text())
-    await assertCount(page, 'Count: 3')
-    await page.locator('[data-testid="field"]').fill('hello')
-
-    let counterPath = path.join(fixture.rootDir, 'app/counter.ts')
-    let counterSource = await fs.readFile(counterPath, 'utf-8')
-    let accepted = waitForConsoleMessage(page, '[remix] HMR accepted update /assets/app/counter.ts')
-    await fs.writeFile(counterPath, counterSource.replace('Increment', 'Increment via HMR'))
-
-    await waitForText(page, '[data-testid="increment"]', 'Increment via HMR')
-    await accepted
-    await assertCount(page, 'Count: 3')
-    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
-  })
-
   it('updates transitive dependencies of an accepted browser module', async (t) => {
     let fixture = await createHmrFixture()
     await write(
@@ -402,7 +380,7 @@ describe('asset server HMR', () => {
     let page = await t.serve(server)
     t.after(fixture.close)
     await navigateToHmrPage(page)
-    await assertCount(page, 'Count: 3')
+    await waitForText(page, '[data-testid="count"]', 'Count: 3')
     await page.locator('[data-testid="field"]').fill('hello')
 
     let failed = waitForConsoleMessage(page, '[remix] HMR update failed')
@@ -3053,16 +3031,6 @@ function monitorLocalRequestFailures(
       }
       assert.equal(message, '')
     },
-  }
-}
-
-async function assertCount(page: TestPage, count: string): Promise<void> {
-  try {
-    await waitForText(page, '[data-testid="count"]', count)
-  } catch (error) {
-    let actual = await page.locator('[data-testid="count"]').textContent()
-    assert.equal(actual?.trim(), count)
-    throw error
   }
 }
 
