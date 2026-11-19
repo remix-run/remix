@@ -142,7 +142,7 @@ describe('createDocsRouter()', () => {
     assert.match(home.headers.get('Content-Type') ?? '', /text\/markdown/)
     let homeMarkdown = await home.text()
     assert.match(homeMarkdown, /^# Introduction\n/)
-    assert.match(homeMarkdown, /```sh\nnpx remix new my-app\n/)
+    assert.match(homeMarkdown, /```sh\r?\nnpx remix new my-app\r?\n/)
     assert.doesNotMatch(homeMarkdown, /::frame/)
 
     let api = await router.fetch(new Request('http://localhost/api.md'))
@@ -150,7 +150,7 @@ describe('createDocsRouter()', () => {
     assert.match(api.headers.get('Content-Type') ?? '', /text\/markdown/)
     let apiMarkdown = await api.text()
     assert.match(apiMarkdown, /^# API Reference\n/)
-    assert.match(apiMarkdown, /\n## Installation\n/)
+    assert.match(apiMarkdown, /\r?\n## Installation\r?\n/)
 
     let homeHtml = await (await router.fetch(new Request('http://localhost/'))).text()
     assert.match(homeHtml, /rel="alternate" type="text\/markdown" href="\/index\.md"/)
