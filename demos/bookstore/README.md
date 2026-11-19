@@ -42,7 +42,7 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 - The asset server's `book-image-320`, `book-image-480`, `book-image-640`, `book-image-768`, and `book-image-960` transforms serve responsive WebP book images, preserving their aspect ratio without enlarging smaller originals. Transformed outputs use the asset server's disk cache.
 - Cart items display 48×64-pixel covers using a separate `book-thumbnail` transform that serves 96×128 WebP images for sharper rendering on high-density displays.
 - Catalog and product pages share image URLs so the browser can reuse downloaded images. Catalog images live in `app/images` and are served through the asset server at `/assets/app/images/…`. Stored catalog paths are resolved when rendering, so an existing database does not need to be reseeded. Uploaded covers continue to use `/uploads/…`.
-- Product pages preload the main image; remaining carousel images load lazily.
+- The homepage, books list, and category pages preload their first cover early in the document head. Product pages preload the selected carousel image; remaining carousel images load lazily. Each preload matches the displayed image's responsive candidates and sizes.
 - The book carousel preserves its selection with `?image=N`, using one-based image numbers and omitting the parameter for the first image. Arrow buttons call `updateUrl()` to replace the current URL without fetching the page. Reloads and shared links render and preload the selected image on the server; invalid or out-of-range values fall back to the first image.
 
 ## Frames

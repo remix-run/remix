@@ -1,14 +1,14 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 
-import type { Book } from '../data/schema.ts'
+import type { BookWithCover } from '../utils/book-images.ts'
 import { routes } from '../routes.ts'
 import type { Cart } from '../utils/cart.ts'
-import { BookCard } from '../ui/book-card.tsx'
+import { BookCard, BookCoverPreload } from '../ui/book-card.tsx'
 import { Layout } from '../ui/layout.tsx'
 
 interface HomePageProps {
-  featuredBooks: Book[]
+  featuredBooks: BookWithCover[]
   cart: Cart
 }
 
@@ -17,7 +17,7 @@ export function HomePage(handle: Handle<HomePageProps>) {
     let { featuredBooks, cart } = handle.props
 
     return (
-      <Layout>
+      <Layout head={<BookCoverPreload book={featuredBooks[0]} />}>
         <div class="card">
           <h1>Welcome to the Bookstore</h1>
           <p mix={css({ margin: '1rem 0' })}>

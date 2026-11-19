@@ -5,7 +5,7 @@ import type { BookWithCover } from '../../utils/book-images.ts'
 import { getBookGenreLabel } from '../../data/book-genres.ts'
 import type { Cart } from '../../utils/cart.ts'
 import { routes } from '../../routes.ts'
-import { BookCard } from '../../ui/book-card.tsx'
+import { BookCard, BookCoverPreload } from '../../ui/book-card.tsx'
 import { Layout } from '../../ui/layout.tsx'
 
 export interface GenrePageProps {
@@ -19,7 +19,7 @@ export function GenrePage(handle: Handle<GenrePageProps>) {
     let { cart, genre, matchingBooks } = handle.props
 
     return (
-      <Layout>
+      <Layout head={<BookCoverPreload book={matchingBooks[0]} />}>
         <h1>{getBookGenreLabel(genre)}</h1>
         <p mix={css({ margin: '1rem 0' })}>
           <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn btn-secondary">

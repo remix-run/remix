@@ -5,7 +5,7 @@ import type { BookWithCover } from '../../utils/book-images.ts'
 import { getBookGenreLabel } from '../../data/book-genres.ts'
 import type { Cart } from '../../utils/cart.ts'
 import { routes } from '../../routes.ts'
-import { BookCard } from '../../ui/book-card.tsx'
+import { BookCard, BookCoverPreload } from '../../ui/book-card.tsx'
 import { Layout } from '../../ui/layout.tsx'
 
 export interface IndexPageProps {
@@ -19,7 +19,7 @@ export function IndexPage(handle: Handle<IndexPageProps>) {
     let { allBooks, cart, genres } = handle.props
 
     return (
-      <Layout>
+      <Layout head={<BookCoverPreload book={allBooks[0]} />}>
         <h1>Browse Books</h1>
 
         <div class="card" mix={css({ marginBottom: '2rem' })}>

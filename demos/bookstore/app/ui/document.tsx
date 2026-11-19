@@ -25,13 +25,13 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta charSet="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title>{title}</title>
+          {head}
           <link rel="stylesheet" href={stylesheetHref} />
           <ImportMap value={importMap} />
           {preloads.map((preloadHref) => (
             <link key={preloadHref} rel="modulepreload" href={preloadHref} nonce={nonce} />
           ))}
           <script type="module" src={href} nonce={nonce} />
-          {head}
         </head>
         <body
           mix={css({

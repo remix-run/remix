@@ -17,6 +17,7 @@ describe('books handlers', () => {
     assertContains(html, 'Ash &amp; Smoke')
     assertContains(html, 'Heavy Metal Guitar Riffs')
     assertContains(html, 'Three Ways to Change Your Life')
+    assertFirstCoverPreload(html)
     assert.deepEqual(
       [...html.matchAll(/<img[^>]+loading="(eager|lazy)"/g)].map((match) => match[1]),
       [...Array(4).fill('eager'), ...Array(46).fill('lazy')],
@@ -64,6 +65,7 @@ describe('books handlers', () => {
     assertContains(categoryHtml, 'Heavy Metal Guitar Riffs')
     assertContains(categoryHtml, 'Clay in Your Hands')
     assertContains(categoryHtml, 'Light Through the Lens')
+    assertFirstCoverPreload(categoryHtml)
     assert.deepEqual(
       [...categoryHtml.matchAll(/<img[^>]+loading="(eager|lazy)"/g)].map((match) => match[1]),
       ['eager', 'eager', 'eager', 'eager', 'lazy', 'lazy', 'lazy', 'lazy', 'lazy'],
@@ -106,3 +108,18 @@ describe('books handlers', () => {
     assertContains(await response.text(), 'Book not found.')
   })
 })
+
+function assertFirstCoverPreload(html: string): void {
+  let head = html.match(/<head>([\s\S]*?)<\/head>/)?.[1]
+  assert.ok(head)
+  let preload = head.match(/<link rel="preload" as="image"[^>]*>/)?.[0]
+  let cover = html.match(/<img[^>]*>/)?.[0]
+  assert.ok(preload)
+  assert.ok(cover)
+  assert.equal(preload.match(/href="([^"]+)"/)?.[1], cover.match(/src="([^"]+)"/)?.[1])
+  assert.equal(preload.match(/imagesrcset="([^"]+)"/)?.[1], cover.match(/srcset="([^"]+)"/)?.[1])
+  assert.equal(preload.match(/imagesizes="([^"]+)"/)?.[1], cover.match(/sizes="([^"]+)"/)?.[1])
+  assert.equal(head.match(/<link rel="preload" as="image"/g)?.length, 1)
+  assert.ok(head.indexOf(preload) < head.indexOf('<link rel="stylesheet"'))
+  assert.ok(head.indexOf(preload) < head.indexOf('<script'))
+}

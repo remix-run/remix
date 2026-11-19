@@ -25,6 +25,18 @@ describe('root controller', () => {
       [...html.matchAll(/data-test-slug="([^"]+)"/g)].map((match) => match[1]),
       ['bbq', 'heavy-metal', 'three-ways', 'midnight-platform'],
     )
+    let head = html.match(/<head>([\s\S]*?)<\/head>/)?.[1]
+    assert.ok(head)
+    let preload = head.match(/<link rel="preload" as="image"[^>]*>/)?.[0]
+    let cover = html.match(/<img[^>]*alt="Ash &amp; Smoke"[^>]*>/)?.[0]
+    assert.ok(preload)
+    assert.ok(cover)
+    assert.equal(preload.match(/href="([^"]+)"/)?.[1], cover.match(/src="([^"]+)"/)?.[1])
+    assert.equal(preload.match(/imagesrcset="([^"]+)"/)?.[1], cover.match(/srcset="([^"]+)"/)?.[1])
+    assert.equal(preload.match(/imagesizes="([^"]+)"/)?.[1], cover.match(/sizes="([^"]+)"/)?.[1])
+    assert.equal(head.match(/<link rel="preload" as="image"/g)?.length, 1)
+    assert.ok(head.indexOf(preload) < head.indexOf('<link rel="stylesheet"'))
+    assert.ok(head.indexOf(preload) < head.indexOf('<script'))
   })
 
   it('GET /uploads/*key serves uploaded files from storage', async () => {

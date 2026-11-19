@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { Frame, css } from 'remix/component'
+import { Frame, attrs, css } from 'remix/component'
 
 import type { BookWithCover } from '../utils/book-images.ts'
 import { routes } from '../routes.ts'
@@ -8,6 +8,21 @@ import { bookCoverTransition } from './book-transitions.ts'
 // Match the shared grid's 250px minimum, 24px gaps, and 1200px container.
 export const bookCardImageSizes =
   '(min-width: 1200px) 272px, (min-width: 1112px) calc((100vw - 112px) / 4), (min-width: 838px) calc((100vw - 88px) / 3), (min-width: 564px) calc((100vw - 64px) / 2), calc(100vw - 40px)'
+
+export function BookCoverPreload(handle: Handle<{ book: BookWithCover | undefined }>) {
+  return () => {
+    let { book } = handle.props
+    return book ? (
+      <link
+        rel="preload"
+        as="image"
+        href={book.cover_url}
+        imageSrcSet={book.cover_srcset}
+        mix={attrs({ imagesizes: book.cover_srcset ? bookCardImageSizes : undefined })}
+      />
+    ) : null
+  }
+}
 
 export interface BookCardProps {
   book: BookWithCover

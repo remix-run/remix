@@ -75,6 +75,10 @@ describe('router', () => {
       /<link rel="preload" as="image"[^>]* href="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=book-image-640)"/,
     )
     assert.ok(preload)
+    let productHead = productHtml.match(/<head>([\s\S]*?)<\/head>/)?.[1]
+    assert.ok(productHead)
+    assert.ok(productHead.indexOf(preload[0]) < productHead.indexOf('<link rel="stylesheet"'))
+    assert.ok(productHead.indexOf(preload[0]) < productHead.indexOf('<script'))
     assert.equal(preload[1], cover[1])
     assert.equal(productHtml.match(/<link[^>]+imagesrcset="([^"]+)"/)?.[1], srcSet[1])
     assert.equal(productHtml.match(/<img[^>]+srcset="([^"]+)"/)?.[1], srcSet[1])

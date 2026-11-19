@@ -102,7 +102,7 @@ describe('book image selection', () => {
     }
   })
 
-  it('selects mobile image variants and preloads only the selected faceout candidate', async (t) => {
+  it('selects mobile image variants and reuses homepage and selected faceout preloads', async (t) => {
     let requests: string[] = []
     let router = await createTestRouter()
     let server = await createTestServer((request) => {
@@ -121,12 +121,20 @@ describe('book image selection', () => {
     })
     try {
       let page = await context.newPage()
-      await page.goto('/books/genre/art')
+      await page.goto('/')
       let cover = page.locator('[data-test-slug] img').first()
       await cover.evaluate((image: HTMLImageElement) => image.decode())
       assert.equal(
         await cover.evaluate((image: HTMLImageElement) => new URL(image.currentSrc).search),
         '?transform=book-image-768',
+      )
+      let coverSrc = await cover.evaluate((image: HTMLImageElement) => {
+        let url = new URL(image.currentSrc)
+        return url.pathname + url.search
+      })
+      assert.deepEqual(
+        requests.filter((url) => url.includes('/bbq-1.')),
+        [coverSrc],
       )
       requests = []
       await page.goto('/books/bbq?image=3')
