@@ -448,18 +448,27 @@ describe('vdom error handling', () => {
       expect(rejections.reasons).toEqual([])
     })
 
-    it('surfaces rejections from on() handlers that were not aborted', async (t) => {
+    it('reports live returned rejections unless the handled chain is returned', async (t) => {
       let rejections = captureUnhandledRejections(t)
       let container = document.createElement('div')
       let root = createRoot(container)
       let error = new Error('handler failed')
+      let handled = false
+      let returnHandledChain = false
+      let handledChainFinished = Promise.withResolvers<void>()
 
       root.render(
         <button
           mix={[
-            on('click', async () => {
-              await Promise.resolve()
-              throw error
+            on('click', () => {
+              let result = Promise.reject(error)
+              if (returnHandledChain) {
+                return result.catch(() => handledChainFinished.resolve())
+              }
+              result.catch(() => {
+                handled = true
+              })
+              return result
             }),
           ]}
         >
@@ -471,6 +480,13 @@ describe('vdom error handling', () => {
       container.querySelector('button')!.click()
 
       await t.waitFor(() => expect(rejections.reasons).toEqual([error]))
+      expect(handled).toBe(true)
+
+      returnHandledChain = true
+      container.querySelector('button')!.click()
+      await handledChainFinished.promise
+      await rejections.flush()
+      expect(rejections.reasons).toEqual([error])
     })
 
     it('ignores rejections from queued tasks after the component renders again', async (t) => {
@@ -569,7 +585,7 @@ describe('vdom error handling', () => {
       expect(rejections.reasons).toEqual([])
     })
 
-    it('accepts fulfilled thenables and reports failures from tasks without a signal', async (t) => {
+    it('leaves returned thenables untouched and reports failures from tasks without a signal', async (t) => {
       let rejections = captureUnhandledRejections(t)
       let errorHandler = t.mock.fn()
       let container = document.createElement('div')
@@ -596,7 +612,7 @@ describe('vdom error handling', () => {
       root.flush()
 
       await t.waitFor(() => expect(rejections.reasons).toEqual([error]))
-      expect(fulfilled).toBe(true)
+      expect(fulfilled).toBe(false)
       expect(errorHandler).not.toHaveBeenCalled()
     })
 

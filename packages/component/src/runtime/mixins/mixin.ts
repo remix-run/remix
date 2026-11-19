@@ -147,7 +147,8 @@ export interface MixinHandle<
   update(): Promise<AbortSignal>
   /**
    * Queues work after pending DOM updates and commit-phase callbacks. Async
-   * rejections are ignored once the host lifetime signal is aborted.
+   * rejections are ignored when the host lifetime signal is aborted as the rejection
+   * is observed. Catch failures inside the callback or return a handled promise chain.
    *
    * @param task Callback receiving the bound host and its runtime lifetime signal.
    */

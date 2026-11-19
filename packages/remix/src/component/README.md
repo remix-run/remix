@@ -296,7 +296,9 @@ Pass the signal with the narrowest lifetime to `fetch()` and other cancellable w
 | The signal resolved by `handle.update()` | The component renders again, or is removed             |
 | `handle.signal`                          | The component is removed                               |
 
-Remix ignores rejections from async `on()` handlers and queued tasks once the signal passed to that work is aborted, regardless of the rejection reason. Rejections while that signal is live still surface as unhandled promise rejections; synchronous task errors still dispatch the root's `error` event. Catch failures when you want to show an error state, and check `signal.aborted` before using a result. Component tasks that omit the signal parameter are tracked for render cancellation when another task in the same commit requests a signal, including the internal task queued by `handle.update()`. Pending tasks flushed when the component is removed receive an aborted cancellation signal even if they omit the parameter.
+Remix observes promises returned by async `on()` handlers and queued tasks that receive a cancellation signal. If that signal is aborted when a rejection is observed, Remix ignores the rejection regardless of its reason. Otherwise, Remix reports the rejection through a new unhandled promise rejection; synchronous task errors still dispatch the root's `error` event. To handle a failure, catch it inside the callback or return the handled chain, such as `return save().catch(showToast)`. Attaching a separate `catch` to a promise and returning the original promise still reports its rejection. Check `signal.aborted` before using a result.
+
+Component tasks that omit the signal parameter are tracked for render cancellation when another task in the same commit requests a signal, including the internal task queued by `handle.update()`. Without that tracking, Remix leaves task return values untouched. Use a required signal parameter; default and rest parameters do not enable tracking. Pending tasks flushed when the component is removed receive an aborted cancellation signal even if they omit the parameter.
 
 ### Context
 

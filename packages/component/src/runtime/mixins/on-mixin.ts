@@ -77,7 +77,9 @@ export function isOnMixinDescriptor(descriptor: unknown): descriptor is OnMixinD
 
 /**
  * Attaches a typed DOM event handler through the mixin system. Async rejections
- * are ignored once the handler's signal is aborted; other rejections remain unhandled.
+ * are ignored when the handler's signal is aborted as the rejection is observed.
+ * Other returned rejections are reported through a new unhandled promise rejection.
+ * Catch failures inside the handler or return a handled promise chain.
  *
  * @param type Event type to listen for.
  * @param handler Event handler.

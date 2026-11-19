@@ -152,10 +152,12 @@ export interface Handle<Props = Record<string, never>, ContextValue = NoContext>
 
   /**
    * Schedules a task to run after the next update. Async rejections are ignored
-   * once its render signal is aborted; other rejections remain unhandled.
+   * when its render signal is aborted as the rejection is observed. Other returned
+   * rejections are reported through a new unhandled promise rejection.
    *
    * @param task Work receiving a signal aborted on the next render or component removal.
-   * Declare the signal parameter to enable render cancellation tracking.
+   * Use a required signal parameter to enable render cancellation tracking.
+   * Catch failures inside the callback or return a handled promise chain.
    */
   queueTask(task: Task): void
 
@@ -695,10 +697,9 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
     let taskSignal = signal ?? this.#renderController?.signal
     let tasks = this.#tasks.splice(0, this.#tasks.length)
     if (!taskSignal) {
-      // No task asked for a signal, so this aborted placeholder doesn't mean the
-      // work was cancelled and its rejections must not be ignored.
+      // No task asked for a signal, so preserve the existing return-value behavior.
       let placeholderSignal = (sharedAbortedSignal ??= AbortSignal.abort())
-      return tasks.map((task) => () => ignoreAbortedRejection(task(placeholderSignal)))
+      return tasks.map((task) => () => task(placeholderSignal))
     }
     return tasks.map((task) => () => ignoreAbortedRejection(task(taskSignal), taskSignal))
   }
