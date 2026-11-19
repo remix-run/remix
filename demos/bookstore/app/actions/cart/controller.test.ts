@@ -1,6 +1,8 @@
 import * as assert from 'remix/assert'
 import { afterEach, beforeEach, describe, it, mock } from 'remix/test'
+import sharp from 'sharp'
 
+import { getBookImageHref } from '../../utils/book-images.ts'
 import {
   assertContains,
   createTestRouter,
@@ -106,6 +108,23 @@ describe('cart handlers', () => {
     assertContains(html, '$27.00')
     assertContains(html, 'Continue Shopping')
     assertContains(html, 'Login to Checkout')
+
+    let thumbnail = html.match(/src="([^" ]+\?transform=book-thumbnail)"/)
+    assert.ok(thumbnail)
+    assertContains(html, 'width="48" height="64"')
+    let image = await router.fetch(new URL(thumbnail[1], 'https://remix.run'))
+    assert.equal(image.status, 200)
+    assert.equal(image.headers.get('Content-Type'), 'image/webp')
+    assert.equal(image.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
+    let bytes = new Uint8Array(await image.arrayBuffer())
+    let metadata = await sharp(bytes).metadata()
+    assert.equal(metadata.width, 96)
+    assert.equal(metadata.height, 128)
+    let catalogImage = await router.fetch(
+      new URL(await getBookImageHref('/images/heavy-metal-1.png'), 'https://remix.run'),
+    )
+    assert.equal(catalogImage.status, 200)
+    assert.ok(bytes.byteLength < (await catalogImage.arrayBuffer()).byteLength)
   })
 
   it('GET /cart/items renders empty state when cart is empty', async () => {

@@ -14,6 +14,7 @@ type CartItem = {
   title: string
   price: number
   quantity: number
+  thumbnailUrl?: string
 }
 
 type CartItemsProps = {
@@ -166,8 +167,25 @@ export const CartItems = clientEntry(
                       <a
                         data-rmx-prefetch="intent"
                         href={routes.books.show.href({ slug: item.slug })}
+                        mix={css({ display: 'inline-flex', alignItems: 'center', gap: '0.75rem' })}
                       >
-                        {item.title}
+                        {item.thumbnailUrl ? (
+                          <img
+                            src={item.thumbnailUrl}
+                            alt=""
+                            width="48"
+                            height="64"
+                            loading="lazy"
+                            mix={css({
+                              width: '48px',
+                              height: '64px',
+                              objectFit: 'cover',
+                              borderRadius: '4px',
+                              flexShrink: 0,
+                            })}
+                          />
+                        ) : null}
+                        <span>{item.title}</span>
                       </a>
                       {cartError && failedBookId === item.bookId ? (
                         <p

@@ -3,11 +3,14 @@ import * as path from 'node:path'
 import type { Book } from '../data/schema.ts'
 import { assets } from './assets.ts'
 
-export async function getBookImageHref(href: string): Promise<string> {
+export async function getBookImageHref(
+  href: string,
+  transform: 'book-image' | 'book-thumbnail' = 'book-image',
+): Promise<string> {
   if (!href.startsWith('/images/') || href === '/images/placeholder.jpg') return href
 
   return assets.getHref(path.resolve(import.meta.dirname, '..', href.slice(1)), {
-    transform: ['book-image'],
+    transform: [transform],
   })
 }
 

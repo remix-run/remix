@@ -55,7 +55,9 @@ export default createController(routes.books, {
       }
 
       let imageUrls = await Promise.all(
-        s.parse(s.array(s.string()), JSON.parse(book.image_urls)).map(getBookImageHref),
+        s
+          .parse(s.array(s.string()), JSON.parse(book.image_urls))
+          .map((href) => getBookImageHref(href)),
       )
       let requestedImage = Number(new URL(request.url).searchParams.get('image'))
       let startIndex =

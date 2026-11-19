@@ -39,6 +39,7 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 
 - Catalog images and browser assets use content hashes in their production URLs. Catalog images are cached as immutable assets for a year.
 - The asset server's `book-image` transform serves book images as WebP at up to 640 pixels wide, preserving their aspect ratio without enlarging smaller originals. Transformed outputs use the asset server's disk cache.
+- Cart items display 48×64-pixel covers using a separate `book-thumbnail` transform that serves 96×128 WebP images for sharper rendering on high-density displays.
 - Catalog and product pages share image URLs so the browser can reuse downloaded images. Catalog images live in `app/images` and are served through the asset server at `/assets/app/images/…`. Stored catalog paths are resolved when rendering, so an existing database does not need to be reseeded. Uploaded covers continue to use `/uploads/…`.
 - Product pages preload the main image; remaining carousel images load lazily.
 - The book carousel preserves its selection with `?image=N`, using one-based image numbers and omitting the parameter for the first image. Arrow buttons call `updateUrl()` to replace the current URL without fetching the page. Reloads and shared links render and preload the selected image on the server; invalid or out-of-range values fall back to the first image.

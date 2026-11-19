@@ -41,6 +41,18 @@ export const assets = createAssetServer({
           }
         },
       }),
+      'book-thumbnail': defineFileTransform({
+        extensions: ['.png'],
+        async transform(bytes) {
+          return {
+            content: await sharp(bytes)
+              .resize({ width: 96, height: 128, fit: 'cover', withoutEnlargement: true })
+              .webp({ quality: 75 })
+              .toBuffer(),
+            extension: '.webp',
+          }
+        },
+      }),
     },
   },
   hmr: browserHmrChannel
