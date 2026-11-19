@@ -86,9 +86,7 @@ let response = new Response('Hello, world!', {
 
 ### Custom Encoding
 
-By default, cookie values are stored as the base64 of their UTF-8 bytes, so arbitrary string values can be safely stored in cookies. A signed value's signature follows it after a `.`, also in base64. `serialize()` writes this as-is and `parse()` reads it as-is: neither percent-encodes nor percent-decodes the value. A cookie whose value another library percent-encoded, as React Router's `createCookie()` does, parses only once that value is percent-decoded.
-
-This is suitable for most use cases, but you can provide your own functions to customize the encoding and decoding of the cookie value.
+By default, cookie values are stored as base64-encoded UTF-8, so any string value can be safely stored in a cookie. When `secrets` are configured, the signature is appended to the encoded value after a `.`. This is suitable for most use cases, but you can provide your own functions to customize the encoding and decoding of the cookie value.
 
 ```tsx
 let sessionCookie = createCookie('session', {
