@@ -2,6 +2,8 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
 import { assertContains, createTestRouter } from '../../../test/helpers.ts'
+import { db } from '../../db.ts'
+import { books } from '../../data/schema.ts'
 
 const router = await createTestRouter()
 
@@ -49,17 +51,41 @@ describe('books handlers', () => {
     )
   })
 
-  it('shows available matches without filling sparse genres with unrelated books', async () => {
-    let response = await router.fetch('https://remix.run/books/midnight-platform/related')
+  it('browses and relates books across the consolidated arts categories', async () => {
+    let category = await router.fetch('https://remix.run/books/genre/art')
+    assert.equal(category.status, 200)
+    let categoryHtml = await category.text()
+    assertContains(categoryHtml, 'Arts, Music &amp; Crafts')
+    assert.equal([...categoryHtml.matchAll(/data-test-slug="([^"]+)"/g)].length, 9)
+    assertContains(categoryHtml, 'Heavy Metal Guitar Riffs')
+    assertContains(categoryHtml, 'Clay in Your Hands')
+    assertContains(categoryHtml, 'Light Through the Lens')
+
+    let related = await router.fetch('https://remix.run/books/light-through-lens/related')
+    assert.deepEqual(
+      [...(await related.text()).matchAll(/data-test-slug="([^"]+)"/g)].map((match) => match[1]),
+      ['heavy-metal', 'clay-in-your-hands', 'vinyl-after-hours'],
+    )
+  })
+
+  it('shows available matches without filling sparse categories with unrelated books', async () => {
+    let response = await router.fetch('https://remix.run/books/pip-paper-moon/related')
     let html = await response.text()
     assert.deepEqual(
       [...html.matchAll(/data-test-slug="([^"]+)"/g)].map((match) => match[1]),
-      ['clockmakers-letter', 'ninth-passenger'],
+      ['fox-found-tuesday'],
     )
 
-    let empty = await router.fetch('https://remix.run/books/light-through-lens/related')
-    assert.equal(empty.status, 200)
-    assertContains(await empty.text(), 'No other books in this genre yet.')
+    let other = await db.find(books, 46)
+    assert.ok(other)
+    await db.delete(books, other.id)
+    try {
+      let empty = await router.fetch('https://remix.run/books/pip-paper-moon/related')
+      assert.equal(empty.status, 200)
+      assertContains(await empty.text(), 'No other books in this category yet.')
+    } finally {
+      await db.create(books, other)
+    }
   })
 
   it('returns an uncached 404 when the related-books source does not exist', async () => {

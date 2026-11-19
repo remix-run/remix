@@ -2,6 +2,7 @@ import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 
 import type { Book } from '../../data/schema.ts'
+import { getBookGenreLabel } from '../../data/book-genres.ts'
 import type { Cart } from '../../utils/cart.ts'
 import { routes } from '../../routes.ts'
 import { BookCard } from '../../ui/book-card.tsx'
@@ -40,7 +41,7 @@ export function IndexPage(handle: Handle<IndexPageProps>) {
         </div>
 
         <div class="card" mix={css({ marginBottom: '2rem' })}>
-          <h3>Browse by Genre</h3>
+          <h3>Browse by Category</h3>
           <div mix={css({ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' })}>
             {genres.map((genre) => (
               <a
@@ -48,7 +49,7 @@ export function IndexPage(handle: Handle<IndexPageProps>) {
                 href={routes.books.genre.href({ genre })}
                 class="btn btn-secondary"
               >
-                {genre}
+                {getBookGenreLabel(genre)}
               </a>
             ))}
           </div>

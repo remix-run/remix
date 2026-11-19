@@ -4,6 +4,7 @@ import { clientEntry, css } from 'remix/component'
 import type { Handle } from 'remix/component'
 
 import type { Book } from '../../../../data/schema.ts'
+import { bookGenres, getBookGenreLabel } from '../../../../data/book-genres.ts'
 import { Field } from '../../../../ui/public/field.tsx'
 import { RestfulForm } from '../../../../ui/restful-form.tsx'
 import { AdminBookForm } from './schema.ts'
@@ -72,11 +73,19 @@ export const AdminBookFields = clientEntry(
                 defaultValue={restored('price', book?.price)}
                 step="0.01"
               />
-              <Field
-                field={fields.genre}
-                label="Genre"
-                defaultValue={restored('genre', book?.genre)}
-              />
+              <Field field={fields.genre} label="Category">
+                <select
+                  defaultValue={restored('genre', book?.genre) ?? ''}
+                  mix={form.control(fields.genre)}
+                >
+                  <option value="" disabled>
+                    Choose a category
+                  </option>
+                  {bookGenres.map((genre) => (
+                    <option value={genre}>{getBookGenreLabel(genre)}</option>
+                  ))}
+                </select>
+              </Field>
               <Field field={fields.isbn} label="ISBN" defaultValue={restored('isbn', book?.isbn)} />
               <Field
                 field={fields.publishedYear}

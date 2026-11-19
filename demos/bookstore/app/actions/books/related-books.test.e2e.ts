@@ -36,7 +36,7 @@ describe('related books', () => {
     assert.equal(requests.length, 0)
     assert.equal(await section.locator('[data-test-slug]').count(), 0)
     assert.equal(
-      await section.getByRole('link', { name: 'Browse this genre' }).getAttribute('href'),
+      await section.getByRole('link', { name: 'Browse this category' }).getAttribute('href'),
       '/books/genre/cookbook',
     )
 

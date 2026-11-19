@@ -2,6 +2,7 @@ import type { Handle } from 'remix/component'
 import { Frame, css } from 'remix/component'
 
 import type { Book } from '../../data/schema.ts'
+import { getBookGenreLabel } from '../../data/book-genres.ts'
 import { routes } from '../../routes.ts'
 import { ImageCarousel } from './public/image-carousel.tsx'
 import { bookCoverTransition } from '../../ui/book-transitions.ts'
@@ -43,7 +44,7 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
             </p>
 
             <p mix={css({ margin: '1rem 0' })}>
-              <span class="badge badge-info">{book.genre}</span>
+              <span class="badge badge-info">{getBookGenreLabel(book.genre)}</span>
               <span
                 class={`badge ${book.in_stock ? 'badge-success' : 'badge-warning'}`}
                 mix={css({ marginLeft: '0.5rem' })}
@@ -153,7 +154,7 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
                   })}
                 >
                   <p role="status">Loading related books…</p>
-                  <a href={routes.books.genre.href({ genre: book.genre })}>Browse this genre</a>
+                  <a href={routes.books.genre.href({ genre: book.genre })}>Browse this category</a>
                 </div>
               }
             />

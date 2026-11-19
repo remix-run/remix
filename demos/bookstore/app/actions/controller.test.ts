@@ -54,7 +54,7 @@ describe('root controller', () => {
       `------${boundary}`,
       'Content-Disposition: form-data; name="genre"',
       '',
-      'test',
+      'fiction',
       `------${boundary}`,
       'Content-Disposition: form-data; name="isbn"',
       '',

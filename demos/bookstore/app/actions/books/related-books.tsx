@@ -10,7 +10,7 @@ export function RelatedBooks(handle: Handle<{ books: Book[]; cart: Cart }>) {
     let { books, cart } = handle.props
 
     return books.length === 0 ? (
-      <p>No other books in this genre yet.</p>
+      <p>No other books in this category yet.</p>
     ) : (
       <div
         mix={css({
