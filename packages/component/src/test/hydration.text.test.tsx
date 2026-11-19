@@ -114,14 +114,9 @@ describe('hydration', () => {
       root.render(view())
       root.flush()
 
-      let div = container.querySelector('div')
-      invariant(div)
-      expect(Array.from(div.children, (child) => child.tagName.toLowerCase())).toEqual([
-        'header',
-        'p',
-        'footer',
-      ])
-      expect(div.textContent).toBe('headerstringfooter')
+      expect(container.innerHTML).toBe(
+        '<div><header>header</header><p>string</p><footer>footer</footer></div>',
+      )
     })
 
     it('handles undefined children as empty text', async () => {

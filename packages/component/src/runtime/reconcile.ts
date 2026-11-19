@@ -1217,11 +1217,15 @@ function insert(
     hydrationNode = null
   }
 
-  // Components, fragments, and empty nodes do not claim DOM nodes. Preserve
-  // client entry markers until their descendants can claim the boundary.
+  // Keep client entry markers for descendants or following siblings to claim. Empty strings
+  // need a placeholder before the marker because the server emits no Text node for them.
   hydrationNode = skipCommentsExceptBoundaryStart(
     hydrationNode ?? null,
-    node.kind === 'component' || node.kind === 'fragment' || node.kind === 'empty',
+    node.kind === 'component' ||
+      node.kind === 'fragment' ||
+      node.kind === 'empty' ||
+      (node.kind === 'text' && node._text === ''),
+    anchor,
   )
 
   if (hydrationNode && anchor && hydrationNode === anchor) {
@@ -1423,8 +1427,10 @@ function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
 function skipCommentsExceptBoundaryStart(
   cursor: Node | null,
   preserveClientEntry: boolean,
+  anchor?: Node,
 ): Node | null {
   while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
+    if (cursor === anchor) return cursor
     if (isFrameStart(cursor)) return cursor
     if (preserveClientEntry && isHydrationStart(cursor)) return cursor
     cursor = cursor.nextSibling

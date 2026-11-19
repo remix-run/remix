@@ -125,6 +125,25 @@ describe('hydration', () => {
       expect(container.querySelector('.inner')).toBe(existingInner)
     })
 
+    it('adopts nonempty text rendered by a root client entry', async () => {
+      let Entry = clientEntry('/text.js#TextEntry', function TextEntry() {
+        return () => 'Hello'
+      })
+
+      let html = await renderToString(<Entry />)
+      container.innerHTML = html
+      let serverText = container.firstChild?.nextSibling
+      invariant(serverText instanceof Text)
+
+      let root = createRoot(container)
+      root.render(<Entry />)
+      root.flush()
+
+      expect(container.innerHTML).toBe(html)
+      expect(container.firstChild?.nextSibling).toBe(serverText)
+      root.dispose()
+    })
+
     it('hydrates component with state preservation', async () => {
       function Counter(handle: Handle<{ initialCount: number }>) {
         let count = handle.props.initialCount

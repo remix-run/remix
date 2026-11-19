@@ -440,6 +440,29 @@ describe('createRangeRoot', () => {
   })
 
   describe('boundary handling', () => {
+    it('keeps an empty string inside the range after skipping comments', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!--start--><!--ignored--><!--end--><footer>Outside</footer>'
+
+      let start = container.childNodes[0]
+      let end = container.childNodes[2]
+      let footer = container.querySelector('footer')
+      invariant(footer)
+
+      let root = createRangeRoot([start, end])
+      root.render('')
+      root.flush()
+
+      root.render(<p>Inside</p>)
+      root.flush()
+
+      expect(container.innerHTML).toBe(
+        '<!--start--><!--ignored--><p>Inside</p><!--end--><footer>Outside</footer>',
+      )
+      expect(container.querySelector('footer')).toBe(footer)
+      root.dispose()
+    })
+
     it('throws when start and end markers do not share a parent node', () => {
       let containerA = document.createElement('div')
       let containerB = document.createElement('div')
