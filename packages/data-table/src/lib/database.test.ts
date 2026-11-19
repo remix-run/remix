@@ -527,6 +527,29 @@ describe('writes and validation', () => {
     ])
   })
 
+  it('leaves joined columns whose tables disagree on type undecoded', async () => {
+    let documents = table({
+      name: 'documents',
+      columns: { id: column.integer(), meta: column.json() },
+    })
+    let notes = table({
+      name: 'notes',
+      columns: { id: column.integer(), document_id: column.integer(), meta: column.text() },
+    })
+    let recording = createRecordingDriver({
+      async execute() {
+        return { rows: [{ id: 1, document_id: 1, meta: '42' }] }
+      },
+    })
+    recording.driver.decodeValue = (value, column) =>
+      column.type === 'json' && typeof value === 'string' ? JSON.parse(value) : value
+    let db = new TestDatabase(recording.driver)
+
+    let rows = await db.query(documents).join(notes, eq(documents.id, notes.document_id)).all()
+
+    assert.deepEqual(rows, [{ id: 1, document_id: 1, meta: '42' }])
+  })
+
   it('validates values and applies timestamps', async () => {
     let createdAt = '2026-01-15T10:00:00.000Z'
     let recording = createRecordingDriver({

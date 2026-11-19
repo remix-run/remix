@@ -1,5 +1,12 @@
 Query builder reads and writes now convert values by column type, so rows have the same JavaScript shape on every adapter. `column.json()` values are written with `JSON.stringify()`, including strings, and values compared with `eq()`, `inList()`, and the other value operators on a `json` column are serialized the same way. Drivers can implement the new optional `DatabaseDriver.decodeValue(value, column)` hook to convert values their database returns in a storage format; `Database` calls it for table query and `returning` rows, while `db.exec()` results are returned unchanged.
 
+Code that wrote already-serialized JSON text to a `json()` column through the query builder now stores a JSON string instead of the encoded value. Pass the value itself:
+
+```diff
+-await db.create(settings, { id: 1, data: JSON.stringify({ theme: 'dark' }) })
++await db.create(settings, { id: 1, data: { theme: 'dark' } })
+```
+
 Arrays interpolated into `sql` now expand into a parenthesized list with one parameter per item, and an empty array throws. To bind an array as a single parameter, such as a PostgreSQL array, wrap it in `rawSql`:
 
 ```ts

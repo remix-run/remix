@@ -25,8 +25,10 @@ export function encodeOperationValues(
   }
 
   let resolve = createColumnResolver(operation)
-  let encodePredicates = (predicates: Predicate[]) =>
-    predicates.map((predicate) => encodePredicate(predicate, resolve))
+
+  function encodePredicates(predicates: Predicate[], resolveColumn = resolve): Predicate[] {
+    return predicates.map((predicate) => encodePredicate(predicate, resolveColumn))
+  }
 
   switch (operation.kind) {
     case 'insert':
@@ -52,7 +54,8 @@ export function encodeOperationValues(
         ...operation,
         joins: operation.joins.map((join) => ({ ...join, on: encodePredicate(join.on, resolve) })),
         where: encodePredicates(operation.where),
-        having: encodePredicates(operation.having),
+        // `having` can name select aliases, which may shadow a column of another type.
+        having: encodePredicates(operation.having, resolveSelectAliases(operation, resolve)),
       }
   }
 }
@@ -82,21 +85,22 @@ export function decodeResultRows(
     return result
   }
 
-  let resolve = createColumnResolver(operation)
-  let aliases = new Map<string, string>()
-
-  if (operation.kind === 'select' && operation.select !== '*') {
-    for (let field of operation.select) aliases.set(field.alias, field.column)
-  }
+  let resolve = resolveSelectAliases(operation, createColumnResolver(operation))
+  // Rows share their keys, so resolve each key's column once per result.
+  let columns = new Map<string, ColumnDefinition | undefined>()
 
   let rows = result.rows.map((row) => {
     let output = row
 
     for (let key in row) {
-      let column = resolve(aliases.get(key) ?? key)
       let value = row[key]
 
-      if (!column || value === null || value === undefined) continue
+      if (value === null || value === undefined) continue
+      if (!columns.has(key)) columns.set(key, resolve(key))
+
+      let column = columns.get(key)
+
+      if (!column) continue
 
       let decoded = decodeValue.call(driver, value, column)
 
@@ -130,13 +134,31 @@ function createColumnResolver(
       return table ? getColumnDefinition(table, column.slice(dot + 1)) : undefined
     }
 
+    let match: ColumnDefinition | undefined
+
     for (let table of tables) {
       let definition = getColumnDefinition(table, column)
-      if (definition) return definition
+      if (!definition) continue
+      // `select *` over a join returns one value per name from whichever table the database
+      // picks, so leave names whose joined tables disagree on the column type unconverted.
+      if (match && match.type !== definition.type) return undefined
+      match ??= definition
     }
 
-    return undefined
+    return match
   }
+}
+
+function resolveSelectAliases(
+  operation: Exclude<DataManipulationOperation, { kind: 'raw' }>,
+  resolve: ColumnResolver,
+): ColumnResolver {
+  if (operation.kind !== 'select' || operation.select === '*') {
+    return resolve
+  }
+
+  let aliases = new Map(operation.select.map((field) => [field.alias, field.column]))
+  return (name) => resolve(aliases.get(name) ?? name)
 }
 
 function getColumnDefinition(table: AnyTable, column: string): ColumnDefinition | undefined {
@@ -172,6 +194,7 @@ function encodePredicate(predicate: Predicate, resolve: ColumnResolver): Predica
       }
     case 'between': {
       let column = resolve(predicate.column)
+      if (column?.type !== 'json') return predicate
       return {
         ...predicate,
         lower: encodeValue(column, predicate.lower),
@@ -189,6 +212,8 @@ function encodePredicate(predicate: Predicate, resolve: ColumnResolver): Predica
       }
 
       let column = resolve(predicate.column)
+
+      if (column?.type !== 'json') return predicate
 
       if (
         (predicate.operator === 'in' || predicate.operator === 'notIn') &&
