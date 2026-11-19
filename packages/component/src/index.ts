@@ -27,8 +27,9 @@ export type {
 } from './runtime/client-entries.ts'
 
 // -- Components --
-export { Fragment } from './runtime/component.ts'
+export { Fragment, Portal } from './runtime/component.ts'
 export { Frame } from './runtime/frame.ts'
+export type { PortalProps } from './runtime/component.ts'
 export type {
   Task,
   Handle,

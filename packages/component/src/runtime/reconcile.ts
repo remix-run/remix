@@ -1,6 +1,6 @@
 import { getNonceManager, type ResourceNonces } from './nonce.ts'
 import type { Component, ComponentHandle, FrameHandle, FrameProps } from './component.ts'
-import { createComponent, Fragment, FRAME_NODE } from './component.ts'
+import { createComponent, Fragment, FRAME_NODE, Portal, type PortalProps } from './component.ts'
 import {
   disposeClientEntryBoundary,
   getClientEntryBoundaryOwner,
@@ -56,6 +56,7 @@ export type VNodeKind =
   | 'component'
   | 'client-entry'
   | 'frame'
+  | 'portal'
 
 export type RuntimeElementProps = {
   [name: string]: unknown
@@ -99,6 +100,10 @@ export type FrameNode = InputNodeBase<'frame', FrameComponent> & {
   props: RuntimeElementProps & FrameProps
 }
 
+export type PortalNode = InputNodeBase<'portal', typeof Portal> & {
+  props: RuntimeElementProps & PortalProps
+}
+
 export type VNodeInput =
   | NonRenderNode
   | TextNode
@@ -106,6 +111,7 @@ export type VNodeInput =
   | HostNode
   | ComponentNode
   | FrameNode
+  | PortalNode
 
 type MountedNodeBase = {
   _parent: VNodeParent
@@ -192,6 +198,15 @@ export type CommittedFrameNode = CommittedNodeBase<'frame', FrameComponent> & {
   _state: FrameMountState
 }
 
+export type CommittedPortalNode = CommittedNodeBase<'portal', typeof Portal> & {
+  props: RuntimeElementProps & PortalProps
+  _container: HTMLElement
+  _rangeStart: Comment
+  _rangeEnd: Comment
+  _children: CommittedVNode[]
+  _removed?: boolean
+}
+
 export type CommittedVNode =
   | CommittedNonRenderNode
   | CommittedTextNode
@@ -200,6 +215,7 @@ export type CommittedVNode =
   | CommittedComponentNode
   | CommittedClientEntryNode
   | CommittedFrameNode
+  | CommittedPortalNode
 
 export type RootVNode = {
   kind: 'root'
@@ -218,12 +234,16 @@ export interface ReconcileContext {
   scheduler: Scheduler
   styles: StyleManager
   rootTarget: EventTarget
+  // Track new nodes for failed-render cleanup once a pass enters a Portal. Ordinary descendants
+  // and later siblings participate too. Undefined means no active pass, null means tracking is off.
+  _pendingMountCleanup?: Set<CommittedVNode | MountingComponentNode> | null
 }
 
 export type VNodeParent =
   | RootVNode
   | CommittedFragmentNode
   | CommittedHostNode
+  | CommittedPortalNode
   | MountingComponentNode
   | CommittedComponentNode
 
@@ -267,11 +287,15 @@ function isFragmentNode(node: VNode): node is FragmentNode | CommittedFragmentNo
   return node.kind === 'fragment'
 }
 
-function isCommittedTextNode(node: CommittedVNode): node is CommittedTextNode {
+function isCommittedTextNode(
+  node: CommittedVNode | MountingComponentNode,
+): node is CommittedTextNode {
   return node.kind === 'text'
 }
 
-function isCommittedHostNode(node: CommittedVNode): node is CommittedHostNode {
+function isCommittedHostNode(
+  node: CommittedVNode | MountingComponentNode,
+): node is CommittedHostNode {
   return node.kind === 'host'
 }
 
@@ -346,6 +370,15 @@ export function toVNode(node: RemixNode): VNodeInput {
       }
     }
     invariant(isElementFunction(node.type), 'Expected component element type')
+    if (node.type === Portal) {
+      let props = parseHostProps(node.props)
+      let container = props.container
+      invariant(
+        container === undefined || container instanceof HTMLElement,
+        'Portal container must be an HTMLElement',
+      )
+      return { kind: 'portal', type: Portal, key: node.key, props: { ...props, container } }
+    }
     if (isFrameComponent(node.type)) {
       invariant(isFrameProps(node.props), '<Frame /> requires a src prop')
       return { kind: 'frame', type: node.type, key: node.key, props: node.props }
@@ -435,15 +468,24 @@ function findMatchingPersistedMixinNode(
   type: string,
   key: Key | undefined,
   domParent: ParentNode,
+  vParent: VNodeParent,
 ): CommittedHostNode | null {
   if (key == null) return null
   for (let node of persistedMixinNodes) {
     if (node._persistence?.parent !== domParent) continue
     if (node.type !== type) continue
     if (node.key !== key) continue
+    if (findPortalAncestor(node._parent) !== findPortalAncestor(vParent)) continue
     return node
   }
   return null
+}
+
+function findPortalAncestor(parent: VNodeParent): CommittedPortalNode | undefined {
+  while (parent.kind !== 'root') {
+    if (parent.kind === 'portal') return parent
+    parent = parent._parent
+  }
 }
 
 const EMPTY_DIRECT_EVENT_DESCRIPTORS: OnMixinDescriptor[] = []
@@ -820,6 +862,38 @@ export function diffVNodes(
   anchor?: Node,
   cursor?: HydrationCursor,
 ): CommittedVNode {
+  if (context._pendingMountCleanup !== undefined) {
+    return reconcileVNodes(curr, next, domParent, vParent, context, anchor, cursor)
+  }
+  context._pendingMountCleanup = findPortalAncestor(vParent) ? new Set() : null
+  try {
+    return reconcileVNodes(curr, next, domParent, vParent, context, anchor, cursor)
+  } catch (error) {
+    if (context._pendingMountCleanup) {
+      // A failed render can leave newly mounted portal descendants outside the committed tree.
+      for (let node of context._pendingMountCleanup) {
+        let parent =
+          node.kind === 'component'
+            ? getComponentDomParent(node, domParent)
+            : (findFirstDomAnchor(node)?.parentNode ?? null)
+        remove(node, parent, context)
+      }
+    }
+    throw error
+  } finally {
+    context._pendingMountCleanup = undefined
+  }
+}
+
+function reconcileVNodes(
+  curr: CommittedVNode | null,
+  next: VNodeInput,
+  domParent: ParentNode,
+  vParent: VNodeParent,
+  context: ReconcileContext,
+  anchor?: Node,
+  cursor?: HydrationCursor,
+): CommittedVNode {
   if (curr === null) {
     return insert(next, domParent, vParent, context, anchor, cursor)
   }
@@ -874,6 +948,9 @@ export function diffVNodes(
         fragmentAnchor,
       )
       return committed
+    }
+    case 'portal': {
+      return diffPortal(curr as CommittedPortalNode, next, domParent, vParent, context, anchor)
     }
     case 'frame': {
       return next.type[FRAME_NODE].diff(
@@ -949,11 +1026,11 @@ function diffHost(
   if (nextProps.innerHTML != null) {
     // innerHTML is set, update it if changed
     if (currProps.innerHTML !== nextProps.innerHTML) {
-      curr._dom.innerHTML = nextProps.innerHTML
+      setHostInnerHTML(curr._dom, nextProps.innerHTML)
     }
   } else if (currProps.innerHTML != null) {
     // innerHTML was removed, clear it before adding children
-    curr._dom.innerHTML = ''
+    setHostInnerHTML(curr._dom, '')
   }
 
   let committed = commitRetainedHostNode(curr, next, vParent, svg, resolved)
@@ -1138,6 +1215,7 @@ function mountHostNode(
   }
   patchHostProps({}, hydratedProps, dom)
   let committed = commitHostNode(node, vParent, svg, dom, resolved)
+  context._pendingMountCleanup?.add(committed)
 
   if (hostProps.innerHTML != null) {
     dom.innerHTML = hostProps.innerHTML
@@ -1207,6 +1285,19 @@ function insert(
   anchor?: Node,
   cursor?: HydrationCursor,
 ): CommittedVNode {
+  let committed = insertVNode(node, domParent, vParent, context, anchor, cursor)
+  context._pendingMountCleanup?.add(committed)
+  return committed
+}
+
+function insertVNode(
+  node: VNodeInput,
+  domParent: ParentNode,
+  vParent: VNodeParent,
+  context: ReconcileContext,
+  anchor?: Node,
+  cursor?: HydrationCursor,
+): CommittedVNode {
   let { frame, scheduler, styles } = context
   let svg = getSvgContext(vParent, node)
   let hydrationNode = cursor?.current
@@ -1217,11 +1308,15 @@ function insert(
     hydrationNode = null
   }
 
-  // Components, fragments, and empty nodes do not claim DOM nodes. Preserve
+  // Components, fragments, portals, and empty nodes do not claim DOM nodes. Preserve
   // client entry markers until their descendants can claim the boundary.
   hydrationNode = skipCommentsExceptBoundaryStart(
     hydrationNode ?? null,
-    node.kind === 'component' || node.kind === 'fragment' || node.kind === 'empty',
+    node.kind === 'component' ||
+      node.kind === 'fragment' ||
+      node.kind === 'portal' ||
+      node.kind === 'empty',
+    anchor,
   )
 
   if (hydrationNode && anchor && hydrationNode === anchor) {
@@ -1329,6 +1424,7 @@ function insert(
         }
 
         let committed = commitHostNode(node, vParent, svg, targetHead, resolved)
+        context._pendingMountCleanup?.add(committed)
         // Render explicit <head> children directly into document.head.
         committed._children = diffChildren(
           null,
@@ -1346,7 +1442,7 @@ function insert(
     }
 
     // Check for matching mixin-persisted node that can be reclaimed
-    let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent)
+    let persistedNode = findMatchingPersistedMixinNode(node.type, node.key, domParent, vParent)
     if (persistedNode) {
       return reclaimPersistedMixinNode(persistedNode, node, vParent, context, svg)
     }
@@ -1398,11 +1494,234 @@ function insert(
     return diffComponent(null, node, domParent, vParent, context, svg, anchor, cursor)
   }
 
+  if (node.kind === 'portal') {
+    return insertPortal(node, domParent, vParent, context)
+  }
+
   if (node.kind === 'frame') {
-    return node.type[FRAME_NODE].insert(node, domParent, vParent, context, svg, anchor, cursor)
+    let committed = node.type[FRAME_NODE].insert(
+      node,
+      domParent,
+      vParent,
+      context,
+      svg,
+      anchor,
+      cursor,
+    )
+    context._pendingMountCleanup?.add(committed)
+    return committed
   }
 
   invariant(false, 'Unexpected node type')
+}
+
+type PortalRange = {
+  _container: HTMLElement
+  _rangeStart: Comment
+  _rangeEnd: Comment
+  _removed?: boolean
+}
+
+const portalRanges = new WeakMap<Node, Comment>()
+const portalContainers = new WeakMap<Node, Set<PortalRange>>()
+let activePortalRanges = 0
+let portalSnapshots: WeakMap<Node[], Node[]> | undefined
+
+function registerPortalRange(range: PortalRange): void {
+  // Keep recognition for snapshots taken before disposal. Weak keys let detached ranges be collected.
+  portalRanges.set(range._rangeStart, range._rangeEnd)
+  let ranges = portalContainers.get(range._container)
+  if (!ranges) portalContainers.set(range._container, (ranges = new Set()))
+  ranges.add(range)
+  activePortalRanges++
+}
+
+function releasePortalRange(range: PortalRange): void {
+  let ranges = portalContainers.get(range._container)
+  if (ranges?.delete(range)) activePortalRanges--
+  if (ranges?.size === 0) portalContainers.delete(range._container)
+}
+
+function getPortalRanges(container: ParentNode): ReadonlySet<PortalRange> | undefined {
+  return portalContainers.get(container)
+}
+
+function getPortalRangeEnd(start: Node): Comment | undefined {
+  return start.nodeType === Node.COMMENT_NODE ? portalRanges.get(start) : undefined
+}
+
+export function excludePortalRanges(nodes: Node[], parent?: Node): Node[] {
+  if (nodes.length === 0) return nodes
+  let snapshot = portalSnapshots?.get(nodes)
+  if (snapshot) return snapshot
+  if (activePortalRanges === 0) return nodes
+  parent ??= nodes[0].parentNode ?? undefined
+  if (!parent || !portalContainers.has(parent)) return nodes
+  let result: Node[] | undefined
+  for (let i = 0; i < nodes.length; i++) {
+    let end = getPortalRangeEnd(nodes[i])
+    if (end) {
+      result ??= nodes.slice(0, i)
+      let endIndex = nodes.indexOf(end, i)
+      invariant(endIndex !== -1, 'Portal end marker not found')
+      i = endIndex
+    } else {
+      result?.push(nodes[i])
+    }
+  }
+  if (!result) return nodes
+  // Cleanup can dispose the last portal before a second pass visits this same node snapshot.
+  portalSnapshots ??= new WeakMap()
+  portalSnapshots.set(nodes, result)
+  return result
+}
+
+function finishPortalRemovals(container: ParentNode): void {
+  let portals = getPortalRanges(container)
+  if (!portals) return
+  for (let portal of portals) {
+    if (!portal._removed) continue
+    if (
+      portal._rangeStart.parentNode === container &&
+      portal._rangeEnd.parentNode === container &&
+      portal._rangeStart.nextSibling !== portal._rangeEnd
+    ) {
+      continue
+    }
+    releasePortalRange(portal)
+    portal._rangeStart.remove()
+    portal._rangeEnd.remove()
+  }
+}
+
+function setHostInnerHTML(element: Element, html: string): void {
+  let portals = getPortalRanges(element)
+  if (!portals) {
+    element.innerHTML = html
+    return
+  }
+  // Raw HTML owns the destination's ordinary content, while each portal owns its own range.
+  let preserved = element.ownerDocument.createDocumentFragment()
+  for (let portal of portals) {
+    moveDomRange(preserved, portal._rangeStart, portal._rangeEnd, null)
+  }
+  element.innerHTML = html
+  element.append(preserved)
+}
+
+function clearFailedPortalContent(node: CommittedPortalNode): void {
+  let current = node._rangeStart.nextSibling
+  while (current && current !== node._rangeEnd) {
+    let next = current.nextSibling
+    current.parentNode?.removeChild(current)
+    current = next
+  }
+}
+
+function getPortalContainer(props: PortalProps, doc: Document): HTMLElement {
+  let container = props.container === undefined ? doc.body : props.container
+  invariant(container, 'Portal requires a destination container or a document body')
+  invariant(container.ownerDocument === doc, 'Portal container must belong to the same document')
+  return container
+}
+
+function insertPortal(
+  node: PortalNode,
+  domParent: ParentNode,
+  vParent: VNodeParent,
+  context: ReconcileContext,
+): CommittedPortalNode {
+  let doc = domParent.ownerDocument ?? document
+  let container = getPortalContainer(node.props, doc)
+  let start = doc.createComment('rmx:portal')
+  let end = doc.createComment('/rmx:portal')
+  container.append(start, end)
+  let committed: CommittedPortalNode = {
+    kind: 'portal',
+    type: Portal,
+    key: node.key,
+    props: node.props,
+    _parent: vParent,
+    _svg: false,
+    _container: container,
+    _rangeStart: start,
+    _rangeEnd: end,
+    _children: [],
+  }
+  registerPortalRange(committed)
+  context._pendingMountCleanup ??= new Set()
+  context._pendingMountCleanup.add(committed)
+  try {
+    for (let child of flatMapChildrenToVNodes(node.props)) {
+      committed._children.push(insert(child, container, committed, context, end))
+    }
+    restoreAncestorSelect(container)
+  } catch (error) {
+    clearFailedPortalContent(committed)
+    remove(committed, domParent, context)
+    throw error
+  }
+  return committed
+}
+
+function diffPortal(
+  curr: CommittedPortalNode,
+  next: PortalNode,
+  domParent: ParentNode,
+  vParent: VNodeParent,
+  context: ReconcileContext,
+  anchor?: Node,
+): CommittedVNode {
+  let container = getPortalContainer(next.props, domParent.ownerDocument ?? document)
+  // A failed replacement can leave the previous portal in the committed tree after its removal.
+  if (
+    curr._removed ||
+    container !== curr._container ||
+    curr._rangeStart.parentNode !== curr._container
+  ) {
+    let current: Node | null = curr._rangeStart
+    while (current) {
+      invariant(
+        !current.contains(container),
+        'Portal container must not be inside its own children',
+      )
+      if (current === curr._rangeEnd) break
+      current = current.nextSibling
+    }
+    return replace(curr, next, domParent, vParent, context, anchor)
+  }
+  curr._parent = vParent
+  curr.props = next.props
+  context._pendingMountCleanup ??= new Set()
+  try {
+    curr._children = diffChildren(
+      curr._children,
+      flatMapChildrenToVNodes(next.props),
+      container,
+      curr,
+      context,
+      undefined,
+      curr._rangeEnd,
+    )
+    restoreAncestorSelect(container)
+  } catch (error) {
+    for (let child of curr._children) remove(child, container, context)
+    curr._children = []
+    clearFailedPortalContent(curr)
+    restoreAncestorSelect(container)
+    throw error
+  }
+  return curr
+}
+
+function getComponentDomParent(node: MountingComponentNode, fallback: ParentNode): ParentNode {
+  let parent = node._parent
+  while (parent.kind !== 'root') {
+    if (parent.kind === 'host') return parent._dom
+    if (parent.kind === 'portal') return parent._container
+    parent = parent._parent
+  }
+  return fallback
 }
 
 function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
@@ -1420,8 +1739,17 @@ function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
 function skipCommentsExceptBoundaryStart(
   cursor: Node | null,
   preserveClientEntry: boolean,
+  anchor?: Node,
 ): Node | null {
-  while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
+  // Skipping comments can reach the range's closing marker even when we started before it.
+  // Stop there so hydration cannot claim a sibling outside the range.
+  while (cursor && cursor !== anchor) {
+    if (cursor.nodeType !== Node.COMMENT_NODE) break
+    let portalEnd = getPortalRangeEnd(cursor)
+    if (portalEnd) {
+      cursor = portalEnd.nextSibling
+      continue
+    }
     if (isFrameStart(cursor)) return cursor
     if (preserveClientEntry && isHydrationStart(cursor)) return cursor
     cursor = cursor.nextSibling
@@ -1492,6 +1820,7 @@ function diffComponent(
     handle = curr._handle
   }
   let mounting = beginComponentNode(next, vParent, svg, handle, context)
+  if (curr === null) context._pendingMountCleanup?.add(mounting)
   return renderComponent(curr && curr._content, mounting, domParent, context, anchor, cursor)
 }
 
@@ -1564,11 +1893,12 @@ function disposeCommittedClientEntryBoundary(
 // A null domParent cleans up without DOM removal - used for descendants when an
 // ancestor DOM node is removed.
 export function remove(
-  node: CommittedVNode,
+  node: CommittedVNode | MountingComponentNode,
   domParent: ParentNode | null,
   context: ReconcileContext,
 ): void {
   let { scheduler } = context
+  context._pendingMountCleanup?.delete(node)
   if (isCommittedTextNode(node)) {
     if (domParent) node._dom.parentNode?.removeChild(node._dom)
     return
@@ -1589,6 +1919,7 @@ export function remove(
             if (node._persistence.token !== token) return
             unmarkNodePersistedByMixins(node)
             performHostNodeRemoval(node, domParent, context)
+            finishPortalRemovals(domParent)
           })
         return
       }
@@ -1605,8 +1936,11 @@ export function remove(
     return
   }
 
-  if (isCommittedComponentNode(node)) {
-    remove(node._content, domParent, context)
+  if (node.kind === 'component') {
+    // A failed first render can leave a handle to dispose without any committed content.
+    if ('_content' in node) {
+      remove(node._content, domParent, context)
+    }
     let tasks = node._handle.remove()
     scheduler.enqueueTasks(tasks)
     return
@@ -1623,6 +1957,16 @@ export function remove(
     } else {
       removeDomRange(node._rangeStart, node._rangeEnd, domParent)
     }
+    return
+  }
+
+  if (node.kind === 'portal') {
+    if (node._removed) return
+    node._removed = true
+    for (let child of node._children) remove(child, node._container, context)
+    node._children = []
+    finishPortalRemovals(node._container)
+    restoreAncestorSelect(node._container)
     return
   }
 
@@ -1685,6 +2029,7 @@ function diffChildren(
     next.length === 0 &&
     anchor === undefined &&
     vParent.kind !== 'fragment' &&
+    !getPortalRanges(domParent) &&
     !parentUsesInnerHTML(vParent) &&
     canBulkClearChildren(curr)
   ) {
@@ -1698,7 +2043,15 @@ function diffChildren(
   if (!hasKeys) {
     for (let i = 0; i < next.length; i++) {
       let currentNode = i < curr.length ? curr[i] : null
-      committed[i] = diffVNodes(currentNode, next[i], domParent, vParent, context, anchor, cursor)
+      committed[i] = reconcileVNodes(
+        currentNode,
+        next[i],
+        domParent,
+        vParent,
+        context,
+        anchor,
+        cursor,
+      )
     }
 
     if (curr.length > next.length) {
@@ -1847,7 +2200,7 @@ function patchKeyedChildren(
       insertAnchor = stableAnchor
     }
 
-    committed[index] = diffVNodes(
+    committed[index] = reconcileVNodes(
       oldNode,
       next[index],
       domParent,
@@ -2131,7 +2484,9 @@ function findLastDomAnchor(node: CommittedVNode | null | undefined): Node | null
 
 function findEdgeDomNode(node: CommittedVNode | null | undefined, last: boolean): Node | null {
   if (!node) return null
-  if (isCommittedTextNode(node) || isCommittedHostNode(node)) return node._dom
+  if (isCommittedTextNode(node) || isCommittedHostNode(node)) {
+    return node._dom
+  }
   if (isCommittedComponentNode(node)) return findEdgeDomNode(node._content, last)
   if (isCommittedClientEntryNode(node) || node.kind === 'frame') {
     return last ? node._rangeEnd : node._rangeStart
@@ -2143,6 +2498,7 @@ function findEdgeDomNode(node: CommittedVNode | null | undefined, last: boolean)
       if (dom) return dom
     }
   }
+  // Portals have no source DOM; their destination children cannot anchor source siblings.
   return null
 }
 
@@ -2157,8 +2513,15 @@ function domRangeContainsNode(first: Node, last: Node, node: Node): boolean {
 }
 
 function moveDomRange(domParent: ParentNode, first: Node, last: Node, before: Node | null): void {
+  let portals = getPortalRanges(domParent)
   let current: Node | null = first
   while (current) {
+    // A fragment's source output can surround a portal that owns its destination placement.
+    let portalEnd: Comment | undefined = portals && getPortalRangeEnd(current)
+    if (portalEnd) {
+      current = portalEnd.nextSibling
+      continue
+    }
     let next: Node | null = current === last ? null : current.nextSibling
     domParent.insertBefore(current, before)
     if (current === last) break
@@ -2190,7 +2553,7 @@ export function findNextSiblingDomAnchor(
   if (vParent.kind === 'component') return findNextSiblingDomAnchor(vParent, stopAtFragmentEnd)
   let children = vParent._children
   if (children.length === 0) {
-    if (vParent.kind === 'root') return vParent._rangeEnd ?? null
+    if (vParent.kind === 'root' || vParent.kind === 'portal') return vParent._rangeEnd ?? null
     if (vParent.kind === 'fragment') {
       return stopAtFragmentEnd ? null : findNextSiblingDomAnchor(vParent)
     }
@@ -2210,7 +2573,7 @@ export function findNextSiblingDomAnchor(
     return stopAtFragmentEnd ? null : findNextSiblingDomAnchor(vParent)
   }
 
-  return vParent.kind === 'root' ? (vParent._rangeEnd ?? null) : null
+  return vParent.kind === 'root' || vParent.kind === 'portal' ? (vParent._rangeEnd ?? null) : null
 }
 
 function reclaimPersistedMixinNode(
