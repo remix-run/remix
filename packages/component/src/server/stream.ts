@@ -501,12 +501,15 @@ async function splitFirstChunk(
     reader.cancel(signal.reason).catch((error) => {
       if (error !== signal.reason) context.onError(error)
     })
+    // Cancelling closes pending reads synchronously, even if source cleanup is still pending.
+    release()
   }
   function release() {
     signal.removeEventListener('abort', cancel)
     reader.releaseLock()
   }
-  async function read() {
+  async function read(): Promise<ReadableStreamReadResult<Uint8Array>> {
+    if (signal.aborted) return { done: true, value: undefined }
     try {
       let next = await reader.read()
       if (next.done) release()

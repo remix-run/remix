@@ -5191,10 +5191,28 @@ describe('stream', () => {
       expect(errors).toEqual([])
     })
 
-    it('cancels a resolved blocking frame stream while a sibling frame is still resolving', async () => {
+    it('cancels and releases a buffered blocking frame stream while a sibling is still resolving', async (t) => {
       let controller = new AbortController()
-      let source = createFrameSource('<p>Reviews</p>')
+      let errors: unknown[] = []
+      let [pulled, resolvePulled] = withResolvers<void>()
+      let [cleanup, resolveCleanup] = withResolvers<void>()
+      t.after(resolveCleanup)
+      let cancelReason: unknown
+      let source = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('<p>Reviews</p>'))
+          controller.enqueue(new TextEncoder().encode('<p>More reviews</p>'))
+        },
+        pull() {
+          resolvePulled()
+        },
+        cancel(reason) {
+          cancelReason = reason
+          return cleanup
+        },
+      })
       let [sibling, , rejectSibling] = withResolvers<string>()
+      let flushUnhandledRejections = trackUnhandledRejections(t)
 
       let stream = renderToStream(
         <div>
@@ -5202,20 +5220,27 @@ describe('stream', () => {
           <Frame src="/fragments/related" />
         </div>,
         {
-          resolveFrame: (src) => (src === '/fragments/reviews' ? source.stream : sibling),
+          onError(error) {
+            errors.push(error)
+          },
+          resolveFrame: (src) => (src === '/fragments/reviews' ? source : sibling),
           signal: controller.signal,
         },
       )
 
       let read = stream.getReader().read()
-      await source.pulled
+      await pulled
 
       let abortError = new DOMException('This operation was aborted', 'AbortError')
       controller.abort(abortError)
       rejectSibling(abortError)
 
-      expect(await source.cancelled).toBe(abortError)
       expect(await read).toEqual({ done: true, value: undefined })
+      expect(cancelReason).toBe(abortError)
+      expect(source.locked).toBe(false)
+      resolveCleanup()
+      expect(await flushUnhandledRejections()).toEqual([])
+      expect(errors).toEqual([])
     })
 
     it('cancels a frame stream that resolves after the consumer cancels', async () => {
