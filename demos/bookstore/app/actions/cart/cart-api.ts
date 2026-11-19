@@ -19,10 +19,6 @@ export async function toggleCart({
   bookId,
   intent,
 }: CartItemOptions & { intent: 'add' | 'remove' }): Promise<CartError | undefined> {
-  if (process.env.NODE_ENV !== 'test') {
-    await new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 701)))
-  }
-
   let book = await db.find(books, bookId)
   if (!book) return { status: 404, message: 'Book not found.' }
   if (book.slug === 'three-ways' && Math.random() < 0.5) {
@@ -45,10 +41,6 @@ export async function updateCart({
   bookId,
   quantity,
 }: CartItemOptions & { quantity: number }): Promise<CartError | undefined> {
-  if (process.env.NODE_ENV !== 'test') {
-    await new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 701)))
-  }
-
   let book = await db.find(books, bookId)
   if (!book) return { status: 404, message: 'Book not found.' }
   if (book.slug === 'three-ways') {
@@ -68,10 +60,6 @@ export async function removeCartItem({
   session,
   bookId,
 }: CartItemOptions): Promise<CartError | undefined> {
-  if (process.env.NODE_ENV !== 'test') {
-    await new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 701)))
-  }
-
   let book = await db.find(books, bookId)
   if (!book) return { status: 404, message: 'Book not found.' }
   if (book.slug === 'three-ways') {

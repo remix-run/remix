@@ -1,5 +1,5 @@
 import * as assert from 'remix/assert'
-import { afterEach, beforeEach, describe, it, mock } from 'remix/test'
+import { describe, it } from 'remix/test'
 import sharp from 'sharp'
 
 import { getBookImageHref } from '../../utils/book-images.ts'
@@ -9,17 +9,10 @@ import {
   getSessionCookie,
   requestWithSession,
 } from '../../../test/helpers.ts'
-import { latency } from './api/controller.tsx'
 
 const router = await createTestRouter()
 
 describe('cart handlers', () => {
-  let latencyMock: ReturnType<typeof mock.method>
-  beforeEach(() => {
-    latencyMock = mock.method(latency, 'wait', async () => {})
-  })
-  afterEach(() => latencyMock.mock.restore())
-
   it('POST /cart/api/add adds book to cart', async () => {
     let response = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
