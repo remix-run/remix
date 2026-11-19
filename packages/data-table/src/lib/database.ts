@@ -57,7 +57,7 @@ import type {
   tableMetadataKey,
   TimestampConfig,
 } from './table.ts'
-import { getTableName } from './table.ts'
+import { getTableColumnDefinitions, getTableName } from './table.ts'
 import type { Pretty } from './types.ts'
 import type { WhereInput } from './operators.ts'
 
@@ -976,9 +976,12 @@ export class Database<dialect extends string = string> {
   }
 
   async #executeOperation(operation: DataManipulationOperation): Promise<DataManipulationResult> {
+    // Serialize outside the driver error wrapper so values JSON cannot represent report directly.
+    let driverOperation = serializeJsonColumnValues(operation)
+
     try {
       return await this.#driver.execute({
-        operation,
+        operation: driverOperation,
         transaction: this.#token,
       })
     } catch (error) {
@@ -995,4 +998,51 @@ export class Database<dialect extends string = string> {
 
 function defaultNow(): Date {
   return new Date()
+}
+
+// Drivers bind each value as a single parameter, so JSON column values must already be JSON text.
+function serializeJsonColumnValues(
+  operation: DataManipulationOperation,
+): DataManipulationOperation {
+  switch (operation.kind) {
+    case 'insert':
+      return { ...operation, values: serializeJsonColumns(operation.table, operation.values) }
+    case 'insertMany':
+      return {
+        ...operation,
+        values: operation.values.map((values) => serializeJsonColumns(operation.table, values)),
+      }
+    case 'update':
+      return { ...operation, changes: serializeJsonColumns(operation.table, operation.changes) }
+    case 'upsert':
+      return {
+        ...operation,
+        values: serializeJsonColumns(operation.table, operation.values),
+        update: operation.update && serializeJsonColumns(operation.table, operation.update),
+      }
+    default:
+      return operation
+  }
+}
+
+function serializeJsonColumns(
+  table: AnyTable,
+  values: Record<string, unknown>,
+): Record<string, unknown> {
+  let columns: Record<string, ColumnDefinition | undefined> = getTableColumnDefinitions(table)
+  let output = values
+
+  for (let column in values) {
+    let value = values[column]
+
+    // Strings are passed through as JSON text that is already serialized.
+    if (columns[column]?.type !== 'json' || value == null || typeof value === 'string') {
+      continue
+    }
+
+    if (output === values) output = { ...values }
+    output[column] = JSON.stringify(value)
+  }
+
+  return output
 }

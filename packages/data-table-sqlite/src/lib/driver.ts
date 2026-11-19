@@ -533,7 +533,24 @@ function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
 }
 
 function normalizeStatementValues(values: unknown[]): unknown[] {
-  return values.map((value) => (value === undefined ? null : value))
+  return values.map((value) => {
+    if (value === undefined) return null
+    if (typeof value === 'boolean') return value ? 1 : 0
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) {
+        throw new TypeError('SQLite Date parameters must be valid dates')
+      }
+      // Match SQLite's own UTC `current_timestamp` format so stored values compare and sort
+      // together. Whole seconds omit `.000`, which would otherwise sort after the same second.
+      let text = value.toISOString().replace('T', ' ').replace('Z', '')
+      return value.getUTCMilliseconds() === 0 ? text.slice(0, -4) : text
+    }
+    // SQLite drivers read a leading object as named bindings, so only bytes may stay objects.
+    if (value !== null && typeof value === 'object' && !ArrayBuffer.isView(value)) {
+      throw new TypeError('SQLite object parameters must be Date or typed array instances')
+    }
+    return value
+  })
 }
 
 function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {

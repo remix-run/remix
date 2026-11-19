@@ -586,6 +586,13 @@ For hand-built, copied, or deserialized statements, and statements from another 
 
 For SQL passed to `rawSql` or directly to `db.exec()`, supply dynamic values through the separate parameter array.
 
+Each parameter binds exactly one value. Pass strings, numbers, bigints, booleans, `null`, `Date` objects, and binary data as a `Buffer` or typed array. Write JSON as text with `JSON.stringify(value)`, and give an `IN` list one placeholder per item. The query builder serializes objects, arrays, numbers, and booleans written to `column.json()` columns for you. Strings written to `json` columns are treated as JSON text that is already serialized, so store a JSON string value as `JSON.stringify('value')`.
+
+```ts
+await db.exec(sql`insert into events (meta) values (${JSON.stringify({ source: 'import' })})`)
+await db.exec('select * from users where id in (?, ?)', ['u_001', 'u_002'])
+```
+
 ## Custom Database Drivers
 
 Applications normally use one of the concrete SQLite, PostgreSQL, or MySQL factories. Integration
