@@ -558,7 +558,9 @@ spy.mock.restore()
 
 Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each browser test file runs in its own `iframe` document.
 
-WebKit limits rapid `history.pushState()` and `history.replaceState()` calls, including calls made by application code and test hooks. If a browser test reaches its 10-second history quota, the runner logs a warning, waits 11 seconds using real timers, runs cleanup, and retries the test once with a fresh test context and `beforeEach` hooks. Successful `beforeAll` setup stays shared. A second quota failure remains a failure; the runner waits again so cleanup and subsequent tests can continue. Other errors are reported normally. History-heavy tests can avoid repeated waits by reducing history updates or running heavy files in separate `remix test` invocations.
+WebKit shares its History API update quota between a top-level document and its iframes. The runner uses a reusable execution page that fully navigates before each file, giving that file a fresh document and history budget. The results dashboard stays open, and Re-run uses the same navigation process. Chromium and Firefox use the single-page iframe runner.
+
+WebKit limits rapid `history.pushState()` and `history.replaceState()` calls, including calls made by application code and test hooks. If a browser test reaches its 10-second history quota within a file, the runner logs a warning, waits 11 seconds using real timers, runs cleanup, and retries the test once with a fresh test context and `beforeEach` hooks. Successful `beforeAll` setup stays shared. A second quota failure remains a failure; the runner waits again so cleanup and subsequent tests can continue. Other errors are reported normally. History-heavy tests can avoid repeated waits by reducing history updates or splitting them across smaller files.
 
 Cookies and browser storage are shared between files; use hooks and cleanup callbacks to reset state when needed.
 

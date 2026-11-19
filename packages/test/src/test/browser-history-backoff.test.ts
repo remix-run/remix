@@ -18,7 +18,7 @@ const SKIP_WEBKIT = IS_BUN || process.platform !== 'darwin'
 
 describe('browser history backoff', () => {
   it(
-    'recovers from WebKit history quota exhaustion across files',
+    'resets WebKit history budgets between files and backs off within a file',
     { skip: SKIP_WEBKIT },
     async (t) => {
       let fixture = await createFixture(t, {
@@ -45,6 +45,9 @@ afterEach(() => {
   document.body.textContent = ''
   cleaned++
 })
+it('starts with a fresh history budget', () => {
+  for (let i = 0; i < 60; i++) history.pushState(null, '', '?i=' + i)
+})
 it('recovers on a fresh attempt', (t) => {
   attempts++
   assert.equal(document.body.textContent, '')
@@ -56,8 +59,8 @@ it('recovers on a fresh attempt', (t) => {
 it('retains shared setup and runner storage', () => {
   assert.equal(setups, 1)
   assert.equal(attempts, 2)
-  assert.equal(cleaned, 2)
-  assert.equal(window.parent.document.documentElement.dataset.previousFile, 'yes')
+  assert.equal(cleaned, 3)
+  assert.equal(window.parent.document.documentElement.dataset.previousFile, undefined)
   assert.equal(localStorage.getItem('previous-file'), 'yes')
   assert.equal(sessionStorage.getItem('previous-file'), 'yes')
   assert.equal(document.cookie, 'previous-file=yes')
@@ -81,17 +84,88 @@ it('retains shared setup and runner storage', () => {
       })
       t.after(run.close)
 
-      assert.equal(run.results.passed, 3)
+      assert.equal(run.results.passed, 4)
       assert.equal(run.results.failed, 0)
       assert.equal(reported.length, 2)
       assert.ok(browser)
       assert.equal(browser.contexts().length, 1)
-      assert.equal(browser.contexts()[0].pages().length, 1)
+      assert.equal(browser.contexts()[0].pages().length, 2)
       assert.equal(warn.mock.calls.length, 1)
       let warning = String(warn.mock.calls[0].arguments[0])
       assert.ok(warning.includes(path.relative(process.cwd(), fixture.testFiles[1])))
       assert.match(warning, /11 seconds/)
-      assert.match(warning, /Reduce history updates or run history-heavy files separately/)
+      assert.match(
+        warning,
+        /Split history-heavy tests across smaller files or reduce history updates/,
+      )
+      await run.close()
+      await run.disconnected
+    },
+  )
+
+  it(
+    'continues after a WebKit import failure and navigates each file again on rerun',
+    { skip: SKIP_WEBKIT },
+    async (t) => {
+      let fixture = await createFixture(t, {
+        'a.test.browser.ts': `
+import { it } from '../../src/lib/framework.ts'
+it('uses the first file budget', () => {
+  window.parent.document.documentElement.dataset.previousFile = 'yes'
+  localStorage.setItem('runs', String(Number(localStorage.getItem('runs') ?? 0) + 1))
+  for (let i = 0; i < 60; i++) history.replaceState(null, '', '?i=' + i)
+})
+`,
+        'b.test.browser.ts': `import './missing.ts'`,
+        'c.test.browser.ts': `
+import * as assert from '@remix-run/assert'
+import { it } from '../../src/lib/framework.ts'
+it('gets a fresh document and budget after the failed file', () => {
+  assert.equal(window.parent.document.documentElement.dataset.previousFile, undefined)
+  for (let i = 0; i < 60; i++) history.pushState(null, '', '?i=' + i)
+})
+`,
+      })
+      let browser: Browser | undefined
+      let launch = webkit.launch.bind(webkit)
+      t.mock.method(webkit, 'launch', async (options) => {
+        browser = await launch(options)
+        return browser
+      })
+      let warn = t.mock.method(console, 'warn', () => {})
+      t.mock.method(console, 'error', () => {})
+      let reported: TestResults[] = []
+      let run = await runBrowserTests({
+        ...fixture,
+        open: true,
+        playwrightUseOpts: { browserName: 'webkit' },
+        reporter: createReporter(reported),
+      })
+      t.after(run.close)
+
+      assert.equal(run.results.passed, 2)
+      assert.equal(run.results.failed, 1)
+      assert.equal(reported.length, 3)
+      assert.equal(reported[1].failed, 1)
+      assert.match(reported[1].tests[0].error?.message ?? '', /Failed to load script/)
+      assert.ok(browser)
+      assert.equal(browser.contexts().length, 1)
+      let pages = browser.contexts()[0].pages()
+      assert.equal(pages.length, 2)
+      let dashboard = pages[0]
+      let execution = pages[1]
+      assert.equal(await execution.evaluate(() => localStorage.getItem('runs')), '1')
+      await Promise.all([
+        dashboard.waitForEvent('load'),
+        dashboard.getByRole('button', { name: 'Re-run' }).click(),
+      ])
+      await dashboard.waitForFunction('window.__testsDone')
+      assert.equal(reported.length, 6)
+      assert.equal(reported[4].failed, 1)
+      assert.equal(reported[5].passed, 1)
+      assert.equal(await execution.evaluate(() => localStorage.getItem('runs')), '2')
+      assert.deepEqual(browser.contexts()[0].pages(), pages)
+      assert.equal(warn.mock.calls.length, 0)
       await run.close()
       await run.disconnected
     },

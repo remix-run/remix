@@ -164,12 +164,19 @@ function mountTests(host: HTMLElement, setup: TestsSetup): void {
 
   void (async () => {
     for (let testFile of setup.testPaths) {
-      let fileResults = await runInIframe(testFile, setup.only)
-      await fetch('/file-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fileResults),
-      })
+      let fileResults: FileResults
+      if (new URLSearchParams(location.search).has('runFiles')) {
+        let response = await fetch(`/run-file?${new URLSearchParams({ file: testFile })}`)
+        if (!response.ok) throw new Error(`Failed to run test file: ${testFile}`)
+        fileResults = await response.json()
+      } else {
+        fileResults = await runInIframe(testFile, setup.only)
+        await fetch('/file-results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fileResults),
+        })
+      }
       totals.passed += fileResults.passed
       totals.failed += fileResults.failed
       totals.skipped += fileResults.skipped

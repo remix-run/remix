@@ -1,5 +1,5 @@
 import * as path from 'node:path'
-import type { Browser, Page, Request } from 'playwright'
+import type { Browser, Page, Request, Response } from 'playwright'
 import { colors } from './colors.ts'
 import { getBrowserTestRootDir } from './config.ts'
 import {
@@ -49,11 +49,14 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
   let envLabel = options.projectName ? `browser:${options.projectName}` : 'browser'
   let browser: Browser | undefined
   let page: Page | undefined
+  let executionPage: Page | undefined
   let close = async () => {
+    await executionPage?.close()
     await page?.close()
     await browser?.close()
     browser = undefined
     page = undefined
+    executionPage = undefined
   }
   let results: TestResults
   let coverageMap: CoverageMap | null = null
@@ -62,14 +65,26 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     browser = await getBrowserLauncher(options.playwrightUseOpts).launch(
       getPlaywrightLaunchOptions(options.playwrightUseOpts),
     )
-    page = await browser.newPage(getPlaywrightPageOptions(options.playwrightUseOpts))
+    let pageOptions = getPlaywrightPageOptions(options.playwrightUseOpts)
+    if (browser.browserType().name() === 'webkit') {
+      // WebKit charges iframe history updates to the top-level document. Reuse one page,
+      // navigating it between files to reset that budget while preserving browser storage.
+      let context = await browser.newContext(pageOptions)
+      page = await context.newPage()
+      executionPage = await context.newPage()
+    } else {
+      page = await browser.newPage(pageOptions)
+    }
     // Cap individual browser operations, then separately watch for per-file
     // progress so large suites can run longer than this without hiding hangs.
-    page.setDefaultTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
-    page.setDefaultNavigationTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
-
-    if (options.console) {
-      page.on('console', (msg) => console.log(`${colors.dim('[browser console]')} ${msg.text()}`))
+    for (let browserPage of executionPage ? [page, executionPage] : [page]) {
+      browserPage.setDefaultTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
+      browserPage.setDefaultNavigationTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
+      if (options.console) {
+        browserPage.on('console', (msg) =>
+          console.log(`${colors.dim('[browser console]')} ${msg.text()}`),
+        )
+      }
     }
 
     // Playwright's JS coverage is Chromium-only. Start before navigation so
@@ -114,9 +129,9 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     }
 
     let runnerUrl = new URL(options.baseUrl)
-    if (browser.browserType().name() === 'webkit') {
-      runnerUrl.searchParams.set('historyBackoff', '1')
-      await page.route('**/history-quota?*', async (route) => {
+    if (executionPage) {
+      runnerUrl.searchParams.set('runFiles', '1')
+      await executionPage.route('**/history-quota?*', async (route) => {
         let params = new URL(route.request().url()).searchParams
         let file = params.get('file')
         if (!file?.startsWith('/scripts/')) {
@@ -127,61 +142,95 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
         let testName = params.get('test')
         let label = testName ? `${fileName} (${testName})` : fileName
         console.warn(
-          `Warning: WebKit's history update limit was reached in ${label}. Waiting 11 seconds for the budget to reset. Reduce history updates or run history-heavy files separately to reduce these waits.`,
+          `Warning: WebKit's history update limit was reached in ${label}. Waiting 11 seconds for the budget to reset. Split history-heavy tests across smaller files or reduce history updates to avoid repeated waits.`,
         )
         resetProgressTimeout()
         await route.fulfill({ status: 200 })
       })
     }
 
-    await page.route('**/file-results', async (route) => {
-      let results = route.request().postDataJSON() as TestResults
-      for (let test of results.tests) {
-        if (test.filePath) test.filePath = urlPathToFilePath(test.filePath, rootDir)
-      }
-      options.reporter.onResult(results, envLabel)
+    function reportFileResults(results: TestResults) {
+      options.reporter.onResult(
+        {
+          ...results,
+          tests: results.tests.map((test) => ({
+            ...test,
+            filePath: test.filePath ? urlPathToFilePath(test.filePath, rootDir) : undefined,
+          })),
+        },
+        envLabel,
+      )
       totalPassed += results.passed
       totalFailed += results.failed
       totalSkipped += results.skipped
       totalTodo += results.todo
       completedFiles++
       resetProgressTimeout()
+    }
+
+    let executionResults: TestResults | undefined
+    await page.context().route('**/file-results', async (route) => {
+      let results = route.request().postDataJSON() as TestResults
+      if (route.request().frame().page() === executionPage) {
+        executionResults = results
+      } else {
+        reportFileResults(results)
+      }
       await route.fulfill({ status: 200 })
     })
 
-    // Fail the tests if any /scripts/ request fails (harness scripts, test
-    // modules, or their transitive imports — all served via the same prefix).
-    let errorPromise = new Promise((_, reject) => {
-      let isScriptRequest = (request: Request) =>
-        new URL(request.url()).pathname.startsWith('/scripts/')
-      page!.on('response', (response) => {
-        if (!response.ok() && isScriptRequest(response.request())) {
-          reject(new Error(`Failed to load script: ${response.request().url()}`))
+    if (executionPage) {
+      let activeExecutionPage = executionPage
+      await page.route('**/run-file?*', async (route) => {
+        let testFile = new URL(route.request().url()).searchParams.get('file')
+        if (
+          !testFile?.startsWith('/scripts/') ||
+          (options.testFiles && !options.testFiles.includes(urlPathToFilePath(testFile, rootDir)))
+        ) {
+          await route.fulfill({ status: 404, body: 'Unknown test file' })
+          return
         }
-      })
-      page!.on('requestfailed', (request) => {
-        if (isScriptRequest(request)) {
-          let failureText = request.failure()?.errorText
-          if (failureText === 'net::ERR_ABORTED') return
-
-          let reason = failureText ? ` (${failureText})` : ''
-          reject(new Error(`Failed to load script: ${request.url()}${reason}`))
+        let fileResults: TestResults
+        executionResults = undefined
+        try {
+          let fileUrl = new URL(options.baseUrl)
+          fileUrl.searchParams.set('file', testFile)
+          fileUrl.searchParams.set('historyBackoff', '1')
+          await waitForBrowserTests(activeExecutionPage, fileUrl.href)
+          if (!executionResults) throw new Error('Missing browser test results')
+          fileResults = executionResults
+        } catch (error) {
+          fileResults = {
+            passed: 0,
+            failed: 1,
+            skipped: 0,
+            todo: 0,
+            tests: [
+              {
+                name: '',
+                suiteName: testFile,
+                filePath: testFile,
+                status: 'failed',
+                error: {
+                  message: error instanceof Error ? error.message : String(error),
+                  stack: error instanceof Error ? error.stack : undefined,
+                },
+                duration: 0,
+              },
+            ],
+          }
         }
+        reportFileResults(fileResults)
+        await route.fulfill({ json: fileResults })
       })
-    })
+    }
 
-    // Prevent unhandled rejection if we fail before setting up the listener
-    errorPromise.catch(() => {})
+    // Prevent unhandled rejection if we fail before starting the run.
     progressTimeoutPromise.catch(() => {})
 
     resetProgressTimeout()
     try {
-      await page.goto(runnerUrl.href)
-      await Promise.race([
-        page.waitForFunction('window.__testsDone', undefined, { timeout: 0 }),
-        errorPromise,
-        progressTimeoutPromise,
-      ])
+      await Promise.race([waitForBrowserTests(page, runnerUrl.href), progressTimeoutPromise])
     } finally {
       watchingProgress = false
       clearProgressTimeout()
@@ -233,5 +282,39 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       close,
       disconnected: Promise.resolve(),
     }
+  }
+}
+
+async function waitForBrowserTests(page: Page, url: string): Promise<void> {
+  let rejectScriptError: (error: Error) => void = () => {}
+  let errorPromise = new Promise<never>((_, reject) => {
+    rejectScriptError = reject
+  })
+  let isScriptRequest = (request: Request) =>
+    new URL(request.url()).pathname.startsWith('/scripts/')
+  function onResponse(response: Response) {
+    if (!response.ok() && isScriptRequest(response.request())) {
+      rejectScriptError(new Error(`Failed to load script: ${response.request().url()}`))
+    }
+  }
+  function onRequestFailed(request: Request) {
+    if (!isScriptRequest(request)) return
+    let failureText = request.failure()?.errorText
+    if (failureText === 'net::ERR_ABORTED') return
+    let reason = failureText ? ` (${failureText})` : ''
+    rejectScriptError(new Error(`Failed to load script: ${request.url()}${reason}`))
+  }
+  page.on('response', onResponse)
+  page.on('requestfailed', onRequestFailed)
+  try {
+    await Promise.race([
+      page
+        .goto(url)
+        .then(() => page.waitForFunction('window.__testsDone', undefined, { timeout: 0 })),
+      errorPromise,
+    ])
+  } finally {
+    page.off('response', onResponse)
+    page.off('requestfailed', onRequestFailed)
   }
 }
