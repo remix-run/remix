@@ -130,7 +130,7 @@
   },
   "dependencies": {
     "@remix-run/component": "workspace:^",
-    "@remix-run/data-schema": "workspace:*"
+    "@remix-run/data-schema": "workspace:^"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",

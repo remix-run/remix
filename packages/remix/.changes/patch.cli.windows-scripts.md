@@ -1,0 +1,1 @@
+Apps created with `remix new` on Windows can run `npm run dev` and `npm start` again. The generated scripts used `cross-env-shell`, which failed with `ERR_INVALID_MODULE_SPECIFIER` on Windows. See the [`@remix-run/cli` changelog](https://github.com/remix-run/remix/blob/main/packages/cli/CHANGELOG.md) to update the scripts in an existing app.
