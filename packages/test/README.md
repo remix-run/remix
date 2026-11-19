@@ -558,11 +558,7 @@ spy.mock.restore()
 
 Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each browser test file runs in its own `iframe` document.
 
-WebKit shares its History API update quota between a top-level document and its iframes. The runner uses a reusable execution page that fully navigates before each file, giving that file a fresh document and history budget. The results dashboard stays open, and Re-run uses the same navigation process. Chromium and Firefox use the single-page iframe runner.
-
-WebKit limits rapid `history.pushState()` and `history.replaceState()` calls, including calls made by application code and test hooks. If a browser test reaches its 10-second history quota within a file, the runner logs a warning, waits 11 seconds using real timers, runs cleanup, and retries the test once with a fresh test context and `beforeEach` hooks. Successful `beforeAll` setup stays shared. A second quota failure remains a failure; the runner waits again so cleanup and subsequent tests can continue. Other errors are reported normally. History-heavy tests can avoid repeated waits by reducing history updates or splitting them across smaller files.
-
-Cookies and browser storage are shared between files; use hooks and cleanup callbacks to reset state when needed.
+Cookies and browser storage are shared between files; reset them in hooks or cleanup callbacks. WebKit also has [history update limits](#webkit-history-limits).
 
 #### `render()`
 
@@ -596,6 +592,16 @@ describe('Counter', () => {
 | `$$(selector)`  | Alias for `container.querySelectorAll()`                                |
 | `act(fn)`       | Runs `fn` and flushes pending component updates                         |
 | `cleanup()`     | Unmounts and removes the container (pass to `t.after` for auto-cleanup) |
+
+#### WebKit history limits
+
+WebKit starts each browser test file with a fresh top-level document and history budget. Within a file, more than 100 combined `history.pushState()` and `history.replaceState()` calls in 10 seconds exhaust that budget. Calls made by application code and test hooks count too.
+
+If a test or `beforeEach` hook reaches the limit, `remix test` logs a warning, waits 11 seconds using real timers, runs cleanup, and retries the test once with a fresh test context and `beforeEach` hooks. A quota failure on retry triggers another wait and remains a failure. Cleanup errors also remain failures.
+
+Successful `beforeAll` setup stays shared. If a `beforeAll` hook reaches the quota, only that hook is retried once after the wait.
+
+Reduce history updates or split history-heavy tests across smaller files to avoid repeated waits.
 
 ### E2E Testing
 
