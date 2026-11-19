@@ -17,6 +17,10 @@ describe('books handlers', () => {
     assertContains(html, 'Ash &amp; Smoke')
     assertContains(html, 'Heavy Metal Guitar Riffs')
     assertContains(html, 'Three Ways to Change Your Life')
+    assert.deepEqual(
+      [...html.matchAll(/<img[^>]+loading="(eager|lazy)"/g)].map((match) => match[1]),
+      [...Array(4).fill('eager'), ...Array(46).fill('lazy')],
+    )
   })
 
   it('GET /books/:slug returns book details', async () => {
@@ -60,6 +64,10 @@ describe('books handlers', () => {
     assertContains(categoryHtml, 'Heavy Metal Guitar Riffs')
     assertContains(categoryHtml, 'Clay in Your Hands')
     assertContains(categoryHtml, 'Light Through the Lens')
+    assert.deepEqual(
+      [...categoryHtml.matchAll(/<img[^>]+loading="(eager|lazy)"/g)].map((match) => match[1]),
+      ['eager', 'eager', 'eager', 'eager', 'lazy', 'lazy', 'lazy', 'lazy', 'lazy'],
+    )
 
     let related = await router.fetch('https://remix.run/books/light-through-lens/related')
     assert.deepEqual(

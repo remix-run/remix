@@ -1,8 +1,12 @@
 import { css, type Handle, clientEntry, on, updateUrl } from 'remix/component'
 
+import type { BookImage } from '../../../utils/book-images.ts'
+
+export const faceoutImageSizes = '(max-width: 388px) calc(100vw - 88px), 300px'
+
 export const ImageCarousel = clientEntry(
   import.meta.url,
-  function ImageCarousel(handle: Handle<{ images: string[]; startIndex?: number }>) {
+  function ImageCarousel(handle: Handle<{ images: BookImage[]; startIndex?: number }>) {
     let index = handle.props.startIndex ?? 0
 
     async function selectImage(nextIndex: number) {
@@ -42,9 +46,9 @@ export const ImageCarousel = clientEntry(
               transform: `translateX(-${index * 100}%)`,
             })}
           >
-            {handle.props.images.map((src, i) => (
+            {handle.props.images.map((image, i) => (
               <div
-                key={src + i}
+                key={image.src + i}
                 mix={css({
                   minWidth: '100%',
                   height: '100%',
@@ -52,7 +56,9 @@ export const ImageCarousel = clientEntry(
                 })}
               >
                 <img
-                  src={src}
+                  src={image.src}
+                  srcset={image.srcSet}
+                  sizes={image.srcSet ? faceoutImageSizes : undefined}
                   alt={`Image ${i + 1} of ${total}`}
                   loading={i === index ? 'eager' : 'lazy'}
                   mix={css({

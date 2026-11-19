@@ -29,18 +29,11 @@ export const assets = createAssetServer({
         : undefined,
     ),
     transforms: {
-      'book-image': defineFileTransform({
-        extensions: ['.png'],
-        async transform(bytes) {
-          return {
-            content: await sharp(bytes)
-              .resize({ width: 640, withoutEnlargement: true })
-              .webp({ quality: 80 })
-              .toBuffer(),
-            extension: '.webp',
-          }
-        },
-      }),
+      'book-image-320': createBookImageTransform(320),
+      'book-image-480': createBookImageTransform(480),
+      'book-image-640': createBookImageTransform(640),
+      'book-image-768': createBookImageTransform(768),
+      'book-image-960': createBookImageTransform(960),
       'book-thumbnail': defineFileTransform({
         extensions: ['.png'],
         async transform(bytes) {
@@ -65,3 +58,18 @@ export const assets = createAssetServer({
     loaders: isHmr ? [componentHmr()] : undefined,
   },
 })
+
+function createBookImageTransform(width: number) {
+  return defineFileTransform({
+    extensions: ['.png'],
+    async transform(bytes) {
+      return {
+        content: await sharp(bytes)
+          .resize({ width, withoutEnlargement: true })
+          .webp({ quality: 75 })
+          .toBuffer(),
+        extension: '.webp',
+      }
+    },
+  })
+}

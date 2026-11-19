@@ -24,6 +24,8 @@ export function RelatedBooks(handle: Handle<{ books: Book[]; cart: Cart }>) {
             book={book}
             inCart={cart.items.some((item) => item.bookId === book.id)}
             imageLoading="lazy"
+            // This grid sits inside the details column with its own 240px minimum.
+            imageSizes="(min-width: 1200px) 378px, (min-width: 924px) calc((100vw - 444px) / 2), (min-width: 769px) calc(100vw - 420px), (min-width: 592px) calc((100vw - 112px) / 2), calc(100vw - 88px)"
           />
         ))}
       </div>

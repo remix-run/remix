@@ -1,16 +1,17 @@
 import type { Handle } from 'remix/component'
-import { Frame, css } from 'remix/component'
+import { Frame, attrs, css } from 'remix/component'
 
 import type { Book } from '../../data/schema.ts'
+import type { BookImage } from '../../utils/book-images.ts'
 import { getBookGenreLabel } from '../../data/book-genres.ts'
 import { routes } from '../../routes.ts'
-import { ImageCarousel } from './public/image-carousel.tsx'
+import { ImageCarousel, faceoutImageSizes } from './public/image-carousel.tsx'
 import { bookCoverTransition } from '../../ui/book-transitions.ts'
 import { Layout } from '../../ui/layout.tsx'
 
 export interface ShowPageProps {
   book: Book
-  imageUrls: string[]
+  imageUrls: BookImage[]
   startIndex: number
 }
 
@@ -20,7 +21,19 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
     let mainImage = imageUrls[startIndex]
 
     return (
-      <Layout head={mainImage ? <link rel="preload" as="image" href={mainImage} /> : null}>
+      <Layout
+        head={
+          mainImage ? (
+            <link
+              rel="preload"
+              as="image"
+              href={mainImage.src}
+              imageSrcSet={mainImage.srcSet}
+              mix={attrs({ imagesizes: mainImage.srcSet ? faceoutImageSizes : undefined })}
+            />
+          ) : null
+        }
+      >
         <div
           mix={css({
             display: 'grid',

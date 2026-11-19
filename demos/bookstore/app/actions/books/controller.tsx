@@ -5,7 +5,7 @@ import * as s from 'remix/data-schema'
 import { books } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { getCurrentCart } from '../../utils/context.ts'
-import { getBookImageHref, resolveBookCover } from '../../utils/book-images.ts'
+import { getBookImage, resolveBookCover } from '../../utils/book-images.ts'
 import { browsingResponseInit } from '../browsing-response.ts'
 import { IndexPage } from './index-page.tsx'
 import { GenreNotFoundPage, GenrePage } from './genre-page.tsx'
@@ -55,9 +55,7 @@ export default createController(routes.books, {
       }
 
       let imageUrls = await Promise.all(
-        s
-          .parse(s.array(s.string()), JSON.parse(book.image_urls))
-          .map((href) => getBookImageHref(href)),
+        s.parse(s.array(s.string()), JSON.parse(book.image_urls)).map((href) => getBookImage(href)),
       )
       let requestedImage = Number(new URL(request.url).searchParams.get('image'))
       let startIndex =

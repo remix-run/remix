@@ -27,11 +27,11 @@ describe('router', () => {
     assert.equal(response.status, 404)
   })
 
-  it('serves smaller WebP images shared by catalog and product pages with immutable fingerprints', async () => {
+  it('serves responsive WebP variants shared by catalog and product pages with immutable fingerprints', async () => {
     let response = await router.fetch('https://remix.run/books')
     let html = await response.text()
     let cover = html.match(
-      /src="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=book-image)"/,
+      /src="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=book-image-640)"/,
     )
     assert.ok(cover)
 
@@ -47,6 +47,21 @@ describe('router', () => {
     let original = await readFile(new URL('./images/bbq-1.png', import.meta.url))
     assert.ok(transformed.byteLength < original.byteLength / 4)
 
+    let srcSet = html.match(/<img[^>]+srcset="([^"]+)"/)
+    assert.ok(srcSet)
+    let candidates = srcSet[1].split(', ')
+    assert.equal(candidates.length, 5)
+    for (let candidate of candidates) {
+      let [href, descriptor] = candidate.split(' ')
+      let variant = await router.fetch(new URL(href, 'https://remix.run'))
+      assert.equal(variant.headers.get('Content-Type'), 'image/webp')
+      assert.equal(variant.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
+      let bytes = new Uint8Array(await variant.arrayBuffer())
+      let size = await sharp(bytes).metadata()
+      assert.equal(size.width, Number.parseInt(descriptor))
+      assert.ok(bytes.byteLength < original.byteLength)
+    }
+
     let sourceHref = await assets.getHref(
       fileURLToPath(new URL('./images/bbq-1.png', import.meta.url)),
     )
@@ -57,10 +72,16 @@ describe('router', () => {
     let product = await router.fetch('https://remix.run/books/bbq')
     let productHtml = await product.text()
     let preload = productHtml.match(
-      /<link rel="preload" as="image" href="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=book-image)"/,
+      /<link rel="preload" as="image"[^>]* href="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=book-image-640)"/,
     )
     assert.ok(preload)
     assert.equal(preload[1], cover[1])
+    assert.equal(productHtml.match(/<link[^>]+imagesrcset="([^"]+)"/)?.[1], srcSet[1])
+    assert.equal(productHtml.match(/<img[^>]+srcset="([^"]+)"/)?.[1], srcSet[1])
+    assert.equal(
+      productHtml.match(/<link[^>]+imagesizes="([^"]+)"/)?.[1],
+      productHtml.match(/<img[^>]+sizes="([^"]+)"/)?.[1],
+    )
 
     let staticImage = await router.fetch('https://remix.run/images/bbq-1.png')
     assert.equal(staticImage.status, 404)
