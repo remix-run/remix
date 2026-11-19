@@ -88,6 +88,42 @@ describe('hydration', () => {
       expect(existingDiv.textContent).toBe('')
     })
 
+    it('keeps an empty string child in place when it later renders an element', async () => {
+      let text = ''
+      function view() {
+        return (
+          <div>
+            <header>header</header>
+            {text && <p>{text}</p>}
+            <footer>footer</footer>
+          </div>
+        )
+      }
+      container.innerHTML = await renderToString(view())
+
+      let existingFooter = container.querySelector('footer')
+      invariant(existingFooter)
+
+      let root = createRoot(container)
+      root.render(view())
+      root.flush()
+
+      expect(container.querySelector('footer')).toBe(existingFooter)
+
+      text = 'string'
+      root.render(view())
+      root.flush()
+
+      let div = container.querySelector('div')
+      invariant(div)
+      expect(Array.from(div.children, (child) => child.tagName.toLowerCase())).toEqual([
+        'header',
+        'p',
+        'footer',
+      ])
+      expect(div.textContent).toBe('headerstringfooter')
+    })
+
     it('handles undefined children as empty text', async () => {
       let html = await renderToString(<div>{undefined}</div>)
       container.innerHTML = html

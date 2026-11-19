@@ -1304,7 +1304,10 @@ function insert(
       return commitTextNode(node, vParent, svg, hydrationNode)
     }
     let dom = document.createTextNode(node._text)
-    insertDomNode(dom, domParent, anchor)
+    // The server renders nothing for an empty string, so hydration reaches the next sibling
+    // instead of a Text node. Insert before that sibling, where the child belongs, and leave it
+    // for the next child to claim.
+    insertDomNode(dom, domParent, hydrationNode?.parentNode === domParent ? hydrationNode : anchor)
     return commitTextNode(node, vParent, svg, dom)
   }
 
