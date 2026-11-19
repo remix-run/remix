@@ -26,7 +26,7 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 
 - SQLite stores the catalog, customers, and orders using typed table definitions.
 - Migrations manage the database schema, and seeds provide sample books and demo accounts.
-- The seed catalog contains 50 books. The homepage selects four distinct books at random; `/books` shows the full catalog. Run `pnpm db:seed` to add new seed entries to an existing database without resetting it.
+- The seed catalog contains 50 books. The homepage features the first four books ordered by ID; `/books` shows the full catalog. Run `pnpm db:seed` to add new seed entries to an existing database without resetting it.
 - Ten broader categories group the catalog, with an average of five books per category. Filters, related books, and the admin category selector share this grouping. Run `pnpm db:migrate` to consolidate categories in an existing database while preserving books, images, and orders.
 - Checkout creates an order and its items together in a database transaction.
 

@@ -32,14 +32,8 @@ export default createController(routes, {
     },
     async home({ db, render, request, session }) {
       let cart = getCurrentCart(session)
-      let bookRows = await db.findMany(books)
-      for (let index = bookRows.length - 1; index > 0; index--) {
-        let randomIndex = Math.floor(Math.random() * (index + 1))
-        let book = bookRows[index]
-        bookRows[index] = bookRows[randomIndex]
-        bookRows[randomIndex] = book
-      }
-      let featuredBooks = await Promise.all(bookRows.slice(0, 4).map(resolveBookCover))
+      let bookRows = await db.findMany(books, { orderBy: ['id', 'asc'], limit: 4 })
+      let featuredBooks = await Promise.all(bookRows.map(resolveBookCover))
 
       return render(
         <HomePage featuredBooks={featuredBooks} cart={cart} />,

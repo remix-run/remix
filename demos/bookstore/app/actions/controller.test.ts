@@ -14,13 +14,17 @@ import { uploadsStorage as uploads } from '../utils/uploads.ts'
 const router = await createTestRouter()
 
 describe('root controller', () => {
-  it('GET / returns home page', async () => {
+  it('GET / returns the first four books in catalog order', async () => {
     let response = await router.fetch('https://remix.run/')
 
     assert.equal(response.status, 200)
     let html = await response.text()
     assertContains(html, 'Welcome to the Bookstore')
     assertContains(html, 'Browse Books')
+    assert.deepEqual(
+      [...html.matchAll(/data-test-slug="([^"]+)"/g)].map((match) => match[1]),
+      ['bbq', 'heavy-metal', 'three-ways', 'midnight-platform'],
+    )
   })
 
   it('GET /uploads/*key serves uploaded files from storage', async () => {
