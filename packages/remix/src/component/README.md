@@ -1818,6 +1818,57 @@ for (let anchor of document.querySelectorAll<HTMLAnchorElement>('a[data-prefetch
 
 When every route runs in the browser and returns a component tree instead of an HTTP response, use `render()` and `run()` from [`remix/spa`](../spa/README.md). Routes keep the router's standard `Request` to `Response` contract, and the runtime reuses frame navigation for links, forms, history traversal, redirects, cancellation, and `data-rmx-target`.
 
+## Portals
+
+`Portal` renders children into `document.body`, letting content escape an ancestor's clipping or stacking context. Import it from `remix/component`:
+
+```tsx
+import { Portal } from 'remix/component'
+
+function SaveStatus() {
+  return () => (
+    <Portal>
+      <p role="status" class="save-status">
+        All changes saved
+      </p>
+    </Portal>
+  )
+}
+```
+
+Pass an `HTMLElement` as `container` to choose another destination in the same document. Use `ref()` to capture the destination and wait until it is available before rendering the Portal:
+
+```tsx
+import { clientEntry, Portal, ref } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+export const Preview = clientEntry(import.meta.url, function Preview(handle: Handle) {
+  let container: HTMLElement | undefined
+
+  return () => (
+    <>
+      <div
+        mix={ref((node) => {
+          container = node
+          handle.update()
+        })}
+      />
+      {container && (
+        <Portal container={container}>
+          <input aria-label="Draft title" defaultValue="Untitled" />
+        </Portal>
+      )}
+    </>
+  )
+})
+```
+
+The ref runs when the destination is inserted. Calling `handle.update()` renders the Portal into it. The guard prevents an initial render into the document body while `container` is still `undefined`.
+
+DOM events bubble through the destination's ancestors. Inherited styles, form ownership, and keyboard navigation also follow the destination DOM. `Portal` only changes placement. Apply positioning and any interaction behaviour to its content.
+
+`Portal` renders nothing on the server and does not render its child components. Inside a [client entry](#client-entries), portal children render in the browser during hydration and subsequent updates. Without a client entry, its content stays absent.
+
 ## Related Packages
 
 - [`remix/component/server`](./server/README.md) - Server rendering with `renderToStream()` and `renderToString()`, including client entry and frame resolution
