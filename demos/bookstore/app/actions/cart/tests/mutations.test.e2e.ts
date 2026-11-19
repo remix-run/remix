@@ -114,8 +114,6 @@ describe('cart submissions', () => {
   })
 
   it('redirects native toggles to the initiating page and flashes errors on the matching book once', async (t) => {
-    let rejecting = false
-    t.mock.method(Math, 'random', () => (rejecting ? 0 : 0.99))
     let router = await createTestRouter()
     let server = await createTestServer((request) => router.fetch(request))
     let runtimePage = await t.serve(server)
@@ -140,9 +138,11 @@ describe('cart submissions', () => {
 
     await page.goto('/books?from=native')
     let card = page.locator('[data-test-slug="three-ways"]')
-    rejecting = true
+    await card.locator('input[name="intent"]').evaluate((input: HTMLInputElement) => {
+      input.value = 'invalid'
+    })
     await card.getByRole('button', { name: 'Add to Cart', exact: true }).click()
-    await card.getByRole('alert').getByText('Couldn’t update this book. Try again.').waitFor()
+    await card.getByRole('alert').getByText('Invalid cart action.').waitFor()
     let details = await card.getByRole('link', { name: 'View Details' }).boundingBox()
     let button = await card.getByRole('button', { name: 'Add to Cart', exact: true }).boundingBox()
     let row = await card.getByRole('link', { name: 'View Details' }).locator('..').boundingBox()
@@ -157,14 +157,18 @@ describe('cart submissions', () => {
     await page.reload()
     assert.equal(await page.getByRole('alert').count(), 0)
 
-    rejecting = false
     await card.getByRole('button', { name: 'Add to Cart', exact: true }).click()
     await card.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
-    await page.goto('/?from=native')
-    rejecting = true
+    await page.goto('/books/genre/self-help?from=native')
+    await card.locator('input[name="intent"]').evaluate((input: HTMLInputElement) => {
+      input.value = 'invalid'
+    })
     await card.getByRole('button', { name: 'Remove from Cart', exact: true }).click()
-    await card.getByRole('alert').getByText('Couldn’t update this book. Try again.').waitFor()
-    assert.equal(new URL(page.url()).pathname + new URL(page.url()).search, '/?from=native')
+    await card.getByRole('alert').getByText('Invalid cart action.').waitFor()
+    assert.equal(
+      new URL(page.url()).pathname + new URL(page.url()).search,
+      '/books/genre/self-help?from=native',
+    )
     assert.equal(await page.getByRole('alert').count(), 1)
     await page.reload()
     assert.equal(await page.getByRole('alert').count(), 0)
@@ -503,7 +507,7 @@ describe('cart submissions', () => {
     assert.deepEqual(mutations, ['PATCH /cart/items 303'])
   })
 
-  it('keeps native mutations on /cart and flashes action errors once', async (t) => {
+  it('keeps native mutations on /cart and lets every book update and remove', async (t) => {
     let router = await createTestRouter()
     let mutations: string[] = []
     let server = await createTestServer(async (request) => {
@@ -541,10 +545,11 @@ describe('cart submissions', () => {
     await row
       .getByRole('button', { name: 'Increase quantity of Three Ways to Change Your Life' })
       .click()
-    await row.getByRole('alert').getByText('Couldn’t update this book. Try again.').waitFor()
+    await page.getByText('Total: $57.98', { exact: true }).waitFor()
+    assert.equal(await page.getByRole('alert').count(), 0)
     assert.equal(new URL(page.url()).pathname, '/cart')
     await row.getByRole('button', { name: 'Remove', exact: true }).click()
-    await row.getByRole('alert').getByText('Couldn’t remove this book. Try again.').waitFor()
+    await page.getByText('Your cart is empty.', { exact: true }).waitFor()
     assert.equal(new URL(page.url()).pathname, '/cart')
     await page.reload()
     assert.equal(await page.getByRole('alert').count(), 0)

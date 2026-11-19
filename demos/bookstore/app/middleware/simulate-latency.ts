@@ -8,6 +8,7 @@ const uploadsMatcher = createMatcher(routes.uploads.pattern)
 
 export function simulateLatency(): Middleware {
   return async ({ request, url }, next) => {
+    if (request.headers.get('X-Remix-Frame') !== 'true') return next()
     if (assetsMatcher.match(url) || uploadsMatcher.match(url)) return next()
 
     let signal = request.signal
@@ -29,6 +30,14 @@ export function simulateLatency(): Middleware {
 
       signal.addEventListener('abort', abort, { once: true })
     })
+
+    signal.throwIfAborted()
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method) && Math.random() < 0.1) {
+      return new Response('Simulated mutation failure. Please try again.', {
+        status: 503,
+        headers: { 'Cache-Control': 'no-store' },
+      })
+    }
 
     return next()
   }

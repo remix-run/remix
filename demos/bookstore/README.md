@@ -93,7 +93,7 @@ Navigation and prefetching use frames too:
 - `pnpm dev` restarts the server when source files change.
 - `pnpm hmr` enables hot module replacement for browser components and reloads frames after server updates.
 - Development keeps asset URLs stable and revalidates changed files.
-- `pnpm dev` sets `DELAY=1` to enable the `simulateLatency()` middleware. It delays non-asset GET requests by a random 100–300 ms and other methods, including POST, by 250–750 ms to demonstrate pending and optimistic UI. Other startup commands can opt in with `DELAY=1`; tests always bypass the middleware. Static files, asset-server requests, and uploaded files bypass the delay. PendingButton's failure feedback keeps its separate two-second timer.
+- `pnpm dev` sets `DELAY=1` to enable the `simulateLatency()` middleware for requests with `X-Remix-Frame: true`. It delays non-asset frame GET requests by a random 100–300 ms and other frame methods, including POST, by 250–750 ms to demonstrate pending and optimistic UI. About 10% of frame POST, PUT, PATCH, and DELETE requests receive a simulated 503 response before their handlers run. Other startup commands can opt in with `DELAY=1`; tests always bypass the middleware. Document requests, static files, asset-server requests, and uploaded files bypass both the delay and simulated failures. PendingButton's failure feedback keeps its separate two-second timer.
 - `pnpm test` runs the demo's tests, and `pnpm typecheck` checks its TypeScript types.
 
 ### Database Commands

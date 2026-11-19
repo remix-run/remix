@@ -21,9 +21,6 @@ export async function toggleCart({
 }: CartItemOptions & { intent: 'add' | 'remove' }): Promise<CartError | undefined> {
   let book = await db.find(books, bookId)
   if (!book) return { status: 404, message: 'Book not found.' }
-  if (book.slug === 'three-ways' && Math.random() < 0.5) {
-    return { status: 500, message: 'Couldn’t update this book. Try again.' }
-  }
 
   let cart = getCurrentCart(session)
   if (intent === 'remove') {
@@ -43,9 +40,6 @@ export async function updateCart({
 }: CartItemOptions & { quantity: number }): Promise<CartError | undefined> {
   let book = await db.find(books, bookId)
   if (!book) return { status: 404, message: 'Book not found.' }
-  if (book.slug === 'three-ways') {
-    return { status: 500, message: 'Couldn’t update this book. Try again.' }
-  }
 
   let next = updateCartItem(getCurrentCart(session), bookId, quantity)
   if (!next) {
@@ -62,9 +56,6 @@ export async function removeCartItem({
 }: CartItemOptions): Promise<CartError | undefined> {
   let book = await db.find(books, bookId)
   if (!book) return { status: 404, message: 'Book not found.' }
-  if (book.slug === 'three-ways') {
-    return { status: 500, message: 'Couldn’t remove this book. Try again.' }
-  }
 
   session.set('cart', removeFromCart(getCurrentCart(session), bookId))
 }
