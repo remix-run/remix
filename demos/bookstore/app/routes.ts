@@ -56,6 +56,7 @@ export const routes = route({
 
     fragments: {
       items: get('/items'),
+      itemsRestore: post('/items'),
       itemsUpdate: patch('/items'),
       itemsRemove: del('/items'),
     },

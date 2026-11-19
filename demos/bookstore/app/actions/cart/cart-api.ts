@@ -59,3 +59,20 @@ export async function removeCartItem({
 
   session.set('cart', removeFromCart(getCurrentCart(session), bookId))
 }
+
+export async function restoreCartItem({
+  db,
+  session,
+  bookId,
+  quantity,
+}: CartItemOptions & { quantity: number }): Promise<CartError | undefined> {
+  let book = await db.find(books, bookId)
+  if (!book) return { status: 404, message: 'Book not found.' }
+
+  let cart = getCurrentCart(session)
+  // Set the saved quantity so retrying a lost response cannot add extra copies.
+  if (!updateCartItem(cart, book.id, quantity)) {
+    cart = addToCart(cart, book.id, book.slug, book.title, book.price, quantity)
+  }
+  session.set('cart', cart)
+}

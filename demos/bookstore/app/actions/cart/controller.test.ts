@@ -91,7 +91,7 @@ describe('cart handlers', () => {
     let html = await response.text()
 
     assert.equal(response.status, 200)
-    assertContains(html, '<table>')
+    assert.match(html, /<table\b/)
     assertContains(html, '<th>Book</th>')
     assertContains(html, 'Heavy Metal Guitar Riffs')
     assertContains(html, 'Decrease quantity of Heavy Metal Guitar Riffs')
@@ -199,9 +199,44 @@ describe('cart handlers', () => {
     }
   })
 
+  it('POST /cart/items restores the saved quantity with trusted book details and is safe to retry', async () => {
+    let session = await cartSession()
+    await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'DELETE',
+        body: new URLSearchParams({ bookId: '1' }),
+      }),
+    )
+    let body = new URLSearchParams({ bookId: '1', quantity: '3', price: '0', title: 'Untrusted' })
+    let restored = await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'POST',
+        headers: { 'X-Remix-Frame': 'true' },
+        body,
+      }),
+    )
+    assert.equal(restored.status, 200)
+    assert.equal(restored.headers.get('Location'), null)
+    assert.match(await restored.text(), /Total:\s*(?:<[^>]+>\s*)*\$50\.97/)
+
+    let retry = await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'POST',
+        body,
+      }),
+    )
+    assert.equal(retry.status, 303)
+    assert.equal(retry.headers.get('Location'), '/cart')
+    let cart = await router.fetch(requestWithSession('https://remix.run/cart/items', session))
+    let html = await cart.text()
+    assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$50\.97/)
+    assertContains(html, 'Ash &amp; Smoke')
+    assert.ok(!html.includes('Untrusted'))
+  })
+
   it('rejects malformed item IDs and missing books before changing the cart', async () => {
     let session = await cartSession()
-    for (let method of ['PATCH', 'DELETE']) {
+    for (let method of ['POST', 'PATCH', 'DELETE']) {
       for (let bookId of ['', '0', '-1', '1.5', '1abc', '9007199254740992']) {
         let response = await router.fetch(
           requestWithSession('https://remix.run/cart/items', session, {

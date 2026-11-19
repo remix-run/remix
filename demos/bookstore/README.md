@@ -50,7 +50,7 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 The cart demonstrates these application conventions for keeping mutations local while supporting ordinary document submissions:
 
 - Each frame keeps its `src` pinned to one URL. Cart items load from `/cart/items`, and mutations leave both that source and the document URL unchanged, so a hard reload still loads `/cart`.
-- HTTP methods select separate handlers at the frame URL: GET renders cart items, PATCH updates quantity, and DELETE removes an item. Cart buttons use GET and POST at `/fragments/cart-button/:bookId`.
+- HTTP methods select separate handlers at the frame URL: GET renders cart items, PATCH updates quantity, DELETE removes an item, and POST restores its saved quantity. Cart buttons use GET and POST at `/fragments/cart-button/:bookId`.
 - Enhanced cart forms intercept submission and call `handle.frame.reload({ method: 'post', body })`. The mutation handler returns updated fragment HTML in the same request, avoiding a separate GET. PATCH and DELETE travel as POST with a hidden `_method` field, which the server's method-override middleware interprets.
 
 Navigation and prefetching use frames too:
@@ -85,8 +85,9 @@ Navigation and prefetching use frames too:
 - Animations respect reduced-motion preferences and fall back to ordinary updates in browsers without view transition support.
 - Remix lifecycle events drive interaction feedback: cart components listen for frame `reloadStart`, while the shared [PendingButton](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/public/pending-button.tsx) also supports `rmx:navigation`. Their `finished` promises determine completion. Abort and active-operation checks keep superseded work from overwriting current UI state.
 - Small state machines model pending and failure feedback in cart items and `PendingButton`. Cart quantities use a non-editable number between decrease and increase buttons. The number updates optimistically, while saved prices stay visible with pending spinners until the server confirms the change. Quantity buttons prevent overlapping writes and stop at one. Failed requests restore the saved quantity, show an error, and allow retry or reload. The buttons also submit ordinary forms without JavaScript.
+- Remove sends its request immediately and shrinks the row to a thumbnail, title, and Undo button for two seconds. A sliding button background shows the time remaining. Hover or keyboard focus resets the window to two seconds and pauses it until both leave. Local state keeps that row, including the last cart item, after the server response. Undo expands it optimistically and restores the saved quantity; requests are serialized, and restoration sets the quantity so retrying a lost response cannot add extra copies. Restored rows keep their original order for the page's lifetime. Expiry collapses the remaining row before detaching it. Failed removal expands the original row with Remove feedback; failed restoration keeps Undo available for retry. Navigation clears local rows, timers, and queued restores. Reduced-motion preferences disable the animations.
 - Failure feedback remains visible independently of animation events, including with reduced motion. Enhanced cart failures use button feedback and inline field errors; document failures also show contextual error messages after the redirect.
-- Removing a focused cart row moves focus to the cart region, including when the cart becomes empty.
+- Removing a focused cart row moves focus to Undo. Expiry moves focus to the cart region, including when the cart becomes empty; restoration returns focus to Remove.
 
 ## Development
 
