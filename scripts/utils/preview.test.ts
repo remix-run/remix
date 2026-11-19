@@ -1,3 +1,4 @@
+import * as cp from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -9,6 +10,7 @@ import {
   PREVIEW_RELEASE_MARKER,
   PreviewGitHub,
   cleanupPrPreviewBranch,
+  getStalePrPreviewChannels,
   getExpiredPreviewReleases,
   getExpiredPrPreviewAssets,
   getPreviewChannel,
@@ -23,27 +25,27 @@ import {
 import type { PreviewAsset, PreviewRelease } from './preview.ts'
 
 describe('preview packages', () => {
-  it('uses the UTC date as SemVer, with a fixed tag per PR', () => {
+  it('uses the UTC date as the SemVer patch, with a fixed tag per PR', () => {
     let sha = 'abcdef1234567890'.padEnd(40, '0')
     let committedAt = '2026-11-02T23:30:00-05:00'
     let tag = getPreviewTag('main', sha, committedAt)
-    assert.equal(tag, 'v0.20261103.0-main-abcdef12')
+    assert.equal(tag, 'v0.0.20261103-main-abcdef12')
     assert.ok(valid(tag))
     let pr = getPreviewTag('pr-123', sha, committedAt)
-    assert.equal(pr, 'v0.20261103.0-pr-123')
+    assert.equal(pr, 'v0.0.20261103-pr-123')
     assert.ok(valid(pr))
     assert.equal(getPreviewChannel(pr), 'pr-123')
     assert.equal(getPreviewTag('pr-123', 'b'.repeat(40), committedAt), pr)
     assert.equal(getPreviewTag('pr-123', sha, '2026-11-03T12:00:00Z'), pr)
     assert.equal(getPreviewChannel('pr-123'), 'pr-123')
     let experimental = getPreviewTag('experimental', sha, committedAt)
-    assert.equal(experimental, 'v0.20261103.0-experimental-abcdef12')
+    assert.equal(experimental, 'v0.0.20261103-experimental-abcdef12')
     assert.ok(valid(experimental))
     assert.equal(getPreviewTag('experimental', sha, '2026-11-03T12:00:00Z'), experimental)
     assert.equal(getPreviewChannel(tag), 'main')
     assert.equal(getPreviewChannel('pr-123-20261103-abcdef12'), 'pr-123')
     assert.equal(getPreviewChannel(experimental), 'experimental')
-    assert.equal(getPreviewTag('main', sha, '2026-11-03T00:00:00Z'), 'v0.20261103.0-main-abcdef12')
+    assert.equal(getPreviewTag('main', sha, '2026-11-03T00:00:00Z'), 'v0.0.20261103-main-abcdef12')
     assert.ok(
       gt(
         getPreviewTag('main', sha, '2027-01-01T00:00:00Z'),
@@ -52,6 +54,15 @@ describe('preview packages', () => {
     )
     assert.equal(getPreviewTag('main', sha, '2026-11-03T17:53:10Z'), tag)
     assert.notEqual(getPreviewTag('main', 'b'.repeat(40), '2026-11-03T17:53:10Z'), tag)
+  })
+
+  it('recognizes earlier SemVer tag formats for cleanup', () => {
+    assert.equal(getPreviewChannel('v0.20261103.0-main-abcdef12'), 'main')
+    assert.equal(getPreviewChannel('v0.20261103.0-pr-123'), 'pr-123')
+    assert.equal(getPreviewChannel('v0.20261103.0-experimental-abcdef12'), 'experimental')
+    assert.equal(getPreviewChannel('v0.20261103.195415-main-abcdef12'), 'main')
+    assert.equal(getPreviewChannel('v0.20261103.195415-pr-123'), 'pr-123')
+    assert.equal(getPreviewChannel('v0.20261103.195415-experimental-abcdef12'), 'experimental')
   })
 
   it('uses full SHA filenames within the shared PR release', () => {
@@ -77,22 +88,22 @@ describe('preview packages', () => {
 
   it('uses concise display titles for each preview channel', () => {
     let sha = 'abcdef1234567890'.padEnd(40, '0')
-    let pr = parsePreviewBuild('v0.20261026.417-pr-12082', sha)
+    let pr = parsePreviewBuild('v0.0.20261026-pr-12082', sha)
     assert.equal(getPreviewReleaseTitle(pr), 'PR #12082')
     assert.equal(getPreviewReleaseTitle({ ...pr, sha: 'b'.repeat(40) }), getPreviewReleaseTitle(pr))
     assert.equal(
-      getPreviewReleaseTitle(parsePreviewBuild('v0.20261103.195415-main-abcdef12', sha)),
+      getPreviewReleaseTitle(parsePreviewBuild('v0.0.20261103-main-abcdef12', sha)),
       'main (abcdef12)',
     )
     assert.equal(
-      getPreviewReleaseTitle(parsePreviewBuild('v0.20261103.0-experimental-abcdef12', sha)),
+      getPreviewReleaseTitle(parsePreviewBuild('v0.0.20261103-experimental-abcdef12', sha)),
       'experimental (abcdef12)',
     )
     assert.equal(getPreviewReleaseTitle(parsePreviewBuild('pr-12082', sha)), 'PR #12082')
   })
 
   it('uses the planned version only for release PRs with a versioned title', () => {
-    let build = parsePreviewBuild('v0.20261026.417-pr-12082', 'a'.repeat(40))
+    let build = parsePreviewBuild('v0.0.20261026-pr-12082', 'a'.repeat(40))
     assert.equal(
       getPreviewReleaseTitle(build, { headRef: 'release-pr/main', title: 'Release v3.2.0' }),
       'Remix 3.2.0 preview',
@@ -129,7 +140,7 @@ describe('preview packages', () => {
       /Invalid preview channel/,
     )
     assert.throws(
-      () => parsePreviewBuild('v0.20261102.0-nightly', sha),
+      () => parsePreviewBuild('v0.0.20261102-nightly', sha),
       /Invalid preview tag or source SHA/,
     )
   })
@@ -184,24 +195,29 @@ describe('preview release retention', () => {
     let createdAt = '2026-11-01T04:30:00Z'
     let headRef = 'feature'
     let title = 'Add a feature'
-    let response = { title, head: { sha, ref: headRef }, created_at: createdAt }
+    let response = {
+      title,
+      head: { sha, ref: headRef },
+      created_at: createdAt,
+      closed_at: createdAt,
+    }
     assert.deepEqual(
       readPullRequest('remix-run/remix', 123, () =>
         JSON.stringify({ ...response, state: 'closed', merged: false }),
       ),
-      { closed: true, sha, headRef, title, createdAt },
+      { closed: true, closedAt: createdAt, sha, headRef, title, createdAt },
     )
     assert.deepEqual(
       readPullRequest('remix-run/remix', 123, () =>
         JSON.stringify({ ...response, state: 'closed', merged: true }),
       ),
-      { closed: true, sha, headRef, title, createdAt },
+      { closed: true, closedAt: createdAt, sha, headRef, title, createdAt },
     )
     assert.deepEqual(
       readPullRequest('remix-run/remix', 123, () =>
-        JSON.stringify({ ...response, state: 'open', merged: false }),
+        JSON.stringify({ ...response, state: 'open', merged: false, closed_at: null }),
       ),
-      { closed: false, sha, headRef, title, createdAt },
+      { closed: false, closedAt: null, sha, headRef, title, createdAt },
     )
   })
 
@@ -272,15 +288,167 @@ describe('preview release retention', () => {
     let malformed = { ...release(5, 'pr-12', '2020-01-01T00:00:00Z'), tag_name: 'pr-12-short' }
     let legacyShared = { ...build, id: 7, tag_name: 'pr-12' }
     let legacySha = { ...build, id: 8, tag_name: 'pr-12-20200101-00000001' }
+    let legacyDate = { ...build, id: 9, tag_name: 'v0.20200101.0-pr-12' }
+    let legacyTimestamp = { ...build, id: 10, tag_name: 'v0.20200101.120000-pr-12' }
     assert.deepEqual(
       getExpiredPreviewReleases(
-        [build, draft, other, experimental, unrelated, malformed, legacyShared, legacySha],
+        [
+          build,
+          draft,
+          other,
+          experimental,
+          unrelated,
+          malformed,
+          legacyShared,
+          legacySha,
+          legacyDate,
+          legacyTimestamp,
+        ],
         'pr-12',
         now,
       ),
-      [build, draft, legacyShared, legacySha],
+      [build, draft, legacyShared, legacySha, legacyDate, legacyTimestamp],
     )
     assert.deepEqual(getExpiredPreviewReleases([build, other, experimental], 'main', now), [])
+  })
+})
+
+describe('stale PR preview discovery', () => {
+  it('discovers stale releases once, keeping open and recently closed PRs', () => {
+    let closed = release(1, 'pr-12', '2020-01-01T00:00:00Z')
+    let draft = { ...release(2, 'pr-13', '2020-01-01T00:00:00Z'), draft: true }
+    let recent = release(3, 'pr-14', '2020-01-01T00:00:00Z')
+    let open = release(4, 'pr-15', '2020-01-01T00:00:00Z')
+    let legacy = { ...closed, id: 5, tag_name: 'pr-12-20200101-00000005' }
+    let unrelated = { ...closed, id: 6, tag_name: 'pr-99', body: 'Unrelated release' }
+    let main = release(7, 'main', '2020-01-01T00:00:00Z')
+
+    let channels = getStalePrPreviewChannels(
+      [closed, draft, recent, open, legacy, unrelated, main],
+      'remix-run/remix',
+      (args) => {
+        let number = Number(args[1].split('/').at(-1))
+        if (![12, 13, 14, 15].includes(number)) throw new Error('Unexpected PR lookup')
+        return JSON.stringify({
+          state: number === 15 ? 'open' : 'closed',
+          title: 'Example PR',
+          created_at: '2020-01-01T00:00:00Z',
+          closed_at:
+            number === 15
+              ? null
+              : number === 14
+                ? '2026-11-01T12:00:00.001Z'
+                : '2026-11-01T12:00:00Z',
+          head: { sha: 'a'.repeat(40), ref: 'feature' },
+        })
+      },
+      now,
+    )
+
+    assert.deepEqual(channels, ['pr-12', 'pr-13'])
+  })
+
+  it('fails discovery when PR status cannot be confirmed', () => {
+    assert.throws(
+      () =>
+        getStalePrPreviewChannels(
+          [release(1, 'pr-12', '2020-01-01T00:00:00Z')],
+          'remix-run/remix',
+          () => {
+            throw new Error('GitHub unavailable')
+          },
+        ),
+      /GitHub unavailable/,
+    )
+  })
+
+  it('rechecks PR status before stale cleanup and makes no changes in dry-run mode', (t) => {
+    let directory = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-stale-pr-test-'))
+    t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+    let requestsPath = path.join(directory, 'requests.json')
+    let releases = [
+      release(1, 'pr-12', '2020-01-01T00:00:00Z'),
+      release(2, 'pr-13', '2020-01-01T00:00:00Z'),
+    ]
+    fs.writeFileSync(
+      path.join(directory, 'gh'),
+      `#!/usr/bin/env node
+const fs = require('node:fs')
+const args = process.argv.slice(2)
+const requestsPath = ${JSON.stringify(requestsPath)}
+const requests = fs.existsSync(requestsPath) ? JSON.parse(fs.readFileSync(requestsPath, 'utf8')) : []
+requests.push(args)
+fs.writeFileSync(requestsPath, JSON.stringify(requests))
+const endpoint = args.at(-1)
+if (args.includes('DELETE') || args.includes('POST') || args.includes('PATCH')) {
+  throw new Error('Dry run attempted a mutation')
+}
+if (endpoint.startsWith('repos/remix-run/previews/releases?')) {
+  console.log(JSON.stringify(endpoint.endsWith('&page=1') ? ${JSON.stringify(releases)} : []))
+} else if (endpoint.startsWith('repos/remix-run/remix/pulls/')) {
+  const number = Number(endpoint.split('/').at(-1))
+  const count = requests.filter((request) => request.at(-1) === endpoint).length
+  console.log(JSON.stringify({
+    state: number === 13 && count > 1 ? 'open' : 'closed',
+    title: 'Example PR',
+    created_at: '2020-01-01T00:00:00Z',
+    closed_at: number === 13 && count > 1 ? null : '2020-01-01T00:00:00Z',
+    head: { sha: 'a'.repeat(40), ref: 'feature' },
+  }))
+} else {
+  throw new Error('Unexpected GitHub command: ' + JSON.stringify(args))
+}
+`,
+      { mode: 0o755 },
+    )
+
+    let result = cp.spawnSync(
+      process.execPath,
+      [path.resolve(import.meta.dirname, '../preview.ts'), 'cleanup-stale-prs', '--dry-run'],
+      {
+        cwd: path.resolve(import.meta.dirname, '../..'),
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: `${directory}${path.delimiter}${process.env.PATH}`,
+          GITHUB_REPOSITORY: 'remix-run/remix',
+          GITHUB_OUTPUT: '',
+        },
+      },
+    )
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /Would delete legacy preview branch: preview\/pr-12/)
+    assert.match(result.stdout, /Would delete preview: v0\.0\.20200101-pr-12/)
+    assert.doesNotMatch(result.stdout, /pr-13/)
+  })
+})
+
+describe('preview GitHub lists', () => {
+  it('reads pages until an empty page, even after a short page', (t) => {
+    let pages = [
+      Array.from({ length: 99 }, (_, index) => release(index + 1, 'main', '2026-11-02T12:00:00Z')),
+      [release(100, 'pr-12', '2026-11-02T12:00:00Z')],
+      [],
+    ]
+    let github = new PreviewGitHub('remix-run/previews', () => {
+      throw new Error('Unexpected GitHub command')
+    })
+    let requested: string[] = []
+    t.mock.method(github, 'api', (method: string, endpoint: string) => {
+      requested.push(`${method} ${endpoint}`)
+      return pages[Number(/&page=(\d+)$/.exec(endpoint)?.[1]) - 1] ?? []
+    })
+
+    let releases = github.listReleases()
+
+    assert.equal(releases.length, 100)
+    assert.equal(releases[99].id, 100)
+    assert.deepEqual(requested, [
+      'GET releases?per_page=100&page=1',
+      'GET releases?per_page=100&page=2',
+      'GET releases?per_page=100&page=3',
+    ])
   })
 })
 
@@ -302,7 +470,8 @@ describe('main publication', () => {
       github,
       'api',
       (method: string, endpoint: string, body?: Record<string, unknown>) => {
-        if (method === 'GET' && endpoint.startsWith('releases?')) return releases
+        if (method === 'GET' && endpoint.startsWith('releases?'))
+          return endpoint.endsWith('&page=1') ? releases : []
         if (method === 'POST' && endpoint === 'releases') {
           if (typeof body?.tag_name !== 'string' || typeof body.body !== 'string')
             throw new Error('Missing release metadata')
@@ -317,7 +486,7 @@ describe('main publication', () => {
         }
         let id = Number(/^releases\/(\d+)/.exec(endpoint)?.[1])
         if (method === 'GET' && endpoint.startsWith(`releases/${id}/assets?`))
-          return assets.get(id) ?? []
+          return endpoint.endsWith('&page=1') ? (assets.get(id) ?? []) : []
         if (method === 'PATCH' && endpoint === `releases/${id}`) {
           let published = releases.find((item) => item.id === id)
           if (!published) throw new Error('Missing release')

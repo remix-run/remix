@@ -39,7 +39,7 @@ const SHARED_PR_TAG = /(?:^|-)pr-[1-9]\d*$/
 export function getPreviewChannel(tag: string): string | null {
   if (/^pr-[1-9]\d*$/.test(tag)) return tag
   let match =
-    /^v0\.[1-9]\d{7}\.(?:0|[1-9]\d{0,5})-(?:(main|experimental)-[a-f0-9]{8}|(pr-[1-9]\d*))$/.exec(
+    /^v0\.(?:0\.[1-9]\d{7}|[1-9]\d{7}\.(?:0|[1-9]\d{0,5}))-(?:(main|experimental)-[a-f0-9]{8}|(pr-[1-9]\d*))$/.exec(
       tag,
     )
   if (match) return match[1] ?? match[2]
@@ -92,7 +92,7 @@ export function getPreviewTag(channel: string, sha: string, timestamp: string): 
   let utc = new Date(timestamp).toISOString()
   let date = utc.slice(0, 10).replaceAll('-', '')
   let suffix = channel.startsWith('pr-') ? channel : `${channel}-${sha.slice(0, 8)}`
-  return `v0.${date}.0-${suffix}`
+  return `v0.0.${date}-${suffix}`
 }
 
 export function getPreviewReleaseTitle(
@@ -324,8 +324,10 @@ export class PreviewGitHub {
     for (let page = 1; ; page++) {
       let result = this.api('GET', `${endpoint}?per_page=100&page=${page}`)
       if (!Array.isArray(result)) throw new Error(`Invalid GitHub list: ${endpoint}`)
+      // GitHub can return fewer than per_page items before the last page, so only an empty page
+      // marks the end.
+      if (result.length === 0) return items
       items.push(...result)
-      if (result.length < 100) return items
     }
   }
 
@@ -584,6 +586,24 @@ export function cleanupPreviews(
   }
 }
 
+export function getStalePrPreviewChannels(
+  releases: PreviewRelease[],
+  repository: string,
+  run = createGitHubRunner(process.env.GITHUB_TOKEN),
+  now = Date.now(),
+): string[] {
+  let channels = new Set<string>()
+  for (let release of releases) {
+    if (!release.body.startsWith(PREVIEW_RELEASE_MARKER)) continue
+    let channel = getPreviewChannel(release.tag_name)
+    if (channel?.startsWith('pr-')) channels.add(channel)
+  }
+  return [...channels].filter((channel) => {
+    let pr = readPullRequest(repository, Number(channel.slice(3)), run)
+    return pr.closed && pr.closedAt !== null && Date.parse(pr.closedAt) <= now - 24 * 60 * 60 * 1000
+  })
+}
+
 export function cleanupPrPreviewBranch(
   github: PreviewGitHub,
   channel: string,
@@ -598,13 +618,24 @@ export function readPullRequest(
   repository: string,
   number: number,
   run = createGitHubRunner(process.env.GITHUB_TOKEN),
-): { closed: boolean; sha: string; headRef: string; title: string; createdAt: string } {
+): {
+  closed: boolean
+  closedAt: string | null
+  sha: string
+  headRef: string
+  title: string
+  createdAt: string
+} {
   validatePreviewRepository(repository)
   if (!Number.isSafeInteger(number) || number < 1) throw new Error('Invalid PR number')
   let value: unknown = JSON.parse(run(['api', `repos/${repository}/pulls/${number}`]))
   if (
     !isRecord(value) ||
     (value.state !== 'open' && value.state !== 'closed') ||
+    !(
+      value.closed_at === null ||
+      (typeof value.closed_at === 'string' && Number.isFinite(Date.parse(value.closed_at)))
+    ) ||
     typeof value.title !== 'string' ||
     typeof value.created_at !== 'string' ||
     !Number.isFinite(Date.parse(value.created_at)) ||
@@ -616,6 +647,7 @@ export function readPullRequest(
   }
   return {
     closed: value.state === 'closed',
+    closedAt: value.closed_at,
     sha: value.head.sha,
     headRef: value.head.ref,
     title: value.title,

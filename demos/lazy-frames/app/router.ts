@@ -1,6 +1,7 @@
 import { asyncContext } from 'remix/middleware/async-context'
 import { logger } from 'remix/middleware/logger'
 import { render } from 'remix/middleware/render'
+import { staticFiles } from 'remix/middleware/static'
 import { createRouter, type RouterContext } from 'remix/router'
 
 import rootController from './actions/controller.tsx'
@@ -14,6 +15,12 @@ import { assets } from './utils/assets.ts'
 export const router = createRouter({
   middleware: [
     ...(process.env.NODE_ENV === 'development' ? [logger()] : []),
+    staticFiles('./public', {
+      cacheControl: 'no-store',
+      etag: false,
+      lastModified: false,
+      index: false,
+    }),
     asyncContext(),
     loadTheme(),
     demoLatency(),

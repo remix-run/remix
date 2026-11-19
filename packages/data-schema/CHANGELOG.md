@@ -2,6 +2,14 @@
 
 This is the changelog for [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Inspect typed object fields and validation metadata with `getSchemaMetadata()` from `remix/data-schema/experimental`, without running validators or default factories. This experimental export may change or be removed in patch releases. ([#12206](https://github.com/remix-run/remix/pull/12206))
+
+- Validate native form submissions with `remix/data-schema/experimental/form`, reusing ordinary schemas, checks, and transforms. Field helpers decode native controls, repeated values, and files. `parse()` returns validated output, while `parseSafe()` failures include restorable values and grouped errors, omitting sensitive values and files. These experimental APIs may change or be removed in patch releases. ([#12206](https://github.com/remix-run/remix/pull/12206))
+
 ## v1.0.0
 
 ### Major Changes

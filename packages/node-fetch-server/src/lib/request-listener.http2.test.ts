@@ -8,6 +8,23 @@ import type { RequestListenerOptions } from './request-listener.ts'
 import { createRequestListener } from './request-listener.ts'
 
 describe('HTTP/2 request authority', () => {
+  it('rejects invalid trusted proxy authorities before calling a handler without arguments', async (t) => {
+    let handler = t.mock.fn(() => new Response('ok'))
+    let response = await sendRequest(
+      t,
+      handler,
+      {
+        ':authority': 'example.com',
+        host: 'example.com',
+        forwarded: 'host="example.com#admin"',
+      },
+      { trustProxy: true, onError() {} },
+    )
+
+    assert.equal(response.status, 400)
+    assert.equal(handler.mock.callCount(), 0)
+  })
+
   it('rejects conflicting Host values before calling a request handler', async (t) => {
     let handlerCalled = false
     let onError = t.mock.fn((_error: unknown) => undefined)

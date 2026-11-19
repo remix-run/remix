@@ -4,9 +4,10 @@ import * as path from 'node:path'
 import { createController } from 'remix/router'
 
 import type { DocsContext } from '../data/docs.ts'
-import { API_PAGE_ID } from '../data/registry.ts'
+import { API_PAGE_ID, getApiPage, getHomePage } from '../data/registry.ts'
 import { renderMarkdownFile } from '../data/markdown.ts'
 import { parseMarkdown } from '../markdown.ts'
+import { renderChapterMarkdown } from './guides/markdown/chapter-markdown.ts'
 import { renderMarkdownRoot } from './guides/markdown/render.tsx'
 import { routes } from '../routes.ts'
 import { ReferenceDocument } from '../ui/document.tsx'
@@ -51,6 +52,13 @@ export function createRootController(options: RootControllerOptions) {
           </ReferenceDocument>,
         )
       },
+      async homeMarkdown() {
+        let docsContext = await options.getDocsContext()
+        let markdown = await renderChapterMarkdown(await fs.readFile(overviewPath, 'utf8'))
+        return new Response(`# ${getHomePage(docsContext.registry).title}\n\n${markdown}`, {
+          headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
+        })
+      },
       async api({ render }) {
         let docsContext = await options.getDocsContext()
         let { html, headings } = await renderMarkdownFile(
@@ -63,6 +71,13 @@ export function createRootController(options: RootControllerOptions) {
             <MarkdownContent html={html} />
           </ReferenceDocument>,
         )
+      },
+      async apiMarkdown() {
+        let docsContext = await options.getDocsContext()
+        let markdown = await fs.readFile(apiOverviewPath, 'utf8')
+        return new Response(`# ${getApiPage(docsContext.registry).title}\n\n${markdown}`, {
+          headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
+        })
       },
       lookup({ request }) {
         return fileResponse(request, path.join(markdownDir, 'api.json'))

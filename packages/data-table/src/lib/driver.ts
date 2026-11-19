@@ -318,6 +318,16 @@ export interface DatabaseDriver<dialect extends string = string> {
   /** Releases connection handles owned by the driver. Must be safe to call repeatedly. */
   close(): void | Promise<void>
   /**
+   * Converts a value read from a typed table column into its JavaScript representation,
+   * for drivers whose database returns some column types in a storage format. For example,
+   * SQLite returns JSON columns as text and booleans as integers. Called for non-null values
+   * in rows returned by table queries and `returning` clauses; raw SQL results are not decoded.
+   * @param value Value returned by the database.
+   * @param column Definition of the column the value was read from.
+   * @returns The decoded value.
+   */
+  decodeValue?(value: unknown, column: ColumnDefinition): unknown
+  /**
    * Runs migration work while holding a driver-specific lock.
    *
    * The callback receives a driver bound to the connection that owns the lock. Drivers must

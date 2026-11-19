@@ -1,0 +1,1 @@
+Fix an element rendering at the end of its parent when it replaces a hydrated empty string, such as `{text && <p>{text}</p>}` once `text` changes from `''`. The server renders nothing for an empty string, so hydration added the client's empty text node after the parent's other children, and the element took its place there instead of where it belongs.

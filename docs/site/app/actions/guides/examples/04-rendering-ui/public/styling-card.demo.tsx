@@ -27,15 +27,12 @@ function ProductCard(handle: Handle<Product>) {
         color: "light-dark(#151515, #f4f4f5)",
         boxShadow: "0 12px 32px light-dark(rgb(15 17 21 / 0.08), rgb(0 0 0 / 0.4))",
         transition: "transform 180ms ease, box-shadow 180ms ease",
-        // Hovering the card restyles the title and button inside its child components.
+        // Hovering the card restyles the title inside its child component.
         "&:hover": {
           boxShadow: "0 18px 44px light-dark(rgb(15 17 21 / 0.14), rgb(0 0 0 / 0.6))",
           transform: "translateY(-3px)",
           "& .title": {
             color: "light-dark(#d83a5a, #ff6b88)",
-          },
-          "& button": {
-            backgroundColor: "#b8324d",
           },
         },
         "@media (max-width: 560px)": {
@@ -136,6 +133,11 @@ function AddToCartButton() {
         fontWeight: "700",
         padding: "0.7rem 1rem",
         transition: "background-color 180ms ease, transform 120ms ease",
+        // The button sets its own background, so it reacts to the hovered card itself. A rule in
+        // the card's style can't override a property this style sets.
+        ":where(article:hover) &": {
+          backgroundColor: "#b8324d",
+        },
         "&:active": {
           transform: "scale(0.98)",
         },
