@@ -324,8 +324,10 @@ export class PreviewGitHub {
     for (let page = 1; ; page++) {
       let result = this.api('GET', `${endpoint}?per_page=100&page=${page}`)
       if (!Array.isArray(result)) throw new Error(`Invalid GitHub list: ${endpoint}`)
+      // GitHub can return fewer than per_page items before the last page, so only an empty page
+      // marks the end.
+      if (result.length === 0) return items
       items.push(...result)
-      if (result.length < 100) return items
     }
   }
 
