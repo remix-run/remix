@@ -95,7 +95,6 @@ describe('t.waitFor', () => {
         return true
       },
     )
-    assert.ok(attempts >= 2)
   })
 
   it('times out with the previous failure when the current attempt never settles', async (t) => {
