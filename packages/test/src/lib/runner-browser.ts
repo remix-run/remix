@@ -86,6 +86,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     let rootDir = getBrowserTestRootDir()
     let completedFiles = 0
     let totalFiles = options.testFiles?.length ?? 0
+    let watchingProgress = true
     let progressTimeoutId: ReturnType<typeof setTimeout> | undefined
     let rejectProgressTimeout: (error: Error) => void = () => {}
     let progressTimeoutPromise = new Promise<never>((_, reject) => {
@@ -101,6 +102,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     function resetProgressTimeout() {
       clearProgressTimeout()
+      if (!watchingProgress) return
       progressTimeoutId = setTimeout(() => {
         let progress = totalFiles > 0 ? ` (${completedFiles}/${totalFiles} files completed)` : ''
         rejectProgressTimeout(
@@ -109,6 +111,27 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
           ),
         )
       }, BROWSER_TEST_FILE_TIMEOUT_MS)
+    }
+
+    let runnerUrl = new URL(options.baseUrl)
+    if (browser.browserType().name() === 'webkit') {
+      runnerUrl.searchParams.set('historyBackoff', '1')
+      await page.route('**/history-quota?*', async (route) => {
+        let params = new URL(route.request().url()).searchParams
+        let file = params.get('file')
+        if (!file?.startsWith('/scripts/')) {
+          await route.fulfill({ status: 400 })
+          return
+        }
+        let fileName = path.relative(process.cwd(), urlPathToFilePath(file, rootDir))
+        let testName = params.get('test')
+        let label = testName ? `${fileName} (${testName})` : fileName
+        console.warn(
+          `Warning: WebKit's history update limit was reached in ${label}. Waiting 11 seconds for the budget to reset. Reduce history updates or run history-heavy files separately to reduce these waits.`,
+        )
+        resetProgressTimeout()
+        await route.fulfill({ status: 200 })
+      })
     }
 
     await page.route('**/file-results', async (route) => {
@@ -153,13 +176,14 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     resetProgressTimeout()
     try {
-      await page.goto(options.baseUrl)
+      await page.goto(runnerUrl.href)
       await Promise.race([
         page.waitForFunction('window.__testsDone', undefined, { timeout: 0 }),
         errorPromise,
         progressTimeoutPromise,
       ])
     } finally {
+      watchingProgress = false
       clearProgressTimeout()
     }
 

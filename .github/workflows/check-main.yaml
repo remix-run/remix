@@ -274,6 +274,9 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/component exec playwright install webkit
 
+      - name: Run WebKit runner regressions
+        run: pnpm --filter @remix-run/test run test src/test/browser-history-backoff.test.ts --type server --only WebKit
+
       - name: Run WebKit tests
         run: pnpm test:browser
 

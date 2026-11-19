@@ -1,0 +1,1 @@
+Recover browser tests that exhaust WebKit's 10-second history update quota. The runner logs a warning, waits 11 seconds using real timers, and retries the affected test once after cleanup. A repeated quota failure stays visible, and other errors are reported normally. The runner keeps its existing iframe execution and shared browser storage.

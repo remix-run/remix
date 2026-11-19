@@ -190,6 +190,8 @@ function runInIframe(
   return new Promise((resolve) => {
     let iframe = document.createElement('iframe')
     let params = new URLSearchParams({ file: testFile })
+    if (new URLSearchParams(location.search).has('historyBackoff'))
+      params.set('historyBackoff', '1')
     if (only) params.set('only', JSON.stringify(only))
     iframe.src = `/iframe?${params}`
     // Make the iframe as big so we don't get unintentional scrolling in test UIs

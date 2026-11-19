@@ -556,7 +556,11 @@ spy.mock.restore()
 
 ### Browser Testing
 
-Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each in-browser test suite runs in an isolated `iframe` so it has access to its own `document` instance.
+Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each browser test file runs in its own `iframe` document.
+
+WebKit limits rapid `history.pushState()` and `history.replaceState()` calls, including calls made by application code and test hooks. If a browser test reaches its 10-second history quota, the runner logs a warning, waits 11 seconds using real timers, runs cleanup, and retries the test once with a fresh test context and `beforeEach` hooks. Successful `beforeAll` setup stays shared. A second quota failure remains a failure; the runner waits again so cleanup and subsequent tests can continue. Other errors are reported normally. History-heavy tests can avoid repeated waits by reducing history updates or running heavy files in separate `remix test` invocations.
+
+Cookies and browser storage are shared between files; use hooks and cleanup callbacks to reset state when needed.
 
 #### `render()`
 
