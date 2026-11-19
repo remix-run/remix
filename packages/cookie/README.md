@@ -25,10 +25,10 @@ let sessionCookie = createCookie('session', {
   secure: true,
 })
 
-cookie.name // "session"
-cookie.httpOnly // true
-cookie.secure // true
-cookie.signed // true
+sessionCookie.name // "session"
+sessionCookie.httpOnly // true
+sessionCookie.secure // true
+sessionCookie.signed // true
 
 // Get the value of the "session" cookie from the request's `Cookie` header
 let value = await sessionCookie.parse(request.headers.get('Cookie'))
@@ -50,7 +50,7 @@ This library supports signing cookies, which is useful for ensuring the integrit
 Secret rotation is also supported, so you can easily rotate in new secrets without breaking existing cookies.
 
 ```tsx
-import { Cookie } from 'remix/cookie'
+import { createCookie } from 'remix/cookie'
 
 // Start with a single secret
 let sessionCookie = createCookie('session', {
@@ -86,7 +86,7 @@ let response = new Response('Hello, world!', {
 
 ### Custom Encoding
 
-By default, cookie values are percent-encoded and wrapped in base64 so arbitrary string values can be safely stored in cookies. This is suitable for most use cases, but you can provide your own functions to customize the encoding and decoding of the cookie value.
+By default, cookie values are stored as base64-encoded UTF-8, so any string value can be safely stored in a cookie. When `secrets` are configured, the signature is appended to the encoded value after a `.`. This is suitable for most use cases, but you can provide your own functions to customize the encoding and decoding of the cookie value.
 
 ```tsx
 let sessionCookie = createCookie('session', {

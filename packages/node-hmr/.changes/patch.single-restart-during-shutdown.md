@@ -1,1 +1,0 @@
-Changing files while the previous server process is still shutting down no longer starts an extra server process that keeps running in the background. The runner now spawns a single replacement once the previous process exits.

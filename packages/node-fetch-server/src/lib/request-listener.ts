@@ -25,6 +25,7 @@ export interface RequestListenerOptions {
   /**
    * Overrides the host portion of the incoming request URL. By default the request URL host is
    * derived from HTTP/2 `:authority`, falling back to the HTTP `Host` header.
+   * The effective host must be a valid hostname or bracketed IPv6 address with an optional port.
    *
    * For example, if you have a `$HOST` environment variable that contains the hostname of your
    * server, you can use it to set the host of all incoming request URLs like so:
@@ -36,8 +37,8 @@ export interface RequestListenerOptions {
   host?: string
   /**
    * An error handler that determines the response when request construction or handling throws.
-   * If no response is returned, conflicting HTTP/2 authorities receive a 400 Bad Request response
-   * and other errors receive a 500 Internal Server Error response.
+   * If no response is returned, invalid request authorities and conflicting HTTP/2 authorities
+   * receive a 400 Bad Request response and other errors receive a 500 Internal Server Error response.
    */
   onError?: ErrorHandler
   /**
@@ -64,8 +65,8 @@ export interface RequestListenerOptions {
  * - [`http2.createServer()`](https://nodejs.org/api/http2.html#http2createserveroptions-onrequesthandler)
  * - [`http2.createSecureServer()`](https://nodejs.org/api/http2.html#http2createsecureserveroptions-onrequesthandler)
  *
- * HTTP/2 requests with conflicting `Host` and `:authority` values are rejected before the handler
- * is called. They receive a 400 response unless `onError` returns a custom response.
+ * Invalid URL hosts and conflicting HTTP/2 `Host` and `:authority` values produce a 400 response
+ * unless `onError` returns a custom response.
  *
  * Example:
  *
@@ -108,7 +109,7 @@ export function createRequestListener(
     return async (req, res) => {
       let isResponseClosed = observeResponseClose(res)
       try {
-        getRequestAuthority(req)
+        getRequestHost(req, undefined, options)
       } catch (error) {
         await sendResponseForCreationError(res, onError, error, isResponseClosed)
         return
@@ -407,7 +408,7 @@ export type RequestOptions = Omit<RequestListenerOptions, 'onError'>
  * @param res The server response object
  * @param options Options for creating the request
  * @returns A `Request` object
- * @throws If HTTP/2 `Host` and `:authority` values identify different hosts
+ * @throws If the effective host is invalid or HTTP/2 `Host` and `:authority` values identify different hosts
  */
 export function createRequest(
   req: http.IncomingMessage | http2.Http2ServerRequest,
@@ -475,21 +476,38 @@ function getClientAddressFamily(address: string, fallbackFamily: string): Client
 
 function getRequestHost(
   req: http.IncomingMessage | http2.Http2ServerRequest,
-  headers: Headers,
+  headers: Headers | undefined,
   options?: RequestOptions,
 ): string {
   let authority = getRequestAuthority(req)
 
-  return (
+  let host =
     options?.host ??
-    (options?.trustProxy ? getForwardedHost(headers) : undefined) ??
+    (options?.trustProxy ? getForwardedHost(headers ?? createHeaders(req)) : undefined) ??
     authority ??
-    headers.get('Host') ??
+    headers?.get('Host') ??
+    req.headers.host ??
     'localhost'
-  )
+
+  parseRequestAuthority(host)
+  return host
 }
 
 class RequestAuthorityError extends Error {}
+
+function parseRequestAuthority(authority: string, protocol = 'http:'): URL {
+  // Require an authority rather than a complete URL.
+  if (/[/\\?#@\s\p{Cc}]/u.test(authority)) {
+    throw new RequestAuthorityError('Invalid request authority')
+  }
+
+  let url = URL.parse(`${protocol}//${authority}`)
+  if (url == null || url.hostname === '') {
+    throw new RequestAuthorityError('Invalid request authority')
+  }
+
+  return url
+}
 
 function getRequestAuthority(
   req: http.IncomingMessage | http2.Http2ServerRequest,
@@ -504,10 +522,10 @@ function getRequestAuthority(
     let protocol =
       (Array.isArray(scheme) ? scheme[0] : scheme) ??
       ('encrypted' in req.socket && req.socket.encrypted ? 'https' : 'http')
-    let authorityUrl = URL.parse(`${protocol}://${authority}`)
-    let hostUrl = URL.parse(`${protocol}://${host}`)
+    let authorityUrl = parseRequestAuthority(authority, `${protocol}:`)
+    let hostUrl = parseRequestAuthority(host, `${protocol}:`)
 
-    if (authorityUrl == null || hostUrl == null || authorityUrl.host !== hostUrl.host) {
+    if (authorityUrl.host !== hostUrl.host) {
       throw new RequestAuthorityError('Host header does not match :authority')
     }
   }

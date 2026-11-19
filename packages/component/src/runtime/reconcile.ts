@@ -1308,14 +1308,15 @@ function insertVNode(
     hydrationNode = null
   }
 
-  // Components, fragments, portals, and empty nodes do not claim DOM nodes. Preserve
-  // client entry markers until their descendants can claim the boundary.
+  // Keep client entry markers for descendants or following siblings to claim. Portals do not
+  // claim source DOM. Empty strings need a placeholder because the server emits no Text node.
   hydrationNode = skipCommentsExceptBoundaryStart(
     hydrationNode ?? null,
     node.kind === 'component' ||
       node.kind === 'fragment' ||
       node.kind === 'portal' ||
-      node.kind === 'empty',
+      node.kind === 'empty' ||
+      (node.kind === 'text' && node._text === ''),
     anchor,
   )
 
@@ -1399,7 +1400,10 @@ function insertVNode(
       return commitTextNode(node, vParent, svg, hydrationNode)
     }
     let dom = document.createTextNode(node._text)
-    insertDomNode(dom, domParent, anchor)
+    // The server renders nothing for an empty string, so hydration reaches the next sibling
+    // instead of a Text node. Insert before that sibling, where the child belongs, and leave it
+    // for the next child to claim.
+    insertDomNode(dom, domParent, hydrationNode?.parentNode === domParent ? hydrationNode : anchor)
     return commitTextNode(node, vParent, svg, dom)
   }
 
@@ -1743,8 +1747,8 @@ function skipCommentsExceptBoundaryStart(
 ): Node | null {
   // Skipping comments can reach the range's closing marker even when we started before it.
   // Stop there so hydration cannot claim a sibling outside the range.
-  while (cursor && cursor !== anchor) {
-    if (cursor.nodeType !== Node.COMMENT_NODE) break
+  while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
+    if (cursor === anchor) return cursor
     let portalEnd = getPortalRangeEnd(cursor)
     if (portalEnd) {
       cursor = portalEnd.nextSibling

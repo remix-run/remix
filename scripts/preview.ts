@@ -1,6 +1,7 @@
 import { appendFile } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
 
+import { logAndExec } from './utils/process.ts'
 import {
   PREVIEW_REPOSITORY,
   PreviewGitHub,
@@ -8,6 +9,7 @@ import {
   cleanupPrPreviewBranch,
   cleanupPreviews,
   createGitHubRunner,
+  getStalePrPreviewChannels,
   parsePreviewBuild,
   publishPreviewBuild,
   readPullRequest,
@@ -35,6 +37,17 @@ if (command === 'build' && target && positionals.length === 2) {
   let published = publishPreviewBuild(client(), build, values.output, { dryRun })
   if (process.env.GITHUB_OUTPUT)
     await appendFile(process.env.GITHUB_OUTPUT, `published=${published && !dryRun}\n`)
+} else if (command === 'cleanup-stale-prs' && positionals.length === 1) {
+  let github = client()
+  let repository = process.env.GITHUB_REPOSITORY ?? 'remix-run/remix'
+  let source = new PreviewGitHub(repository, createGitHubRunner(process.env.GITHUB_TOKEN))
+  for (let channel of getStalePrPreviewChannels(github.listReleases(), repository)) {
+    let number = Number(channel.slice(3))
+    if (!readPullRequest(repository, number).closed) continue
+    cleanupPrPreviewBranch(source, channel, { dryRun })
+    cleanupPreviews(github, channel, { dryRun })
+    if (!dryRun) logAndExec(process.execPath, ['scripts/preview-pr.ts', 'cleanup', String(number)])
+  }
 } else if (command === 'cleanup-branch' && target && positionals.length === 2) {
   cleanupPrPreviewBranch(
     new PreviewGitHub(
@@ -61,7 +74,7 @@ if (command === 'build' && target && positionals.length === 2) {
   }
 } else {
   throw new Error(
-    'Usage: pnpm preview <build <main|pr-N|experimental>|publish <tag> <source-sha>|cleanup <main|experimental|pr-N>|cleanup-branch <pr-N>> [--dry-run] [--output <directory>]',
+    'Usage: pnpm preview <build <main|pr-N|experimental>|publish <tag> <source-sha>|cleanup <main|experimental|pr-N>|cleanup-branch <pr-N>|cleanup-stale-prs> [--dry-run] [--output <directory>]',
   )
 }
 

@@ -2153,8 +2153,9 @@ describe('run', () => {
     app.dispose()
   })
 
-  it('does not hydrate imported client entries through their parent boundary', async () => {
+  it('keeps empty text before independently hydrated child entries', async () => {
     let clicks = 0
+    let text = ''
     let updateOuter = () => {}
 
     let Inner = clientEntry('/inner.js#Inner', function Inner() {
@@ -2177,12 +2178,18 @@ describe('run', () => {
       }
       return () => (
         <section>
+          {text && <p>{text}</p>}
           <Inner />
         </section>
       )
     })
 
     document.body.innerHTML = await drain(renderToStream(<Outer />))
+
+    let button = document.querySelector('button')
+    invariant(button)
+    let innerStart = button.previousSibling
+    invariant(innerStart instanceof Comment)
 
     let app = run({
       loadModule(moduleUrl, exportName) {
@@ -2193,14 +2200,19 @@ describe('run', () => {
     })
     await app.ready()
 
-    let button = document.querySelector('button')
-    invariant(button)
+    expect(document.querySelectorAll('button')).toHaveLength(1)
+    expect(document.querySelector('button')).toBe(button)
 
     button.click()
     expect(clicks).toBe(1)
 
+    text = 'Before child'
     updateOuter()
     app.flush()
+    let paragraph = document.querySelector('section > p')
+    invariant(paragraph)
+    expect(innerStart.previousSibling).toBe(paragraph)
+    expect(innerStart.nextSibling).toBe(button)
     button.click()
     expect(clicks).toBe(2)
 

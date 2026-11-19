@@ -572,7 +572,37 @@ let result = await db.exec(sql`
 `)
 ```
 
-`sql` keeps values parameterized for the database dialect, so you can avoid manual string concatenation.
+`sql` binds interpolated values as parameters. Arrays expand into a parenthesized list with one parameter per item, so `` sql`where id in ${ids}` `` becomes `where id in (?, ?)`. Interpolating an empty array throws. To compose reusable SQL fragments, create them with `sql` or `rawSql`:
+
+```ts
+import { rawSql, sql } from 'remix/data-table'
+
+let condition = sql`email = ${email}`
+let limit = rawSql('limit ?', [10])
+let result = await db.exec(sql`select id, email from users where ${condition} ${limit}`)
+```
+
+For hand-built, copied, or deserialized statements, and statements from another loaded copy of the package, use `rawSql(statement.text, statement.values)` imported alongside the composing `sql`. Otherwise, the statement object is passed as a parameter value.
+
+For SQL passed to `rawSql` or directly to `db.exec()`, supply dynamic values through the separate parameter array.
+
+Each parameter in a `rawSql` or `db.exec()` values array binds exactly one value. Pass strings, numbers, bigints, booleans, `null`, `Date` objects, and binary data as a `Buffer` or typed array. Write JSON as text with `JSON.stringify(value)`, and give an `IN` list one placeholder per item. To bind a whole array as one PostgreSQL array parameter, wrap it in `rawSql`:
+
+```ts
+await db.exec(sql`insert into events (meta) values (${JSON.stringify({ source: 'import' })})`)
+await db.exec('select * from users where id in (?, ?)', ['u_001', 'u_002'])
+await db.exec(sql`select * from users where id = any(${rawSql('?', [['u_001', 'u_002']])})`)
+```
+
+### Column Values
+
+The query builder converts values by column type, so rows have the same JavaScript shape on every adapter:
+
+- `column.json()` values are written with `JSON.stringify()`, including strings, and read back as parsed values. Values compared with `eq()`, `inList()`, and the other value operators are serialized the same way.
+- `column.boolean()` values read back as `true` or `false`, including on SQLite and MySQL, which store them as integers.
+- `column.timestamp()` values read back as `Date` objects, including on SQLite, which stores them as text.
+
+`null` is stored as SQL `NULL`. Results from `db.exec()` are returned as the driver produced them.
 
 ## Custom Database Drivers
 
@@ -672,6 +702,7 @@ driver owns SQL execution and connection lifecycle. A driver provides:
 - `execute()` and `executeScript()`
 - `hasTable()`, `hasColumn()`, `wipe()`, and idempotent `close()`
 - transaction and savepoint lifecycle methods using opaque `TransactionToken` values
+- an optional `decodeValue(value, column)` hook that converts values the database returns in a storage format, such as JSON text, into their JavaScript form for table query results
 
 Drivers whose capabilities report `migrationLock: true` also implement `withMigrationLock()` and
 run its callback with a `DatabaseDriver` bound to the connection that owns the lock.

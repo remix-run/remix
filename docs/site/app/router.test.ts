@@ -124,6 +124,40 @@ describe('createDocsRouter()', () => {
     assert.equal(missing.status, 404)
   })
 
+  it('serves the home page and API overview as markdown', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let guides = await loadDocsNavigationItems()
+    let router = createDocsRouter({
+      assetServer,
+      docsContext: {
+        docFiles: [],
+        docFilesLookup: new Map(),
+        registry: buildRegistry([packageFile('remix/data-table')], guides),
+      },
+    })
+
+    let home = await router.fetch(new Request('http://localhost/index.md'))
+    assert.equal(home.status, 200)
+    assert.match(home.headers.get('Content-Type') ?? '', /text\/markdown/)
+    let homeMarkdown = await home.text()
+    assert.match(homeMarkdown, /^# Introduction\n/)
+    assert.match(homeMarkdown, /```sh\r?\nnpx remix new my-app\r?\n/)
+    assert.doesNotMatch(homeMarkdown, /::frame/)
+
+    let api = await router.fetch(new Request('http://localhost/api.md'))
+    assert.equal(api.status, 200)
+    assert.match(api.headers.get('Content-Type') ?? '', /text\/markdown/)
+    let apiMarkdown = await api.text()
+    assert.match(apiMarkdown, /^# API Reference\n/)
+    assert.match(apiMarkdown, /\r?\n## Installation\r?\n/)
+
+    let homeHtml = await (await router.fetch(new Request('http://localhost/'))).text()
+    assert.match(homeHtml, /rel="alternate" type="text\/markdown" href="\/index\.md"/)
+    let apiHtml = await (await router.fetch(new Request('http://localhost/api/'))).text()
+    assert.match(apiHtml, /rel="alternate" type="text\/markdown" href="\/api\.md"/)
+  })
+
   it('keeps guides in the root panel on direct API reference requests', async (t) => {
     let assetServer = createAssetServer()
     t.after(() => assetServer.close())
