@@ -1061,6 +1061,35 @@ describe('mysql driver', () => {
     assert.match(statements[1], /where \(\(`id` = 2\)\) limit 1$/)
   })
 
+  it('decodes tinyint boolean columns returned by mysql2', async () => {
+    let flags = table({
+      name: 'flags',
+      columns: { id: column.integer(), enabled: column.boolean() },
+    })
+    let connection = {
+      escape: mysql.escape,
+      async query() {
+        return [
+          [
+            { id: 1, enabled: 1 },
+            { id: 2, enabled: 0 },
+          ],
+          [],
+        ]
+      },
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+    }
+
+    let db = createDatabase(new MysqlDatabaseDriver(connection as never))
+
+    assert.deepEqual(await db.query(flags).all(), [
+      { id: 1, enabled: true },
+      { id: 2, enabled: false },
+    ])
+  })
+
   it('normalizes bigint count rows', async () => {
     let connection = {
       async query() {

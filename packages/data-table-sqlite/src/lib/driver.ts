@@ -3,6 +3,7 @@ import { mkdir, rm } from 'node:fs/promises'
 import { setTimeout } from 'node:timers/promises'
 
 import type {
+  ColumnDefinition,
   DataManipulationOperation,
   DataManipulationRequest,
   DataManipulationResult,
@@ -154,6 +155,37 @@ export class SqliteDatabaseDriver implements DatabaseDriver<'sqlite'> {
   compileSql(operation: DataManipulationOperation): SqlStatement[] {
     let compiled = compileSqliteOperation(operation)
     return [{ text: compiled.text, values: compiled.values }]
+  }
+
+  /**
+   * Decodes values SQLite stores in a different form: JSON text, integer booleans, and
+   * timestamp text.
+   * @param value Value read from the database.
+   * @param column Definition of the column the value was read from.
+   * @returns The decoded value.
+   */
+  decodeValue(value: unknown, column: ColumnDefinition): unknown {
+    if (column.type === 'boolean' && (typeof value === 'number' || typeof value === 'bigint')) {
+      return Number(value) !== 0
+    }
+
+    if (column.type === 'json' && typeof value === 'string') {
+      try {
+        return JSON.parse(value)
+      } catch {
+        // Leave text written before JSON columns were serialized as it was stored.
+        return value
+      }
+    }
+
+    if (column.type === 'timestamp' && typeof value === 'string') {
+      // Only decode text in the form this driver binds, so a Date read back binds as the same
+      // text and still matches the stored value in filters and key lookups.
+      let date = new Date(value.replace(' ', 'T') + 'Z')
+      return !Number.isNaN(date.getTime()) && formatTimestamp(date) === value ? date : value
+    }
+
+    return value
   }
 
   /**
@@ -540,10 +572,7 @@ function normalizeStatementValues(values: unknown[]): unknown[] {
       if (Number.isNaN(value.getTime())) {
         throw new TypeError('SQLite Date parameters must be valid dates')
       }
-      // Match SQLite's own UTC `current_timestamp` format so stored values compare and sort
-      // together. Whole seconds omit `.000`, which would otherwise sort after the same second.
-      let text = value.toISOString().replace('T', ' ').replace('Z', '')
-      return value.getUTCMilliseconds() === 0 ? text.slice(0, -4) : text
+      return formatTimestamp(value)
     }
     // SQLite drivers read a leading object as named bindings, so only bytes may stay objects.
     if (value !== null && typeof value === 'object' && !ArrayBuffer.isView(value)) {
@@ -551,6 +580,13 @@ function normalizeStatementValues(values: unknown[]): unknown[] {
     }
     return value
   })
+}
+
+// Match SQLite's own UTC `current_timestamp` format so stored values compare and sort together.
+// Whole seconds omit `.000`, which would otherwise sort after the same second.
+function formatTimestamp(date: Date): string {
+  let text = date.toISOString().replace('T', ' ').replace('Z', '')
+  return date.getUTCMilliseconds() === 0 ? text.slice(0, -4) : text
 }
 
 function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
