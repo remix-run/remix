@@ -362,17 +362,22 @@ describe('stale PR preview discovery', () => {
     )
   })
 
-  it('rechecks PR status before stale cleanup and makes no changes in dry-run mode', (t) => {
-    let directory = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-stale-pr-test-'))
-    t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
-    let requestsPath = path.join(directory, 'requests.json')
-    let releases = [
-      release(1, 'pr-12', '2020-01-01T00:00:00Z'),
-      release(2, 'pr-13', '2020-01-01T00:00:00Z'),
-    ]
-    fs.writeFileSync(
-      path.join(directory, 'gh'),
-      `#!/usr/bin/env node
+  // Fakes `gh` with an extensionless node script on PATH, which Windows can't resolve.
+  // This command only runs on ubuntu in the preview workflow.
+  it(
+    'rechecks PR status before stale cleanup and makes no changes in dry-run mode',
+    { skip: process.platform === 'win32' },
+    (t) => {
+      let directory = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-stale-pr-test-'))
+      t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+      let requestsPath = path.join(directory, 'requests.json')
+      let releases = [
+        release(1, 'pr-12', '2020-01-01T00:00:00Z'),
+        release(2, 'pr-13', '2020-01-01T00:00:00Z'),
+      ]
+      fs.writeFileSync(
+        path.join(directory, 'gh'),
+        `#!/usr/bin/env node
 const fs = require('node:fs')
 const args = process.argv.slice(2)
 const requestsPath = ${JSON.stringify(requestsPath)}
@@ -399,29 +404,30 @@ if (endpoint.startsWith('repos/remix-run/previews/releases?')) {
   throw new Error('Unexpected GitHub command: ' + JSON.stringify(args))
 }
 `,
-      { mode: 0o755 },
-    )
+        { mode: 0o755 },
+      )
 
-    let result = cp.spawnSync(
-      process.execPath,
-      [path.resolve(import.meta.dirname, '../preview.ts'), 'cleanup-stale-prs', '--dry-run'],
-      {
-        cwd: path.resolve(import.meta.dirname, '../..'),
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          PATH: `${directory}${path.delimiter}${process.env.PATH}`,
-          GITHUB_REPOSITORY: 'remix-run/remix',
-          GITHUB_OUTPUT: '',
+      let result = cp.spawnSync(
+        process.execPath,
+        [path.resolve(import.meta.dirname, '../preview.ts'), 'cleanup-stale-prs', '--dry-run'],
+        {
+          cwd: path.resolve(import.meta.dirname, '../..'),
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: `${directory}${path.delimiter}${process.env.PATH}`,
+            GITHUB_REPOSITORY: 'remix-run/remix',
+            GITHUB_OUTPUT: '',
+          },
         },
-      },
-    )
+      )
 
-    assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /Would delete legacy preview branch: preview\/pr-12/)
-    assert.match(result.stdout, /Would delete preview: v0\.0\.20200101-pr-12/)
-    assert.doesNotMatch(result.stdout, /pr-13/)
-  })
+      assert.equal(result.status, 0, result.stderr)
+      assert.match(result.stdout, /Would delete legacy preview branch: preview\/pr-12/)
+      assert.match(result.stdout, /Would delete preview: v0\.0\.20200101-pr-12/)
+      assert.doesNotMatch(result.stdout, /pr-13/)
+    },
+  )
 })
 
 describe('preview GitHub lists', () => {
