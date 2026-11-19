@@ -1,0 +1,1 @@
+Add passkey (WebAuthn) login to `remix/auth` with `createWebAuthnProvider()` and its registration and authentication helpers, and use `remix/auth/webauthn-client` in the browser to create and use passkeys. See the [`@remix-run/auth` changelog](https://github.com/remix-run/remix/blob/main/packages/auth/CHANGELOG.md) for details.

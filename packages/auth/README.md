@@ -1,11 +1,12 @@
 # auth
 
-Composable browser authentication primitives for Remix. Use this package to verify credentials on your own server, start external OAuth or OIDC redirects, finish provider callbacks, and write an app-owned auth record into the session. Pair it with [`remix/middleware/auth`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) when later requests need to resolve that session data into the current user and protect routes.
+Composable browser authentication primitives for Remix. Use this package to verify credentials on your own server, start external OAuth or OIDC redirects, finish provider callbacks, sign users in with passkeys (WebAuthn), and write an app-owned auth record into the session. Pair it with [`remix/middleware/auth`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) when later requests need to resolve that session data into the current user and protect routes.
 
 ## Features
 
 - Small, composable primitives: `verifyCredentials()`, `startExternalAuth()`, `finishExternalAuth()`, `refreshExternalAuth()`, and `completeAuth()`
 - Built-in provider support for Google, Microsoft, Okta, Auth0, GitHub, Facebook, and X
+- Passkey (WebAuthn) registration and login with no third-party dependencies
 - Module-scope provider configuration for boot-time validation and stable callback URLs
 - App-owned session records so you decide what auth data to persist
 - Shared session completion for credentials and external auth flows
@@ -465,6 +466,120 @@ export function createAcmeAuthProvider(options: AcmeAuthProviderOptions) {
 
 The runtime may write a serialized value to `transaction.providerState` during `createAuthorizationURL()`. Remix persists that value with the OAuth transaction and returns it to `handleCallback()`. Treat it as provider-owned opaque data, and encrypt sensitive values because session storage is not guaranteed to be confidential. Extending `OAuthTokens` preserves provider-specific fields through callback and refresh results without requiring those fields to become part of Remix's built-in token model.
 
+## Passkeys (WebAuthn)
+
+Use `createWebAuthnProvider()` to let users register passkeys and sign in with them. Each ceremony has a start step that stores a one-time challenge in the session and returns JSON options for the browser, and a finish step that verifies the browser's response against that challenge. The stored challenge is cleared whether verification succeeds or fails, so a response can only be used once.
+
+- `startWebAuthnRegistration(provider, context, options)` returns options for `navigator.credentials.create()`
+- `finishWebAuthnRegistration(provider, context, response, options?)` verifies the new credential and returns `{ credential, userVerified, returnTo? }`
+- `startWebAuthnAuthentication(provider, context, options?)` returns options for `navigator.credentials.get()`
+- `finishWebAuthnAuthentication(provider, context, response, options)` verifies the signed assertion and returns `{ credential, userId, userVerified, returnTo? }`
+
+Your app owns credential storage. `credential` is plain JSON, so persist it as-is after registration, and save it again after each login so the updated `signCount` can detect cloned authenticators. Starting from the same `session()` and `auth()` setup as the credentials example above:
+
+```ts
+import {
+  completeAuth,
+  createWebAuthnProvider,
+  finishWebAuthnAuthentication,
+  finishWebAuthnRegistration,
+  startWebAuthnAuthentication,
+  startWebAuthnRegistration,
+} from 'remix/auth'
+import { Auth, requireAuth } from 'remix/middleware/auth'
+import type { GoodAuth } from 'remix/middleware/auth'
+
+let passkeys = createWebAuthnProvider({
+  rpId: 'example.com',
+  rpName: 'Example',
+  origin: 'https://example.com',
+})
+
+router.post('/passkeys/register/options', {
+  middleware: [requireAuth()],
+  async handler(context) {
+    let { identity } = context.get(Auth) as GoodAuth<{ id: string; email: string }>
+    let existing = await passkeyStore.listForUser(identity.id)
+
+    return Response.json(
+      startWebAuthnRegistration(passkeys, context, {
+        user: { id: identity.id, name: identity.email },
+        excludeCredentials: existing,
+      }),
+    )
+  },
+})
+
+router.post('/passkeys/register', {
+  middleware: [requireAuth()],
+  async handler(context) {
+    let { credential } = await finishWebAuthnRegistration(
+      passkeys,
+      context,
+      await context.request.json(),
+    )
+    await passkeyStore.save(credential)
+
+    return Response.json({ ok: true })
+  },
+})
+
+router.post('/login/passkey/options', (context) =>
+  Response.json(startWebAuthnAuthentication(passkeys, context)),
+)
+
+router.post('/login/passkey', async (context) => {
+  let { credential, userId } = await finishWebAuthnAuthentication(
+    passkeys,
+    context,
+    await context.request.json(),
+    { getCredential: (id) => passkeyStore.get(id) },
+  )
+  await passkeyStore.save(credential)
+
+  let session = completeAuth(context)
+  session.set('auth', { userId })
+
+  return Response.json({ redirectTo: '/dashboard' })
+})
+```
+
+`user.id` is stored on the authenticator and returned on every login, so pass an opaque app user id of at most 64 bytes, never an email address. Leave `allowCredentials` empty for discoverable passkey login, where the browser lets the user pick any passkey for your site, or pass a user's credentials when you already know who is signing in.
+
+In the browser, `remix/auth/webauthn-client` converts between the JSON options and the binary values `navigator.credentials` uses:
+
+```ts
+import { createPasskey, getPasskey } from 'remix/auth/webauthn-client'
+
+async function registerPasskey() {
+  let options = await fetch('/passkeys/register/options', { method: 'POST' }).then((res) =>
+    res.json(),
+  )
+  let credential = await createPasskey(options)
+  await fetch('/passkeys/register', { method: 'POST', body: JSON.stringify(credential) })
+}
+
+async function signInWithPasskey() {
+  let options = await fetch('/login/passkey/options', { method: 'POST' }).then((res) => res.json())
+  let credential = await getPasskey(options)
+  let response = await fetch('/login/passkey', { method: 'POST', body: JSON.stringify(credential) })
+  let { redirectTo } = await response.json()
+  location.assign(redirectTo)
+}
+```
+
+Pass `{ mediation: 'conditional' }` to `getPasskey()` to offer passkeys in the browser's autofill menu on an input with `autocomplete="username webauthn"`.
+
+Provider options:
+
+- `rpId` is your registrable domain. Every `origin` must be that host or one of its subdomains, and must use `https` (or `http` on `localhost`)
+- `userVerification` defaults to `'preferred'`. Use `'required'` to reject logins where the authenticator did not check a PIN, biometric, or device passcode
+- `residentKey` defaults to `'preferred'`. Use `'required'` to only create discoverable credentials
+- `timeout` defaults to 5 minutes and is enforced on the server as well as in the browser
+- `algorithms` defaults to `[-8, -7, -257]` (Ed25519, ES256, RS256)
+
+Registration always requests `attestation: 'none'`, and attestation statements are not verified. The credential's key, origin, rpId, challenge, and signature are always verified; attestation only proves which authenticator model created a credential, which most apps do not need.
+
 ## Related Packages
 
 - [`auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) - Request authentication and route protection helpers
@@ -479,6 +594,7 @@ The runtime may write a serialized value to `transaction.providerState` during `
 - [RFC 7636: PKCE](https://datatracker.ietf.org/doc/html/rfc7636)
 - [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html)
 - [OpenID Connect Discovery](https://openid.net/specs/openid-connect-discovery-1_0.html)
+- [Web Authentication Level 3](https://www.w3.org/TR/webauthn-3/)
 
 ## License
 
