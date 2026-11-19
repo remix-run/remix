@@ -976,9 +976,12 @@ export class Database<dialect extends string = string> {
   }
 
   async #executeOperation(operation: DataManipulationOperation): Promise<DataManipulationResult> {
+    // Serialize outside the driver error wrapper so values JSON cannot represent report directly.
+    let driverOperation = serializeJsonColumnValues(operation)
+
     try {
       return await this.#driver.execute({
-        operation: serializeJsonColumnValues(operation),
+        operation: driverOperation,
         transaction: this.#token,
       })
     } catch (error) {
@@ -1033,7 +1036,7 @@ function serializeJsonColumns(
     let value = values[column]
 
     // Strings are passed through as JSON text that is already serialized.
-    if (columns[column]?.type !== 'json' || value === null || typeof value !== 'object') {
+    if (columns[column]?.type !== 'json' || value == null || typeof value === 'string') {
       continue
     }
 

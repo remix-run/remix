@@ -121,7 +121,8 @@ export class MysqlDatabaseDriver implements DatabaseDriver<'mysql'> {
     let statements = this.compileSql(request.operation)
     let statement = statements[0]
     let client = this.#resolveClient(request.transaction)
-    let [result] = await client.query(formatStatement(client, statement))
+    // An empty values array keeps mysql2 from scanning the formatted SQL for named placeholders.
+    let [result] = await client.query(formatStatement(client, statement), [])
 
     if (isRowsResult(result)) {
       let rows = normalizeRows(result)
@@ -634,9 +635,12 @@ function formatStatement(client: MysqlQueryable, statement: SqlStatement): strin
         !Buffer.isBuffer(value)
       ) {
         throw new TypeError('MySQL object parameters must be Date or typed array instances')
+      } else if (typeof value === 'number' && !Number.isFinite(value)) {
+        throw new TypeError('MySQL number parameters must be finite')
       }
 
-      output += client.escape(value)
+      // mysql2 quotes bigints as strings, which MySQL compares to integers as doubles.
+      output += typeof value === 'bigint' ? value.toString() : client.escape(value)
       valueIndex += 1
       index += 1
       continue

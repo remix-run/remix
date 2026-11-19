@@ -55,6 +55,29 @@ describe('createMysqlDatabase', () => {
     ])
   })
 
+  it('binds bigints as integers and rejects non-finite numbers', async (t) => {
+    let pool = createPool({})
+    t.after(() => pool.end())
+    let calls: unknown[][] = []
+    t.mock.method(pool, 'query', async (...args: unknown[]) => {
+      calls.push(args)
+      return [[], []]
+    })
+    let db = createMysqlDatabase(pool)
+
+    await db.exec('select ? from t where id = ?', [1.5, 9007199254740993n])
+    await assert.rejects(
+      db.exec('select ?', [Number.NaN]),
+      (error: unknown) =>
+        error instanceof DataTableDatabaseError &&
+        error.cause instanceof TypeError &&
+        error.cause.message === 'MySQL number parameters must be finite',
+    )
+
+    // The empty values array keeps mysql2's `namedPlaceholders` option from rescanning the SQL.
+    assert.deepEqual(calls, [['select 1.5 from t where id = 9007199254740993', []]])
+  })
+
   it('rejects statements whose placeholders and values do not match', async (t) => {
     let pool = createPool({})
     t.after(() => pool.end())

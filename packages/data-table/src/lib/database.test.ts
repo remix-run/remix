@@ -415,6 +415,8 @@ describe('writes and validation', () => {
     await db.query(settings).insertMany([
       { id: 2, data: ['red', 'blue'] },
       { id: 3, data: null },
+      { id: 5, data: false },
+      { id: 6, data: 42 },
     ])
     await db.query(settings).where({ id: 1 }).update({ data: '{"theme":"light"}' })
     await db.query(settings).upsert({ id: 4, data: { a: 1 } }, { update: { data: { b: 2 } } })
@@ -429,6 +431,8 @@ describe('writes and validation', () => {
       values: [
         { id: 2, data: '["red","blue"]' },
         { id: 3, data: null },
+        { id: 5, data: 'false' },
+        { id: 6, data: '42' },
       ],
     })
     assert.deepEqual(operations[2], { ...operations[2], changes: { data: '{"theme":"light"}' } })
@@ -441,6 +445,8 @@ describe('writes and validation', () => {
       { theme: 'dark' },
       ['red', 'blue'],
       null,
+      false,
+      42,
       '{"theme":"light"}',
       { a: 1 },
       { b: 2 },

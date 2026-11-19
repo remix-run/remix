@@ -52,14 +52,14 @@ describe('SQL interpolation', () => {
 
     try {
       let result = await db.exec(
-        sql`select ${date} as first, ${true} as flag, ${date} as second, hex(${new Uint8Array([0, 255])}) as bytes, hex(${new Int16Array([1])}) as shorts`,
+        sql`select ${date} as first, ${true} as flag, ${new Date('2026-06-01T12:00:00.250Z')} as second, hex(${new Uint8Array([0, 255])}) as bytes, hex(${new Int16Array([1])}) as shorts`,
       )
 
       assert.deepEqual(result.rows, [
         {
-          first: '2026-06-01 12:00:00.000',
+          first: '2026-06-01 12:00:00',
           flag: 1,
-          second: '2026-06-01 12:00:00.000',
+          second: '2026-06-01 12:00:00.250',
           bytes: '00FF',
           shorts: '0100',
         },
@@ -76,10 +76,29 @@ describe('SQL interpolation', () => {
       await db.exec('create table events (at text)')
       await db.exec("insert into events values ('2026-06-01 12:00:00')")
       let result = await db.exec(
-        sql`select count(*) as count from events where at > ${new Date('2026-06-01T06:00:00Z')}`,
+        sql`select
+          (select count(*) from events where at > ${new Date('2026-06-01T06:00:00Z')}) as after,
+          (select count(*) from events where at = ${new Date('2026-06-01T12:00:00Z')}) as same,
+          (select count(*) from events where at < ${new Date('2026-06-01T12:00:00.500Z')}) as before`,
       )
 
-      assert.deepEqual(result.rows, [{ count: 1 }])
+      assert.deepEqual(result.rows, [{ after: 1, same: 1, before: 1 }])
+    } finally {
+      await db.close()
+    }
+  })
+
+  it('rejects invalid dates', async () => {
+    let db = createSqliteDatabase({ filename: ':memory:' })
+
+    try {
+      await assert.rejects(
+        db.exec(sql`select ${new Date('invalid')}`),
+        (error: unknown) =>
+          error instanceof DataTableDatabaseError &&
+          error.cause instanceof TypeError &&
+          error.cause.message === 'SQLite Date parameters must be valid dates',
+      )
     } finally {
       await db.close()
     }
@@ -100,7 +119,7 @@ describe('SQL interpolation', () => {
 
       let result = await db.exec('select * from events')
       assert.deepEqual(result.rows, [
-        { id: 1, at: '2026-06-01 12:00:00.000', meta: '{"theme":"dark"}' },
+        { id: 1, at: '2026-06-01 12:00:00', meta: '{"theme":"dark"}' },
       ])
     } finally {
       await db.close()
