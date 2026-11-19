@@ -19,7 +19,9 @@ const exampleMatcher = createMatcher(routes.guides.examples.show.pattern)
 export async function renderChapterMarkdown(source: string): Promise<string> {
   return replaceMarkdownFrames(source, async (src) => {
     let fallback = await loadMarkdownFallback(src)
-    return fallback ? renderSourceBlock(await readFile(fallback.sourceUrl, 'utf8')) : ''
+    if (!fallback) return ''
+    if ('markdown' in fallback) return fallback.markdown
+    return renderSourceBlock(await readFile(fallback.sourceUrl, 'utf8'))
   })
 }
 
