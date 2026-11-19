@@ -1023,47 +1023,6 @@ describe('runTests skip and todo reasons', () => {
 })
 
 describe('runTests history quota recovery', () => {
-  it('retries with a fresh context and reruns beforeEach', async () => {
-    let setups = 0
-    let contexts: TestContext[] = []
-    let results = await runWithSuites(
-      [
-        {
-          name: 'suite',
-          beforeEach: [
-            {
-              fn() {
-                setups++
-              },
-            },
-          ],
-          tests: [
-            {
-              name: 'history',
-              fn(context) {
-                contexts.push(context)
-                assert.equal(setups, contexts.length)
-                if (contexts.length === 1) {
-                  throw new DOMException(
-                    'Attempt to use history.replaceState() more than 100 times per 10 seconds',
-                    'SecurityError',
-                  )
-                }
-              },
-            },
-          ],
-        },
-      ],
-      {
-        async onHistoryQuotaExceeded() {},
-      },
-    )
-    assert.equal(results.passed, 1)
-    assert.equal(results.failed, 0)
-    assert.equal(contexts.length, 2)
-    assert.notEqual(contexts[0], contexts[1])
-  })
-
   it('bounds retries and backs off again before continuing after a repeated quota failure', async () => {
     let attempts = 0
     let backoffs = 0

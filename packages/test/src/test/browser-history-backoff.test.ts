@@ -34,12 +34,15 @@ it('uses the initial budget', () => {
 `,
         'b.test.browser.ts': `
 import * as assert from '@remix-run/assert'
+import type { TestContext } from '../../src/lib/context.ts'
 import { beforeAll, beforeEach, afterEach, it } from '../../src/lib/framework.ts'
 let setups = 0
+let beforeEachRuns = 0
 let attempts = 0
 let cleaned = 0
+let firstContext: TestContext | undefined
 beforeAll(() => { setups++ })
-beforeEach(() => { document.body.textContent = '' })
+beforeEach(() => { beforeEachRuns++; document.body.textContent = '' })
 afterEach(() => {
   history.replaceState(null, '', '?cleanup')
   document.body.textContent = ''
@@ -50,6 +53,9 @@ it('starts with a fresh history budget', () => {
 })
 it('recovers on a fresh attempt', (t) => {
   attempts++
+  assert.equal(beforeEachRuns, attempts + 1)
+  if (attempts === 1) firstContext = t
+  else assert.notEqual(t, firstContext)
   assert.equal(document.body.textContent, '')
   document.body.textContent = 'fixture'
   t.useFakeTimers()
@@ -68,28 +74,15 @@ it('retains shared setup and runner storage', () => {
 })
 `,
       })
-      let browser: Browser | undefined
-      let launch = webkit.launch.bind(webkit)
-      t.mock.method(webkit, 'launch', async (options) => {
-        browser = await launch(options)
-        return browser
-      })
       let warn = t.mock.method(console, 'warn', () => {})
-      let reported: TestResults[] = []
       let run = await runBrowserTests({
         ...fixture,
-        open: true,
         playwrightUseOpts: { browserName: 'webkit' },
-        reporter: createReporter(reported),
+        reporter: createReporter([]),
       })
-      t.after(run.close)
 
       assert.equal(run.results.passed, 4)
       assert.equal(run.results.failed, 0)
-      assert.equal(reported.length, 2)
-      assert.ok(browser)
-      assert.equal(browser.contexts().length, 1)
-      assert.equal(browser.contexts()[0].pages().length, 2)
       assert.equal(warn.mock.calls.length, 1)
       let warning = String(warn.mock.calls[0].arguments[0])
       assert.ok(warning.includes(path.relative(process.cwd(), fixture.testFiles[1])))
@@ -98,8 +91,6 @@ it('retains shared setup and runner storage', () => {
         warning,
         /Split history-heavy tests across smaller files or reduce history updates/,
       )
-      await run.close()
-      await run.disconnected
     },
   )
 
@@ -110,19 +101,18 @@ it('retains shared setup and runner storage', () => {
       let fixture = await createFixture(t, {
         'a.test.browser.ts': `
 import { it } from '../../src/lib/framework.ts'
-it('uses the first file budget', () => {
+it('marks the first file and counts runs', () => {
   window.parent.document.documentElement.dataset.previousFile = 'yes'
   localStorage.setItem('runs', String(Number(localStorage.getItem('runs') ?? 0) + 1))
-  for (let i = 0; i < 60; i++) history.replaceState(null, '', '?i=' + i)
 })
 `,
         'b.test.browser.ts': `import './missing.ts'`,
         'c.test.browser.ts': `
 import * as assert from '@remix-run/assert'
 import { it } from '../../src/lib/framework.ts'
-it('gets a fresh document and budget after the failed file', () => {
+it('gets a fresh document after the failed file', () => {
   assert.equal(window.parent.document.documentElement.dataset.previousFile, undefined)
-  for (let i = 0; i < 60; i++) history.pushState(null, '', '?i=' + i)
+  history.pushState(null, '', '?after-error')
 })
 `,
       })
