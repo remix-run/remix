@@ -306,6 +306,34 @@ describe('preview release retention', () => {
   })
 })
 
+describe('preview GitHub lists', () => {
+  it('reads pages until an empty page, even after a short page', (t) => {
+    let pages = [
+      Array.from({ length: 99 }, (_, index) => release(index + 1, 'main', '2026-11-02T12:00:00Z')),
+      [release(100, 'pr-12', '2026-11-02T12:00:00Z')],
+      [],
+    ]
+    let github = new PreviewGitHub('remix-run/previews', () => {
+      throw new Error('Unexpected GitHub command')
+    })
+    let requested: string[] = []
+    t.mock.method(github, 'api', (method: string, endpoint: string) => {
+      requested.push(`${method} ${endpoint}`)
+      return pages[Number(/&page=(\d+)$/.exec(endpoint)?.[1]) - 1] ?? []
+    })
+
+    let releases = github.listReleases()
+
+    assert.equal(releases.length, 100)
+    assert.equal(releases[99].id, 100)
+    assert.deepEqual(requested, [
+      'GET releases?per_page=100&page=1',
+      'GET releases?per_page=100&page=2',
+      'GET releases?per_page=100&page=3',
+    ])
+  })
+})
+
 describe('main publication', () => {
   it('marks new main publications latest regardless of source order, without promoting reruns', (t) => {
     let directory = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-main-test-'))
@@ -324,7 +352,8 @@ describe('main publication', () => {
       github,
       'api',
       (method: string, endpoint: string, body?: Record<string, unknown>) => {
-        if (method === 'GET' && endpoint.startsWith('releases?')) return releases
+        if (method === 'GET' && endpoint.startsWith('releases?'))
+          return endpoint.endsWith('&page=1') ? releases : []
         if (method === 'POST' && endpoint === 'releases') {
           if (typeof body?.tag_name !== 'string' || typeof body.body !== 'string')
             throw new Error('Missing release metadata')
@@ -339,7 +368,7 @@ describe('main publication', () => {
         }
         let id = Number(/^releases\/(\d+)/.exec(endpoint)?.[1])
         if (method === 'GET' && endpoint.startsWith(`releases/${id}/assets?`))
-          return assets.get(id) ?? []
+          return endpoint.endsWith('&page=1') ? (assets.get(id) ?? []) : []
         if (method === 'PATCH' && endpoint === `releases/${id}`) {
           let published = releases.find((item) => item.id === id)
           if (!published) throw new Error('Missing release')
