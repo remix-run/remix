@@ -9,7 +9,6 @@ import {
 } from './frame-runtime.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps, setSelectDefaultValue, setSelectValue } from './core/props.ts'
-import { isMixinDescriptor } from './core/mix.ts'
 import {
   isEmptyChild,
   isPrimitiveChild,
@@ -23,13 +22,14 @@ import { normalizeUnsafeHTMLProps } from './unsafe-html.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
 import { isEntry, skipComments, logHydrationMismatch } from './client-entries.ts'
-import type { Scheduler } from './scheduler.ts'
+import type { Scheduler } from './vdom.ts'
 import {
   bindMixinRuntime,
   cancelPendingMixinRemoval,
   dispatchMixinBeforeUpdate,
   dispatchMixinCommit,
   getMixinRuntimeSignal,
+  isMixinDescriptor,
   prepareMixinRemoval,
   resolveMixedProps,
   teardownMixins,
@@ -389,8 +389,11 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
-export const defaultStyleManager: StyleManager =
-  typeof window !== 'undefined' ? createStyleManager() : (null as unknown as StyleManager)
+let defaultStyleManager: StyleManager | undefined
+
+export function getDefaultStyleManager(): StyleManager {
+  return (defaultStyleManager ??= createStyleManager())
+}
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -1110,14 +1113,31 @@ function mountHostNode(
 ): CommittedHostNode {
   let hostProps = resolved.props
   let childInputs = node._children
-  // Server option attributes already reflect the select's winning value. Preserve them and edits.
-  patchHostProps(
-    {},
-    childCursor && dom instanceof HTMLOptionElement
-      ? { ...hostProps, selected: undefined }
-      : hostProps,
-    dom,
-  )
+  let hydratedProps = hostProps
+  let editedBeforeHydration: 'value' | 'checked' | undefined
+  if (childCursor) {
+    // Server option attributes already reflect the select's winning value. Preserve them and edits.
+    if (dom instanceof HTMLOptionElement) hydratedProps = { ...hostProps, selected: undefined }
+    // Keep what the user typed or toggled before this control hydrated. It's replayed below.
+    if (dom instanceof HTMLInputElement && (dom.type === 'checkbox' || dom.type === 'radio')) {
+      if (dom.checked !== dom.defaultChecked) editedBeforeHydration = 'checked'
+    } else if (
+      (dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement) &&
+      dom.value !== dom.defaultValue
+    ) {
+      // Browsers sanitize some server values, such as lowercasing colors or clamping ranges, so
+      // compare against the server value as this control holds it.
+      let pristine = dom.cloneNode()
+      if (pristine instanceof HTMLInputElement || pristine instanceof HTMLTextAreaElement) {
+        pristine.value = dom.defaultValue
+        if (pristine.value !== dom.value) editedBeforeHydration = 'value'
+      }
+    }
+    if (editedBeforeHydration) {
+      hydratedProps = { ...hydratedProps, [editedBeforeHydration]: undefined }
+    }
+  }
+  patchHostProps({}, hydratedProps, dom)
   let committed = commitHostNode(node, vParent, svg, dom, resolved)
 
   if (hostProps.innerHTML != null) {
@@ -1140,6 +1160,29 @@ function mountHostNode(
 
   setupHostNode(committed, context.scheduler)
   bindNodeMixRuntime(committed, context, false, parent)
+
+  if (editedBeforeHydration) {
+    // Replay the edit once handlers are attached so app state catches up with what the user sees.
+    context.scheduler.enqueueTasks([
+      () => {
+        if (!dom.isConnected) return
+        // Selecting a radio unchecks the rest of its group, and only the selected one fires events.
+        if (dom instanceof HTMLInputElement && dom.type === 'radio' && !dom.checked) {
+          return
+        }
+        dom.dispatchEvent(new Event('input', { bubbles: true }))
+        // These controls commit `change` while still focused. Others, like text, number, and
+        // textarea, still fire their own `change` on blur.
+        if (
+          dom.ownerDocument.activeElement !== dom ||
+          (dom instanceof HTMLInputElement &&
+            ['checkbox', 'radio', 'range', 'color', 'file'].includes(dom.type))
+        ) {
+          dom.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+      },
+    ])
+  }
   return committed
 }
 

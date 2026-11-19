@@ -1,1 +1,0 @@
-Add new `t.waitFor(condition, { interval, timeout })` API to retry assertions until they pass. Polling stops when the test ends. See [Polling Assertions](https://github.com/remix-run/remix/tree/main/packages/test#polling-assertions) for usage.

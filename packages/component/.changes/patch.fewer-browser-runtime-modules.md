@@ -1,1 +1,0 @@
-The browser runtime is smaller, with no behavior changes. Pages that hydrate with `run()` load 6 fewer component modules and about 3% less gzipped code, and apps that only use `createRoot()` or `createRangeRoot()` load 6 fewer component modules and about 8% less gzipped code.

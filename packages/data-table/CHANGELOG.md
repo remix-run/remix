@@ -2,6 +2,57 @@
 
 This is the changelog for [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table). It follows [semantic versioning](https://semver.org/).
 
+## v1.1.0
+
+### Minor Changes
+
+- Query builder reads and writes now convert values by column type, so rows have the same JavaScript shape on every adapter. `column.json()` values are written with `JSON.stringify()`, including strings, and values compared with `eq()`, `inList()`, and the other value operators on a `json` column are serialized the same way. Drivers can implement the new optional `DatabaseDriver.decodeValue(value, column)` hook to convert values their database returns in a storage format; `Database` calls it for table query and `returning` rows, while `db.exec()` results are returned unchanged. ([#12337](https://github.com/remix-run/remix/pull/12337))
+
+  Code that wrote already-serialized JSON text to a `json()` column through the query builder now stores a JSON string instead of the encoded value. Pass the value itself:
+
+  ```diff
+  -await db.create(settings, { id: 1, data: JSON.stringify({ theme: 'dark' }) })
+  +await db.create(settings, { id: 1, data: { theme: 'dark' } })
+  ```
+
+  Arrays interpolated into `sql` now expand into a parenthesized list with one parameter per item, and an empty array throws. To bind an array as a single parameter, such as a PostgreSQL array, wrap it in `rawSql`:
+
+  ```ts
+  let byIds = sql`select * from users where id in ${['u_001', 'u_002']}`
+  // select * from users where id in (?, ?)
+
+  let byArray = sql`select * from users where id = any(${rawSql('?', [['u_001', 'u_002']])})`
+  ```
+
+- Add shared SQL clause compilers to `@remix-run/data-table/sql-helpers` so adapters no longer need their own copies of predicate and clause compilation. `compilePredicate()`, `compileFromClause()`, `compileWhereClause()`, `compileHavingClause()`, `compileGroupByClause()`, `compileOrderByClause()`, `compileLimitOffsetClause()`, and `compileReturningClause()` take a `SqlCompileContext` that supplies the dialect's `quoteIdentifier()`, a `bindValue()` hook that records a value and returns its placeholder, and an optional `ilike` mode (`'ilike'` for native support, `'lower-like'` by default). ([#12276](https://github.com/remix-run/remix/pull/12276))
+
+  ```ts
+  import { compileWhereClause } from 'remix/data-table/sql-helpers'
+
+  let values: unknown[] = []
+  let where = compileWhereClause(operation.where, {
+    quoteIdentifier: (name) => '"' + name.replace(/"/g, '""') + '"',
+    bindValue(value) {
+      values.push(value)
+      return '$' + values.length
+    },
+  })
+  ```
+
+  The `JoinClause`, `JoinType`, and `ReturningSelection` types used by these helpers are now exported from `@remix-run/data-table`.
+
+### Patch Changes
+
+- Nested `sql` composition now requires statements created by `sql` or `rawSql` from the same loaded copy of the package. Other statement objects are passed as parameter values. Direct `db.exec()` calls continue to accept structural `SqlStatement` objects. ([#12332](https://github.com/remix-run/remix/pull/12332))
+
+  Queries that compose hand-built, copied, deserialized, or separately loaded statements may now return different results or raise driver errors. Use the local `rawSql` helper to create composable fragments:
+
+  ```diff
+  -let condition = { text: 'status = ?', values: ['active'] }
+  +let condition = rawSql('status = ?', ['active'])
+   let statement = sql`select * from users where ${condition}`
+  ```
+
 ## v1.0.0
 
 ### Major Changes

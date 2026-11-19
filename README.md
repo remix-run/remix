@@ -11,43 +11,51 @@
 <br />
 <br />
 
-# Welcome to Remix 3!
+Remix is a full-stack TypeScript framework for building web applications. It comes with everything you need to build fast, safe, modern web applications. We use it to build many of our production applications at Shopify.
 
-This is the source repository for Remix 3. It is under active development.
+## Get started
 
-We published [a blog post](https://remix.run/blog/wake-up-remix) earlier this year with some of our thoughts around Remix 3. It explains our philosophy for web development and why we think the time is right for something new. When working on Remix 3, we follow these principles:
+With Node.js 24.3 or later, create an app and start the development server.
 
-1. **Model-First Development**. AI fundamentally shifts the human-computer interaction model for both user experience and developer workflows. Optimize the source code, documentation, tooling, and abstractions for LLMs. Additionally, develop abstractions for applications to use models in the product itself, not just as a tool to develop it.
-2. **Build on Web APIs**. Sharing abstractions across the stack greatly reduces the amount of context switching, both for humans and machines. Build on the foundation of Web APIs and JavaScript because it is the only full stack ecosystem.
-3. **Religiously Runtime**. Designing for bundlers/compilers/typegen (and any pre-runtime static analysis) leads to poor API design that eventually pollutes the entire system. All packages must be designed with no expectation of static analysis and all tests must run without bundling. Because browsers are involved, `--import` loaders for simple transformations like TypeScript and JSX are permissible.
-4. **Avoid Dependencies**. Dependencies lock you into somebody else's roadmap. Choose them wisely, wrap them completely, and expect to replace most of them with our own package eventually. The goal is zero.
-5. **Demand Composition**. Abstractions should be single-purpose and replaceable. A composable abstraction is easy to add and remove from an existing program. Every package must be useful and documented independent of any other context. New features should first be attempted as a new package. If impossible, attempt to break up the existing package to make it more composable. However, tightly coupled modules that almost always change together in both directions should be moved to the same package.
-6. **Distribute Cohesively**. Extremely composable ecosystems are difficult to learn and use. Remix will be distributed as a single `remix` package for both distribution and documentation.
+```sh
+npx remix new my-remix-app
+cd my-remix-app
+npm i
+npm run dev
+```
 
-## Goals
+To add Remix to an existing project, install the package.
 
-Although we recommend the `remix` package for ease of use, all packages that make up Remix should be usable standalone as well. This forces us to consider package boundaries and helps us define public interfaces that are portable and interoperable.
+```sh
+npm i remix
+```
 
-Each package in Remix:
+Follow the [Getting Started tutorial](https://docs.remix.run/start-here/) to build a page with an editable form. Explore the [bookstore demo](https://github.com/remix-run/remix/tree/main/demos/bookstore) to see how sign-in, a shopping cart, and checkout fit together.
 
-- Has a [single responsibility](https://en.wikipedia.org/wiki/Single-responsibility_principle)
-- Prioritizes web standards to ensure maximum interoperability and portability across JavaScript runtimes
-- Augments standards unobtrusively where they are missing or incomplete, minimizing incompatibility risks
+### Install from `main`
 
-This means Remix code is **portable by default**. Remix packages work seamlessly across [Node.js](https://nodejs.org/), [Bun](https://bun.sh/), [Deno](https://deno.com/), [Cloudflare Workers](https://workers.cloudflare.com/), and other environments.
+To try a new feature or test a fix before the next release, install the latest build from `main` in your project.
 
-We leverage server-side web APIs when they are available:
+```sh
+pnpm add "$(curl -fsSL https://github.com/remix-run/previews/releases/latest/download/remix.url)"
+```
 
-- [The Web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) instead of `node:stream`
-- [`Uint8Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array) instead of Node.js `Buffer`s
-- [The Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API) instead of `node:crypto`
-- [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) and [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) instead of some bespoke runtime-specific API
+This pins your project to a specific commit. Run the command again when you want a newer build. You can find the source commit and tarballs for individual packages in the [latest preview release](https://github.com/remix-run/previews/releases/latest).
 
-The benefit is code that's not just reusable, but **future-proof**.
+If pnpm blocks tarball dependencies, set `blockExoticSubdeps: false` in your project's `pnpm-workspace.yaml`.
+
+## Design principles
+
+1. **Model-First Development.** We design Remix for developers who build with coding agents and use models in their apps. New apps include the [Remix skill for coding agents](https://github.com/remix-run/remix/blob/main/.agents/skills/remix/SKILL.md), and `node_modules/remix/INDEX.md` points to the guides and API docs for your installed version.
+2. **Build on Web APIs.** The router accepts a standard `Request` and returns a `Response`. The generated app connects it to Node.js through a server adapter. You can test the same routes by passing requests directly to the router.
+3. **Religiously Runtime.** Routes and middleware run directly from source. You can test them without bundling your app or generating types.
+4. **Avoid Dependencies.** A new Remix app has one runtime dependency, `remix`. Where Remix uses third-party code, it wraps that code behind its own APIs.
+5. **Demand Composition.** Each package does one job. You can use the router in an existing Fetch handler or add the session package to an app that already has a router.
+6. **Distribute Cohesively.** Import what you need from a single package, such as `remix/router` for routing or `remix/component` for UI.
+
+For the ideas behind these principles, read [Wake up, Remix!](https://remix.run/blog/wake-up-remix).
 
 ## Packages
-
-Most packages in this repository are standalone JavaScript/TypeScript tools. The `remix` package composes them under one umbrella for distribution and documentation.
 
 - [assert](packages/assert): Node assert-compatible utilities for any JavaScript environment
 - [assets](packages/assets): Fetch-based server for compiling browser JS/TS and CSS assets on demand
@@ -97,45 +105,9 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [test](packages/test): A test framework for JavaScript and TypeScript projects
 - [ui](packages/ui): Headless, accessible UI primitives and animation utilities for Remix components
 
-## Installation
-
-Install Remix:
-
-```sh
-npm i remix
-```
-
-To create a new Remix app with the CLI, use `npx remix new`:
-
-```sh
-npx remix new my-remix-app
-```
-
-To try a PR preview, use the installation command posted on the PR. To install the [latest `main` build](https://github.com/remix-run/previews/releases/latest):
-
-```sh
-pnpm add "$(curl -fsSL https://github.com/remix-run/previews/releases/latest/download/remix.url)"
-```
-
-This resolves to the build's SHA-specific tarball URL, so your lockfile stays pinned. Run it again to update.
-
-To install an individual package, use its tarball URL from the same release. The release notes link to the full source commit.
-
-Each PR has one release containing its latest 10 successful SHA builds, with a separate install URL for each SHA. Older SHA builds are deleted as new builds finish. Closing or merging a PR deletes its preview releases and tags. Main previews have a separate release per SHA and are kept for seven days, with the newest successful build always retained. Reopening a PR triggers a new preview build. Experimental previews expire after 30 days. Installs using deleted builds need a newer preview URL and an updated lockfile.
-
-If your pnpm version blocks transitive Git or tarball dependencies, add this to your `pnpm-workspace.yaml`:
-
-```yaml
-blockExoticSubdeps: false
-```
-
-## Agent Skills For Building Apps
-
-Agents that are starting a Remix 3 app from this repository should use the [`remix` app skill](./.agents/skills/remix/SKILL.md). The CLI prepack step copies this skill into the app template so generated apps can use the same guidance.
-
 ## Contributing
 
-We welcome contributions! If you'd like to contribute, please feel free to open an issue or submit a pull request. See [CONTRIBUTING](https://github.com/remix-run/remix/blob/main/CONTRIBUTING.md) for more information.
+See the [contributing guide](https://github.com/remix-run/remix/blob/main/CONTRIBUTING.md) to report a bug, propose a feature, or submit a pull request. To test a pull request, use the preview install command posted on the PR.
 
 ## License
 

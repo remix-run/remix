@@ -1,1 +1,0 @@
-Multiple import map detection now runs its feature test once. It previously also ran in the detection iframe's initial `about:blank` document, which left a canceled `blob:` request in the browser's network panel. This was only visible in developer tools: nothing extra was sent over the network and detection results are unchanged.

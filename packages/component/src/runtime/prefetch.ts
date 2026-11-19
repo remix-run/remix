@@ -33,11 +33,14 @@ export interface PrefetchFrameReference {
   readonly fallback: boolean
 }
 
-/** References to delegate to Remix's native asset hints and nested frame fetching. */
+/** References to prefetch, with defaults for omitted fields and `[]` to skip a category. */
 export interface PrefetchReferences {
-  /** Original asset elements to prefetch (defaults to discovered asset declarations). */
+  /** Original asset elements to prefetch; `[]` skips asset hints (defaults to discovered assets). */
   assets?: readonly Element[]
-  /** Nested frame requests to fetch using the same overrides (defaults to none). */
+  /**
+   * Nested frame requests to fetch using the same overrides. Does not change asset selection
+   * (defaults to none).
+   */
   frames?: readonly Pick<PrefetchFrameReference, 'src' | 'target'>[]
 }
 
@@ -83,10 +86,11 @@ export interface DefaultPrefetchOverrides {
    */
   fetch?(url: string, init: RequestInit): Promise<Response>
   /**
-   * Handles each parsed response. Call `prefetchReferences()` to prefetch discovered assets,
-   * or pass selected arrays. Omitted assets use discovered defaults; omitted frames are not fetched.
-   * Pass `frames` explicitly to prefetch nested sources. Returning without delegating skips Remix's
-   * work. Responsive image and track preloads are skipped by native hints; the hook may perform and
+   * Handles each parsed response. Call `prefetchReferences()` to prefetch discovered assets without
+   * fetching nested sources. Passing an object overrides only the fields supplied: `assets` defaults
+   * to discovered assets and `frames` defaults to `[]`. Selecting `frames` alone retains default
+   * assets; pass `assets: []` to skip them. Returning without delegating skips Remix's work.
+   * Responsive image and track preloads are skipped by native hints; the hook may perform and
    * await its own image loading or other prefetching instead.
    *
    * @param prefetchReferences Starts selected default work while the hook is active.
@@ -938,13 +942,13 @@ function getResponseElements(source: DocumentFragment): Element[] {
   return elements
 }
 
+const javaScriptTypes = new Set(['', 'module', 'text/javascript', 'application/javascript'])
+
 function isAssetReference(element: Element, baseURL: string): boolean {
   if (element instanceof HTMLScriptElement) {
     return (
       getAssetHref(element.getAttribute('src'), baseURL) !== undefined &&
-      ['', 'module', 'text/javascript', 'application/javascript'].includes(
-        element.type.toLowerCase(),
-      )
+      javaScriptTypes.has(element.type.toLowerCase())
     )
   }
   return (
@@ -1031,11 +1035,7 @@ function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement
       return
     }
   } else if (element instanceof HTMLScriptElement) {
-    if (
-      !['', 'module', 'text/javascript', 'application/javascript'].includes(
-        element.type.toLowerCase(),
-      )
-    ) {
+    if (!javaScriptTypes.has(element.type.toLowerCase())) {
       return
     }
   } else if (!(element instanceof HTMLImageElement) || element.srcset) {

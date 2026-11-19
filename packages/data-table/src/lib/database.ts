@@ -23,6 +23,7 @@ import {
   resolveCreateRowWhere,
   toWriteResult,
 } from './database/helpers.ts'
+import { decodeResultRows, encodeOperationValues } from './database/column-values.ts'
 import { executeQuery } from './database/query-execution.ts'
 import type {
   AnyQuery,
@@ -864,7 +865,22 @@ export class Database<dialect extends string = string> {
     return toWriteResult(result)
   }
 
+  /**
+   * Executes SQL text or a {@link SqlStatement} with bound parameter values.
+   *
+   * SQL text is executed as supplied. Use `sql` to compose statements with
+   * interpolated parameters.
+   *
+   * @param statement SQL text or statement to execute.
+   * @param values Values to bind when `statement` is a string.
+   * @returns The SQL execution result.
+   */
   async exec(statement: string | SqlStatement, values?: unknown[]): Promise<DataManipulationResult>
+  /**
+   * Executes a query and returns its result.
+   * @param input Query to execute.
+   * @returns The result for the query's execution mode.
+   */
   async exec<input extends AnyQuery>(input: input): Promise<QueryExecutionResult<input>>
   async exec<input extends AnyQuery>(
     statementOrInput: string | SqlStatement | input,
@@ -961,11 +977,16 @@ export class Database<dialect extends string = string> {
   }
 
   async #executeOperation(operation: DataManipulationOperation): Promise<DataManipulationResult> {
+    // Encode outside the driver error wrapper so values JSON cannot represent report directly.
+    let driverOperation = encodeOperationValues(operation)
+
     try {
-      return await this.#driver.execute({
-        operation,
+      let result = await this.#driver.execute({
+        operation: driverOperation,
         transaction: this.#token,
       })
+
+      return decodeResultRows(this.#driver, operation, result)
     } catch (error) {
       throw new DataTableDatabaseError('Database execution failed', {
         cause: error,

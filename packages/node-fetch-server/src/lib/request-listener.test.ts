@@ -822,14 +822,15 @@ describe('createRequestListener', () => {
 
   it('ignores proxy headers by default', async (t) => {
     let requestUrl = await captureRequestUrl(t, {
+      url: '/secret?value=%2F',
       headers: {
-        Host: 'example.com',
-        Forwarded: 'for=203.0.113.43; proto=https; host=remix.run',
-        'X-Forwarded-Host': 'remix.run',
+        Host: 'tenant.example.com:8080',
+        Forwarded: 'for=203.0.113.43; proto=https; host="example.com/../admin"',
+        'X-Forwarded-Host': 'example.com?admin',
         'X-Forwarded-Proto': 'https',
       },
     })
-    assert.equal(requestUrl, 'http://example.com/')
+    assert.equal(requestUrl, 'http://tenant.example.com:8080/secret?value=%2F')
   })
 
   it('uses the `Forwarded` proto and host parameters when proxies are trusted', async (t) => {
@@ -846,18 +847,19 @@ describe('createRequestListener', () => {
     assert.equal(requestUrl, 'https://remix.run/')
   })
 
-  it('uses quoted `Forwarded` proto and host values when proxies are trusted', async (t) => {
+  it('uses quoted `Forwarded` values before an invalid `X-Forwarded-Host` when proxies are trusted', async (t) => {
     let requestUrl = await captureRequestUrl(
       t,
       {
         headers: {
           Host: 'example.com',
-          Forwarded: 'for="[2001:db8:cafe::17]"; proto="https"; host="remix.run"',
+          Forwarded: 'for="[2001:db8:cafe::17]"; proto="https"; host="[2001:db8::1]:8080"',
+          'X-Forwarded-Host': 'example.com/../admin',
         },
       },
       { trustProxy: true },
     )
-    assert.equal(requestUrl, 'https://remix.run/')
+    assert.equal(requestUrl, 'https://[2001:db8::1]:8080/')
   })
 
   it('uses `X-Forwarded-Host` and `X-Forwarded-Proto` when proxies are trusted', async (t) => {
@@ -890,22 +892,22 @@ describe('createRequestListener', () => {
     assert.equal(requestUrl, 'https://remix.run/')
   })
 
-  it('uses the host option before trusted proxy host headers', async (t) => {
+  it('uses the host option before invalid Host and trusted proxy host headers', async (t) => {
     let requestUrl = await captureRequestUrl(
       t,
       {
         headers: {
-          Host: 'example.com',
-          Forwarded: 'host=remix.run',
-          'X-Forwarded-Host': 'remix.run',
+          Host: 'example.com/../admin',
+          Forwarded: 'host="example.com/../admin"',
+          'X-Forwarded-Host': 'example.com/../admin',
         },
       },
       {
-        host: 'app.example.com',
+        host: '[2001:db8::1]:8080',
         trustProxy: true,
       },
     )
-    assert.equal(requestUrl, 'http://app.example.com/')
+    assert.equal(requestUrl, 'http://[2001:db8::1]:8080/')
   })
 
   it('ignores invalid forwarded protocol header values when proxies are trusted', async (t) => {
@@ -1290,7 +1292,62 @@ describe('createRequestListener', () => {
   })
 })
 
-describe('createRequest HTTP/2 authority', () => {
+describe('createRequest authority', () => {
+  it('throws for an invalid HTTP/2 authority without Host', () => {
+    let req = createMockRequest({
+      url: '/secret',
+      headers: { ':authority': 'example.com/../admin' },
+    })
+    let res = createMockResponse({ req })
+
+    assert.throws(() => createRequest(req, res), { message: 'Invalid request authority' })
+  })
+
+  it('throws for an invalid HTTP/2 authority before applying overrides', () => {
+    let req = createMockRequest({
+      headers: {
+        ':authority': 'example.com/../admin',
+        Host: 'example.com',
+        Forwarded: 'host=proxy.example.com',
+      },
+    })
+    let res = createMockResponse({ req })
+
+    assert.throws(() => createRequest(req, res, { host: 'app.example.com', trustProxy: true }), {
+      message: 'Invalid request authority',
+    })
+  })
+
+  it('throws for an invalid Host whose parsed host matches HTTP/2 authority', () => {
+    let req = createMockRequest({
+      headers: { ':authority': 'example.com', Host: 'example.com/../admin' },
+    })
+    let res = createMockResponse({ req })
+
+    assert.throws(() => createRequest(req, res, { host: 'app.example.com' }), {
+      message: 'Invalid request authority',
+    })
+  })
+
+  it('throws for invalid authority syntax in host overrides', () => {
+    let req = createMockRequest({ url: '/secret', headers: { Host: 'example.com' } })
+    let res = createMockResponse({ req })
+
+    for (let host of ['', 'example.com\\admin', 'example.com%2fadmin', 'exam\tple.com']) {
+      assert.throws(() => createRequest(req, res, { host }), {
+        message: 'Invalid request authority',
+      })
+    }
+  })
+
+  it('preserves URL hostname normalization and request-target encoding', () => {
+    let req = createMockRequest({ url: '/secret%2Fvalue?next=%2Fadmin' })
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res, { host: '%65XAMPLE.com:8080' })
+
+    assert.equal(request.url, 'http://example.com:8080/secret%2Fvalue?next=%2Fadmin')
+  })
+
   it('throws when Host and authority identify different hosts', () => {
     let req = createMockRequest({
       headers: { ':authority': 'example.com', Host: 'other.example.com' },

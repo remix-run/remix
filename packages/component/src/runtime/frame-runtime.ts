@@ -2,11 +2,10 @@ import type { FrameHandle, FrameResolution, ReloadOrigin } from './component.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameInstance } from './frame.ts'
-import type { ProcessClientEntryPreloads } from './module-preloader.ts'
-import type { Scheduler } from './scheduler.ts'
+import type { ProcessClientEntryPreloads } from './frame.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 import type { ResourceNonces } from './nonce.ts'
-import type { VirtualRoot } from './vdom.ts'
+import type { Scheduler, VirtualRoot } from './vdom.ts'
 
 /**
  * Loads a named client-entry export for hydration.
@@ -51,11 +50,15 @@ export type ResolveFrame = (
  */
 export interface ResolveFrameOptions {
   /**
-   * Browser transition that caused this load, including loads of client frames within its response.
-   * Absent for independent frame loads and reloads, even while another navigation is active.
-   * Describes the original navigation; redirects are reflected in the commit callback's `to`.
+   * Effective history behavior of the navigation that caused this load.
+   * Inherited by client frames within its response; absent for independent loads and reloads.
    */
-  transition?: NavigationTransition
+  navigationType?: NavigationType
+  /**
+   * Original history entry being left, inherited by client frames within the response.
+   * Absent for independent loads and reloads. Redirects preserve the original entry.
+   */
+  from?: NavigationHistoryEntry
   /** Frame name, absent for both the top-level document and unnamed `<Frame>` loads. */
   target?: string
   /** Form values submitted to the frame source for a POST reload or navigation. */
@@ -75,7 +78,7 @@ export type PendingClientEntries = Map<
 
 export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
   /** The initiating anchor, area, or owning form. */
-  element?: HTMLAnchorElement | HTMLAreaElement | HTMLFormElement
+  element?: HTMLAnchorElement | HTMLAreaElement | SVGAElement | HTMLFormElement
   /** The actual submitter captured by the native submit event. */
   submitter?: HTMLElement | null
   /** The owning form for a submission, even when its submitter has been detached. */
@@ -163,7 +166,8 @@ export type FrameRuntime = {
     | {
         signal: AbortSignal
         origin?: ReloadOrigin
-        transition?: NavigationTransition
+        navigationType?: NavigationType
+        from?: NavigationHistoryEntry
         reconciliationTracker?: ReconciliationTracker
         blockingFrameTracker?: ReconciliationTracker
       }
