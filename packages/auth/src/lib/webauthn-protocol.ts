@@ -17,30 +17,58 @@ export interface WebAuthnTransaction {
   returnTo?: string
 }
 
-// Reads and always clears the stored ceremony, so a challenge can only be answered once.
+// Stores a started ceremony. A session keeps a few pending ceremonies at once, so a passkey autofill
+// prompt, a second tab, or a modal login button don't invalidate each other's challenges.
+export function saveWebAuthnTransaction(
+  session: Session,
+  transactionKey: string,
+  transaction: WebAuthnTransaction,
+): void {
+  let now = Date.now()
+  let pending = readPendingTransactions(session, transactionKey).filter(
+    (entry) => entry.expiresAt >= now,
+  )
+  pending.push(transaction)
+  session.set(transactionKey, pending.slice(-5))
+}
+
+// Removes the pending ceremony that issued `challenge` and returns it, so each challenge can only
+// be answered once.
 export function takeWebAuthnTransaction(
   session: Session,
   transactionKey: string,
   provider: WebAuthnProvider,
   ceremony: WebAuthnTransaction['ceremony'],
+  challenge: string,
 ): WebAuthnTransaction {
-  let transaction = session.get(transactionKey) as WebAuthnTransaction | undefined
-  if (session.has(transactionKey)) {
+  let pending = readPendingTransactions(session, transactionKey)
+  let index = pending.findIndex(
+    (entry) =>
+      entry.challenge === challenge &&
+      entry.provider === provider.name &&
+      entry.ceremony === ceremony,
+  )
+  if (index === -1) {
+    throw new Error(`Missing WebAuthn ${ceremony} for "${provider.name}".`)
+  }
+
+  let [transaction] = pending.splice(index, 1)
+  if (pending.length > 0) {
+    session.set(transactionKey, pending)
+  } else {
     session.unset(transactionKey)
   }
 
-  if (
-    transaction == null ||
-    transaction.provider !== provider.name ||
-    transaction.ceremony !== ceremony
-  ) {
-    throw new Error(`Missing WebAuthn ${ceremony} for "${provider.name}".`)
-  }
-  if (Date.now() > transaction.expiresAt) {
+  if (Date.now() > transaction!.expiresAt) {
     throw new Error(`WebAuthn ${ceremony} expired.`)
   }
 
-  return transaction
+  return transaction!
+}
+
+function readPendingTransactions(session: Session, transactionKey: string): WebAuthnTransaction[] {
+  let value = session.get(transactionKey)
+  return Array.isArray(value) ? (value as WebAuthnTransaction[]) : []
 }
 
 export function getObject(value: unknown, name: string): Record<string, unknown> {
@@ -87,13 +115,13 @@ export function parseCredentialResponse(value: unknown): {
   return { id, response: getObject(credential.response, 'response') }
 }
 
-// Verifies `clientDataJSON` against the expected ceremony type, challenge, and allowed origins.
+// Verifies `clientDataJSON` against the expected ceremony type and allowed origins, and returns the
+// challenge it answers so the caller can find the matching pending ceremony.
 export function verifyClientData(
   provider: WebAuthnProvider,
   clientDataJSON: Uint8Array,
   type: 'webauthn.create' | 'webauthn.get',
-  challenge: string,
-): void {
+): string {
   let clientData: Record<string, unknown>
   try {
     clientData = getObject(JSON.parse(new TextDecoder().decode(clientDataJSON)), 'clientDataJSON')
@@ -104,9 +132,6 @@ export function verifyClientData(
   if (clientData.type !== type) {
     throw new Error(`Invalid WebAuthn client data type. Expected "${type}".`)
   }
-  if (clientData.challenge !== challenge) {
-    throw new Error('Invalid WebAuthn challenge.')
-  }
   if (typeof clientData.origin !== 'string' || !provider.origins.includes(clientData.origin)) {
     throw new Error(`Invalid WebAuthn origin "${String(clientData.origin)}".`)
   }
@@ -114,6 +139,11 @@ export function verifyClientData(
   if (clientData.crossOrigin === true) {
     throw new Error('Cross-origin WebAuthn ceremonies are not allowed.')
   }
+  if (typeof clientData.challenge !== 'string' || clientData.challenge.length === 0) {
+    throw new Error('Invalid WebAuthn challenge.')
+  }
+
+  return clientData.challenge
 }
 
 export interface AuthenticatorData {
@@ -141,7 +171,7 @@ export async function verifyAuthenticatorData(
   let expectedRpIdHash = new Uint8Array(
     await crypto.subtle.digest('SHA-256', new TextEncoder().encode(provider.rpId)),
   )
-  if (!equalBytes(bytes.subarray(0, 32), expectedRpIdHash)) {
+  if (expectedRpIdHash.some((byte, index) => byte !== bytes[index])) {
     throw new Error('Invalid WebAuthn rpId hash.')
   }
 
@@ -174,6 +204,9 @@ export async function verifyAuthenticatorData(
       byte.toString(16).padStart(2, '0'),
     ).join('')
     let credentialIdLength = view.getUint16(53)
+    if (credentialIdLength > 1023) {
+      throw new Error('WebAuthn credential id is longer than 1023 bytes.')
+    }
     let credentialIdEnd = 55 + credentialIdLength
     if (credentialIdEnd > bytes.length) {
       throw new Error('Invalid WebAuthn attested credential data.')
@@ -196,21 +229,6 @@ export async function verifyAuthenticatorData(
   }
 
   return data
-}
-
-// Decodes a registration `attestationObject` and returns its authenticator data. Attestation
-// statements are not verified: providers always request `attestation: "none"`, so the credential
-// is treated as unattested regardless of format.
-export function readAttestationAuthenticatorData(
-  attestationObject: Uint8Array,
-): Uint8Array<ArrayBuffer> {
-  let decoded = decodeCBOR(attestationObject)
-  let authData = decoded instanceof Map ? decoded.get('authData') : undefined
-  if (!(authData instanceof Uint8Array)) {
-    throw new Error('Invalid WebAuthn attestation object.')
-  }
-
-  return authData
 }
 
 // Imports a COSE public key and returns its algorithm plus a signature verifier.
@@ -288,13 +306,6 @@ export async function importCOSEPublicKey(coseKey: Uint8Array): Promise<{
   throw new Error(`Unsupported WebAuthn credential algorithm "${String(algorithm)}".`)
 }
 
-export function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array<ArrayBuffer> {
-  let bytes = new Uint8Array(a.length + b.length)
-  bytes.set(a)
-  bytes.set(b, a.length)
-  return bytes
-}
-
 function coseBytes(key: Map<CBORValue, CBORValue>, label: number): string {
   let value = key.get(label)
   if (!(value instanceof Uint8Array)) {
@@ -302,17 +313,6 @@ function coseBytes(key: Map<CBORValue, CBORValue>, label: number): string {
   }
 
   return toBase64Url(value)
-}
-
-function equalBytes(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false
-
-  let difference = 0
-  for (let index = 0; index < a.length; index++) {
-    difference |= a[index]! ^ b[index]!
-  }
-
-  return difference === 0
 }
 
 // WebAuthn ECDSA signatures are ASN.1 DER `SEQUENCE { INTEGER r, INTEGER s }`, while Web Crypto

@@ -3,6 +3,20 @@ import { describe, it } from '@remix-run/test'
 
 import { createPasskey, getPasskey } from './webauthn-client.ts'
 
+// Replaces `navigator` with a plain data property so the stub works whether the runtime defines it
+// as an accessor (Node) or a data property.
+function stubNavigator(navigator: object): () => void {
+  let original = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  Object.defineProperty(globalThis, 'navigator', { value: navigator, configurable: true })
+  return () => {
+    if (original == null) {
+      Reflect.deleteProperty(globalThis, 'navigator')
+    } else {
+      Object.defineProperty(globalThis, 'navigator', original)
+    }
+  }
+}
+
 function bytes(...values: number[]) {
   return new Uint8Array(values).buffer
 }
@@ -10,28 +24,25 @@ function bytes(...values: number[]) {
 describe('createPasskey()', () => {
   it('decodes options for the browser and encodes the credential as JSON', async (t) => {
     let calls: CredentialCreationOptions[] = []
-    t.mock.getter(
-      globalThis,
-      'navigator',
-      () =>
-        ({
-          credentials: {
-            async create(options: CredentialCreationOptions) {
-              calls.push(options)
-              return {
-                id: 'AQI',
-                rawId: bytes(1, 2),
-                authenticatorAttachment: 'platform',
-                response: {
-                  clientDataJSON: bytes(3),
-                  attestationObject: bytes(4, 5),
-                  getTransports: () => ['internal', 'hybrid'],
-                },
-                getClientExtensionResults: () => ({ credProps: { rk: true } }),
-              }
-            },
+    t.after(
+      stubNavigator({
+        credentials: {
+          async create(options: CredentialCreationOptions) {
+            calls.push(options)
+            return {
+              id: 'AQI',
+              rawId: bytes(1, 2),
+              authenticatorAttachment: 'platform',
+              response: {
+                clientDataJSON: bytes(3),
+                attestationObject: bytes(4, 5),
+                getTransports: () => ['internal', 'hybrid'],
+              },
+              getClientExtensionResults: () => ({ credProps: { rk: true } }),
+            }
           },
-        }) as unknown as Navigator,
+        },
+      }),
     )
 
     let result = await createPasskey({
@@ -74,29 +85,26 @@ describe('createPasskey()', () => {
 describe('getPasskey()', () => {
   it('passes mediation through and encodes the assertion as JSON', async (t) => {
     let calls: CredentialRequestOptions[] = []
-    t.mock.getter(
-      globalThis,
-      'navigator',
-      () =>
-        ({
-          credentials: {
-            async get(options: CredentialRequestOptions) {
-              calls.push(options)
-              return {
-                id: 'AQI',
-                rawId: bytes(1, 2),
-                authenticatorAttachment: null,
-                response: {
-                  clientDataJSON: bytes(3),
-                  authenticatorData: bytes(4),
-                  signature: bytes(5),
-                  userHandle: null,
-                },
-                getClientExtensionResults: () => ({}),
-              }
-            },
+    t.after(
+      stubNavigator({
+        credentials: {
+          async get(options: CredentialRequestOptions) {
+            calls.push(options)
+            return {
+              id: 'AQI',
+              rawId: bytes(1, 2),
+              authenticatorAttachment: null,
+              response: {
+                clientDataJSON: bytes(3),
+                authenticatorData: bytes(4),
+                signature: bytes(5),
+                userHandle: null,
+              },
+              getClientExtensionResults: () => ({}),
+            }
           },
-        }) as unknown as Navigator,
+        },
+      }),
     )
 
     let result = await getPasskey(
@@ -121,13 +129,10 @@ describe('getPasskey()', () => {
   })
 
   it('throws when the browser returns no credential', async (t) => {
-    t.mock.getter(
-      globalThis,
-      'navigator',
-      () =>
-        ({
-          credentials: { get: async () => null },
-        }) as unknown as Navigator,
+    t.after(
+      stubNavigator({
+        credentials: { get: async () => null },
+      }),
     )
 
     await assert.rejects(

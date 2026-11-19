@@ -41,7 +41,12 @@ function createWebAuthnApp(options: Partial<WebAuthnProviderOptions> = {}) {
   })
   router.post('/register/finish', async (context) => {
     try {
-      let result = await finishWebAuthnRegistration(provider, context, await context.request.json())
+      let result = await finishWebAuthnRegistration(
+        provider,
+        context,
+        await context.request.json(),
+        { getCredential: (id) => credentials.get(id) ?? null },
+      )
       credentials.set(result.credential.id, result.credential)
       return Response.json(result)
     } catch (error) {
@@ -174,7 +179,21 @@ describe('finishWebAuthnRegistration()', () => {
     let { status, body } = await app.register(authenticator, { challenge: 'not-the-challenge' })
 
     assert.equal(status, 400)
-    assert.equal(body.error, 'Invalid WebAuthn challenge.')
+    assert.equal(body.error, 'Missing WebAuthn registration for "webauthn".')
+  })
+
+  it('rejects a credential id that is already registered', async () => {
+    let app = createWebAuthnApp()
+    let authenticator = await createSoftwareAuthenticator()
+    let first = await app.register(authenticator)
+    let originalPublicKey = app.credentials.get(authenticator.credentialId)?.publicKey
+
+    let second = await app.register(authenticator)
+
+    assert.equal(first.status, 200)
+    assert.equal(second.status, 400)
+    assert.equal(second.body.error, 'WebAuthn credential is already registered.')
+    assert.equal(app.credentials.get(authenticator.credentialId)?.publicKey, originalPublicKey)
   })
 
   it('rejects a response from an origin the provider does not allow', async () => {
@@ -397,6 +416,40 @@ describe('finishWebAuthnAuthentication()', () => {
 
     assert.equal(status, 400)
     assert.equal(body.error, 'WebAuthn signature counter did not increase.')
+  })
+
+  it('accepts responses to concurrent ceremonies in the same session', async () => {
+    let app = createWebAuthnApp()
+    let authenticator = await createSoftwareAuthenticator()
+    await app.register(authenticator)
+
+    let autofill = await app.request('POST', '/login/start', {})
+    let modal = await app.request('POST', '/login/start', {})
+    let modalResult = await app.request(
+      'POST',
+      '/login/finish',
+      await authenticator.authenticate(modal.body, 'user-1'),
+    )
+    let autofillResult = await app.request(
+      'POST',
+      '/login/finish',
+      await authenticator.authenticate(autofill.body, 'user-1'),
+    )
+
+    assert.equal(modalResult.status, 200)
+    assert.equal(autofillResult.status, 200)
+  })
+
+  it('rejects an assertion whose backup eligibility changed since registration', async () => {
+    let app = createWebAuthnApp()
+    let authenticator = await createSoftwareAuthenticator()
+    await app.register(authenticator)
+
+    // User present, user verified, and backup eligible; registration reported not eligible.
+    let { status, body } = await app.login(authenticator, {}, { flags: 0x0d })
+
+    assert.equal(status, 400)
+    assert.equal(body.error, 'WebAuthn backup eligibility changed for this credential.')
   })
 
   it('accepts authenticators that always report a zero counter', async () => {

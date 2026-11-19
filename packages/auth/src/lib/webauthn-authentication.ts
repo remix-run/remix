@@ -8,11 +8,11 @@ import type {
 } from './providers/webauthn.ts'
 import { createRandomToken, getSession, sanitizeReturnTo } from './utils.ts'
 import {
-  concatBytes,
   defaultWebAuthnTransactionKey,
   getBytes,
   importCOSEPublicKey,
   parseCredentialResponse,
+  saveWebAuthnTransaction,
   takeWebAuthnTransaction,
   verifyAuthenticatorData,
   verifyClientData,
@@ -87,7 +87,11 @@ export function startWebAuthnAuthentication<
       allowCredentials.length > 0 ? allowCredentials.map((credential) => credential.id) : undefined,
     returnTo: sanitizeReturnTo(options.returnTo ?? null),
   }
-  session.set(options.transactionKey ?? defaultWebAuthnTransactionKey, transaction)
+  saveWebAuthnTransaction(
+    session,
+    options.transactionKey ?? defaultWebAuthnTransactionKey,
+    transaction,
+  )
 
   return {
     challenge: transaction.challenge,
@@ -104,8 +108,10 @@ export function startWebAuthnAuthentication<
 
 /**
  * Finishes a WebAuthn authentication ceremony by verifying the browser's signed assertion against
- * the stored credential and the challenge stored in the session. The stored ceremony is cleared
- * whether verification succeeds or fails.
+ * the stored credential and a challenge stored in the session. Once the response is matched to its
+ * ceremony, that ceremony is removed from the session whether verification succeeds or fails. The
+ * removal is only saved when the route returns a response, so catch errors from this function
+ * instead of letting them escape.
  *
  * @param provider The WebAuthn provider that started the ceremony.
  * @param context The current request context with session middleware installed.
@@ -123,14 +129,17 @@ export async function finishWebAuthnAuthentication<
   options: FinishWebAuthnAuthenticationOptions,
 ): Promise<FinishedWebAuthnAuthenticationResult> {
   let session = getSession(context, 'finishWebAuthnAuthentication()')
+  let assertion = parseCredentialResponse(response)
+  let clientDataJSON = getBytes(assertion.response, 'clientDataJSON')
+  let challenge = verifyClientData(provider, clientDataJSON, 'webauthn.get')
   let transaction = takeWebAuthnTransaction(
     session,
     options.transactionKey ?? defaultWebAuthnTransactionKey,
     provider,
     'authentication',
+    challenge,
   )
 
-  let assertion = parseCredentialResponse(response)
   if (
     transaction.allowCredentials != null &&
     !transaction.allowCredentials.includes(assertion.id)
@@ -156,18 +165,18 @@ export async function finishWebAuthnAuthentication<
     }
   }
 
-  let clientDataJSON = getBytes(assertion.response, 'clientDataJSON')
-  verifyClientData(provider, clientDataJSON, 'webauthn.get', transaction.challenge)
-
   let authenticatorDataBytes = getBytes(assertion.response, 'authenticatorData')
   let authenticatorData = await verifyAuthenticatorData(provider, authenticatorDataBytes)
+  if (authenticatorData.backupEligible !== stored.backupEligible) {
+    throw new Error('WebAuthn backup eligibility changed for this credential.')
+  }
 
   let publicKey = await importCOSEPublicKey(fromBase64Url(stored.publicKey))
   let clientDataHash = new Uint8Array(await crypto.subtle.digest('SHA-256', clientDataJSON))
-  let verified = await publicKey.verify(
-    getBytes(assertion.response, 'signature'),
-    concatBytes(authenticatorDataBytes, clientDataHash),
-  )
+  let signedData = new Uint8Array(authenticatorDataBytes.length + clientDataHash.length)
+  signedData.set(authenticatorDataBytes)
+  signedData.set(clientDataHash, authenticatorDataBytes.length)
+  let verified = await publicKey.verify(getBytes(assertion.response, 'signature'), signedData)
   if (!verified) {
     throw new Error('Invalid WebAuthn signature.')
   }

@@ -1,6 +1,7 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 
 import { toBase64Url } from './base64url.ts'
+import { decodeCBOR } from './cbor.ts'
 import type {
   WebAuthnCredential,
   WebAuthnProvider,
@@ -12,7 +13,7 @@ import {
   getBytes,
   importCOSEPublicKey,
   parseCredentialResponse,
-  readAttestationAuthenticatorData,
+  saveWebAuthnTransaction,
   takeWebAuthnTransaction,
   verifyAuthenticatorData,
   verifyClientData,
@@ -40,6 +41,11 @@ export interface StartWebAuthnRegistrationOptions {
  * Options for finishing a WebAuthn registration ceremony.
  */
 export interface FinishWebAuthnRegistrationOptions {
+  /**
+   * Looks up a stored credential by its base64url id. Registration fails when it returns a
+   * credential, so a new registration can never replace a credential that belongs to someone else.
+   */
+  getCredential(id: string): WebAuthnCredential | null | Promise<WebAuthnCredential | null>
   /** Session key used to read and clear the in-progress ceremony. Defaults to `"__webauthn"`. */
   transactionKey?: string
 }
@@ -85,7 +91,11 @@ export function startWebAuthnRegistration<
     userId: options.user.id,
     returnTo: sanitizeReturnTo(options.returnTo ?? null),
   }
-  session.set(options.transactionKey ?? defaultWebAuthnTransactionKey, transaction)
+  saveWebAuthnTransaction(
+    session,
+    options.transactionKey ?? defaultWebAuthnTransactionKey,
+    transaction,
+  )
 
   return {
     rp: { id: provider.rpId, name: provider.rpName },
@@ -112,15 +122,16 @@ export function startWebAuthnRegistration<
 }
 
 /**
- * Finishes a WebAuthn registration ceremony by verifying the browser's response against the
- * challenge stored in the session. The stored ceremony is cleared whether verification succeeds or
- * fails.
+ * Finishes a WebAuthn registration ceremony by verifying the browser's response against a
+ * challenge stored in the session. Once the response is matched to its ceremony, that ceremony is
+ * removed from the session whether verification succeeds or fails. The removal is only saved when
+ * the route returns a response, so catch errors from this function instead of letting them escape.
  *
  * @param provider The WebAuthn provider that started the ceremony.
  * @param context The current request context with session middleware installed.
  * @param response The untrusted registration response from the browser, usually
  * `PublicKeyCredential.toJSON()` parsed from the request body.
- * @param options Transaction lookup settings.
+ * @param options Existing-credential lookup and transaction settings.
  * @returns The verified credential to persist, plus the preserved `returnTo` target.
  */
 export async function finishWebAuthnRegistration<
@@ -129,28 +140,32 @@ export async function finishWebAuthnRegistration<
   provider: WebAuthnProvider,
   context: context,
   response: unknown,
-  options: FinishWebAuthnRegistrationOptions = {},
+  options: FinishWebAuthnRegistrationOptions,
 ): Promise<FinishedWebAuthnRegistrationResult> {
   let session = getSession(context, 'finishWebAuthnRegistration()')
+  let credential = parseCredentialResponse(response)
+  let challenge = verifyClientData(
+    provider,
+    getBytes(credential.response, 'clientDataJSON'),
+    'webauthn.create',
+  )
   let transaction = takeWebAuthnTransaction(
     session,
     options.transactionKey ?? defaultWebAuthnTransactionKey,
     provider,
     'registration',
+    challenge,
   )
 
-  let credential = parseCredentialResponse(response)
-  verifyClientData(
-    provider,
-    getBytes(credential.response, 'clientDataJSON'),
-    'webauthn.create',
-    transaction.challenge,
-  )
+  // Attestation statements are not verified: providers always request `attestation: "none"`, so
+  // the credential is treated as unattested regardless of format.
+  let attestationObject = decodeCBOR(getBytes(credential.response, 'attestationObject'))
+  let authData = attestationObject instanceof Map ? attestationObject.get('authData') : undefined
+  if (!(authData instanceof Uint8Array)) {
+    throw new Error('Invalid WebAuthn attestation object.')
+  }
 
-  let authenticatorData = await verifyAuthenticatorData(
-    provider,
-    readAttestationAuthenticatorData(getBytes(credential.response, 'attestationObject')),
-  )
+  let authenticatorData = await verifyAuthenticatorData(provider, authData)
   let attested = authenticatorData.attestedCredential
   if (attested == null) {
     throw new Error('WebAuthn registration is missing attested credential data.')
@@ -162,6 +177,9 @@ export async function finishWebAuthnRegistration<
   let { algorithm } = await importCOSEPublicKey(attested.publicKey)
   if (!provider.algorithms.includes(algorithm)) {
     throw new Error(`WebAuthn credential algorithm "${algorithm}" was not requested.`)
+  }
+  if ((await options.getCredential(credential.id)) != null) {
+    throw new Error('WebAuthn credential is already registered.')
   }
 
   let transports = credential.response.transports

@@ -20,13 +20,15 @@ npm i remix
 
 ## Usage
 
-`remix/auth` exposes five primitives:
+`remix/auth` exposes five primitives for credentials and external auth:
 
 - `verifyCredentials(provider, context)` parses submitted credentials and returns the authenticated result or `null`
 - `startExternalAuth(provider, context, options?)` stores the in-progress OAuth transaction in the session and returns the provider redirect response
 - `finishExternalAuth(provider, context, options?)` validates the callback, clears the stored transaction, and returns `{ result, returnTo? }`, including any provider tokens in `result.tokens`
 - `refreshExternalAuth(provider, tokens)` exchanges a previously stored `refreshToken` for a fresh provider token bundle when the provider runtime supports refresh
 - `completeAuth(context)` rotates the current session id and returns the session for auth writes
+
+Passkey login adds four more, described in [Passkeys (WebAuthn)](#passkeys-webauthn): `startWebAuthnRegistration()`, `finishWebAuthnRegistration()`, `startWebAuthnAuthentication()`, and `finishWebAuthnAuthentication()`.
 
 The route owns redirects, flashes, and other app-specific behavior. `remix/auth` owns the protocol work.
 
@@ -468,14 +470,16 @@ The runtime may write a serialized value to `transaction.providerState` during `
 
 ## Passkeys (WebAuthn)
 
-Use `createWebAuthnProvider()` to let users register passkeys and sign in with them. Each ceremony has a start step that stores a one-time challenge in the session and returns JSON options for the browser, and a finish step that verifies the browser's response against that challenge. The stored challenge is cleared whether verification succeeds or fails, so a response can only be used once.
+Use `createWebAuthnProvider()` to let users register passkeys and sign in with them. Each ceremony has a start step that stores a one-time challenge in the session and returns JSON options for the browser, and a finish step that verifies the browser's response against that challenge. A session holds up to five pending ceremonies, so a passkey autofill prompt, a second tab, and a sign-in button don't cancel each other.
+
+Once a response is matched to its ceremony, the finish step removes that ceremony from the session whether verification succeeds or fails. `session()` middleware only saves that change when your route returns a response, so catch errors from the finish helpers instead of letting them escape.
 
 - `startWebAuthnRegistration(provider, context, options)` returns options for `navigator.credentials.create()`
-- `finishWebAuthnRegistration(provider, context, response, options?)` verifies the new credential and returns `{ credential, userVerified, returnTo? }`
+- `finishWebAuthnRegistration(provider, context, response, options)` verifies the new credential and returns `{ credential, userVerified, returnTo? }`
 - `startWebAuthnAuthentication(provider, context, options?)` returns options for `navigator.credentials.get()`
 - `finishWebAuthnAuthentication(provider, context, response, options)` verifies the signed assertion and returns `{ credential, userId, userVerified, returnTo? }`
 
-Your app owns credential storage. `credential` is plain JSON, so persist it as-is after registration, and save it again after each login so the updated `signCount` can detect cloned authenticators. Starting from the same `session()` and `auth()` setup as the credentials example above:
+Your app owns credential storage, and both finish helpers take a `getCredential(id)` lookup. Registration fails when the credential id is already stored, so a new registration can never replace someone else's credential. `credential` is plain JSON, so persist it as-is after registration, and save it again after each login so the updated `signCount` can detect cloned authenticators. Starting from the same `session()` and `auth()` setup as the credentials example above:
 
 ```ts
 import {
@@ -513,14 +517,19 @@ router.post('/passkeys/register/options', {
 router.post('/passkeys/register', {
   middleware: [requireAuth()],
   async handler(context) {
-    let { credential } = await finishWebAuthnRegistration(
-      passkeys,
-      context,
-      await context.request.json(),
-    )
-    await passkeyStore.save(credential)
+    try {
+      let { credential } = await finishWebAuthnRegistration(
+        passkeys,
+        context,
+        await context.request.json(),
+        { getCredential: (id) => passkeyStore.get(id) },
+      )
+      await passkeyStore.save(credential)
 
-    return Response.json({ ok: true })
+      return Response.json({ ok: true })
+    } catch {
+      return Response.json({ error: 'Passkey registration failed' }, { status: 400 })
+    }
   },
 })
 
@@ -529,18 +538,22 @@ router.post('/login/passkey/options', (context) =>
 )
 
 router.post('/login/passkey', async (context) => {
-  let { credential, userId } = await finishWebAuthnAuthentication(
-    passkeys,
-    context,
-    await context.request.json(),
-    { getCredential: (id) => passkeyStore.get(id) },
-  )
-  await passkeyStore.save(credential)
+  try {
+    let { credential, userId } = await finishWebAuthnAuthentication(
+      passkeys,
+      context,
+      await context.request.json(),
+      { getCredential: (id) => passkeyStore.get(id) },
+    )
+    await passkeyStore.save(credential)
 
-  let session = completeAuth(context)
-  session.set('auth', { userId })
+    let session = completeAuth(context)
+    session.set('auth', { userId })
 
-  return Response.json({ redirectTo: '/dashboard' })
+    return Response.json({ redirectTo: '/dashboard' })
+  } catch {
+    return Response.json({ error: 'Passkey sign-in failed' }, { status: 400 })
+  }
 })
 ```
 
@@ -577,6 +590,8 @@ Provider options:
 - `residentKey` defaults to `'preferred'`. Use `'required'` to only create discoverable credentials
 - `timeout` defaults to 5 minutes and is enforced on the server as well as in the browser
 - `algorithms` defaults to `[-8, -7, -257]` (Ed25519, ES256, RS256)
+
+Pending ceremonies live in the session. With cookie session storage, removing a ceremony only sends the browser a new cookie, and the old cookie still holds it. Someone who captured both the old cookie and a successful response, for example from request logs, could replay them until the ceremony's `timeout` passes, and most synced passkeys always report a `signCount` of 0, so the counter check won't catch it. Use server-side session storage (such as `remix/session-storage/fs`, Redis, or Memcache) for passkey routes when single-use challenges matter, or keep `timeout` short.
 
 Registration always requests `attestation: 'none'`, and attestation statements are not verified. The credential's key, origin, rpId, challenge, and signature are always verified; attestation only proves which authenticator model created a credential, which most apps do not need.
 
