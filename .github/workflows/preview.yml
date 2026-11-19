@@ -8,6 +8,16 @@ on:
     branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, closed]
+    paths:
+      - 'packages/**'
+      - '!**/*.md'
+      - '!**/*.mdx'
+      - '!**/*.test.*'
+      - '!**/*.demo.*'
+      - '!packages/**/demos/**'
+      - '!packages/**/demo/**'
+      - '!packages/**/bench/**'
+      - '!packages/*/**/test/**'
   schedule:
     - cron: '23 4 * * *'
   workflow_dispatch:
@@ -118,6 +128,31 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PREVIEW_CHANNEL: ${{ needs.build.outputs.channel }}
         run: node scripts/preview.ts cleanup-branch "$PREVIEW_CHANNEL"
+
+  # PR path filters can skip close events; the nightly sweep cleans PRs closed for 24 hours.
+  cleanup-stale-prs:
+    if: github.repository == 'remix-run/remix' && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: preview-cleanup-stale-prs
+      queue: max
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          package-manager-cache: false
+      - name: Clean up stranded PR previews
+        env:
+          REMIX_PREVIEWS_PAT: ${{ secrets.REMIX_PREVIEWS_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/preview.ts cleanup-stale-prs
 
   cleanup:
     if: >-
