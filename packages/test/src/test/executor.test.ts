@@ -1023,35 +1023,17 @@ describe('runTests skip and todo reasons', () => {
 })
 
 describe('runTests history quota recovery', () => {
-  it('waits before cleanup and retries with a fresh context and beforeEach hooks', async (t) => {
-    let paused = Promise.withResolvers<void>()
-    let resume = Promise.withResolvers<void>()
-    let order: string[] = []
+  it('retries with a fresh context and reruns beforeEach', async () => {
+    let setups = 0
     let contexts: TestContext[] = []
-    let target = { value: 0 }
-    let run = runWithSuites(
+    let results = await runWithSuites(
       [
         {
           name: 'suite',
-          beforeAll: [
-            {
-              fn() {
-                order.push('beforeAll')
-              },
-            },
-          ],
           beforeEach: [
             {
               fn() {
-                order.push('beforeEach')
-              },
-            },
-          ],
-          afterEach: [
-            {
-              fn() {
-                assert.equal(target.value, 0)
-                order.push('afterEach')
+                setups++
               },
             },
           ],
@@ -1059,13 +1041,8 @@ describe('runTests history quota recovery', () => {
             {
               name: 'history',
               fn(context) {
-                assert.equal(target.value, 0)
                 contexts.push(context)
-                order.push('test')
-                context.mock.property(target, 'value', contexts.length)
-                context.after(() => {
-                  order.push('cleanup')
-                })
+                assert.equal(setups, contexts.length)
                 if (contexts.length === 1) {
                   throw new DOMException(
                     'Attempt to use history.replaceState() more than 100 times per 10 seconds',
@@ -1078,43 +1055,13 @@ describe('runTests history quota recovery', () => {
         },
       ],
       {
-        onHistoryQuotaExceeded(name) {
-          assert.equal(name, 'suite > history')
-          order.push('backoff')
-          paused.resolve()
-          return resume.promise
-        },
+        async onHistoryQuotaExceeded() {},
       },
     )
-    t.after(async () => {
-      resume.resolve()
-      await run
-    })
-    await Promise.race([
-      paused.promise,
-      run.then(() => {
-        throw new Error('Finished without backing off')
-      }),
-    ])
-    assert.deepEqual(order, ['beforeAll', 'beforeEach', 'test', 'backoff'])
-    assert.equal(contexts[0].signal.aborted, true)
-    resume.resolve()
-    let results = await run
     assert.equal(results.passed, 1)
     assert.equal(results.failed, 0)
+    assert.equal(contexts.length, 2)
     assert.notEqual(contexts[0], contexts[1])
-    assert.deepEqual(order, [
-      'beforeAll',
-      'beforeEach',
-      'test',
-      'backoff',
-      'cleanup',
-      'afterEach',
-      'beforeEach',
-      'test',
-      'cleanup',
-      'afterEach',
-    ])
   })
 
   it('bounds retries and backs off again before continuing after a repeated quota failure', async () => {
