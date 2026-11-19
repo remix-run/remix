@@ -1,1 +1,0 @@
-Nested `sql` composition in `remix/data-table` now requires fragments created by `sql` or `rawSql` from the same loaded copy of the package. Other statement objects are passed as parameter values. See the [`data-table` changelog](https://github.com/remix-run/remix/blob/main/packages/data-table/CHANGELOG.md) for migration examples.

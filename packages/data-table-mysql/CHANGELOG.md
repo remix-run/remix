@@ -2,6 +2,30 @@
 
 This is the changelog for [`data-table-mysql`](https://github.com/remix-run/remix/tree/main/packages/data-table-mysql). It follows [semantic versioning](https://semver.org/).
 
+## v1.1.0
+
+### Minor Changes
+
+- Query builder results now read `boolean()` columns as `true` or `false`. MySQL stores booleans as `tinyint(1)`, which mysql2 returns as `1` or `0`. `db.exec()` results keep the values mysql2 returns. ([#12337](https://github.com/remix-run/remix/pull/12337))
+
+### Patch Changes
+
+- Bind every query parameter as exactly one value. Previously, mysql2 expanded array parameters into lists and plain-object parameters into column assignments, and it substituted values into question marks inside quoted strings, quoted identifiers, and comments. The adapter now binds parameters itself: it rejects objects other than `Date`, `Buffer`, typed arrays, and `DataView` (including mysql2 `raw()` and `toSqlString()` objects, which mysql2 inlined as SQL), binds bigints as integers instead of quoted strings, rejects `NaN` and `Infinity`, leaves question marks inside quotes and comments as written, and rejects statements whose placeholder and value counts differ. ([#12335](https://github.com/remix-run/remix/pull/12335))
+
+  Raw SQL that relied on mysql2's array expansion, object expansion, or `??` identifier placeholder must be rewritten. Use `JSON.stringify(value)` for JSON data, `inList()` or one placeholder per item for lists of values, and quoted identifiers in the SQL text.
+
+  ```diff
+  -await db.exec('select * from accounts where id in (?)', [[1, 2]])
+  +await db.exec('select * from accounts where id in (?, ?)', [1, 2])
+  -await db.exec('select ?? from accounts', ['email'])
+  +await db.exec('select `email` from accounts')
+  ```
+
+- Fix upserts with a separate `update` object binding values in the wrong order. Compiled statements bound the `on duplicate key update` values before the inserted values, so an upsert such as `upsert({ status: 'enabled', email: 'info@remix.run' }, { update: { email: 'contact@remix.run' } })` wrote the update value into the first inserted column. Inserted values are now bound first, matching their placeholders. ([#12276](https://github.com/remix-run/remix/pull/12276))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@1.1.0`](https://github.com/remix-run/remix/releases/tag/data-table@1.1.0)
+
 ## v1.0.0
 
 ### Major Changes

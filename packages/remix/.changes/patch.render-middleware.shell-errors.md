@@ -1,1 +1,0 @@
-`context.render()` from `remix/middleware/render` no longer responds with `200` when a component throws while rendering the page shell. The middleware now waits for the first chunk of HTML, so shell errors reject `router.fetch()` for `GET` and `HEAD` requests and the server can respond with a `500`.
