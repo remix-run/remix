@@ -413,6 +413,13 @@ hydrates. When two `css(...)` styles on one element set the same property, their
 doesn't decide which one wins, so
 [put variants behind a selector in a single style](/api/component/#combining-styles).
 
+Each style also gets a cascade sublayer of its own, in the order the page first inserted them, and
+a later sublayer wins whatever the selectors' specificity. A parent usually renders before its
+children, so a nested selector in the parent's style, such as `"&:hover .title"`, can't override a
+property that the child's own style sets. Style what the child leaves unset from the parent, as the
+card below does with its title. For the rest, put the state in the child's style, as the card's
+button does with `":where(article:hover) &"`.
+
 During server rendering, Remix collects generated rules, deduplicates them, and inserts their
 `<style data-rmx-style>` tags into the document head. A server-rendered page does not wait for browser
 JavaScript to receive its component styles.
@@ -423,7 +430,8 @@ JavaScript to receive its component styles.
 
 A [cascade layer](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer) is a named group of CSS
 rules declared with `@layer`. The order of layers decides which rules win, before selector
-specificity is compared. Generated `css(...)` rules live in the `rmx` layer. If your app uses its
+specificity is compared. Generated `css(...)` rules live in the `rmx` layer, each style in a
+sublayer of its own. If your app uses its
 own layers, declare the complete order once:
 
 ```css filename=app/actions/public/app.css
