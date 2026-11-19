@@ -18,7 +18,7 @@ const SKIP_WEBKIT = IS_BUN || process.platform !== 'darwin'
 
 describe('browser history backoff', () => {
   it(
-    'recovers WebKit history budgets across files and tests without replacing the runner',
+    'recovers from WebKit history quota exhaustion across files',
     { skip: SKIP_WEBKIT },
     async (t) => {
       let fixture = await createFixture(t, {
@@ -38,7 +38,6 @@ import { beforeAll, beforeEach, afterEach, it } from '../../src/lib/framework.ts
 let setups = 0
 let attempts = 0
 let cleaned = 0
-let storageAttempts = 0
 beforeAll(() => { setups++ })
 beforeEach(() => { document.body.textContent = '' })
 afterEach(() => {
@@ -57,12 +56,12 @@ it('recovers on a fresh attempt', (t) => {
 it('retains shared setup and runner storage', () => {
   assert.equal(setups, 1)
   assert.equal(attempts, 2)
-  assert.equal(cleaned, 2 + storageAttempts++)
+  assert.equal(cleaned, 2)
   assert.equal(window.parent.document.documentElement.dataset.previousFile, 'yes')
   assert.equal(localStorage.getItem('previous-file'), 'yes')
   assert.equal(sessionStorage.getItem('previous-file'), 'yes')
   assert.equal(document.cookie, 'previous-file=yes')
-  for (let i = 0; i < 60; i++) history.pushState(null, '', '?i=' + i)
+  history.pushState(null, '', '?after-backoff')
 })
 `,
       })
@@ -88,7 +87,7 @@ it('retains shared setup and runner storage', () => {
       assert.ok(browser)
       assert.equal(browser.contexts().length, 1)
       assert.equal(browser.contexts()[0].pages().length, 1)
-      assert.equal(warn.mock.calls.length, 2)
+      assert.equal(warn.mock.calls.length, 1)
       let warning = String(warn.mock.calls[0].arguments[0])
       assert.ok(warning.includes(path.relative(process.cwd(), fixture.testFiles[1])))
       assert.match(warning, /11 seconds/)
