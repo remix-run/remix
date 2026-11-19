@@ -34,6 +34,8 @@ let db = createMysqlDatabase({
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `mysql2/promise`.
 
+Each query parameter represents one value. The driver accepts `Date` and `Buffer` objects and rejects other objects, including arrays. Pass `JSON.stringify(value)` for a JSON column. For an SQL `IN` list, use `inList(column, values)` in the query builder or supply one placeholder per item in raw SQL.
+
 ## Database Capabilities
 
 `data-table-mysql` reports this capability set by default:

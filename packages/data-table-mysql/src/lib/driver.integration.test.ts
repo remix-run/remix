@@ -1,4 +1,5 @@
 import * as assert from '@remix-run/assert'
+import { DataTableDatabaseError, sql } from '@remix-run/data-table'
 import { after, before, describe, it } from '@remix-run/test'
 import { createPool, type Pool } from 'mysql2/promise'
 
@@ -38,6 +39,23 @@ describe('mysql driver integration', { skip: typeof DATABASE_URL !== 'string' },
       }, 'mysql')
     },
     supportsReturning: false,
+  })
+
+  it('requires JSON parameters to be serialized and accepts dates and buffers', async () => {
+    let db = createMysqlDatabase(pool)
+    let settings = { theme: 'dark' }
+    await assert.rejects(
+      db.exec(sql`select json_type(${settings})`),
+      (error: unknown) =>
+        error instanceof DataTableDatabaseError && error.cause instanceof TypeError,
+    )
+    let result = await db.exec(sql`
+      select json_unquote(json_extract(${JSON.stringify(settings)}, '$.theme')) as theme,
+             year(${new Date('2026-06-01T12:00:00Z')}) as year_value,
+             hex(${Buffer.from([0, 255])}) as bytes
+    `)
+
+    assert.deepEqual(result.rows, [{ theme: 'dark', year_value: 2026, bytes: '00FF' }])
   })
 
   it('runs migrations through a single-connection pool without deadlocking', async () => {

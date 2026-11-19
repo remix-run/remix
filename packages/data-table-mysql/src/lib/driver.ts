@@ -9,6 +9,7 @@ import type {
   TransactionToken,
 } from '@remix-run/data-table'
 import { AsyncLocalStorage } from 'node:async_hooks'
+import { isDate } from 'node:util/types'
 
 import { getTablePrimaryKey } from '@remix-run/data-table'
 import mysql from 'mysql2/promise'
@@ -120,6 +121,14 @@ export class MysqlDatabaseDriver implements DatabaseDriver<'mysql'> {
 
     let statements = this.compileSql(request.operation)
     let statement = statements[0]
+    // mysql2 expands arrays into lists and plain objects into column assignments.
+    for (let value of statement.values) {
+      if (value === null || typeof value !== 'object') continue
+      if (!isDate(value) && !Buffer.isBuffer(value)) {
+        throw new TypeError('MySQL object parameters must be Date or Buffer instances')
+      }
+    }
+
     let client = this.#resolveClient(request.transaction)
     let [result] = await client.query(statement.text, statement.values)
 
