@@ -391,6 +391,62 @@ describe('queries', () => {
 })
 
 describe('writes and validation', () => {
+  it('serializes json column values before sending writes to the driver', async () => {
+    let written: unknown[] = []
+    let settings = table({
+      name: 'settings',
+      columns: {
+        id: column.integer(),
+        name: column.text(),
+        data: column.json(),
+      },
+      afterWrite({ values }) {
+        written.push(...values.map((value) => value.data))
+      },
+    })
+    let recording = createRecordingDriver({
+      async execute() {
+        return { affectedRows: 1 }
+      },
+    })
+    let db = new TestDatabase(recording.driver)
+
+    await db.query(settings).insert({ id: 1, name: 'theme', data: { theme: 'dark' } })
+    await db.query(settings).insertMany([
+      { id: 2, data: ['red', 'blue'] },
+      { id: 3, data: null },
+    ])
+    await db.query(settings).where({ id: 1 }).update({ data: '{"theme":"light"}' })
+    await db.query(settings).upsert({ id: 4, data: { a: 1 } }, { update: { data: { b: 2 } } })
+
+    let operations = recording.requests.map((request) => request.operation)
+    assert.deepEqual(operations[0], {
+      ...operations[0],
+      values: { id: 1, name: 'theme', data: '{"theme":"dark"}' },
+    })
+    assert.deepEqual(operations[1], {
+      ...operations[1],
+      values: [
+        { id: 2, data: '["red","blue"]' },
+        { id: 3, data: null },
+      ],
+    })
+    assert.deepEqual(operations[2], { ...operations[2], changes: { data: '{"theme":"light"}' } })
+    assert.deepEqual(operations[3], {
+      ...operations[3],
+      values: { id: 4, data: '{"a":1}' },
+      update: { data: '{"b":2}' },
+    })
+    assert.deepEqual(written, [
+      { theme: 'dark' },
+      ['red', 'blue'],
+      null,
+      '{"theme":"light"}',
+      { a: 1 },
+      { b: 2 },
+    ])
+  })
+
   it('validates values and applies timestamps', async () => {
     let createdAt = '2026-01-15T10:00:00.000Z'
     let recording = createRecordingDriver({

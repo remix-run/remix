@@ -533,7 +533,16 @@ function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
 }
 
 function normalizeStatementValues(values: unknown[]): unknown[] {
-  return values.map((value) => (value === undefined ? null : value))
+  return values.map((value) => {
+    if (value === undefined) return null
+    if (typeof value === 'boolean') return value ? 1 : 0
+    if (value instanceof Date) return value.toISOString()
+    // SQLite drivers read a leading object as named bindings, so only bytes may stay objects.
+    if (value !== null && typeof value === 'object' && !(value instanceof Uint8Array)) {
+      throw new TypeError('SQLite object parameters must be Date or Uint8Array instances')
+    }
+    return value
+  })
 }
 
 function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {

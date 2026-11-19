@@ -56,6 +56,8 @@ sqlite.close()
 
 Destructive lifecycle methods are unavailable when you pass an existing client.
 
+Each query parameter represents one value. The driver binds booleans as `1` or `0` and `Date` objects as ISO 8601 strings, such as `'2026-06-01T12:00:00.000Z'`. It accepts `Uint8Array` and `Buffer` values as blobs and rejects other objects, including arrays. The query builder serializes values written to `json()` columns; in raw SQL, pass `JSON.stringify(value)`.
+
 This is a good fit for local development, embedded deployments, and single-node services. Import any driver-specific types you need directly from your runtime's SQLite module.
 
 ## Database Capabilities

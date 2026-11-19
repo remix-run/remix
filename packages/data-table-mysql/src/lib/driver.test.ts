@@ -543,6 +543,7 @@ describe('mysql driver', () => {
     let statements: Array<{ text: string; values: unknown[] }> = []
 
     let connection = {
+      escape: mysql.escape,
       async query(text: string, values: unknown[] = []) {
         statements.push({ text, values })
 
@@ -558,14 +559,14 @@ describe('mysql driver', () => {
     let count = await db.query(accounts).where(ilike('email', '%EXAMPLE%')).count()
 
     assert.equal(count, 3)
-    assert.match(statements[0].text, /lower\(`email`\) like lower\(\?\)/)
-    assert.deepEqual(statements[0].values, ['%EXAMPLE%'])
+    assert.match(statements[0].text, /lower\(`email`\) like lower\('%EXAMPLE%'\)/)
   })
 
   it('starts and commits transactions on pooled connections', async () => {
     let lifecycle: string[] = []
 
     let poolConnection = {
+      escape: mysql.escape,
       async query() {
         return [{ affectedRows: 1, insertId: 1 }, []]
       },
@@ -692,6 +693,7 @@ describe('mysql driver', () => {
     let lifecycle: string[] = []
 
     let poolConnection = {
+      escape: mysql.escape,
       async query() {
         return [{ affectedRows: 1, insertId: 1 }, []]
       },
@@ -928,6 +930,7 @@ describe('mysql driver', () => {
     let statements: Array<{ text: string; values: unknown[] }> = []
 
     let connection = {
+      escape: mysql.escape,
       async query(text: string, values: unknown[] = []) {
         statements.push({ text, values })
         return [[{ count: '0' }], []]
@@ -946,8 +949,7 @@ describe('mysql driver', () => {
       .count()
 
     assert.match(statements[0].text, /`accounts`\.`id`\s*=\s*`projects`\.`account_id`/)
-    assert.match(statements[0].text, /`accounts`\.`email`\s*=\s*\?/)
-    assert.deepEqual(statements[0].values, ['accounts.email'])
+    assert.match(statements[0].text, /`accounts`\.`email`\s*=\s*'accounts\.email'/)
   })
 
   it('compiles cross-schema table references in joins', async () => {
@@ -996,6 +998,7 @@ describe('mysql driver', () => {
     let statements: Array<{ text: string; values: unknown[] }> = []
 
     let connection = {
+      escape: mysql.escape,
       async query(text: string, values: unknown[] = []) {
         statements.push({ text, values })
         return [[{ count: '0' }], []]
@@ -1012,8 +1015,7 @@ describe('mysql driver', () => {
       .where(inList('id', [1, 3]))
       .count()
 
-    assert.match(statements[0].text, /`id`\s+in\s+\(\?,\s*\?\)/)
-    assert.deepEqual(statements[0].values, [1, 3])
+    assert.match(statements[0].text, /`id`\s+in\s+\(1,\s*3\)/)
   })
 
   it('loads the inserted row for create({ returnRow: true }) without RETURNING support', async () => {
@@ -1021,6 +1023,7 @@ describe('mysql driver', () => {
     let calls = 0
 
     let connection = {
+      escape: mysql.escape,
       async query(text: string, values: unknown[] = []) {
         statements.push({ text, values })
         calls += 1
@@ -1055,8 +1058,7 @@ describe('mysql driver', () => {
     assert.equal(statements.length, 2)
     assert.match(statements[0].text, /^insert into `accounts`/)
     assert.match(statements[1].text, /^select \* from `accounts`/)
-    assert.match(statements[1].text, /where \(\(`id` = \?\)\)/)
-    assert.deepEqual(statements[1].values, [2, 1])
+    assert.match(statements[1].text, /where \(\(`id` = 2\)\) limit 1$/)
   })
 
   it('normalizes bigint count rows', async () => {
@@ -1077,6 +1079,7 @@ describe('mysql driver', () => {
 
   it('defaults write metadata when mysql returns a non-object header', async () => {
     let connection = {
+      escape: mysql.escape,
       async query() {
         return [0, []]
       },
@@ -1094,6 +1097,7 @@ describe('mysql driver', () => {
 
   it('does not expose insertId for composite primary keys', async () => {
     let connection = {
+      escape: mysql.escape,
       async query() {
         return [{ affectedRows: 1, insertId: 123 }, []]
       },
@@ -1131,6 +1135,7 @@ describe('mysql driver', () => {
 
   it('does not expose insertId for non-insert writes', async () => {
     let connection = {
+      escape: mysql.escape,
       async query() {
         return [{ affectedRows: 1, insertId: 99 }, []]
       },

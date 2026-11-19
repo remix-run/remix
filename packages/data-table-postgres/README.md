@@ -33,6 +33,8 @@ let db = createPostgresDatabase({
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `pg`.
 
+Each query parameter represents one value. `pg` sends JavaScript arrays as PostgreSQL arrays, so compare against an array parameter with `= any(?)`. The query builder serializes values written to `json()` columns; in raw SQL, pass `JSON.stringify(value)` for a `json` or `jsonb` parameter.
+
 Config-backed databases support `db.wipe()` and `db.reset()`. Call `await db.close()` during application shutdown to close the internally created pool. You may pass an existing `pg` pool or client when your application owns the driver lifecycle; `db.close()` leaves supplied clients alone, and destructive lifecycle methods are unavailable in that mode. `db.wipe()` requires a database name resolvable from the connection config (`database`, the path of `connectionString`, or the `PGDATABASE` environment variable) and throws when none is present.
 
 Migration runs reserve one connection for the PostgreSQL advisory lock, migration SQL, and journal updates. Lock acquisition waits up to 60 seconds (via `lock_timeout`) and fails with an error instead of blocking forever. After a successful run the connection is unlocked and returned to the pool; if the migration or unlock fails, the reserved connection is destroyed instead of being reused, so a dirty session can never leak back into the pool. Nested migration lock acquisition throws instead of deadlocking.
