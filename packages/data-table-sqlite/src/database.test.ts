@@ -167,6 +167,40 @@ describe('SQL interpolation', () => {
     }
   })
 
+  it('decodes timestamp text only when the Date binds back to the stored text', async () => {
+    let db = createSqliteDatabase({ filename: ':memory:' })
+    let events = table({
+      name: 'events',
+      columns: { id: column.integer(), at: column.timestamp() },
+    })
+
+    try {
+      await db.exec('create table events (id integer primary key, at text)')
+      await db.exec(
+        "insert into events values (1, '2026-06-01 12:00:00'), (2, '2026-06-01 12:00:00.123'), " +
+          "(3, '2026-06-01T12:00:00Z'), (4, '2026-06-01 12:00:00.123456')",
+      )
+
+      let rows = await db.query(events).orderBy('id').all()
+      assert.deepEqual(rows, [
+        { id: 1, at: new Date('2026-06-01T12:00:00Z') },
+        { id: 2, at: new Date('2026-06-01T12:00:00.123Z') },
+        { id: 3, at: '2026-06-01T12:00:00Z' },
+        { id: 4, at: '2026-06-01 12:00:00.123456' },
+      ])
+
+      for (let row of rows) {
+        let found = await db.query(events).where({ at: row.at }).all()
+        assert.deepEqual(
+          found.map((match) => match.id),
+          [row.id],
+        )
+      }
+    } finally {
+      await db.close()
+    }
+  })
+
   it('executes composed fragments and structural raw statements', async () => {
     let db = createSqliteDatabase({ filename: ':memory:' })
 

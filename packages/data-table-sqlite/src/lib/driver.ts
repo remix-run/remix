@@ -179,13 +179,10 @@ export class SqliteDatabaseDriver implements DatabaseDriver<'sqlite'> {
     }
 
     if (column.type === 'timestamp' && typeof value === 'string') {
-      // SQLite's own timestamps have no zone and are UTC.
-      let match =
-        /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)(Z|[+-]\d{2}:?\d{2})?$/.exec(
-          value,
-        )
-      let date = match ? new Date(match[1] + 'T' + match[2] + (match[3] ?? 'Z')) : undefined
-      return date && !Number.isNaN(date.getTime()) ? date : value
+      // Only decode text in the form this driver binds, so a Date read back binds as the same
+      // text and still matches the stored value in filters and key lookups.
+      let date = new Date(value.replace(' ', 'T') + 'Z')
+      return !Number.isNaN(date.getTime()) && formatTimestamp(date) === value ? date : value
     }
 
     return value
@@ -575,10 +572,7 @@ function normalizeStatementValues(values: unknown[]): unknown[] {
       if (Number.isNaN(value.getTime())) {
         throw new TypeError('SQLite Date parameters must be valid dates')
       }
-      // Match SQLite's own UTC `current_timestamp` format so stored values compare and sort
-      // together. Whole seconds omit `.000`, which would otherwise sort after the same second.
-      let text = value.toISOString().replace('T', ' ').replace('Z', '')
-      return value.getUTCMilliseconds() === 0 ? text.slice(0, -4) : text
+      return formatTimestamp(value)
     }
     // SQLite drivers read a leading object as named bindings, so only bytes may stay objects.
     if (value !== null && typeof value === 'object' && !ArrayBuffer.isView(value)) {
@@ -586,6 +580,13 @@ function normalizeStatementValues(values: unknown[]): unknown[] {
     }
     return value
   })
+}
+
+// Match SQLite's own UTC `current_timestamp` format so stored values compare and sort together.
+// Whole seconds omit `.000`, which would otherwise sort after the same second.
+function formatTimestamp(date: Date): string {
+  let text = date.toISOString().replace('T', ' ').replace('Z', '')
+  return date.getUTCMilliseconds() === 0 ? text.slice(0, -4) : text
 }
 
 function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
