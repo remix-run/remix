@@ -1,7 +1,6 @@
 import type { ElementProps, ElementType, RemixNode, Renderable } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
-import { ignoreAbortedRejection } from './ignore-aborted-rejection.ts'
 
 /**
  * An `EventTarget` subclass with typed event maps.
@@ -94,6 +93,24 @@ export function getComponentError(event: Event): unknown {
 }
 
 /**
+ * Ignores a rejection from async runtime work once that work's signal has been
+ * aborted. Rejections from work whose signal is still live are re-thrown so
+ * they continue to surface as unhandled rejections.
+ *
+ * @param result The value returned by an event handler or task.
+ * @param signal The work's cancellation signal, when one was requested.
+ */
+export function ignoreAbortedRejection(result: unknown, signal?: AbortSignal): void {
+  if (result === null || (typeof result !== 'object' && typeof result !== 'function')) return
+  void Promise.resolve()
+    .then(() => result)
+    .catch((error: unknown) => {
+      if (signal?.aborted) return
+      throw error
+    })
+}
+
+/**
  * Task queued to run after a component update completes.
  */
 export type Task = (signal: AbortSignal) => void
@@ -134,9 +151,11 @@ export interface Handle<Props = Record<string, never>, ContextValue = NoContext>
   update(): Promise<AbortSignal>
 
   /**
-   * Schedules a task to run after the next update.
+   * Schedules a task to run after the next update. Async rejections are ignored
+   * once its render signal is aborted; other rejections remain unhandled.
    *
    * @param task Work receiving a signal aborted on the next render or component removal.
+   * Declare the signal parameter to enable render cancellation tracking.
    */
   queueTask(task: Task): void
 
@@ -679,7 +698,7 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
       // No task asked for a signal, so this aborted placeholder doesn't mean the
       // work was cancelled and its rejections must not be ignored.
       let placeholderSignal = (sharedAbortedSignal ??= AbortSignal.abort())
-      return tasks.map((task) => () => task(placeholderSignal))
+      return tasks.map((task) => () => ignoreAbortedRejection(task(placeholderSignal)))
     }
     return tasks.map((task) => () => ignoreAbortedRejection(task(taskSignal), taskSignal))
   }

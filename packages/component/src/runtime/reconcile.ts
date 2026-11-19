@@ -1,13 +1,12 @@
 import { getNonceManager, type ResourceNonces } from './nonce.ts'
 import type { Component, ComponentHandle, FrameHandle, FrameProps } from './component.ts'
-import { createComponent, Fragment, FRAME_NODE } from './component.ts'
+import { createComponent, Fragment, FRAME_NODE, ignoreAbortedRejection } from './component.ts'
 import {
   disposeClientEntryBoundary,
   getClientEntryBoundaryOwner,
   getFrameRuntime,
   type FrameMountState,
 } from './frame-runtime.ts'
-import { ignoreAbortedRejection } from './ignore-aborted-rejection.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps, setSelectDefaultValue, setSelectValue } from './core/props.ts'
 import { isMixinDescriptor } from './core/mix.ts'

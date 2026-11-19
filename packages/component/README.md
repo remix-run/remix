@@ -296,7 +296,7 @@ Pass the signal with the narrowest lifetime to `fetch()` and other cancellable w
 | The signal resolved by `handle.update()` | The component renders again, or is removed             |
 | `handle.signal`                          | The component is removed                               |
 
-Remix doesn't handle a rejected async event handler or queued task, and aborting a `fetch()` rejects it. Catch errors inside async work, and check `signal.aborted` before using a result.
+Remix ignores rejections from async `on()` handlers and queued tasks once the signal passed to that work is aborted, regardless of the rejection reason. Rejections while that signal is live still surface as unhandled promise rejections; synchronous task errors still dispatch the root's `error` event. Catch failures when you want to show an error state, and check `signal.aborted` before using a result. Component tasks that omit the signal parameter are tracked for render cancellation when another task in the same commit requests a signal, including the internal task queued by `handle.update()`. Pending tasks flushed when the component is removed receive an aborted cancellation signal even if they omit the parameter.
 
 ### Context
 

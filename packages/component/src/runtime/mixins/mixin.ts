@@ -4,9 +4,8 @@ import type { Key } from '../key.ts'
 import type { Scheduler } from '../scheduler.ts'
 import type { SchedulerPhaseEvent } from '../scheduler.ts'
 import { jsx } from '../core/vnode.ts'
-import { TypedEventTarget } from '../component.ts'
+import { TypedEventTarget, ignoreAbortedRejection } from '../component.ts'
 import { invariant } from '../invariant.ts'
-import { ignoreAbortedRejection } from '../ignore-aborted-rejection.ts'
 import { composeMixedProps, isMixinElementFunction } from '../core/mix.ts'
 
 type RebindNode<value, baseNode, boundNode> = value extends (
@@ -147,7 +146,8 @@ export interface MixinHandle<
    */
   update(): Promise<AbortSignal>
   /**
-   * Queues work after pending DOM updates and commit-phase callbacks.
+   * Queues work after pending DOM updates and commit-phase callbacks. Async
+   * rejections are ignored once the host lifetime signal is aborted.
    *
    * @param task Callback receiving the bound host and its runtime lifetime signal.
    */

@@ -1,5 +1,5 @@
 import { createMixin, type MixinType } from './mixin.ts'
-import { ignoreAbortedRejection } from '../ignore-aborted-rejection.ts'
+import { ignoreAbortedRejection } from '../component.ts'
 import type { ElementProps } from '../core/vnode.ts'
 import type { MixinDescriptor } from './mixin.ts'
 import type { EnsureEvent, EventMap } from '../event-types.ts'
@@ -76,7 +76,8 @@ export function isOnMixinDescriptor(descriptor: unknown): descriptor is OnMixinD
 }
 
 /**
- * Attaches a typed DOM event handler through the mixin system.
+ * Attaches a typed DOM event handler through the mixin system. Async rejections
+ * are ignored once the handler's signal is aborted; other rejections remain unhandled.
  *
  * @param type Event type to listen for.
  * @param handler Event handler.

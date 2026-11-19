@@ -42,3 +42,5 @@ The router rejects with `request.signal.reason` when a request aborts. Pass the 
 ## Match component cleanup to the work's lifetime {#cancellation-in-components-with-handle-signal}
 
 Use event-handler signals for re-entrant event work, queued-task signals for work invalidated by the next render, `ref` signals for element-owned resources, and `handle.signal` for component-lifetime listeners or streams. Check the relevant signal before applying asynchronous results.
+
+Remix ignores rejections from async `on()` handlers and queued tasks once the signal passed to that work is aborted, regardless of the rejection reason. Rejections while that signal is live remain unhandled promise rejections, rather than root `error` events. Catch failures inside the callback when you want to report them or show an error state. Declare the signal parameter on component tasks to enable render cancellation tracking. Calling `handle.update()` also enables tracking for tasks in that commit. Pending tasks flushed on component removal receive an aborted cancellation signal even if they omit the parameter.
