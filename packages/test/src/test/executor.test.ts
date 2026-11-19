@@ -1023,6 +1023,55 @@ describe('runTests skip and todo reasons', () => {
 })
 
 describe('runTests history quota recovery', () => {
+  it('backs off once for aggregated cleanup quota errors before afterEach without replaying cleanup', async () => {
+    let cleanups = 0
+    let backoffs = 0
+    let results = await runWithSuites(
+      [
+        {
+          name: 'suite',
+          afterEach: [
+            {
+              fn() {
+                assert.equal(backoffs, 1)
+              },
+            },
+          ],
+          tests: [
+            {
+              name: 'cleanup failures',
+              fn(t) {
+                function cleanup() {
+                  cleanups++
+                  throw new DOMException(
+                    'Attempt to use history.replaceState() more than 100 times per 10 seconds',
+                    'SecurityError',
+                  )
+                }
+                t.after(cleanup)
+                t.after(cleanup)
+                t.after(() => {
+                  throw new Error('other cleanup failure')
+                })
+              },
+            },
+          ],
+        },
+      ],
+      {
+        async onHistoryQuotaExceeded() {
+          backoffs++
+        },
+      },
+    )
+    assert.equal(cleanups, 2)
+    assert.equal(backoffs, 1)
+    assert.equal(results.failed, 1)
+    assert.match(results.tests[0].error?.message ?? '', /history.replaceState/)
+    assert.match(results.tests[0].error?.message ?? '', /other cleanup failure/)
+    assert.ok(!results.tests[0].error?.message.includes('afterEach failed'))
+  })
+
   it('bounds retries and backs off again before continuing after a repeated quota failure', async () => {
     let attempts = 0
     let backoffs = 0
@@ -1064,6 +1113,7 @@ describe('runTests history quota recovery', () => {
 
   it('reports unrelated SecurityErrors and quota errors without browser recovery normally', async () => {
     let backoffs = 0
+    let aggregateAttempts = 0
     let otherError = await runWithSuites(
       [
         {
@@ -1073,6 +1123,19 @@ describe('runTests history quota recovery', () => {
               name: 'invalid URL',
               fn() {
                 throw new DOMException('Invalid URL', 'SecurityError')
+              },
+            },
+            {
+              name: 'mixed errors',
+              fn() {
+                if (++aggregateAttempts > 1) return
+                throw new AggregateError([
+                  new DOMException(
+                    'Attempt to use history.replaceState() more than 100 times per 10 seconds',
+                    'SecurityError',
+                  ),
+                  new Error('unrelated failure'),
+                ])
               },
             },
           ],
@@ -1101,7 +1164,8 @@ describe('runTests history quota recovery', () => {
       },
     ])
     assert.equal(backoffs, 0)
-    assert.equal(otherError.failed, 1)
+    assert.equal(aggregateAttempts, 1)
+    assert.equal(otherError.failed, 2)
     assert.equal(noRecovery.failed, 1)
   })
 

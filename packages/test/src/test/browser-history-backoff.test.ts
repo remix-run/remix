@@ -13,8 +13,8 @@ import type { TestResults } from '../lib/reporters/results.ts'
 import { IS_BUN } from '../lib/runtime.ts'
 
 const PKG_DIR = fileURLToPath(new URL('../../', import.meta.url))
-// CI installs WebKit in the macOS job; the other jobs install Chromium and Firefox.
-const SKIP_WEBKIT = IS_BUN || process.platform !== 'darwin'
+// Postinstall installs Chromium and Firefox; macOS CI opts in after installing WebKit.
+const SKIP_WEBKIT = IS_BUN || process.platform !== 'darwin' || process.env.REMIX_TEST_WEBKIT !== '1'
 
 describe('browser history backoff', () => {
   it(
@@ -77,6 +77,8 @@ it('retains shared setup and runner storage', () => {
       let warn = t.mock.method(console, 'warn', () => {})
       let run = await runBrowserTests({
         ...fixture,
+        // CLI paths and native filesystem paths can use different separators on Windows.
+        testFiles: fixture.testFiles.map((file) => path.win32.normalize(file)),
         playwrightUseOpts: { browserName: 'webkit' },
         reporter: createReporter([]),
       })
@@ -95,7 +97,7 @@ it('retains shared setup and runner storage', () => {
   )
 
   it(
-    'continues after a WebKit import failure and navigates each file again on rerun',
+    'continues after WebKit import and page-load failures and navigates each file on rerun',
     { skip: SKIP_WEBKIT },
     async (t) => {
       let fixture = await createFixture(t, {
@@ -145,6 +147,14 @@ it('gets a fresh document after the failed file', () => {
       let dashboard = pages[0]
       let execution = pages[1]
       assert.equal(await execution.evaluate(() => localStorage.getItem('runs')), '1')
+      await execution.route('**/*', async (route) => {
+        let url = new URL(route.request().url())
+        if (url.pathname === '/' && url.searchParams.get('file')?.endsWith('/b.test.browser.ts')) {
+          await route.fulfill({ status: 404, body: 'Unknown test file' })
+        } else {
+          await route.fallback()
+        }
+      })
       await Promise.all([
         dashboard.waitForEvent('load'),
         dashboard.getByRole('button', { name: 'Re-run' }).click(),
@@ -152,6 +162,7 @@ it('gets a fresh document after the failed file', () => {
       await dashboard.waitForFunction('window.__testsDone')
       assert.equal(reported.length, 6)
       assert.equal(reported[4].failed, 1)
+      assert.match(reported[4].tests[0].error?.message ?? '', /Failed to load test page:.*404/)
       assert.equal(reported[5].passed, 1)
       assert.equal(await execution.evaluate(() => localStorage.getItem('runs')), '2')
       assert.deepEqual(browser.contexts()[0].pages(), pages)

@@ -183,10 +183,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       let activeExecutionPage = executionPage
       await page.route('**/run-file?*', async (route) => {
         let testFile = new URL(route.request().url()).searchParams.get('file')
-        if (
-          !testFile?.startsWith('/scripts/') ||
-          (options.testFiles && !options.testFiles.includes(urlPathToFilePath(testFile, rootDir)))
-        ) {
+        if (!testFile?.startsWith('/scripts/')) {
           await route.fulfill({ status: 404, body: 'Unknown test file' })
           return
         }
@@ -308,9 +305,12 @@ async function waitForBrowserTests(page: Page, url: string): Promise<void> {
   page.on('requestfailed', onRequestFailed)
   try {
     await Promise.race([
-      page
-        .goto(url)
-        .then(() => page.waitForFunction('window.__testsDone', undefined, { timeout: 0 })),
+      page.goto(url).then((response) => {
+        if (response && !response.ok()) {
+          throw new Error(`Failed to load test page: ${url} (${response.status()})`)
+        }
+        return page.waitForFunction('window.__testsDone', undefined, { timeout: 0 })
+      }),
       errorPromise,
     ])
   } finally {

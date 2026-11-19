@@ -275,6 +275,8 @@ jobs:
         run: pnpm --filter @remix-run/component exec playwright install webkit
 
       - name: Run WebKit runner regressions
+        env:
+          REMIX_TEST_WEBKIT: '1'
         run: pnpm --filter @remix-run/test run test src/test/browser-history-backoff.test.ts --type server --only WebKit
 
       - name: Run WebKit tests

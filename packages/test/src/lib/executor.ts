@@ -227,7 +227,16 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
           try {
             await cleanup()
           } catch (error) {
-            await backOffHistoryQuota(error, getFullTestName(suite.name, `${test.name} cleanup`))
+            let errors: unknown[] = error instanceof AggregateError ? error.errors : [error]
+            for (let cause of errors) {
+              if (
+                await backOffHistoryQuota(
+                  cause,
+                  getFullTestName(suite.name, `${test.name} cleanup`),
+                )
+              )
+                break
+            }
             cleanupError = createHookFailure('cleanup', error)
           }
           if (suite.afterEach) {
