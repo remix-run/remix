@@ -10,6 +10,7 @@ import { routes } from '../../routes.ts'
 import { installDebugBoundaries } from './debug-boundaries.ts'
 import { createFrameRequestManager } from './frame-request-manager.ts'
 import { createRelatedBookPrefetchManager } from './related-book-prefetch-manager.ts'
+import { prefetchResponsiveImages } from './prefetch-responsive-images.ts'
 
 const bookDetailsMatcher = createMatcher(routes.books.show.pattern)
 const relatedBooksMatcher = createMatcher(routes.books.related.pattern)
@@ -48,22 +49,26 @@ export const app = run({
       },
       {
         fetch: frameRequestManager.fetch,
-        processFrame(prefetchReferences, context) {
+        async processFrame(prefetchReferences, context) {
           // Queue lazy related frames discovered in the prefetched details HTML.
           // Card hover/focus starts them; if intent preceded discovery, start them now.
           if (bookDetailsMatcher.match(context.src)) {
             relatedBookPrefetchManager.queueRelatedBooks(context)
           }
 
-          // Include ordinary cover images from related-books responses in asset prefetching.
-          // Details responses continue to use their explicit image preloads.
+          // Related covers and page image preloads use responsive image candidates.
+          // Only explicit preloads from page HTML participate; hidden slides stay lazy.
+          let images = context.fragment.querySelectorAll(
+            'link[rel="preload"][as="image"][imagesrcset]',
+          )
           if (relatedBooksMatcher.match(context.src)) {
-            return prefetchReferences({
-              assets: [...context.assets, ...context.fragment.querySelectorAll('img[src]')],
-            })
+            images = context.fragment.querySelectorAll('img[src]')
           }
           // Prefetch default assets; nested frames require explicit selection.
-          return prefetchReferences()
+          await Promise.all([
+            prefetchResponsiveImages(images, context.signal),
+            prefetchReferences({ assets: [...context.assets, ...images] }),
+          ])
         },
       },
     )
