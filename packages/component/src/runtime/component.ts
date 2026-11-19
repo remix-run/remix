@@ -695,6 +695,34 @@ export function Fragment(handle: Handle<FragmentProps>): RenderFn {
   return () => null // reconciler renders
 }
 
+/** Props accepted by the built-in {@link Portal} component. */
+export interface PortalProps {
+  /** Children to render at the destination while retaining their component context and frame. */
+  children?: RemixNode
+  /**
+   * Destination in the same document as the portal. Defaults to that document's body when omitted.
+   * Changing the destination element remounts the children and resets their local state. If the
+   * destination is removed, children stay attached to that element until the container changes or
+   * the portal is disposed.
+   */
+  container?: HTMLElement
+}
+
+/**
+ * Renders children into another DOM container without adding a wrapper element.
+ * Renders nothing on the server. Inside a client entry, portal children render in the browser during
+ * hydration and subsequent updates. Without a client entry, the portal stays absent. DOM events,
+ * inherited styles, form ownership, and keyboard navigation follow the destination's DOM ancestry
+ * and order.
+ *
+ * @param handle Component handle containing the portal props.
+ * @returns An empty server render function.
+ */
+export function Portal(handle: Handle<PortalProps>): RenderFn {
+  void handle
+  return () => null
+}
+
 /**
  * Creates a frame handle with default no-op implementations for testing and internal wiring.
  *
