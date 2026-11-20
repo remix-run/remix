@@ -367,9 +367,10 @@ export function toVNode(node: RemixNode): VNodeInput {
     invariant(isElementFunction(node.type), 'Expected component element type')
     if (node.type === Portal) {
       let props = parseHostProps(node.props)
-      let container = props.container
+      let container: PortalProps['container'] = node.props.container
       invariant(
-        container === undefined || container instanceof HTMLElement,
+        container === undefined ||
+          container instanceof (container?.ownerDocument?.defaultView?.HTMLElement ?? HTMLElement),
         'Portal container must be an HTMLElement',
       )
       return { kind: 'portal', type: Portal, key: node.key, props: { ...props, container } }

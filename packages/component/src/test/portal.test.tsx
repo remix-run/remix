@@ -746,6 +746,42 @@ describe('Portal', () => {
     expect(setups).toBe(1)
   })
 
+  it('renders into a custom destination when the root and destination are inside an iframe', (t) => {
+    let frame = document.createElement('iframe')
+    document.body.append(frame)
+    t.after(() => frame.remove())
+    let doc = frame.contentDocument
+    invariant(doc)
+    let source = doc.createElement('div')
+    let destination = doc.createElement('section')
+    doc.body.append(source, destination)
+    let root = createRoot(source)
+    t.after(() => root.dispose())
+
+    root.render(
+      <Portal container={destination}>
+        <b>Content</b>
+      </Portal>,
+    )
+    expect(source.childNodes.length).toBe(0)
+    expect(destination.querySelector('b')?.textContent).toBe('Content')
+    root.render(<Portal container={destination}>Updated</Portal>)
+    expect(destination.textContent).toBe('Updated')
+    root.dispose()
+    expect(destination.childNodes.length).toBe(0)
+  })
+
+  it('rejects an SVG element as a container', (t) => {
+    let destination = document.createElement('div')
+    let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    let { root, cleanup } = render(<Portal container={destination}>Content</Portal>)
+    t.after(cleanup)
+    expect(() => root.render(jsx(Portal, { container: svg, children: 'Changed' }))).toThrow(
+      'Portal container must be an HTMLElement',
+    )
+    expect(destination.textContent).toBe('Content')
+  })
+
   it('rejects a null destination without removing existing portal content', (t) => {
     let destination = document.createElement('div')
     let { root, cleanup } = render(<Portal container={destination}>Content</Portal>)
