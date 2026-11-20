@@ -19,8 +19,18 @@ describe('Live examples in the docs site', () => {
       if (message.type() === 'error') errors.push(`${message.location().url} ${message.text()}`)
     })
 
+    function waitForHydration() {
+      return page.evaluate(async () => {
+        let entry = document.querySelector<HTMLScriptElement>('script[type="module"][src]')
+        if (!entry) throw new Error('Missing docs app entry')
+        let { app } = await import(entry.src)
+        await app.ready()
+      })
+    }
+
     await page.setViewportSize({ width: 390, height: 720 })
     await page.goto('/patterns/accordion/')
+    await waitForHydration()
     let source = page.locator('#basic .docs-demo-source')
     let code = source.locator('.docs-demo-source-code')
     let disclosure = source.getByRole('button', { name: 'Show code', exact: true })
@@ -72,6 +82,7 @@ describe('Live examples in the docs site', () => {
     )
 
     await page.goto('/patterns/popover/')
+    await waitForHydration()
     let popover = page.locator('#basic .docs-demo-preview')
     let trigger = popover.getByRole('button', { name: 'Filter pull requests' })
     await trigger.click()
