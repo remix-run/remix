@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 
 import type { Book } from '../data/schema.ts'
-import { assets } from './assets.ts'
+import { assets, bookImageWidths } from './assets.ts'
 
 export interface BookImage {
   src: string
@@ -28,17 +28,9 @@ export async function getBookImage(href: string): Promise<BookImage> {
   if (src === href) return { src }
 
   let candidates = await Promise.all(
-    (
-      [
-        ['book-image-320', 320],
-        ['book-image-480', 480],
-        ['book-image-640', 640],
-        ['book-image-768', 768],
-        ['book-image-960', 960],
-      ] as const
-    ).map(async ([transform, width]) => {
+    bookImageWidths.map(async (width) => {
       let url = await assets.getHref(path.resolve(import.meta.dirname, '..', href.slice(1)), {
-        transform: [transform],
+        transform: [`book-image-${width}`],
       })
       return `${url} ${width}w`
     }),
