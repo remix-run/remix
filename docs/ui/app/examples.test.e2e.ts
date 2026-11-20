@@ -2,14 +2,10 @@ import * as assert from 'remix/assert'
 import { createTestServer } from 'remix/node-fetch-server/test'
 import { describe, it } from 'remix/test'
 import type { TestContext } from 'remix/test'
-import { scriptEntry } from './assets.ts'
 import { router } from './router.ts'
 
 async function waitForHydration(page: Awaited<ReturnType<TestContext['serve']>>) {
-  await page.evaluate(async (entryHref) => {
-    let { app } = await import(entryHref)
-    await app.ready()
-  }, scriptEntry.href)
+  await page.locator('html[data-test-hydrated]').waitFor({ state: 'attached' })
 }
 
 describe('Live examples in the docs site', () => {
@@ -227,9 +223,16 @@ describe('Live examples in the docs site', () => {
     assert.ok(summary)
     assert.ok(summary.y >= header.y + header.height + 16)
 
-    await page.unroute('**/*')
-    await page.reload()
+    // WebKit does not reliably restart previously blocked modules on reload.
+    await page.close()
+    page = await t.serve(await createTestServer(router.fetch))
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/patterns/listbox/#ref-members-matchSearchText')
     await waitForHydration(page)
+    outline = page.locator('#docs-secondary-navigation')
+    entry = page.locator('#ref-members-matchSearchText')
+    header = await page.getByRole('banner').boundingBox()
+    assert.ok(header)
     await entry.waitFor({ state: 'visible' })
     await page.setViewportSize({ width: 390, height: 720 })
     await page.goto('/patterns/listbox/')
