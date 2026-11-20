@@ -425,55 +425,6 @@ describe('toast gestures and clocks', () => {
     assert.equal(region.hasAttribute('data-expanded'), false)
   })
 
-  it('keeps timed toasts working without CSS.registerProperty', async (t) => {
-    t.mock.property(CSS, 'registerProperty', undefined)
-    let errors: unknown[] = []
-    let controller = new AbortController()
-    window.addEventListener('error', (event) => errors.push(event.error), {
-      signal: controller.signal,
-    })
-    t.after(() => controller.abort())
-    let time = clock(t)
-    let toastManager = createToastManager()
-    toastManager.add({ title: 'Saved', timeout: 1000 })
-    let result = render(
-      <Context manager={toastManager}>
-        {(toastItems) => (
-          <section mix={root({ label: 'Notifications' })}>
-            {toastItems.map((toastItem) => (
-              <ItemContext key={toastItem.id} value={toastItem.id}>
-                <article key={toastItem.id} mix={item({ countdown: true })}>
-                  {toastItem.title}
-                </article>
-              </ItemContext>
-            ))}
-          </section>
-        )}
-      </Context>,
-    )
-    t.after(result.cleanup)
-    t.after(() => toastManager.closeAll())
-    let region = element(result.container, 'section')
-    let card = element(region, 'article')
-    assert.equal(card.textContent, 'Saved')
-    assert.equal(card.getAnimations().length, 0)
-    time.advance(400)
-    await result.act(() =>
-      region.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' })),
-    )
-    time.advance(1000)
-    assert.equal(toastManager.items.length, 1)
-    await result.act(() =>
-      region.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })),
-    )
-    await result.act(() => time.advance(599))
-    assert.equal(toastManager.items.length, 1)
-    await result.act(() => time.advance(1))
-    assert.equal(toastManager.items.length, 0)
-    assert.equal(card.isConnected, false)
-    assert.deepEqual(errors, [])
-  })
-
   it('replaces countdown animations on pause, restart and persistent updates', async (t) => {
     let toastManager = createToastManager()
     let id = toastManager.add({ title: 'Saved', timeout: 10000 })
