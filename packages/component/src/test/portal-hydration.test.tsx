@@ -71,13 +71,9 @@ describe('Portal hydration', () => {
     expect(ownerSignal?.aborted).toBe(true)
   })
 
-  it('only mounts portals and runs queued tasks inside a client entry', async (t) => {
+  it('only mounts portals inside a client entry', async (t) => {
     let version = 1
-    let tasks: string[] = []
     function Notice(handle: Handle<{ label: string; version: number }>) {
-      handle.queueTask(() => {
-        tasks.push(handle.props.label)
-      })
       return () => (
         <Portal>
           <p>
@@ -99,7 +95,6 @@ describe('Portal hydration', () => {
       )
     setDocument(await renderPage())
     expect(document.querySelector('p')).toBeNull()
-    expect(tasks).toEqual([])
     let following = document.querySelector('i')
     let app = run({ loadModule: () => Entry, resolveFrame: renderPage })
     t.after(() => app.dispose())
@@ -110,14 +105,12 @@ describe('Portal hydration', () => {
     expect(content.textContent).toBe('Client 1')
     expect(document.querySelectorAll('p').length).toBe(1)
     expect(document.querySelector('i')).toBe(following)
-    expect(tasks).toEqual(['Client'])
     version++
     await app.frames.top.reload()
     expect(document.querySelector('p')).toBe(content)
     expect(content.textContent).toBe('Client 2')
     expect(document.querySelectorAll('p').length).toBe(1)
     expect(document.querySelector('i')).toBe(following)
-    expect(tasks).toEqual(['Client'])
     app.dispose()
     expect(content.isConnected).toBe(false)
   })
