@@ -417,7 +417,7 @@ class BlobContent {
     let result = new Uint8Array(this.size)
 
     let offset = 0
-    for await (let chunk of this.stream()) {
+    for await (let chunk of readStream(this.stream())) {
       result.set(chunk, offset)
       offset += chunk.length
     }
@@ -465,6 +465,35 @@ class BlobContent {
   }
 }
 
+// Fall back to readers in browsers without ReadableStream async iteration.
+async function* readStream(
+  stream: ReadableStream<Uint8Array<ArrayBuffer>>,
+): AsyncGenerator<Uint8Array<ArrayBuffer>> {
+  if (typeof stream[Symbol.asyncIterator] === 'function') {
+    yield* stream
+    return
+  }
+
+  let completed = false
+  let reader = stream.getReader()
+  try {
+    while (true) {
+      let result = await reader.read()
+      if (result.done) {
+        completed = true
+        return
+      }
+      yield result.value
+    }
+  } finally {
+    try {
+      if (!completed) await reader.cancel()
+    } finally {
+      reader.releaseLock()
+    }
+  }
+}
+
 function streamContentArray(
   content: (Blob | Uint8Array<ArrayBuffer>)[],
   start = 0,
@@ -503,7 +532,7 @@ function streamContentArray(
             return
           }
 
-          for await (let chunk of part.stream()) {
+          for await (let chunk of readStream(part.stream())) {
             pushChunk(chunk)
 
             if (bytesRead >= end) {
