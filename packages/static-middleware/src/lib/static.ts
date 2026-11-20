@@ -114,16 +114,24 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
       return next()
     }
 
-    let rootRealPath: string
-    try {
-      rootRealPath = await fsp.realpath(root)
-    } catch {
+    // A directory's path can only be answered with an index file or a listing
+    if ((relativePath === '' || relativePath.endsWith('/')) && index.length === 0 && !listFiles) {
       return next()
     }
 
     let targetPath = path.join(root, relativePath)
-    let containedTargetPath = await resolveContainedPath(rootRealPath, targetPath)
-    if (containedTargetPath == null) {
+
+    // In front of an app's routes, most requests aren't for files. Settle that with one
+    // filesystem call, which queues on libuv's small threadpool, before resolving the root.
+    let containedTargetPath: string
+    let rootRealPath: string
+    try {
+      containedTargetPath = await fsp.realpath(targetPath)
+      rootRealPath = await fsp.realpath(root)
+    } catch {
+      return next()
+    }
+    if (!isContainedPath(rootRealPath, containedTargetPath)) {
       return next()
     }
 

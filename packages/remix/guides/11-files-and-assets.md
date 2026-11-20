@@ -39,6 +39,21 @@ staticFiles("./public", {
 
 `filter` receives the requested path relative to the directory, so this one hides dotfiles. `cacheControl`, `etag`, and `lastModified` are the same options [`createFileResponse()` accepts](#send-stored-and-on-disk-files). To serve more than one directory, add another `staticFiles()` call with its own options.
 
+In front of your routes, `staticFiles()` checks the filesystem for every `GET` and `HEAD` request, pages included. A `filter` can skip that check for paths that can't be files, such as anything outside the directory's top-level entries:
+
+```ts
+import { readdirSync } from "node:fs";
+
+let publicEntries = new Set(readdirSync("./public"));
+
+staticFiles("./public", {
+  index: false,
+  filter: (path) => publicEntries.has(path.split("/", 1)[0]),
+});
+```
+
+Top-level files and folders added to `public/` after the server starts aren't served until it restarts.
+
 ## How the asset server works
 
 Browser code needs more than a static directory. It's written in TypeScript and JSX, imports npm packages, references stylesheets and images, and should reload while you work and be minified and cached aggressively in production. Those are the jobs you'd normally hand to a bundler. The asset server in [`remix/assets`](../src/assets/README.md) handles them without a build step:
