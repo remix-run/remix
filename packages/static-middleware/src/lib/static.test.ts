@@ -106,6 +106,39 @@ describe('staticFiles middleware', () => {
       assert.equal(await response.text(), 'Custom Fallback Handler')
     })
 
+    it('passes a request that is not for a file on after one filesystem call', async (t) => {
+      createTestFile('test.txt', 'Hello, World!')
+      let realpath = t.mock.method(fs.promises, 'realpath')
+      let stat = t.mock.method(fs.promises, 'stat')
+
+      let router = createRouter({ middleware: [staticFiles(tmpDir)] })
+      router.get('/posts/:slug', () => new Response('Post'))
+
+      let response = await router.fetch('https://remix.run/posts/hello')
+
+      assert.equal(await response.text(), 'Post')
+      assert.deepEqual(
+        realpath.mock.calls.map((call) => call.arguments[0]),
+        [path.join(tmpDir, 'posts/hello')],
+      )
+      assert.equal(stat.mock.calls.length, 0)
+    })
+
+    it('passes directory paths on without filesystem calls when it has no index or listing', async (t) => {
+      createTestFile('docs/index.html', '<h1>Docs</h1>')
+      let realpath = t.mock.method(fs.promises, 'realpath')
+      let stat = t.mock.method(fs.promises, 'stat')
+
+      let router = createRouter({ middleware: [staticFiles(tmpDir, { index: false })] })
+      router.get('/', () => new Response('Home'))
+      router.get('/docs/', () => new Response('Docs route'))
+
+      assert.equal(await (await router.fetch('https://remix.run/')).text(), 'Home')
+      assert.equal(await (await router.fetch('https://remix.run/docs/')).text(), 'Docs route')
+      assert.equal(realpath.mock.calls.length, 0)
+      assert.equal(stat.mock.calls.length, 0)
+    })
+
     it('falls through to handler when requesting a directory', async () => {
       let dirPath = path.join(tmpDir, 'subdir')
       fs.mkdirSync(dirPath)
