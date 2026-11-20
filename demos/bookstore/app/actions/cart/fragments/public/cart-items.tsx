@@ -1,26 +1,44 @@
 import * as form from '@remix-run/ui/form'
 import type { FormSubmission } from 'remix/data-schema/experimental/form'
-import type { FrameReloadStartEvent, Handle, RemixNode } from 'remix/component'
+import type { FrameReloadStartEvent, Handle, Props, RemixNode } from 'remix/component'
 import { css, clientEntry, on, ref } from 'remix/component'
 
 import { routes } from '../../../../routes.ts'
+import type { CartItem } from '../../../../utils/cart.ts'
 import { PendingButton } from '../../../../ui/public/pending-button.tsx'
 import { RestfulForm } from '../../../../ui/restful-form.tsx'
 import { CartItemRemoveForm } from './schema.ts'
 
 const undoTimeout = 2000
 
-type CartItem = {
-  bookId: number
-  slug: string
-  title: string
-  price: number
-  quantity: number
+const itemErrorStyle = css({
+  position: 'absolute',
+  bottom: '0.5rem',
+  left: '0.75rem',
+  right: '0.75rem',
+  margin: 0,
+  color: '#dc2626',
+  fontSize: '0.875rem',
+})
+
+const quantityIconProps = {
+  width: '16',
+  height: '16',
+  viewBox: '0 0 16 16',
+  'aria-hidden': 'true',
+  focusable: 'false',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: '1.5',
+  strokeLinecap: 'round',
+} satisfies Props<'svg'>
+
+interface CartItemWithThumbnail extends CartItem {
   thumbnailUrl?: string
 }
 
 type CartItemsProps = {
-  items: CartItem[]
+  items: CartItemWithThumbnail[]
   total: number
   canCheckout: boolean
   error?: string
@@ -35,7 +53,7 @@ type CartAction =
   | { bookId: number; type: 'remove' }
 
 type RemovedItem = {
-  item: CartItem
+  item: CartItemWithThumbnail
   phase: 'undo' | 'exiting' | 'restoring' | 'restore-failed'
   confirmed: boolean
   hovered: boolean
@@ -428,18 +446,7 @@ export const CartItems = clientEntry(
                           </span>
                         </div>
                         {cartError && failedBookId === item.bookId ? (
-                          <p
-                            role="alert"
-                            mix={css({
-                              position: 'absolute',
-                              bottom: '0.5rem',
-                              left: '0.75rem',
-                              right: '0.75rem',
-                              margin: 0,
-                              color: '#dc2626',
-                              fontSize: '0.875rem',
-                            })}
-                          >
+                          <p role="alert" mix={itemErrorStyle}>
                             {cartError}
                           </p>
                         ) : null}
@@ -494,17 +501,7 @@ export const CartItems = clientEntry(
                             disabled={item.quantity <= 1}
                             aria-disabled={isPending || undefined}
                           >
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 16 16"
-                              aria-hidden="true"
-                              focusable="false"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                            >
+                            <svg {...quantityIconProps}>
                               <path d="M3 8h10" />
                             </svg>
                           </button>
@@ -528,34 +525,12 @@ export const CartItems = clientEntry(
                             disabled={item.quantity >= Number.MAX_SAFE_INTEGER}
                             aria-disabled={isPending || undefined}
                           >
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 16 16"
-                              aria-hidden="true"
-                              focusable="false"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                            >
+                            <svg {...quantityIconProps}>
                               <path d="M3 8h10M8 3v10" />
                             </svg>
                           </button>
                           {quantityError ? (
-                            <p
-                              id={quantityErrorId}
-                              role="alert"
-                              mix={css({
-                                position: 'absolute',
-                                bottom: '0.5rem',
-                                left: '0.75rem',
-                                right: '0.75rem',
-                                color: '#dc2626',
-                                margin: 0,
-                                fontSize: '0.875rem',
-                              })}
-                            >
+                            <p id={quantityErrorId} role="alert" mix={itemErrorStyle}>
                               {quantityError}
                             </p>
                           ) : null}
