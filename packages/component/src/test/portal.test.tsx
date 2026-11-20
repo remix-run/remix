@@ -116,7 +116,7 @@ describe('Portal', () => {
           <Portal container={document.createElement('div')}>Content</Portal>
         </Entry>,
       ),
-    ).rejects.toThrow('Portals with custom containers must be created in client-only code paths.')
+    ).rejects.toThrow('Portals with custom containers cannot be serialized.')
   })
 
   it('rejects null destinations in serialised portal props', async () => {
@@ -128,7 +128,7 @@ describe('Portal', () => {
     )
     await expect(
       renderToString(<Entry>{jsx(Portal, { container: null, children: 'Content' })}</Entry>),
-    ).rejects.toThrow('Portals with custom containers must be created in client-only code paths.')
+    ).rejects.toThrow('Portals with custom containers cannot be serialized.')
   })
 
   it('leaves no source DOM for empty, populated or nested portals', (t) => {
