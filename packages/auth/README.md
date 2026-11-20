@@ -479,6 +479,8 @@ Once a response is matched to its ceremony, the finish step removes that ceremon
 - `startWebAuthnAuthentication(provider, context, options?)` returns options for `navigator.credentials.get()`
 - `finishWebAuthnAuthentication(provider, context, response, options)` verifies the signed assertion and returns `{ credential, userId, userVerified, returnTo? }`
 
+For a complete app built on these helpers, see the [passkeys demo](https://github.com/remix-run/remix/tree/main/demos/passkeys). It covers sign-up, sign-in from the username autofill, and adding and removing passkeys.
+
 Your app owns credential storage, and both finish helpers take a `getCredential(id)` lookup. Registration fails when the credential id is already stored, so a new registration can never replace someone else's credential. `credential` is plain JSON, so persist it as-is after registration, and save it again after each login so the updated `signCount` can detect cloned authenticators. Starting from the same `session()` and `auth()` setup as the credentials example above:
 
 ```ts

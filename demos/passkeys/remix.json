@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/remix/schema/remix.json",
+  "assets": {
+    "rootDir": "../..",
+    "basePath": "/assets",
+    "mounts": {
+      "app": "demos/passkeys/app",
+      "npm": "node_modules",
+      "packages": "packages"
+    },
+    "allowFiles": ["demos/passkeys/app/routes.ts", "demos/passkeys/app/**/public/**"],
+    "allowPackages": ["remix"],
+    "denyFiles": ["demos/passkeys/app/**/*.test.*"]
+  },
+  "db": {
+    "adapter": {
+      "type": "sqlite",
+      "filename": "./db/passkeys.sqlite",
+      "foreignKeys": true
+    },
+    "migrations": {
+      "directory": "./db/migrations"
+    }
+  },
+  "test": {
+    "playwright": {
+      "configFile": "./playwright.config.ts"
+    }
+  }
+}
