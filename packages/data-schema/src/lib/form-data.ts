@@ -93,48 +93,51 @@ export type ParsedFormData<schema extends FormDataSchema> = {
 export function object<schema extends FormDataSchema>(
   schema: schema,
 ): FormDataObjectSchema<schema> {
-  return createSchema(function validate(value, context) {
-    if (!isFormDataSource(value)) {
-      return fail('Expected FormData or URLSearchParams', context.path, {
-        code: 'type.form_data_source',
-        input: value,
-        parseOptions: context.options,
-      })
-    }
-
-    let abortEarly = shouldAbortEarly(context.options)
-    let issues: Issue[] = []
-    let output: Partial<Record<keyof schema, unknown>> = {}
-
-    for (let [key, entrySchema] of Object.entries(schema) as [
-      keyof schema & string,
-      FormDataEntrySchema<any>,
-    ][]) {
-      let result = parseField(value, key, entrySchema, context)
-
-      if ('issues' in result) {
-        if (abortEarly) {
-          return { issues: result.issues }
-        }
-
-        issues.push(...result.issues)
-        continue
+  return createSchema(
+    function validate(value, context) {
+      if (!isFormDataSource(value)) {
+        return fail('Expected FormData or URLSearchParams', context.path, {
+          code: 'type.form_data_source',
+          input: value,
+          parseOptions: context.options,
+        })
       }
 
-      Object.defineProperty(output, key, {
-        value: result.value,
-        enumerable: true,
-        writable: true,
-        configurable: true,
-      })
-    }
+      let abortEarly = shouldAbortEarly(context.options)
+      let issues: Issue[] = []
+      let output: Partial<Record<keyof schema, unknown>> = {}
 
-    if (issues.length > 0) {
-      return { issues }
-    }
+      for (let [key, entrySchema] of Object.entries(schema) as [
+        keyof schema & string,
+        FormDataEntrySchema<any>,
+      ][]) {
+        let result = parseField(value, key, entrySchema, context)
 
-    return { value: output as ParsedFormData<schema> }
-  })
+        if ('issues' in result) {
+          if (abortEarly) {
+            return { issues: result.issues }
+          }
+
+          issues.push(...result.issues)
+          continue
+        }
+
+        Object.defineProperty(output, key, {
+          value: result.value,
+          enumerable: true,
+          writable: true,
+          configurable: true,
+        })
+      }
+
+      if (issues.length > 0) {
+        return { issues }
+      }
+
+      return { value: output as ParsedFormData<schema> }
+    },
+    { kind: 'formData' },
+  )
 }
 
 /**

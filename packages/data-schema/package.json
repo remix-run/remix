@@ -18,13 +18,17 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/lib/json-schema.ts",
+    "./dist/lib/json-schema.js"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./checks": "./src/checks.ts",
     "./experimental": "./src/experimental.ts",
     "./coerce": "./src/coerce.ts",
     "./form-data": "./src/form-data.ts",
+    "./json-schema": "./src/json-schema.ts",
     "./lazy": "./src/lazy.ts",
     "./package.json": "./package.json",
     "./experimental/form": "./src/experimental-form.ts"
@@ -51,6 +55,10 @@
         "types": "./dist/form-data.d.ts",
         "default": "./dist/form-data.js"
       },
+      "./json-schema": {
+        "types": "./dist/json-schema.d.ts",
+        "default": "./dist/json-schema.js"
+      },
       "./lazy": {
         "types": "./dist/lazy.d.ts",
         "default": "./dist/lazy.js"
@@ -66,6 +74,7 @@
     "@remix-run/assert": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
+    "ajv": "^8.17.1",
     "typescript": "catalog:"
   },
   "scripts": {

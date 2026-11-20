@@ -1,4 +1,4 @@
-import type { StandardSchemaV1 } from '@standard-schema/spec'
+import type { StandardJSONSchemaV1, StandardSchemaV1 } from '@standard-schema/spec'
 
 /**
  * A validation issue returned by a schema, compatible with Standard Schema v1.
@@ -59,6 +59,8 @@ type SyncStandardSchemaProps<input, output> = Omit<
   validate: (value: unknown, options?: ValidationOptions) => ValidationResult<output>
   // Preserve Standard Schema's compile-time type channel.
   types?: StandardSchemaV1.Types<input, output> | undefined
+  // Standard JSON Schema v1.
+  jsonSchema: StandardJSONSchemaV1.Converter
 }
 
 type SyncStandardSchema<input, output = input> = {
@@ -73,6 +75,88 @@ export type Check<output> = {
   message?: string
   code?: string
   values?: Record<string, unknown>
+}
+
+/**
+ * Documentation attached to a schema with `schema.meta(...)`.
+ */
+export type SchemaMeta = {
+  /**
+   * A short name for the schema, emitted as JSON Schema `title`.
+   */
+  title?: string
+  /**
+   * A human-readable description, emitted as JSON Schema `description`.
+   */
+  description?: string
+  /**
+   * An explicit JSON Schema fragment for this node.
+   *
+   * The fragment is merged last, so it wins over anything the emitter derives. Attaching one
+   * also allows a schema that would otherwise have no representation, such as a refined
+   * schema, to be emitted.
+   */
+  jsonSchema?: Record<string, unknown>
+}
+
+/**
+ * The description of a schema, without the state that `pipe`, `refine`, `transform` and
+ * `meta` add.
+ */
+export type SchemaDefInit =
+  | { kind: 'any' }
+  | { kind: 'array'; element: Schema<any, any> }
+  | { kind: 'bigint' }
+  | { kind: 'boolean' }
+  | { kind: 'coerce'; to: 'bigint' | 'boolean' | 'date' | 'number' | 'string' }
+  | { kind: 'defaulted'; source: Schema<any, any>; value: unknown }
+  | { kind: 'enum'; values: readonly unknown[] }
+  | { kind: 'formData' }
+  | { kind: 'instanceof'; constructor: abstract new (...args: any[]) => any }
+  | { kind: 'lazy'; resolve: () => Schema<any, any> }
+  | { kind: 'literal'; value: unknown }
+  | { kind: 'map'; key: Schema<any, any>; value: Schema<any, any> }
+  | { kind: 'null' }
+  | { kind: 'nullable'; source: Schema<any, any> }
+  | { kind: 'number' }
+  | {
+      kind: 'object'
+      entries: Record<string, Schema<any, any>>
+      unknownKeys: 'strip' | 'passthrough' | 'error'
+    }
+  | { kind: 'optional'; source: Schema<any, any> }
+  | { kind: 'record'; key: Schema<any, any>; value: Schema<any, any> }
+  | { kind: 'set'; element: Schema<any, any> }
+  | { kind: 'string' }
+  | { kind: 'symbol' }
+  | { kind: 'tuple'; items: Schema<any, any>[] }
+  | { kind: 'undefined' }
+  | { kind: 'union'; members: Schema<any, any>[] }
+  | { kind: 'unknown' }
+  | {
+      kind: 'variant'
+      discriminator: PropertyKey
+      variants: Record<PropertyKey, Schema<any, any>>
+    }
+
+/**
+ * The full description of a schema, carried on `schema['~def']`.
+ *
+ * `kind` keeps reporting the constructor underneath, so `string().pipe(minLength(1))` still
+ * reports `kind: 'string'`.
+ */
+export type SchemaDef = SchemaDefInit & {
+  /**
+   * Whether `refine` was applied. A predicate has no JSON Schema representation.
+   *
+   * Checks and transforms are not recorded here. Read those from {@link getSchemaMetadata},
+   * which is the introspection API for both.
+   */
+  refined: boolean
+  /**
+   * Documentation added by `meta`.
+   */
+  meta?: SchemaMeta
 }
 
 /**
@@ -170,7 +254,23 @@ export type Schema<input, output = input> = SyncStandardSchema<input, output> & 
   /**
    * Internal validator used to validate nested values while preserving `path`/`options`.
    */
+  /**
+   * Attach documentation to this schema.
+   *
+   * Values are merged with any metadata already present, and survive `pipe`, `refine` and
+   * `transform`.
+   *
+   * @param values The metadata to merge
+   * @returns A new schema carrying the metadata
+   */
+  meta: (values: SchemaMeta) => Schema<input, output>
   '~run': (value: unknown, context: ValidationContext) => ValidationResult<output>
+  /**
+   * Describes how this schema was built, for introspection.
+   *
+   * Reading it never calls the validator and never throws, so it is safe on any schema.
+   */
+  '~def': SchemaDef
 }
 
 /**
@@ -209,6 +309,44 @@ type InternalValidationContext = ValidationContext & {
 
 const builtinSchemas = new WeakSet<object>()
 
+/**
+ * Converts a schema to JSON Schema. Supplied by `@remix-run/data-schema/json-schema` so that
+ * the converter is only loaded by programs that ask for it.
+ */
+type JSONSchemaConverter = (
+  schema: Schema<any, any>,
+  io: 'input' | 'output',
+  options: StandardJSONSchemaV1.Options,
+) => Record<string, unknown>
+
+let jsonSchemaConverter: JSONSchemaConverter | undefined
+
+/**
+ * Install the JSON Schema converter used by `~standard.jsonSchema`.
+ *
+ * `@remix-run/data-schema/json-schema` calls this when it loads. Nothing else should.
+ *
+ * @param converter The converter to install
+ */
+export function registerJSONSchemaConverter(converter: JSONSchemaConverter): void {
+  jsonSchemaConverter = converter
+}
+
+function convertToJSONSchema(
+  schema: Schema<any, any>,
+  io: 'input' | 'output',
+  options: StandardJSONSchemaV1.Options,
+): Record<string, unknown> {
+  if (jsonSchemaConverter === undefined) {
+    throw new Error(
+      'Cannot convert to JSON Schema because the converter is not loaded. ' +
+        "Import '@remix-run/data-schema/json-schema' to load it.",
+    )
+  }
+
+  return jsonSchemaConverter(schema, io, options)
+}
+
 type IssueDescriptor = {
   code: string
   defaultMessage: string
@@ -221,11 +359,16 @@ type IssueDescriptor = {
  * Creates a sync Standard Schema-compatible schema from a validation function.
  *
  * @param validator Validator that returns either a parsed value or validation issues.
+ * @param definition Describes how the schema was built, so it can be introspected and converted
+ * to JSON Schema. Defaults to an opaque definition that cannot be converted.
  * @returns A chainable schema object.
  */
 export function createSchema<input, output>(
   validator: (value: unknown, context: ValidationContext) => ValidationResult<output>,
+  definition: SchemaDefInit | SchemaDef = { kind: 'unknown' },
 ): Schema<input, output> {
+  let def: SchemaDef = { refined: false, ...definition }
+
   let schema: Schema<input, output> = {
     '~standard': {
       version: 1,
@@ -238,7 +381,16 @@ export function createSchema<input, output>(
         }
         return validator(value, context)
       },
+      jsonSchema: {
+        input(options: StandardJSONSchemaV1.Options) {
+          return convertToJSONSchema(schema, 'input', options)
+        },
+        output(options: StandardJSONSchemaV1.Options) {
+          return convertToJSONSchema(schema, 'output', options)
+        },
+      },
     },
+    '~def': def,
     '~run'(value: unknown, context: InternalValidationContext) {
       if (context.mutablePath) {
         return validator(value, { path: [...context.path], options: context.options })
@@ -281,6 +433,7 @@ export function createSchema<input, output>(
 
           return result
         },
+        def,
       )
 
       let existingChecks = getSchemaChecks(schema)
@@ -322,6 +475,7 @@ export function createSchema<input, output>(
 
           return result
         },
+        { ...def, refined: true },
       )
 
       copySchemaMetadata(schema, refinedSchema)
@@ -339,6 +493,7 @@ export function createSchema<input, output>(
 
           return { value: transformer(result.value) }
         },
+        def,
       )
 
       let metadata = getSchemaMetadata(schema)
@@ -347,6 +502,15 @@ export function createSchema<input, output>(
         inputChecks: metadata.inputChecks ?? metadata.checks,
       })
       return transformedSchema
+    },
+    meta(values: SchemaMeta) {
+      let metaSchema = createDerivedSchema<input, output>(schema, validator, {
+        ...def,
+        meta: { ...def.meta, ...values },
+      })
+
+      copySchemaMetadata(schema, metaSchema)
+      return metaSchema
     },
   }
 
@@ -407,8 +571,9 @@ function isBuiltinSchema(schema: Schema<any, any>): boolean {
 
 function createBuiltinSchema<input, output>(
   validator: (value: unknown, context: InternalValidationContext) => ValidationResult<output>,
+  definition: SchemaDefInit | SchemaDef = { kind: 'unknown' },
 ): Schema<input, output> {
-  let schema = createSchema<input, output>(validator)
+  let schema = createSchema<input, output>(validator, definition)
   // Built-in validators keep the shared path internal and copy it when creating issues.
   schema['~run'] = validator
   builtinSchemas.add(schema)
@@ -418,10 +583,18 @@ function createBuiltinSchema<input, output>(
 function createDerivedSchema<input, output>(
   source: Schema<any, any>,
   validator: (value: unknown, context: InternalValidationContext) => ValidationResult<output>,
+  definition: SchemaDefInit | SchemaDef = { kind: 'unknown' },
 ): Schema<input, output> {
   return isBuiltinSchema(source)
-    ? createBuiltinSchema<input, output>(validator)
-    : createSchema<input, output>(validator)
+    ? createBuiltinSchema<input, output>(validator, definition)
+    : createSchema<input, output>(validator, definition)
+}
+
+function defineSchema<input, output>(
+  definition: SchemaDefInit,
+  validator: (value: unknown, context: InternalValidationContext) => ValidationResult<output>,
+): Schema<input, output> {
+  return createBuiltinSchema<input, output>(validator, definition)
 }
 
 function runAtPath<input, output>(
@@ -564,7 +737,7 @@ export function fail(
  */
 export function any(): Schema<any, unknown> {
   return setAcceptsUndefined(
-    createBuiltinSchema(function validate(value) {
+    defineSchema({ kind: 'any' }, function validate(value) {
       return { value }
     }),
     true,
@@ -580,7 +753,7 @@ export function any(): Schema<any, unknown> {
 export function array<input, output>(
   elementSchema: Schema<input, output>,
 ): Schema<unknown, output[]> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'array', element: elementSchema }, function validate(value, context) {
     if (!Array.isArray(value)) {
       return fail('Expected array', context.path, {
         code: 'type.array',
@@ -625,7 +798,7 @@ export function array<input, output>(
  * @returns A schema that produces a `bigint`
  */
 export function bigint(): Schema<unknown, bigint> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'bigint' }, function validate(value, context) {
     if (typeof value !== 'bigint') {
       return fail('Expected bigint', context.path, {
         code: 'type.bigint',
@@ -644,7 +817,7 @@ export function bigint(): Schema<unknown, bigint> {
  * @returns A schema that produces a `boolean`
  */
 export function boolean(): Schema<unknown, boolean> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'boolean' }, function validate(value, context) {
     if (typeof value !== 'boolean') {
       return fail('Expected boolean', context.path, {
         code: 'type.boolean',
@@ -668,7 +841,8 @@ export function defaulted<input, output>(
   schema: Schema<input, output>,
   defaultValue: output | (() => output),
 ): Schema<input | undefined, output> {
-  let defaultedSchema = createBuiltinSchema<input | undefined, output>(
+  let defaultedSchema = defineSchema<input | undefined, output>(
+    { kind: 'defaulted', source: schema, value: defaultValue },
     function validate(value, context) {
       if (value === undefined) {
         let resolved =
@@ -694,7 +868,7 @@ export function defaulted<input, output>(
 export function enum_<const values extends readonly [unknown, ...unknown[]]>(
   values: values,
 ): Schema<unknown, values[number]> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'enum', values }, function validate(value, context) {
     for (let allowed of values) {
       if (value === allowed) {
         return { value: value as values[number] }
@@ -719,7 +893,7 @@ export function enum_<const values extends readonly [unknown, ...unknown[]]>(
 export function instanceof_<constructor extends abstract new (...args: any[]) => any>(
   constructor: constructor,
 ): Schema<unknown, InstanceType<constructor>> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'instanceof', constructor }, function validate(value, context) {
     if (!(value instanceof constructor)) {
       return fail('Expected instance of ' + constructor.name, context.path, {
         code: 'instanceof.invalid_type',
@@ -740,7 +914,7 @@ export function instanceof_<constructor extends abstract new (...args: any[]) =>
  * @returns A schema that produces the literal type
  */
 export function literal<const value>(literalValue: value): Schema<unknown, value> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'literal', value: literalValue }, function validate(value, context) {
     if (value !== literalValue) {
       return fail('Expected literal value', context.path, {
         code: 'literal.invalid_value',
@@ -765,51 +939,54 @@ export function map<keyInput, keyOutput, valueInput, valueOutput>(
   keySchema: Schema<keyInput, keyOutput>,
   valueSchema: Schema<valueInput, valueOutput>,
 ): Schema<unknown, Map<keyOutput, valueOutput>> {
-  return createBuiltinSchema(function validate(value, context) {
-    if (!(value instanceof Map)) {
-      return fail('Expected Map', context.path, {
-        code: 'type.map',
-        input: value,
-        parseOptions: context.options,
-      })
-    }
-
-    let abortEarly = shouldAbortEarly(context.options)
-    let issues: Issue[] = []
-    let outputMap = new Map<keyOutput, valueOutput>()
-
-    for (let [key, val] of value) {
-      let keyResult = runAtPath(keySchema, key, context, key)
-
-      if (keyResult.issues) {
-        if (abortEarly) {
-          return keyResult
-        }
-
-        issues.push(...keyResult.issues)
-        continue
+  return defineSchema(
+    { kind: 'map', key: keySchema, value: valueSchema },
+    function validate(value, context) {
+      if (!(value instanceof Map)) {
+        return fail('Expected Map', context.path, {
+          code: 'type.map',
+          input: value,
+          parseOptions: context.options,
+        })
       }
 
-      let valueResult = runAtPath(valueSchema, val, context, key)
+      let abortEarly = shouldAbortEarly(context.options)
+      let issues: Issue[] = []
+      let outputMap = new Map<keyOutput, valueOutput>()
 
-      if (valueResult.issues) {
-        if (abortEarly) {
-          return valueResult
+      for (let [key, val] of value) {
+        let keyResult = runAtPath(keySchema, key, context, key)
+
+        if (keyResult.issues) {
+          if (abortEarly) {
+            return keyResult
+          }
+
+          issues.push(...keyResult.issues)
+          continue
         }
 
-        issues.push(...valueResult.issues)
-        continue
+        let valueResult = runAtPath(valueSchema, val, context, key)
+
+        if (valueResult.issues) {
+          if (abortEarly) {
+            return valueResult
+          }
+
+          issues.push(...valueResult.issues)
+          continue
+        }
+
+        outputMap.set(keyResult.value, valueResult.value)
       }
 
-      outputMap.set(keyResult.value, valueResult.value)
-    }
+      if (issues.length > 0) {
+        return { issues }
+      }
 
-    if (issues.length > 0) {
-      return { issues }
-    }
-
-    return { value: outputMap }
-  })
+      return { value: outputMap }
+    },
+  )
 }
 
 /**
@@ -818,7 +995,7 @@ export function map<keyInput, keyOutput, valueInput, valueOutput>(
  * @returns A schema that produces `null`
  */
 export function null_(): Schema<unknown, null> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'null' }, function validate(value, context) {
     if (value !== null) {
       return fail('Expected null', context.path, {
         code: 'type.null',
@@ -840,7 +1017,8 @@ export function null_(): Schema<unknown, null> {
 export function nullable<input, output>(
   schema: Schema<input, output>,
 ): Schema<input | null, output | null> {
-  let nullableSchema = createBuiltinSchema<input | null, output | null>(
+  let nullableSchema = defineSchema<input | null, output | null>(
+    { kind: 'nullable', source: schema },
     function validate(value, context) {
       if (value === null) {
         return { value: null }
@@ -860,7 +1038,7 @@ export function nullable<input, output>(
  * @returns A schema that produces a `number`
  */
 export function number(): Schema<unknown, number> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'number' }, function validate(value, context) {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
       return fail('Expected number', context.path, {
         code: 'type.number',
@@ -890,73 +1068,76 @@ export function object<shape extends ObjectShape>(
   shape: shape,
   options?: ObjectOptions,
 ): ObjectSchema<shape> {
-  let objectSchema = createBuiltinSchema(function validate(value, context) {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      return fail('Expected object', context.path, {
-        code: 'type.object',
-        input: value,
-        parseOptions: context.options,
-      })
-    }
-
-    let abortEarly = shouldAbortEarly(context.options)
-    let issues: Issue[] = []
-    let outputValues: Record<string, unknown> = {}
-    let input = value as Record<string, unknown>
-    let unknownKeys = options?.unknownKeys ?? 'strip'
-
-    for (let key of Object.keys(shape)) {
-      let result = runAtPath(shape[key], input[key], context, key)
-
-      if (result.issues) {
-        if (abortEarly) {
-          return result
-        }
-
-        issues.push(...result.issues)
-      } else {
-        if (Object.prototype.hasOwnProperty.call(input, key) || result.value !== undefined) {
-          outputValues[key] = result.value
-        }
+  let objectSchema = defineSchema(
+    { kind: 'object', entries: shape, unknownKeys: options?.unknownKeys ?? 'strip' },
+    function validate(value, context) {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return fail('Expected object', context.path, {
+          code: 'type.object',
+          input: value,
+          parseOptions: context.options,
+        })
       }
-    }
 
-    if (unknownKeys === 'passthrough' || unknownKeys === 'error') {
-      for (let key in input) {
-        if (!Object.prototype.hasOwnProperty.call(input, key)) {
-          continue
-        }
+      let abortEarly = shouldAbortEarly(context.options)
+      let issues: Issue[] = []
+      let outputValues: Record<string, unknown> = {}
+      let input = value as Record<string, unknown>
+      let unknownKeys = options?.unknownKeys ?? 'strip'
 
-        if (Object.prototype.hasOwnProperty.call(shape, key)) {
-          continue
-        }
+      for (let key of Object.keys(shape)) {
+        let result = runAtPath(shape[key], input[key], context, key)
 
-        if (unknownKeys === 'passthrough') {
-          outputValues[key] = input[key]
-        } else {
-          let issue = createIssueFromContext(context, {
-            code: 'object.unknown_key',
-            defaultMessage: 'Unknown key',
-            input: input[key],
-            path: withPath(context.path, key),
-            values: { key },
-          })
-
+        if (result.issues) {
           if (abortEarly) {
-            return { issues: [issue] }
+            return result
           }
 
-          issues.push(issue)
+          issues.push(...result.issues)
+        } else {
+          if (Object.prototype.hasOwnProperty.call(input, key) || result.value !== undefined) {
+            outputValues[key] = result.value
+          }
         }
       }
-    }
 
-    if (issues.length > 0) {
-      return { issues }
-    }
+      if (unknownKeys === 'passthrough' || unknownKeys === 'error') {
+        for (let key in input) {
+          if (!Object.prototype.hasOwnProperty.call(input, key)) {
+            continue
+          }
 
-    return { value: outputValues as { [key in keyof shape]: InferOutput<shape[key]> } }
-  })
+          if (Object.prototype.hasOwnProperty.call(shape, key)) {
+            continue
+          }
+
+          if (unknownKeys === 'passthrough') {
+            outputValues[key] = input[key]
+          } else {
+            let issue = createIssueFromContext(context, {
+              code: 'object.unknown_key',
+              defaultMessage: 'Unknown key',
+              input: input[key],
+              path: withPath(context.path, key),
+              values: { key },
+            })
+
+            if (abortEarly) {
+              return { issues: [issue] }
+            }
+
+            issues.push(issue)
+          }
+        }
+      }
+
+      if (issues.length > 0) {
+        return { issues }
+      }
+
+      return { value: outputValues as { [key in keyof shape]: InferOutput<shape[key]> } }
+    },
+  )
 
   setSchemaMetadata(objectSchema, { ...getSchemaMetadata(objectSchema), shape })
   return objectSchema
@@ -971,7 +1152,8 @@ export function object<shape extends ObjectShape>(
 export function optional<input, output>(
   schema: Schema<input, output>,
 ): Schema<input | undefined, output | undefined> {
-  let optionalSchema = createBuiltinSchema<input | undefined, output | undefined>(
+  let optionalSchema = defineSchema<input | undefined, output | undefined>(
+    { kind: 'optional', source: schema },
     function validate(value, context) {
       if (value === undefined) {
         return { value: undefined }
@@ -996,56 +1178,59 @@ export function record<keyInput, keyOutput extends PropertyKey, valueInput, valu
   keySchema: Schema<keyInput, keyOutput>,
   valueSchema: Schema<valueInput, valueOutput>,
 ): Schema<unknown, Record<keyOutput, valueOutput>> {
-  return createBuiltinSchema(function validate(value, context) {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      return fail('Expected object', context.path, {
-        code: 'type.object',
-        input: value,
-        parseOptions: context.options,
-      })
-    }
-
-    let abortEarly = shouldAbortEarly(context.options)
-    let issues: Issue[] = []
-    let outputValues: Record<PropertyKey, valueOutput> = {}
-    let input = value as Record<string, unknown>
-
-    for (let key in input) {
-      if (!Object.prototype.hasOwnProperty.call(input, key)) {
-        continue
+  return defineSchema(
+    { kind: 'record', key: keySchema, value: valueSchema },
+    function validate(value, context) {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return fail('Expected object', context.path, {
+          code: 'type.object',
+          input: value,
+          parseOptions: context.options,
+        })
       }
 
-      let keyResult = runAtPath(keySchema, key, context, key)
+      let abortEarly = shouldAbortEarly(context.options)
+      let issues: Issue[] = []
+      let outputValues: Record<PropertyKey, valueOutput> = {}
+      let input = value as Record<string, unknown>
 
-      if (keyResult.issues) {
-        if (abortEarly) {
-          return keyResult
+      for (let key in input) {
+        if (!Object.prototype.hasOwnProperty.call(input, key)) {
+          continue
         }
 
-        issues.push(...keyResult.issues)
-        continue
-      }
+        let keyResult = runAtPath(keySchema, key, context, key)
 
-      let valueResult = runAtPath(valueSchema, input[key], context, key)
+        if (keyResult.issues) {
+          if (abortEarly) {
+            return keyResult
+          }
 
-      if (valueResult.issues) {
-        if (abortEarly) {
-          return valueResult
+          issues.push(...keyResult.issues)
+          continue
         }
 
-        issues.push(...valueResult.issues)
-        continue
+        let valueResult = runAtPath(valueSchema, input[key], context, key)
+
+        if (valueResult.issues) {
+          if (abortEarly) {
+            return valueResult
+          }
+
+          issues.push(...valueResult.issues)
+          continue
+        }
+
+        outputValues[keyResult.value] = valueResult.value
       }
 
-      outputValues[keyResult.value] = valueResult.value
-    }
+      if (issues.length > 0) {
+        return { issues }
+      }
 
-    if (issues.length > 0) {
-      return { issues }
-    }
-
-    return { value: outputValues as Record<keyOutput, valueOutput> }
-  })
+      return { value: outputValues as Record<keyOutput, valueOutput> }
+    },
+  )
 }
 
 /**
@@ -1057,7 +1242,7 @@ export function record<keyInput, keyOutput extends PropertyKey, valueInput, valu
 export function set<valueInput, valueOutput>(
   valueSchema: Schema<valueInput, valueOutput>,
 ): Schema<unknown, Set<valueOutput>> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'set', element: valueSchema }, function validate(value, context) {
     if (!(value instanceof Set)) {
       return fail('Expected Set', context.path, {
         code: 'type.set',
@@ -1101,7 +1286,7 @@ export function set<valueInput, valueOutput>(
  * @returns A schema that produces a `string`
  */
 export function string(): Schema<unknown, string> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'string' }, function validate(value, context) {
     if (typeof value !== 'string') {
       return fail('Expected string', context.path, {
         code: 'type.string',
@@ -1120,7 +1305,7 @@ export function string(): Schema<unknown, string> {
  * @returns A schema that produces a `symbol`
  */
 export function symbol(): Schema<unknown, symbol> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'symbol' }, function validate(value, context) {
     if (typeof value !== 'symbol') {
       return fail('Expected symbol', context.path, {
         code: 'type.symbol',
@@ -1142,7 +1327,7 @@ export function symbol(): Schema<unknown, symbol> {
 export function tuple<items extends Schema<any, any>[]>(
   items: items,
 ): Schema<unknown, { [index in keyof items]: InferOutput<items[index]> }> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'tuple', items }, function validate(value, context) {
     if (!Array.isArray(value)) {
       return fail('Expected array', context.path, {
         code: 'type.array',
@@ -1204,7 +1389,7 @@ export function tuple<items extends Schema<any, any>[]>(
  */
 export function undefined_(): Schema<unknown, undefined> {
   return setAcceptsUndefined(
-    createBuiltinSchema(function validate(value, context) {
+    defineSchema({ kind: 'undefined' }, function validate(value, context) {
       if (value !== undefined) {
         return fail('Expected undefined', context.path, {
           code: 'type.undefined',
@@ -1233,48 +1418,51 @@ export function variant<
   key extends PropertyKey,
   variants extends Record<PropertyKey, Schema<any, any>>,
 >(discriminator: key, variants: variants): Schema<unknown, InferOutput<variants[keyof variants]>> {
-  return createBuiltinSchema(function validate(value, context) {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      return fail('Expected object', context.path, {
-        code: 'type.object',
-        input: value,
-        parseOptions: context.options,
-      })
-    }
+  return defineSchema(
+    { kind: 'variant', discriminator, variants },
+    function validate(value, context) {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return fail('Expected object', context.path, {
+          code: 'type.object',
+          input: value,
+          parseOptions: context.options,
+        })
+      }
 
-    let input = value as Record<PropertyKey, unknown>
-    let tag = input[discriminator]
+      let input = value as Record<PropertyKey, unknown>
+      let tag = input[discriminator]
 
-    if (tag === undefined) {
-      return fail('Expected discriminator', [...context.path, discriminator], {
-        code: 'variant.missing_discriminator',
-        input: value,
-        values: { discriminator: String(discriminator) },
-        parseOptions: context.options,
-      })
-    }
+      if (tag === undefined) {
+        return fail('Expected discriminator', [...context.path, discriminator], {
+          code: 'variant.missing_discriminator',
+          input: value,
+          values: { discriminator: String(discriminator) },
+          parseOptions: context.options,
+        })
+      }
 
-    if (typeof tag !== 'string' && typeof tag !== 'number' && typeof tag !== 'symbol') {
-      return fail('Unknown discriminator', [...context.path, discriminator], {
-        code: 'variant.unknown_discriminator',
-        input: tag,
-        values: { discriminator: String(discriminator) },
-        parseOptions: context.options,
-      })
-    }
+      if (typeof tag !== 'string' && typeof tag !== 'number' && typeof tag !== 'symbol') {
+        return fail('Unknown discriminator', [...context.path, discriminator], {
+          code: 'variant.unknown_discriminator',
+          input: tag,
+          values: { discriminator: String(discriminator) },
+          parseOptions: context.options,
+        })
+      }
 
-    if (!Object.prototype.hasOwnProperty.call(variants, tag)) {
-      return fail('Unknown discriminator', [...context.path, discriminator], {
-        code: 'variant.unknown_discriminator',
-        input: tag,
-        values: { discriminator: String(discriminator) },
-        parseOptions: context.options,
-      })
-    }
+      if (!Object.prototype.hasOwnProperty.call(variants, tag)) {
+        return fail('Unknown discriminator', [...context.path, discriminator], {
+          code: 'variant.unknown_discriminator',
+          input: tag,
+          values: { discriminator: String(discriminator) },
+          parseOptions: context.options,
+        })
+      }
 
-    let schema = variants[tag as keyof variants]
-    return schema['~run'](value, context)
-  })
+      let schema = variants[tag as keyof variants]
+      return schema['~run'](value, context)
+    },
+  )
 }
 
 /**
@@ -1288,7 +1476,7 @@ export function variant<
 export function union<schemas extends Schema<any, any>[]>(
   schemas: schemas,
 ): Schema<unknown, InferOutput<schemas[number]>> {
-  return createBuiltinSchema(function validate(value, context) {
+  return defineSchema({ kind: 'union', members: schemas }, function validate(value, context) {
     if (schemas.length === 0) {
       return fail('No union variant matched', context.path, {
         code: 'union.no_variants',
