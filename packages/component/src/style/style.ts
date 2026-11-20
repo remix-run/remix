@@ -212,6 +212,12 @@ function atRuleBodyToCss(styles: StyleObject): string {
   )
 }
 
+// Each server render starts with an empty style cache, so keep generated rules across renders.
+// Keying by the serialized styles keeps style objects that are mutated in place correct, and
+// evicting the least recently used rule keeps dynamic styles from growing the cache unbounded.
+const STYLE_RULE_CACHE_LIMIT = 1000
+const styleRuleCache = new Map<string, { selector: string; css: string }>()
+
 export function processStyleClass(
   styleObj: CSSProps,
   styleCache: Map<string, { selector: string; css: string }>,
@@ -231,11 +237,18 @@ export function processStyleClass(
     return cached
   }
 
-  let selector = `rmxc-${hashStyle(serialized)}`
-  let css = styleToCss(styleObj, `.${selector}`)
-  let result = { selector, css }
-
-  // Store in cache
+  let result = styleRuleCache.get(serialized)
+  if (result) {
+    styleRuleCache.delete(serialized)
+  } else {
+    let selector = `rmxc-${hashStyle(serialized)}`
+    result = { selector, css: styleToCss(styleObj, `.${selector}`) }
+    if (styleRuleCache.size >= STYLE_RULE_CACHE_LIMIT) {
+      let oldest = styleRuleCache.keys().next()
+      if (!oldest.done) styleRuleCache.delete(oldest.value)
+    }
+  }
+  styleRuleCache.set(serialized, result)
   styleCache.set(serialized, result)
 
   return result
