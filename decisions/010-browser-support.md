@@ -41,17 +41,6 @@ The original follow-up proposed a committed Browserslist baseline, compatibility
 
 The existing Playwright configuration exercises Chromium, Firefox, and WebKit supplied by the installed Playwright version. It does not pin the historical minimum versions, and Playwright WebKit is not a test of released Safari 17.5. Passing that matrix does not establish conformance to this baseline. Browserslist alone would not enforce compatibility either; API checks and tests must consume the policy.
 
-## Audit on November 20, 2026
-
-A source audit at `01e5b5d4c1d034642dc01274661f83c83b3c235f`, checked against [MDN browser-compat-data 8.1.10][bcd], identified two gaps addressed by the changes accompanying this record:
-
-- **Toast countdowns required Firefox 128.** `synchronizeCountdown()` in `packages/ui/src/toast.tsx` called `CSS.registerProperty()` for timed items with `countdown: true` without checking support; [Firefox added it in 128][register-property-data]. The resulting lifecycle errors were reported by the browser even though the independent timer could continue. It now checks the capability and skips the countdown animation when registration is unavailable, preserving timers, pausing, and dismissal.
-- **The separate lazy-file utility depended on native stream async iteration.** `BlobContent.bytes()` and `streamContentArray()` in `packages/lazy-file/src/lib/lazy-file.ts` used `for await` directly on a native `ReadableStream`. [Native stream async iteration][stream-iteration-data] is absent in Chrome and Edge 123 and Safari/iOS Safari 17.5. This broke content reads such as `new LazyBlob(['hello']).text()`; streaming a native Blob part reached the same dependency. Both sites now feature-detect the stream's async iterator and delegate to it when available. Otherwise, a local reader-based generator releases its reader and cancels on early exit. This utility is outside the original four-package investigation and is not a dependency of the core browser runtime.
-
-The navigation capability gate still matches the decision. The template and browser-entry guide retain the multiple-import-map fallback. The reviewed newer language APIs, constructed stylesheets, native popover methods, and spring `linear()` easing fit the baseline. No additional unguarded API above the baseline was identified in the reviewed component, UI, SPA, fetch-router, and route-pattern source.
-
-Both fixes have regression tests that remove the unavailable capabilities. The toast test checks for browser-reported errors and verifies pause, resume, and expiry. Lazy-file tests cover delegation to an available async iterator, content reads without stream async iteration, early cancellation, and reader cleanup after failure. These tests do not run historical browser binaries. The audit does not certify every CSS value, application stylesheet, dependency, or browser-specific behavior; enforcing the baseline in CI remains follow-up work.
-
 ## When to revisit
 
 1. Deliberately adopting a platform feature without a workable fallback requires a higher baseline.
@@ -63,6 +52,3 @@ Both fixes have regression tests that remove the unavailable capabilities. The t
 [light-dark]: https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/color_value/light-dark
 [popover]: https://developer.mozilla.org/en-US/docs/Web/API/Popover_API
 [browser-entry]: https://github.com/remix-run/remix/blob/main/docs/site/app/actions/guides/chapters/05-interactivity.md#browser-entry-with-run
-[bcd]: https://github.com/mdn/browser-compat-data/tree/v8.1.10
-[register-property-data]: https://github.com/mdn/browser-compat-data/blob/v8.1.10/api/CSS.json
-[stream-iteration-data]: https://github.com/mdn/browser-compat-data/blob/v8.1.10/api/ReadableStream.json
