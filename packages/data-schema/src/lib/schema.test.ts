@@ -340,6 +340,24 @@ describe('object', () => {
     assert.deepEqual(result.value, { name: 'Ada', extra: 'x' })
   })
 
+  it('preserves special passthrough keys as own fields', () => {
+    let schema = object({ name: string() }, { unknownKeys: 'passthrough' })
+    let input = { name: 'Ada', ['__proto__']: 'label' }
+    let result = schema['~standard'].validate(input)
+
+    assertSuccess(result)
+    assert.deepEqual(result.value, input)
+  })
+
+  it('preserves special declared keys as own fields', () => {
+    let schema = object({ ['__proto__']: string() })
+    let input = { ['__proto__']: 'label' }
+    let result = schema['~standard'].validate(input)
+
+    assertSuccess(result)
+    assert.deepEqual(result.value, input)
+  })
+
   it('errors on unknown keys when configured', () => {
     let schema = object({ name: string() }, { unknownKeys: 'error' })
     let result = schema['~standard'].validate({ name: 'Ada', extra: 'x' })
@@ -614,6 +632,17 @@ describe('record', () => {
 
     assertSuccess(result)
     assert.deepEqual(result.value, { a: 1, b: 2 })
+  })
+
+  it('preserves special keys produced by transforms as own entries', () => {
+    let schema = record(
+      string().transform((key) => key.toLowerCase()),
+      number(),
+    )
+    let result = schema['~standard'].validate({ __PROTO__: 1 })
+
+    assertSuccess(result)
+    assert.deepEqual(result.value, { ['__proto__']: 1 })
   })
 
   it('reports invalid record values with paths', () => {
