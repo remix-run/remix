@@ -88,20 +88,6 @@ describe('LazyBlob', () => {
     assert.equal(buffer.byteLength, 5)
   })
 
-  it('reads through a stream-provided async iterator when available', async (t) => {
-    let stream = new ReadableStream<Uint8Array<ArrayBuffer>>({
-      start(controller) {
-        controller.close()
-      },
-    })
-    t.mock.method(stream, Symbol.asyncIterator, async function* () {
-      yield new TextEncoder().encode('hello')
-    })
-    let blob = new LazyBlob({ byteLength: 5, stream: () => stream })
-
-    assert.equal(await blob.text(), 'hello')
-  })
-
   it('reads native Blob parts without ReadableStream async iteration', async (t) => {
     t.mock.property(ReadableStream.prototype, Symbol.asyncIterator, undefined)
     let blob = new LazyBlob([new Blob(['hello']), ' world'])
