@@ -46,14 +46,16 @@ describe('resolveConfig', () => {
     let config = resolveConfig()
 
     assert.equal(config.pool, 'forks')
+    assert.equal(config.fileTimeout, 600_000)
   })
 
   it('uses structured invocation options', () => {
-    let config = resolveConfig({ concurrency: 1, pool: 'threads', quiet: true })
+    let config = resolveConfig({ concurrency: 1, pool: 'threads', quiet: true, fileTimeout: 0 })
 
     assert.equal(config.concurrency, 1)
     assert.equal(config.pool, 'threads')
     assert.equal(config.quiet, true)
+    assert.equal(config.fileTimeout, 0)
   })
 
   it('rejects unsupported pool values', () => {

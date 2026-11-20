@@ -23,6 +23,7 @@ const testCommandOptions = {
   'glob.exclude': { type: 'string', multiple: true },
   'glob.test': { type: 'string', multiple: true },
   concurrency: { type: 'string', short: 'c' },
+  fileTimeout: { type: 'string' },
   coverage: { type: 'boolean' },
   'no-coverage': { type: 'boolean' },
   'coverage.dir': { type: 'string' },
@@ -84,6 +85,11 @@ const testCommandFlagMeta: Record<keyof typeof testCommandOptions, TestFlagMeta>
     description: 'Maximum concurrent test workers',
     valueHint: 'count',
     default: 'os.availableParallelism()',
+  },
+  fileTimeout: {
+    description: 'Test file deadline in milliseconds; 0 disables it',
+    valueHint: 'ms',
+    default: '600000',
   },
   coverage: { description: 'Collect test coverage', default: 'false' },
   'no-coverage': { description: 'Do not collect test coverage' },
@@ -255,6 +261,13 @@ function parseTestCommandArgs(argv: string[], pools: readonly RemixTestPool[]) {
       open: resolveBooleanOption(tokens, 'browser.open', 'no-browser.open'),
     }),
     concurrency: optionalPositiveInteger(values.concurrency, '--concurrency'),
+    fileTimeout: (() => {
+      let value = optionalNumber(values.fileTimeout, '--fileTimeout')
+      if (value !== undefined && (!Number.isInteger(value) || value < 0 || value > 2_147_483_647)) {
+        throw invalidOptionValue('Invalid --fileTimeout. Expected an integer from 0 to 2147483647')
+      }
+      return value
+    })(),
     coverage,
     glob,
     only: values.only,
@@ -342,6 +355,7 @@ function createTestOptionsFromConfig(config: RemixTestCommandConfig | undefined)
             open: config.playwright.open,
           },
     concurrency: config.concurrency,
+    fileTimeout: config.fileTimeout,
     coverage: config.coverage,
     glob: {
       browser: config.browserFiles,

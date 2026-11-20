@@ -1,3 +1,5 @@
+import { resolveFileTimeout, withFileTimeout } from '../../lib/file-timeout.ts'
+import { createFailedResults } from '../../lib/worker-results.ts'
 import { normalizeLine } from '../../lib/normalize.ts'
 import type { SerializedOnlyPattern } from '../../lib/config.ts'
 import type { TestResult, TestResults } from '../../lib/reporters/results.ts'
@@ -163,14 +165,18 @@ function mountTests(host: HTMLElement, setup: TestsSetup): void {
   renderSummary(false)
 
   void (async () => {
+    let params = new URLSearchParams(location.search)
+    let fileTimeout = resolveFileTimeout(params.get('fileTimeout') ?? undefined)
+    let environment = params.get('environment') ?? 'browser'
     for (let testFile of setup.testPaths) {
       let fileResults: FileResults
-      if (new URLSearchParams(location.search).has('runFiles')) {
+      if (params.has('runFiles')) {
         let response = await fetch(`/run-file?${new URLSearchParams({ file: testFile })}`)
         if (!response.ok) throw new Error(`Failed to run test file: ${testFile}`)
         fileResults = await response.json()
       } else {
-        fileResults = await runInIframe(testFile, setup.only)
+        await fetch(`/file-start?${new URLSearchParams({ file: testFile })}`)
+        fileResults = await runInIframe(testFile, setup.only, fileTimeout, environment)
         await fetch('/file-results', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -190,63 +196,82 @@ function mountTests(host: HTMLElement, setup: TestsSetup): void {
   })()
 }
 
-function runInIframe(
+async function runInIframe(
   testFile: string,
   only: SerializedOnlyPattern[] | undefined,
+  fileTimeout: number,
+  environment: string,
 ): Promise<FileResults> {
-  return new Promise((resolve) => {
-    let iframe = document.createElement('iframe')
-    let params = new URLSearchParams({ file: testFile })
-    if (new URLSearchParams(location.search).has('historyBackoff'))
-      params.set('historyBackoff', '1')
-    if (only) params.set('only', JSON.stringify(only))
-    iframe.src = `/iframe?${params}`
-    // Make the iframe as big so we don't get unintentional scrolling in test UIs
-    let parentBody = iframe.contentWindow?.document.body
-    iframe.width = Math.max(parentBody?.scrollWidth ?? 0, 800).toString()
-    iframe.height = Math.max(Math.round((parentBody?.scrollHeight ?? 0) / 2), 400).toString()
-    // Earlier files' results render ahead of an appended iframe and push it out of view, where
-    // WebKit throttles its timers, so the running file goes first.
-    document.body.prepend(iframe)
+  let iframe = document.createElement('iframe')
+  let onMessage: (event: MessageEvent) => void = () => {}
+  try {
+    return await withFileTimeout(
+      testFile,
+      environment,
+      fileTimeout,
+      () =>
+        new Promise((resolve) => {
+          let params = new URLSearchParams({ file: testFile })
+          if (new URLSearchParams(location.search).has('historyBackoff'))
+            params.set('historyBackoff', '1')
+          if (only) params.set('only', JSON.stringify(only))
+          iframe.src = `/iframe?${params}`
+          // Make the iframe as big so we don't get unintentional scrolling in test UIs
+          let parentBody = iframe.contentWindow?.document.body
+          iframe.width = Math.max(parentBody?.scrollWidth ?? 0, 800).toString()
+          iframe.height = Math.max(Math.round((parentBody?.scrollHeight ?? 0) / 2), 400).toString()
+          // Earlier files' results render ahead of an appended iframe and push it out of view, where
+          // WebKit throttles its timers, so the running file goes first.
+          document.body.prepend(iframe)
 
-    function onMessage(event: MessageEvent) {
-      if (event.source !== iframe.contentWindow) return
-      window.removeEventListener('message', onMessage)
-      // Hide instead of remove so when coverage is enabled the iframe remains attached
-      // so V8 retains its scripts and Playwright can collect coverage at run end.
-      iframe.style.display = 'none'
-      if (event.data.type === 'test-results') {
-        let { passed, failed, skipped, todo, tests } = event.data.results as TestResults
-        resolve({
-          passed,
-          failed,
-          skipped,
-          todo,
-          tests: tests.map((t) => ({ ...t, filePath: testFile })),
-        })
-      } else {
-        let { message, stack } = event.data.error
-        resolve({
-          passed: 0,
-          failed: 1,
-          skipped: 0,
-          todo: 0,
-          tests: [
-            {
-              name: '',
-              suiteName: testFile,
-              filePath: testFile,
-              status: 'failed',
-              error: { message, stack },
-              duration: 0,
-            },
-          ],
-        })
-      }
+          onMessage = (event: MessageEvent) => {
+            if (event.source !== iframe.contentWindow) return
+            // Hide instead of remove so when coverage is enabled the iframe remains attached
+            // so V8 retains its scripts and Playwright can collect coverage at run end.
+            iframe.style.display = 'none'
+            if (event.data.type === 'test-results') {
+              let { passed, failed, skipped, todo, tests } = event.data.results as TestResults
+              resolve({
+                passed,
+                failed,
+                skipped,
+                todo,
+                tests: tests.map((t) => ({ ...t, filePath: testFile })),
+              })
+            } else {
+              let { message, stack } = event.data.error
+              resolve({
+                passed: 0,
+                failed: 1,
+                skipped: 0,
+                todo: 0,
+                tests: [
+                  {
+                    name: '',
+                    suiteName: testFile,
+                    filePath: testFile,
+                    status: 'failed',
+                    error: { message, stack },
+                    duration: 0,
+                  },
+                ],
+              })
+            }
+          }
+
+          window.addEventListener('message', onMessage)
+        }),
+    )
+  } catch (error) {
+    iframe.remove()
+    let results = createFailedResults(error)
+    return {
+      ...results,
+      tests: results.tests.map((test) => ({ ...test, suiteName: testFile, filePath: testFile })),
     }
-
-    window.addEventListener('message', onMessage)
-  })
+  } finally {
+    window.removeEventListener('message', onMessage)
+  }
 }
 
 function buildSuite(suiteName: string, tests: TestResult[], baseDir: string): HTMLElement {

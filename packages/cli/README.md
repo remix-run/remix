@@ -151,6 +151,7 @@ trailing commas. Every top-level field is optional:
 
     // Test execution
     "concurrency": 4,
+    "fileTimeout": 600000,
     "pool": "forks",
     "setup": "./test/setup.ts",
     "watch": false,

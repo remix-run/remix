@@ -79,6 +79,7 @@ trailing commas are allowed:
     "only": ["/checkout/i"],
 
     "concurrency": 2,
+    "fileTimeout": 600000,
     "pool": "forks",
     "setup": "./test/setup.ts",
     "watch": false,
@@ -135,6 +136,7 @@ You may specify any test setting as a CLI flag. Boolean settings have negative f
 | `--browser.open`            |       |
 | `--no-browser.open`         |       |
 | `--concurrency <n>`         | `-c`  |
+| `--fileTimeout <ms>`        |       |
 | `--coverage`                |       |
 | `--no-coverage`             |       |
 | `--coverage.dir <path>`     |       |
@@ -166,6 +168,26 @@ The standalone `remix-test` executable is no longer installed. Update scripts to
 - "test": "remix-test --type server"
 + "test": "remix test --type server"
 ```
+
+### File Deadlines
+
+Each test file has a ten-minute execution deadline, separately for each browser project. The
+clock starts when a worker or browser begins the file, so queued files keep their full allowance.
+Imports, tests, and cleanup count toward the deadline. A timeout reports the file and project,
+terminates the worker or removes the browser's test frame/page, and continues with queued files.
+Successful runs clear the deadline before waiting for a browser kept open for inspection.
+
+Set `test.fileTimeout` in `remix.json`, pass `fileTimeout` to `runRemixTest()`, or use the CLI:
+
+```sh
+remix test --fileTimeout 300000
+remix test --fileTimeout 0 # Disable the file deadline
+```
+
+Values are integer milliseconds from `0` through `2147483647`. Individual test and hook timeouts
+still apply. Browser operations and the browser harness's existing 90-second progress watchdog
+also remain active; the watchdog identifies the current file and project when available. WebKit
+history-quota recovery resets the progress watchdog, but does not extend the file deadline.
 
 ### Focusing Tests
 

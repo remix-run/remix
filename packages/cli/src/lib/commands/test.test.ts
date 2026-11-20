@@ -16,6 +16,19 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 const TEST_COMMAND_HELP_TEXT = getTestCommandHelpText()
 
 describe('test command', () => {
+  it('overrides the configured file deadline and allows disabling it', () => {
+    assert.equal(resolveTestCommandOptions([], { fileTimeout: 123 }, ['forks']).fileTimeout, 123)
+    assert.equal(
+      resolveTestCommandOptions(['--fileTimeout', '0'], { fileTimeout: 123 }, ['forks'])
+        .fileTimeout,
+      0,
+    )
+    assert.throws(
+      () => resolveTestCommandOptions(['--fileTimeout=-1'], undefined, ['forks']),
+      /Invalid --fileTimeout/,
+    )
+  })
+
   it('prints test command help', async () => {
     let result = await captureOutput(() => runRemix(['test', '--help']))
     let helpResult = await captureOutput(() => runRemix(['help', 'test']))

@@ -86,6 +86,8 @@ export interface RemixDoctorCommandConfig {
 export interface RemixTestCommandConfig {
   browserFiles?: string[]
   concurrency?: number
+  /** Per-file execution deadline in milliseconds (600000 by default); `0` disables it. */
+  fileTimeout?: number
   coverage?: {
     branches?: number
     dir?: string
@@ -417,6 +419,7 @@ function parseTestConfig(
       'e2eFiles',
       'exclude',
       'files',
+      'fileTimeout',
       'only',
       'playwright',
       'pool',
@@ -458,6 +461,18 @@ function parseTestConfig(
       throwConfigError(source, [...objectPath, 'concurrency'], 'Expected a positive integer')
     }
     config.concurrency = concurrency
+  }
+
+  let fileTimeout = optionalNumber(object.fileTimeout, source, [...objectPath, 'fileTimeout'])
+  if (fileTimeout !== undefined) {
+    if (!Number.isInteger(fileTimeout) || fileTimeout < 0 || fileTimeout > 2_147_483_647) {
+      throwConfigError(
+        source,
+        [...objectPath, 'fileTimeout'],
+        'Expected an integer from 0 to 2147483647',
+      )
+    }
+    config.fileTimeout = fileTimeout
   }
 
   let pool = optionalEnum(object.pool, testPools, source, [...objectPath, 'pool'])

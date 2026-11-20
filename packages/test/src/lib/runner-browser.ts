@@ -2,6 +2,7 @@ import * as path from 'node:path'
 import type { Browser, Page, Request, Response } from 'playwright'
 import { colors } from './colors.ts'
 import { getBrowserTestRootDir } from './config.ts'
+import { resolveFileTimeout, withFileTimeout } from './file-timeout.ts'
 import {
   collectCoverageMapFromPlaywright,
   type CoverageMap,
@@ -16,7 +17,7 @@ import {
 import type { Reporter } from './reporters/index.ts'
 import type { TestResults } from './reporters/results.ts'
 
-const BROWSER_TEST_FILE_TIMEOUT_MS = 90_000
+const BROWSER_TEST_PROGRESS_TIMEOUT_MS = 90_000
 
 // The harness reports each test result with `filePath` set to the
 // `/scripts/<rel>` URL the iframe loaded. Reporters expect a real filesystem
@@ -31,6 +32,7 @@ export interface TestRunOptions {
   baseUrl: string
   console?: boolean
   coverage?: boolean
+  fileTimeout?: number
   open?: boolean
   playwrightUseOpts?: PlaywrightUseOpts
   projectName?: string
@@ -47,6 +49,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
   disconnected: Promise<void>
 }> {
   let envLabel = options.projectName ? `browser:${options.projectName}` : 'browser'
+  let fileTimeout = resolveFileTimeout(options.fileTimeout)
   let browser: Browser | undefined
   let page: Page | undefined
   let executionPage: Page | undefined
@@ -78,8 +81,8 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     // Cap individual browser operations, then separately watch for per-file
     // progress so large suites can run longer than this without hiding hangs.
     for (let browserPage of executionPage ? [page, executionPage] : [page]) {
-      browserPage.setDefaultTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
-      browserPage.setDefaultNavigationTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
+      browserPage.setDefaultTimeout(BROWSER_TEST_PROGRESS_TIMEOUT_MS)
+      browserPage.setDefaultNavigationTimeout(BROWSER_TEST_PROGRESS_TIMEOUT_MS)
       if (options.console) {
         browserPage.on('console', (msg) =>
           console.log(`${colors.dim('[browser console]')} ${msg.text()}`),
@@ -99,6 +102,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     let totalSkipped = 0
     let totalTodo = 0
     let rootDir = getBrowserTestRootDir()
+    let activeFile: string | undefined
     let completedFiles = 0
     let totalFiles = options.testFiles?.length ?? 0
     let watchingProgress = true
@@ -119,19 +123,27 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       clearProgressTimeout()
       if (!watchingProgress) return
       progressTimeoutId = setTimeout(() => {
+        let file = activeFile ? ` in ${urlPathToFilePath(activeFile, rootDir)} [${envLabel}]` : ''
         let progress = totalFiles > 0 ? ` (${completedFiles}/${totalFiles} files completed)` : ''
         rejectProgressTimeout(
           new Error(
-            `Timed out waiting ${BROWSER_TEST_FILE_TIMEOUT_MS}ms for browser test progress${progress}`,
+            `Timed out waiting ${BROWSER_TEST_PROGRESS_TIMEOUT_MS}ms for browser test progress${file}${progress}`,
           ),
         )
-      }, BROWSER_TEST_FILE_TIMEOUT_MS)
+      }, BROWSER_TEST_PROGRESS_TIMEOUT_MS)
     }
 
     let runnerUrl = new URL(options.baseUrl)
+    runnerUrl.searchParams.set('fileTimeout', String(fileTimeout))
+    runnerUrl.searchParams.set('environment', envLabel)
+    await page.route('**/file-start?*', async (route) => {
+      activeFile = new URL(route.request().url()).searchParams.get('file') ?? undefined
+      resetProgressTimeout()
+      await route.fulfill({ status: 200 })
+    })
     if (executionPage) {
       runnerUrl.searchParams.set('runFiles', '1')
-      await executionPage.route('**/history-quota?*', async (route) => {
+      await page.context().route('**/history-quota?*', async (route) => {
         let params = new URL(route.request().url()).searchParams
         let file = params.get('file')
         if (!file?.startsWith('/scripts/')) {
@@ -165,6 +177,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       totalSkipped += results.skipped
       totalTodo += results.todo
       completedFiles++
+      activeFile = undefined
       resetProgressTimeout()
     }
 
@@ -194,16 +207,40 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
           await route.fulfill({ status: 404, body: 'Unknown test file' })
           return
         }
+        activeFile = testFile
+        resetProgressTimeout()
         let fileResults: TestResults
         executionResults = undefined
+        let deadline: AbortSignal | undefined
         try {
           let fileUrl = new URL(options.baseUrl)
           fileUrl.searchParams.set('file', testFile)
           fileUrl.searchParams.set('historyBackoff', '1')
-          await waitForBrowserTests(activeExecutionPage, fileUrl.href)
+          await withFileTimeout(
+            urlPathToFilePath(testFile, rootDir),
+            envLabel,
+            fileTimeout,
+            (signal) => {
+              deadline = signal
+              return waitForBrowserTests(activeExecutionPage, fileUrl.href, signal)
+            },
+          )
           if (!executionResults) throw new Error('Missing browser test results')
           fileResults = executionResults
         } catch (error) {
+          // Closing a timed-out page also cancels pending Playwright operations and script requests.
+          if (deadline?.aborted && navigation === dashboardNavigation) {
+            let context = activeExecutionPage.context()
+            await activeExecutionPage.close()
+            activeExecutionPage = await context.newPage()
+            executionPage = activeExecutionPage
+            activeExecutionPage.setDefaultTimeout(BROWSER_TEST_PROGRESS_TIMEOUT_MS)
+            activeExecutionPage.setDefaultNavigationTimeout(BROWSER_TEST_PROGRESS_TIMEOUT_MS)
+            if (options.console)
+              activeExecutionPage.on('console', (msg) =>
+                console.log(`${colors.dim('[browser console]')} ${msg.text()}`),
+              )
+          }
           fileResults = {
             passed: 0,
             failed: 1,
@@ -294,7 +331,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
   }
 }
 
-async function waitForBrowserTests(page: Page, url: string): Promise<void> {
+async function waitForBrowserTests(page: Page, url: string, signal?: AbortSignal): Promise<void> {
   // Navigation can cancel script requests left over from the previous document.
   let requests = new WeakSet<Request>()
   let rejectScriptError: (error: Error) => void = () => {}
@@ -318,6 +355,10 @@ async function waitForBrowserTests(page: Page, url: string): Promise<void> {
     let reason = failureText ? ` (${failureText})` : ''
     rejectScriptError(new Error(`Failed to load script: ${request.url()}${reason}`))
   }
+  function onAbort() {
+    rejectScriptError(signal?.reason)
+  }
+  signal?.addEventListener('abort', onAbort, { once: true })
   page.on('request', onRequest)
   page.on('response', onResponse)
   page.on('requestfailed', onRequestFailed)
@@ -332,6 +373,7 @@ async function waitForBrowserTests(page: Page, url: string): Promise<void> {
       errorPromise,
     ])
   } finally {
+    signal?.removeEventListener('abort', onAbort)
     page.off('request', onRequest)
     page.off('response', onResponse)
     page.off('requestfailed', onRequestFailed)

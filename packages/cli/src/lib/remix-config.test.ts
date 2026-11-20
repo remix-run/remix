@@ -10,6 +10,21 @@ import { loadConfig, loadRemixConfig } from './remix-config.ts'
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 
 describe('Remix config loading', () => {
+  it('loads file deadlines and rejects out-of-range values at their source location', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-file-timeout-'))
+    try {
+      await fs.writeFile(path.join(cwd, 'remix.json'), '{ "test": { "fileTimeout": 0 } }')
+      assert.equal((await loadConfig(cwd)).test?.fileTimeout, 0)
+      await fs.writeFile(path.join(cwd, 'remix.json'), '{ "test": { "fileTimeout": 2147483648 } }')
+      await assert.rejects(
+        () => loadConfig(cwd),
+        /Expected an integer from 0 to 2147483647 at test.fileTimeout/,
+      )
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
   it('loads an explicit config file or searches upward from a directory', async () => {
     let rootDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-discovery-'))
     let nestedDir = path.join(rootDir, 'app', 'actions')

@@ -12,6 +12,8 @@ import {
   type V8CoverageEntry,
 } from './coverage.ts'
 import type { PlaywrightUseOpts } from './playwright.ts'
+import { resolveFileTimeout, withFileTimeout } from './file-timeout.ts'
+import { createFailedResults } from './worker-results.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { Counts, TestResults } from './reporters/results.ts'
 
@@ -45,6 +47,7 @@ export async function runServerTests(
   type: 'server' | 'e2e',
   options: {
     cwd?: string
+    fileTimeout?: number
     open?: boolean
     only?: SerializedOnlyPattern[]
     playwrightUseOpts?: PlaywrightUseOpts
@@ -59,6 +62,7 @@ export async function runServerTests(
   let cwd = options.cwd ?? process.cwd()
   let envLabel = options.projectName ? `${type}:${options.projectName}` : type
   let pool = options.pool ?? 'forks'
+  let fileTimeout = resolveFileTimeout(options.fileTimeout)
 
   function accumulate(results: TestResults, file: string) {
     reporter.onResult(
@@ -77,11 +81,12 @@ export async function runServerTests(
     await runInConcurrentWorkers(
       files,
       concurrency,
-      (file) =>
+      (file, signal) =>
         runFileInPool(
           file,
           type,
           (results) => {
+            if (signal.aborted) return
             accumulate(results, file)
             if (results.e2eBrowserCoverageEntries) {
               allBrowserCoverageEntries.push(...results.e2eBrowserCoverageEntries)
@@ -93,9 +98,11 @@ export async function runServerTests(
             playwrightUseOpts: options.playwrightUseOpts,
           },
         ),
-      () => counts.failed++,
+      (file, error) => accumulate(createFailedResults(error), file),
       !options.open,
       options.workerShutdownTimeoutMs ?? DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS,
+      fileTimeout,
+      envLabel,
     )
 
     if (options.coverage && allBrowserCoverageEntries.length > 0) {
@@ -117,14 +124,20 @@ export async function runServerTests(
     await runInConcurrentWorkers(
       files,
       concurrency,
-      (file) =>
-        runFileInPool(file, type, (results) => accumulate(results, file), {
-          ...options,
-          pool,
-        }),
-      () => counts.failed++,
+      (file, signal) =>
+        runFileInPool(
+          file,
+          type,
+          (results) => {
+            if (!signal.aborted) accumulate(results, file)
+          },
+          { ...options, pool },
+        ),
+      (file, error) => accumulate(createFailedResults(error), file),
       true,
       options.workerShutdownTimeoutMs ?? DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS,
+      fileTimeout,
+      envLabel,
     )
 
     if (coverageDataDir) {
@@ -140,10 +153,12 @@ export async function runServerTests(
 async function runInConcurrentWorkers(
   files: string[],
   concurrency: number,
-  runFile: (file: string) => WorkerRun,
-  onError: () => void,
+  runFile: (file: string, signal: AbortSignal) => WorkerRun,
+  onError: (file: string, error: unknown) => void,
   terminateWhenFinished: boolean,
   workerShutdownTimeoutMs: number,
+  fileTimeout: number,
+  environment: string,
 ): Promise<void> {
   let index = 0
   let active = 0
@@ -155,7 +170,11 @@ async function runInConcurrentWorkers(
         index++
         active++
 
-        let run = runFile(file)
+        let run: WorkerRun | undefined
+        let finished = withFileTimeout(file, environment, fileTimeout, (signal) => {
+          run = runFile(file, signal)
+          return run.finished
+        })
 
         function complete() {
           active--
@@ -166,17 +185,20 @@ async function runInConcurrentWorkers(
           }
         }
 
-        run.finished.then(
+        finished.then(
           async () => {
             try {
+              if (!run) return
               if (terminateWhenFinished) {
                 let exited = await waitForWorkerExit(run.exited, workerShutdownTimeoutMs)
                 if (!exited) {
                   let terminated = await run.terminate()
                   if (!terminated) {
-                    onError()
+                    onError(file, new Error(`Failed to terminate worker for ${file}`))
                   }
                 }
+              } else {
+                await run.exited
               }
             } finally {
               complete()
@@ -186,8 +208,8 @@ async function runInConcurrentWorkers(
             try {
               console.error(`Error running ${file}:`, err instanceof Error ? err.message : err)
               console.error(err)
-              onError()
-              await run.terminate()
+              onError(file, err)
+              await run?.terminate()
             } finally {
               complete()
             }
@@ -264,9 +286,7 @@ export function runFileInWorker(
         reject(error)
         return
       }
-      if (!options.open) {
-        resolve()
-      }
+      resolve()
     })
     worker.once('error', reject)
     exited.then((code) => {
@@ -327,9 +347,7 @@ function runFileInProcess(
         reject(error)
         return
       }
-      if (!options.open) {
-        resolve()
-      }
+      resolve()
     })
     child.once('error', reject)
     exited.then((code) => {
@@ -371,11 +389,9 @@ async function terminateChildProcess(
     return true
   }
 
-  if (!child.kill()) {
-    return false
-  }
-
-  return await waitForWorkerExit(exited, 5_000)
+  if (child.kill() && (await waitForWorkerExit(exited, 5_000))) return true
+  // A test can install a SIGTERM handler; its deadline must still release the worker slot.
+  return child.kill('SIGKILL') && (await waitForWorkerExit(exited, 5_000))
 }
 
 function isTestResults(value: unknown): value is TestResults {

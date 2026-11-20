@@ -2,6 +2,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { PlaywrightTestConfig } from 'playwright/test'
+import { resolveFileTimeout } from './file-timeout.ts'
 
 export const IS_RUNNING_FROM_SRC = path.extname(new URL(import.meta.url).pathname) === '.ts'
 
@@ -33,6 +34,7 @@ const defaultValues: ResolvedRemixTestConfig = {
     open: false,
   },
   concurrency: os.availableParallelism(),
+  fileTimeout: 600_000,
   coverage: {
     dir: '.coverage',
     include: undefined,
@@ -113,6 +115,12 @@ export interface RemixTestConfig {
   /** Max number of concurrent test workers (--concurrency) */
   concurrency?: number | string
   /**
+   * Maximum execution time in milliseconds for each test file and browser project (600000 by
+   * default). Includes imports, tests, and cleanup; excludes time queued for a worker. Set to `0`
+   * to disable the deadline. (--fileTimeout)
+   */
+  fileTimeout?: number | string
+  /**
    * Coverage configuration. `true` enables with defaults; an object enables with settings;
    * `false` disables. CLI `--coverage` flag overrides the boolean aspect.
    */
@@ -186,6 +194,7 @@ export interface ResolvedRemixTestConfig {
     open?: boolean
   }
   concurrency: number
+  fileTimeout: number
   coverage:
     | {
         dir: string
@@ -230,6 +239,7 @@ export function resolveConfig(config: RemixTestConfig = {}): ResolvedRemixTestCo
       open: config.browser?.open ?? defaultValues.browser.open,
     },
     concurrency: resolveConcurrency(config.concurrency ?? defaultValues.concurrency),
+    fileTimeout: resolveFileTimeout(config.fileTimeout ?? defaultValues.fileTimeout),
     coverage: coverageEnabled
       ? {
           dir: coverageOptions.dir ?? defaultValues.coverage!.dir,

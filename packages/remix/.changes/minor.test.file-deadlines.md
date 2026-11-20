@@ -1,0 +1,1 @@
+Test files now have a ten-minute execution deadline per browser project, with the file and project identified on timeout. Customize it using `test.fileTimeout` in `remix.json`, `remix test --fileTimeout <ms>`, or `fileTimeout` in `remix/test/cli` options; `0` disables the deadline.

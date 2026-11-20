@@ -175,6 +175,13 @@
           "minimum": 1,
           "description": "Maximum number of concurrent test workers."
         },
+        "fileTimeout": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "default": 600000,
+          "description": "Execution deadline in milliseconds for each test file/browser project. Set to 0 to disable."
+        },
         "coverage": {
           "$ref": "#/$defs/coverage"
         },

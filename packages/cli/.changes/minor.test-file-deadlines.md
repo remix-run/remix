@@ -1,0 +1,1 @@
+Configure per-file test execution deadlines with `test.fileTimeout` in `remix.json` or `remix test --fileTimeout <ms>`. Each file/browser project defaults to ten minutes, including imports and cleanup but excluding time in the worker queue. Set the value to `0` to disable the deadline.

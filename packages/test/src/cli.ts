@@ -212,6 +212,7 @@ async function runRemixTestInCwd(invocationConfig: RemixTestConfig, cwd: string)
             cwd,
             only: config.only,
             pool: config.pool,
+            fileTimeout: config.fileTimeout,
           },
         )
         counts.failed += serverResult.failed
@@ -274,6 +275,7 @@ async function runRemixTestInCwd(invocationConfig: RemixTestConfig, cwd: string)
               projectName: project.name,
               reporter,
               testFiles: browserFiles,
+              fileTimeout: config.fileTimeout,
             })
           }
 
@@ -287,6 +289,7 @@ async function runRemixTestInCwd(invocationConfig: RemixTestConfig, cwd: string)
                   cwd,
                   only: config.only,
                   pool: config.pool,
+                  fileTimeout: config.fileTimeout,
                 })
               : null
 
