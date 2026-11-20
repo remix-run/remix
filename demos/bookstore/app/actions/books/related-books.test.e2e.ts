@@ -69,6 +69,10 @@ describe('related books', () => {
         width: button.getBoundingClientRect().width,
         top: button.getBoundingClientRect().top,
         wraps: button.scrollWidth > button.clientWidth,
+        scrollWidth: button.scrollWidth,
+        clientWidth: button.clientWidth,
+        fontSize: getComputedStyle(button).fontSize,
+        text: button.textContent,
       })),
     )
     assert.ok(Math.abs(buttons[0].width - buttons[1].width) < 1)
@@ -76,6 +80,7 @@ describe('related books', () => {
     assert.equal(
       buttons.some((button) => button.wraps),
       false,
+      `Related book buttons: ${JSON.stringify(buttons)}`,
     )
     assert.equal(new URL(page.url()).search, '?image=3')
 

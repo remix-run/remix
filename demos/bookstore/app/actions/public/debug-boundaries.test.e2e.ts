@@ -48,7 +48,7 @@ describe('frame debug bookmarklet', () => {
     assert.equal(await overlay.count(), 1)
     await toggleBookmarklet(page)
     assert.equal(await overlay.count(), 0)
-    assert.deepEqual(requests, ['/example'])
+    assert.deepEqual(requests, ['/example'], `Bookmarklet requests: ${JSON.stringify(requests)}`)
     assert.deepEqual(errors, [])
   })
 
