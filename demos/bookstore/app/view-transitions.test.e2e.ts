@@ -6,6 +6,68 @@ import type { Page } from 'playwright'
 import { createTestRouter } from '../test/helpers.ts'
 
 describe('bookstore view transitions', () => {
+  it('reverses the selected related cover on Back and restores it on Forward', async (t) => {
+    let page = await t.serve(await createTestServer((await createTestRouter()).fetch))
+    await page.setViewportSize({ width: 1280, height: 1800 })
+    await pauseViewTransitions(page)
+    await page.goto('/books/bbq')
+    await page.evaluate(async () => {
+      let script = document.querySelector<HTMLScriptElement>('script[type="module"][src]')
+      if (!script) throw new Error('Missing app entry')
+      let { app } = await import(script.src)
+      await app.ready()
+    })
+    let related = page.getByRole('region', { name: 'Related Books', exact: true })
+    await related.getByRole('heading', { name: 'Bread Before Dawn', exact: true }).waitFor()
+    await related
+      .locator('[data-test-slug="bread-before-dawn"]')
+      .getByRole('link', { name: 'View Details', exact: true })
+      .click({ noWaitAfter: true })
+    await page.waitForFunction(() => document.documentElement.dataset.transitionReady === 'true')
+    await finishTransition(page)
+    await related.getByRole('heading', { name: 'Ash & Smoke', exact: true }).waitFor()
+
+    let relatedFrameRequests = 0
+    page.on('request', (request) => {
+      if (
+        new URL(request.url()).pathname === '/books/bbq/related' &&
+        request.headers()['x-remix-prefetch'] !== 'true'
+      ) {
+        relatedFrameRequests++
+      }
+    })
+    let back = page.goBack()
+    await page.waitForFunction(() => document.documentElement.dataset.transitionReady === 'true')
+    let covers = await activeCoverTransitions(page)
+    assert.deepEqual(covers, ['book-cover-11'], `Back animated ${covers.join(', ')}`)
+    assert.equal(
+      await page
+        .locator('[data-book-faceout="1"]')
+        .evaluate((faceout) => getComputedStyle(faceout).viewTransitionName),
+      'none',
+    )
+    assert.ok(
+      relatedFrameRequests <= 1,
+      `Back loaded the related frame ${relatedFrameRequests} times`,
+    )
+    await finishTransition(page)
+    await back
+    await related.getByRole('heading', { name: 'Bread Before Dawn', exact: true }).waitFor()
+
+    let forward = page.goForward()
+    await page.waitForFunction(() => document.documentElement.dataset.transitionReady === 'true')
+    covers = await activeCoverTransitions(page)
+    assert.deepEqual(covers, ['book-cover-11'], `Forward animated ${covers.join(', ')}`)
+    assert.equal(
+      await page
+        .locator('[data-book-faceout="11"]')
+        .evaluate((faceout) => getComputedStyle(faceout).viewTransitionName),
+      'book-cover-11',
+    )
+    await finishTransition(page)
+    await forward
+  })
+
   it('cross-fades content while moving only the cover from a scrolled catalog', async (t) => {
     let page = await t.serve(await createTestServer((await createTestRouter()).fetch))
     let errors: string[] = []
@@ -128,6 +190,14 @@ describe('bookstore view transitions', () => {
     assert.deepEqual(errors, [])
   })
 })
+
+async function finishTransition(page: Page) {
+  await page.evaluate(() => {
+    document.dispatchEvent(new Event('finish-test-transition'))
+    delete document.documentElement.dataset.transitionReady
+  })
+  await page.evaluate(async () => window.navigation.transition?.finished)
+}
 
 async function activeCoverTransitions(page: Page): Promise<string[]> {
   return page.evaluate(() => {

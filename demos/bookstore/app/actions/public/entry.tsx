@@ -115,15 +115,31 @@ export const app = run({
               )
               ?.closest('[data-book-id]')
           : null
+        let goingBack =
+          navigationType === 'traverse' &&
+          options?.from != null &&
+          navigation.currentEntry != null &&
+          navigation.currentEntry.index < options.from.index
+        let outgoingBookId = faceout?.getAttribute('data-book-faceout')
+        let incomingBookId = destinationCard?.getAttribute('data-book-id')
+        // Back returns the outgoing faceout to its card; forward navigation opens the next cover.
+        let bookId = goingBack
+          ? (outgoingBookId ?? incomingBookId)
+          : (incomingBookId ?? outgoingBookId)
 
-        let viewTransition = document.startViewTransition(commitFrame)
-        // Only covers entering or leaving the faceout participate in shared transitions.
-        for (let bookId of [
-          faceout?.getAttribute('data-book-faceout'),
-          destinationCard?.getAttribute('data-book-id'),
-        ]) {
-          if (bookId) viewTransition.types?.add(`book-cover-${bookId}`)
-        }
+        let viewTransition = document.startViewTransition(async () => {
+          await commitFrame()
+          if (goingBack && fromBook && toBook && !signal.aborted) {
+            // The restored lazy frame must contain the return card before the new snapshot.
+            let destinationBookId = document
+              .querySelector('[data-book-faceout]')
+              ?.getAttribute('data-book-faceout')
+            if (destinationBookId) {
+              await app.frames.get(`related-books-${destinationBookId}`)?.reload()
+            }
+          }
+        })
+        if (bookId) viewTransition.types?.add(`book-cover-${bookId}`)
         let skip = () => viewTransition.skipTransition()
         signal.addEventListener('abort', skip, { once: true })
         void viewTransition.ready.catch(() => {})
