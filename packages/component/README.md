@@ -1863,8 +1863,6 @@ export const Preview = clientEntry(import.meta.url, function Preview(handle: Han
 })
 ```
 
-The ref runs when the destination is inserted. Calling `handle.update()` renders the Portal into it. The guard prevents an initial render into the document body while `container` is still `undefined`.
-
 DOM events bubble through the destination's ancestors. Inherited styles, form ownership, and keyboard navigation also follow the destination DOM. `Portal` only changes placement. Apply positioning and any interaction behaviour to its content.
 
 `Portal` renders nothing on the server and does not render its child components. Inside a [client entry](#client-entries), portal children render in the browser during hydration and subsequent updates. Without a client entry, its content stays absent.
