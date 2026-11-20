@@ -458,6 +458,13 @@ function shouldRestoreControlledReflectionOnInput(
   // earlier `input` can race and clobber the value observed by app handlers.
   if (state.controlledChecked !== undefined) return false
   if (node.type === 'select') return false
+  // Date and time pickers do too, and a partly typed date's `input` carries an empty value
+  if (
+    node._dom instanceof HTMLInputElement &&
+    ['date', 'datetime-local', 'month', 'time', 'week'].includes(node._dom.type)
+  ) {
+    return false
+  }
   return true
 }
 

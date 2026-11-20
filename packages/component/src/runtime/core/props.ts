@@ -113,6 +113,16 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
     return
   }
 
+  // Leave a value the control already holds. Writing it again clears a date or time input
+  // that's partly filled in, whose value stays empty until every part is.
+  if (
+    name === 'value' &&
+    (dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement) &&
+    dom.value === String(value)
+  ) {
+    return
+  }
+
   if (attr === 'style' && isStyleObject(value)) {
     patchStyleObject(dom, undefined, value)
     return
