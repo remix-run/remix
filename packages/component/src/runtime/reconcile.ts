@@ -1673,8 +1673,6 @@ function skipCommentsExceptBoundaryStart(
   preserveClientEntry: boolean,
   anchor?: Node,
 ): Node | null {
-  // Skipping comments can reach the range's closing marker even when we started before it.
-  // Stop there so hydration cannot claim a sibling outside the range.
   while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
     if (cursor === anchor) return cursor
     let portalEnd = getPortalRangeEnd(cursor)
@@ -2433,9 +2431,7 @@ function findLastDomAnchor(node: CommittedVNode | null | undefined): Node | null
 
 function findEdgeDomNode(node: CommittedVNode | null | undefined, last: boolean): Node | null {
   if (!node) return null
-  if (isCommittedTextNode(node) || isCommittedHostNode(node)) {
-    return node._dom
-  }
+  if (isCommittedTextNode(node) || isCommittedHostNode(node)) return node._dom
   if (isCommittedComponentNode(node)) return findEdgeDomNode(node._content, last)
   if (isCommittedClientEntryNode(node) || node.kind === 'frame') {
     return last ? node._rangeEnd : node._rangeStart
