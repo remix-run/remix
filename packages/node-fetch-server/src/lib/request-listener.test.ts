@@ -1292,6 +1292,32 @@ describe('createRequestListener', () => {
   })
 })
 
+describe('createRequest request targets', () => {
+  it('throws for literal backslashes in the path', () => {
+    let req = createMockRequest({ url: '/files\\..\\notes.txt' })
+    let res = createMockResponse({ req })
+
+    assert.throws(() => createRequest(req, res), {
+      message: 'Invalid request target: backslash in path',
+    })
+  })
+
+  it('preserves encoded path backslashes and literal query backslashes', () => {
+    let req = createMockRequest({ url: '/files%5C..%5Cnotes.txt?value=\\draft' })
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+
+    assert.equal(request.url, 'http://localhost/files%5C..%5Cnotes.txt?value=\\draft')
+  })
+
+  it('continues to normalize ordinary dot segments', () => {
+    let req = createMockRequest({ url: '/files/../notes.txt?value=%2F' })
+    let res = createMockResponse({ req })
+
+    assert.equal(createRequest(req, res).url, 'http://localhost/notes.txt?value=%2F')
+  })
+})
+
 describe('createRequest authority', () => {
   it('throws for an invalid HTTP/2 authority without Host', () => {
     let req = createMockRequest({
