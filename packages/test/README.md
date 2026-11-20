@@ -556,7 +556,9 @@ spy.mock.restore()
 
 ### Browser Testing
 
-Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each in-browser test suite runs in an isolated `iframe` so it has access to its own `document` instance.
+Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each browser test file runs in its own `iframe` document.
+
+Cookies and browser storage are shared between files; reset them in hooks or cleanup callbacks. WebKit also has [history update limits](#webkit-history-limits).
 
 #### `render()`
 
@@ -590,6 +592,16 @@ describe('Counter', () => {
 | `$$(selector)`  | Alias for `container.querySelectorAll()`                                |
 | `act(fn)`       | Runs `fn` and flushes pending component updates                         |
 | `cleanup()`     | Unmounts and removes the container (pass to `t.after` for auto-cleanup) |
+
+#### WebKit history limits
+
+WebKit starts each browser test file with a fresh top-level document and history budget. Within a file, more than 100 combined `history.pushState()` and `history.replaceState()` calls in 10 seconds exhaust that budget. Calls made by application code and test hooks count too.
+
+If a test or `beforeEach` hook throws WebKit's history-quota `SecurityError`, `remix test` logs a warning, waits 11 seconds using real timers, runs cleanup, and retries the test once with a fresh test context and `beforeEach` hooks. A quota failure on retry triggers another wait and remains a failure. Cleanup errors also remain failures.
+
+Successful `beforeAll` setup stays shared. If a `beforeAll` hook throws the quota error, only that hook is retried once after the wait.
+
+Reduce history updates or split history-heavy tests across smaller files to avoid repeated waits.
 
 ### E2E Testing
 

@@ -1,0 +1,1 @@
+Prevent history-quota failures caused by earlier WebKit browser test files. Each file gets a fresh history budget, with an 11-second backoff and one retry if a test exhausts it. See [WebKit history limits](https://github.com/remix-run/remix/tree/main/packages/test#webkit-history-limits) for recovery behavior.
