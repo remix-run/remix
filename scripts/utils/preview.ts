@@ -586,6 +586,24 @@ export function cleanupPreviews(
   }
 }
 
+export function getStalePrPreviewChannels(
+  releases: PreviewRelease[],
+  repository: string,
+  run = createGitHubRunner(process.env.GITHUB_TOKEN),
+  now = Date.now(),
+): string[] {
+  let channels = new Set<string>()
+  for (let release of releases) {
+    if (!release.body.startsWith(PREVIEW_RELEASE_MARKER)) continue
+    let channel = getPreviewChannel(release.tag_name)
+    if (channel?.startsWith('pr-')) channels.add(channel)
+  }
+  return [...channels].filter((channel) => {
+    let pr = readPullRequest(repository, Number(channel.slice(3)), run)
+    return pr.closed && pr.closedAt !== null && Date.parse(pr.closedAt) <= now - 24 * 60 * 60 * 1000
+  })
+}
+
 export function cleanupPrPreviewBranch(
   github: PreviewGitHub,
   channel: string,
@@ -600,13 +618,24 @@ export function readPullRequest(
   repository: string,
   number: number,
   run = createGitHubRunner(process.env.GITHUB_TOKEN),
-): { closed: boolean; sha: string; headRef: string; title: string; createdAt: string } {
+): {
+  closed: boolean
+  closedAt: string | null
+  sha: string
+  headRef: string
+  title: string
+  createdAt: string
+} {
   validatePreviewRepository(repository)
   if (!Number.isSafeInteger(number) || number < 1) throw new Error('Invalid PR number')
   let value: unknown = JSON.parse(run(['api', `repos/${repository}/pulls/${number}`]))
   if (
     !isRecord(value) ||
     (value.state !== 'open' && value.state !== 'closed') ||
+    !(
+      value.closed_at === null ||
+      (typeof value.closed_at === 'string' && Number.isFinite(Date.parse(value.closed_at)))
+    ) ||
     typeof value.title !== 'string' ||
     typeof value.created_at !== 'string' ||
     !Number.isFinite(Date.parse(value.created_at)) ||
@@ -618,6 +647,7 @@ export function readPullRequest(
   }
   return {
     closed: value.state === 'closed',
+    closedAt: value.closed_at,
     sha: value.head.sha,
     headRef: value.head.ref,
     title: value.title,

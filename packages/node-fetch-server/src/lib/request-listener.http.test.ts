@@ -57,11 +57,52 @@ describe('HTTP request authority', () => {
   })
 })
 
+describe('HTTP request targets', () => {
+  it('rejects literal path backslashes before calling a request handler', async (t) => {
+    let handler = t.mock.fn((request: Request) => new Response(request.url))
+    let onError = t.mock.fn((_error: unknown) => undefined)
+    let response = await sendRequest(t, handler, {}, { onError }, '/files\\..\\notes.txt')
+
+    assert.equal(response.status, 400)
+    assert.equal(response.body, 'Bad Request')
+    assert.equal(handler.mock.callCount(), 0)
+    assert.equal(onError.mock.callCount(), 1)
+    let error = onError.mock.calls[0].arguments[0]
+    assert.ok(error instanceof Error)
+    assert.equal(error.message, 'Invalid request target: backslash in path')
+  })
+
+  it('rejects path backslashes even for a handler without arguments', async (t) => {
+    let handler = t.mock.fn(() => new Response('ok'))
+    let response = await sendRequest(t, handler, {}, { onError() {} }, '/files\\notes.txt')
+
+    assert.equal(response.status, 400)
+    assert.equal(handler.mock.callCount(), 0)
+  })
+
+  it('preserves encoded path backslashes and literal query backslashes', async (t) => {
+    let response = await sendRequest(
+      t,
+      (request) => {
+        let url = new URL(request.url)
+        return new Response(url.pathname + url.search)
+      },
+      {},
+      undefined,
+      '/files%5Cnotes.txt?value=\\draft',
+    )
+
+    assert.equal(response.status, 200)
+    assert.equal(response.body, '/files%5Cnotes.txt?value=\\draft')
+  })
+})
+
 async function sendRequest(
   t: TestContext,
   handler: FetchHandler,
   headers: http.OutgoingHttpHeaders,
   options?: RequestListenerOptions,
+  path = '/files/notes.txt?value=%2F',
 ): Promise<{ status: number | undefined; body: string }> {
   let server = http.createServer(createRequestListener(handler, options))
   t.after(async () => {
@@ -79,7 +120,7 @@ async function sendRequest(
         {
           hostname: '127.0.0.1',
           port: address.port,
-          path: '/secret?value=%2F',
+          path,
           headers,
         },
         resolve,

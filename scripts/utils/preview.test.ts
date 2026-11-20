@@ -1,3 +1,4 @@
+import * as cp from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -9,6 +10,7 @@ import {
   PREVIEW_RELEASE_MARKER,
   PreviewGitHub,
   cleanupPrPreviewBranch,
+  getStalePrPreviewChannels,
   getExpiredPreviewReleases,
   getExpiredPrPreviewAssets,
   getPreviewChannel,
@@ -193,24 +195,29 @@ describe('preview release retention', () => {
     let createdAt = '2026-11-01T04:30:00Z'
     let headRef = 'feature'
     let title = 'Add a feature'
-    let response = { title, head: { sha, ref: headRef }, created_at: createdAt }
+    let response = {
+      title,
+      head: { sha, ref: headRef },
+      created_at: createdAt,
+      closed_at: createdAt,
+    }
     assert.deepEqual(
       readPullRequest('remix-run/remix', 123, () =>
         JSON.stringify({ ...response, state: 'closed', merged: false }),
       ),
-      { closed: true, sha, headRef, title, createdAt },
+      { closed: true, closedAt: createdAt, sha, headRef, title, createdAt },
     )
     assert.deepEqual(
       readPullRequest('remix-run/remix', 123, () =>
         JSON.stringify({ ...response, state: 'closed', merged: true }),
       ),
-      { closed: true, sha, headRef, title, createdAt },
+      { closed: true, closedAt: createdAt, sha, headRef, title, createdAt },
     )
     assert.deepEqual(
       readPullRequest('remix-run/remix', 123, () =>
-        JSON.stringify({ ...response, state: 'open', merged: false }),
+        JSON.stringify({ ...response, state: 'open', merged: false, closed_at: null }),
       ),
-      { closed: false, sha, headRef, title, createdAt },
+      { closed: false, closedAt: null, sha, headRef, title, createdAt },
     )
   })
 
@@ -304,6 +311,123 @@ describe('preview release retention', () => {
     )
     assert.deepEqual(getExpiredPreviewReleases([build, other, experimental], 'main', now), [])
   })
+})
+
+describe('stale PR preview discovery', () => {
+  it('discovers stale releases once, keeping open and recently closed PRs', () => {
+    let closed = release(1, 'pr-12', '2020-01-01T00:00:00Z')
+    let draft = { ...release(2, 'pr-13', '2020-01-01T00:00:00Z'), draft: true }
+    let recent = release(3, 'pr-14', '2020-01-01T00:00:00Z')
+    let open = release(4, 'pr-15', '2020-01-01T00:00:00Z')
+    let legacy = { ...closed, id: 5, tag_name: 'pr-12-20200101-00000005' }
+    let unrelated = { ...closed, id: 6, tag_name: 'pr-99', body: 'Unrelated release' }
+    let main = release(7, 'main', '2020-01-01T00:00:00Z')
+
+    let channels = getStalePrPreviewChannels(
+      [closed, draft, recent, open, legacy, unrelated, main],
+      'remix-run/remix',
+      (args) => {
+        let number = Number(args[1].split('/').at(-1))
+        if (![12, 13, 14, 15].includes(number)) throw new Error('Unexpected PR lookup')
+        return JSON.stringify({
+          state: number === 15 ? 'open' : 'closed',
+          title: 'Example PR',
+          created_at: '2020-01-01T00:00:00Z',
+          closed_at:
+            number === 15
+              ? null
+              : number === 14
+                ? '2026-11-01T12:00:00.001Z'
+                : '2026-11-01T12:00:00Z',
+          head: { sha: 'a'.repeat(40), ref: 'feature' },
+        })
+      },
+      now,
+    )
+
+    assert.deepEqual(channels, ['pr-12', 'pr-13'])
+  })
+
+  it('fails discovery when PR status cannot be confirmed', () => {
+    assert.throws(
+      () =>
+        getStalePrPreviewChannels(
+          [release(1, 'pr-12', '2020-01-01T00:00:00Z')],
+          'remix-run/remix',
+          () => {
+            throw new Error('GitHub unavailable')
+          },
+        ),
+      /GitHub unavailable/,
+    )
+  })
+
+  // Fakes `gh` with an extensionless node script on PATH, which Windows can't resolve.
+  // This command only runs on ubuntu in the preview workflow.
+  it(
+    'rechecks PR status before stale cleanup and makes no changes in dry-run mode',
+    { skip: process.platform === 'win32' },
+    (t) => {
+      let directory = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-stale-pr-test-'))
+      t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+      let requestsPath = path.join(directory, 'requests.json')
+      let releases = [
+        release(1, 'pr-12', '2020-01-01T00:00:00Z'),
+        release(2, 'pr-13', '2020-01-01T00:00:00Z'),
+      ]
+      fs.writeFileSync(
+        path.join(directory, 'gh'),
+        `#!/usr/bin/env node
+const fs = require('node:fs')
+const args = process.argv.slice(2)
+const requestsPath = ${JSON.stringify(requestsPath)}
+const requests = fs.existsSync(requestsPath) ? JSON.parse(fs.readFileSync(requestsPath, 'utf8')) : []
+requests.push(args)
+fs.writeFileSync(requestsPath, JSON.stringify(requests))
+const endpoint = args.at(-1)
+if (args.includes('DELETE') || args.includes('POST') || args.includes('PATCH')) {
+  throw new Error('Dry run attempted a mutation')
+}
+if (endpoint.startsWith('repos/remix-run/previews/releases?')) {
+  console.log(JSON.stringify(endpoint.endsWith('&page=1') ? ${JSON.stringify(releases)} : []))
+} else if (endpoint.startsWith('repos/remix-run/remix/pulls/')) {
+  const number = Number(endpoint.split('/').at(-1))
+  const count = requests.filter((request) => request.at(-1) === endpoint).length
+  console.log(JSON.stringify({
+    state: number === 13 && count > 1 ? 'open' : 'closed',
+    title: 'Example PR',
+    created_at: '2020-01-01T00:00:00Z',
+    closed_at: number === 13 && count > 1 ? null : '2020-01-01T00:00:00Z',
+    head: { sha: 'a'.repeat(40), ref: 'feature' },
+  }))
+} else {
+  throw new Error('Unexpected GitHub command: ' + JSON.stringify(args))
+}
+`,
+        { mode: 0o755 },
+      )
+
+      let result = cp.spawnSync(
+        process.execPath,
+        [path.resolve(import.meta.dirname, '../preview.ts'), 'cleanup-stale-prs', '--dry-run'],
+        {
+          cwd: path.resolve(import.meta.dirname, '../..'),
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: `${directory}${path.delimiter}${process.env.PATH}`,
+            GITHUB_REPOSITORY: 'remix-run/remix',
+            GITHUB_OUTPUT: '',
+          },
+        },
+      )
+
+      assert.equal(result.status, 0, result.stderr)
+      assert.match(result.stdout, /Would delete legacy preview branch: preview\/pr-12/)
+      assert.match(result.stdout, /Would delete preview: v0\.0\.20200101-pr-12/)
+      assert.doesNotMatch(result.stdout, /pr-13/)
+    },
+  )
 })
 
 describe('preview GitHub lists', () => {
