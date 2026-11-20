@@ -1,5 +1,5 @@
-import type { InferOutput, Issue, ParseOptions, Schema } from './schema.ts'
-import { createIssue, createSchema, fail } from './schema.ts'
+import type { BaseSchemaNode, InferOutput, Issue, ParseOptions, Schema } from './schema.ts'
+import { createIssue, createSchemaNode, fail } from './schema.ts'
 
 type FormDataEntryKind = 'field' | 'fields' | 'file' | 'files'
 
@@ -9,6 +9,12 @@ type FormDataEntryKind = 'field' | 'fields' | 'file' | 'files'
 export type FormDataSource = FormData | URLSearchParams
 
 type FormDataParseResult<output> = { value: output } | { issues: ReadonlyArray<Issue> }
+
+export type FormDataObjectSchemaNode = BaseSchemaNode<'formData'> & {
+  // Entries are plain `{ kind, name, schema }` objects made by `field()`, `fields()`, `file()`
+  // and `files()`. Not named `entries`, which experimental form schemas define on this object.
+  formEntries: FormDataSchema
+}
 
 type FormDataValidationContext = {
   path: NonNullable<Issue['path']>
@@ -93,48 +99,53 @@ export type ParsedFormData<schema extends FormDataSchema> = {
 export function object<schema extends FormDataSchema>(
   schema: schema,
 ): FormDataObjectSchema<schema> {
-  return createSchema(function validate(value, context) {
-    if (!isFormDataSource(value)) {
-      return fail('Expected FormData or URLSearchParams', context.path, {
-        code: 'type.form_data_source',
-        input: value,
-        parseOptions: context.options,
-      })
-    }
+  let node = createSchemaNode<FormDataObjectSchemaNode>('formData', runFormDataObject)
+  node.formEntries = schema
+  return node
+}
 
-    let abortEarly = shouldAbortEarly(context.options)
-    let issues: Issue[] = []
-    let output: Partial<Record<keyof schema, unknown>> = {}
+function runFormDataObject(
+  this: FormDataObjectSchemaNode,
+  value: unknown,
+  context: FormDataValidationContext,
+) {
+  if (!isFormDataSource(value)) {
+    return fail('Expected FormData or URLSearchParams', context.path, {
+      code: 'type.form_data_source',
+      input: value,
+      parseOptions: context.options,
+    })
+  }
 
-    for (let [key, entrySchema] of Object.entries(schema) as [
-      keyof schema & string,
-      FormDataEntrySchema<any>,
-    ][]) {
-      let result = parseField(value, key, entrySchema, context)
+  let abortEarly = shouldAbortEarly(context.options)
+  let issues: Issue[] = []
+  let output: Record<string, unknown> = {}
 
-      if ('issues' in result) {
-        if (abortEarly) {
-          return { issues: result.issues }
-        }
+  for (let [key, entrySchema] of Object.entries(this.formEntries)) {
+    let result = parseField(value, key, entrySchema, context)
 
-        issues.push(...result.issues)
-        continue
+    if ('issues' in result) {
+      if (abortEarly) {
+        return { issues: result.issues }
       }
 
-      Object.defineProperty(output, key, {
-        value: result.value,
-        enumerable: true,
-        writable: true,
-        configurable: true,
-      })
+      issues.push(...result.issues)
+      continue
     }
 
-    if (issues.length > 0) {
-      return { issues }
-    }
+    Object.defineProperty(output, key, {
+      value: result.value,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    })
+  }
 
-    return { value: output as ParsedFormData<schema> }
-  })
+  if (issues.length > 0) {
+    return { issues }
+  }
+
+  return { value: output }
 }
 
 /**
