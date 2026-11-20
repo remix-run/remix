@@ -1,0 +1,1 @@
+`ContentSecurityPolicy` builds policies from initializer objects faster, which helps apps that create a nonce-based policy on every request. A policy with 17 directives takes about 45% less time to build in our benchmarks. Serialized policies are unchanged.

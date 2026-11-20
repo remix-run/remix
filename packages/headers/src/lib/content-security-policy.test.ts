@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
+import type { ContentSecurityPolicyInit } from './content-security-policy.ts'
 import { ContentSecurityPolicy } from './content-security-policy.ts'
 
 describe('ContentSecurityPolicy', () => {
@@ -108,5 +109,45 @@ describe('ContentSecurityPolicy', () => {
     })
     assert.equal(policy.toString(), 'script-src')
     assert.equal(ContentSecurityPolicy.from(null).toString(), '')
+  })
+
+  it('serializes every initializer directive with its hyphenated name', () => {
+    let policy = new ContentSecurityPolicy({
+      defaultSrc: ['a'],
+      scriptSrc: ['a'],
+      scriptSrcElem: ['a'],
+      scriptSrcAttr: ['a'],
+      styleSrc: ['a'],
+      styleSrcElem: ['a'],
+      styleSrcAttr: ['a'],
+      imgSrc: ['a'],
+      fontSrc: ['a'],
+      connectSrc: ['a'],
+      mediaSrc: ['a'],
+      objectSrc: ['a'],
+      frameSrc: ['a'],
+      childSrc: ['a'],
+      workerSrc: ['a'],
+      manifestSrc: ['a'],
+      baseUri: ['a'],
+      formAction: ['a'],
+      frameAncestors: ['a'],
+      sandbox: ['a'],
+      upgradeInsecureRequests: true,
+      reportTo: 'a',
+      reportUri: ['a'],
+      trustedTypes: ['a'],
+      requireTrustedTypesFor: ['a'],
+    })
+    assert.equal(
+      policy.toString(),
+      'default-src a; script-src a; script-src-elem a; script-src-attr a; style-src a; style-src-elem a; style-src-attr a; img-src a; font-src a; connect-src a; media-src a; object-src a; frame-src a; child-src a; worker-src a; manifest-src a; base-uri a; form-action a; frame-ancestors a; sandbox a; upgrade-insecure-requests; report-to a; report-uri a; trusted-types a; require-trusted-types-for a',
+    )
+  })
+
+  it('hyphenates untyped initializer keys outside the known directives', () => {
+    let init = { fencedFrameSrc: ["'none'"], toString: ["'self'"] }
+    let policy = new ContentSecurityPolicy(init as ContentSecurityPolicyInit)
+    assert.equal(policy.toString(), "fenced-frame-src 'none'; to-string 'self'")
   })
 })
