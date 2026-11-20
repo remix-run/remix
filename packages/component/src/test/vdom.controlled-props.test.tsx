@@ -581,6 +581,102 @@ describe('vdom controlled props', () => {
     expect(output.textContent).toBe('beta')
   })
 
+  it('applies a date picked on a controlled date input from its change handler', async () => {
+    function App(handle: Handle) {
+      let value = '2024-05-10'
+      return () => (
+        <input
+          type="date"
+          value={value}
+          mix={[
+            on('change', (event) => {
+              value = event.currentTarget.value
+              handle.update()
+            }),
+          ]}
+        />
+      )
+    }
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<App />)
+    root.flush()
+
+    // Picking a date dispatches `input`, then `change`
+    let input = container.querySelector('input') as HTMLInputElement
+    input.value = '2024-06-20'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await controlledRestore()
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+    root.flush()
+
+    expect(input.value).toBe('2024-06-20')
+  })
+
+  it('restores a controlled date input on change when no update happens', async () => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<input type="datetime-local" value="2024-05-10T20:00" />)
+    root.flush()
+
+    let input = container.querySelector('input') as HTMLInputElement
+    input.value = '2024-06-20T21:30'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await controlledRestore()
+    expect(input.value).toBe('2024-06-20T21:30')
+
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+    await controlledRestore()
+    expect(input.value).toBe('2024-05-10T20:00')
+  })
+
+  it('does not write a controlled value the input already holds', () => {
+    function App(handle: Handle) {
+      let value = '2024-05-10T20:00'
+      return () => (
+        <input
+          type="datetime-local"
+          value={value}
+          mix={[
+            on('input', (event) => {
+              value = event.currentTarget.value
+              handle.update()
+            }),
+          ]}
+        />
+      )
+    }
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<App />)
+    root.flush()
+
+    let input = container.querySelector('input') as HTMLInputElement
+    let { get, set } = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!
+    let writes: string[] = []
+    Object.defineProperty(input, 'value', {
+      configurable: true,
+      get() {
+        return get!.call(this)
+      },
+      set(value: string) {
+        writes.push(value)
+        set!.call(this, value)
+      },
+    })
+
+    // Clearing one part of a date leaves the others typed and the value empty. Writing the empty
+    // value back would clear the rest.
+    set!.call(input, '')
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    root.flush()
+
+    expect(input.value).toBe('')
+    expect(writes).toEqual([])
+  })
+
   it('detaches controlled listeners on dispose', async () => {
     let container = document.createElement('div')
     let root = createRoot(container)
