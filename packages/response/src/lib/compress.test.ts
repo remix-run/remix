@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import {
   gunzip,
+  brotliCompressSync,
   brotliDecompress,
   inflate,
   constants,
@@ -329,6 +330,32 @@ describe('compressResponse()', () => {
 
     // Level 9 should produce smaller output than level 1
     assert.ok(level9Buffer.length < level1Buffer.length)
+  })
+
+  it('compresses with brotli at quality 5 unless another quality is set', async () => {
+    let request = new Request('https://remix.run', {
+      headers: { 'Accept-Encoding': 'br' },
+    })
+    let content = Array.from({ length: 2000 }, (_, i) => `<li>Item ${i * 7919}</li>`).join('')
+    let atQuality = (quality: number) =>
+      brotliCompressSync(content, { params: { [constants.BROTLI_PARAM_QUALITY]: quality } })
+
+    let defaults = await compressResponse(new Response(content), request)
+    let configured = await compressResponse(new Response(content), request, {
+      brotli: { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } },
+    })
+
+    assert.deepEqual(Buffer.from(await defaults.arrayBuffer()), atQuality(5))
+    assert.deepEqual(Buffer.from(await configured.arrayBuffer()), atQuality(11))
+  })
+
+  it('keeps the default brotli quality beside other brotli params', () => {
+    let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/plain' }), {
+      brotli: { params: { [constants.BROTLI_PARAM_LGWIN]: 18 } },
+    })
+
+    assert.equal(options.brotli?.params?.[constants.BROTLI_PARAM_QUALITY], 5)
+    assert.equal(options.brotli?.params?.[constants.BROTLI_PARAM_LGWIN], 18)
   })
 
   it('compresses with custom brotli options', async () => {

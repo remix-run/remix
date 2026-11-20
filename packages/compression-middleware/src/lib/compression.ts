@@ -41,7 +41,9 @@ export interface CompressionOptions {
   /**
    * node:zlib options for Brotli compression.
    * Can be static or a function that returns options based on the response.
-   * HTML and SSE responses use `BROTLI_OPERATION_FLUSH` unless you explicitly set a flush value.
+   * Quality defaults to 5 rather than Node's 11, which can take longer than generating the
+   * response. HTML and SSE responses use `BROTLI_OPERATION_FLUSH` unless you explicitly set a
+   * flush value.
    *
    * See: https://nodejs.org/api/zlib.html#class-brotlioptions
    */
