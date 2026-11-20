@@ -43,6 +43,10 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 - **Comments**: add non-JSDoc comments only when behavior is surprising or non-obvious
 - **Formatting**: Oxfmt with `printWidth: 100`, no semicolons, single quotes, spaces not tabs
 
+## Browser Support
+
+For browser-facing changes, preserve the minimum versions and navigation fallback policy in [the browser support decision](decisions/010-browser-support.md). Use feature detection and graceful degradation wherever possible, preferring native implementations when available and preserving core interactions when they are missing. Raising the baseline requires an explicit decision.
+
 ## Component Styling
 
 - Write a `css()` style used at one JSX site inline in that element's `mix`, such as `<p mix={css({ color: 'var(--muted)' })}>`. Keep comments explaining a rule beside it.
