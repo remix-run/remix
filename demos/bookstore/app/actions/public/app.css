@@ -133,6 +133,7 @@
     mix-blend-mode: normal;
   }
 
+  ::view-transition-group(root),
   ::view-transition-group(bookstore-page) {
     /* Page snapshots can differ greatly in height and scroll position. */
     animation: none;
@@ -140,7 +141,7 @@
 
   ::view-transition-group(.book-cover) {
     z-index: 1;
-    animation-duration: 420ms;
+    animation-duration: 200ms;
     animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
     border-radius: 8px;
     overflow: clip;
@@ -153,11 +154,11 @@
   }
 
   ::view-transition-old(bookstore-page) {
-    animation: bookstore-page-out 160ms ease-in both;
+    animation: bookstore-page-out 200ms ease-in both;
   }
 
   ::view-transition-new(bookstore-page) {
-    animation: bookstore-page-in 260ms ease-out both;
+    animation: bookstore-page-in 200ms ease-out both;
   }
 
   @keyframes bookstore-page-out {
