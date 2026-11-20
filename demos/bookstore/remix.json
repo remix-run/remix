@@ -34,6 +34,7 @@
     "seed": "./db/seed.sql"
   },
   "test": {
+    "concurrency": 1,
     "playwright": {
       "configFile": "./playwright.config.ts"
     }
