@@ -10,6 +10,7 @@ import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/
 import type { ElementFunction } from '../runtime/element-function.ts'
 import { Fragment, FRAME_NODE, createComponent, createFrameHandle } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
+import { ErrorBoundary, renderErrorBoundaryFallback } from '../runtime/error-boundary.ts'
 import {
   getSelectValues,
   isAllowedHostPropName,
@@ -23,6 +24,9 @@ import {
   appendFlushMarker,
   createFrameStartMarker,
   createHydrationStartMarker,
+  ERROR_BOUNDARY_END_MARKER,
+  ERROR_BOUNDARY_FAILED_START_MARKER,
+  ERROR_BOUNDARY_START_MARKER,
   FRAME_END_MARKER,
   FRAME_TEMPLATE_END_MARKER,
   HYDRATION_END_MARKER,
@@ -213,7 +217,9 @@ interface RenderContext {
   elementDepth: number
   documentSegments: DocumentSegments
   onError: (error: unknown) => void
+  onCaughtError: (error: unknown) => void
   parentVNode?: VNode
+  boundaryHydrationIds?: string[]
   styleCache: Map<string, { selector: string; css: string }>
   resolveFrame: (
     src: string,
@@ -248,8 +254,24 @@ interface SsrFrameState {
   topFrame: FrameHandle
 }
 
-type FrameSegment = { kind: 'frame'; frameId: string; content: Segment[] | string | null }
-type Segment = string | StaticSegment | FrameSegment
+type FrameSegment = {
+  kind: 'frame'
+  frameId: string
+  content: Segment[] | string | null
+  tail?: ReadableStream<Uint8Array>
+  // Set when the frame belonged to error boundary content that was replaced by its fallback.
+  abandoned?: boolean
+}
+type BoundarySegment = {
+  kind: 'boundary'
+  content: Segment[]
+  failed: boolean
+  // Client entries rendered directly by this boundary's content, removed if the content fails.
+  hydrationIds: string[]
+  // Set when an enclosing boundary replaced this boundary with its fallback.
+  abandoned?: boolean
+}
+type Segment = string | StaticSegment | FrameSegment | BoundarySegment
 
 const MAX_BUFFERED_HTML_LENGTH = 64 * 1024
 // UTF-8 needs at most three bytes per UTF-16 code unit.
@@ -337,6 +359,14 @@ export function renderToStream(
   node: RemixNode,
   options?: RenderToStreamOptions,
 ): ReadableStream<Uint8Array> {
+  return renderNodeToStream(node, options)
+}
+
+function renderNodeToStream(
+  node: RemixNode,
+  options: RenderToStreamOptions | undefined,
+  onCaughtError?: (error: unknown) => void,
+): ReadableStream<Uint8Array> {
   let encoder = new TextEncoder()
   let onError = options?.onError ?? ((error) => console.error(error))
   let currentFrameSrc = normalizeFrameSrc(options?.frameSrc ?? options?.topFrameSrc)
@@ -350,6 +380,7 @@ export function renderToStream(
     elementDepth: 0,
     documentSegments: {},
     onError,
+    onCaughtError: onCaughtError ?? onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
     styleCache: new Map(),
     pendingFrames: [],
@@ -628,6 +659,8 @@ function buildSegment(
         output.push(buildImportMapSegment(props, context))
       } else if (isFrameComponent(type)) {
         output.push(buildFrameSegment(node, context, frameState))
+      } else if (type === ErrorBoundary) {
+        buildErrorBoundarySegment(props, context, frameState, output)
       } else if (isEntry(type)) {
         buildEntrySegment(type, props, context, frameState, output)
       } else {
@@ -689,9 +722,14 @@ function buildFrameSegment(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
     ).then(async (resolved) => {
       let { html, tail } = await resolveFrameHtml(resolved)
+      if (seg.abandoned) {
+        tail?.cancel().catch(() => {})
+        return
+      }
       html = hoistClientEntryResourcesFromFrameHead(html, context.clientEntryHeadResources)
       seg.content = html
       if (tail) {
+        seg.tail = tail
         context.blockingFrameTails.push(tail)
       }
     })
@@ -701,6 +739,185 @@ function buildFrameSegment(
   }
 
   return seg
+}
+
+type RenderPosition = Pick<
+  RenderContext,
+  | 'insideSvg'
+  | 'insideHead'
+  | 'elementDepth'
+  | 'selectValues'
+  | 'selectScalar'
+  | 'optionText'
+  | 'parentVNode'
+  | 'boundaryHydrationIds'
+>
+
+// Document-level render state that error boundary content can write. When the content fails,
+// the boundary rolls back what the content changed before rendering its fallback.
+interface DocumentState {
+  documentSegments: DocumentSegments
+  flushKind: FlushKind
+  managedImportMaps: ManagedImportMap[]
+}
+
+function getRenderPosition(context: RenderContext): RenderPosition {
+  return {
+    insideSvg: context.insideSvg,
+    insideHead: context.insideHead,
+    elementDepth: context.elementDepth,
+    selectValues: context.selectValues,
+    selectScalar: context.selectScalar,
+    optionText: context.optionText,
+    parentVNode: context.parentVNode,
+    boundaryHydrationIds: context.boundaryHydrationIds,
+  }
+}
+
+function getDocumentState(context: RenderContext): DocumentState {
+  return {
+    documentSegments: { ...context.documentSegments },
+    flushKind: context.flushKind,
+    managedImportMaps: [...context.managedImportMaps],
+  }
+}
+
+function buildErrorBoundarySegment(
+  props: ElementProps,
+  context: RenderContext,
+  frameState: SsrFrameState,
+  output: Segment[],
+): void {
+  let segment: BoundarySegment = { kind: 'boundary', content: [], failed: false, hydrationIds: [] }
+  output.push(segment)
+  let position = getRenderPosition(context)
+  let documentBefore = getDocumentState(context)
+  let frameCount = context.frameData.size
+  let blockingFrameCount = context.blockingFrames.length
+
+  try {
+    context.boundaryHydrationIds = segment.hydrationIds
+    buildSegment(props.children, context, frameState, segment.content)
+    context.boundaryHydrationIds = position.boundaryHydrationIds
+  } catch (error) {
+    // Frames that throw while rendering never reach the content's segments.
+    for (let id of Array.from(context.frameData.keys()).slice(frameCount)) {
+      context.frameData.delete(id)
+    }
+    context.blockingFrames.length = blockingFrameCount
+    let documentAfter = getDocumentState(context)
+    Object.assign(context, position)
+    renderErrorBoundaryFallbackSegment(segment, props, error, context, frameState, [
+      documentBefore,
+      documentAfter,
+    ])
+    context.boundaryHydrationIds = position.boundaryHydrationIds
+    return
+  }
+
+  // Blocking frames resolve before the shell is sent, so a frame that fails can still be
+  // replaced by the fallback. Frames with a fallback stream after the shell and are not caught.
+  let frames = context.blockingFrames.splice(blockingFrameCount)
+  if (frames.length === 0) return
+
+  let documentAfter = getDocumentState(context)
+  let settled = Promise.all(frames).then(
+    () => {},
+    async (error) => {
+      // Let sibling frames settle so the tails of any that resolved can be cancelled.
+      await Promise.allSettled(frames)
+      if (isSignalAbortError(context.signal, error)) throw error
+      if (segment.abandoned) return
+
+      let current = getRenderPosition(context)
+      Object.assign(context, position)
+      let fallbackFrameCount = context.blockingFrames.length
+      try {
+        renderErrorBoundaryFallbackSegment(segment, props, error, context, frameState, [
+          documentBefore,
+          documentAfter,
+        ])
+      } finally {
+        Object.assign(context, current)
+      }
+      // A fallback frame that fails is handled by the next boundary up.
+      await Promise.all(context.blockingFrames.splice(fallbackFrameCount))
+    },
+  )
+  settled.catch(() => {})
+  context.blockingFrames.push(settled)
+}
+
+function renderErrorBoundaryFallbackSegment(
+  segment: BoundarySegment,
+  props: ElementProps,
+  error: unknown,
+  context: RenderContext,
+  frameState: SsrFrameState,
+  [before, after]: [DocumentState, DocumentState],
+): void {
+  abandonSegments(segment.content, context)
+  for (let id of segment.hydrationIds) {
+    context.unresolvedHydrationData.delete(id)
+  }
+  segment.hydrationIds = []
+
+  if (after.managedImportMaps.length !== before.managedImportMaps.length) {
+    context.managedImportMaps = context.managedImportMaps.filter(
+      (map) => before.managedImportMaps.includes(map) || !after.managedImportMaps.includes(map),
+    )
+  }
+  let documentSegments = context.documentSegments
+  if (after.documentSegments.html !== before.documentSegments.html) {
+    documentSegments.html = before.documentSegments.html
+    documentSegments.depth = before.documentSegments.depth
+  }
+  if (after.documentSegments.head !== before.documentSegments.head) {
+    documentSegments.head = before.documentSegments.head
+  }
+  if (after.documentSegments.body !== before.documentSegments.body) {
+    documentSegments.body = before.documentSegments.body
+  }
+  if (after.flushKind !== before.flushKind) context.flushKind = before.flushKind
+
+  context.onCaughtError(error)
+  segment.failed = true
+  segment.content = []
+  context.boundaryHydrationIds = segment.hydrationIds
+  // Retrying needs a browser, so the server fallback receives a no-op.
+  let fallback = renderErrorBoundaryFallback(props.fallback, error, () => {})
+  buildSegment(fallback, context, frameState, segment.content)
+}
+
+// Removes the frames and client entries rendered by discarded boundary content.
+function abandonSegments(segments: Segment[], context: RenderContext): void {
+  for (let segment of segments) {
+    if (typeof segment === 'string' || segment.kind === 'static') continue
+    if (segment.kind === 'boundary') {
+      segment.abandoned = true
+      for (let id of segment.hydrationIds) {
+        context.unresolvedHydrationData.delete(id)
+      }
+      segment.hydrationIds.length = 0
+      abandonSegments(segment.content, context)
+      continue
+    }
+
+    let { frameId } = segment
+    segment.abandoned = true
+    context.frameData.delete(frameId)
+    let pendingIndex = context.pendingFrames.findIndex((frame) => frame.frameId === frameId)
+    if (pendingIndex !== -1) {
+      let [pending] = context.pendingFrames.splice(pendingIndex, 1)
+      pending.promise.then((resolved) => resolved.tail?.cancel()).catch(() => {})
+    }
+    let tail = segment.tail
+    if (tail) {
+      context.blockingFrameTails = context.blockingFrameTails.filter((item) => item !== tail)
+      tail.cancel().catch(() => {})
+    }
+    if (Array.isArray(segment.content)) abandonSegments(segment.content, context)
+  }
 }
 
 function buildElementSegment(
@@ -1303,6 +1520,7 @@ function buildEntrySegment(
     component: type,
     propsJson,
   })
+  context.boundaryHydrationIds?.push(instanceId)
 
   output.push(`<!--${HYDRATION_END_MARKER}-->`)
 }
@@ -1436,6 +1654,12 @@ function serializeSegment(segments: Segment[]): string {
       parts.push(seg)
     } else if (seg.kind === 'static') {
       parts.push(seg.html)
+    } else if (seg.kind === 'boundary') {
+      parts.push(
+        `<!--${seg.failed ? ERROR_BOUNDARY_FAILED_START_MARKER : ERROR_BOUNDARY_START_MARKER}-->`,
+      )
+      parts.push(serializeSegment(seg.content))
+      parts.push(`<!--${ERROR_BOUNDARY_END_MARKER}-->`)
     } else {
       parts.push(`<!--${createFrameStartMarker(seg.frameId)}-->`)
       if (typeof seg.content === 'string') parts.push(seg.content)
@@ -2032,12 +2256,16 @@ export async function renderToString(
 ): Promise<string> {
   return stripFlushMarkers(
     await drain(
-      renderToStream(node, {
-        nonce: options?.nonce,
-        onError(error) {
-          throw error
+      renderNodeToStream(
+        node,
+        {
+          nonce: options?.nonce,
+          onError(error) {
+            throw error
+          },
         },
-      }),
+        (error) => console.error(error),
+      ),
     ),
   )
 }

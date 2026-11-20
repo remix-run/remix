@@ -9,7 +9,7 @@ This chapter is unfinished. The sections below outline what it will cover. For w
 - [Node server](https://github.com/remix-run/remix/blob/main/packages/node-fetch-server/README.md)
 - [Rendering middleware](https://github.com/remix-run/remix/blob/main/packages/render-middleware/README.md)
 
-Remix does not turn every failure into a component error boundary. Expected outcomes are responses; unexpected exceptions cross the router boundary; rendering and browser runtime errors use explicit reporting hooks.
+Remix does not turn every failure into a component error boundary. Expected outcomes are responses; unexpected exceptions cross the router boundary; rendering and browser runtime errors use explicit reporting hooks. When one part of a page can fail without making the rest useless, wrap it in `<ErrorBoundary>`.
 
 ## Return expected failures as responses {#returning-error-responses-in-controllers}
 
@@ -26,6 +26,18 @@ Return a route-specific `404` page when the action understands what is missing. 
 ## Report streaming render failures {#streaming-render-errors}
 
 Pass `onError` and `request.signal` to `renderToStream()`. Root and blocking-render failures report the error and reject the stream. A later non-blocking frame or streamed frame-tail failure is reported while the already-rendered fallback remains. After body bytes are sent, the server cannot replace the response with a new error page. With the `render()` middleware, root and blocking-render failures reject `router.fetch()`, so the server boundary can respond with a `500`. Only middleware that runs before `render()` sees that rejection, and responses whose body is replaced or transformed after rendering only report the error to `onError`.
+
+## Contain rendering failures with an error boundary {#component-error-boundaries}
+
+`<ErrorBoundary>` from `remix/component` renders its `fallback` in place of children that throw during setup or render. On the server, it also catches blocking frames that fail to resolve. The rest of the page renders, the error goes to `renderToStream()`'s `onError`, and `render()` responds with the status you chose.
+
+```tsx
+<ErrorBoundary fallback={<p>Reviews are unavailable right now.</p>}>
+  <AlbumReviews albumId={album.id} />
+</ErrorBoundary>
+```
+
+In a client entry, the boundary also catches errors from browser renders and updates, and a fallback function receives a `retry` function that renders the children again. Event handlers and async work are not caught. See [Error Boundaries](https://github.com/remix-run/remix/tree/main/packages/component#error-boundaries) for what is caught where.
 
 ## Own frame-resolution failures {#frame-resolution-errors}
 
