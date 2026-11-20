@@ -88,6 +88,60 @@ describe('LazyBlob', () => {
     assert.equal(buffer.byteLength, 5)
   })
 
+  it('reads through a stream-provided async iterator when available', async (t) => {
+    let stream = new ReadableStream<Uint8Array<ArrayBuffer>>({
+      start(controller) {
+        controller.close()
+      },
+    })
+    t.mock.method(stream, Symbol.asyncIterator, async function* () {
+      yield new TextEncoder().encode('hello')
+    })
+    let blob = new LazyBlob({ byteLength: 5, stream: () => stream })
+
+    assert.equal(await blob.text(), 'hello')
+  })
+
+  it('reads native Blob parts without ReadableStream async iteration', async (t) => {
+    t.mock.property(ReadableStream.prototype, Symbol.asyncIterator, undefined)
+    let blob = new LazyBlob([new Blob(['hello']), ' world'])
+
+    assert.equal(await blob.text(), 'hello world')
+  })
+
+  it('cancels a Blob part stream and releases its reader when a slice ends early', async (t) => {
+    t.mock.property(ReadableStream.prototype, Symbol.asyncIterator, undefined)
+    let cancelled = false
+    let stream = new ReadableStream<Uint8Array<ArrayBuffer>>({
+      pull(controller) {
+        controller.enqueue(new TextEncoder().encode('hello'))
+      },
+      cancel() {
+        cancelled = true
+      },
+    })
+    let part = new LazyBlob({ byteLength: 10, stream: () => stream })
+    let blob = new LazyBlob([part]).slice(0, 3)
+
+    assert.equal(await blob.text(), 'hel')
+    assert.equal(cancelled, true)
+    assert.equal(stream.locked, false)
+  })
+
+  it('preserves read errors and releases the stream reader', async (t) => {
+    t.mock.property(ReadableStream.prototype, Symbol.asyncIterator, undefined)
+    let error = new Error('read failed')
+    let stream = new ReadableStream<Uint8Array<ArrayBuffer>>({
+      start(controller) {
+        controller.error(error)
+      },
+    })
+    let blob = new LazyBlob({ byteLength: 1, stream: () => stream })
+
+    await assert.rejects(blob.text(), error)
+    assert.equal(stream.locked, false)
+  })
+
   describe('toBlob()', () => {
     it('converts to a native Blob', async () => {
       let blobType = normalizeFileOrBlobType('text/plain')
