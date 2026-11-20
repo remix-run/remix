@@ -771,6 +771,30 @@ describe('Portal', () => {
     expect(destination.childNodes.length).toBe(0)
   })
 
+  it('renders into a custom destination adopted into the root document', (t) => {
+    let frame = document.createElement('iframe')
+    document.body.append(frame)
+    t.after(() => frame.remove())
+    let doc = frame.contentDocument
+    invariant(doc)
+    let source = doc.createElement('div')
+    let destination = document.createElement('section')
+    doc.body.append(source, destination)
+    let root = createRoot(source)
+    t.after(() => root.dispose())
+
+    root.render(
+      <Portal container={destination}>
+        <input defaultValue="Draft" />
+      </Portal>,
+    )
+    expect(destination.querySelector('input')?.value).toBe('Draft')
+    root.render(<Portal container={destination}>Updated</Portal>)
+    expect(destination.textContent).toBe('Updated')
+    root.dispose()
+    expect(destination.childNodes.length).toBe(0)
+  })
+
   it('rejects an SVG element as a container', (t) => {
     let destination = document.createElement('div')
     let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')

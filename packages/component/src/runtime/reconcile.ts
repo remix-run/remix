@@ -368,9 +368,12 @@ export function toVNode(node: RemixNode): VNodeInput {
     if (node.type === Portal) {
       let props = parseHostProps(node.props)
       let container: PortalProps['container'] = node.props.container
+      // Adoption changes ownerDocument without changing the element's prototype, so avoid
+      // instanceof checks against either window's HTMLElement constructor.
       invariant(
         container === undefined ||
-          container instanceof (container?.ownerDocument?.defaultView?.HTMLElement ?? HTMLElement),
+          (container?.nodeType === Node.ELEMENT_NODE &&
+            container.namespaceURI === 'http://www.w3.org/1999/xhtml'),
         'Portal container must be an HTMLElement',
       )
       return { kind: 'portal', type: Portal, key: node.key, props: { ...props, container } }
