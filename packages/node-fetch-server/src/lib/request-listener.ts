@@ -37,8 +37,9 @@ export interface RequestListenerOptions {
   host?: string
   /**
    * An error handler that determines the response when request construction or handling throws.
-   * If no response is returned, invalid request authorities and conflicting HTTP/2 authorities
-   * receive a 400 Bad Request response and other errors receive a 500 Internal Server Error response.
+   * If no response is returned, literal path backslashes, invalid request authorities, and
+   * conflicting HTTP/2 authorities receive a 400 Bad Request response. Other errors receive a
+   * 500 Internal Server Error response.
    */
   onError?: ErrorHandler
   /**
@@ -65,8 +66,10 @@ export interface RequestListenerOptions {
  * - [`http2.createServer()`](https://nodejs.org/api/http2.html#http2createserveroptions-onrequesthandler)
  * - [`http2.createSecureServer()`](https://nodejs.org/api/http2.html#http2createsecureserveroptions-onrequesthandler)
  *
- * Invalid URL hosts and conflicting HTTP/2 `Host` and `:authority` values produce a 400 response
- * unless `onError` returns a custom response.
+ * Literal backslashes in the request path, invalid URL hosts, and conflicting HTTP/2 `Host` and
+ * `:authority` values are rejected before calling the handler. They produce a 400 response unless
+ * `onError` returns a custom response. Backslashes in the query and percent-encoded backslashes
+ * remain accepted.
  *
  * Example:
  *
@@ -109,6 +112,7 @@ export function createRequestListener(
     return async (req, res) => {
       let isResponseClosed = observeResponseClose(res)
       try {
+        validateRequestTarget(req)
         getRequestHost(req, undefined, options)
       } catch (error) {
         await sendResponseForCreationError(res, onError, error, isResponseClosed)
@@ -251,7 +255,7 @@ async function createErrorResponse(onError: ErrorHandler, error: unknown): Promi
   try {
     let response = await onError(error)
     if (response != null) return response
-    return error instanceof RequestAuthorityError
+    return error instanceof RequestAuthorityError || error instanceof RequestTargetError
       ? new Response('Bad Request', { status: 400 })
       : internalServerError()
   } catch (error) {
@@ -408,13 +412,16 @@ export type RequestOptions = Omit<RequestListenerOptions, 'onError'>
  * @param res The server response object
  * @param options Options for creating the request
  * @returns A `Request` object
- * @throws If the effective host is invalid or HTTP/2 `Host` and `:authority` values identify different hosts
+ * @throws If the request path contains a literal backslash, the effective host is invalid, or
+ * HTTP/2 `Host` and `:authority` values identify different hosts
  */
 export function createRequest(
   req: http.IncomingMessage | http2.Http2ServerRequest,
   res: http.ServerResponse | http2.Http2ServerResponse,
   options?: RequestOptions,
 ): Request {
+  validateRequestTarget(req)
+
   let lifecycle = createRequestLifecycle()
   observeResponseForRequestLifecycle(res, lifecycle)
 
@@ -438,6 +445,15 @@ export function createRequest(
   }
 
   return new Request(url, init)
+}
+
+class RequestTargetError extends Error {}
+
+function validateRequestTarget(req: http.IncomingMessage | http2.Http2ServerRequest): void {
+  // Validate the incoming path before Web URL parsing normalizes backslashes into forward slashes.
+  if (req.url?.split('?', 1)[0].includes('\\')) {
+    throw new RequestTargetError('Invalid request target: backslash in path')
+  }
 }
 
 function getRequestProtocol(
