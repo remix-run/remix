@@ -18,6 +18,117 @@ const SKIP_WEBKIT = IS_BUN || process.platform !== 'darwin' || process.env.REMIX
 
 describe('browser history backoff', () => {
   it(
+    'discards stale WebKit results and script failures when refreshed during loading and execution',
+    { skip: SKIP_WEBKIT },
+    async (t) => {
+      let fixture = await createFixture(t, {
+        'a.test.browser.ts': `
+import * as assert from '@remix-run/assert'
+import { value } from './slow.ts'
+import { it } from '../../src/lib/framework.ts'
+it('restarts the interrupted file', async () => {
+  assert.equal(value, 1)
+  let attempts = Number(localStorage.getItem('attempts') ?? 0) + 1
+  localStorage.setItem('attempts', String(attempts))
+  if (attempts === 1) await new Promise(() => {})
+  assert.equal(attempts, 2)
+})
+`,
+        'b.test.browser.ts': `
+import * as assert from '@remix-run/assert'
+import { it } from '../../src/lib/framework.ts'
+it('continues after the restarted file', () => {
+  assert.equal(localStorage.getItem('attempts'), '2')
+})
+`,
+      })
+      await fsp.writeFile(path.join(fixture.dir, 'slow.ts'), 'export const value = 1')
+      let firstModuleRequest = Promise.withResolvers<void>()
+      let restartedModuleRequest = Promise.withResolvers<void>()
+      let releaseFirstModule = Promise.withResolvers<void>()
+      let browser: Browser | undefined
+      let launch = webkit.launch.bind(webkit)
+      t.mock.method(webkit, 'launch', async (options) => {
+        browser = await launch(options)
+        let newContext = browser.newContext.bind(browser)
+        t.mock.method(browser, 'newContext', async (options) => {
+          let context = await newContext(options)
+          let firstRequest = true
+          await context.route('**/slow.ts', async (route) => {
+            if (firstRequest) {
+              firstRequest = false
+              firstModuleRequest.resolve()
+              await releaseFirstModule.promise
+            } else {
+              restartedModuleRequest.resolve()
+            }
+            await route.fallback()
+          })
+          return context
+        })
+        return browser
+      })
+      let reported: TestResults[] = []
+      let running = runBrowserTests({
+        ...fixture,
+        open: true,
+        playwrightUseOpts: { browserName: 'webkit' },
+        reporter: createReporter(reported),
+      })
+      t.after(async () => {
+        releaseFirstModule.resolve()
+        await browser?.close()
+        await running
+      })
+      let execution = await t.waitFor(
+        () => {
+          let page = browser?.contexts()[0]?.pages()[1]
+          assert.ok(page)
+          return page
+        },
+        { timeout: 10_000 },
+      )
+      let dashboard = execution.context().pages()[0]
+      await Promise.race([
+        firstModuleRequest.promise,
+        running.then(() => {
+          throw new Error('Browser run ended before the first module request')
+        }),
+      ])
+      await dashboard.reload()
+      await Promise.race([
+        restartedModuleRequest.promise,
+        running.then(() => {
+          throw new Error('Browser run ended before the restarted module loaded')
+        }),
+      ])
+      releaseFirstModule.resolve()
+      await Promise.race([
+        execution.waitForFunction(
+          () => location.origin !== 'null' && localStorage.getItem('attempts') === '1',
+        ),
+        running.then(() => {
+          throw new Error('Browser run ended before the interrupted test restarted')
+        }),
+      ])
+      await dashboard.reload()
+      let run = await running
+      assert.equal(run.results.passed, 2)
+      assert.equal(run.results.failed, 0)
+      assert.deepEqual(
+        reported.map(({ passed, failed }) => ({ passed, failed })),
+        [
+          { passed: 1, failed: 0 },
+          { passed: 1, failed: 0 },
+        ],
+      )
+      assert.equal(await execution.evaluate(() => localStorage.getItem('attempts')), '2')
+      await run.close()
+      await run.disconnected
+    },
+  )
+
+  it(
     'resets WebKit history budgets between files and backs off within a file',
     { skip: SKIP_WEBKIT },
     async (t) => {

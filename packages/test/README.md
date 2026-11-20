@@ -597,9 +597,9 @@ describe('Counter', () => {
 
 WebKit starts each browser test file with a fresh top-level document and history budget. Within a file, more than 100 combined `history.pushState()` and `history.replaceState()` calls in 10 seconds exhaust that budget. Calls made by application code and test hooks count too.
 
-If a test or `beforeEach` hook reaches the limit, `remix test` logs a warning, waits 11 seconds using real timers, runs cleanup, and retries the test once with a fresh test context and `beforeEach` hooks. A quota failure on retry triggers another wait and remains a failure. Cleanup errors also remain failures.
+If a test or `beforeEach` hook throws WebKit's history-quota `SecurityError`, `remix test` logs a warning, waits 11 seconds using real timers, runs cleanup, and retries the test once with a fresh test context and `beforeEach` hooks. A quota failure on retry triggers another wait and remains a failure. Cleanup errors also remain failures.
 
-Successful `beforeAll` setup stays shared. If a `beforeAll` hook reaches the quota, only that hook is retried once after the wait.
+Successful `beforeAll` setup stays shared. If a `beforeAll` hook throws the quota error, only that hook is retried once after the wait.
 
 Reduce history updates or split history-heavy tests across smaller files to avoid repeated waits.
 

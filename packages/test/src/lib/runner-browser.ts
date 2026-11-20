@@ -181,7 +181,14 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     if (executionPage) {
       let activeExecutionPage = executionPage
+      let dashboardNavigation = 0
+      page.on('request', (request) => {
+        if (request.isNavigationRequest() && request.frame() === page?.mainFrame()) {
+          dashboardNavigation++
+        }
+      })
       await page.route('**/run-file?*', async (route) => {
+        let navigation = dashboardNavigation
         let testFile = new URL(route.request().url()).searchParams.get('file')
         if (!testFile?.startsWith('/scripts/')) {
           await route.fulfill({ status: 404, body: 'Unknown test file' })
@@ -216,6 +223,11 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
               },
             ],
           }
+        }
+        // Refreshing the dashboard invalidates a request still waiting on the execution page.
+        if (navigation !== dashboardNavigation) {
+          await route.abort()
+          return
         }
         reportFileResults(fileResults)
         await route.fulfill({ json: fileResults })
@@ -283,24 +295,30 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 }
 
 async function waitForBrowserTests(page: Page, url: string): Promise<void> {
+  // Navigation can cancel script requests left over from the previous document.
+  let requests = new WeakSet<Request>()
   let rejectScriptError: (error: Error) => void = () => {}
   let errorPromise = new Promise<never>((_, reject) => {
     rejectScriptError = reject
   })
   let isScriptRequest = (request: Request) =>
     new URL(request.url()).pathname.startsWith('/scripts/')
+  function onRequest(request: Request) {
+    requests.add(request)
+  }
   function onResponse(response: Response) {
-    if (!response.ok() && isScriptRequest(response.request())) {
+    if (requests.has(response.request()) && !response.ok() && isScriptRequest(response.request())) {
       rejectScriptError(new Error(`Failed to load script: ${response.request().url()}`))
     }
   }
   function onRequestFailed(request: Request) {
-    if (!isScriptRequest(request)) return
+    if (!requests.has(request) || !isScriptRequest(request)) return
     let failureText = request.failure()?.errorText
     if (failureText === 'net::ERR_ABORTED') return
     let reason = failureText ? ` (${failureText})` : ''
     rejectScriptError(new Error(`Failed to load script: ${request.url()}${reason}`))
   }
+  page.on('request', onRequest)
   page.on('response', onResponse)
   page.on('requestfailed', onRequestFailed)
   try {
@@ -314,6 +332,7 @@ async function waitForBrowserTests(page: Page, url: string): Promise<void> {
       errorPromise,
     ])
   } finally {
+    page.off('request', onRequest)
     page.off('response', onResponse)
     page.off('requestfailed', onRequestFailed)
   }
