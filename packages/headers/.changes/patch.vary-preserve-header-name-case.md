@@ -1,1 +1,0 @@
-`Vary` keeps header names as they were first given instead of lowercasing them, so `compression()` and `cors()` no longer rewrite `Vary: Cookie` to `Vary: cookie`. Safari only varies its cache on cookies when the name is spelled `Cookie`, so the lowercased value could let it reuse a private response for a different session.

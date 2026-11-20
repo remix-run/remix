@@ -2,6 +2,12 @@
 
 This is the changelog for [`component-hmr`](https://github.com/remix-run/remix/tree/main/packages/component-hmr). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.2
+
+### Patch Changes
+
+- Fix a `ReferenceError` during HMR when a component's setup creates a callback that uses a setup variable declared after it, such as an `abort` listener that calls a `let reset = () => {}` declared further down. The same code worked without HMR, so whether it broke in development depended only on the order of the setup declarations. ([#12290](https://github.com/remix-run/remix/pull/12290))
+
 ## v1.0.1
 
 ### Patch Changes

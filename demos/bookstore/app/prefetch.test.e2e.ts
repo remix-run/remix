@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import * as assert from 'remix/assert'
+import type * as Component from 'remix/component'
 import { createTestServer } from 'remix/node-fetch-server/test'
 import { describe, it } from 'remix/test'
 import type { Locator, Page } from 'playwright'
@@ -10,6 +11,103 @@ import { assets } from './utils/assets.ts'
 const router = await createTestRouter()
 
 describe('bookstore prefetching', () => {
+  it('returns to login on Back after logout', async (t) => {
+    let accountStatuses: number[] = []
+    let page = await t.serve(
+      await createTestServer(async (request) => {
+        let response = await router.fetch(request)
+        if (new URL(request.url).pathname === '/account') {
+          accountStatuses.push(response.status)
+        }
+        return response
+      }),
+    )
+    await page.goto('/login')
+    await waitForNavigationRuntime(page)
+    await page.getByRole('textbox', { name: 'Email', exact: true }).fill('customer@example.com')
+    await page.getByLabel('Password', { exact: true }).fill('password123')
+    await page.getByRole('button', { name: 'Login', exact: true }).click()
+    await page.getByRole('heading', { name: 'My Account', exact: true }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+
+    await page.getByRole('button', { name: 'Logout', exact: true }).click()
+    // The redirected page renders before the replacement navigation to `/` aborts the logout
+    // transition, so wait for that navigation before awaiting the current transition.
+    await page.waitForURL((url) => url.pathname === '/')
+    await page.getByRole('heading', { name: 'Welcome to the Bookstore', exact: true }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    await page.evaluate(async () => {
+      try {
+        await window.navigation.back().finished
+      } catch (error) {
+        // The login redirect replaces the traversal that requested the account page.
+        if (!(error instanceof DOMException) || error.name !== 'AbortError') throw error
+      }
+    })
+
+    await page.getByRole('heading', { name: 'Login', exact: true }).waitFor()
+    assert.equal(new URL(page.url()).pathname, '/login')
+    assert.equal(accountStatuses.at(-1), 302)
+    assert.equal((await page.locator('body').textContent())?.includes('John Doe'), false)
+  })
+
+  it('reuses stale frame HTML on Back/Forward and fetches again on ordinary navigation', async (t) => {
+    let requests: string[] = []
+    let page = await t.serve(
+      await createTestServer(async (request) => {
+        let response = await router.fetch(request)
+        let pathname = new URL(request.url).pathname
+        if (
+          (pathname === '/about' || pathname === '/contact') &&
+          request.headers.get('X-Remix-Frame') === 'true'
+        ) {
+          requests.push(pathname)
+          // Make browsing HTML immediately stale without waiting for its normal 30-second lifetime.
+          response.headers.set('Cache-Control', 'private, max-age=0')
+        }
+        return response
+      }),
+    )
+    await page.goto('/contact')
+    await waitForNavigationRuntime(page)
+
+    await page
+      .getByRole('banner')
+      .getByRole('link', { name: 'About', exact: true })
+      .evaluate((anchor: HTMLAnchorElement) => anchor.click())
+    await page.getByRole('heading', { name: 'About Our Bookstore' }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    await page
+      .getByRole('banner')
+      .getByRole('link', { name: 'Contact', exact: true })
+      .evaluate((anchor: HTMLAnchorElement) => anchor.click())
+    await page.getByRole('heading', { name: 'Contact Us', exact: true }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    assert.deepEqual(requests, ['/about', '/contact'])
+
+    await page.evaluate(async () => window.navigation.back().finished)
+    await page.getByRole('heading', { name: 'About Our Bookstore' }).waitFor()
+    await page.evaluate(async () => window.navigation.forward().finished)
+    await page.getByRole('heading', { name: 'Contact Us', exact: true }).waitFor()
+    assert.deepEqual(
+      requests,
+      reusesCachedHtml(page)
+        ? ['/about', '/contact']
+        : ['/about', '/contact', '/about', '/contact'],
+    )
+
+    await page
+      .getByRole('banner')
+      .getByRole('link', { name: 'About', exact: true })
+      .evaluate((anchor: HTMLAnchorElement) => anchor.click())
+    await page.getByRole('heading', { name: 'About Our Bookstore' }).waitFor()
+    await page.evaluate(async () => window.navigation.transition?.finished)
+    assert.equal(
+      requests.filter((pathname) => pathname === '/about').length,
+      reusesCachedHtml(page) ? 2 : 3,
+    )
+  })
+
   it('reuses viewport-prefetched frame HTML without caching document navigations', async (t) => {
     let releaseImages = Promise.withResolvers<void>()
     t.after(() => releaseImages.resolve())
@@ -74,7 +172,7 @@ describe('bookstore prefetching', () => {
     assert.equal(imageRequests.filter((path) => path.includes('/bbq-')).length, 1)
     await link.click()
     await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
-    assert.equal(requests.length, reusesPrefetchedHtml(page) ? 1 : 2)
+    assert.equal(requests.length, reusesCachedHtml(page) ? 1 : 2)
     assert.equal(requests[0].headers.get('X-Remix-Frame'), 'true')
     assert.equal(
       await page.getByRole('img', { name: 'Image 1 of 3' }).getAttribute('src'),
@@ -115,7 +213,7 @@ describe('bookstore prefetching', () => {
     releaseImages.resolve()
     let freshDocument = await page.goto('/books/bbq')
     assert.equal(freshDocument?.headers()['cache-control'], 'no-store')
-    assert.equal(requests.length, reusesPrefetchedHtml(page) ? 2 : 3)
+    assert.equal(requests.length, reusesCachedHtml(page) ? 2 : 3)
     assert.equal(requests.at(-1)?.headers.get('X-Remix-Frame'), null)
   })
 
@@ -258,7 +356,7 @@ describe('bookstore prefetching', () => {
     assert.equal(requests, 2)
   })
 
-  it('keeps an unfinished asset prefetch connected through frame navigation', async (t) => {
+  it('keeps an unfinished shared asset prefetch connected through frame navigation', async (t) => {
     let scriptHref = await assets.getHref(
       fileURLToPath(new URL('./actions/books/public/image-carousel.tsx', import.meta.url)),
     )
@@ -276,22 +374,45 @@ describe('bookstore prefetching', () => {
         return router.fetch(request)
       }),
     )
+    let prefetched = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/books/bbq',
+    )
     await page.goto('/')
     await waitForNavigationRuntime(page)
     let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
     let prefetchesScript = await prefetchesAssets(page)
-    let prefetched = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/books/bbq',
-    )
     await link.scrollIntoViewIfNeeded()
-    if (prefetchesScript) await started.promise
-    else await (await prefetched).finished()
+    if (prefetchesScript) {
+      await started.promise
+      let prefetchHref = await assets.getHref(
+        fileURLToPath(
+          new URL('../../../packages/component/src/runtime/prefetch.ts', import.meta.url),
+        ),
+      )
+      // Retain a caller after navigation removes the declarative trigger's anchor.
+      await page.evaluate(async (href) => {
+        let { prefetch }: Pick<typeof Component, 'prefetch'> = await import(href)
+        prefetch('/books/bbq')
+      }, prefetchHref)
+    } else {
+      await (await prefetched).finished()
+    }
     let failedAssets: string[] = []
     page.on('requestfailed', (request) => {
       if (new URL(request.url()).pathname === scriptHref) failedAssets.push(request.url())
     })
+    let anchor = await link.elementHandle()
+    assert.ok(anchor)
+    let hint = prefetchesScript
+      ? await page.locator(`head link[rel="prefetch"][href$="${scriptHref}"]`).elementHandle()
+      : null
     await link.click()
-    await page.getByRole('heading', { name: 'Ash & Smoke', exact: true }).waitFor()
+    await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
+    assert.equal(await anchor.evaluate((node) => node.isConnected), false)
+    if (prefetchesScript) {
+      assert.ok(hint)
+      assert.equal(await hint.evaluate((node) => node.isConnected), true)
+    }
     assert.equal(
       await page.locator(`head link[rel="prefetch"][href$="${scriptHref}"]`).count(),
       prefetchesScript ? 1 : 0,
@@ -329,10 +450,10 @@ describe('bookstore prefetching', () => {
     await (await prefetched).finished()
     await link.click()
     await page.getByRole('heading', { name: 'About Our Bookstore' }).waitFor()
-    assert.equal(requests, reusesPrefetchedHtml(page) ? 1 : 2)
+    assert.equal(requests, reusesCachedHtml(page) ? 1 : 2)
   })
 
-  it('observes links added by frame navigation and does not repeat on viewport reentry', async (t) => {
+  it('prefetches visible book covers before their details buttons and does not repeat on viewport reentry', async (t) => {
     let requests: string[] = []
     let page = await t.serve(
       await createTestServer((request) => {
@@ -352,14 +473,15 @@ describe('bookstore prefetching', () => {
     await page.getByRole('banner').getByRole('link', { name: 'Books', exact: true }).click()
     await page.getByRole('heading', { name: 'Browse Books', exact: true }).waitFor()
 
-    let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
+    let link = page.getByRole('link', { name: 'Ash & Smoke', exact: true })
     assert.equal(await isInViewport(link), false)
     assert.equal(requests.includes('/books/bbq'), false)
 
     let prefetched = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/books/bbq',
     )
-    await link.scrollIntoViewIfNeeded()
+    await link.evaluate((anchor) => anchor.scrollIntoView({ block: 'start' }))
+    assert.equal(await isInViewport(page.locator('a.btn[href="/books/bbq"]')), false)
     await (await prefetched).finished()
     await page.waitForFunction(() => !document.querySelector('head link[rel="prefetch"]'))
     await page.getByRole('banner').scrollIntoViewIfNeeded()
@@ -392,7 +514,7 @@ async function waitForNavigationRuntime(page: Page): Promise<void> {
 
 // Playwright's WebKit contexts keep no HTTP cache, so navigations there fetch prefetched HTML again.
 // Safari reuses it, as WebKit does with a persistent profile.
-function reusesPrefetchedHtml(page: Page): boolean {
+function reusesCachedHtml(page: Page): boolean {
   return page.context().browser()?.browserType().name() !== 'webkit'
 }
 

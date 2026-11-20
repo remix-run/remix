@@ -1,15 +1,17 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
-import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
+import type { FrameHandle, FrameReloadStartEvent, Handle, RemixNode } from '../runtime/component.ts'
+import type { NavigationEvent } from '../runtime/navigation.ts'
 import { Fragment } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import { Frame, getNamedFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
+import type { ResolveFrame } from '../runtime/frame-runtime.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
-import { css, navigate, on } from '../index.ts'
+import { css, navigate, on, updateUrl } from '../index.ts'
 import { jsx } from '../runtime/core/vnode.ts'
 import {
   drain,
@@ -35,6 +37,56 @@ async function setupReloadBodyTest(t: TestContext) {
   t.after(() => app.dispose())
   await app.ready()
   return { app, requests }
+}
+
+async function setupInheritedReloadFinished(t: TestContext) {
+  document.body.innerHTML = '<main>Initial</main>'
+  let app = run({
+    loadModule: mock.fn(),
+    resolveFrame(src) {
+      return src === '/child' || src === '/outer' ? (
+        <p>{src}</p>
+      ) : (
+        <main>
+          <Frame name="child" src="/child" />
+        </main>
+      )
+    },
+  })
+  t.after(() => app.dispose())
+  await app.ready()
+  await app.frames.top.reload()
+  let child = app.frames.get('child')
+  invariant(child)
+  let events: FrameReloadStartEvent[] = []
+  child.addEventListener('reloadStart', (event) => events.push(event))
+  await app.frames.top.reload()
+  let event = events[0]
+  invariant(event)
+  let signal = await event.finished
+  expect(signal.aborted).toBe(false)
+  return { app, child, events, signal }
+}
+
+async function renderPendingChildChunks(content: string) {
+  let response = Promise.withResolvers<string>()
+  let chunks = readChunks(
+    renderToStream(
+      <html>
+        <head />
+        <body>
+          <Frame name="child" src="/child" fallback={<p>Loading child</p>} />
+        </body>
+      </html>,
+      { resolveFrame: () => response.promise },
+    ),
+  )
+  let shell = await chunks.next()
+  invariant(!shell.done)
+  response.resolve(content)
+  let templates = ''
+  for await (let chunk of chunks) templates += chunk
+  return { shell: shell.value, templates }
 }
 
 function getCommentMarkerId(html: string, prefix: 'rmx:f:' | 'rmx:h:'): string {
@@ -225,6 +277,295 @@ function recordRenderedText(root: Node = document): { stop(): string[] } {
   }
 }
 
+function waitForIntersection(element: Element): Promise<void> {
+  return new Promise((resolve) => {
+    let observer = new IntersectionObserver(() => {
+      observer.disconnect()
+      // Other observers in this notification batch can run after this callback.
+      requestAnimationFrame(() => resolve())
+    })
+    observer.observe(element)
+  })
+}
+
+type LazyFrameRendering = 'client' | 'hydrated' | 'server'
+
+async function setupLazyFrame(
+  t: TestContext,
+  resolveFrame: ResolveFrame,
+  options: {
+    mode?: LazyFrameRendering
+    resolvePage?: (renderPage: () => Promise<string>) => Promise<string>
+  } = {},
+) {
+  let reveal: (() => Promise<AbortSignal>) | undefined
+  let version = 0
+  function renderContent(version: number, visible = true) {
+    return (
+      <section
+        id="lazy-host"
+        data-version={version}
+        mix={css({ position: 'fixed', top: '100000px', left: 0 })}
+      >
+        {visible ? (
+          <Frame name="lazy" src="/lazy" loading="lazy" fallback={<p id="waiting">Waiting</p>} />
+        ) : null}
+      </section>
+    )
+  }
+  let Entry = clientEntry(
+    '/lazy-entry.js#Entry',
+    function Entry(handle: Handle<{ version: number }>) {
+      let visible = options.mode === 'hydrated'
+      reveal = () => {
+        visible = true
+        return handle.update()
+      }
+      return () => renderContent(handle.props.version, visible)
+    },
+  )
+  let renderPage = () =>
+    renderDocumentContent(
+      options.mode === 'server' ? renderContent(version++) : <Entry version={version++} />,
+    )
+  document.documentElement.innerHTML = await renderPage()
+  let app = run({
+    loadModule: () => Entry,
+    resolveFrame(src, resolveOptions) {
+      return src === '/page'
+        ? (options.resolvePage?.(renderPage) ?? renderPage())
+        : resolveFrame(src, resolveOptions)
+    },
+  })
+  t.after(() => app.dispose())
+  await app.ready()
+  if (options.mode !== 'server') {
+    invariant(reveal)
+    await reveal()
+  }
+  let host = document.getElementById('lazy-host')
+  let frame = app.frames.get('lazy')
+  invariant(host && frame)
+  await waitForIntersection(host)
+  return { app, frame, host, renderPage }
+}
+
+async function assertPendingLazyFrameRestart(t: TestContext, mode: LazyFrameRendering = 'client') {
+  let requests: Array<{
+    signal: AbortSignal
+    response: ReturnType<typeof Promise.withResolvers<string>>
+  }> = []
+  let { app, frame, host } = await setupLazyFrame(
+    t,
+    (_src, options) => {
+      invariant(options?.signal)
+      let response = Promise.withResolvers<string>()
+      requests.push({ signal: options.signal, response })
+      return response.promise
+    },
+    { mode },
+  )
+  let events: string[] = []
+  frame.addEventListener('reloadStart', () => events.push('start'))
+  frame.addEventListener('reloadComplete', () => events.push('complete'))
+  await app.frames.top.reload({ src: '/page' })
+  expect(requests).toEqual([])
+  expect(document.getElementById('waiting')?.textContent).toBe('Waiting')
+  expect(events).toEqual(['start', 'complete'])
+
+  host.style.top = '0'
+  await waitForIntersection(host)
+  expect(requests.length).toBe(1)
+  expect(events).toEqual(['start', 'complete'])
+
+  await app.frames.top.reload({ src: '/page' })
+  expect(requests.length).toBe(2)
+  expect(requests[0]?.signal.aborted).toBe(true)
+  expect(requests[1]?.signal.aborted).toBe(false)
+  requests[0]?.response.resolve('<p id="stale-lazy-content">Stale</p>')
+  await waitForIntersection(host)
+  expect(document.getElementById('stale-lazy-content')).toBe(null)
+  expect(document.getElementById('waiting')?.textContent).toBe('Waiting')
+
+  let completed = new Promise<void>((resolve) => {
+    frame.addEventListener('reloadComplete', () => resolve(), { once: true })
+  })
+  requests[1]?.response.resolve('<p id="fresh-lazy-content">Fresh</p>')
+  await completed
+  expect(document.getElementById('fresh-lazy-content')?.textContent).toBe('Fresh')
+  expect(events).toEqual(['start', 'complete', 'start', 'complete'])
+}
+
+async function assertEagerSsrTakeover(t: TestContext, streaming: boolean, explicitReload = false) {
+  let loading: 'lazy' | 'eager' = 'lazy'
+  let renderPage = () =>
+    renderToStream(
+      <html>
+        <head />
+        <body>
+          <section id="lazy-host" mix={css({ position: 'fixed', top: 0, left: 0 })}>
+            <Frame
+              name="lazy"
+              src="/lazy"
+              loading={loading}
+              fallback={loading === 'lazy' || streaming ? <p>Waiting</p> : undefined}
+            />
+          </section>
+        </body>
+      </html>,
+      { resolveFrame: () => '<p id="fresh-content">Fresh</p>' },
+    )
+  document.documentElement.innerHTML = await drain(renderPage())
+  let response = Promise.withResolvers<string>()
+  let requestSignal: AbortSignal | undefined
+  let app = run({
+    loadModule: mock.fn(),
+    resolveFrame(src, options) {
+      if (src === '/page') return renderPage()
+      requestSignal = options?.signal
+      return response.promise
+    },
+  })
+  t.after(() => app.dispose())
+  await app.ready()
+  let host = document.getElementById('lazy-host')
+  let frame = app.frames.get('lazy')
+  invariant(host && frame)
+  await waitForIntersection(host)
+  invariant(requestSignal)
+  expect(requestSignal.aborted).toBe(false)
+  let events: string[] = []
+  let started: FrameReloadStartEvent[] = []
+  frame.addEventListener('reloadStart', (event) => {
+    events.push('start')
+    started.push(event)
+  })
+  frame.addEventListener('reloadComplete', () => events.push('complete'))
+  let reloaded = explicitReload ? frame.reload() : undefined
+
+  loading = 'eager'
+  await app.frames.top.reload({ src: '/page' })
+  expect(app.frames.get('lazy')).toBe(frame)
+  expect(document.getElementById('fresh-content')?.textContent).toBe('Fresh')
+  response.resolve('<p id="stale-content">Stale</p>')
+  await reloaded
+  await waitForIntersection(host)
+  expect(host.textContent).toBe('Fresh')
+  expect(requestSignal.aborted).toBe(true)
+  expect(events).toEqual(['start', 'complete'])
+  expect((await started[0]!.finished).aborted).toBe(explicitReload)
+}
+
+async function assertSettledLazyFrameRestart(
+  t: TestContext,
+  mode: LazyFrameRendering,
+  options: { failAncestor?: boolean } = {},
+) {
+  let requests: Array<{
+    signal: AbortSignal
+    response: ReturnType<typeof Promise.withResolvers<string>>
+  }> = []
+  let holdPage = false
+  let pageResponse = Promise.withResolvers<string>()
+  let { app, frame, host, renderPage } = await setupLazyFrame(
+    t,
+    (_src, options) => {
+      invariant(options?.signal)
+      let { signal } = options
+      let response = Promise.withResolvers<string>()
+      signal.addEventListener('abort', () => response.reject(signal.reason), { once: true })
+      requests.push({ signal, response })
+      return response.promise
+    },
+    { mode, resolvePage: (renderPage) => (holdPage ? pageResponse.promise : renderPage()) },
+  )
+  host.style.top = '0'
+  await waitForIntersection(host)
+  expect(requests.length).toBe(1)
+  await app.frames.top.reload({ src: '/page' })
+  expect(requests.length).toBe(2)
+
+  host.style.top = '100000px'
+  await waitForIntersection(host)
+  let canceled = new Promise<void>((resolve) => {
+    frame.addEventListener('reloadComplete', () => resolve(), { once: true })
+  })
+  holdPage = true
+  let reloaded = app.frames.top.reload()
+  await canceled
+  expect(requests[1]?.signal.aborted).toBe(true)
+  if (options.failAncestor) {
+    let failure = new Error('Ancestor reload failed')
+    let errors: unknown[] = []
+    app.addEventListener('error', (event) => errors.push(event.error))
+    let rejected = expect(reloaded).rejects.toThrow(failure.message)
+    pageResponse.reject(failure)
+    await rejected
+    expect(errors).toEqual([failure])
+    host.style.top = '0'
+    await waitForIntersection(host)
+  } else {
+    pageResponse.resolve(await renderPage())
+    await reloaded
+  }
+  expect(requests.length).toBe(3)
+  expect(requests[2]?.signal.aborted).toBe(false)
+  let loaded = waitForElement('#fresh-lazy-content')
+  requests[2]?.response.resolve('<p id="fresh-lazy-content">Fresh</p>')
+  await loaded
+  expect(document.getElementById('fresh-lazy-content')?.textContent).toBe('Fresh')
+}
+
+async function assertLazyReloadPreemption(
+  t: TestContext,
+  mode: LazyFrameRendering,
+  options: { ancestorReload?: boolean } = {},
+) {
+  let requests: Array<{
+    src: string
+    signal: AbortSignal
+    response: ReturnType<typeof Promise.withResolvers<string>>
+  }> = []
+  let { app, frame, host } = await setupLazyFrame(
+    t,
+    (src, options) => {
+      invariant(options?.signal)
+      let { signal } = options
+      let response = Promise.withResolvers<string>()
+      signal.addEventListener('abort', () => response.reject(signal.reason), { once: true })
+      requests.push({ src, signal, response })
+      return response.promise
+    },
+    { mode },
+  )
+  host.style.top = '0'
+  await waitForIntersection(host)
+  expect(requests.length).toBe(1)
+  if (options.ancestorReload) {
+    await app.frames.top.reload({ src: '/page' })
+    expect(requests.length).toBe(2)
+    host.style.top = '0'
+  }
+
+  let previous = requests.at(-1)
+  invariant(previous)
+  let reloaded = frame.reload({ src: '/explicit' })
+  let requestCount = requests.length
+  let explicit = requests.at(-1)
+  invariant(explicit)
+  expect(previous.signal.aborted).toBe(true)
+  expect(explicit.src).toBe('/explicit')
+  await waitForIntersection(host)
+  await waitForIntersection(host)
+  expect(requests.length).toBe(requestCount)
+  expect(explicit.signal.aborted).toBe(false)
+
+  explicit.response.resolve('<p id="explicit-lazy-content">Explicit</p>')
+  await reloaded
+  expect(document.getElementById('explicit-lazy-content')?.textContent).toBe('Explicit')
+  expect(frame.src).toBe('/explicit')
+}
+
 function createDisposableEntry(id: string, onDispose: () => void) {
   return clientEntry(id, function Entry(handle: Handle) {
     handle.signal.addEventListener('abort', onDispose)
@@ -373,7 +714,7 @@ describe('run', () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(1)
       let [src, init] = fetchMock.mock.calls[0]!.arguments
-      expect(src).toBe('/account')
+      expect(src).toBe(new URL('/account', window.location.href).href)
       expect(init?.body).toBe(formData)
       let headers = new Headers(init?.headers)
       expect(headers.get('Accept')).toBe('text/html')
@@ -396,7 +737,7 @@ describe('run', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     let [src, init] = fetchMock.mock.calls[0]!.arguments
-    expect(src).toBe('/frame')
+    expect(src).toBe(new URL('/frame', window.location.href).href)
     expect(init?.mode).toBe('same-origin')
     let headers = new Headers(init?.headers)
     expect(headers.get('Accept')).toBe('text/html')
@@ -413,7 +754,7 @@ describe('run', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     let [src, init] = fetchMock.mock.calls[0]!.arguments
-    expect(src).toBe('/frame')
+    expect(src).toBe(new URL('/frame', window.location.href).href)
     expect(init?.mode).toBe('same-origin')
     let headers = new Headers(init?.headers)
     expect(headers.get('Accept')).toBe('text/html')
@@ -438,7 +779,7 @@ describe('run', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     let [src, init] = fetchMock.mock.calls[0]!.arguments
-    expect(src).toBe('/next')
+    expect(src).toBe(new URL('/next', window.location.href).href)
     expect(init?.mode).toBe('same-origin')
     let headers = new Headers(init?.headers)
     expect(headers.get('Accept')).toBe('text/html')
@@ -448,11 +789,18 @@ describe('run', () => {
     expect(document.getElementById('next-page')?.textContent).toBe('Next page')
   })
 
-  it('retains the requested source without retaining the previous method or body', async (t) => {
+  it('normalizes multipart reload metadata and retains only the source on the next reload', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
+    let events: FrameReloadStartEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
     let body = new FormData()
     body.set('name', 'Ada')
-    await app.frames.top.reload({ src: '/save', method: 'post', body })
+    await app.frames.top.reload({
+      src: '/save',
+      method: 'POST',
+      encType: 'MULTIPART/FORM-DATA',
+      body,
+    })
     await app.frames.top.reload()
 
     expect(requests).toHaveLength(2)
@@ -461,20 +809,580 @@ describe('run', () => {
     expect(requests[1]!.url).toBe(new URL('/save', document.baseURI).href)
     expect(await requests[1]!.text()).toBe('')
     if ('body' in requests[1]!) expect(requests[1]!.body).toBeNull()
+    expect(
+      requests[0]!.headers.get('Content-Type')?.startsWith('multipart/form-data; boundary='),
+    ).toBe(true)
+    expect((await requests[0]!.formData()).get('name')).toBe('Ada')
+    expect(events).toHaveLength(2)
+    expect(events[0]!.src).toBe('/save')
+    expect(events[0]!.method).toBe('post')
+    expect(events[0]!.encType).toBe('multipart/form-data')
+    expect(events[0]!.formData).toBe(body)
+    expect(events[1]!.src).toBe('/save')
+    expect(events[1]!.method).toBe('get')
+    expect(events[1]!.encType).toBeNull()
+    expect(events[1]!.formData).toBeNull()
   })
 
-  it('reloads with multipart FormData and lets Fetch generate its boundary', async (t) => {
-    let { app, requests } = await setupReloadBodyTest(t)
-    let body = new FormData()
-    body.set('name', 'Ada')
-    await app.frames.top.reload({ method: 'post', encType: 'multipart/form-data', body })
+  it('identifies the anchor when a nested element starts a link navigation', async (t) => {
+    let { app } = await setupReloadBodyTest(t)
+    let anchor = document.createElement('a')
+    anchor.href = new URL('/next', window.location.href).href
+    let label = document.createElement('span')
+    anchor.append(label)
+    let form = document.createElement('form')
+    form.append(anchor)
+    document.body.append(form)
+    let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
+    app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
+    let submissions: NavigationEvent[] = []
+    window.addEventListener('rmx:navigation', (event) => submissions.push(event), {
+      signal: t.signal,
+    })
 
-    expect(requests).toHaveLength(1)
-    let request = requests[0]!
-    expect(request.headers.get('Content-Type')?.startsWith('multipart/form-data; boundary=')).toBe(
-      true,
+    label.click()
+    let event = await reloaded.promise
+    await event.finished
+
+    expect(event.element).toBe(anchor)
+    expect(event.submitter).toBeNull()
+    expect(event.src).toBe(anchor.href)
+    expect(event.method).toBe('get')
+    expect(event.encType).toBeNull()
+    expect(event.formData).toBeNull()
+    expect(submissions).toHaveLength(1)
+    expect(submissions[0]?.element).toBe(anchor)
+    expect(submissions[0]?.frameSrc).toBe(anchor.href)
+    expect(submissions[0]?.target).toBe(anchor)
+    expect(submissions[0]?.submitter).toBe(undefined)
+    expect(submissions[0]?.formData).toBe(undefined)
+    expect(submissions[0]?.encType).toBe(undefined)
+    expect(submissions[0]?.finished).not.toBe(event.finished)
+    await submissions[0]?.finished
+  })
+
+  it('dispatches navigation events on image-map areas', async (t) => {
+    await setupReloadBodyTest(t)
+    let area = document.createElement('area')
+    area.href = new URL('/mapped', window.location.href).href
+    document.body.append(area)
+    let started = Promise.withResolvers<NavigationEvent>()
+    area.addEventListener('rmx:navigation', started.resolve, { once: true })
+
+    area.click()
+    let event = await started.promise
+    await event.finished
+
+    expect(event.element).toBe(area)
+    expect(event.frameSrc).toBe(area.href)
+    expect(event.method).toBe('get')
+  })
+
+  it('dispatches navigation events on SVG links', async (t) => {
+    await setupReloadBodyTest(t)
+    let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    let anchor = document.createElementNS(svg.namespaceURI, 'a')
+    anchor.setAttribute('href', '/svg-link')
+    svg.append(anchor)
+    document.body.append(svg)
+    let started = Promise.withResolvers<NavigationEvent>()
+    window.addEventListener('rmx:navigation', started.resolve, { once: true, signal: t.signal })
+
+    anchor.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    let event = await started.promise
+    await event.finished
+
+    expect(event.element).toBe(anchor)
+    expect(event.target).toBe(anchor)
+    expect(event.method).toBe('get')
+    expect(event.formData).toBe(undefined)
+  })
+
+  it('describes native form submission options after submitter overrides', async (t) => {
+    let { app, requests } = await setupReloadBodyTest(t)
+    let src = window.location.href
+    let form = document.createElement('form')
+    form.method = 'get'
+    form.action = '/unused'
+    let input = document.createElement('input')
+    input.name = 'contains'
+    let button = document.createElement('button')
+    button.formAction = src
+    button.formMethod = 'post'
+    button.formEnctype = 'text/plain'
+    button.name = 'intent'
+    button.value = 'save'
+    form.append(input, button)
+    document.body.append(form)
+    let order: string[] = []
+    let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
+    app.frames.top.addEventListener(
+      'reloadStart',
+      (event) => {
+        order.push('reloadStart')
+        reloaded.resolve(event)
+      },
+      { once: true },
     )
-    expect((await request.formData()).get('name')).toBe('Ada')
+    let submissions: NavigationEvent[] = []
+    let buttonEvent: NavigationEvent | undefined
+    button.addEventListener('rmx:navigation', (event) => {
+      buttonEvent = event
+      order.push('button')
+      event.preventDefault()
+    })
+    form.addEventListener('rmx:navigation', (event) => {
+      order.push('form')
+      submissions.push(event)
+    })
+
+    button.click()
+    let event = await reloaded.promise
+    await event.finished
+
+    expect(event.src).toBe(src)
+    expect(event.method).toBe('post')
+    expect(event.encType).toBe('text/plain')
+    expect(event.element).toBe(form)
+    expect(event.submitter).toBe(button)
+    expect(event.formData?.get('intent')).toBe('save')
+    expect(submissions).toHaveLength(1)
+    let submission = submissions[0]!
+    expect(submission).toBe(buttonEvent)
+    expect(order).toEqual(['button', 'form', 'reloadStart'])
+    expect(submission).toBeInstanceOf(Event)
+    expect(submission.target).toBe(button)
+    expect(submission.cancelable).toBe(false)
+    expect(submission.defaultPrevented).toBe(false)
+    expect('form' in submission).toBe(false)
+    expect(submission.frameSrc).toBe(event.src)
+    expect(submission.method).toBe('post')
+    expect(submission.encType).toBe('text/plain')
+    expect(submission.formData).toBe(event.formData)
+    expect(submission.element).toBe(form)
+    expect(submission.submitter).toBe(button)
+    expect(submission.finished).not.toBe(event.finished)
+    await submission.finished
+    expect(requests[0]!.headers.get('Content-Type')).toBe('text/plain')
+    expect(await requests[0]!.text()).toBe('contains=\r\nintent=save\r\n')
+  })
+
+  it('dispatches rmx:navigation on the form for requestSubmit() and submit() without a submitter', async (t) => {
+    let { app } = await setupReloadBodyTest(t)
+    // submit() skips the native submit event; both methods omit a submitter.
+    for (let method of ['requestSubmit', 'submit'] as const) {
+      let form = document.createElement('form')
+      form.method = 'post'
+      form.action = window.location.href
+      let input = document.createElement('input')
+      input.name = 'title'
+      input.value = 'Ada'
+      let button = document.createElement('button')
+      let namedField = document.createElement('input')
+      namedField.name = 'getRootNode'
+      form.append(input, namedField, button)
+      document.body.append(form)
+      let events: NavigationEvent[] = []
+      form.addEventListener('rmx:navigation', (event) => events.push(event))
+      let reloaded = new Promise<FrameReloadStartEvent>((resolve) => {
+        app.frames.top.addEventListener('reloadStart', resolve, { once: true })
+      })
+
+      form[method]()
+      let reload = await reloaded
+
+      expect(events).toHaveLength(1)
+      let event = events[0]!
+      expect(event.target).toBe(form)
+      expect(event.element).toBe(form)
+      expect(event.submitter).toBe(undefined)
+      expect(reload.element).toBe(form)
+      expect(reload.submitter).toBe(event.submitter ?? null)
+      expect(event.formData?.get('title')).toBe('Ada')
+      expect(event.finished).not.toBe(reload.finished)
+      await event.finished
+      expect(document.querySelector('main')?.textContent).toBe('Saved')
+    }
+  })
+
+  it('announces a submission before reloadStart replaces its frame reload', async (t) => {
+    let { app } = await setupReloadBodyTest(t)
+    let form = document.createElement('form')
+    form.method = 'post'
+    form.action = window.location.href
+    document.body.append(form)
+    let events: NavigationEvent[] = []
+    form.addEventListener('rmx:navigation', (event) => events.push(event))
+    let replacement: Promise<AbortSignal> | undefined
+    let reloadEvents: FrameReloadStartEvent[] = []
+    let replaced = Promise.withResolvers<void>()
+    app.frames.top.addEventListener('reloadStart', (event) => {
+      reloadEvents.push(event)
+      if (reloadEvents.length === 1) {
+        replacement = app.frames.top.reload()
+        replaced.resolve()
+      }
+    })
+
+    form.requestSubmit()
+    await replaced.promise
+    await replacement
+
+    expect(events).toHaveLength(1)
+    expect((await events[0]!.finished).aborted).toBe(true)
+    expect((await reloadEvents[0]!.finished).aborted).toBe(true)
+    await reloadEvents[1]!.finished
+  })
+
+  it('notifies the owning form when its submit button is inside another form', async (t) => {
+    let { app } = await setupReloadBodyTest(t)
+    let form = document.createElement('form')
+    form.id = 'external-submit-form'
+    form.method = 'post'
+    let input = document.createElement('input')
+    input.name = 'dispatchEvent'
+    form.append(input)
+    let otherForm = document.createElement('form')
+    let button = document.createElement('button')
+    button.setAttribute('form', form.id)
+    otherForm.append(button)
+    document.body.append(form, otherForm)
+    let order: string[] = []
+    let events: NavigationEvent[] = []
+    button.addEventListener('rmx:navigation', (event) => {
+      order.push('button')
+      events.push(event)
+    })
+    form.addEventListener('rmx:navigation', (event) => {
+      order.push('form')
+      events.push(event)
+    })
+    otherForm.addEventListener('rmx:navigation', () => order.push('other form'))
+    window.addEventListener('rmx:navigation', () => order.push('window'), {
+      signal: t.signal,
+    })
+    let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
+    app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
+
+    form.requestSubmit(button)
+    let reload = await reloaded.promise
+    await reload.finished
+
+    expect(order).toEqual(['button', 'form', 'window'])
+    expect(events).toHaveLength(2)
+    expect(events[0]?.target).toBe(button)
+    expect(events[0]?.bubbles).toBe(false)
+    expect(events[1]?.target).toBe(form)
+    expect(events[1]?.element).toBe(form)
+    expect(events[1]?.submitter).toBe(button)
+    expect(events[1]?.finished).toBe(events[0]?.finished)
+    await events[1]?.finished
+    expect(events[0]?.finished).not.toBe(reload.finished)
+    await events[0]?.finished
+  })
+
+  it('notifies the owning form after a GET submitter is detached and history is replaced', async (t) => {
+    let { app } = await setupReloadBodyTest(t)
+    let form = document.createElement('form')
+    form.setAttribute('data-rmx-history', 'replace')
+    form.action = window.location.href
+    let input = document.createElement('input')
+    input.name = 'q'
+    input.value = 'Ada'
+    let button = document.createElement('button')
+    form.append(input, button)
+    document.body.append(form)
+    form.addEventListener('submit', () => button.remove())
+    let events: NavigationEvent[] = []
+    form.addEventListener('rmx:navigation', (event) => events.push(event))
+    let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
+    app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
+
+    let historyLength = window.navigation.entries().length
+    form.requestSubmit(button)
+    let reload = await reloaded.promise
+    await reload.finished
+
+    expect(window.navigation.entries()).toHaveLength(historyLength)
+    expect(reload.element).toBe(form)
+    expect(reload.submitter).toBe(button)
+    expect(events).toHaveLength(1)
+    expect(events[0]?.element).toBe(form)
+    expect(events[0]?.submitter).toBe(button)
+    expect(events[0]?.frameSrc).toBe(reload.src)
+    expect(new URL(reload.src).searchParams.get('q')).toBe('Ada')
+    expect(events[0]?.method).toBe('get')
+    expect(events[0]?.navigationType).toBe('replace')
+    expect(events[0]?.encType).toBe(undefined)
+    expect(events[0]?.formData).toBe(undefined)
+    expect(events[0]?.finished).not.toBe(reload.finished)
+    await events[0]?.finished
+  })
+
+  it('notifies window, the detached POST submitter, and its disconnected form', async (t) => {
+    let form = document.createElement('form')
+    window.navigation.addEventListener('navigate', () => form.remove(), {
+      once: true,
+      signal: t.signal,
+    })
+    let { app } = await setupReloadBodyTest(t)
+    form.method = 'post'
+    let input = document.createElement('input')
+    input.name = 'intent'
+    input.value = 'save'
+    let button = document.createElement('button')
+    form.append(input, button)
+    document.body.append(form)
+    form.addEventListener('submit', () => button.remove())
+    let events: NavigationEvent[] = []
+    window.addEventListener('rmx:navigation', (event) => events.push(event), {
+      capture: true,
+      signal: t.signal,
+    })
+    button.addEventListener('rmx:navigation', (event) => events.push(event))
+    form.addEventListener('rmx:navigation', (event) => events.push(event))
+    let reloaded = Promise.withResolvers<FrameReloadStartEvent>()
+    app.frames.top.addEventListener('reloadStart', reloaded.resolve, { once: true })
+
+    form.requestSubmit(button)
+    let reload = await reloaded.promise
+    await reload.finished
+
+    expect(events.map((event) => event.target)).toEqual([window, button, form])
+    expect(events[0]?.element).toBe(form)
+    expect(events[0]?.submitter).toBe(button)
+    expect(events[0]?.formData?.get('intent')).toBe('save')
+    expect(events[1]?.finished).toBe(events[0]?.finished)
+    expect(events[2]?.finished).toBe(events[0]?.finished)
+    await events[0]?.finished
+  })
+
+  it('announces programmatic navigation synchronously but excludes independent reloads and URL updates', async (t) => {
+    let { app } = await setupReloadBodyTest(t)
+    let events: NavigationEvent[] = []
+    window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
+    let seen: NavigationEvent | undefined
+    window.navigation.addEventListener('navigate', () => (seen = events.at(-1)), {
+      once: true,
+      signal: t.signal,
+    })
+
+    await app.frames.top.reload({ method: 'post', body: new FormData() })
+    expect(events).toHaveLength(0)
+    let loading = navigate(window.location.href)
+    expect(events).toHaveLength(1)
+    expect(seen).toBe(events[0])
+    expect(events[0]?.target).toBe(window)
+    expect(events[0]?.element).toBe(null)
+    expect(events[0]?.frameTarget).toBe(undefined)
+    await loading
+    await events[0]?.finished
+    await updateUrl('?navigation=url-only')
+    expect(events).toHaveLength(1)
+    expect((await events[0]?.finished)?.aborted).toBe(false)
+  })
+
+  it('resolves finished as aborted when the frame is disposed mid-reload', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let [response] = withResolvers<Response>()
+    t.mock.method(globalThis, 'fetch', () => response)
+    let app = run({ loadModule: mock.fn() })
+    await app.ready()
+    let events: FrameReloadStartEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
+
+    void app.frames.top.reload().catch(() => {})
+    app.dispose()
+
+    expect(events).toHaveLength(1)
+    expect((await events[0]!.finished).aborted).toBe(true)
+  })
+
+  it('resolves finished immediately when navigation aborts before its resolver settles', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let response = Promise.withResolvers<string>()
+    let app = run({ loadModule: mock.fn(), resolveFrame: () => response.promise })
+    t.after(() => {
+      response.resolve('')
+      app.dispose()
+    })
+    await app.ready()
+    let finished: FrameReloadStartEvent['finished'] | undefined
+    app.frames.top.addEventListener('reloadStart', (event) => {
+      finished = event.finished
+    })
+    let controller = new AbortController()
+    let reload = reloadFrameForNavigation(app.frames.top, { signal: controller.signal })
+
+    controller.abort(new Error('Navigation stopped'))
+    invariant(finished)
+    expect((await finished).aborted).toBe(true)
+    response.resolve('<!DOCTYPE html><html><head></head><body>Stale</body></html>')
+    await reload.finished
+    expect(document.querySelector('main')?.textContent).toBe('Initial')
+  })
+
+  it('preserves non-Error reload rejections in finished', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let failure: unknown
+    let app = run({ loadModule: mock.fn(), resolveFrame: () => Promise.reject(failure) })
+    t.after(() => app.dispose())
+    app.addEventListener('error', () => {})
+    await app.ready()
+    let events: FrameReloadStartEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
+
+    await expect(app.frames.top.reload()).rejects.toBe(undefined)
+    await expect(events[0]!.finished).rejects.toBe(undefined)
+    failure = null
+    await expect(app.frames.top.reload()).rejects.toBe(null)
+    await expect(events[1]!.finished).rejects.toBe(null)
+
+    let navigationEvent = Promise.withResolvers<NavigationEvent>()
+    window.addEventListener('rmx:navigation', navigationEvent.resolve, {
+      once: true,
+      signal: t.signal,
+    })
+    let loading = navigate('?navigation=failure').catch(() => {})
+    let event = await navigationEvent.promise
+    await expect(event.finished).rejects.toBe(null)
+    await loading
+  })
+
+  it('preserves a client child frame’s failure normally and when an error listener retries', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let failure = new Error('Child request failed')
+    let failChild = false
+    let order: string[] = []
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src) {
+        if (src === '/child') {
+          if (failChild) throw failure
+          return '<p>Initial child</p>'
+        }
+        return (
+          <main>
+            <Frame name="child" src="/child" />
+          </main>
+        )
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    await app.frames.top.reload()
+    let child = app.frames.get('child')
+    invariant(child)
+    app.addEventListener('error', () => order.push('error'))
+    let events: FrameReloadStartEvent[] = []
+    child.addEventListener('reloadStart', (event) => events.push(event))
+    child.addEventListener('reloadComplete', () => order.push('complete'))
+    failChild = true
+
+    await app.frames.top.reload()
+
+    expect(events).toHaveLength(1)
+    await expect(events[0]!.finished).rejects.toBe(failure)
+    expect(order).toEqual(['error', 'complete'])
+    expect(document.querySelector('main')?.textContent).toBe('Initial child')
+
+    let recovery = Promise.withResolvers<AbortSignal>()
+    app.addEventListener(
+      'error',
+      () => {
+        failChild = false
+        void child.reload().then(recovery.resolve, recovery.reject)
+      },
+      { once: true },
+    )
+    await app.frames.top.reload()
+
+    expect(events).toHaveLength(3)
+    await expect(events[1]!.finished).rejects.toBe(failure)
+    expect((await recovery.promise).aborted).toBe(false)
+    expect(order).toEqual(['error', 'complete', 'error', 'complete'])
+    expect(document.querySelector('main')?.textContent).toBe('Initial child')
+  })
+
+  it('preserves a direct reload started by a finished signal’s abort listener', async (t) => {
+    let { child, events, signal } = await setupInheritedReloadFinished(t)
+    let replacement: Promise<AbortSignal> | undefined
+    signal.addEventListener(
+      'abort',
+      () => {
+        replacement = child.reload({ src: '/child' })
+      },
+      { once: true },
+    )
+
+    let outer = child.reload({ src: '/outer' })
+    invariant(replacement)
+    expect((await outer).aborted).toBe(true)
+    let replacementSignal = await replacement
+
+    expect(replacementSignal.aborted).toBe(false)
+    expect(events).toHaveLength(2)
+    expect(await events[1]!.finished).toBe(replacementSignal)
+    expect(document.querySelector('main')?.textContent).toBe('/child')
+  })
+
+  it('preserves an ancestor reload started by a finished signal’s abort listener', async (t) => {
+    let { app, events, signal } = await setupInheritedReloadFinished(t)
+    let replacement: Promise<AbortSignal> | undefined
+    signal.addEventListener(
+      'abort',
+      () => {
+        replacement = app.frames.top.reload()
+      },
+      { once: true },
+    )
+
+    let outer = app.frames.top.reload()
+    invariant(replacement)
+    expect((await outer).aborted).toBe(true)
+    expect((await replacement).aborted).toBe(false)
+
+    expect(events).toHaveLength(2)
+    expect((await events[1]!.finished).aborted).toBe(false)
+    expect(document.querySelector('main')?.textContent).toBe('/child')
+  })
+
+  it('replaces inherited finished when a child reloadStart listener reloads its ancestor', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src) {
+        if (src === '/child') return '<p>Child</p>'
+        return (
+          <main>
+            <Frame name="child" src="/child" />
+          </main>
+        )
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    await app.frames.top.reload()
+    let child = app.frames.get('child')
+    invariant(child)
+    let events: FrameReloadStartEvent[] = []
+    let replacement: Promise<AbortSignal> | undefined
+    child.addEventListener('reloadStart', (event) => {
+      events.push(event)
+      if (events.length === 1) replacement = app.frames.top.reload()
+    })
+    let form = document.createElement('form')
+    let submissions: NavigationEvent[] = []
+    form.addEventListener('rmx:navigation', (event) => submissions.push(event))
+
+    await reloadFrameForNavigation(app.frames.top, { element: form, form }).finished
+    await replacement
+
+    expect(events).toHaveLength(2)
+    expect(submissions).toHaveLength(0)
+    expect((await events[0]!.finished).aborted).toBe(true)
+    await events[1]!.finished
+    expect(document.querySelector('main')?.textContent).toBe('Child')
   })
 
   it('reloads with text/plain FormData and normalizes line breaks', async (t) => {
@@ -491,6 +1399,8 @@ describe('run', () => {
 
   it('defaults FormData reloads to GET and replaces the source query without a body', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
+    let events: FrameReloadStartEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
     let body = new FormData()
     body.append('name', 'Ada Lovelace')
     body.append('name', 'Grace')
@@ -504,23 +1414,42 @@ describe('run', () => {
     expect(requests).toHaveLength(1)
     let request = requests[0]!
     let expectedUrl = new URL(
-      '/search?name=Ada+Lovelace&name=Grace&file=notes.txt#results',
+      '/search?name=Ada+Lovelace&name=Grace&file=notes.txt',
       document.baseURI,
     ).href
+    expect(events).toHaveLength(1)
+    expect(events[0]!.src).toBe(`${expectedUrl}#results`)
+    expect(events[0]!.method).toBe('get')
+    expect(events[0]!.encType).toBeNull()
+    expect(events[0]!.formData).toBeNull()
     expect(request.url).toBe(expectedUrl)
     expect(request.method).toBe('GET')
     expect(await request.text()).toBe('')
     if ('body' in request) expect(request.body).toBeNull()
-    expect(app.frames.top.src).toBe(expectedUrl)
+    expect(app.frames.top.src).toBe(`${expectedUrl}#results`)
     expect(document.body.textContent).toBe('Saved')
   })
 
   it('defaults POST FormData to URL encoding with normalized line breaks and file names', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
+    let events: FrameReloadStartEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
     let body = new FormData()
     body.set('name\nline', 'Ada\nLovelace')
     body.set('file', new File(['contents'], 'notes.txt'))
-    await app.frames.top.reload({ method: 'post', body })
+    let reload = app.frames.top.reload({ src: '/save', method: 'post', body })
+    let event = events[0]
+    invariant(event)
+    expect(event.src).toBe('/save')
+    expect(event.method).toBe('post')
+    expect(event.encType).toBe('application/x-www-form-urlencoded')
+    expect(event.formData).toBe(body)
+    expect(event.element).toBeNull()
+    expect(event.submitter).toBeNull()
+    let signal = await event.finished
+    expect(signal).toBe(await reload)
+    expect(signal.aborted).toBe(false)
+    expect(document.querySelector('main')?.textContent).toBe('Saved')
 
     expect(requests).toHaveLength(1)
     let request = requests[0]!
@@ -530,6 +1459,8 @@ describe('run', () => {
 
   it('defaults an invalid form method to GET and encodes its fields in the query', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
+    let events: FrameReloadStartEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
     let body = new FormData()
     body.set('name', 'Ada')
     await app.frames.top.reload({ src: '/search?old=1', method: 'PATCH', body })
@@ -540,6 +1471,10 @@ describe('run', () => {
     expect(await requests[0]!.text()).toBe('')
     if ('body' in requests[0]!) expect(requests[0]!.body).toBeNull()
     expect(requests[0]!.headers.get('Content-Type')).toBeNull()
+    expect(events).toHaveLength(1)
+    expect(events[0]!.src).toBe(requests[0]!.url)
+    expect(events[0]!.method).toBe('get')
+    expect(events[0]!.encType).toBeNull()
   })
 
   it('accepts case-insensitive form methods and encodings', async (t) => {
@@ -557,6 +1492,8 @@ describe('run', () => {
 
   it('falls back to URL encoding for an invalid FormData encoding', async (t) => {
     let { app, requests } = await setupReloadBodyTest(t)
+    let events: FrameReloadStartEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => events.push(event))
     let body = new FormData()
     body.set('name', 'Ada')
     await app.frames.top.reload({ method: 'post', encType: 'invalid', body })
@@ -564,6 +1501,9 @@ describe('run', () => {
     expect(requests).toHaveLength(1)
     expect(requests[0]!.headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
     expect(await requests[0]!.text()).toBe('name=Ada')
+    expect(events).toHaveLength(1)
+    expect(events[0]!.method).toBe('post')
+    expect(events[0]!.encType).toBe('application/x-www-form-urlencoded')
   })
 
   it('submits FormData through one default fetch and renders the returned HTML', async (t) => {
@@ -594,7 +1534,7 @@ describe('run', () => {
     expect(signal.aborted).toBe(false)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     let [src, init] = fetchMock.mock.calls[0]!.arguments
-    expect(src).toBe('/account/save')
+    expect(src).toBe(new URL('/account/save', window.location.href).href)
     expect(init?.method).toBe('post')
     expect(init?.body).toBeInstanceOf(URLSearchParams)
     expect(String(init?.body)).toBe('name=Ada+Lovelace')
@@ -643,7 +1583,7 @@ describe('run', () => {
 
     try {
       await app.frames.top.reload()
-      expect(fetchMock.mock.calls[0]?.arguments[0]).toBe('details')
+      expect(fetchMock.mock.calls[0]?.arguments[0]).toBe('https://frames.example/partials/details')
       expect(fetchMock.mock.calls[0]?.arguments[1]?.mode).toBe('same-origin')
     } finally {
       app.dispose()
@@ -829,6 +1769,10 @@ describe('run', () => {
     )
 
     let app = run({ loadModule: mock.fn() })
+    let started: FrameReloadStartEvent | undefined
+    app.frames.top.addEventListener('reloadStart', (event) => {
+      started = event
+    })
     let reportedError: unknown
     app.addEventListener('error', (event) => {
       reportedError = event.error
@@ -842,6 +1786,8 @@ describe('run', () => {
         'Failed to resolve frame: 500 Internal Server Error',
       )
 
+      invariant(started)
+      await expect(started.finished).rejects.toBe(reportedError)
       expect(fetchMock).toHaveBeenCalledTimes(1)
       expect(reportedError).toBeInstanceOf(Error)
       expect((reportedError as Error).message).toBe(
@@ -1210,8 +2156,9 @@ describe('run', () => {
     app.dispose()
   })
 
-  it('does not hydrate imported client entries through their parent boundary', async () => {
+  it('keeps empty text before independently hydrated child entries', async () => {
     let clicks = 0
+    let text = ''
     let updateOuter = () => {}
 
     let Inner = clientEntry('/inner.js#Inner', function Inner() {
@@ -1234,12 +2181,18 @@ describe('run', () => {
       }
       return () => (
         <section>
+          {text && <p>{text}</p>}
           <Inner />
         </section>
       )
     })
 
     document.body.innerHTML = await drain(renderToStream(<Outer />))
+
+    let button = document.querySelector('button')
+    invariant(button)
+    let innerStart = button.previousSibling
+    invariant(innerStart instanceof Comment)
 
     let app = run({
       loadModule(moduleUrl, exportName) {
@@ -1250,14 +2203,19 @@ describe('run', () => {
     })
     await app.ready()
 
-    let button = document.querySelector('button')
-    invariant(button)
+    expect(document.querySelectorAll('button')).toHaveLength(1)
+    expect(document.querySelector('button')).toBe(button)
 
     button.click()
     expect(clicks).toBe(1)
 
+    text = 'Before child'
     updateOuter()
     app.flush()
+    let paragraph = document.querySelector('section > p')
+    invariant(paragraph)
+    expect(innerStart.previousSibling).toBe(paragraph)
+    expect(innerStart.nextSibling).toBe(button)
     button.click()
     expect(clicks).toBe(2)
 
@@ -3514,11 +4472,15 @@ describe('run', () => {
     app.dispose()
   })
 
-  it('updates and reloads the top frame for ordinary navigation', async (t) => {
+  it('uses the absolute destination for relative programmatic navigation', async (t) => {
     let fixture = await setupFrameNavigationTest(t)
     let destinationUrl = new URL('/next', window.location.href).href
+    let events: NavigationEvent[] = []
+    window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
+    let reloads: FrameReloadStartEvent[] = []
+    fixture.frames().top.addEventListener('reloadStart', (event) => reloads.push(event))
 
-    await navigate(destinationUrl, {
+    await navigate('/next', {
       history: 'replace',
       resetScroll: false,
     })
@@ -3526,6 +4488,8 @@ describe('run', () => {
     expect(window.location.href).toBe(destinationUrl)
     expect(fixture.frames().top.src).toBe(window.location.href)
     expect(fixture.requests).toEqual([{ src: destinationUrl, target: undefined }])
+    expect(events[0]?.frameSrc).toBe(fixture.requests[0]?.src)
+    expect(reloads[0]?.src).toBe(events[0]?.frameSrc)
   })
 
   it('reloads only the target frame using the public destination without data-rmx-src', async (t) => {
@@ -3544,7 +4508,9 @@ describe('run', () => {
   it('preserves a targeted src while later top frame reloads use the public destination', async (t) => {
     let fixture = await setupFrameNavigationTest(t)
     let destinationUrl = new URL('/destination', window.location.href).href
-    let targetSrc = '/target-frame'
+    let targetSrc = '../target-frame?tab=one#summary'
+    let events: NavigationEvent[] = []
+    window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
 
     await navigateWithLink(destinationUrl, { target: 'target', src: targetSrc })
 
@@ -3553,16 +4519,24 @@ describe('run', () => {
     expect(frames.top.src).toBe(window.location.href)
     expect(frames.target.src).toBe(targetSrc)
     expect(fixture.requests).toEqual([{ src: targetSrc, target: 'target' }])
+    expect(events[0]?.frameSrc).toBe(targetSrc)
+    expect(events[0]?.to).toBe(destinationUrl)
+    expect(events[0]?.frameTarget).toBe('target')
 
     await frames.top.reload()
     expect(fixture.requests).toEqual([
       { src: targetSrc, target: 'target' },
       { src: destinationUrl, target: undefined },
     ])
+    expect(events).toHaveLength(1)
   })
 
   it('restores top and targeted frame sources during back and forward traversal', async (t) => {
     let fixture = await setupFrameNavigationTest(t)
+    let events: FrameReloadStartEvent[] = []
+    let target = fixture.frames().target
+    invariant(target)
+    target.addEventListener('reloadStart', (event) => events.push(event))
     let firstDestinationUrl = new URL('/first', window.location.href).href
     let secondDestinationUrl = new URL('/second', window.location.href).href
     let firstTargetSrc = '/first-frame'
@@ -3597,6 +4571,20 @@ describe('run', () => {
       { src: firstTargetSrc, target: 'target' },
       { src: secondTargetSrc, target: 'target' },
     ])
+    expect(events.map((event) => event.src)).toEqual([
+      firstTargetSrc,
+      secondTargetSrc,
+      firstTargetSrc,
+      secondTargetSrc,
+    ])
+    for (let event of events) {
+      expect(event.element).toBeNull()
+      expect(event.submitter).toBeNull()
+      expect(event.method).toBe('get')
+      expect(event.encType).toBeNull()
+      expect(event.formData).toBeNull()
+      await event.finished
+    }
   })
 
   it('restores traversal scroll after a preserved entry resolves a blocking frame', async (t) => {
@@ -3708,14 +4696,14 @@ describe('run', () => {
     await navigate(detailUrl)
     expect(document.getElementById('scroll-detail-page')?.textContent).toContain('Detail')
 
-    let didScroll = false
+    let listItemsRenderedAtScroll: boolean | undefined
     window.navigation.addEventListener(
       'navigate',
       (event) => {
         let scroll = event.scroll.bind(event)
         Object.defineProperty(event, 'scroll', {
           value() {
-            didScroll = true
+            listItemsRenderedAtScroll = document.getElementById('scroll-list-items') != null
             scroll()
           },
         })
@@ -3725,16 +4713,10 @@ describe('run', () => {
 
     let backNavigation = window.navigation.back().finished
     await deferredListItemsRequested
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    )
-
-    expect(didScroll).toBe(false)
-
     resolveDeferredListItems(listItemsContent)
     await backNavigation
 
-    expect(didScroll).toBe(true)
+    expect(listItemsRenderedAtScroll).toBe(true)
     expect(document.getElementById('scroll-list-items')).not.toBe(null)
     expect(window.scrollY).toBe(2500)
   })
@@ -3839,6 +4821,8 @@ describe('run', () => {
   it('dispatches reloadStart and reloadComplete events for non-blocking child frames during top frame reloads', async () => {
     let childReloadStartEvents = 0
     let childReloadCompleteEvents = 0
+    let childReloadFinished: FrameReloadStartEvent['finished'] | undefined
+    let childReloadSettled = false
     let [childReloadCompleted, markChildReloadCompleted] = withResolvers<void>()
     let reloadTopFromChild: undefined | (() => Promise<AbortSignal>)
 
@@ -3848,8 +4832,11 @@ describe('run', () => {
         reloadTopFromChild = async () => {
           handle.frame.addEventListener(
             'reloadStart',
-            () => {
+            (event) => {
               childReloadStartEvents++
+              childReloadFinished = event.finished.finally(() => {
+                childReloadSettled = true
+              })
             },
             { once: true },
           )
@@ -3947,6 +4934,7 @@ describe('run', () => {
 
     expect(childReloadStartEvents).toBe(1)
     expect(childReloadCompleteEvents).toBe(0)
+    expect(childReloadSettled).toBe(false)
     expect(document.getElementById('event-child-frame-fallback')).toBeNull()
     expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Initial child')
 
@@ -3955,10 +4943,629 @@ describe('run', () => {
 
     expect(childReloadStartEvents).toBe(1)
     expect(childReloadCompleteEvents).toBe(1)
+    await childReloadFinished
     expect(document.getElementById('event-child-frame-fallback')).toBeNull()
     expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Reloaded child')
 
     app.dispose()
+  })
+
+  it('finishes child reloads when cached HTML reuses resolved frame markers', async (t) => {
+    let cachedHtml = await drainWithProtocol(
+      renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame name="child" src="/child" />
+          </body>
+        </html>,
+        { resolveFrame: () => '<p id="cached-child">Cached child</p>' },
+      ),
+    )
+    let initialDocument = new DOMParser().parseFromString(cachedHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let childRender = Promise.withResolvers<void>()
+    let releaseChildRender = Promise.withResolvers<string[]>()
+    let reloadRenderCalls = 0
+    let reloading = false
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame: () => streamFromChunks([cachedHtml]),
+      processClientEntryPreloads(hrefs) {
+        if (reloading && ++reloadRenderCalls === 2) {
+          childRender.resolve()
+          return releaseChildRender.promise
+        }
+        return hrefs
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    let child = app.frames.get('child')
+    invariant(child)
+    let events: FrameReloadStartEvent[] = []
+    let completions = 0
+    child.addEventListener('reloadStart', (event) => events.push(event))
+    child.addEventListener('reloadComplete', () => completions++)
+
+    reloading = true
+    let reload = app.frames.top.reload()
+    await childRender.promise
+    expect(completions).toBe(0)
+    releaseChildRender.resolve([])
+    await reload
+
+    expect(app.frames.get('child')).toBe(child)
+    expect(document.getElementById('cached-child')?.textContent).toBe('Cached child')
+    expect(events).toHaveLength(1)
+    expect(completions).toBe(1)
+    expect((await events[0]!.finished).aborted).toBe(false)
+  })
+
+  it('finishes cached pending frame markers only after their replayed template renders', async (t) => {
+    let { shell, templates } = await renderPendingChildChunks(
+      '<p id="cached-child">Cached child</p>',
+    )
+    let initialDocument = new DOMParser().parseFromString(shell + templates, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let templateChunk = Promise.withResolvers<string>()
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame: () => streamFromChunks([shell, templateChunk.promise]),
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    let label = document.getElementById('cached-child')
+    invariant(label)
+    label.textContent = 'Client edit'
+    let child = app.frames.get('child')
+    invariant(child)
+    let events: FrameReloadStartEvent[] = []
+    let completions = 0
+    child.addEventListener('reloadStart', (event) => events.push(event))
+    child.addEventListener('reloadComplete', () => completions++)
+
+    let reload = reloadFrameForNavigation(app.frames.top)
+    await reload.committed
+    expect(events).toHaveLength(1)
+    expect(completions).toBe(0)
+    expect(document.getElementById('cached-child')?.textContent).toBe('Client edit')
+
+    templateChunk.resolve(templates)
+    await reload.finished
+    await new Promise(requestAnimationFrame)
+
+    expect(app.frames.get('child')).toBe(child)
+    expect(document.getElementById('cached-child')?.textContent).toBe('Cached child')
+    expect(events).toHaveLength(1)
+    expect(completions).toBe(1)
+    expect((await events[0]!.finished).aborted).toBe(false)
+  })
+
+  it('finishes cached reloads that reuse an initial pending template watch', async (t) => {
+    let { shell, templates } = await renderPendingChildChunks(
+      '<link rel="modulepreload" data-rmx-module-preload href="/child.js"><p id="cached-child">Cached child</p>',
+    )
+
+    for (let buffered of [false, true]) {
+      let initialDocument = new DOMParser().parseFromString(shell, 'text/html')
+      document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+      let templateChunk = Promise.withResolvers<string>()
+      let rendering = Promise.withResolvers<void>()
+      let releaseRender = Promise.withResolvers<string[]>()
+      let releaseShell = Promise.withResolvers<string[]>()
+      let reloading = false
+      let app = run({
+        loadModule: mock.fn(),
+        resolveFrame: () =>
+          streamFromChunks(buffered ? [shell + templates] : [shell, templateChunk.promise]),
+        processClientEntryPreloads(hrefs) {
+          if (hrefs.includes('/child.js')) {
+            rendering.resolve()
+            return releaseRender.promise
+          }
+          if (reloading && buffered) return releaseShell.promise
+          return hrefs
+        },
+      })
+      t.after(() => app.dispose())
+      await app.ready()
+      let child = app.frames.get('child')
+      invariant(child)
+      let events: FrameReloadStartEvent[] = []
+      let completions = 0
+      child.addEventListener('reloadStart', (event) => events.push(event))
+      child.addEventListener('reloadComplete', () => completions++)
+
+      reloading = true
+      let reload = reloadFrameForNavigation(app.frames.top)
+      if (!buffered) {
+        await reload.committed
+        templateChunk.resolve(templates)
+      }
+      await rendering.promise
+      expect(completions).toBe(0)
+      releaseRender.resolve([])
+      if (buffered) {
+        // The initial watcher can finish rendering before the replayed shell is accepted.
+        await new Promise(requestAnimationFrame)
+        expect(document.getElementById('cached-child')?.textContent).toBe('Cached child')
+        expect(completions).toBe(0)
+        releaseShell.resolve([])
+      }
+      await reload.finished
+      await new Promise(requestAnimationFrame)
+
+      expect(document.getElementById('cached-child')?.textContent).toBe('Cached child')
+      expect(events).toHaveLength(1)
+      expect(completions).toBe(1)
+      expect((await events[0]!.finished).aborted).toBe(false)
+      app.dispose()
+    }
+  })
+
+  it('preserves initial streamed child content when an ancestor navigation is aborted', async (t) => {
+    let { shell, templates } = await renderPendingChildChunks(
+      '<link rel="modulepreload" data-rmx-module-preload href="/child.js"><p id="streamed-child">Initial child</p>',
+    )
+
+    for (let acceptShell of [false, true]) {
+      let initialDocument = new DOMParser().parseFromString(shell, 'text/html')
+      document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+      let response = Promise.withResolvers<string>()
+      let releaseRender = Promise.withResolvers<string[]>()
+      let rendering = false
+      let app = run({
+        loadModule: mock.fn(),
+        resolveFrame: () =>
+          acceptShell
+            ? new ReadableStream<Uint8Array>({
+                start(controller) {
+                  controller.enqueue(new TextEncoder().encode(shell))
+                },
+              })
+            : response.promise,
+        processClientEntryPreloads(hrefs) {
+          if (hrefs.includes('/child.js')) {
+            rendering = true
+            return releaseRender.promise
+          }
+          return hrefs
+        },
+      })
+      t.after(() => {
+        releaseRender.resolve([])
+        response.resolve('')
+        app.dispose()
+      })
+      await app.ready()
+      let child = app.frames.get('child')
+      invariant(child)
+      let events: FrameReloadStartEvent[] = []
+      child.addEventListener('reloadStart', (event) => events.push(event))
+      let controller = new AbortController()
+      let reload = reloadFrameForNavigation(app.frames.top, { signal: controller.signal })
+      if (acceptShell) {
+        await reload.committed
+        controller.abort()
+      }
+      document.body.insertAdjacentHTML('beforeend', templates)
+      await new Promise(requestAnimationFrame)
+      expect(rendering).toBe(true)
+      controller.abort()
+      expect(events).toHaveLength(1)
+      expect((await events[0]!.finished).aborted).toBe(true)
+      releaseRender.resolve([])
+      response.resolve('')
+      await reload.finished
+      await new Promise(requestAnimationFrame)
+
+      expect(document.getElementById('streamed-child')?.textContent).toBe('Initial child')
+      app.dispose()
+    }
+  })
+
+  it('rejects a streamed child reload when processing its template fails', async (t) => {
+    let initial = await renderPendingChildChunks('<p>Initial child</p>')
+    let initialDocument = new DOMParser().parseFromString(
+      initial.shell + initial.templates,
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let { shell, templates } = await renderPendingChildChunks(
+      '<link rel="modulepreload" data-rmx-module-preload href="/failed.js"><p>Saved child</p>',
+    )
+    let templateChunk = Promise.withResolvers<string>()
+    let failure = new Error('Preload processing failed')
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame: () => streamFromChunks([shell, templateChunk.promise]),
+      processClientEntryPreloads(hrefs) {
+        if (hrefs.includes('/failed.js')) throw failure
+        return hrefs
+      },
+    })
+    t.after(() => app.dispose())
+    let errors: unknown[] = []
+    app.addEventListener('error', (event) => errors.push(event.error))
+    await app.ready()
+    let child = app.frames.get('child')
+    invariant(child)
+    let rejected: unknown[] = []
+    let completions = 0
+    child.addEventListener('reloadStart', (event) => {
+      void event.finished.catch((error) => rejected.push(error))
+    })
+    child.addEventListener('reloadComplete', () => completions++)
+
+    let reload = reloadFrameForNavigation(app.frames.top)
+    await reload.committed
+    templateChunk.resolve(templates)
+    await reload.finished
+    await new Promise(requestAnimationFrame)
+
+    expect(errors).toEqual([failure])
+    expect(rejected).toEqual([failure])
+    expect(completions).toBe(1)
+    expect(document.querySelector('p')?.textContent).toBe('Initial child')
+  })
+
+  it('does not fail a sibling’s new reload when a completion listener retries its ancestor', async (t) => {
+    function renderDocument() {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame name="first" src="/first" />
+            <Frame name="second" src="/second" />
+          </body>
+        </html>,
+        { resolveFrame: (src) => `<p>${src}</p>` },
+      )
+    }
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderDocument()),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let content = Promise.withResolvers<ReadableStream<Uint8Array>>()
+    let failure = new Error('Ancestor failed')
+    let fail = true
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame() {
+        if (fail) throw failure
+        return content.promise
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    let first = app.frames.get('first')
+    let second = app.frames.get('second')
+    invariant(first && second)
+    let recovery: Promise<AbortSignal> | undefined
+    first.addEventListener(
+      'reloadComplete',
+      () => {
+        fail = false
+        recovery = app.frames.top.reload()
+      },
+      { once: true },
+    )
+    let events: FrameReloadStartEvent[] = []
+    let settled: boolean[] = []
+    let completions = 0
+    second.addEventListener('reloadStart', (event) => {
+      let index = events.length
+      events.push(event)
+      settled.push(false)
+      void event.finished.then(
+        () => (settled[index] = true),
+        () => (settled[index] = true),
+      )
+    })
+    second.addEventListener('reloadComplete', () => completions++)
+
+    await expect(app.frames.top.reload()).rejects.toBe(failure)
+
+    expect(events).toHaveLength(2)
+    expect(completions).toBe(1)
+    expect(settled).toEqual([true, false])
+    content.resolve(renderDocument())
+    invariant(recovery)
+    expect((await recovery).aborted).toBe(false)
+    expect((await events[1]!.finished).aborted).toBe(false)
+    expect(completions).toBe(2)
+  })
+
+  it('gives child frames the initiating request and their own lifecycle after navigation acceptance', async (t) => {
+    function renderDocument(label: string) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame name="child" src="/child" />
+          </body>
+        </html>,
+        {
+          resolveFrame: () => renderToStream(<p id="child-label">{label}</p>),
+        },
+      )
+    }
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderDocument('Initial child')),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame: () => renderDocument('Saved child'),
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    let child = app.frames.get('child')
+    invariant(child)
+    let events: FrameReloadStartEvent[] = []
+    let order: string[] = []
+    let topEvents: FrameReloadStartEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => {
+      topEvents.push(event)
+      order.push('top')
+    })
+    child.addEventListener('reloadStart', (event) => {
+      events.push(event)
+      order.push('child')
+    })
+    let form = document.createElement('form')
+    form.method = 'post'
+    form.action = window.location.href
+    let input = document.createElement('input')
+    input.name = 'name'
+    input.value = 'Ada'
+    form.append(input)
+    let button = document.createElement('button')
+    form.append(button)
+    document.body.append(form)
+    let accepted = Promise.withResolvers<NavigationEvent>()
+    let submissions: NavigationEvent[] = []
+    button.addEventListener('rmx:navigation', (event) => {
+      submissions.push(event)
+      order.push('submit')
+      accepted.resolve(event)
+    })
+    form.requestSubmit(button)
+    let navigation = await accepted.promise
+    await navigation.finished
+    let formData = navigation.formData
+    expect(formData?.get('name')).toBe('Ada')
+
+    expect(order).toEqual(['submit', 'top', 'child'])
+    expect(events).toHaveLength(1)
+    expect(submissions).toHaveLength(1)
+    expect(submissions[0]!.finished).not.toBe(topEvents[0]!.finished)
+    expect(events[0]!.finished).not.toBe(topEvents[0]!.finished)
+    expect(events[0]!.src).toBe(app.frames.top.src)
+    expect(events[0]!.method).toBe('post')
+    expect(events[0]!.encType).toBe('application/x-www-form-urlencoded')
+    expect(events[0]!.formData).toBe(formData)
+    expect(events[0]!.element).toBe(form)
+    expect(events[0]!.submitter).toBe(button)
+    let childSignal = await events[0]!.finished
+    expect(childSignal.aborted).toBe(false)
+    expect(document.getElementById('child-label')?.textContent).toBe('Saved child')
+    app.dispose()
+    expect(childSignal.aborted).toBe(true)
+  })
+
+  it('keeps the ancestor request when a child finishes its own reload before the ancestor renders', async (t) => {
+    let ancestorContent = Promise.withResolvers<RemixNode>()
+    let childContent = Promise.withResolvers<string>()
+    let parentRequests = 0
+    let childRequests = 0
+    let childNode = <Frame name="child" src="/child" />
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src) {
+        if (src === '/child') {
+          childRequests++
+          return childRequests === 2 ? childContent.promise : '<p>Child</p>'
+        }
+        parentRequests++
+        return parentRequests === 1 ? childNode : ancestorContent.promise
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    await app.frames.top.reload()
+    let child = app.frames.get('child')
+    invariant(child)
+    let events: FrameReloadStartEvent[] = []
+    child.addEventListener('reloadStart', (event) => events.push(event))
+    let ownReload = child.reload()
+    let form = document.createElement('form')
+    let button = document.createElement('button')
+    form.append(button)
+    let formData = new FormData()
+    formData.set('title', 'Saved')
+    let ancestorReload = reloadFrameForNavigation(app.frames.top, {
+      method: 'post',
+      encType: 'text/plain',
+      formData,
+      element: form,
+      submitter: button,
+      form,
+    })
+
+    childContent.resolve('<p>Earlier child request</p>')
+    await ownReload
+    ancestorContent.resolve(childNode)
+    await ancestorReload.finished
+
+    expect(events).toHaveLength(2)
+    let event = events[1]!
+    expect(event.src).toBe(app.frames.top.src)
+    expect(event.method).toBe('post')
+    expect(event.encType).toBe('text/plain')
+    expect(event.formData).toBe(formData)
+    expect(event.element).toBe(form)
+    expect(event.submitter).toBe(button)
+    expect((await event.finished).aborted).toBe(false)
+    expect(document.querySelector('p')?.textContent).toBe('Child')
+  })
+
+  it('keeps the ancestor request through buffered and streamed pending frame templates', async (t) => {
+    function renderParent(label: string) {
+      return renderToStream(<Frame name="child" src="/child" />, {
+        resolveFrame: () => `<p id="child-content">${label}</p>`,
+      })
+    }
+    function renderDocument(
+      parentContent: ReadableStream<Uint8Array> | Promise<ReadableStream<Uint8Array>>,
+    ) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame name="parent" src="/parent" fallback={<p>Loading parent</p>} />
+          </body>
+        </html>,
+        {
+          resolveFrame: () => parentContent,
+        },
+      )
+    }
+
+    for (let delivery of ['buffered', 'streamed']) {
+      let initialDocument = new DOMParser().parseFromString(
+        await drainWithProtocol(renderDocument(renderParent('Initial child'))),
+        'text/html',
+      )
+      document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+      let parentContent = Promise.withResolvers<ReadableStream<Uint8Array>>()
+      let chunks = readChunks(renderDocument(parentContent.promise))
+      let shell = await chunks.next()
+      invariant(!shell.done, 'Expected the pending parent shell')
+      parentContent.resolve(renderParent('Saved child'))
+      let templates = ''
+      for await (let chunk of chunks) templates += chunk
+      let firstChunk = Promise.withResolvers<string>()
+      let lastChunk = Promise.withResolvers<string>()
+      let childContent = Promise.withResolvers<string>()
+      let app = run({
+        loadModule: mock.fn(),
+        resolveFrame(src) {
+          return src === '/child'
+            ? childContent.promise
+            : streamFromChunks([firstChunk.promise, lastChunk.promise])
+        },
+      })
+      t.after(() => app.dispose())
+      await app.ready()
+      await waitForElement('#child-content')
+      let child = app.frames.get('child')
+      invariant(child, 'Expected the nested child frame')
+      let events: FrameReloadStartEvent[] = []
+      child.addEventListener('reloadStart', (event) => events.push(event))
+      let ownReload = child.reload()
+      let form = document.createElement('form')
+      let formData = new FormData()
+      formData.set('title', 'Saved')
+      let ancestorReload = reloadFrameForNavigation(app.frames.top, {
+        method: 'post',
+        encType: 'text/plain',
+        formData,
+        element: form,
+        form,
+      })
+      childContent.resolve('<p>Earlier child request</p>')
+      await ownReload
+
+      if (delivery === 'buffered') {
+        firstChunk.resolve(shell.value + templates)
+        lastChunk.resolve('')
+      } else {
+        firstChunk.resolve(shell.value)
+        await ancestorReload.committed
+        lastChunk.resolve(templates)
+      }
+      await ancestorReload.finished
+
+      expect(events).toHaveLength(2)
+      let event = events[1]!
+      expect(event.src).toBe(app.frames.top.src)
+      expect(event.method).toBe('post')
+      expect(event.encType).toBe('text/plain')
+      expect(event.formData).toBe(formData)
+      expect(event.element).toBe(form)
+      expect((await event.finished).aborted).toBe(false)
+      expect(document.getElementById('child-content')?.textContent).toBe('Saved child')
+      app.dispose()
+    }
+  })
+
+  it('preserves an ancestor resolver’s AbortError in finished, including when an error listener retries', async (t) => {
+    function renderDocument(label = 'Initial child') {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <Frame name="child" src="/child" />
+          </body>
+        </html>,
+        { resolveFrame: () => `<p id="child-label">${label}</p>` },
+      )
+    }
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderDocument()),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+    let failure = new DOMException('Resolver failed', 'AbortError')
+    let fail = true
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame() {
+        if (fail) throw failure
+        return renderDocument('Recovered child')
+      },
+    })
+    t.after(() => app.dispose())
+    app.addEventListener('error', () => {})
+    await app.ready()
+    let child = app.frames.get('child')
+    invariant(child)
+    let topEvents: FrameReloadStartEvent[] = []
+    app.frames.top.addEventListener('reloadStart', (event) => topEvents.push(event))
+    let events: FrameReloadStartEvent[] = []
+    let completions = 0
+    child.addEventListener('reloadStart', (event) => events.push(event))
+    child.addEventListener('reloadComplete', () => completions++)
+
+    await expect(app.frames.top.reload()).rejects.toBe(failure)
+
+    await expect(topEvents[0]!.finished).rejects.toBe(failure)
+    expect(events).toHaveLength(1)
+    await expect(events[0]!.finished).rejects.toBe(failure)
+    expect(completions).toBe(1)
+    expect(document.getElementById('child-label')?.textContent).toBe('Initial child')
+
+    let recovery = Promise.withResolvers<AbortSignal>()
+    app.addEventListener(
+      'error',
+      () => {
+        fail = false
+        void app.frames.top.reload().then(recovery.resolve, recovery.reject)
+      },
+      { once: true },
+    )
+    await expect(app.frames.top.reload()).rejects.toBe(failure)
+    expect((await recovery.promise).aborted).toBe(false)
+
+    await expect(topEvents[1]!.finished).rejects.toBe(failure)
+    expect(events).toHaveLength(3)
+    await expect(events[1]!.finished).rejects.toBe(failure)
+    expect((await events[2]!.finished).aborted).toBe(false)
+    expect(document.getElementById('child-label')?.textContent).toBe('Recovered child')
   })
 
   it('reloads a frame region when the response uses css mixins', async () => {
@@ -4365,8 +5972,10 @@ describe('run', () => {
     expect(document.getElementById('last')?.textContent).toBe('Last')
   })
 
-  it('aborts stale frame reloads when reload is re-entered', async () => {
-    let reload: undefined | (() => Promise<AbortSignal>)
+  it('aborts stale reloads, announces each request, and completes only the latest', async () => {
+    let frameHandle: FrameHandle | undefined
+    let events: string[] = []
+    let reloadEvents: FrameReloadStartEvent[] = []
     let callCount = 0
     let firstSignal: AbortSignal | undefined
     let secondSignal: AbortSignal | undefined
@@ -4378,7 +5987,7 @@ describe('run', () => {
     let ReloadButton = clientEntry(
       '/assets/reload-abort.js#ReloadAbort',
       function ReloadAbort(handle: Handle) {
-        reload = () => handle.frame.reload()
+        frameHandle = handle.frame
         return () => <button id="reload-abort">Reload abort</button>
       },
     )
@@ -4430,16 +6039,22 @@ describe('run', () => {
 
     await clientFrame.ready()
 
-    invariant(reload)
+    invariant(frameHandle)
+    frameHandle.addEventListener('reloadStart', (event) => {
+      events.push('start')
+      reloadEvents.push(event)
+    })
+    frameHandle.addEventListener('reloadComplete', () => events.push('complete'))
 
-    let firstReloadPromise = reload()
+    let firstReloadPromise = frameHandle.reload()
     await firstReloadResolving
     expect(firstSignal?.aborted).toBe(false)
 
-    let secondReloadPromise = reload()
+    let secondReloadPromise = frameHandle.reload()
     await secondReloadResolving
     expect(firstSignal?.aborted).toBe(true)
     expect(secondSignal?.aborted).toBe(false)
+    expect((await reloadEvents[0]!.finished).aborted).toBe(true)
 
     resolveFirstReloadContent('<section><p id="reload-value">Stale</p></section>')
     let firstReloadSignal = await firstReloadPromise
@@ -4448,89 +6063,16 @@ describe('run', () => {
 
     // First reload should be ignored because it was superseded.
     expect(document.getElementById('reload-value')?.textContent).toBe('Initial')
+    expect(events).toEqual(['start', 'start'])
 
     resolveSecondReloadContent('<section><p id="reload-value">Fresh</p></section>')
     let secondReloadSignal = await secondReloadPromise
     expect(secondReloadSignal).toBe(secondSignal)
     expect(secondReloadSignal.aborted).toBe(false)
+    expect(await reloadEvents[1]!.finished).toBe(secondReloadSignal)
+    expect(events).toEqual(['start', 'start', 'complete'])
 
     expect(document.getElementById('reload-value')?.textContent).toBe('Fresh')
-    clientFrame.dispose()
-  })
-
-  it('dispatches one reloadStart and reloadComplete pair when reload is re-entered', async () => {
-    let frameHandle: FrameHandle | undefined
-    let events: string[] = []
-    let callCount = 0
-    let [firstReloadContent, resolveFirstReloadContent] = withResolvers<string>()
-    let [secondReloadContent, resolveSecondReloadContent] = withResolvers<string>()
-
-    let ReloadButton = clientEntry(
-      '/assets/reload-reentry-events.js#ReloadReentryEvents',
-      function ReloadReentryEvents(handle: Handle) {
-        frameHandle = handle.frame
-        return () => <button id="reload-reentry-events">Reload</button>
-      },
-    )
-
-    let html = await drain(
-      renderToStream(
-        <main>
-          <Frame src="/reload-reentry-events" fallback={<div>Loading…</div>} />
-        </main>,
-        {
-          async resolveFrame() {
-            return await drain(
-              renderToStream(
-                <section>
-                  <p id="reload-value">Initial</p>
-                  <ReloadButton />
-                </section>,
-              ),
-            )
-          },
-        },
-      ),
-    )
-    document.body.innerHTML = html
-
-    let clientFrame = run({
-      loadModule(moduleUrl, exportName) {
-        if (
-          moduleUrl === '/assets/reload-reentry-events.js' &&
-          exportName === 'ReloadReentryEvents'
-        ) {
-          return ReloadButton
-        }
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
-      },
-      resolveFrame(src: string) {
-        if (src !== '/reload-reentry-events') throw new Error(`Unexpected frame src: ${src}`)
-        callCount++
-        if (callCount === 1) return firstReloadContent
-        if (callCount === 2) return secondReloadContent
-        throw new Error(`Unexpected reload call count: ${callCount}`)
-      },
-    })
-
-    await clientFrame.ready()
-
-    invariant(frameHandle)
-    frameHandle.addEventListener('reloadStart', () => events.push('start'))
-    frameHandle.addEventListener('reloadComplete', () => events.push('complete'))
-
-    let firstReloadPromise = frameHandle.reload()
-    let secondReloadPromise = frameHandle.reload()
-
-    resolveFirstReloadContent('<section><p id="reload-value">Stale</p></section>')
-    await firstReloadPromise
-    expect(events).toEqual(['start'])
-
-    resolveSecondReloadContent('<section><p id="reload-value">Fresh</p></section>')
-    await secondReloadPromise
-    expect(events).toEqual(['start', 'complete'])
-    expect(document.getElementById('reload-value')?.textContent).toBe('Fresh')
-
     clientFrame.dispose()
   })
 
@@ -5368,6 +6910,740 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
+  it('hydrates lazy frames near the viewport once without blocking app.ready()', async (t) => {
+    let requests: string[] = []
+    let { app, host } = await setupLazyFrame(
+      t,
+      (src) => {
+        requests.push(src)
+        return '<p id="lazy-content">Loaded</p>'
+      },
+      { mode: 'server' },
+    )
+    expect(requests).toEqual([])
+    expect(host.textContent).toBe('Waiting')
+    expect(host.children.length).toBe(1)
+    expect(host.firstElementChild?.tagName).toBe('P')
+    expect(app.frames.get('lazy')?.src).toBe('/lazy')
+
+    let loaded = waitForElement('#lazy-content')
+    host.style.top = '0'
+    await loaded
+    expect(requests).toEqual(['/lazy'])
+    expect(host.textContent).toBe('Loaded')
+
+    host.style.top = '100000px'
+    await waitForIntersection(host)
+    host.style.top = '0'
+    await waitForIntersection(host)
+    expect(requests).toEqual(['/lazy'])
+  })
+
+  it('loads lazy frames within one viewport height or width of the visible area', async (t) => {
+    let requests: string[] = []
+    let root = createRoot(container, {
+      frameInit: {
+        resolveFrame(src) {
+          requests.push(src)
+          return `<p id="${src.slice(1)}">Loaded</p>`
+        },
+      },
+    })
+    t.after(() => root.dispose())
+    root.render(
+      <>
+        <section
+          id="vertical-host"
+          mix={css({ position: 'fixed', top: window.innerHeight * 2 + 50, left: 0 })}
+        >
+          <Frame src="/vertical-content" loading="lazy" fallback={<p>Waiting</p>} />
+        </section>
+        <section
+          id="horizontal-host"
+          mix={css({ position: 'fixed', top: 0, left: window.innerWidth * 2 + 50 })}
+        >
+          <Frame src="/horizontal-content" loading="lazy" fallback={<p>Waiting</p>} />
+        </section>
+      </>,
+    )
+    root.flush()
+    let vertical = document.getElementById('vertical-host')
+    let horizontal = document.getElementById('horizontal-host')
+    invariant(vertical && horizontal)
+    await waitForIntersection(vertical)
+    expect(requests).toEqual([])
+
+    let verticalLoaded = waitForElement('#vertical-content')
+    vertical.style.top = `${window.innerHeight * 2 - 50}px`
+    await verticalLoaded
+    expect(requests).toEqual(['/vertical-content'])
+
+    let horizontalLoaded = waitForElement('#horizontal-content')
+    horizontal.style.left = `${window.innerWidth * 2 - 50}px`
+    await horizontalLoaded
+    expect(requests).toEqual(['/vertical-content', '/horizontal-content'])
+  })
+
+  it('warns and loads a client-created lazy frame without a fallback immediately', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let warn = t.mock.method(console, 'warn', () => {})
+    let response = Promise.withResolvers<string>()
+    let resolveFrame = mock.fn(() => response.promise)
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    root.render(jsx(Frame, { src: '/empty', loading: 'lazy' }))
+    root.flush()
+    await waitForIntersection(container)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0]?.arguments).toEqual([
+      'Frame with loading="lazy" requires a fallback that renders an element. Loading "/empty" immediately.',
+    ])
+    expect(container.children.length).toBe(0)
+
+    let loaded = waitForElement('#empty-content')
+    response.resolve('<p id="empty-content">Loaded</p>')
+    await loaded
+    expect(container.children.length).toBe(1)
+  })
+
+  it('warns and loads a hydrated lazy frame with a text-only fallback immediately', async (t) => {
+    function Fallback() {
+      return () => 'Waiting'
+    }
+    document.body.innerHTML = await drain(
+      renderToStream(
+        <section id="lazy-host">
+          <Frame src="/text" loading="lazy" fallback={<Fallback />} />
+        </section>,
+      ),
+    )
+    let host = document.getElementById('lazy-host')
+    invariant(host)
+    host.style.cssText = 'position:fixed;top:100000px;left:0'
+    let warn = t.mock.method(console, 'warn', () => {})
+    let response = Promise.withResolvers<string>()
+    let resolveFrame = mock.fn(() => response.promise)
+    let app = run({ loadModule: mock.fn(), resolveFrame })
+    t.after(() => app.dispose())
+    await app.ready()
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0]?.arguments).toEqual([
+      'Frame with loading="lazy" requires a fallback that renders an element. Loading "/text" immediately.',
+    ])
+    expect(host.textContent).toBe('Waiting')
+    expect(host.children.length).toBe(0)
+
+    let loaded = waitForElement('#text-content')
+    response.resolve('<p id="text-content">Loaded</p>')
+    await loaded
+    expect(host.textContent).toBe('Loaded')
+  })
+
+  it('warns and loads a lazy frame when its fallback stops rendering elements', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let warn = t.mock.method(console, 'warn', () => {})
+    let fallback: Handle | undefined
+    let visible = true
+    function Fallback(handle: Handle) {
+      fallback = handle
+      return () => (visible ? <p>Waiting</p> : null)
+    }
+    let resolveFrame = mock.fn(() => '<p id="removed-fallback-content">Loaded</p>')
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    root.render(<Frame src="/removed-fallback" loading="lazy" fallback={<Fallback />} />)
+    root.flush()
+    await waitForIntersection(container)
+    expect(resolveFrame).not.toHaveBeenCalled()
+    expect(warn.mock.calls.length).toBe(0)
+    invariant(fallback)
+    let loaded = waitForElement('#removed-fallback-content')
+    visible = false
+    await fallback.update()
+    await waitForIntersection(container)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls.length).toBe(1)
+    await loaded
+  })
+
+  it('debounces viewport changes before updating the lazy frame loading boundary', async (t) => {
+    let originalHeight = Object.getOwnPropertyDescriptor(window, 'innerHeight')
+    invariant(originalHeight)
+    t.after(() => Object.defineProperty(window, 'innerHeight', originalHeight))
+    container.style.cssText = `position:fixed;top:${window.innerHeight * 2.5}px;left:0`
+    let resolveFrame = mock.fn(() => '<p id="resized-content">Loaded</p>')
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    let observe = t.mock.method(IntersectionObserver.prototype, 'observe')
+    root.render(<Frame src="/resized-content" loading="lazy" fallback={<p>Waiting</p>} />)
+    root.flush()
+    await waitForIntersection(container)
+    expect(resolveFrame).not.toHaveBeenCalled()
+
+    let loaded = waitForElement('#resized-content')
+    let observationCount = observe.mock.calls.length
+    let timers = t.useFakeTimers()
+    Object.defineProperty(window, 'innerHeight', { value: window.innerHeight * 2 })
+    window.dispatchEvent(new Event('resize'))
+    timers.advance(50)
+    window.dispatchEvent(new Event('resize'))
+    timers.advance(99)
+    expect(observe.mock.calls.length).toBe(observationCount)
+    timers.advance(1)
+    expect(observe.mock.calls.length).toBe(observationCount + 1)
+    timers.restore()
+    await loaded
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+  })
+
+  it('shares a visibility observer and cleans up loaded, removed, and disposed lazy frames', async (t) => {
+    let OriginalObserver = globalThis.IntersectionObserver
+    let observers: IntersectionObserver[] = []
+    globalThis.IntersectionObserver = class extends OriginalObserver {
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        super(callback, options)
+        observers.push(this)
+      }
+    }
+    t.after(() => {
+      globalThis.IntersectionObserver = OriginalObserver
+    })
+    let firstHost = document.createElement('section')
+    let secondHost = document.createElement('section')
+    let removedHost = document.createElement('section')
+    firstHost.style.cssText =
+      secondHost.style.cssText =
+      removedHost.style.cssText =
+        'position:fixed;top:100000px;left:0'
+    container.append(firstHost, secondHost, removedHost)
+    let requests: string[] = []
+    let frameInit = {
+      resolveFrame(src: string) {
+        requests.push(src)
+        return `<p id="${src.slice(1)}">Loaded</p>`
+      },
+    }
+    let first = createRoot(firstHost, { frameInit })
+    let second = createRoot(secondHost, { frameInit })
+    let removed = createRoot(removedHost, { frameInit })
+    t.after(() => {
+      first.dispose()
+      second.dispose()
+      removed.dispose()
+    })
+    first.render(<Frame src="/first" loading="lazy" fallback={<p>First</p>} />)
+    second.render(<Frame src="/second" loading="lazy" fallback={<p>Second</p>} />)
+    removed.render(<Frame src="/removed" loading="lazy" fallback={<p>Removed</p>} />)
+    first.flush()
+    second.flush()
+    removed.flush()
+    expect(observers.length).toBe(1)
+    let observer = observers[0]
+    invariant(observer)
+    let disconnect = t.mock.method(observer, 'disconnect')
+
+    let firstLoaded = waitForElement('#first')
+    firstHost.style.top = '0'
+    await firstLoaded
+    expect(requests).toEqual(['/first'])
+    expect(disconnect).not.toHaveBeenCalled()
+
+    removed.render(null)
+    removed.flush()
+    expect(removedHost.childNodes.length).toBe(0)
+    removed.render(<Frame src="/disposed" loading="lazy" fallback={<p>Disposed</p>} />)
+    removed.flush()
+    removed.dispose()
+    removedHost.style.top = '0'
+    expect(disconnect).not.toHaveBeenCalled()
+    let secondLoaded = waitForElement('#second')
+    secondHost.style.top = '0'
+    await secondLoaded
+    expect(requests).toEqual(['/first', '/second'])
+    expect(observers.length).toBe(1)
+    expect(disconnect).toHaveBeenCalledTimes(1)
+  })
+
+  it('loads a lazy frame after its fallback component replaces the observed element', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let fallback: Handle | undefined
+    let swapped = false
+    function Fallback(handle: Handle) {
+      fallback = handle
+      return () => (swapped ? <section>Waiting</section> : <p>Waiting</p>)
+    }
+    let resolveFrame = mock.fn(() => '<p id="updated-fallback-content">Loaded</p>')
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    root.render(<Frame src="/lazy" loading="lazy" fallback={<Fallback />} />)
+    root.flush()
+    await waitForIntersection(container)
+    invariant(fallback)
+    swapped = true
+    await fallback.update()
+    expect(container.querySelector('section')?.textContent).toBe('Waiting')
+    expect(resolveFrame).not.toHaveBeenCalled()
+
+    container.style.top = '0'
+    await waitForIntersection(container)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('#updated-fallback-content')?.textContent).toBe('Loaded')
+  })
+
+  it('restarts a pending client-created lazy frame during an ancestor reload', async (t) => {
+    await assertPendingLazyFrameRestart(t)
+  })
+
+  it('restarts a pending hydrated lazy frame during an ancestor reload', async (t) => {
+    await assertPendingLazyFrameRestart(t, 'hydrated')
+  })
+
+  it('updates a deferred client frame source and loads when changed to eager', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let requests: string[] = []
+    let root = createRoot(container, {
+      frameInit: {
+        resolveFrame(src) {
+          requests.push(src)
+          return '<p id="eager-content">Loaded</p>'
+        },
+      },
+    })
+    t.after(() => root.dispose())
+    root.render(<Frame src="/old" loading="lazy" fallback={<p>First</p>} />)
+    root.flush()
+    await waitForIntersection(container)
+    root.render(<Frame src="/new" loading="lazy" fallback={<p>Second</p>} />)
+    root.flush()
+    await waitForIntersection(container)
+    expect(requests).toEqual([])
+    expect(container.textContent).toBe('Second')
+
+    let loaded = waitForElement('#eager-content')
+    root.render(<Frame src="/new" loading="eager" fallback="Second" />)
+    root.flush()
+    await loaded
+    expect(requests).toEqual(['/new'])
+  })
+
+  it('loads an offscreen lazy frame immediately for an explicit reload', async (t) => {
+    let requests: string[] = []
+    let { frame, host } = await setupLazyFrame(
+      t,
+      (src) => {
+        requests.push(src)
+        return '<p>Explicitly loaded</p>'
+      },
+      { mode: 'server' },
+    )
+    await frame.reload()
+    expect(host.textContent).toBe('Explicitly loaded')
+    host.style.top = '0'
+    await waitForIntersection(host)
+    expect(requests).toEqual(['/lazy'])
+  })
+
+  it('preserves explicitly reloaded lazy frame content through parent updates', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let parent: Handle | undefined
+    function Entry(handle: Handle) {
+      parent = handle
+      return () => <Frame name="lazy" src="/lazy" loading="lazy" fallback={<p>Waiting</p>} />
+    }
+    let response = Promise.withResolvers<string>()
+    let root = createRoot(container, { frameInit: { resolveFrame: () => response.promise } })
+    t.after(() => root.dispose())
+    root.render(<Entry />)
+    root.flush()
+    invariant(parent)
+    let frame = parent.frames.get('lazy')
+    invariant(frame)
+
+    let reloaded = frame.reload()
+    expect(container.textContent).toBe('Waiting')
+    response.resolve('<p id="reloaded-content">Loaded</p>')
+    await reloaded
+    expect(container.querySelector('#reloaded-content')?.textContent).toBe('Loaded')
+
+    await parent.update()
+    expect(container.querySelector('#reloaded-content')?.textContent).toBe('Loaded')
+  })
+
+  it('loads a lazy frame when a large fallback overlaps the viewport', async (t) => {
+    container.style.cssText = 'position:fixed;top:-50000px;left:0'
+    let resolveFrame = mock.fn(() => '<p id="large-lazy-content">Loaded</p>')
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    let loaded = waitForElement('#large-lazy-content')
+    root.render(<Frame src="/large" loading="lazy" fallback={<p>Waiting</p>} />)
+    root.flush()
+    await waitForIntersection(container)
+    expect(resolveFrame).not.toHaveBeenCalled()
+    root.render(
+      <Frame
+        src="/large"
+        loading="lazy"
+        fallback={<section mix={css({ height: '100000px' })}>Waiting</section>}
+      />,
+    )
+    root.flush()
+    await loaded
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not restart a lazy load after replacement during fallback hydration', async (t) => {
+    let Fallback = clientEntry('/fallback.js#Fallback', function Fallback() {
+      return () => <p>Waiting</p>
+    })
+    document.body.innerHTML = await drain(
+      renderToStream(<Frame name="lazy" src="/lazy" loading="lazy" fallback={<Fallback />} />),
+    )
+    let requested = Promise.withResolvers<void>()
+    let module = Promise.withResolvers<typeof Fallback>()
+    let resolveFrame = mock.fn(() => '<p>Unexpected request</p>')
+    let app = run({
+      async loadModule() {
+        requested.resolve()
+        return await module.promise
+      },
+      resolveFrame,
+    })
+    t.after(() => app.dispose())
+    await requested.promise
+    let frame = app.frames.get('lazy')
+    invariant(frame)
+    await frame.replace('<p id="replacement">Replacement</p>')
+    module.resolve(Fallback)
+    await app.ready()
+    await waitForIntersection(document.body)
+    await waitForIntersection(document.body)
+    expect(resolveFrame).not.toHaveBeenCalled()
+    expect(document.getElementById('replacement')?.textContent).toBe('Replacement')
+  })
+
+  it('starts an eager load while a server-rendered lazy fallback is still hydrating', async (t) => {
+    let loading: 'lazy' | 'eager' = 'lazy'
+    let update: (() => void) | undefined
+    let Fallback = clientEntry('/fallback.js#Fallback', function Fallback() {
+      return () => <p>Waiting</p>
+    })
+    let Entry = clientEntry('/entry.js#Entry', function Entry(handle: Handle) {
+      update = () => void handle.update()
+      return () => <Frame src="/lazy" loading={loading} fallback={<Frame src="/fallback" />} />
+    })
+    document.body.innerHTML = await drain(
+      renderToStream(<Entry />, { resolveFrame: () => renderToStream(<Fallback />) }),
+    )
+    let requested = Promise.withResolvers<void>()
+    let module = Promise.withResolvers<typeof Fallback>()
+    let resolveFrame = mock.fn(() => '<p id="eager-content">Loaded</p>')
+    let app = run({
+      async loadModule(url) {
+        if (url === '/entry.js') return Entry
+        requested.resolve()
+        return await module.promise
+      },
+      resolveFrame,
+    })
+    t.after(() => {
+      module.resolve(Fallback)
+      app.dispose()
+    })
+    await app.ready()
+    await requested.promise
+    invariant(update)
+    loading = 'eager'
+    update()
+    app.flush()
+    await waitForIntersection(document.body)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    expect(document.getElementById('eager-content')?.textContent).toBe('Loaded')
+  })
+
+  it('loads lazy frames eagerly when IntersectionObserver is unavailable', async (t) => {
+    let original = globalThis.IntersectionObserver
+    Object.defineProperty(globalThis, 'IntersectionObserver', { value: undefined })
+    t.after(() => {
+      globalThis.IntersectionObserver = original
+    })
+    let resolveFrame = mock.fn(() => '<p id="unsupported-lazy-content">Loaded</p>')
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    let loaded = waitForElement('#unsupported-lazy-content')
+    root.render(<Frame src="/lazy" loading="lazy" fallback={<p>Waiting</p>} />)
+    root.flush()
+    await loaded
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps lazy frames deferred and refreshes loaded content without blocking ancestor reloads', async (t) => {
+    let fallback = <p>Waiting</p>
+    let renderPage = () =>
+      renderDocumentContent(
+        <section id="lazy-host" mix={css({ position: 'fixed', top: '100000px', left: 0 })}>
+          <Frame name="lazy" src="/lazy" loading="lazy" fallback={fallback} />
+        </section>,
+      )
+    document.documentElement.innerHTML = await renderPage()
+    let requests: string[] = []
+    let refresh = Promise.withResolvers<string>()
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src) {
+        requests.push(src)
+        if (src !== '/lazy') return renderPage()
+        return requests.filter((request) => request === '/lazy').length === 1
+          ? '<p id="lazy-content">Loaded</p>'
+          : refresh.promise
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    let frame = app.frames.get('lazy')
+    invariant(frame)
+    let events: string[] = []
+    frame.addEventListener('reloadStart', () => events.push('start'))
+    frame.addEventListener('reloadComplete', () => events.push('complete'))
+    fallback = <span>Waiting</span>
+    await app.frames.top.reload({ src: '/page' })
+    let host = document.getElementById('lazy-host')
+    invariant(host)
+    await waitForIntersection(host)
+    expect(requests).toEqual(['/page'])
+    expect(host.textContent).toBe('Waiting')
+    expect(events).toEqual(['start', 'complete'])
+
+    let loaded = waitForElement('#lazy-content')
+    host.style.top = '0'
+    await loaded
+    await waitForIntersection(host)
+    expect(events).toEqual(['start', 'complete'])
+    await app.frames.top.reload()
+    expect(document.getElementById('lazy-host')?.textContent).toBe('Loaded')
+    expect(requests).toEqual(['/page', '/lazy', '/page', '/lazy'])
+    expect(events).toEqual(['start', 'complete', 'start'])
+
+    let refreshed = new Promise<void>((resolve) => {
+      frame.addEventListener('reloadComplete', () => resolve(), { once: true })
+    })
+    refresh.resolve('<p id="refreshed-content">Refreshed</p>')
+    await refreshed
+    expect(document.getElementById('lazy-host')?.textContent).toBe('Refreshed')
+    expect(events).toEqual(['start', 'complete', 'start', 'complete'])
+  })
+
+  it('restarts a pending server-rendered lazy frame during an ancestor reload', async (t) => {
+    await assertPendingLazyFrameRestart(t, 'server')
+  })
+
+  it('supersedes a pending lazy request with inline eager SSR content', async (t) => {
+    await assertEagerSsrTakeover(t, false)
+  })
+
+  it('supersedes a pending lazy request with streamed eager SSR content', async (t) => {
+    await assertEagerSsrTakeover(t, true)
+  })
+
+  it('transfers an explicit lazy reload to eager SSR without duplicating reload events', async (t) => {
+    await assertEagerSsrTakeover(t, true, true)
+  })
+
+  it('restarts a settled aborted server lazy load when the next ancestor response arrives', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'server')
+  })
+
+  it('restarts a settled aborted client-created lazy load when the next ancestor response arrives', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'client')
+  })
+
+  it('restarts a settled aborted hydrated lazy load when the next ancestor response arrives', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'hydrated')
+  })
+
+  it('resumes an aborted server lazy load after the ancestor reload fails', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'server', { failAncestor: true })
+  })
+
+  it('resumes an aborted client-created lazy load after the ancestor reload fails', async (t) => {
+    await assertSettledLazyFrameRestart(t, 'client', { failAncestor: true })
+  })
+
+  it('preempts an initial client-created lazy request with an explicit reload', async (t) => {
+    await assertLazyReloadPreemption(t, 'client')
+  })
+
+  it('keeps an explicit reload from rearming an aborted client-created lazy request', async (t) => {
+    await assertLazyReloadPreemption(t, 'client', { ancestorReload: true })
+  })
+
+  it('keeps an explicit reload from rearming an aborted hydrated lazy request', async (t) => {
+    await assertLazyReloadPreemption(t, 'hydrated', { ancestorReload: true })
+  })
+
+  it('resumes a deferred client-created lazy frame after an aborted targeted navigation', async (t) => {
+    let requests: Array<{
+      src: string
+      signal: AbortSignal
+      response: ReturnType<typeof Promise.withResolvers<string>>
+    }> = []
+    let { frame, host } = await setupLazyFrame(t, (src, options) => {
+      invariant(options?.signal)
+      let { signal } = options
+      let response = Promise.withResolvers<string>()
+      signal.addEventListener('abort', () => response.reject(signal.reason), { once: true })
+      requests.push({ src, signal, response })
+      return response.promise
+    })
+    expect(requests.length).toBe(0)
+    let events: string[] = []
+    frame.addEventListener('reloadStart', () => events.push('start'))
+    frame.addEventListener('reloadComplete', () => events.push('complete'))
+
+    frame.src = '/targeted'
+    let controller = new AbortController()
+    let navigation = reloadFrameForNavigation(frame, { signal: controller.signal })
+    expect(requests.length).toBe(1)
+    controller.abort()
+    await navigation.finished
+    expect(requests[0]?.signal.aborted).toBe(true)
+    expect(events).toEqual(['start', 'complete'])
+
+    host.style.top = '0'
+    await waitForIntersection(host)
+    expect(requests.length).toBe(2)
+    expect(requests[1]?.src).toBe('/targeted')
+    expect(requests[1]?.signal.aborted).toBe(false)
+    let loaded = waitForElement('#recovered-lazy-content')
+    requests[1]?.response.resolve('<p id="recovered-lazy-content">Recovered</p>')
+    await loaded
+    await waitForIntersection(host)
+    expect(host.textContent).toContain('Recovered')
+    expect(events).toEqual(['start', 'complete'])
+  })
+
+  it('does not resume lazy observation after a frame changes to eager', async (t) => {
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    let loading: 'lazy' | 'eager' = 'lazy'
+    let parent: Handle | undefined
+    function Entry(handle: Handle) {
+      parent = handle
+      return () => <Frame name="lazy" src="/lazy" loading={loading} fallback={<p>Waiting</p>} />
+    }
+    let requests: AbortSignal[] = []
+    let root = createRoot(container, {
+      frameInit: {
+        resolveFrame(_src, options) {
+          invariant(options?.signal)
+          let { signal } = options
+          requests.push(signal)
+          return new Promise<string>((_resolve, reject) => {
+            signal.addEventListener('abort', () => reject(signal.reason), { once: true })
+          })
+        },
+      },
+    })
+    t.after(() => root.dispose())
+    root.render(<Entry />)
+    root.flush()
+    invariant(parent)
+    let frame = parent.frames.get('lazy')
+    invariant(frame)
+
+    loading = 'eager'
+    await parent.update()
+    expect(requests.length).toBe(1)
+    let controller = new AbortController()
+    let navigation = reloadFrameForNavigation(frame, { signal: controller.signal })
+    expect(requests.length).toBe(2)
+    controller.abort()
+    await navigation.finished
+
+    container.style.top = '0'
+    await waitForIntersection(container)
+    expect(requests.length).toBe(2)
+    expect(requests.every((signal) => signal.aborted)).toBe(true)
+  })
+
+  it('preserves a lazy fallback when navigation aborts before the first streamed content', async (t) => {
+    let reading = Promise.withResolvers<void>()
+    let stream = new ReadableStream<Uint8Array>({
+      pull() {
+        if (stream.locked) reading.resolve()
+      },
+    })
+    let response = Promise.withResolvers<string>()
+    let requests: string[] = []
+    let warn = t.mock.method(console, 'warn', () => {})
+    let { frame, host } = await setupLazyFrame(t, (src) => {
+      requests.push(src)
+      return requests.length === 1 ? new Response(stream) : response.promise
+    })
+    let fallback = document.getElementById('waiting')
+    invariant(fallback)
+
+    frame.src = '/targeted'
+    let controller = new AbortController()
+    let navigation = reloadFrameForNavigation(frame, { signal: controller.signal })
+    await reading.promise
+    expect(document.getElementById('waiting')).toBe(fallback)
+    controller.abort()
+    await navigation.finished
+    await waitForIntersection(host)
+    expect(document.getElementById('waiting')).toBe(fallback)
+    expect(requests).toEqual(['/targeted'])
+    expect(warn).not.toHaveBeenCalled()
+
+    host.style.top = '0'
+    await waitForIntersection(host)
+    expect(requests).toEqual(['/targeted', '/targeted'])
+    let loaded = waitForElement('#recovered-stream-content')
+    response.resolve('<p id="recovered-stream-content">Recovered</p>')
+    await loaded
+    expect(fallback.isConnected).toBe(false)
+  })
+
+  it('reports failed server-rendered lazy frame requests once', async (t) => {
+    let failure = new Error('Frame request failed')
+    let errors: unknown[] = []
+    let { app, host } = await setupLazyFrame(
+      t,
+      () => {
+        throw failure
+      },
+      { mode: 'server' },
+    )
+    app.addEventListener('error', (event) => errors.push(event.error))
+    host.style.top = '0'
+    await waitForIntersection(host)
+    expect(errors).toEqual([failure])
+    expect(host.textContent).toBe('Waiting')
+  })
+
+  it('reports failed lazy frame requests without retrying on another intersection', async (t) => {
+    let failure = new Error('Frame request failed')
+    let errors: unknown[] = []
+    let resolveFrame = mock.fn(() => {
+      throw failure
+    })
+    let root = createRoot(container, { frameInit: { resolveFrame } })
+    t.after(() => root.dispose())
+    let reported = Promise.withResolvers<void>()
+    root.addEventListener('error', (event) => {
+      errors.push(event.error)
+      reported.resolve()
+    })
+    root.render(<Frame src="/failure" loading="lazy" fallback={<p>Waiting</p>} />)
+    root.flush()
+    await reported.promise
+    expect(errors).toEqual([failure])
+    expect(container.textContent).toBe('Waiting')
+    container.style.cssText = 'position:fixed;top:100000px;left:0'
+    await waitForIntersection(container)
+    container.style.top = '0'
+    await waitForIntersection(container)
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+  })
+
   it('renders a client-created Frame with createRoot frameInit', async () => {
     let rootContainer = document.createElement('div')
     document.body.appendChild(rootContainer)
@@ -5603,7 +7879,7 @@ describe('run', () => {
     root.flush()
     expect(rootContainer.querySelector('#fallback-a')?.textContent).toBe('Loading A…')
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#frame-a')
     expect(rootContainer.querySelector('#frame-a')?.textContent).toBe('A')
 
     let frameA = rootContainer.querySelector('#frame-a')
@@ -5619,7 +7895,7 @@ describe('run', () => {
 
     resolveNextFrame('<p id="frame-b">B</p>')
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitForElement('#frame-b')
     expect(rootContainer.querySelector('#frame-b')?.textContent).toBe('B')
     root.dispose()
   })
@@ -8557,6 +10833,59 @@ describe('run', () => {
     expect(rootContainer.querySelector('#result')?.textContent).toBe('Resolved content')
     expect(rootContainer.querySelector('#fallback')).toBe(null)
     root.dispose()
+  })
+
+  it('reloads a committed client frame in place when src changes while a sub-frame is loading', async (t) => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+    t.after(() => rootContainer.remove())
+
+    let SlowEntry = clientEntry('/assets/slow-entry.js#SlowEntry', function SlowEntry() {
+      return () => <p id="slow">Slow</p>
+    })
+    let firstContent = await drain(
+      renderToStream(
+        <section id="first">
+          <Frame src="/sub" />
+        </section>,
+        { resolveFrame: () => renderFrameContent(<SlowEntry />) },
+      ),
+    )
+    // The parent commits before its sub-frame is ready, because the sub-frame's client entry
+    // module is still loading.
+    let [slowModule, resolveSlowModule] = withResolvers<Function>()
+    let [slowModuleRequested, markSlowModuleRequested] = withResolvers<void>()
+    let [secondContent, resolveSecondContent] = withResolvers<string>()
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        resolveFrame(src) {
+          if (src === '/first') return firstContent
+          if (src === '/second') return secondContent
+          throw new Error(`Unexpected frame src: ${src}`)
+        },
+        loadModule() {
+          markSlowModuleRequested()
+          return slowModule
+        },
+      },
+    })
+    t.after(() => root.dispose())
+    let fallback = <p id="fallback">Loading...</p>
+
+    root.render(<Frame src="/first" fallback={fallback} />)
+    root.flush()
+    await slowModuleRequested
+    expect(rootContainer.querySelector('#first')).not.toBe(null)
+
+    let renderedText = recordRenderedText(rootContainer)
+    root.render(<Frame src="/second" fallback={fallback} />)
+    root.flush()
+    resolveSecondContent('<p id="second">Second</p>')
+    await waitForText('#second', 'Second', rootContainer)
+
+    expect(renderedText.stop().some((text) => text.includes('Loading...'))).toBe(false)
+    expect(rootContainer.querySelector('#first')).toBe(null)
+    resolveSlowModule(SlowEntry)
   })
 
   it('loads new client-created frame src values during server-driven entry rerenders', async () => {

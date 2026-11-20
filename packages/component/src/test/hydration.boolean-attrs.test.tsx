@@ -1,5 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
+import { on } from '../index.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -132,5 +133,71 @@ describe('hydration', () => {
       expect(container.querySelector('button')).toBe(existingButton)
       expect(existingButton.disabled).toBe(false)
     })
+  })
+
+  it('keeps and replays form control edits made before hydration', async () => {
+    let events: string[] = []
+    let form = (
+      <form
+        mix={[
+          on('input', (event) => {
+            invariant(event.target instanceof HTMLInputElement)
+            let { name, type, checked, value } = event.target
+            events.push(`input ${name}=${type === 'checkbox' ? checked : value}`)
+          }),
+          on('change', (event) => {
+            invariant(event.target instanceof HTMLInputElement)
+            events.push(`change ${event.target.name}`)
+          }),
+        ]}
+      >
+        <input name="q" value="" />
+        <input name="agree" type="checkbox" checked={false} />
+      </form>
+    )
+    container.innerHTML = await renderToString(form)
+    let text = container.querySelector<HTMLInputElement>('input[name="q"]')
+    let checkbox = container.querySelector<HTMLInputElement>('input[name="agree"]')
+    invariant(text && checkbox)
+    text.value = 'accessibility'
+    checkbox.checked = true
+
+    let root = createRoot(container)
+    root.render(form)
+    root.flush()
+
+    expect(text.value).toBe('accessibility')
+    expect(checkbox.checked).toBe(true)
+    expect(events).toEqual([
+      'input q=accessibility',
+      'change q',
+      'input agree=true',
+      'change agree',
+    ])
+  })
+
+  it('does not replay server values the browser normalized', async () => {
+    let events: string[] = []
+    let form = (
+      <form
+        mix={on('input', (event) => {
+          invariant(event.target instanceof HTMLInputElement)
+          events.push(event.target.name)
+        })}
+      >
+        <input name="color" type="color" value="#FF0000" />
+        <input name="email" type="email" value=" a@b.co " />
+        <input name="range" type="range" max="100" value="150" />
+        <input name="number" type="number" value="abc" />
+        <input name="text" value={'a\nb'} />
+      </form>
+    )
+    container.innerHTML = await renderToString(form)
+
+    let root = createRoot(container)
+    root.render(form)
+    root.flush()
+
+    expect(events).toEqual([])
   })
 })

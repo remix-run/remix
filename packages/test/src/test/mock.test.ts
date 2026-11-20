@@ -69,6 +69,34 @@ describe('mock function controls', () => {
     }
   })
 
+  it('creates method and accessor mocks without calling a mocked array validator', (t) => {
+    let target = {
+      method: () => 1,
+      get value() {
+        return 1
+      },
+      set value(_value: number) {},
+    }
+    let isArray = t.mock.method(Array, 'isArray', () => true)
+    try {
+      t.mock.method(target, 'method', () => 2)
+      t.mock.getter(target, 'value', () => 3)
+      let setter = t.mock.setter(target, 'value', () => {})
+      assert.equal(target.method(), 2)
+      assert.equal(target.value, 3)
+      target.value = 4
+      assert.equal(setter.mock.calls[0].arguments[0], 4)
+      isArray.mock.mockImplementation((value: unknown): value is unknown[] => false)
+      assert.throws(
+        () => Reflect.apply(t.mock.method, t.mock, [target, 'method', undefined, []]),
+        /options must be an object/,
+      )
+      assert.equal(isArray.mock.callCount(), 0)
+    } finally {
+      isArray.mock.restore()
+    }
+  })
+
   it('automatically restores Object.defineProperty without calling its replacement', async () => {
     let original = Object.defineProperty
     let obj = { method: () => 'original' }

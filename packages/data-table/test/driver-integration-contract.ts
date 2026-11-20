@@ -37,6 +37,16 @@ const tasks = table({
   },
 })
 
+const settings = table({
+  name: 'settings',
+  columns: {
+    id: column.integer(),
+    data: column.json(),
+    enabled: column.boolean().nullable(),
+    at: column.timestamp().nullable(),
+  },
+})
+
 const accountProjects = hasMany(accounts, projects)
 const accountTasks = hasManyThrough(accounts, tasks, {
   through: accountProjects,
@@ -51,6 +61,30 @@ export type IntegrationContractOptions = {
 export function runDriverIntegrationContract(options: IntegrationContractOptions): void {
   beforeEach(async () => {
     await options.resetDatabase()
+  })
+
+  it('round-trips json, boolean, and timestamp column values', async function () {
+    let db = options.createDatabase()
+    let at = new Date('2026-06-01T12:00:00.000Z')
+
+    await db.query(settings).insertMany([
+      { id: 1, data: { theme: 'dark', tags: ['a'] }, enabled: true, at },
+      { id: 2, data: ['red', 'blue'], enabled: false, at: null },
+      { id: 3, data: 'light', enabled: null, at: null },
+    ])
+
+    let rows = await db.query(settings).orderBy('id').all()
+    assert.deepEqual(rows, [
+      { id: 1, data: { theme: 'dark', tags: ['a'] }, enabled: true, at },
+      { id: 2, data: ['red', 'blue'], enabled: false, at: null },
+      { id: 3, data: 'light', enabled: null, at: null },
+    ])
+
+    let enabled = await db.query(settings).where({ enabled: true }).all()
+    assert.deepEqual(
+      enabled.map((row) => row.id),
+      [1],
+    )
   })
 
   it('supports joined alias select with groupBy/having', async function () {

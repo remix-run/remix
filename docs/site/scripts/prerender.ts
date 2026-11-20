@@ -47,7 +47,9 @@ const guidePaths = (await loadDocsChapterSummaries('production')).flatMap((chapt
 ])
 const paths = [
   routes.home.href(),
+  routes.homeMarkdown.href(),
   routes.api.href(),
+  routes.apiMarkdown.href(),
   routes.lookup.href(),
   // The overview embeds this frame, and the crawl doesn't follow frame sources.
   routes.guides.examples.show.href({ chapter: 'overview', example: 'install-command' }),

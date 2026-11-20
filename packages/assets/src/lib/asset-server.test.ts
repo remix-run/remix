@@ -29,6 +29,7 @@ import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
 import { hashContent } from './fingerprint.ts'
 import type { ModuleLoader } from './loaders.ts'
+import { isNoEntityError } from './fs-errors.ts'
 
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
 
@@ -158,15 +159,6 @@ function getWatchEventFilePath(filePath: string): string {
 
 function getBrowserHmrWatchedFilePath(filePath: string): string {
   return normalizeWindowsPath(getWatchEventFilePath(filePath))
-}
-
-function isNoEntityError(error: unknown): error is NodeJS.ErrnoException {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }
 
 async function getCompiledCodeAndSourceMap(
@@ -690,7 +682,9 @@ describe('asset-server', () => {
   })
 
   it('picks up source file changes without watch mode', async () => {
-    await write(dir, 'app/content/value.txt', 'hello\n')
+    let filePath = await write(dir, 'app/content/value.txt', 'hello\n')
+    // Same-size writes can share an mtime on filesystems with coarse timestamp resolution.
+    await fs.utimes(filePath, 1, 1)
     let assetServer = createTestServer(dir, {
       files: {
         extensions: ['.txt'],
@@ -704,6 +698,7 @@ describe('asset-server', () => {
     assert.equal(await firstResponse.text(), 'hello\n')
 
     await write(dir, 'app/content/value.txt', 'world\n')
+    await fs.utimes(filePath, 2, 2)
 
     let secondResponse = await get(assetServer, '/assets/app/content/value.txt')
     assert.ok(secondResponse)
@@ -2437,11 +2432,13 @@ describe('asset-server', () => {
   })
 
   it('updates source file fingerprints when source files change without watch mode', async () => {
-    await write(
+    let filePath = await write(
       dir,
       'app/images/logo.svg',
       '<svg xmlns="http://www.w3.org/2000/svg"><title>hello</title></svg>\n',
     )
+    // Same-size writes can share an mtime on filesystems with coarse timestamp resolution.
+    await fs.utimes(filePath, 1, 1)
     let assetServer = createTestServer(dir, {
       files: {
         extensions: ['.svg'],
@@ -2459,6 +2456,7 @@ describe('asset-server', () => {
       'app/images/logo.svg',
       '<svg xmlns="http://www.w3.org/2000/svg"><title>world</title></svg>\n',
     )
+    await fs.utimes(filePath, 2, 2)
 
     let secondHref = await assetServer.getHref('app/images/logo.svg')
     assert.notEqual(secondHref, firstHref)
@@ -4184,6 +4182,54 @@ describe('asset-server', () => {
     assert.match(body, /import "\/assets\/app\/shared\.ts"/)
     assert.match(body, /import \{ value \} from "\/assets\/app\/value\.ts"/)
     assert.doesNotMatch(body, /(?:barrel|unused)\.ts/)
+    assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+      '/assets/app/entry.ts',
+      '/assets/app/shared.ts',
+      '/assets/app/value.ts',
+      '/assets/app/other.ts',
+    ])
+  })
+
+  it('preserves first evaluation through implementation modules after nested imports are rewritten', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: ['./shared.ts', './other.ts'] })
+    await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { unused } from "./unused.ts"', 'export { value } from "./value.ts"'].join('\n'),
+    )
+    await write(
+      dir,
+      'app/unused.ts',
+      'import { shared } from "./shared-barrel.ts"\nexport const unused = shared',
+    )
+    await write(
+      dir,
+      'app/value.ts',
+      [
+        'import "./other.ts"',
+        'import { shared } from "./shared-barrel.ts"',
+        'export const value = shared',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/shared-barrel.ts',
+      ['export { shared } from "./shared.ts"', 'export { extra } from "./extra.ts"'].join('\n'),
+    )
+    await write(dir, 'app/shared.ts', 'globalThis.order = ["shared"]\nexport let shared = 1')
+    await write(dir, 'app/other.ts', 'globalThis.order.push("other")')
+    await write(dir, 'app/extra.ts', 'export const extra = "extra"')
+    let assetServer = createTestServer(dir)
+
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+    assert.match(body, /import "\/assets\/app\/shared\.ts"/)
+    assert.ok(
+      getLineAndColumn(body, '/assets/app/shared.ts').line <
+        getLineAndColumn(body, '/assets/app/value.ts').line,
+    )
+    assert.doesNotMatch(body, /barrel|unused|extra/)
     assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
       '/assets/app/entry.ts',
       '/assets/app/shared.ts',
@@ -10960,6 +11006,28 @@ describe('asset-server', () => {
     assert.equal(receivedError.code, 'IMPORT_RESOLUTION_FAILED')
     assert.match(receivedError.message, /Failed to resolve import/)
     assert.match(receivedError.message, /"\.\/missing\.css"/)
+  })
+
+  it('calls onError for CSS imports that traverse through a file', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      '@import "./theme.css/dark.css";\nbody { color: red; }\n',
+    )
+    await write(dir, 'app/styles/theme.css', 'body { color: blue; }\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'IMPORT_RESOLUTION_FAILED')
+    assert.match(receivedError.message, /"\.\/theme\.css\/dark\.css"/)
   })
 
   it('calls onError for unsupported CSS url dependencies when files are not configured', async () => {

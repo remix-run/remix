@@ -10,6 +10,7 @@ import { isAbsoluteFilePath, normalizeFilePath, resolveFilePath } from './paths.
 import type { AssetRouteMatch, CompiledRoutes } from './routes.ts'
 import { supportedScriptExtensions } from './scripts/resolve.ts'
 import { isStyleFilePath } from './styles/compiler.ts'
+import { isNoEntityError } from './fs-errors.ts'
 
 const scriptExtensions = new Set<string>(supportedScriptExtensions)
 const globSyntaxPattern = /[*?[\]{}()!+@]/
@@ -187,7 +188,7 @@ async function collectFiles(root: string, filePaths: Set<string>): Promise<void>
   try {
     stat = await fsPromises.stat(root)
   } catch (error) {
-    if (isPathNotFoundError(error)) return
+    if (isNoEntityError(error)) return
     throw error
   }
 
@@ -213,17 +214,7 @@ async function pathExists(filePath: string): Promise<boolean> {
     await fsPromises.access(filePath)
     return true
   } catch (error) {
-    if (isPathNotFoundError(error)) return false
+    if (isNoEntityError(error)) return false
     throw error
   }
-}
-
-function isPathNotFoundError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    (error.code === 'ENOENT' || error.code === 'ENOTDIR')
-  )
 }

@@ -9,7 +9,6 @@ import {
 } from './frame-runtime.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps, setSelectDefaultValue, setSelectValue } from './core/props.ts'
-import { isMixinDescriptor } from './core/mix.ts'
 import {
   isEmptyChild,
   isPrimitiveChild,
@@ -23,13 +22,14 @@ import { normalizeUnsafeHTMLProps } from './unsafe-html.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
 import { isEntry, skipComments, logHydrationMismatch } from './client-entries.ts'
-import type { Scheduler } from './scheduler.ts'
+import type { Scheduler } from './vdom.ts'
 import {
   bindMixinRuntime,
   cancelPendingMixinRemoval,
   dispatchMixinBeforeUpdate,
   dispatchMixinCommit,
   getMixinRuntimeSignal,
+  isMixinDescriptor,
   prepareMixinRemoval,
   resolveMixedProps,
   teardownMixins,
@@ -39,6 +39,7 @@ import {
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
+import { isCommentNode, isFrameStart, isHydrationStart } from './stream-protocol.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 
@@ -388,8 +389,11 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
-export const defaultStyleManager: StyleManager =
-  typeof window !== 'undefined' ? createStyleManager() : (null as unknown as StyleManager)
+let defaultStyleManager: StyleManager | undefined
+
+export function getDefaultStyleManager(): StyleManager {
+  return (defaultStyleManager ??= createStyleManager())
+}
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -850,6 +854,15 @@ export function diffVNodes(
     }
     case 'fragment': {
       let childInputs = next._children
+      // `anchor` marks the end of the parent's child list, not the end of this
+      // fragment, so new children would land after the fragment's siblings.
+      // Insert them right after the fragment's current DOM instead, which keeps
+      // its range contiguous for a later keyed move.
+      let currLastDom = findLastDomAnchor(curr)
+      let fragmentAnchor =
+        currLastDom && currLastDom.parentNode === domParent
+          ? (currLastDom.nextSibling ?? undefined)
+          : (findNextSiblingDomAnchor(curr, true) ?? anchor)
       let committed = beginFragmentNode(next, vParent, svg)
       committed._children = diffChildren(
         (curr as CommittedFragmentNode)._children,
@@ -858,7 +871,7 @@ export function diffVNodes(
         committed,
         context,
         undefined,
-        anchor,
+        fragmentAnchor,
       )
       return committed
     }
@@ -908,7 +921,7 @@ function replace(
     }
   }
 
-  let replacementAnchor = findNextSiblingDomAnchor(curr) ?? anchor
+  let replacementAnchor = findNextSiblingDomAnchor(curr, true) ?? anchor
   remove(curr, domParent, context)
   return insert(next, domParent, vParent, context, replacementAnchor)
 }
@@ -1099,14 +1112,31 @@ function mountHostNode(
 ): CommittedHostNode {
   let hostProps = resolved.props
   let childInputs = node._children
-  // Server option attributes already reflect the select's winning value. Preserve them and edits.
-  patchHostProps(
-    {},
-    childCursor && dom instanceof HTMLOptionElement
-      ? { ...hostProps, selected: undefined }
-      : hostProps,
-    dom,
-  )
+  let hydratedProps = hostProps
+  let editedBeforeHydration: 'value' | 'checked' | undefined
+  if (childCursor) {
+    // Server option attributes already reflect the select's winning value. Preserve them and edits.
+    if (dom instanceof HTMLOptionElement) hydratedProps = { ...hostProps, selected: undefined }
+    // Keep what the user typed or toggled before this control hydrated. It's replayed below.
+    if (dom instanceof HTMLInputElement && (dom.type === 'checkbox' || dom.type === 'radio')) {
+      if (dom.checked !== dom.defaultChecked) editedBeforeHydration = 'checked'
+    } else if (
+      (dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement) &&
+      dom.value !== dom.defaultValue
+    ) {
+      // Browsers sanitize some server values, such as lowercasing colors or clamping ranges, so
+      // compare against the server value as this control holds it.
+      let pristine = dom.cloneNode()
+      if (pristine instanceof HTMLInputElement || pristine instanceof HTMLTextAreaElement) {
+        pristine.value = dom.defaultValue
+        if (pristine.value !== dom.value) editedBeforeHydration = 'value'
+      }
+    }
+    if (editedBeforeHydration) {
+      hydratedProps = { ...hydratedProps, [editedBeforeHydration]: undefined }
+    }
+  }
+  patchHostProps({}, hydratedProps, dom)
   let committed = commitHostNode(node, vParent, svg, dom, resolved)
 
   if (hostProps.innerHTML != null) {
@@ -1129,6 +1159,29 @@ function mountHostNode(
 
   setupHostNode(committed, context.scheduler)
   bindNodeMixRuntime(committed, context, false, parent)
+
+  if (editedBeforeHydration) {
+    // Replay the edit once handlers are attached so app state catches up with what the user sees.
+    context.scheduler.enqueueTasks([
+      () => {
+        if (!dom.isConnected) return
+        // Selecting a radio unchecks the rest of its group, and only the selected one fires events.
+        if (dom instanceof HTMLInputElement && dom.type === 'radio' && !dom.checked) {
+          return
+        }
+        dom.dispatchEvent(new Event('input', { bubbles: true }))
+        // These controls commit `change` while still focused. Others, like text, number, and
+        // textarea, still fire their own `change` on blur.
+        if (
+          dom.ownerDocument.activeElement !== dom ||
+          (dom instanceof HTMLInputElement &&
+            ['checkbox', 'radio', 'range', 'color', 'file'].includes(dom.type))
+        ) {
+          dom.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+      },
+    ])
+  }
   return committed
 }
 
@@ -1164,11 +1217,15 @@ function insert(
     hydrationNode = null
   }
 
-  // Components, fragments, and empty nodes do not claim DOM nodes. Preserve
-  // client entry markers until their descendants can claim the boundary.
+  // Keep client entry markers for descendants or following siblings to claim. Empty strings
+  // need a placeholder before the marker because the server emits no Text node for them.
   hydrationNode = skipCommentsExceptBoundaryStart(
     hydrationNode ?? null,
-    node.kind === 'component' || node.kind === 'fragment' || node.kind === 'empty',
+    node.kind === 'component' ||
+      node.kind === 'fragment' ||
+      node.kind === 'empty' ||
+      (node.kind === 'text' && node._text === ''),
+    anchor,
   )
 
   if (hydrationNode && anchor && hydrationNode === anchor) {
@@ -1180,7 +1237,7 @@ function insert(
     vParent.kind !== 'root' &&
     node.kind === 'component' &&
     isEntry(node.type) &&
-    hydrationNode instanceof Comment
+    isCommentNode(hydrationNode)
   ) {
     let runtime = getFrameRuntime(frame)
     let pending = runtime?.pendingClientEntries.get(hydrationNode)
@@ -1251,7 +1308,10 @@ function insert(
       return commitTextNode(node, vParent, svg, hydrationNode)
     }
     let dom = document.createTextNode(node._text)
-    insertDomNode(dom, domParent, anchor)
+    // The server renders nothing for an empty string, so hydration reaches the next sibling
+    // instead of a Text node. Insert before that sibling, where the child belongs, and leave it
+    // for the next child to claim.
+    insertDomNode(dom, domParent, hydrationNode?.parentNode === domParent ? hydrationNode : anchor)
     return commitTextNode(node, vParent, svg, dom)
   }
 
@@ -1367,23 +1427,15 @@ function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
 function skipCommentsExceptBoundaryStart(
   cursor: Node | null,
   preserveClientEntry: boolean,
+  anchor?: Node,
 ): Node | null {
   while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
-    if (isFrameStartComment(cursor)) return cursor
-    if (preserveClientEntry && isCommentNode(cursor) && cursor.data.trim().startsWith('rmx:h:')) {
-      return cursor
-    }
+    if (cursor === anchor) return cursor
+    if (isFrameStart(cursor)) return cursor
+    if (preserveClientEntry && isHydrationStart(cursor)) return cursor
     cursor = cursor.nextSibling
   }
   return cursor
-}
-
-export function isFrameStartComment(node: Node | null | undefined): node is Comment {
-  return isCommentNode(node) && node.data.trim().startsWith('rmx:f:')
-}
-
-function isCommentNode(node: Node | null | undefined): node is Comment {
-  return node?.nodeType === Node.COMMENT_NODE
 }
 
 export function renderComponent(
@@ -1635,11 +1687,13 @@ function diffChildren(
     return committed as CommittedVNode[]
   }
 
-  // Only bulk-clear when at least one committed child is being removed.
+  // Only bulk-clear when at least one committed child is being removed. A
+  // fragment shares its DOM parent with its siblings, so it can't clear it.
   if (
     curr.length > 0 &&
     next.length === 0 &&
     anchor === undefined &&
+    vParent.kind !== 'fragment' &&
     !parentUsesInnerHTML(vParent) &&
     canBulkClearChildren(curr)
   ) {
@@ -1771,19 +1825,53 @@ function patchKeyedChildren(
     }
   }
 
+  // Stable children keep their DOM position, so a new child can be inserted
+  // directly before the next stable sibling instead of at the end of the list
+  // and moved by the placement pass. Hydration keeps the list end anchor
+  // because it marks where adoption stops.
+  let stableIndexes = matchAnalysis.canSkipPlacement ? null : lisMatches(matches, curr)
+  let nextStableCursor = 0
+  // The cached anchor stays valid for new children before `stableAnchorIndex`
+  // because that stable child has not been diffed yet
+  let stableAnchorIndex = -1
+  let stableAnchor = anchor
+
   for (let index = 0; index < next.length; index++) {
     let oldIndex = matches[index]
     let oldNode = oldIndex >= 0 ? curr[oldIndex] : null
+    let insertAnchor = anchor
 
-    committed[index] = diffVNodes(oldNode, next[index], domParent, vParent, context, anchor, cursor)
+    if (!oldNode && stableIndexes && !cursor) {
+      if (stableAnchorIndex < index) {
+        stableAnchorIndex = next.length
+        stableAnchor = anchor
+        while (nextStableCursor < stableIndexes.length) {
+          let stableIndex = stableIndexes[nextStableCursor++]
+          if (stableIndex < index) continue
+          stableAnchorIndex = stableIndex
+          stableAnchor = findFirstDomAnchor(curr[matches[stableIndex]]) ?? anchor
+          break
+        }
+      }
+      insertAnchor = stableAnchor
+    }
+
+    committed[index] = diffVNodes(
+      oldNode,
+      next[index],
+      domParent,
+      vParent,
+      context,
+      insertAnchor,
+      cursor,
+    )
   }
   let committedChildren = committed as CommittedVNode[]
 
-  if (matchAnalysis.canSkipPlacement) {
+  if (!stableIndexes) {
     return committedChildren
   }
 
-  let stableIndexes = lisMatches(matches)
   let stableCursor = stableIndexes.length - 1
   let placementAnchor: Node | null = anchor ?? null
 
@@ -1989,13 +2077,16 @@ function analyzeKeyedChildMatches(
   return { hasRemovals, canSkipPlacement }
 }
 
-function lisMatches(matches: readonly number[]): number[] {
+function lisMatches(matches: readonly number[], curr: CommittedVNode[]): number[] {
   let predecessors = Array.from<number>({ length: matches.length })
   let tails: number[] = []
 
   for (let index = 0; index < matches.length; index++) {
     let value = matches[index] + 1
-    if (value === 0) continue
+    // A matched child with no DOM yet can't be stable: if it starts rendering
+    // DOM, `replace()` finds an insertion point from the old child order, which
+    // a reorder has already invalidated, so the placement pass has to move it.
+    if (value === 0 || !findFirstDomAnchor(curr[matches[index]])) continue
 
     let low = 0
     let high = tails.length
@@ -2032,6 +2123,9 @@ function placeVNode(node: CommittedVNode, domParent: ParentNode, anchor: Node | 
   if (!lastDom) return
   if (anchor && domRangeContainsNode(firstDom, lastDom, anchor)) return
   if (firstDom === anchor) return
+  // Re-inserting a node that is already in place still disconnects and
+  // reconnects it, which runs custom element callbacks and resets state
+  if (lastDom.nextSibling === anchor) return
 
   moveDomRange(domParent, firstDom, lastDom, anchor)
 }
@@ -2094,15 +2188,21 @@ function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
   return true
 }
 
+// During a diff the caller already has the end anchor of the enclosing
+// fragment, so `stopAtFragmentEnd` returns null there instead of walking the
+// fragment's old siblings, which a keyed diff may have reordered or grown
 export function findNextSiblingDomAnchor(
   curr: CommittedVNode | MountingComponentNode,
+  stopAtFragmentEnd = false,
 ): Node | null {
   let vParent = curr._parent
-  if (vParent.kind === 'component') return findNextSiblingDomAnchor(vParent)
+  if (vParent.kind === 'component') return findNextSiblingDomAnchor(vParent, stopAtFragmentEnd)
   let children = vParent._children
   if (children.length === 0) {
     if (vParent.kind === 'root') return vParent._rangeEnd ?? null
-    if (vParent.kind === 'fragment') return findNextSiblingDomAnchor(vParent)
+    if (vParent.kind === 'fragment') {
+      return stopAtFragmentEnd ? null : findNextSiblingDomAnchor(vParent)
+    }
     return null
   }
 
@@ -2110,11 +2210,13 @@ export function findNextSiblingDomAnchor(
   if (idx === -1) return null
   for (let i = idx + 1; i < children.length; i++) {
     let dom = findFirstDomAnchor(children[i])
-    if (dom) return dom
+    // During a keyed diff `children` is still the old list, so a sibling may
+    // already have been removed from the DOM
+    if (dom?.parentNode) return dom
   }
 
   if (isFragmentNode(vParent)) {
-    return findNextSiblingDomAnchor(vParent)
+    return stopAtFragmentEnd ? null : findNextSiblingDomAnchor(vParent)
   }
 
   return vParent.kind === 'root' ? (vParent._rangeEnd ?? null) : null

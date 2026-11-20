@@ -2,6 +2,19 @@
 
 This is the changelog for [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Fix cases where the dev server could stop responding to requests, miss file changes, or crash: ([#12198](https://github.com/remix-run/remix/pull/12198))
+  - Requests waiting on `createHmrReadyFetch()` no longer hang forever when a restart is requested while a hot update is still being accepted, for example when an accept handler asks for a restart because a component module's client entries changed.
+  - A file change made right after the server reports ready is no longer missed. `ready()` now also waits until newly watched directories are being watched.
+  - Changes to the files a server module imports are no longer missed after that module is hot updated. Previously the runner stopped watching the module's unchanged imports once the update was accepted.
+  - Changes to watched server files are no longer missed after the runner stops watching a directory that contains another watched directory.
+  - A file watcher error is now logged instead of crashing the dev server.
+
+- Changing files while the previous server process is still shutting down no longer starts an extra server process that keeps running in the background. The runner now spawns a single replacement once the previous process exits. ([#12199](https://github.com/remix-run/remix/pull/12199))
+
 ## v1.0.0
 
 ### Major Changes

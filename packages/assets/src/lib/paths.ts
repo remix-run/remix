@@ -1,4 +1,5 @@
 import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const windowsDriveLetterRE = /^[A-Za-z]:\//
 const uncPrefixRE = /^\/\/[^/]+\/[^/]+/
@@ -51,6 +52,24 @@ export function resolveFilePath(rootDir: string, filePath: string): string {
   }
 
   return normalizeFilePath(`${rootDir.replace(/\/+$/, '')}/${normalizeWindowsPath(filePath)}`)
+}
+
+export function resolveInputFilePath(rootDir: string, filePath: string): string {
+  if (filePath.startsWith('file://')) {
+    return normalizeFilePath(fileURLToPath(new URL(filePath)))
+  }
+
+  if (filePath.includes('://')) {
+    throw new TypeError(`Expected a file path or file:// URL, received "${filePath}"`)
+  }
+
+  return resolveFilePath(rootDir, filePath)
+}
+
+export function isSameOrDescendantPath(filePath: string, directoryPath: string): boolean {
+  let normalizedDirectoryPath = directoryPath.replace(/\/+$/, '')
+
+  return filePath === normalizedDirectoryPath || filePath.startsWith(`${normalizedDirectoryPath}/`)
 }
 
 export function getFilePathDirectory(filePath: string): string {

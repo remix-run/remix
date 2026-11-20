@@ -1,12 +1,5 @@
-import type { FrameContent, FrameResolution } from './component.ts'
 import type { RemixNode } from './core/vnode.ts'
-
-type SPAResponseData = {
-  node: RemixNode
-  redirectedTo?: string
-}
-
-let spaResponses: WeakMap<Response, SPAResponseData> | undefined
+import { spaResponses } from './frame.ts'
 
 /**
  * Creates and finalizes responses carrying renderable Remix nodes for the SPA runtime.
@@ -26,8 +19,7 @@ export const spaResponse = {
     }
 
     let response = new Response(null, init)
-    let responses = (spaResponses ??= new WeakMap())
-    responses.set(response, { node })
+    spaResponses.set(response, { node })
     return response
   },
 
@@ -40,7 +32,7 @@ export const spaResponse = {
    * @throws {TypeError} When the response was not created by `spaResponse.create()`.
    */
   finalize(response: Response, redirectedTo?: string): Response {
-    let data = getSpaResponseData(response)
+    let data = spaResponses.get(response)
     if (!data) throw new TypeError('Expected a Remix SPA response')
 
     if (redirectedTo === undefined) {
@@ -50,63 +42,4 @@ export const spaResponse = {
     }
     return response
   },
-}
-
-function getSpaResponseData(response: Response): SPAResponseData | undefined {
-  return spaResponses?.get(response)
-}
-
-export async function unwrapFrameResolution(
-  resolution: FrameResolution,
-): Promise<{ content: FrameContent; redirectedTo?: string; nonce?: string }> {
-  if (!(resolution instanceof Response)) return { content: resolution }
-
-  let data = getSpaResponseData(resolution)
-  if (data) {
-    return {
-      content: data.node,
-      redirectedTo: data.redirectedTo,
-    }
-  }
-
-  let content = resolution.body ?? (await resolution.text())
-  return {
-    content,
-    nonce: getResponseNonce(resolution),
-    redirectedTo: resolution.redirected && resolution.url ? resolution.url : undefined,
-  }
-}
-
-function getResponseNonce(response: Response): string | undefined {
-  let header =
-    response.headers.get('Content-Security-Policy') ??
-    response.headers.get('Content-Security-Policy-Report-Only')
-  let nonce: string | undefined
-  for (let policy of header?.split(',') ?? []) {
-    let directives = new Map<string, string[]>()
-    for (let directive of policy.split(';')) {
-      let tokens = directive.split(/[\t\n\f\r ]+/).filter(Boolean)
-      let name = tokens.shift()?.toLowerCase()
-      // CSP uses the first occurrence, even when its source list is empty.
-      if (name && !directives.has(name)) directives.set(name, tokens)
-    }
-    let scriptSources =
-      directives.get('script-src-elem') ??
-      directives.get('script-src') ??
-      directives.get('default-src')
-    let styleSources =
-      directives.get('style-src-elem') ??
-      directives.get('style-src') ??
-      directives.get('default-src')
-    for (let sources of [scriptSources, styleSources]) {
-      for (let source of sources ?? []) {
-        let value = /^'nonce-([a-z0-9+/_-]+={0,2})'$/i.exec(source)?.[1]
-        if (value === undefined) continue
-        // Only translate a single shared render nonce; differing values are ambiguous.
-        if (nonce !== undefined && nonce !== value) return undefined
-        nonce = value
-      }
-    }
-  }
-  return nonce
 }

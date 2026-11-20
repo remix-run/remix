@@ -2,6 +2,27 @@
 
 This is the changelog for [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite). It follows [semantic versioning](https://semver.org/).
 
+## v1.1.0
+
+### Minor Changes
+
+- Query builder results now decode values SQLite stores in another form: `json()` columns are parsed with `JSON.parse()`, `boolean()` columns read as `true` or `false` instead of `1` or `0`, and `timestamp()` columns stored in SQLite's `current_timestamp` format, with optional milliseconds, read as `Date` objects. Timestamp text in another format and text in a `json()` column that is not valid JSON are returned unchanged, and `db.exec()` results keep the stored values. Code that compared these columns against `1`, `0`, or JSON text should compare against the decoded values instead. ([#12337](https://github.com/remix-run/remix/pull/12337))
+
+  ```diff
+   let settings = await db.query(userSettings).find(userId)
+  -if (settings.enabled === 1) applyTheme(JSON.parse(settings.data))
+  +if (settings.enabled) applyTheme(settings.data)
+  ```
+
+### Patch Changes
+
+- Bind `Date` and boolean parameters consistently. Previously, a `Date` in the first parameter position was read as a named-bindings object in Node.js, shifting the remaining values, and a `Date` anywhere else failed, which broke `timestamp` column writes, including the default `created_at` and `updated_at` values. Dates are now bound as UTC strings in SQLite's `current_timestamp` format, such as `'2026-06-01 12:00:00'` (with milliseconds only when they are nonzero), and booleans in raw `sql` statements are bound as `1` or `0` like query builder values. Invalid dates are rejected. ([#12335](https://github.com/remix-run/remix/pull/12335))
+
+  Object and array parameters other than typed arrays are now rejected in both Node.js and Bun. In Bun, an object parameter was previously read as a set of named bindings; pass each value positionally instead.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@1.1.0`](https://github.com/remix-run/remix/releases/tag/data-table@1.1.0)
+
 ## v1.0.0
 
 ### Major Changes

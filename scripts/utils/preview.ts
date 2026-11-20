@@ -32,13 +32,14 @@ export interface PreviewRelease {
 
 export const PREVIEW_REPOSITORY = 'remix-run/previews'
 export const PREVIEW_RELEASE_MARKER = '<!-- remix-preview -->'
+export const PR_PREVIEW_BUILD_LIMIT = 5
 const PR_BUILD_COMPLETE = 'Complete preview build'
 const SHARED_PR_TAG = /(?:^|-)pr-[1-9]\d*$/
 
 export function getPreviewChannel(tag: string): string | null {
   if (/^pr-[1-9]\d*$/.test(tag)) return tag
   let match =
-    /^v0\.[1-9]\d{7}\.(?:0|[1-9]\d{0,5})-(?:(main|experimental)-[a-f0-9]{8}|(pr-[1-9]\d*))$/.exec(
+    /^v0\.(?:0\.[1-9]\d{7}|[1-9]\d{7}\.(?:0|[1-9]\d{0,5}))-(?:(main|experimental)-[a-f0-9]{8}|(pr-[1-9]\d*))$/.exec(
       tag,
     )
   if (match) return match[1] ?? match[2]
@@ -76,7 +77,7 @@ export function getExpiredPreviewReleases(
               Date.parse(a.published_at ?? a.created_at),
           )[0]
       : undefined
-  let cutoff = now - (channel === 'main' ? 7 : 30) * 24 * 60 * 60 * 1000
+  let cutoff = now - 30 * 24 * 60 * 60 * 1000
   return builds.filter(
     (release) =>
       release.id !== latest?.id && Date.parse(release.published_at ?? release.created_at) < cutoff,
@@ -90,9 +91,8 @@ export function getPreviewTag(channel: string, sha: string, timestamp: string): 
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error(`Invalid source SHA: ${sha}`)
   let utc = new Date(timestamp).toISOString()
   let date = utc.slice(0, 10).replaceAll('-', '')
-  let time = Number(utc.slice(11, 19).replaceAll(':', ''))
   let suffix = channel.startsWith('pr-') ? channel : `${channel}-${sha.slice(0, 8)}`
-  return `v0.${date}.${time}-${suffix}`
+  return `v0.0.${date}-${suffix}`
 }
 
 export function getPreviewReleaseTitle(
@@ -104,11 +104,6 @@ export function getPreviewReleaseTitle(
     return version ? `Remix ${version} preview` : `PR #${build.channel.slice(3)}`
   }
   return `${build.channel} (${build.sha.slice(0, 8)})`
-}
-
-function getPreviewTagTime(tag: string): number {
-  let match = /^v0\.(\d{8})\.(\d{1,6})-/.exec(tag)
-  return match ? Number(match[1]) * 1_000_000 + Number(match[2]) : 0
 }
 
 export function validatePreviewRepository(repository: string): string {
@@ -132,7 +127,7 @@ export function getPreviewTarballUrl(
 
 function getPreviewAssetName(build: PreviewBuild, packageDirName: string): string {
   return SHARED_PR_TAG.test(build.tag)
-    ? `${packageDirName}-${build.sha.slice(0, 8)}.tgz`
+    ? `${packageDirName}-${build.sha}.tgz`
     : `${packageDirName}.tgz`
 }
 
@@ -254,16 +249,18 @@ export interface PreviewAsset {
 
 function getCompletedPrPreviewBuilds(
   assets: PreviewAsset[],
-): { sha: string; asset: PreviewAsset }[] {
+): { sha: string; suffix: string; asset: PreviewAsset }[] {
   return assets
     .flatMap((asset) => {
       let sha = /^Complete preview build: ([a-f0-9]{40})$/.exec(asset.label ?? '')?.[1]
-      return sha &&
-        asset.name === `remix-${sha.slice(0, 8)}.tgz` &&
-        asset.state === 'uploaded' &&
-        asset.size > 0
-        ? [{ sha, asset }]
-        : []
+      if (!sha || asset.state !== 'uploaded' || asset.size <= 0) return []
+      let suffix =
+        asset.name === `remix-${sha}.tgz`
+          ? sha
+          : asset.name === `remix-${sha.slice(0, 8)}.tgz`
+            ? sha.slice(0, 8)
+            : undefined
+      return suffix ? [{ sha, suffix, asset }] : []
     })
     .toSorted(
       (a, b) =>
@@ -274,12 +271,12 @@ function getCompletedPrPreviewBuilds(
 export function getExpiredPrPreviewAssets(assets: PreviewAsset[]): PreviewAsset[] {
   let retained = new Set(
     getCompletedPrPreviewBuilds(assets)
-      .slice(0, 10)
-      .map((build) => build.sha.slice(0, 8)),
+      .slice(0, PR_PREVIEW_BUILD_LIMIT)
+      .map((build) => build.suffix),
   )
   return assets.filter((asset) => {
-    let sha = /-([a-f0-9]{8})\.tgz$/.exec(asset.name)?.[1]
-    return sha !== undefined && !retained.has(sha)
+    let suffix = /-([a-f0-9]{40}|[a-f0-9]{8})\.tgz$/.exec(asset.name)?.[1]
+    return suffix !== undefined && !retained.has(suffix)
   })
 }
 
@@ -327,8 +324,10 @@ export class PreviewGitHub {
     for (let page = 1; ; page++) {
       let result = this.api('GET', `${endpoint}?per_page=100&page=${page}`)
       if (!Array.isArray(result)) throw new Error(`Invalid GitHub list: ${endpoint}`)
+      // GitHub can return fewer than per_page items before the last page, so only an empty page
+      // marks the end.
+      if (result.length === 0) return items
       items.push(...result)
-      if (result.length < 100) return items
     }
   }
 
@@ -377,7 +376,7 @@ export function publishPreview(
     throw new Error('Missing remix preview tarball')
   if (
     SHARED_PR_TAG.test(build.tag) &&
-    files.some((filename) => !filename.endsWith(`-${build.sha.slice(0, 8)}.tgz`))
+    files.some((filename) => !filename.endsWith(`-${build.sha}.tgz`))
   )
     throw new Error('Preview tarballs do not match the source SHA')
   if (build.channel === 'main') {
@@ -455,22 +454,11 @@ export function publishPreview(
   for (let asset of github.listAssets(release)) github.delete(`releases/assets/${asset.id}`)
   for (let filename of files) github.upload(release, filename)
   verifyAssets(github.listAssets(release), expected, true)
-  // Builds can finish out of order, so only the newest main commit becomes the latest release.
-  let latest =
-    build.channel === 'main' &&
-    github
-      .listReleases()
-      .every(
-        (item) =>
-          item.draft ||
-          getPreviewChannel(item.tag_name) !== 'main' ||
-          getPreviewTagTime(item.tag_name) <= getPreviewTagTime(build.tag),
-      )
   github.api('PATCH', `releases/${release.id}`, {
     name: title,
     draft: false,
     prerelease: build.channel !== 'main',
-    make_latest: String(latest),
+    make_latest: String(build.channel === 'main'),
   })
   console.log(`Published preview: ${url}`)
   return url
@@ -487,7 +475,7 @@ function publishPrPreview(
 ): string {
   let prNumber = build.channel.slice('pr-'.length)
   let prUrl = `${repositoryUrl}/pull/${prNumber}`
-  let header = `${PREVIEW_RELEASE_MARKER}\nPreview builds for [PR #${prNumber}](${prUrl}).\n\nThe latest 10 successful SHA builds are retained until this PR closes.\n`
+  let header = `${PREVIEW_RELEASE_MARKER}\nPreview builds for [PR #${prNumber}](${prUrl}).\n\nThe latest ${PR_PREVIEW_BUILD_LIMIT} successful SHA builds are retained until this PR closes.\n`
   if (
     release &&
     (!release.body.startsWith(PREVIEW_RELEASE_MARKER) || !release.body.includes(`](${prUrl})`))
@@ -508,13 +496,11 @@ function publishPrPreview(
   }
   let assets = github.listAssets(release)
   let complete = getCompletedPrPreviewBuilds(assets).find(
-    (item) => item.sha.slice(0, 8) === build.sha.slice(0, 8),
+    (item) => item.sha === build.sha && item.suffix === build.sha,
   )
   if (complete) {
-    if (complete.sha !== build.sha)
-      throw new Error(`Preview filename SHA collision: ${build.sha.slice(0, 8)}`)
     verifyAssets(
-      assets.filter((asset) => asset.name.endsWith(`-${build.sha.slice(0, 8)}.tgz`)),
+      assets.filter((asset) => asset.name.endsWith(`-${build.sha}.tgz`)),
       expected,
       false,
     )
@@ -528,7 +514,7 @@ function publishPrPreview(
     for (let filename of files) github.upload(release, filename)
     assets = github.listAssets(release)
     verifyAssets(
-      assets.filter((asset) => asset.name.endsWith(`-${build.sha.slice(0, 8)}.tgz`)),
+      assets.filter((asset) => asset.name.endsWith(`-${build.sha}.tgz`)),
       expected,
       true,
     )
@@ -540,9 +526,9 @@ function publishPrPreview(
   }
   assets = github.listAssets(release)
   for (let asset of getExpiredPrPreviewAssets(assets)) github.delete(`releases/assets/${asset.id}`)
-  let retained = getCompletedPrPreviewBuilds(assets).slice(0, 10)
+  let retained = getCompletedPrPreviewBuilds(assets).slice(0, PR_PREVIEW_BUILD_LIMIT)
   let rows = retained.map(({ sha, asset }) => {
-    let url = getPreviewTarballUrl({ ...build, sha }, 'remix', github.repository)
+    let url = `https://github.com/${github.repository}/releases/download/${encodeURIComponent(build.tag)}/${asset.name}`
     return `| [${sha.slice(0, 8)}](${prUrl}/commits/${sha}) | ${asset.updated_at} | \`pnpm add "${url}"\` |`
   })
   github.api('PATCH', `releases/${release.id}`, {
@@ -575,7 +561,10 @@ export function publishPreviewBuild(
       publishPreview(github, build, directory, dryRun)
       published = true
       if (!dryRun && !prNumber)
-        cleanupPreviews(github, build.channel === 'main' ? 'main' : 'experimental')
+        cleanupPreviews(
+          github,
+          build.channel.startsWith('experimental-') ? 'experimental' : build.channel,
+        )
     }
   } finally {
     if (!dryRun && closed()) {
@@ -597,6 +586,24 @@ export function cleanupPreviews(
   }
 }
 
+export function getStalePrPreviewChannels(
+  releases: PreviewRelease[],
+  repository: string,
+  run = createGitHubRunner(process.env.GITHUB_TOKEN),
+  now = Date.now(),
+): string[] {
+  let channels = new Set<string>()
+  for (let release of releases) {
+    if (!release.body.startsWith(PREVIEW_RELEASE_MARKER)) continue
+    let channel = getPreviewChannel(release.tag_name)
+    if (channel?.startsWith('pr-')) channels.add(channel)
+  }
+  return [...channels].filter((channel) => {
+    let pr = readPullRequest(repository, Number(channel.slice(3)), run)
+    return pr.closed && pr.closedAt !== null && Date.parse(pr.closedAt) <= now - 24 * 60 * 60 * 1000
+  })
+}
+
 export function cleanupPrPreviewBranch(
   github: PreviewGitHub,
   channel: string,
@@ -611,13 +618,24 @@ export function readPullRequest(
   repository: string,
   number: number,
   run = createGitHubRunner(process.env.GITHUB_TOKEN),
-): { closed: boolean; sha: string; headRef: string; title: string; createdAt: string } {
+): {
+  closed: boolean
+  closedAt: string | null
+  sha: string
+  headRef: string
+  title: string
+  createdAt: string
+} {
   validatePreviewRepository(repository)
   if (!Number.isSafeInteger(number) || number < 1) throw new Error('Invalid PR number')
   let value: unknown = JSON.parse(run(['api', `repos/${repository}/pulls/${number}`]))
   if (
     !isRecord(value) ||
     (value.state !== 'open' && value.state !== 'closed') ||
+    !(
+      value.closed_at === null ||
+      (typeof value.closed_at === 'string' && Number.isFinite(Date.parse(value.closed_at)))
+    ) ||
     typeof value.title !== 'string' ||
     typeof value.created_at !== 'string' ||
     !Number.isFinite(Date.parse(value.created_at)) ||
@@ -629,6 +647,7 @@ export function readPullRequest(
   }
   return {
     closed: value.state === 'closed',
+    closedAt: value.closed_at,
     sha: value.head.sha,
     headRef: value.head.ref,
     title: value.title,

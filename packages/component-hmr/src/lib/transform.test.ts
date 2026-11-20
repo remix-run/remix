@@ -518,6 +518,21 @@ import * as __remixComponentRefresh__ from "@acme/remix/component/dev/refresh";`
     )
   })
 
+  it('rewrites setup closures that reference variables declared later', () => {
+    let result = transformComponentsForBrowser(
+      `export function Ticker(handle) {
+  handle.signal.addEventListener('abort', () => reset())
+  let reset = () => {}
+  return () => <button onClick={reset}>Reset</button>
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Ticker.tsx' },
+    )
+
+    let implementation = getGeneratedComponentImplementation(result.code, 'Ticker')
+    assert.match(implementation, /addEventListener\('abort', \(\) => __s__\.reset\(\)\)/)
+  })
+
   it('does not rewrite setup bindings that shadow previously hoisted variables', () => {
     let result = transformComponentsForBrowser(
       `export function Counter() {
