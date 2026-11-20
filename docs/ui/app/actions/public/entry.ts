@@ -74,7 +74,10 @@ reloadOnServerUpdate(app)
 
 app
   .ready()
-  .then(revealApiFragment)
+  .then(() => {
+    document.documentElement.setAttribute('data-test-hydrated', '')
+    revealApiFragment()
+  })
   .catch(() => {})
 
 window.addEventListener('hashchange', revealApiFragment)

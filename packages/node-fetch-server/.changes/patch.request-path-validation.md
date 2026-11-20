@@ -1,0 +1,1 @@
+Enhance incoming request URL validation to reject literal backslashes in the path. `createRequestListener()` returns `400 Bad Request` unless `onError` returns a custom response, and `createRequest()` throws.

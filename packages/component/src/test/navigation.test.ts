@@ -1332,6 +1332,7 @@ describe('navigate', () => {
     let [transitionFinished, resolveTransitionFinished] = withResolvers<void>()
     let stubNavigation = {
       currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       transition: { finished: transitionFinished } as NavigationTransition,
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
@@ -1495,6 +1496,7 @@ describe('navigate', () => {
     let updateCurrentEntryMock = mock.fn()
     let stubNavigation = {
       currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       navigate: navigateMethodMock,
       updateCurrentEntry: updateCurrentEntryMock,
       addEventListener(type: string, listener: EventListener) {
@@ -1720,6 +1722,7 @@ describe('navigate', () => {
     let updateCurrentEntryMock = mock.fn()
     let stubNavigation = {
       currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       navigate: navigateMethodMock,
       updateCurrentEntry: updateCurrentEntryMock,
       addEventListener(type: string, listener: EventListener) {
@@ -2456,6 +2459,7 @@ describe('frame navigation sources', () => {
     let reload = mock.fn()
     let stubNavigation = {
       currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       transition: { finished: Promise.resolve() } as NavigationTransition,
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
@@ -2511,6 +2515,7 @@ describe('frame navigation sources', () => {
     let reload = mock.fn()
     let stubNavigation = {
       currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       transition: { finished: Promise.resolve() } as NavigationTransition,
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
@@ -2948,6 +2953,7 @@ describe('form navigation', () => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
       currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
         if (type === 'navigate') navigateListener = listener
@@ -3157,6 +3163,7 @@ describe('form navigation', () => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
       currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       updateCurrentEntry: mock.fn(),
       addEventListener(type: string, listener: EventListener) {
         if (type === 'navigate') navigateListener = listener
@@ -3185,6 +3192,7 @@ describe('form navigation', () => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
       currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       updateCurrentEntry: mock.fn(),
       addEventListener(type: string, listener: EventListener) {
         if (type === 'navigate') navigateListener = listener
