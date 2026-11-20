@@ -1,25 +1,24 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 
-import type { Book } from '../../data/schema.ts'
-import type { Cart } from '../../utils/cart.ts'
+import type { BookWithCover } from '../../utils/book-images.ts'
+import { getBookGenreLabel } from '../../data/book-genres.ts'
 import { routes } from '../../routes.ts'
-import { BookCard } from '../../ui/book-card.tsx'
+import { BookCard, BookCoverPreload } from '../../ui/book-card.tsx'
 import { Layout } from '../../ui/layout.tsx'
 
 export interface GenrePageProps {
   genre: string
-  matchingBooks: Book[]
-  cart: Cart
+  matchingBooks: BookWithCover[]
 }
 
 export function GenrePage(handle: Handle<GenrePageProps>) {
   return () => {
-    let { cart, genre, matchingBooks } = handle.props
+    let { genre, matchingBooks } = handle.props
 
     return (
-      <Layout>
-        <h1>{genre.charAt(0).toUpperCase() + genre.slice(1)} Books</h1>
+      <Layout head={<BookCoverPreload book={matchingBooks[0]} />}>
+        <h1>{getBookGenreLabel(genre)}</h1>
         <p mix={css({ margin: '1rem 0' })}>
           <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn btn-secondary">
             View All Books
@@ -27,10 +26,9 @@ export function GenrePage(handle: Handle<GenrePageProps>) {
         </p>
 
         <div class="grid" mix={css({ marginTop: '2rem' })}>
-          {matchingBooks.map((book) => {
-            let inCart = cart.items.some((item) => item.slug === book.slug)
-            return <BookCard book={book} inCart={inCart} />
-          })}
+          {matchingBooks.map((book, index) => (
+            <BookCard book={book} imageLoading={index < 4 ? 'eager' : 'lazy'} />
+          ))}
         </div>
       </Layout>
     )
@@ -41,8 +39,8 @@ export function GenreNotFoundPage(handle: Handle<{ genre: string }>) {
   return () => (
     <Layout>
       <div class="card">
-        <h1>Genre Not Found</h1>
-        <p>No books found in the "{handle.props.genre}" genre.</p>
+        <h1>Category Not Found</h1>
+        <p>No books found in the "{handle.props.genre}" category.</p>
         <p mix={css({ marginTop: '1rem' })}>
           <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
             Browse All Books

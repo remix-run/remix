@@ -3,19 +3,17 @@ import { css } from 'remix/component'
 
 import type { Book } from '../data/schema.ts'
 import { routes } from '../routes.ts'
-import type { Cart } from '../utils/cart.ts'
 import { BookCard } from '../ui/book-card.tsx'
 import { Layout } from '../ui/layout.tsx'
 
 interface SearchPageProps {
   query: string
   matchingBooks: Book[]
-  cart: Cart
 }
 
 export function SearchPage(handle: Handle<SearchPageProps>) {
   return () => {
-    let { cart, matchingBooks, query } = handle.props
+    let { matchingBooks, query } = handle.props
 
     return (
       <Layout>
@@ -48,10 +46,7 @@ export function SearchPage(handle: Handle<SearchPageProps>) {
 
         <div class="grid">
           {matchingBooks.length > 0 ? (
-            matchingBooks.map((book) => {
-              let inCart = cart.items.some((item) => item.slug === book.slug)
-              return <BookCard book={book} inCart={inCart} />
-            })
+            matchingBooks.map((book) => <BookCard book={book} />)
           ) : (
             <p>No books found matching your search.</p>
           )}

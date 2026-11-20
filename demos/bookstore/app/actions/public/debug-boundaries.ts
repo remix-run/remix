@@ -1,4 +1,4 @@
-export function installDebugBoundaries(): () => void {
+export function installDebugBoundaries(mode: 'app' | 'bookmarklet' = 'app'): () => void {
   let overlay = document.createElement('div')
   overlay.id = 'bookstore-debug-boundaries'
   overlay.setAttribute('aria-hidden', 'true')
@@ -35,7 +35,7 @@ export function installDebugBoundaries(): () => void {
   `)
   shadow.adoptedStyleSheets = [styles]
 
-  let enabled = new URLSearchParams(location.search).has('debug')
+  let enabled = mode === 'bookmarklet' || new URLSearchParams(location.search).has('debug')
   let animationFrame = 0
   let boxes: HTMLDivElement[] = []
   let controller = new AbortController()
@@ -122,45 +122,66 @@ export function installDebugBoundaries(): () => void {
     animationFrame = requestAnimationFrame(draw)
   }
 
-  window.addEventListener(
-    'keydown',
+  if (mode === 'app')
+    window.addEventListener(
+      'keydown',
+      (event) => {
+        if (!event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
+        if (event.key.toLowerCase() !== 'd') return
+        event.preventDefault()
+        if (event.repeat) return
+        enabled = !enabled
+        if (enabled) {
+          draw()
+        } else {
+          cancelAnimationFrame(animationFrame)
+          overlay.remove()
+        }
+      },
+      { capture: true, signal: controller.signal },
+    )
+
+  // Bookmarklets reuse the app's existing shortcut handler instead of adding another overlay.
+  document.addEventListener(
+    'remix:toggle-debug-boundaries',
     (event) => {
-      if (!event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
-      if (event.key.toLowerCase() !== 'd') return
       event.preventDefault()
-      if (event.repeat) return
-      enabled = !enabled
-      if (enabled) {
-        draw()
+      event.stopImmediatePropagation()
+      if (mode === 'bookmarklet') {
+        dispose()
       } else {
-        cancelAnimationFrame(animationFrame)
-        overlay.remove()
+        window.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'd', metaKey: true, cancelable: true }),
+        )
       }
     },
-    { capture: true, signal: controller.signal },
+    { signal: controller.signal },
   )
 
   if (enabled) draw()
 
-  return () => {
+  return dispose
+
+  function dispose() {
     controller.abort()
     cancelAnimationFrame(animationFrame)
     overlay.remove()
+    boxes = []
   }
-}
 
-function getVisibleRects(node: Node): DOMRect[] {
-  if (node instanceof Element) {
-    // display: contents has no box of its own, but its children can include padded controls.
-    if (getComputedStyle(node).display === 'contents') {
-      return Array.from(node.childNodes).flatMap(getVisibleRects)
+  function getVisibleRects(node: Node): DOMRect[] {
+    if (node instanceof Element) {
+      // display: contents has no box of its own, but its children can include padded controls.
+      if (getComputedStyle(node).display === 'contents') {
+        return Array.from(node.childNodes).flatMap(getVisibleRects)
+      }
+      return Array.from(node.getClientRects())
     }
-    return Array.from(node.getClientRects())
+    if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+      let range = document.createRange()
+      range.selectNode(node)
+      return Array.from(range.getClientRects())
+    }
+    return []
   }
-  if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
-    let range = document.createRange()
-    range.selectNode(node)
-    return Array.from(range.getClientRects())
-  }
-  return []
 }

@@ -1,24 +1,23 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 
-import type { Book } from '../../data/schema.ts'
-import type { Cart } from '../../utils/cart.ts'
+import type { BookWithCover } from '../../utils/book-images.ts'
+import { getBookGenreLabel } from '../../data/book-genres.ts'
 import { routes } from '../../routes.ts'
-import { BookCard } from '../../ui/book-card.tsx'
+import { BookCard, BookCoverPreload } from '../../ui/book-card.tsx'
 import { Layout } from '../../ui/layout.tsx'
 
 export interface IndexPageProps {
-  allBooks: Book[]
+  allBooks: BookWithCover[]
   genres: string[]
-  cart: Cart
 }
 
 export function IndexPage(handle: Handle<IndexPageProps>) {
   return () => {
-    let { allBooks, cart, genres } = handle.props
+    let { allBooks, genres } = handle.props
 
     return (
-      <Layout>
+      <Layout head={<BookCoverPreload book={allBooks[0]} />}>
         <h1>Browse Books</h1>
 
         <div class="card" mix={css({ marginBottom: '2rem' })}>
@@ -40,7 +39,7 @@ export function IndexPage(handle: Handle<IndexPageProps>) {
         </div>
 
         <div class="card" mix={css({ marginBottom: '2rem' })}>
-          <h3>Browse by Genre</h3>
+          <h3>Browse by Category</h3>
           <div mix={css({ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' })}>
             {genres.map((genre) => (
               <a
@@ -48,17 +47,16 @@ export function IndexPage(handle: Handle<IndexPageProps>) {
                 href={routes.books.genre.href({ genre })}
                 class="btn btn-secondary"
               >
-                {genre}
+                {getBookGenreLabel(genre)}
               </a>
             ))}
           </div>
         </div>
 
         <div class="grid">
-          {allBooks.map((book) => {
-            let inCart = cart.items.some((item) => item.slug === book.slug)
-            return <BookCard book={book} inCart={inCart} />
-          })}
+          {allBooks.map((book, index) => (
+            <BookCard book={book} imageLoading={index < 4 ? 'eager' : 'lazy'} />
+          ))}
         </div>
       </Layout>
     )

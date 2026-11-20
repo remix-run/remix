@@ -2,6 +2,7 @@ import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 
 import type { Book } from '../../../data/schema.ts'
+import { getBookGenreLabel } from '../../../data/book-genres.ts'
 import { routes } from '../../../routes.ts'
 import { RestfulForm } from '../../../ui/restful-form.tsx'
 import { Layout } from '../../../ui/layout.tsx'
@@ -34,7 +35,7 @@ export function AdminBooksIndexPage(handle: Handle<{ books: Book[] }>) {
               <tr>
                 <th>Title</th>
                 <th>Author</th>
-                <th>Genre</th>
+                <th>Category</th>
                 <th>Price</th>
                 <th>Stock</th>
                 <th>Actions</th>
@@ -45,7 +46,7 @@ export function AdminBooksIndexPage(handle: Handle<{ books: Book[] }>) {
                 <tr>
                   <td>{book.title}</td>
                   <td>{book.author}</td>
-                  <td>{book.genre}</td>
+                  <td>{getBookGenreLabel(book.genre)}</td>
                   <td>${book.price.toFixed(2)}</td>
                   <td>
                     <span class={`badge ${book.in_stock ? 'badge-success' : 'badge-warning'}`}>

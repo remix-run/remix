@@ -10,6 +10,7 @@
     },
     "allowFiles": [
       "demos/bookstore/app/routes.ts",
+      "demos/bookstore/app/data/book-genres.ts",
       "demos/bookstore/app/**/public/**",
       "demos/bookstore/app/actions/auth/login/login-form.ts",
       "demos/bookstore/app/actions/auth/login/login-schema.ts",

@@ -36,6 +36,7 @@ import { loadDatabase } from './middleware/database.ts'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
 import { flashUntilRead } from './middleware/flash-until-read.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
+import { simulateLatency } from './middleware/simulate-latency.ts'
 import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
 import { assets, browserHmrChannel } from './utils/assets.ts'
@@ -65,6 +66,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
         etag: false,
         lastModified: false,
       }),
+      ...(process.env.DELAY === '1' && process.env.NODE_ENV !== 'test' ? [simulateLatency()] : []),
       formData({ uploadHandler }),
       methodOverride(),
       session(cookie, storage),

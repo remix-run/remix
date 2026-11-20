@@ -1,4 +1,4 @@
-import { defaultResolveFrame, run } from 'remix/component'
+import { defaultPrefetch, defaultResolveFrame, run } from 'remix/component'
 import {
   detectMultipleImportMapSupport,
   importModule,
@@ -8,8 +8,12 @@ import { createMatcher } from 'remix/route-pattern/match'
 
 import { routes } from '../../routes.ts'
 import { installDebugBoundaries } from './debug-boundaries.ts'
+import { createFrameRequestManager } from './frame-request-manager.ts'
+import { createRelatedBookPrefetchManager } from './related-book-prefetch-manager.ts'
+import { prefetchResponsiveImages } from './prefetch-responsive-images.ts'
 
 const bookDetailsMatcher = createMatcher(routes.books.show.pattern)
+const relatedBooksMatcher = createMatcher(routes.books.related.pattern)
 const browsingPageMatchers = [
   routes.home.pattern,
   routes.books.index.pattern,
@@ -21,6 +25,9 @@ const browsingPageMatchers = [
   routes.auth.register.index.pattern,
 ].map((pattern) => createMatcher(pattern))
 const disposeDebugBoundaries = installDebugBoundaries()
+const prefetchController = new AbortController()
+const frameRequestManager = createFrameRequestManager(prefetchController.signal)
+const relatedBookPrefetchManager = createRelatedBookPrefetchManager(prefetchController.signal)
 
 export const app = run({
   async loadModule(moduleUrl: string, exportName: string) {
@@ -31,14 +38,58 @@ export const app = run({
     }
     return Component
   },
+  prefetch(src, options) {
+    return defaultPrefetch(
+      src,
+      {
+        ...options,
+        signal: options?.signal
+          ? AbortSignal.any([options.signal, prefetchController.signal])
+          : prefetchController.signal,
+      },
+      {
+        fetch: frameRequestManager.fetch,
+        async processFrame(prefetchReferences, context) {
+          // Queue lazy related frames discovered in the prefetched details HTML.
+          // Card hover/focus starts them; if intent preceded discovery, start them now.
+          if (bookDetailsMatcher.match(context.src)) {
+            relatedBookPrefetchManager.queueRelatedBooks(context)
+          }
+
+          // Related covers and page image preloads use responsive image candidates.
+          // Only explicit preloads from page HTML participate; hidden slides stay lazy.
+          let images = context.fragment.querySelectorAll(
+            'link[rel="preload"][as="image"][imagesrcset]',
+          )
+          if (relatedBooksMatcher.match(context.src)) {
+            images = context.fragment.querySelectorAll('img[src]')
+          }
+          // Prefetch default assets; nested frames require explicit selection.
+          await Promise.all([
+            prefetchResponsiveImages(images, context.signal),
+            prefetchReferences({ assets: [...context.assets, ...images] }),
+          ])
+        },
+      },
+    )
+  },
   resolveFrame(src, options) {
     return defaultResolveFrame(src, options, {
       fetch(url, init) {
+        if ((init.method ?? 'GET').toUpperCase() !== 'GET') {
+          frameRequestManager.invalidate()
+          return fetch(url, init).finally(() => frameRequestManager.invalidate())
+        }
         let reuseBrowsingHtml =
-          (init.method ?? 'GET').toUpperCase() === 'GET' &&
           options?.navigationType === 'traverse' &&
           browsingPageMatchers.some((matcher) => matcher.match(url) !== null)
-        return fetch(url, { ...init, cache: reuseBrowsingHtml ? 'force-cache' : undefined })
+        let requestInit = {
+          ...init,
+          cache: reuseBrowsingHtml ? 'force-cache' : undefined,
+        } satisfies RequestInit
+        let existing = frameRequestManager.get(url, requestInit)
+        if (existing) return existing
+        return fetch(url, requestInit)
       },
       async commit(commitFrame, { signal, to }) {
         let navigationType = options?.navigationType
@@ -53,11 +104,42 @@ export const app = run({
           return commitFrame()
         }
 
-        let viewTransition = document.startViewTransition(commitFrame)
         let from = options?.from?.url
-        if (bookDetailsMatcher.match(to) || (from != null && bookDetailsMatcher.match(from))) {
-          viewTransition.types?.add('book-details')
-        }
+        let toBook = bookDetailsMatcher.match(to)
+        let fromBook = from != null ? bookDetailsMatcher.match(from) : null
+        let faceout = fromBook ? document.querySelector('[data-book-faceout]') : null
+        let destinationCard = toBook
+          ? document
+              .querySelector(
+                `a[href="${CSS.escape(routes.books.show.href({ slug: toBook.params.slug }))}"]`,
+              )
+              ?.closest('[data-book-id]')
+          : null
+        let goingBack =
+          navigationType === 'traverse' &&
+          options?.from != null &&
+          navigation.currentEntry != null &&
+          navigation.currentEntry.index < options.from.index
+        let outgoingBookId = faceout?.getAttribute('data-book-faceout')
+        let incomingBookId = destinationCard?.getAttribute('data-book-id')
+        // Back returns the outgoing faceout to its card; forward navigation opens the next cover.
+        let bookId = goingBack
+          ? (outgoingBookId ?? incomingBookId)
+          : (incomingBookId ?? outgoingBookId)
+
+        let viewTransition = document.startViewTransition(async () => {
+          await commitFrame()
+          if (goingBack && fromBook && toBook && !signal.aborted) {
+            // The restored lazy frame must contain the return card before the new snapshot.
+            let destinationBookId = document
+              .querySelector('[data-book-faceout]')
+              ?.getAttribute('data-book-faceout')
+            if (destinationBookId) {
+              await app.frames.get(`related-books-${destinationBookId}`)?.reload()
+            }
+          }
+        })
+        if (bookId) viewTransition.types?.add(`book-cover-${bookId}`)
         let skip = () => viewTransition.skipTransition()
         signal.addEventListener('abort', skip, { once: true })
         void viewTransition.ready.catch(() => {})
@@ -81,7 +163,10 @@ export const app = run({
 })
 
 if (import.meta.hot) {
-  import.meta.hot.dispose(disposeDebugBoundaries)
+  import.meta.hot.dispose(() => {
+    prefetchController.abort()
+    disposeDebugBoundaries()
+  })
   import.meta.hot.on('server:update', async () => {
     try {
       await app.ready()

@@ -2,6 +2,7 @@ import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 
 import type { Book } from '../../../data/schema.ts'
+import { getBookGenreLabel } from '../../../data/book-genres.ts'
 import { routes } from '../../../routes.ts'
 import { Layout } from '../../../ui/layout.tsx'
 
@@ -40,7 +41,7 @@ export function AdminBookShowPage(handle: Handle<{ book: Book }>) {
             <strong>Price:</strong> ${book.price.toFixed(2)}
           </p>
           <p>
-            <strong>Genre:</strong> {book.genre}
+            <strong>Category:</strong> {getBookGenreLabel(book.genre)}
           </p>
           <p>
             <strong>ISBN:</strong> {book.isbn}
