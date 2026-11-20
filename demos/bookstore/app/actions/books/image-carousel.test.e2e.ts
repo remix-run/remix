@@ -5,6 +5,12 @@ import type { Page } from 'playwright'
 
 import { createTestRouter } from '../../../test/helpers.ts'
 
+// Bound the whole file, including cleanup, without keeping successful workers alive.
+setTimeout(() => {
+  console.error('image-carousel.test.e2e.ts timed out after 60000ms')
+  process.exit(1)
+}, 60_000).unref()
+
 describe('book image selection', () => {
   it('updates the URL without fetching and preserves selection through reloads and Back', async (t) => {
     let router = await createTestRouter()
