@@ -169,18 +169,70 @@ describe('Remix config loading', () => {
   })
 
   it('rejects unsupported database adapter types', async () => {
-    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-db-module-'))
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-db-unknown-'))
 
     try {
       await fs.writeFile(
         path.join(cwd, 'remix.json'),
-        JSON.stringify({ db: { adapter: { type: 'module', module: './app/database.ts' } } }),
+        JSON.stringify({ db: { adapter: { type: 'mongo', uri: 'mongodb://localhost' } } }),
         'utf8',
       )
 
       await assert.rejects(
         () => loadRemixConfig(cwd, undefined),
-        /Expected one of: sqlite, postgres, mysql at db\.adapter\.type/,
+        /Expected one of: sqlite, postgres, mysql, module at db\.adapter\.type/,
+      )
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('parses a module database configuration', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-db-module-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({
+          db: {
+            adapter: {
+              type: 'module',
+              module: './app/database.ts',
+              export: 'createDatabase',
+              connection: { env: 'DATABASE_URL', default: 'libsql://localhost' },
+              options: { authToken: { env: 'DATABASE_AUTH_TOKEN' } },
+            },
+          },
+        }),
+        'utf8',
+      )
+
+      let config = await loadRemixConfig(cwd, undefined)
+      assert.deepEqual(config.db?.adapter, {
+        type: 'module',
+        module: './app/database.ts',
+        export: 'createDatabase',
+        connection: { env: 'DATABASE_URL', default: 'libsql://localhost' },
+        options: { authToken: { env: 'DATABASE_AUTH_TOKEN' } },
+      })
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects a module database configuration without a module', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-db-module-invalid-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({ db: { adapter: { type: 'module' } } }),
+        'utf8',
+      )
+
+      await assert.rejects(
+        () => loadRemixConfig(cwd, undefined),
+        /Expected a string at db\.adapter\.module/,
       )
     } finally {
       await fs.rm(cwd, { recursive: true, force: true })
