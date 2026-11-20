@@ -563,7 +563,9 @@ export function startNavigationListener(
             if (!coordinator.isCurrent(event)) return
             event.scroll()
             if (!coordinator.isCurrent(event)) return
-            // WebKit can overwrite the destination's native position during a slow traversal;
+            // WebKit can overwrite the destination's native position during a slow traversal.
+            // Its source documents a scroll-save timer racing with loading and clobbering history:
+            // https://github.com/WebKit/WebKit/blob/aa9b09cf670187495dc2426b0c06e5f3c86e52d7/Source/WebKit/WebProcess/WebPage/WebPage.cpp#L8883-L8884
             // Firefox can clamp it to the outgoing document's height before this commit.
             if (
               savedPosition &&
