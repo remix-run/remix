@@ -1,5 +1,13 @@
 # csp-middleware
 
+## v1.0.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@1.0.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@1.0.1)
+  - [`headers@1.1.1`](https://github.com/remix-run/remix/releases/tag/headers@1.1.1)
+
 ## v1.0.0
 
 ### Major Changes

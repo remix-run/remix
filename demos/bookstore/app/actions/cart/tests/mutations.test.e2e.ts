@@ -119,8 +119,11 @@ describe('cart submissions', () => {
     let runtimePage = await t.serve(server)
     let browser = runtimePage.context().browser()
     assert.ok(browser)
-    let context = await browser.newContext({ baseURL: server.baseUrl, javaScriptEnabled: false })
-    t.after(() => context.close())
+    // Close the native context before t.serve() cleanup waits for its connections.
+    await using context = await browser.newContext({
+      baseURL: server.baseUrl,
+      javaScriptEnabled: false,
+    })
     let page = await context.newPage()
     await page.goto('/books/bbq?from=catalog')
     await page.getByRole('button', { name: 'Add to Cart', exact: true }).click()
@@ -1023,8 +1026,10 @@ describe('cart submissions', () => {
     let runtimePage = await t.serve(server)
     let browser = runtimePage.context().browser()
     assert.ok(browser)
-    let context = await browser.newContext({ baseURL: server.baseUrl, javaScriptEnabled: false })
-    t.after(() => context.close())
+    await using context = await browser.newContext({
+      baseURL: server.baseUrl,
+      javaScriptEnabled: false,
+    })
     let page = await context.newPage()
     await page.request.post('/cart/api/add', { form: { bookId: '1' } })
     mutations.length = 0

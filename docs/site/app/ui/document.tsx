@@ -58,6 +58,13 @@ export function ReferenceDocument(
       : getHomePage(registry)
     let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
     let description = getPageDescription(page)
+    let markdownHref = page.docFile
+      ? routes.reference.markdown.href({ slug: page.docFile.urlPath })
+      : page.id === HOME_PAGE_ID
+        ? routes.homeMarkdown.href()
+        : page.id === API_PAGE_ID
+          ? routes.apiMarkdown.href()
+          : undefined
 
     return (
       <DocsDocument
@@ -65,13 +72,13 @@ export function ReferenceDocument(
         description={description}
         path={page.path}
         head={
-          page.docFile ? (
+          markdownHref ? (
             <link
               data-rmx-key="docs-markdown-alternate"
               rel="alternate"
               type="text/markdown"
-              href={routes.reference.markdown.href({ slug: page.docFile.urlPath })}
-              title={`Markdown docs for ${page.docFile.name ?? page.title}`}
+              href={markdownHref}
+              title={`Markdown docs for ${page.docFile?.name ?? page.title}`}
             />
           ) : null
         }

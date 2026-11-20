@@ -1694,7 +1694,19 @@ run({
 
 The `processFrame` hook runs for each parsed response. Its `ProcessFrameContext` contains the requested `src` and `target`, triggering `element`, cancellation `signal`, consumed `response`, inert `fragment`, original `assets` with their attributes, and same-origin nested `frames`. Remix never mounts the fragment. Custom asset loading can also use `fetch(url, { priority: 'low', signal })`; applications own its queue, deduplication, and cache policy.
 
-Call `prefetchReferences()` for default asset hints, or pass `{ assets: selected }` to filter them. `assets: []` skips assets. Only supported original fragment elements are accepted, including those inside templates and manually selected nonresponsive `<img src>` elements; newly created elements, responsive images, and track preloads are ignored. Nested sources require explicit `{ frames }` selection, as shown [below](#prefetching-nested-frames).
+Call `prefetchReferences()` to prefetch discovered assets without fetching nested sources. Passing an object overrides only the fields supplied; omitted fields keep their defaults:
+
+- `assets` defaults to the discovered asset declarations. Pass `assets: []` to skip asset hints.
+- `frames` defaults to `[]`. Pass frame references to opt into nested fetches.
+
+For example, `prefetchReferences({ frames: [] })` still prefetches discovered assets, just like `prefetchReferences()`. To fetch nested sources with or without those assets:
+
+```ts
+prefetchReferences({ frames }) // Discovered assets and selected nested frames
+prefetchReferences({ assets: [], frames }) // Selected nested frames only
+```
+
+Pass `{ assets: selected }` to filter asset hints. Only supported original fragment elements are accepted, including those inside templates and manually selected nonresponsive `<img src>` elements; newly created elements, responsive images, and track preloads are ignored. See [prefetching nested frames](#prefetching-nested-frames) for selecting frame references.
 
 Returning without delegation skips native asset and nested-frame work. Call the continuation while the hook is active; after it settles or is cancelled, further calls do nothing. Repeated calls deduplicate references. `defaultPrefetch()` awaits the hook and all delegated work, even when the hook doesn't return that work's promise. Speculative failures don't affect navigation.
 
@@ -1726,7 +1738,7 @@ processFrame(prefetchReferences, { frames }) {
 }
 ```
 
-Pass `{ frames }` to select every source. Nested requests inherit hooks, the triggering element, and cancellation, preserve named-frame headers, and avoid repeated references and cycles. Prefetching can warm a source's cache, but doesn't guarantee navigation will avoid showing fallback content; resolved HTML may already have streamed in the containing response.
+Pass `{ frames }` to select every source while retaining default asset hints, or `{ assets: [], frames }` to fetch only the nested sources. Nested requests inherit hooks, the triggering element, and cancellation, preserve named-frame headers, and avoid repeated references and cycles. Prefetching can warm a source's cache, but doesn't guarantee navigation will avoid showing fallback content; resolved HTML may already have streamed in the containing response.
 
 #### Scheduling and Retaining Frame HTML
 

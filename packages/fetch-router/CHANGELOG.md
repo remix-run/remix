@@ -2,6 +2,31 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Fix response bodies leaking when a request is aborted before its handler or middleware returns. `router.fetch()` already rejects with the abort reason, but a `Response` that resolved afterward was discarded without cancelling its body, so streaming work behind it, such as rendering a frame, kept running. The router now cancels the body of any response that arrives after the request was aborted. ([#12190](https://github.com/remix-run/remix/pull/12190))
+
+- Inline `{ middleware, handler }` actions in `createController()` and `router.map()` controllers now type their handler with their own action middleware, the same as actions passed to `router.get()` or created with `createAction()`. Previously only controller middleware reached the handler's context type, even though the action's middleware ran. ([#12149](https://github.com/remix-run/remix/pull/12149))
+
+- Fix router middleware receiving an empty response body when a `GET` route serves a `HEAD` request. The router now strips the body after router middleware runs, so middleware sees the same response it would for `GET`. Middleware that derives the status or headers from the body, such as `render()` rejecting when the page shell fails to render, now gives `HEAD` requests the same result as `GET` requests. ([#12190](https://github.com/remix-run/remix/pull/12190))
+
+- `RouterContext` and `MiddlewareContext` no longer drop every middleware value when the middleware array contains a conditional entry like `...(isDev ? [logger()] : [])`. Middleware before and after the conditional entry now types the context; the conditional middleware's own values are left out because it may not run. ([#12000](https://github.com/remix-run/remix/pull/12000))
+
+  ```ts
+  let router = createRouter({
+    middleware: [
+      ...(process.env.NODE_ENV === 'development' ? [logger()] : []),
+      formData(),
+      render({ assets }),
+    ],
+  })
+
+  // Now includes `formData` and `render`
+  type AppContext = RouterContext<typeof router>
+  ```
+
 ## v1.0.0
 
 ### Major Changes

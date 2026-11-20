@@ -49,8 +49,13 @@ function requestGitHub(query: string, variables: Record<string, unknown>): unkno
 function findReleasedItems(tag: string): ReleasedItems {
   let prs = new Set<number>()
   let issues = new Set<string>()
-  for (let number of getReleasedPrNumbers(tag)) {
+  // Stacked PRs merge into another PR's branch, so they ship without their own commit on main.
+  // Walk them from each released PR.
+  let queue = [...getReleasedPrNumbers(tag)]
+  for (let number of queue) {
+    if (prs.has(number)) continue
     let cursor: string | null = null
+    let branch: { name: string; openedAt: string; mergedAt: string } | null = null
     do {
       let response = readObject(
         requestGitHub(
@@ -58,7 +63,7 @@ function findReleasedItems(tag: string): ReleasedItems {
             query($number: Int!, $cursor: String) {
               repository(owner: "remix-run", name: "remix") {
                 pullRequest(number: $number) {
-                  title body merged
+                  title body merged headRefName createdAt mergedAt
                   closingIssuesReferences(first: 100, after: $cursor) {
                     nodes { number repository { nameWithOwner } }
                     pageInfo { hasNextPage endCursor }
@@ -76,6 +81,14 @@ function findReleasedItems(tag: string): ReleasedItems {
       }
       if (pr.merged !== true || pr.title === 'Release' || /^Release v\d/.test(pr.title)) break
       prs.add(number)
+      if (
+        typeof pr.headRefName !== 'string' ||
+        typeof pr.createdAt !== 'string' ||
+        typeof pr.mergedAt !== 'string'
+      ) {
+        throw new Error(`Could not read PR #${number}.`)
+      }
+      branch = { name: pr.headRefName, openedAt: pr.createdAt, mergedAt: pr.mergedAt }
       let references = readConnection(pr.closingIssuesReferences)
       for (let node of references.nodes) {
         if (node === null) continue
@@ -94,6 +107,34 @@ function findReleasedItems(tag: string): ReleasedItems {
         if (Number.isSafeInteger(issue) && issue > 0) issues.add(`${repository}#${issue}`)
       }
       cursor = references.cursor
+    } while (cursor)
+    if (branch === null) continue
+    do {
+      let response = readObject(
+        requestGitHub(
+          `
+            query($branch: String!, $cursor: String) {
+              repository(owner: "remix-run", name: "remix") {
+                pullRequests(baseRefName: $branch, states: MERGED, first: 100, after: $cursor) {
+                  nodes { number mergedAt }
+                  pageInfo { hasNextPage endCursor }
+                }
+              }
+            }
+          `,
+          { branch: branch.name, cursor },
+        ),
+      )
+      let stacked = readConnection(readObject(response.repository).pullRequests)
+      for (let node of stacked.nodes) {
+        let pr = readObject(node)
+        if (typeof pr.number !== 'number' || typeof pr.mergedAt !== 'string') {
+          throw new Error('Invalid stacked PR.')
+        }
+        // Branch names get reused, so only count PRs merged while this PR was open.
+        if (pr.mergedAt >= branch.openedAt && pr.mergedAt <= branch.mergedAt) queue.push(pr.number)
+      }
+      cursor = stacked.cursor
     } while (cursor)
   }
   return { prs, issues }

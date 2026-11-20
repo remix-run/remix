@@ -4,7 +4,10 @@ export const routes = route({
   // Underscored so no package (like `remix/assets`) can take the path.
   assets: '/_assets/*asset',
   home: '/',
+  // `/` has no name to add `.md` to, so the home page's markdown lives at `/index.md`.
+  homeMarkdown: '/index.md',
   api: '/api/',
+  apiMarkdown: '/api.md',
   lookup: '/api.json',
   // Guides live at the URL root (`/start-here/`).
   guides: route({
