@@ -1,6 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { normalizeCssValue, processStyleClass } from '../style/style.ts'
+import type { CSSProps } from '../style/style.ts'
 
 describe('processStyleClass', () => {
   it('returns class selectors and css text', () => {
@@ -33,6 +34,40 @@ describe('processStyleClass', () => {
     expect(first.selector).toBe(second.selector)
     expect(first.css).toBe(second.css)
     expect(cache.size).toBe(1)
+  })
+
+  it('reuses rules generated for an earlier style cache', () => {
+    let first = processStyleClass({ color: 'teal', padding: 4 }, new Map())
+    let cache = new Map<string, { selector: string; css: string }>()
+    let second = processStyleClass({ color: 'teal', padding: 4 }, cache)
+
+    expect(second).toBe(first)
+    expect(cache.get(JSON.stringify({ color: 'teal', padding: 4 }))).toBe(first)
+  })
+
+  it('generates a new rule after a style object is mutated in place', () => {
+    let styles: CSSProps = { color: 'olive' }
+    let first = processStyleClass(styles, new Map())
+    styles.color = 'navy'
+    let second = processStyleClass(styles, new Map())
+
+    expect(second.selector).not.toBe(first.selector)
+    expect(second.css).toContain('color: navy;')
+    expect(second.css).not.toContain('olive')
+  })
+
+  it('evicts the least recently used rules shared across style caches', () => {
+    let kept = processStyleClass({ color: 'maroon' }, new Map())
+    let evicted = processStyleClass({ color: 'coral' }, new Map())
+    for (let index = 0; index < 1000; index++) {
+      processStyleClass({ color: 'maroon' }, new Map())
+      processStyleClass({ zIndex: index }, new Map())
+    }
+
+    expect(processStyleClass({ color: 'maroon' }, new Map())).toBe(kept)
+    let regenerated = processStyleClass({ color: 'coral' }, new Map())
+    expect(regenerated).not.toBe(evicted)
+    expect(regenerated).toEqual(evicted)
   })
 
   it('keeps declaration order for the same properties written in a different order', () => {
