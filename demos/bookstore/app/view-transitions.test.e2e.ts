@@ -265,16 +265,19 @@ async function pauseViewTransitions(page: Page) {
     document.startViewTransition = (update) => {
       let transition = start(update)
       delete document.documentElement.dataset.transitionReady
-      void transition.ready.then(() => {
-        for (let animation of document.getAnimations()) {
-          if (
-            animation.effect instanceof KeyframeEffect &&
-            animation.effect.pseudoElement?.startsWith('::view-transition')
-          ) {
-            animation.pause()
-            animation.currentTime = 0
-          }
-        }
+      void transition.ready.then(async () => {
+        await Promise.all(
+          document.getAnimations().map(async (animation) => {
+            if (
+              animation.effect instanceof KeyframeEffect &&
+              animation.effect.pseudoElement?.startsWith('::view-transition')
+            ) {
+              animation.pause()
+              await animation.ready
+              animation.currentTime = 0
+            }
+          }),
+        )
         document.documentElement.dataset.transitionReady = 'true'
       })
       document.addEventListener('finish-test-transition', () => transition.skipTransition(), {

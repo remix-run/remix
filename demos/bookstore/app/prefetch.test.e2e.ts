@@ -534,9 +534,20 @@ describe('bookstore prefetching', () => {
     await section.scrollIntoViewIfNeeded()
     await section.getByRole('heading', { name: 'Citrus & Salt', exact: true }).waitFor()
     let covers = section.locator('img')
-    await covers.evaluateAll((images) =>
-      Promise.all(images.map((image) => image instanceof HTMLImageElement && image.decode())),
-    )
+    for (let cover of await covers.all()) {
+      await cover.scrollIntoViewIfNeeded()
+      let image = await cover.elementHandle()
+      assert.ok(image)
+      try {
+        await page.waitForFunction(
+          (image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
+          image,
+        )
+        await cover.evaluate((image: HTMLImageElement) => image.decode())
+      } finally {
+        await image.dispose()
+      }
+    }
     let chosen = await covers.evaluateAll((images) =>
       images.map((image) => {
         if (!(image instanceof HTMLImageElement)) throw new Error('Expected a cover image')
