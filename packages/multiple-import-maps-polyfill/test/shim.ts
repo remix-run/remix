@@ -1,4 +1,5 @@
 // Adapted from ES Module Shims 2.8.4 test/shim.js.
+import type { TestContext } from '@remix-run/test'
 import { preloadShim } from '../src/lib/core.ts'
 import type { ImportMap } from '../src/lib/resolve.ts'
 
@@ -348,31 +349,47 @@ suite('Errors', function () {
 })
 
 suite('Source maps', () => {
-  test('should include `//# sourceURL=` directive if one is not present in original module', async () => {
+  async function readShimmedSource(moduleURL: string, t: TestContext) {
+    let blobs = new Map<string, Blob>()
+    let createObjectURL = URL.createObjectURL.bind(URL)
+    let capture = t.mock.method(URL, 'createObjectURL', (object: Blob | MediaSource) => {
+      let url = createObjectURL(object)
+      if (object instanceof Blob) blobs.set(url, object)
+      return url
+    })
+
+    try {
+      await importShimmed(moduleURL)
+      let load = getLoad(moduleURL)
+      assert.ok(load, 'Shimmed module was not registered')
+      let blob = blobs.get(load.b)
+      assert.ok(blob, 'Generated module Blob was not captured')
+      // Cleanup may revoke the URL after import resolves; the Blob remains readable.
+      return await blob.text()
+    } finally {
+      capture.mock.restore()
+    }
+  }
+
+  test('should include `//# sourceURL=` directive if one is not present in original module', async (t) => {
     let moduleURL = new URL('./fixtures/es-modules/without-source-url.js', baseURL).href
-    await importShimmed(moduleURL)
-    let moduleBlobURL = getLoad(moduleURL)!.b
-    let blobContent = await fetch(moduleBlobURL).then((r) => r.text())
+    let blobContent = await readShimmedSource(moduleURL, t)
     assert(blobContent.includes(`//# sourceURL=${moduleURL}`))
   })
 
-  test('should replace relative paths in `//# sourceURL=` directive with absolute URL', async () => {
+  test('should replace relative paths in `//# sourceURL=` directive with absolute URL', async (t) => {
     let moduleURL = new URL('./fixtures/es-modules/with-relative-source-url.js', baseURL).href
-    await importShimmed(moduleURL)
-    let moduleBlobURL = getLoad(moduleURL)!.b
-    let blobContent = await fetch(moduleBlobURL).then((r) => r.text())
+    let blobContent = await readShimmedSource(moduleURL, t)
     let sourceURL = new URL('module.ts', moduleURL).href
     assert(blobContent.endsWith(`//# sourceURL=${sourceURL}`))
     // Should not touch any other occurrences of `//# sourceURL=` in the code.
     assert(blobContent.includes('//# sourceURL=i-should-not-be-affected.no'))
   })
 
-  test('should replace relative paths in `//# sourceMappingURL=` directive with absolute URL and add `//# sourceURL=`', async () => {
+  test('should replace relative paths in `//# sourceMappingURL=` directive with absolute URL and add `//# sourceURL=`', async (t) => {
     let moduleURL = new URL('./fixtures/es-modules/with-relative-source-mapping-url.js', baseURL)
       .href
-    await importShimmed(moduleURL)
-    let moduleBlobURL = getLoad(moduleURL)!.b
-    let blobContent = await fetch(moduleBlobURL).then((r) => r.text())
+    let blobContent = await readShimmedSource(moduleURL, t)
     let sourceMappingURL = new URL('./with-relative-source-mapping-url.js.map', moduleURL).href
     assert(
       blobContent.endsWith(`//# sourceMappingURL=${sourceMappingURL}\n//# sourceURL=${moduleURL}`),
@@ -382,12 +399,10 @@ suite('Source maps', () => {
     assert(blobContent.includes('//# sourceMappingURL=i-should-not-be-affected.no'))
   })
 
-  test('should keep original absolute URL in `//# sourceMappingURL=` directive and add `//# sourceURL=`', async () => {
+  test('should keep original absolute URL in `//# sourceMappingURL=` directive and add `//# sourceURL=`', async (t) => {
     let moduleURL = new URL('./fixtures/es-modules/with-absolute-source-mapping-url.js', baseURL)
       .href
-    await importShimmed(moduleURL)
-    let moduleBlobURL = getLoad(moduleURL)!.b
-    let blobContent = await fetch(moduleBlobURL).then((r) => r.text())
+    let blobContent = await readShimmedSource(moduleURL, t)
     assert(
       blobContent.endsWith(
         `//# sourceMappingURL=https://example.com/module.js.map\n//# sourceURL=${moduleURL}`,
@@ -398,14 +413,12 @@ suite('Source maps', () => {
     assert(blobContent.includes('//# sourceMappingURL=i-should-not-be-affected.no'))
   })
 
-  test('should preserve existing sourceURL if both sourceURL and sourceMappingURL already exist', async () => {
+  test('should preserve existing sourceURL if both sourceURL and sourceMappingURL already exist', async (t) => {
     let moduleURL = new URL(
       './fixtures/es-modules/with-source-url-and-source-mapping-url.js',
       baseURL,
     ).href
-    await importShimmed(moduleURL)
-    let moduleBlobURL = getLoad(moduleURL)!.b
-    let blobContent = await fetch(moduleBlobURL).then((r) => r.text())
+    let blobContent = await readShimmedSource(moduleURL, t)
     assert(
       blobContent.endsWith(
         `//# sourceURL=${new URL('/with-source-url-and-source-mapping-url.js', window.location.origin)}\n//# sourceMappingURL=https://example.com/module.js.map`,
