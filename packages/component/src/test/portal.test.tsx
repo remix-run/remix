@@ -2030,6 +2030,74 @@ describe('Portal', () => {
     expect(container.querySelector('b')).toBe(draft)
   })
 
+  it('preserves input focus and selection without extra focus events when destination raw HTML changes', (t) => {
+    let host = render(<section innerHTML={unsafeHTML('<p>Before</p>')} />)
+    t.after(host.cleanup)
+    let destination = host.container.querySelector('section')
+    invariant(destination)
+    let portal = render(
+      <Portal container={destination}>
+        <input />
+      </Portal>,
+    )
+    t.after(portal.cleanup)
+    let input = destination.querySelector('input')
+    invariant(input)
+    input.value = 'Unsaved draft'
+    input.focus()
+    input.setSelectionRange(2, 7)
+    let events: string[] = []
+    input.addEventListener('focus', () => events.push('focus'))
+    input.addEventListener('blur', () => events.push('blur'))
+
+    host.root.render(<section innerHTML={unsafeHTML('<p>After</p>')} />)
+    expect(destination.querySelector('p')?.textContent).toBe('After')
+    expect(destination.querySelector('input')).toBe(input)
+    expect(document.activeElement).toBe(input)
+    expect(input.value).toBe('Unsaved draft')
+    expect(input.selectionStart).toBe(2)
+    expect(input.selectionEnd).toBe(7)
+    expect(events).toEqual([])
+
+    host.root.render(<section />)
+    expect(destination.querySelector('p')).toBe(null)
+    expect(destination.querySelector('input')).toBe(input)
+    expect(document.activeElement).toBe(input)
+    expect(input.value).toBe('Unsaved draft')
+    expect(input.selectionStart).toBe(2)
+    expect(input.selectionEnd).toBe(7)
+    expect(events).toEqual([])
+  })
+
+  it('keeps portal content connected when destination raw HTML changes or is cleared', (t) => {
+    let events: string[] = []
+    let tag = 'portal-connection-' + crypto.randomUUID()
+    customElements.define(
+      tag,
+      class extends HTMLElement {
+        connectedCallback() {
+          events.push('connect')
+        }
+        disconnectedCallback() {
+          events.push('disconnect')
+        }
+      },
+    )
+    let host = render(<section innerHTML={unsafeHTML('<p>Before</p>')} />)
+    t.after(host.cleanup)
+    let destination = host.container.querySelector('section')
+    invariant(destination)
+    let portal = render(<Portal container={destination}>{jsx(tag, {})}</Portal>)
+    t.after(portal.cleanup)
+    expect(events).toEqual(['connect'])
+
+    host.root.render(<section innerHTML={unsafeHTML('<p>After</p>')} />)
+    host.root.render(<section />)
+    expect(events).toEqual(['connect'])
+    portal.cleanup()
+    expect(events).toEqual(['connect', 'disconnect'])
+  })
+
   it('reflects a controlled select value after portaled options are added and removed', async (t) => {
     let destination: HTMLSelectElement | null = null
     let show = true
