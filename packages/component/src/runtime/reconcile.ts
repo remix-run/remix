@@ -1562,18 +1562,25 @@ function finishPortalRemovals(container: ParentNode): void {
 }
 
 function setHostInnerHTML(element: Element, html: string): void {
-  let portals = getPortalRanges(element)
-  if (!portals) {
+  // A template's innerHTML updates its content fragment, leaving Portal nodes untouched.
+  if (!getPortalRanges(element) || element.localName === 'template') {
     element.innerHTML = html
     return
   }
-  // Raw HTML owns the destination's ordinary content, while each portal owns its own range.
-  let preserved = element.ownerDocument.createDocumentFragment()
-  for (let portal of portals) {
-    moveDomRange(preserved, portal._rangeStart, portal._rangeEnd, null)
+  // Keep Portal ranges connected. Detaching them would disturb focus and trigger connection
+  // lifecycle callbacks.
+  for (let node of excludePortalRanges(Array.from(element.childNodes), element)) {
+    element.removeChild(node)
   }
-  element.innerHTML = html
-  element.append(preserved)
+  if (element.localName === 'html') {
+    // insertAdjacentHTML uses a body context for html elements, unlike innerHTML.
+    let parsed = element.ownerDocument.createElement('html')
+    parsed.innerHTML = html
+    let anchor = element.firstChild
+    while (parsed.firstChild) element.insertBefore(parsed.firstChild, anchor)
+  } else {
+    element.insertAdjacentHTML('afterbegin', html)
+  }
 }
 
 function getPortalContainer(props: PortalProps, doc: Document): HTMLElement {
