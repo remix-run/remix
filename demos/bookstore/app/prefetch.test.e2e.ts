@@ -567,8 +567,23 @@ describe('bookstore prefetching', () => {
         await createTestServer(async (request) => {
           if (new URL(request.url).pathname === '/books/bbq/related') {
             relatedRequests.push(request)
-            requested.resolve()
-            await release.promise
+            let headers = new Headers(request.headers)
+            headers.delete('Accept-Encoding')
+            let response = await router.fetch(new Request(request, { headers }))
+            let html = await response.text()
+            response.headers.delete('Content-Length')
+            // Keep the prefix available until the lazy frame has joined the pending response.
+            return new Response(
+              new ReadableStream<Uint8Array>({
+                async start(controller) {
+                  controller.enqueue(new TextEncoder().encode(html))
+                  requested.resolve()
+                  await release.promise
+                  controller.close()
+                },
+              }),
+              { status: response.status, headers: response.headers },
+            )
           }
           return router.fetch(request)
         }),
@@ -590,14 +605,11 @@ describe('bookstore prefetching', () => {
         .getByRole('link', { name: 'View Details', exact: true })
         .evaluate((anchor: HTMLAnchorElement) => anchor.click())
       await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
+      await page.evaluate(async () => window.navigation.transition?.finished)
       let related = page.getByRole('region', { name: 'Related Books', exact: true })
       await related.scrollIntoViewIfNeeded()
-      await related
-        .getByRole('status')
-        .getByText('Loading related books…', { exact: true })
-        .waitFor()
-      release.resolve()
       await related.getByRole('heading', { name: 'Citrus & Salt', exact: true }).waitFor()
+      release.resolve()
       assert.equal(relatedRequests.length, 1)
       assert.equal(relatedRequests[0].headers.get('X-Remix-Prefetch'), 'true')
       assert.equal(relatedRequests[0].headers.get('X-Remix-Target'), 'related-books-1')
