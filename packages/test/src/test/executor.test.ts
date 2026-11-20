@@ -1022,6 +1022,200 @@ describe('runTests skip and todo reasons', () => {
   })
 })
 
+describe('runTests history quota recovery', () => {
+  it('backs off once for aggregated cleanup quota errors before afterEach without replaying cleanup', async () => {
+    let cleanups = 0
+    let backoffs = 0
+    let results = await runWithSuites(
+      [
+        {
+          name: 'suite',
+          afterEach: [
+            {
+              fn() {
+                assert.equal(backoffs, 1)
+              },
+            },
+          ],
+          tests: [
+            {
+              name: 'cleanup failures',
+              fn(t) {
+                function cleanup() {
+                  cleanups++
+                  throw new DOMException(
+                    'Attempt to use history.replaceState() more than 100 times per 10 seconds',
+                    'SecurityError',
+                  )
+                }
+                t.after(cleanup)
+                t.after(cleanup)
+                t.after(() => {
+                  throw new Error('other cleanup failure')
+                })
+              },
+            },
+          ],
+        },
+      ],
+      {
+        async onHistoryQuotaExceeded() {
+          backoffs++
+        },
+      },
+    )
+    assert.equal(cleanups, 2)
+    assert.equal(backoffs, 1)
+    assert.equal(results.failed, 1)
+    assert.match(results.tests[0].error?.message ?? '', /history.replaceState/)
+    assert.match(results.tests[0].error?.message ?? '', /other cleanup failure/)
+    assert.ok(!results.tests[0].error?.message.includes('afterEach failed'))
+  })
+
+  it('bounds retries and backs off again before continuing after a repeated quota failure', async () => {
+    let attempts = 0
+    let backoffs = 0
+    let results = await runWithSuites(
+      [
+        {
+          name: 'suite',
+          tests: [
+            {
+              name: 'too many updates',
+              fn() {
+                attempts++
+                throw new DOMException(
+                  'Attempt to use history.pushState() more than 100 times per 10 seconds',
+                  'SecurityError',
+                )
+              },
+            },
+            {
+              name: 'next test',
+              fn() {
+                assert.equal(backoffs, 2)
+              },
+            },
+          ],
+        },
+      ],
+      {
+        async onHistoryQuotaExceeded() {
+          backoffs++
+        },
+      },
+    )
+    assert.equal(attempts, 2)
+    assert.equal(results.failed, 1)
+    assert.equal(results.passed, 1)
+    assert.match(results.tests[0].error?.message ?? '', /history.pushState/)
+  })
+
+  it('reports unrelated SecurityErrors and quota errors without browser recovery normally', async () => {
+    let backoffs = 0
+    let aggregateAttempts = 0
+    let otherError = await runWithSuites(
+      [
+        {
+          name: 'suite',
+          tests: [
+            {
+              name: 'invalid URL',
+              fn() {
+                throw new DOMException('Invalid URL', 'SecurityError')
+              },
+            },
+            {
+              name: 'mixed errors',
+              fn() {
+                if (++aggregateAttempts > 1) return
+                throw new AggregateError([
+                  new DOMException(
+                    'Attempt to use history.replaceState() more than 100 times per 10 seconds',
+                    'SecurityError',
+                  ),
+                  new Error('unrelated failure'),
+                ])
+              },
+            },
+          ],
+        },
+      ],
+      {
+        async onHistoryQuotaExceeded() {
+          backoffs++
+        },
+      },
+    )
+    let noRecovery = await runWithSuites([
+      {
+        name: 'suite',
+        tests: [
+          {
+            name: 'server test',
+            fn() {
+              throw new DOMException(
+                'Attempt to use history.replaceState() more than 100 times per 10 seconds',
+                'SecurityError',
+              )
+            },
+          },
+        ],
+      },
+    ])
+    assert.equal(backoffs, 0)
+    assert.equal(aggregateAttempts, 1)
+    assert.equal(otherError.failed, 2)
+    assert.equal(noRecovery.failed, 1)
+  })
+
+  it('retries only the beforeAll hook that exhausted the quota', async () => {
+    let firstHook = 0
+    let attempts = 0
+    let backoffs = 0
+    let results = await runWithSuites(
+      [
+        {
+          name: 'suite',
+          beforeAll: [
+            {
+              fn() {
+                firstHook++
+              },
+            },
+            {
+              fn() {
+                if (++attempts === 1)
+                  throw new DOMException(
+                    'Attempt to use history.replaceState() more than 100 times per 10 seconds',
+                    'SecurityError',
+                  )
+              },
+            },
+          ],
+          tests: [
+            {
+              name: 'test',
+              fn() {
+                assert.equal(firstHook, 1)
+              },
+            },
+          ],
+        },
+      ],
+      {
+        async onHistoryQuotaExceeded() {
+          backoffs++
+        },
+      },
+    )
+    assert.equal(attempts, 2)
+    assert.equal(backoffs, 1)
+    assert.equal(results.passed, 1)
+    assert.equal(results.failed, 0)
+  })
+})
+
 async function runWithSuites(
   suites: SuiteFixture[],
   options?: RunTestsOptions,
