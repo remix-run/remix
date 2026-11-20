@@ -221,6 +221,7 @@ await compressResponse(response, request, {
   },
 
   // node:zlib options for Brotli compression.
+  // Quality defaults to 5 instead of Node's 11, which is too slow to run on each response.
   // For HTML and SSE responses (text/html and text/event-stream),
   // flush: BROTLI_OPERATION_FLUSH is applied unless you explicitly set a flush value.
   // See: https://nodejs.org/api/zlib.html#class-brotlioptions
