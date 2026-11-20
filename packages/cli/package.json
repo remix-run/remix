@@ -25,7 +25,8 @@
     "./dist/lib/load-route-map-worker.js"
   ],
   "engines": {
-    "node": ">=24.3.0"
+    "node": ">=24.3.0",
+    "bun": ">=1.4.3"
   },
   "exports": {
     ".": "./src/index.ts",
