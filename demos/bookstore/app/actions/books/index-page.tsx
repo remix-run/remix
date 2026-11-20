@@ -3,7 +3,6 @@ import { css } from 'remix/component'
 
 import type { BookWithCover } from '../../utils/book-images.ts'
 import { getBookGenreLabel } from '../../data/book-genres.ts'
-import type { Cart } from '../../utils/cart.ts'
 import { routes } from '../../routes.ts'
 import { BookCard, BookCoverPreload } from '../../ui/book-card.tsx'
 import { Layout } from '../../ui/layout.tsx'
@@ -11,12 +10,11 @@ import { Layout } from '../../ui/layout.tsx'
 export interface IndexPageProps {
   allBooks: BookWithCover[]
   genres: string[]
-  cart: Cart
 }
 
 export function IndexPage(handle: Handle<IndexPageProps>) {
   return () => {
-    let { allBooks, cart, genres } = handle.props
+    let { allBooks, genres } = handle.props
 
     return (
       <Layout head={<BookCoverPreload book={allBooks[0]} />}>
@@ -56,12 +54,9 @@ export function IndexPage(handle: Handle<IndexPageProps>) {
         </div>
 
         <div class="grid">
-          {allBooks.map((book, index) => {
-            let inCart = cart.items.some((item) => item.slug === book.slug)
-            return (
-              <BookCard book={book} inCart={inCart} imageLoading={index < 4 ? 'eager' : 'lazy'} />
-            )
-          })}
+          {allBooks.map((book, index) => (
+            <BookCard book={book} imageLoading={index < 4 ? 'eager' : 'lazy'} />
+          ))}
         </div>
       </Layout>
     )

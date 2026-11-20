@@ -3,7 +3,6 @@ import { css } from 'remix/component'
 
 import type { BookWithCover } from '../../utils/book-images.ts'
 import { getBookGenreLabel } from '../../data/book-genres.ts'
-import type { Cart } from '../../utils/cart.ts'
 import { routes } from '../../routes.ts'
 import { BookCard, BookCoverPreload } from '../../ui/book-card.tsx'
 import { Layout } from '../../ui/layout.tsx'
@@ -11,12 +10,11 @@ import { Layout } from '../../ui/layout.tsx'
 export interface GenrePageProps {
   genre: string
   matchingBooks: BookWithCover[]
-  cart: Cart
 }
 
 export function GenrePage(handle: Handle<GenrePageProps>) {
   return () => {
-    let { cart, genre, matchingBooks } = handle.props
+    let { genre, matchingBooks } = handle.props
 
     return (
       <Layout head={<BookCoverPreload book={matchingBooks[0]} />}>
@@ -28,12 +26,9 @@ export function GenrePage(handle: Handle<GenrePageProps>) {
         </p>
 
         <div class="grid" mix={css({ marginTop: '2rem' })}>
-          {matchingBooks.map((book, index) => {
-            let inCart = cart.items.some((item) => item.slug === book.slug)
-            return (
-              <BookCard book={book} inCart={inCart} imageLoading={index < 4 ? 'eager' : 'lazy'} />
-            )
-          })}
+          {matchingBooks.map((book, index) => (
+            <BookCard book={book} imageLoading={index < 4 ? 'eager' : 'lazy'} />
+          ))}
         </div>
       </Layout>
     )

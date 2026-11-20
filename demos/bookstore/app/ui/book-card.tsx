@@ -26,7 +26,6 @@ export function BookCoverPreload(handle: Handle<{ book: BookWithCover | undefine
 
 export interface BookCardProps {
   book: BookWithCover
-  inCart: boolean
   imageLoading?: 'eager' | 'lazy'
   imageSizes?: string
 }

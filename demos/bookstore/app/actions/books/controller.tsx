@@ -4,7 +4,6 @@ import * as s from 'remix/data-schema'
 
 import { books } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
-import { getCurrentCart } from '../../utils/context.ts'
 import { getBookImage, resolveBookCover } from '../../utils/book-images.ts'
 import { browsingResponseInit } from '../browsing-response.ts'
 import { IndexPage } from './index-page.tsx'
@@ -14,19 +13,18 @@ import { RelatedBooks } from './related-books.tsx'
 
 export default createController(routes.books, {
   actions: {
-    async index({ db, render, request, session }) {
+    async index({ db, render, request }) {
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
       allBooks = await Promise.all(allBooks.map(resolveBookCover))
       let genreRows = await db.query(books).select('genre').distinct().orderBy('genre', 'asc').all()
-      let cart = getCurrentCart(session)
 
       return render(
-        <IndexPage allBooks={allBooks} genres={genreRows.map((row) => row.genre)} cart={cart} />,
+        <IndexPage allBooks={allBooks} genres={genreRows.map((row) => row.genre)} />,
         browsingResponseInit(request),
       )
     },
 
-    async genre({ db, params, render, request, session }) {
+    async genre({ db, params, render, request }) {
       let genre = params.genre
       let matchingBooks = await db.findMany(books, {
         where: ilike('genre', genre),
@@ -39,10 +37,8 @@ export default createController(routes.books, {
 
       matchingBooks = await Promise.all(matchingBooks.map(resolveBookCover))
 
-      let cart = getCurrentCart(session)
-
       return render(
-        <GenrePage genre={genre} matchingBooks={matchingBooks} cart={cart} />,
+        <GenrePage genre={genre} matchingBooks={matchingBooks} />,
         browsingResponseInit(request),
       )
     },
@@ -69,7 +65,7 @@ export default createController(routes.books, {
       )
     },
 
-    async related({ db, params, render, request, session }) {
+    async related({ db, params, render, request }) {
       let book = await db.findOne(books, { where: { slug: params.slug } })
       if (!book) {
         return render(<p>Book not found.</p>, {
@@ -85,10 +81,7 @@ export default createController(routes.books, {
       })
       relatedBooks = await Promise.all(relatedBooks.map(resolveBookCover))
 
-      return render(
-        <RelatedBooks books={relatedBooks} cart={getCurrentCart(session)} />,
-        browsingResponseInit(request),
-      )
+      return render(<RelatedBooks books={relatedBooks} />, browsingResponseInit(request))
     },
   },
 })

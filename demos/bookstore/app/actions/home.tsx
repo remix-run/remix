@@ -3,18 +3,16 @@ import { css } from 'remix/component'
 
 import type { BookWithCover } from '../utils/book-images.ts'
 import { routes } from '../routes.ts'
-import type { Cart } from '../utils/cart.ts'
 import { BookCard, BookCoverPreload } from '../ui/book-card.tsx'
 import { Layout } from '../ui/layout.tsx'
 
 interface HomePageProps {
   featuredBooks: BookWithCover[]
-  cart: Cart
 }
 
 export function HomePage(handle: Handle<HomePageProps>) {
   return () => {
-    let { featuredBooks, cart } = handle.props
+    let { featuredBooks } = handle.props
 
     return (
       <Layout head={<BookCoverPreload book={featuredBooks[0]} />}>
@@ -33,10 +31,9 @@ export function HomePage(handle: Handle<HomePageProps>) {
 
         <h2 mix={css({ margin: '2rem 0 1rem' })}>Featured Books</h2>
         <div class="grid">
-          {featuredBooks.map((book) => {
-            let inCart = cart.items.some((item) => item.slug === book.slug)
-            return <BookCard book={book} inCart={inCart} />
-          })}
+          {featuredBooks.map((book) => (
+            <BookCard book={book} />
+          ))}
         </div>
       </Layout>
     )
