@@ -1,10 +1,10 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 import { Session } from '@remix-run/session'
 
+import { toBase64Url } from './base64url.ts'
 import type { OAuthTransaction } from './provider.ts'
 
 const textEncoder = new TextEncoder()
-const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 const returnToBaseURL = 'https://remix.local'
 
 export function createCodeVerifier(): string {
@@ -44,10 +44,7 @@ export function getRequiredSearchParam(context: RequestContext, name: string): s
   return value
 }
 
-export function getSession(
-  context: RequestContext,
-  source: 'completeAuth()' | 'finishExternalAuth()' | 'startExternalAuth()',
-): Session {
+export function getSession(context: RequestContext, source: string): Session {
   let session = context.get(Session)
   if (session == null) {
     throw new Error(`Session not found. Make sure session() middleware runs before ${source}.`)
@@ -94,30 +91,8 @@ export function sanitizeReturnTo(value: string | null): string | undefined {
   return url.pathname + url.search + url.hash
 }
 
-function createRandomToken(byteLength: number): string {
+export function createRandomToken(byteLength: number): string {
   let bytes = new Uint8Array(byteLength)
   crypto.getRandomValues(bytes)
   return toBase64Url(bytes)
-}
-
-function toBase64Url(bytes: Uint8Array): string {
-  return toBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
-}
-
-function toBase64(bytes: Uint8Array): string {
-  let output = ''
-
-  for (let index = 0; index < bytes.length; index += 3) {
-    let byte1 = bytes[index] ?? 0
-    let byte2 = bytes[index + 1] ?? 0
-    let byte3 = bytes[index + 2] ?? 0
-    let chunk = (byte1 << 16) | (byte2 << 8) | byte3
-
-    output += base64Chars[(chunk >> 18) & 0x3f]
-    output += base64Chars[(chunk >> 12) & 0x3f]
-    output += index + 1 < bytes.length ? base64Chars[(chunk >> 6) & 0x3f] : '='
-    output += index + 2 < bytes.length ? base64Chars[chunk & 0x3f] : '='
-  }
-
-  return output
 }

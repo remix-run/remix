@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/auth",
   "version": "1.0.2",
-  "description": "Browser login, OAuth, and OIDC helpers for Remix",
+  "description": "Browser login, OAuth, OIDC, and passkey helpers for Remix",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -21,6 +21,7 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
+    "./webauthn-client": "./src/webauthn-client.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -28,6 +29,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./webauthn-client": {
+        "types": "./dist/webauthn-client.d.ts",
+        "default": "./dist/webauthn-client.js"
       },
       "./package.json": "./package.json"
     }
@@ -71,6 +76,8 @@
     "auth0",
     "login",
     "credentials",
-    "session"
+    "session",
+    "webauthn",
+    "passkeys"
   ]
 }

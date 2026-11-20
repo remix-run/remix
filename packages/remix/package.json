@@ -33,6 +33,7 @@
       "types": "./src/assets/types/hmr.d.ts"
     },
     "./auth": "./src/auth.ts",
+    "./auth/webauthn-client": "./src/auth/webauthn-client.ts",
     "./cli": "./src/cli.ts",
     "./component": "./src/component.ts",
     "./component-hmr": "./src/component-hmr.ts",
@@ -160,6 +161,10 @@
       "./auth": {
         "types": "./dist/auth.d.ts",
         "default": "./dist/auth.js"
+      },
+      "./auth/webauthn-client": {
+        "types": "./dist/auth/webauthn-client.d.ts",
+        "default": "./dist/auth/webauthn-client.js"
       },
       "./cli": {
         "types": "./dist/cli.d.ts",
