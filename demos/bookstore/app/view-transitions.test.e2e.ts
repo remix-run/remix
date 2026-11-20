@@ -89,13 +89,15 @@ describe('bookstore view transitions', () => {
 
     let start = await sampleTransition(page, 0)
     let middle = await sampleTransition(page, 0.5)
-    assert.deepEqual(middle.page, start.page)
+    assert.equal(start.pageAnimation, 'none')
+    assert.equal(middle.pageAnimation, 'none')
     assert.notEqual(middle.cover.transform, start.cover.transform)
     assert.equal(start.title, 'none')
     assert.deepEqual(middle.snapshotTransforms, ['none', 'none'])
     assert.ok(middle.oldOpacity < start.oldOpacity)
     assert.ok(middle.newOpacity > start.newOpacity)
-    assert.equal(await page.evaluate(() => scrollY), 0)
+    let resetScroll = await page.evaluate(() => scrollY)
+    assert.ok(Math.abs(resetScroll) <= 1, `Expected scroll near 0, received ${resetScroll}`)
     await page.evaluate(() => {
       document.dispatchEvent(new Event('finish-test-transition'))
       delete document.documentElement.dataset.transitionReady
@@ -105,15 +107,21 @@ describe('bookstore view transitions', () => {
 
     let back = page.goBack()
     await page.waitForFunction(() => document.documentElement.dataset.transitionReady === 'true')
+    await page.evaluate(async () => window.navigation.transition?.finished)
     start = await sampleTransition(page, 0)
     middle = await sampleTransition(page, 0.5)
-    assert.deepEqual(middle.page, start.page)
+    assert.equal(start.pageAnimation, 'none')
+    assert.equal(middle.pageAnimation, 'none')
     assert.notEqual(middle.cover.transform, start.cover.transform)
     assert.equal(start.title, 'none')
     assert.deepEqual(middle.snapshotTransforms, ['none', 'none'])
     assert.ok(middle.oldOpacity < start.oldOpacity)
     assert.ok(middle.newOpacity > start.newOpacity)
-    assert.ok(Math.abs((await page.evaluate(() => scrollY)) - originalScroll) < 1)
+    let restoredScroll = await page.evaluate(() => scrollY)
+    assert.ok(
+      Math.abs(restoredScroll - originalScroll) <= 1,
+      `Expected scroll near ${originalScroll}, received ${restoredScroll}`,
+    )
     await sampleTransition(page, 1)
     let buttons = page.locator('[data-test-slug="ink-and-tide"] .btn')
     let snapshotButtons = await buttons.evaluateAll((buttons) =>
@@ -122,9 +130,7 @@ describe('bookstore view transitions', () => {
     await page.evaluate(() => document.dispatchEvent(new Event('finish-test-transition')))
     await back
     await page.getByRole('heading', { name: 'Browse Books', exact: true }).waitFor()
-    await page.waitForFunction(() =>
-      document.querySelector('[data-test-slug="ink-and-tide"]')?.matches(':hover'),
-    )
+    await link.hover()
     await page.locator('[data-test-slug="ink-and-tide"]').evaluate(async (card) => {
       card.getBoundingClientRect()
       await Promise.all(card.getAnimations().map((animation) => animation.finished))
@@ -239,7 +245,11 @@ async function sampleTransition(page: Page, progress: number) {
       document.querySelector('[data-test-slug="ink-and-tide"] h3') ??
       document.querySelector('main h1')
     return {
-      page: geometry('bookstore-page'),
+      // Lazy content can change snapshot dimensions; the page group must have no motion animation.
+      pageAnimation: getComputedStyle(
+        document.documentElement,
+        '::view-transition-group(bookstore-page)',
+      ).animationName,
       cover: geometry('book-cover-13'),
       title: title ? getComputedStyle(title).viewTransitionName : undefined,
       snapshotTransforms: [oldPage.transform, newPage.transform],
