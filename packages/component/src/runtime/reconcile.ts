@@ -234,9 +234,8 @@ export interface ReconcileContext {
   scheduler: Scheduler
   styles: StyleManager
   rootTarget: EventTarget
-  // Track new nodes for failed-render cleanup once a pass enters a Portal. Ordinary descendants
-  // and later siblings participate too. Undefined means no active pass, null means tracking is off.
-  _pendingMountCleanup?: Set<CommittedVNode | MountingComponentNode> | null
+  // New Portals need cleanup if their source render fails before recording them.
+  _pendingPortals?: Set<CommittedPortalNode> | null
 }
 
 export type VNodeParent =
@@ -287,15 +286,11 @@ function isFragmentNode(node: VNode): node is FragmentNode | CommittedFragmentNo
   return node.kind === 'fragment'
 }
 
-function isCommittedTextNode(
-  node: CommittedVNode | MountingComponentNode,
-): node is CommittedTextNode {
+function isCommittedTextNode(node: CommittedVNode): node is CommittedTextNode {
   return node.kind === 'text'
 }
 
-function isCommittedHostNode(
-  node: CommittedVNode | MountingComponentNode,
-): node is CommittedHostNode {
+function isCommittedHostNode(node: CommittedVNode): node is CommittedHostNode {
   return node.kind === 'host'
 }
 
@@ -862,26 +857,18 @@ export function diffVNodes(
   anchor?: Node,
   cursor?: HydrationCursor,
 ): CommittedVNode {
-  if (context._pendingMountCleanup !== undefined) {
+  if (context._pendingPortals !== undefined) {
     return reconcileVNodes(curr, next, domParent, vParent, context, anchor, cursor)
   }
-  context._pendingMountCleanup = findPortalAncestor(vParent) ? new Set() : null
+  // Null marks an active render without allocating a collection unless it creates a Portal.
+  context._pendingPortals = null
   try {
     return reconcileVNodes(curr, next, domParent, vParent, context, anchor, cursor)
   } catch (error) {
-    if (context._pendingMountCleanup) {
-      // A failed render can leave newly mounted portal descendants outside the committed tree.
-      for (let node of context._pendingMountCleanup) {
-        let parent =
-          node.kind === 'component'
-            ? getComponentDomParent(node, domParent)
-            : (findFirstDomAnchor(node)?.parentNode ?? null)
-        remove(node, parent, context)
-      }
-    }
+    for (let portal of context._pendingPortals ?? []) remove(portal, null, context)
     throw error
   } finally {
-    context._pendingMountCleanup = undefined
+    context._pendingPortals = undefined
   }
 }
 
@@ -1215,7 +1202,6 @@ function mountHostNode(
   }
   patchHostProps({}, hydratedProps, dom)
   let committed = commitHostNode(node, vParent, svg, dom, resolved)
-  context._pendingMountCleanup?.add(committed)
 
   if (hostProps.innerHTML != null) {
     dom.innerHTML = hostProps.innerHTML
@@ -1278,19 +1264,6 @@ export function insertDomNode(dom: Node, domParent: ParentNode, anchor?: Node): 
 }
 
 function insert(
-  node: VNodeInput,
-  domParent: ParentNode,
-  vParent: VNodeParent,
-  context: ReconcileContext,
-  anchor?: Node,
-  cursor?: HydrationCursor,
-): CommittedVNode {
-  let committed = insertVNode(node, domParent, vParent, context, anchor, cursor)
-  context._pendingMountCleanup?.add(committed)
-  return committed
-}
-
-function insertVNode(
   node: VNodeInput,
   domParent: ParentNode,
   vParent: VNodeParent,
@@ -1428,7 +1401,6 @@ function insertVNode(
         }
 
         let committed = commitHostNode(node, vParent, svg, targetHead, resolved)
-        context._pendingMountCleanup?.add(committed)
         // Render explicit <head> children directly into document.head.
         committed._children = diffChildren(
           null,
@@ -1503,17 +1475,7 @@ function insertVNode(
   }
 
   if (node.kind === 'frame') {
-    let committed = node.type[FRAME_NODE].insert(
-      node,
-      domParent,
-      vParent,
-      context,
-      svg,
-      anchor,
-      cursor,
-    )
-    context._pendingMountCleanup?.add(committed)
-    return committed
+    return node.type[FRAME_NODE].insert(node, domParent, vParent, context, svg, anchor, cursor)
   }
 
   invariant(false, 'Unexpected node type')
@@ -1613,15 +1575,6 @@ function setHostInnerHTML(element: Element, html: string): void {
   element.append(preserved)
 }
 
-function clearFailedPortalContent(node: CommittedPortalNode): void {
-  let current = node._rangeStart.nextSibling
-  while (current && current !== node._rangeEnd) {
-    let next = current.nextSibling
-    current.parentNode?.removeChild(current)
-    current = next
-  }
-}
-
 function getPortalContainer(props: PortalProps, doc: Document): HTMLElement {
   let container = props.container === undefined ? doc.body : props.container
   invariant(container, 'Portal requires a destination container or a document body')
@@ -1653,18 +1606,12 @@ function insertPortal(
     _children: [],
   }
   registerPortalRange(committed)
-  context._pendingMountCleanup ??= new Set()
-  context._pendingMountCleanup.add(committed)
-  try {
-    for (let child of flatMapChildrenToVNodes(node.props)) {
-      committed._children.push(insert(child, container, committed, context, end))
-    }
-    restoreAncestorSelect(container)
-  } catch (error) {
-    clearFailedPortalContent(committed)
-    remove(committed, domParent, context)
-    throw error
+  context._pendingPortals ??= new Set()
+  context._pendingPortals.add(committed)
+  for (let child of flatMapChildrenToVNodes(node.props)) {
+    committed._children.push(insert(child, container, committed, context, end))
   }
+  restoreAncestorSelect(container)
   return committed
 }
 
@@ -1696,36 +1643,17 @@ function diffPortal(
   }
   curr._parent = vParent
   curr.props = next.props
-  context._pendingMountCleanup ??= new Set()
-  try {
-    curr._children = diffChildren(
-      curr._children,
-      flatMapChildrenToVNodes(next.props),
-      container,
-      curr,
-      context,
-      undefined,
-      curr._rangeEnd,
-    )
-    restoreAncestorSelect(container)
-  } catch (error) {
-    for (let child of curr._children) remove(child, container, context)
-    curr._children = []
-    clearFailedPortalContent(curr)
-    restoreAncestorSelect(container)
-    throw error
-  }
+  curr._children = diffChildren(
+    curr._children,
+    flatMapChildrenToVNodes(next.props),
+    container,
+    curr,
+    context,
+    undefined,
+    curr._rangeEnd,
+  )
+  restoreAncestorSelect(container)
   return curr
-}
-
-function getComponentDomParent(node: MountingComponentNode, fallback: ParentNode): ParentNode {
-  let parent = node._parent
-  while (parent.kind !== 'root') {
-    if (parent.kind === 'host') return parent._dom
-    if (parent.kind === 'portal') return parent._container
-    parent = parent._parent
-  }
-  return fallback
 }
 
 function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
@@ -1824,7 +1752,6 @@ function diffComponent(
     handle = curr._handle
   }
   let mounting = beginComponentNode(next, vParent, svg, handle, context)
-  if (curr === null) context._pendingMountCleanup?.add(mounting)
   return renderComponent(curr && curr._content, mounting, domParent, context, anchor, cursor)
 }
 
@@ -1897,12 +1824,11 @@ function disposeCommittedClientEntryBoundary(
 // A null domParent cleans up without DOM removal - used for descendants when an
 // ancestor DOM node is removed.
 export function remove(
-  node: CommittedVNode | MountingComponentNode,
+  node: CommittedVNode,
   domParent: ParentNode | null,
   context: ReconcileContext,
 ): void {
   let { scheduler } = context
-  context._pendingMountCleanup?.delete(node)
   if (isCommittedTextNode(node)) {
     if (domParent) node._dom.parentNode?.removeChild(node._dom)
     return
@@ -1940,11 +1866,8 @@ export function remove(
     return
   }
 
-  if (node.kind === 'component') {
-    // A failed first render can leave a handle to dispose without any committed content.
-    if ('_content' in node) {
-      remove(node._content, domParent, context)
-    }
+  if (isCommittedComponentNode(node)) {
+    remove(node._content, domParent, context)
     let tasks = node._handle.remove()
     scheduler.enqueueTasks(tasks)
     return
@@ -1967,8 +1890,30 @@ export function remove(
   if (node.kind === 'portal') {
     if (node._removed) return
     node._removed = true
+    context._pendingPortals?.delete(node)
     for (let child of node._children) remove(child, node._container, context)
     node._children = []
+    // An interrupted child update can leave DOM outside the recorded child list. Removing a
+    // normal host removes that DOM too. A Portal must clear its range, preserving known exits.
+    if (
+      node._rangeStart.parentNode === node._container &&
+      node._rangeEnd.parentNode === node._container &&
+      node._rangeStart.nextSibling !== node._rangeEnd
+    ) {
+      let retained: Set<Node> | undefined
+      for (let child of persistedMixinNodes) {
+        if (child._persistence?.parent !== node._container) continue
+        if (findPortalAncestor(child._parent) !== node) continue
+        retained ??= new Set()
+        retained.add(child._dom)
+      }
+      let current = node._rangeStart.nextSibling
+      while (current && current !== node._rangeEnd) {
+        let next = current.nextSibling
+        if (!retained?.has(current)) current.remove()
+        current = next
+      }
+    }
     finishPortalRemovals(node._container)
     restoreAncestorSelect(node._container)
     return
