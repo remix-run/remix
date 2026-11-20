@@ -1042,6 +1042,93 @@ describe('Portal', () => {
     expect(signal?.aborted).toBe(true)
   })
 
+  it('removes only newly created portals when a source update fails', (t) => {
+    let destination = document.createElement('div')
+    let { root, cleanup } = render(
+      <>
+        <Portal key="existing" container={destination}>
+          <b>Existing</b>
+        </Portal>
+      </>,
+    )
+    t.after(cleanup)
+    t.mock.method(console, 'error', () => {})
+    let error = new Error('Source update failed')
+    let errors: unknown[] = []
+    root.addEventListener('error', (event) => errors.push(event.error))
+    let child = destination.querySelector('b')
+    let start = destination.firstChild
+    let end = destination.lastChild
+    function BadSibling() {
+      throw error
+      return () => null
+    }
+    root.render(
+      <>
+        <Portal key="existing" container={destination}>
+          <b>Existing</b>
+        </Portal>
+        <Portal key="new" container={destination}>
+          <i>Abandoned</i>
+        </Portal>
+        <Fragment key="bad">
+          <BadSibling />
+        </Fragment>
+      </>,
+    )
+    expect(errors).toEqual([error])
+    expect(destination.textContent).toBe('Existing')
+    expect(destination.querySelector('b')).toBe(child)
+    expect(destination.firstChild).toBe(start)
+    expect(destination.lastChild).toBe(end)
+    root.render(
+      <>
+        <Portal key="existing" container={destination}>
+          <b>Recovered</b>
+        </Portal>
+      </>,
+    )
+    expect(destination.textContent).toBe('Recovered')
+    expect(destination.querySelector('b')).toBe(child)
+    cleanup()
+    expect(destination.childNodes.length).toBe(0)
+  })
+
+  it('lets completed children finish exiting when initial portal rendering fails', async (t) => {
+    let destination = document.createElement('div')
+    let finish = Promise.withResolvers<void>()
+    let removed = Promise.withResolvers<void>()
+    t.after(() => finish.resolve())
+    let exit = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => event.persistNode(() => finish.promise))
+      handle.addEventListener('remove', () => removed.resolve())
+      return () => handle.element
+    })
+    let error = new Error('Initial render failed')
+    function BadChild() {
+      throw error
+      return () => null
+    }
+    let root = createRoot(document.createElement('div'))
+    t.after(() => root.dispose())
+    t.mock.method(console, 'error', () => {})
+    let errors: unknown[] = []
+    root.addEventListener('error', (event) => errors.push(event.error))
+    root.render(
+      <Portal container={destination}>
+        <b mix={exit()}>Leaving</b>
+        <BadChild />
+      </Portal>,
+    )
+    expect(errors).toEqual([error])
+    expect(destination.textContent).toBe('Leaving')
+    expect(destination.firstChild?.nodeType).toBe(Node.COMMENT_NODE)
+    expect(destination.lastChild?.nodeType).toBe(Node.COMMENT_NODE)
+    finish.resolve()
+    await removed.promise
+    expect(destination.childNodes.length).toBe(0)
+  })
+
   it('rejects a different document and keeps an existing destination intact', (t) => {
     let destination = document.createElement('div')
     let other = document.implementation.createHTMLDocument().body
@@ -1479,7 +1566,7 @@ describe('Portal', () => {
     expect(target.querySelector('b')).toBe(draft)
   })
 
-  it('cleans up children inserted during a failed portal update', (t) => {
+  it('removes all destination content when disposed after a failed portal update', (t) => {
     let destination = document.createElement('div')
     let { root, cleanup } = render(
       <Portal container={destination}>
@@ -1488,12 +1575,10 @@ describe('Portal', () => {
     )
     t.after(cleanup)
     t.mock.method(console, 'error', () => {})
-    let signal: AbortSignal | undefined
     let error = new Error('Update failed')
     let errors: unknown[] = []
     root.addEventListener('error', (event) => errors.push(event.error))
-    function NewChild(handle: Handle) {
-      signal = handle.signal
+    function NewChild() {
       return () => <i>New child</i>
     }
     function BadChild() {
@@ -1510,16 +1595,14 @@ describe('Portal', () => {
     expect(errors).toEqual([error])
     cleanup()
     expect(destination.childNodes.length).toBe(0)
-    expect(signal?.aborted).toBe(true)
   })
-  it('cleans up partially mounted subtrees after an independent descendant update fails', async (t) => {
+  it('removes all destination content when disposed after a descendant update fails', async (t) => {
     let destination = document.createElement('div')
+    let nestedDestination = document.createElement('div')
     let update = async () => {}
     let failing = false
-    let signal: AbortSignal | undefined
     let error = new Error('Independent update failed')
-    function NewChild(handle: Handle) {
-      signal = handle.signal
+    function NewChild() {
       return () => <i>New child</i>
     }
     function BadChild() {
@@ -1534,6 +1617,9 @@ describe('Portal', () => {
       return () =>
         failing ? (
           <>
+            <Portal container={nestedDestination}>
+              <b>Nested</b>
+            </Portal>
             Stray text
             <section>
               <NewChild />
@@ -1559,9 +1645,81 @@ describe('Portal', () => {
     void update()
     await failed.promise
     expect(errors).toEqual([error])
+    expect(nestedDestination.childNodes.length).toBe(0)
     cleanup()
     expect(destination.childNodes.length).toBe(0)
-    expect(signal?.aborted).toBe(true)
+  })
+
+  it('clears failed update leftovers while preserving exits and neighbouring portals', async (t) => {
+    let destination = document.createElement('div')
+    let finish = Promise.withResolvers<void>()
+    let removed = Promise.withResolvers<void>()
+    t.after(() => finish.resolve())
+    let exit = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => event.persistNode(() => finish.promise))
+      handle.addEventListener('remove', () => removed.resolve())
+      return () => handle.element
+    })
+    let error = new Error('Descendant update failed')
+    function BadChild() {
+      throw error
+      return () => null
+    }
+    let update = () => {}
+    function Content(handle: Handle) {
+      let failing = false
+      update = () => {
+        failing = true
+        void handle.update()
+      }
+      return () =>
+        failing ? (
+          <>
+            Stray<i>Unrecorded</i>
+            <BadChild />
+          </>
+        ) : (
+          <span>Original</span>
+        )
+    }
+    let { root, cleanup } = render(
+      <>
+        <Portal key="owner" container={destination}>
+          <b mix={exit()}>Leaving</b>
+          <Content />
+        </Portal>
+        <Portal key="neighbour" container={destination}>
+          <u>Neighbour</u>
+        </Portal>
+      </>,
+    )
+    t.after(cleanup)
+    t.mock.method(console, 'error', () => {})
+    let errors: unknown[] = []
+    root.addEventListener('error', (event) => errors.push(event.error))
+    let start = destination.firstChild
+    let end = destination.childNodes[3]
+    let neighbour = destination.querySelector('u')
+    update()
+    root.flush()
+    expect(errors).toEqual([error])
+    root.render(
+      <>
+        <Portal key="neighbour" container={destination}>
+          <u>Neighbour</u>
+        </Portal>
+      </>,
+    )
+    expect(destination.textContent).toBe('LeavingNeighbour')
+    expect(destination.firstChild).toBe(start)
+    expect(destination.childNodes[2]).toBe(end)
+    expect(destination.querySelector('u')).toBe(neighbour)
+    finish.resolve()
+    await removed.promise
+    expect(destination.textContent).toBe('Neighbour')
+    expect(destination.childNodes.length).toBe(3)
+    cleanup()
+    expect(destination.childNodes.length).toBe(0)
   })
   it('reconciles element, text, empty, and fragment content within its own destination range', (t) => {
     let destination = document.createElement('div')
