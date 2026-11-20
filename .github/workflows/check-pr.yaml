@@ -180,6 +180,19 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
 
+      - name: Diagnose bookstore failures in isolation
+        continue-on-error: true
+        run: >-
+          pnpm --filter bookstore-demo run test --quiet --concurrency 1
+          app/prefetch.test.e2e.ts
+          app/actions/books/related-books.test.e2e.ts
+          app/view-transitions.test.e2e.ts
+          --only 'warms destination assets|loads near the viewport|cross-fades content'
+
+      - name: Diagnose docs hydration in isolation
+        continue-on-error: true
+        run: pnpm --filter remix-ui-docs run test --quiet app/examples.test.e2e.ts
+
       - name: Run tests
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
