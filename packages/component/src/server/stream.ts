@@ -1185,7 +1185,7 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
     if (type === Portal) {
       invariant(
         props.container === undefined,
-        'Portals with custom containers must be created in client-only code paths.',
+        'Portals with custom containers cannot be serialized.',
       )
       return { $rmxPortal: true, props, key: serializeKey(element.key) }
     }
