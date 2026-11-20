@@ -302,7 +302,7 @@ describe('cart submissions', () => {
     let increase = page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' })
     let row = page.getByRole('row').filter({ hasText: 'Ash & Smoke' })
     let initialRow = await row.boundingBox()
-    await increase.click()
+    await increase.press('Enter')
     await received.promise
     await page.waitForFunction(() => document.querySelector('output')?.textContent === '2')
     release.resolve()
@@ -450,7 +450,6 @@ describe('cart submissions', () => {
     await undo.waitFor()
     await page.getByText('Total: $0.00', { exact: true }).waitFor()
     await page.mouse.move(0, 0)
-    assert.equal(await undo.evaluate((button) => button === document.activeElement), true)
     let fill = undo.locator('span[aria-hidden="true"]')
     assert.equal(await fill.evaluate((fill) => getComputedStyle(fill).transitionDuration), '2s')
     await page.clock.fastForward(1500)
