@@ -66,6 +66,7 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       getPlaywrightLaunchOptions(options.playwrightUseOpts),
     )
     let pageOptions = getPlaywrightPageOptions(options.playwrightUseOpts)
+    let useWindowIsolation = browser.browserType().name() === 'firefox'
     if (browser.browserType().name() === 'webkit') {
       // WebKit charges iframe history updates to the top-level document. Reuse one page,
       // navigating it between files to reset that budget while preserving browser storage.
@@ -85,6 +86,13 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
           console.log(`${colors.dim('[browser console]')} ${msg.text()}`),
         )
       }
+    }
+    if (options.console && useWindowIsolation) {
+      page.context().on('page', (testPage) => {
+        testPage.on('console', (msg) =>
+          console.log(`${colors.dim('[browser console]')} ${msg.text()}`),
+        )
+      })
     }
 
     // Playwright's JS coverage is Chromium-only. Start before navigation so
@@ -129,6 +137,8 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     }
 
     let runnerUrl = new URL(options.baseUrl)
+    // Firefox commits intercepted iframe traversals twice: https://bugzilla.mozilla.org/2080513
+    if (useWindowIsolation) runnerUrl.searchParams.set('isolation', 'window')
     if (executionPage) {
       runnerUrl.searchParams.set('runFiles', '1')
       await executionPage.route('**/history-quota?*', async (route) => {
@@ -318,9 +328,10 @@ async function waitForBrowserTests(page: Page, url: string): Promise<void> {
     let reason = failureText ? ` (${failureText})` : ''
     rejectScriptError(new Error(`Failed to load script: ${request.url()}${reason}`))
   }
-  page.on('request', onRequest)
-  page.on('response', onResponse)
-  page.on('requestfailed', onRequestFailed)
+  let source = new URL(url).searchParams.get('isolation') === 'window' ? page.context() : page
+  source.on('request', onRequest)
+  source.on('response', onResponse)
+  source.on('requestfailed', onRequestFailed)
   try {
     await Promise.race([
       page.goto(url).then((response) => {
@@ -332,8 +343,8 @@ async function waitForBrowserTests(page: Page, url: string): Promise<void> {
       errorPromise,
     ])
   } finally {
-    page.off('request', onRequest)
-    page.off('response', onResponse)
-    page.off('requestfailed', onRequestFailed)
+    source.off('request', onRequest)
+    source.off('response', onResponse)
+    source.off('requestfailed', onRequestFailed)
   }
 }

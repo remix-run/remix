@@ -366,7 +366,9 @@ describe('hydration', () => {
       expect(div.style.marginTop).toBe('8px')
       expect(getComputedStyle(div).animationIterationCount).toBe('2')
       expect(getComputedStyle(div).borderImageSlice).toBe('3')
-      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      if (CSS.supports('-webkit-mask-box-image-width', '2')) {
+        expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      }
       expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
       expect(div.getBoundingClientRect().height).toBe(40)
 
@@ -380,7 +382,9 @@ describe('hydration', () => {
       expect(div.style.marginTop).toBe('8px')
       expect(getComputedStyle(div).animationIterationCount).toBe('2')
       expect(getComputedStyle(div).borderImageSlice).toBe('3')
-      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      if (CSS.supports('-webkit-mask-box-image-width', '2')) {
+        expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      }
       expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
       expect(div.getBoundingClientRect().height).toBe(40)
 
@@ -407,7 +411,9 @@ describe('hydration', () => {
       expect(div.style.marginTop).toBe('12px')
       expect(getComputedStyle(div).animationIterationCount).toBe('3')
       expect(getComputedStyle(div).borderImageSlice).toBe('4')
-      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('3')
+      if (CSS.supports('-webkit-mask-box-image-width', '2')) {
+        expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('3')
+      }
       expect(getComputedStyle(div).shapeImageThreshold).toBe('0.75')
       expect(div.getBoundingClientRect().height).toBe(20)
 
@@ -423,7 +429,9 @@ describe('hydration', () => {
       expect(div.style.marginTop).toBe('')
       expect(getComputedStyle(div).animationIterationCount).toBe('1')
       expect(getComputedStyle(div).borderImageSlice).toBe('100%')
-      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('auto')
+      if (CSS.supports('-webkit-mask-box-image-width', '2')) {
+        expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('auto')
+      }
       expect(getComputedStyle(div).shapeImageThreshold).toBe('0')
       expect(div.getBoundingClientRect().height).toBe(50)
       root.dispose()
