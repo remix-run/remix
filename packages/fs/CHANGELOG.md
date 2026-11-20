@@ -2,6 +2,13 @@
 
 This is the changelog for [`fs`](https://github.com/remix-run/remix/tree/main/packages/fs). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`lazy-file@5.0.9`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.9)
+
 ## v1.0.0
 
 ### Major Changes

@@ -2,6 +2,16 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.14.1
+
+### Patch Changes
+
+- Timed toasts with `countdown: true` no longer report errors in browsers without `CSS.registerProperty()`, including Firefox 125–127. The countdown animation is skipped while timers, pausing, and dismissal continue normally. ([#12370](https://github.com/remix-run/remix/pull/12370))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`component@1.3.1`](https://github.com/remix-run/remix/releases/tag/component@1.3.1)
+  - [`data-schema@1.0.2`](https://github.com/remix-run/remix/releases/tag/data-schema@1.0.2)
+
 ## v0.14.0
 
 ### Minor Changes

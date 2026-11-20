@@ -2,6 +2,12 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.2
+
+### Patch Changes
+
+- Enhance incoming request URL validation to reject literal backslashes in the path. `createRequestListener()` returns `400 Bad Request` unless `onError` returns a custom response, and `createRequest()` throws. ([#12368](https://github.com/remix-run/remix/pull/12368))
+
 ## v1.0.1
 
 ### Patch Changes
