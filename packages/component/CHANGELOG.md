@@ -2,6 +2,14 @@
 
 This is the changelog for [`component`](https://github.com/remix-run/remix/tree/main/packages/component). It follows [semantic versioning](https://semver.org/).
 
+## v1.3.1
+
+### Patch Changes
+
+- Fix an element rendering at the end of its parent when it replaces a hydrated empty string, such as `{text && <p>{text}</p>}` once `text` changes from `''`. The server renders nothing for an empty string, so hydration added the client's empty text node after the parent's other children, and the element took its place there instead of where it belongs. ([#12348](https://github.com/remix-run/remix/pull/12348))
+
+- Improve Back and Forward scroll restoration in Safari and Firefox when the destination takes time to load, while honoring manual restoration and visitor input during navigation. Positions saved after completed visits are restored once the destination renders. Entries left during an interrupted, failed, or superseded navigation fall back to browser restoration until a later navigation completes, so an older saved position does not override the browser. ([#12295](https://github.com/remix-run/remix/pull/12295))
+
 ## v1.3.0
 
 ### Minor Changes

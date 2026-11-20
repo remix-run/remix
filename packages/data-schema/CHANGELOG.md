@@ -2,6 +2,12 @@
 
 This is the changelog for [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.2
+
+### Patch Changes
+
+- Preserve accepted keys as own properties in `object()` and `record()` results, including keys produced by record key transforms. ([#12373](https://github.com/remix-run/remix/pull/12373))
+
 ## v1.0.1
 
 ### Patch Changes

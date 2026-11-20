@@ -2,6 +2,13 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.4
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`file-storage@1.0.2`](https://github.com/remix-run/remix/releases/tag/file-storage@1.0.2)
+
 ## v1.0.3
 
 ### Patch Changes

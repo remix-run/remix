@@ -2,6 +2,12 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
+## v5.0.9
+
+### Patch Changes
+
+- Read `LazyBlob` and `LazyFile` contents in browsers without native `ReadableStream` async iteration, including Chrome and Edge 123 and Safari 17.5. Reading Blob parts and slices preserves stream cancellation and reader cleanup. ([#12370](https://github.com/remix-run/remix/pull/12370))
+
 ## v5.0.8
 
 ### Patch Changes

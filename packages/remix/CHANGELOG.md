@@ -2,6 +2,25 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.3.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.4`](https://github.com/remix-run/remix/releases/tag/assets@1.0.4)
+  - [`cli@1.0.4`](https://github.com/remix-run/remix/releases/tag/cli@1.0.4)
+  - [`component@1.3.1`](https://github.com/remix-run/remix/releases/tag/component@1.3.1)
+  - [`data-schema@1.0.2`](https://github.com/remix-run/remix/releases/tag/data-schema@1.0.2)
+  - [`file-storage@1.0.2`](https://github.com/remix-run/remix/releases/tag/file-storage@1.0.2)
+  - [`file-storage-s3@1.1.2`](https://github.com/remix-run/remix/releases/tag/file-storage-s3@1.1.2)
+  - [`fs@1.0.1`](https://github.com/remix-run/remix/releases/tag/fs@1.0.1)
+  - [`lazy-file@5.0.9`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.9)
+  - [`node-fetch-server@1.0.2`](https://github.com/remix-run/remix/releases/tag/node-fetch-server@1.0.2)
+  - [`render-middleware@1.1.2`](https://github.com/remix-run/remix/releases/tag/render-middleware@1.1.2)
+  - [`spa@1.0.4`](https://github.com/remix-run/remix/releases/tag/spa@1.0.4)
+  - [`static-middleware@1.0.4`](https://github.com/remix-run/remix/releases/tag/static-middleware@1.0.4)
+  - [`test@1.2.1`](https://github.com/remix-run/remix/releases/tag/test@1.2.1)
+
 ## v3.3.0
 
 ### Minor Changes
