@@ -1,6 +1,6 @@
 import { getNonceManager, type ResourceNonces } from './nonce.ts'
 import type { Component, ComponentHandle, FrameHandle, FrameProps } from './component.ts'
-import { createComponent, Fragment, FRAME_NODE } from './component.ts'
+import { createComponent, Fragment, FRAME_NODE, ignoreAbortedRejection } from './component.ts'
 import {
   disposeClientEntryBoundary,
   getClientEntryBoundaryOwner,
@@ -1085,7 +1085,8 @@ function disposeDirectEventListeners(node: CommittedHostNode, detach: boolean): 
 function invokeDirectEventBinding(binding: DirectEventBinding, event: Event): void {
   binding.reentry?.abort(new DOMException('', 'EventReentry'))
   binding.reentry = new AbortController()
-  void binding.handler(event, binding.reentry.signal)
+  let signal = binding.reentry.signal
+  ignoreAbortedRejection(binding.handler(event, signal), signal)
 }
 
 function diffText(

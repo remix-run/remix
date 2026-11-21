@@ -3,7 +3,7 @@ import type { ElementProps, RemixElement } from '../core/vnode.ts'
 import type { Key } from '../key.ts'
 import type { Scheduler, SchedulerPhaseEvent } from '../vdom.ts'
 import { isRemixElement, jsx } from '../core/vnode.ts'
-import { TypedEventTarget } from '../component.ts'
+import { TypedEventTarget, ignoreAbortedRejection } from '../component.ts'
 import { invariant } from '../invariant.ts'
 
 type RebindNode<value, baseNode, boundNode> = value extends (
@@ -144,7 +144,9 @@ export interface MixinHandle<
    */
   update(): Promise<AbortSignal>
   /**
-   * Queues work after pending DOM updates and commit-phase callbacks.
+   * Queues work after pending DOM updates and commit-phase callbacks. Async
+   * rejections are ignored when the host lifetime signal is aborted as the rejection
+   * is observed. Catch failures inside the callback or return a handled promise chain.
    *
    * @param task Callback receiving the bound host and its runtime lifetime signal.
    */
@@ -632,7 +634,8 @@ class MixinHandleImpl
       () => {
         let binding = this.#state.binding
         invariant(binding)
-        task(binding.node, getMixinRuntimeSignal(this.#state))
+        let signal = getMixinRuntimeSignal(this.#state)
+        ignoreAbortedRejection(task(binding.node, signal), signal)
       },
     ])
   }
