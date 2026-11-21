@@ -63,6 +63,14 @@ function streamFile(
   start = 0,
   end = Infinity,
 ): ReadableStream<Uint8Array<ArrayBuffer>> {
+  if (end <= start) {
+    return new ReadableStream({
+      start(controller) {
+        controller.close()
+      },
+    })
+  }
+
   let readStream = fs.createReadStream(filename, { start, end: end - 1 }).iterator()
 
   return new ReadableStream({
