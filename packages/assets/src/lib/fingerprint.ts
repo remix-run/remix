@@ -1,5 +1,11 @@
-const fingerprintedExtensionRE = /^(.+)\.@([A-Za-z0-9_-]+)(\.[^./]+)$/
-const fingerprintedBasenameRE = /^(.+)\.@([A-Za-z0-9_-]+)$/
+import { safeDecodeURIComponent } from './paths.ts'
+
+// Emitted URLs use `.~` because `~` is unreserved in RFC 3986 and left alone by
+// `encodeURIComponent`, so hosts that canonicalize paths per segment (e.g. Cloudflare
+// Workers Static Assets) serve them without redirecting. `.@` is still accepted so URLs
+// emitted by earlier versions keep resolving.
+const fingerprintSeparator = '.~'
+const fingerprintedBasenameRE = /^(.+)\.[~@]([A-Za-z0-9_-]{6})(\.[^./]+)?$/
 
 export type EmittedAsset = {
   content: string
@@ -33,27 +39,22 @@ export function parseFingerprintSuffix(pathname: string): {
 } {
   let lastSlashIndex = pathname.lastIndexOf('/')
   let directory = lastSlashIndex >= 0 ? pathname.slice(0, lastSlashIndex + 1) : ''
-  let basename = lastSlashIndex >= 0 ? pathname.slice(lastSlashIndex + 1) : pathname
-  let extensionMatch = basename.match(fingerprintedExtensionRE)
+  let encodedBasename = lastSlashIndex >= 0 ? pathname.slice(lastSlashIndex + 1) : pathname
+  let match = safeDecodeURIComponent(encodedBasename)?.match(fingerprintedBasenameRE)
+  let stem = match?.[1]
+  let extension = match?.[3] ?? ''
 
-  if (extensionMatch) {
+  // Without an extension, a `.` or `..` stem would resolve to a directory
+  if (!match || !stem || (!extension && (stem === '.' || stem === '..'))) {
     return {
-      pathname: `${directory}${extensionMatch[1]}${extensionMatch[3]}`,
-      requestedFingerprint: extensionMatch[2],
-    }
-  }
-
-  let basenameMatch = basename.match(fingerprintedBasenameRE)
-  if (basenameMatch) {
-    return {
-      pathname: `${directory}${basenameMatch[1]}`,
-      requestedFingerprint: basenameMatch[2],
+      pathname,
+      requestedFingerprint: null,
     }
   }
 
   return {
-    pathname,
-    requestedFingerprint: null,
+    pathname: `${directory}${encodeURIComponent(stem + extension)}`,
+    requestedFingerprint: match[2] ?? null,
   }
 }
 
@@ -66,10 +67,10 @@ export function formatFingerprintedPathname(pathname: string, fingerprint: strin
   let lastDotIndex = basename.lastIndexOf('.')
 
   if (lastDotIndex <= 0) {
-    return `${pathname}.@${fingerprint}`
+    return `${pathname}${fingerprintSeparator}${fingerprint}`
   }
 
-  return `${directory}${basename.slice(0, lastDotIndex)}.@${fingerprint}${basename.slice(lastDotIndex)}`
+  return `${directory}${basename.slice(0, lastDotIndex)}${fingerprintSeparator}${fingerprint}${basename.slice(lastDotIndex)}`
 }
 
 export function getFingerprintRequestCacheControl(requestedFingerprint: string | null): string {
