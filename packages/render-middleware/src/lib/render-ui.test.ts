@@ -551,6 +551,82 @@ describe('render', () => {
     assert.deepEqual(errors, [renderError])
   })
 
+  it('renders error pages from the router error handler', async () => {
+    let handledErrors: unknown[] = []
+    let actionError = new Error('Action failed')
+    let router = createRouter({
+      middleware: [render()],
+      errorHandler(error, context) {
+        handledErrors.push(error)
+        return context.render(createElement('h1', {}, 'Something went wrong'), { status: 500 })
+      },
+    })
+
+    router.get('/', () => {
+      throw actionError
+    })
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 500)
+    assert.equal(response.headers.get('Content-Type'), 'text/html; charset=UTF-8')
+    assert.match(await response.text(), /<h1>Something went wrong<\/h1>/)
+    assert.deepEqual(handledErrors, [actionError])
+  })
+
+  it('renders the router error handler response inside a frame whose action throws', async () => {
+    let router = createRouter({
+      middleware: [render()],
+      errorHandler(_, context) {
+        return context.render(createElement('p', {}, 'Frame failed'), { status: 500 })
+      },
+    })
+
+    router.get('/', (context) =>
+      context.render(
+        createElement(
+          'main',
+          {},
+          createElement('h1', {}, 'Page'),
+          createElement(Frame, { src: '/broken' }),
+        ),
+      ),
+    )
+    router.get('/broken', () => {
+      throw new Error('Frame action failed')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.match(html, /<h1>Page<\/h1>/)
+    assert.match(html, /<p>Frame failed<\/p>/)
+  })
+
+  it('does not send shell render errors to the router error handler', async () => {
+    let errorHandlerCalls = 0
+    let router = createRouter({
+      middleware: [render({ onError() {} })],
+      errorHandler(_, context) {
+        errorHandlerCalls++
+        return context.render(createElement('h1', {}, 'Something went wrong'), { status: 500 })
+      },
+    })
+    let renderError = new Error('Broken component')
+
+    function Broken() {
+      return () => {
+        throw renderError
+      }
+    }
+
+    router.get('/', (context) => context.render(createElement(Broken)))
+
+    await assert.rejects(router.fetch('https://remix.run/'), renderError)
+    assert.equal(errorHandlerCalls, 0)
+  })
+
   it('rejects the request when inner middleware rebuilds a response whose shell fails', async () => {
     let errors: unknown[] = []
     let middleware = render({ onError: (error) => errors.push(error) })

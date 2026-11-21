@@ -220,6 +220,24 @@ export interface RouterOptions<
    */
   defaultHandler?: RequestHandler<MiddlewareContext<middleware, context>>
   /**
+   * The error handler that runs when a route action, action middleware, or the default handler
+   * throws. It runs inside the router middleware, so it receives the same context as an action and
+   * its response passes back through the router middleware like any other response.
+   *
+   * Errors thrown by router middleware, errors from aborted requests, and errors thrown by the
+   * error handler itself are not handled and reject `router.fetch()`.
+   *
+   * By default, errors reject `router.fetch()`.
+   *
+   * @param error The thrown value
+   * @param context The request context
+   * @returns The response to send instead
+   */
+  errorHandler?: (
+    error: unknown,
+    context: MiddlewareContext<middleware, context>,
+  ) => Response | Promise<Response>
+  /**
    * The matcher to use for matching routes.
    *
    * @default `createMultiMatcher()`
@@ -369,6 +387,9 @@ export function createRouter<
   type RouterContext = MiddlewareContext<middleware, context>
 
   let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any>
+  let errorHandler = options?.errorHandler as
+    | ((error: unknown, context: AnyContext) => Response | Promise<Response>)
+    | undefined
   let matcher = options?.matcher ?? createMultiMatcher<MatchData>()
   let routerMiddleware = normalizeMiddleware(options?.middleware)
 
@@ -376,13 +397,28 @@ export function createRouter<
   let headFallbackContexts = new WeakSet<RequestContext>()
 
   async function dispatchRouter(context: RequestContext): Promise<Response> {
-    let dispatch = () => dispatchMatches(context)
+    let dispatch = errorHandler
+      ? () => dispatchMatchesOrError(context, errorHandler)
+      : () => dispatchMatches(context)
     let response = routerMiddleware
       ? await runMiddleware(routerMiddleware, context, dispatch)
       : await dispatch()
 
     // Strip the body after router middleware so it sees the same response as for GET
     return headFallbackContexts.has(context) ? headResponse(response) : response
+  }
+
+  async function dispatchMatchesOrError(
+    context: RequestContext,
+    handleError: (error: unknown, context: AnyContext) => Response | Promise<Response>,
+  ): Promise<Response> {
+    try {
+      return await dispatchMatches(context)
+    } catch (error) {
+      if (context.request.signal.aborted) throw error
+
+      return raceRequestAbort(Promise.resolve(handleError(error, context)), context.request)
+    }
   }
 
   async function dispatchMatches(context: RequestContext): Promise<Response> {
