@@ -1,1 +1,1 @@
-export { session } from './lib/session.ts'
+export { inheritSession, session } from './lib/session.ts'

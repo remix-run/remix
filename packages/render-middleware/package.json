@@ -35,6 +35,9 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@remix-run/cookie": "workspace:*",
+    "@remix-run/headers": "workspace:*",
+    "@remix-run/session": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
@@ -47,6 +50,7 @@
     "@remix-run/component": "workspace:^",
     "@remix-run/fetch-router": "workspace:^",
     "@remix-run/response": "workspace:^",
+    "@remix-run/session-middleware": "workspace:^",
     "@remix-run/csp-middleware": "workspace:^"
   },
   "scripts": {

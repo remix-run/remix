@@ -2,7 +2,11 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createRouter, type Middleware, type MiddlewareContext } from '@remix-run/fetch-router'
+import { createCookie } from '@remix-run/cookie'
 import { csp, getCspNonce } from '@remix-run/csp-middleware'
+import { SetCookie } from '@remix-run/headers/set-cookie'
+import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
+import { session } from '@remix-run/session-middleware'
 import { jsx } from '@remix-run/component/jsx-runtime'
 import {
   clientEntry,
@@ -193,6 +197,52 @@ describe('render', () => {
     assert.equal(styles.length, 1)
     assert.ok(styles.every((tag) => tag.includes(`nonce="${nonce}"`)))
     assert.ok(html.includes(`<script nonce="${nonce}">globalThis.child = true</script>`))
+  })
+
+  it('keeps flash messages available to every frame in the document', async () => {
+    let router = createRouter({
+      middleware: [
+        session(createCookie('session', { secrets: ['secret'] }), createMemorySessionStorage()),
+        render(),
+      ] as const,
+    })
+    router.post('/save', (context) => {
+      context.session.flash('message', 'Saved!')
+      return new Response(null, { status: 303, headers: { Location: '/' } })
+    })
+    router.get('/', (context) =>
+      context.render(
+        createElement(
+          'main',
+          {},
+          createElement(Frame, { src: '/redirect' }),
+          createElement(Frame, { src: '/message' }),
+          createElement(Frame, { src: '/message', fallback: createElement('p', {}, 'Loading') }),
+          createElement(Frame, { src: 'https://cdn.remix.run/message' }),
+        ),
+      ),
+    )
+    router.get(
+      '/redirect',
+      () => new Response(null, { status: 302, headers: { Location: '/message' } }),
+    )
+    router.get('/message', (context) =>
+      context.render(
+        createElement('p', {}, `Message: ${context.session.get('message') ?? 'none'}`),
+      ),
+    )
+
+    let saveResponse = await router.fetch('https://remix.run/save', { method: 'POST' })
+    let cookie = new SetCookie(saveResponse.headers.getSetCookie()[0])
+    let headers = { Cookie: `${cookie.name}=${cookie.value}` }
+
+    let html = await (await router.fetch('https://remix.run/', { headers })).text()
+    assert.equal(html.match(/Message: Saved!/g)?.length, 3)
+    // Cross-origin frames do not receive credentials, so they do not share the session either.
+    assert.equal(html.match(/Message: none/g)?.length, 1)
+
+    let nextHtml = await (await router.fetch('https://remix.run/', { headers })).text()
+    assert.equal(nextHtml.match(/Message: none/g)?.length, 4)
   })
 
   it('resolves nested and targeted frames through the current router', async () => {
