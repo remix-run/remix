@@ -534,6 +534,64 @@ describe('Select', () => {
     expect(hiddenInput.value).toBe('react')
     expect(formData.get('framework')).toBe('react')
   })
+  it('restores defaultValue when the form resets', async () => {
+    let changes: SelectChangeEvent[] = []
+    let { container, root } = renderApp(
+      <form
+        mix={onSelectChange((event) => {
+          changes.push(event)
+        })}
+      >
+        {renderSelect({ defaultValue: 'react', name: 'framework' })}
+      </form>,
+    )
+    let trigger = getTrigger(container)
+    let hiddenInput = getHiddenInput(container)
+    let remix = getOptionByText(container, 'Remix')
+    let react = getOptionByText(container, 'React')
+
+    trigger.focus()
+    key(trigger, 'r')
+    await settle(root)
+
+    expect(hiddenInput.value).toBe('remix')
+    expect(trigger.textContent).toContain('Remix framework')
+    expect(changes).toHaveLength(1)
+
+    ;(container.querySelector('form') as HTMLFormElement).reset()
+    await new Promise<void>((resolve) => setTimeout(resolve))
+    await settle(root)
+
+    expect(hiddenInput.value).toBe('react')
+    expect(new FormData(container.querySelector('form') as HTMLFormElement).get('framework')).toBe(
+      'react',
+    )
+    expect(trigger.textContent).toContain('Select a framework')
+    expect(trigger.getAttribute('aria-describedby')).toBe(react.id)
+    expect(react.getAttribute('aria-selected')).toBe('true')
+    expect(remix.getAttribute('aria-selected')).toBe('false')
+    expect(changes).toHaveLength(1)
+  })
+
+  it('clears the selection on form reset when there is no defaultValue', async () => {
+    let { container, root } = renderApp(<form>{renderSelect({ name: 'framework' })}</form>)
+    let trigger = getTrigger(container)
+    let hiddenInput = getHiddenInput(container)
+
+    trigger.focus()
+    key(trigger, 'r')
+    await settle(root)
+
+    expect(hiddenInput.value).toBe('remix')
+    ;(container.querySelector('form') as HTMLFormElement).reset()
+    await new Promise<void>((resolve) => setTimeout(resolve))
+    await settle(root)
+
+    expect(hiddenInput.value).toBe('')
+    expect(trigger.textContent).toContain('Select a framework')
+    expect(trigger.hasAttribute('aria-describedby')).toBe(false)
+  })
+
   it('dispatches change event', async (t) => {
     let changes: SelectChangeEvent[] = []
     let { container, root } = renderApp(

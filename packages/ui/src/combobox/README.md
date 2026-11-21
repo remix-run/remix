@@ -104,6 +104,7 @@ Mirrors the committed value into a hidden input for forms. Apply it to an `<inpu
 - If typing leaves no matches, the popup closes immediately without the navigation fade-out.
 - Selecting from the list sets `data-combobox-flash` for app-owned flash styling, then closes the popup and finally commits the visible input label.
 - Typing clears the committed value immediately. The hidden form value becomes empty until the user commits again.
+- When the input's form resets, the combobox closes and returns to `defaultValue` without dispatching a change event.
 - Blur commits an exact `label` or `searchValue` match. A non-matching blur clears the draft text and committed value.
 - Escape keeps exact-match draft text but clears non-matching draft text and selection.
 - Disabled options can stay visible in filtered results, but they are skipped by keyboard navigation and selection.

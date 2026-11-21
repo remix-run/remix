@@ -13,6 +13,7 @@ import {
 
 import * as listbox from './listbox.ts'
 import * as popover from './popover.ts'
+import { onFormReset } from './lib/form-reset.ts'
 import { type SearchValue } from './lib/typeahead.ts'
 import { waitForCssTransition } from './lib/wait-for-css-transition.ts'
 import { wait } from './lib/wait.ts'
@@ -104,6 +105,7 @@ interface ComboboxContextValue {
   openFromInputActivation: () => Promise<void>
   registerInput: (node: HTMLInputElement) => void
   registerSurface: (node: HTMLElement) => void
+  reset: () => void
   setInputText: (text: string) => Promise<void>
   syncPopoverMinWidth: () => void
   selectActive: () => Promise<void>
@@ -583,6 +585,32 @@ function ComboboxProvider(
     return listboxRef?.selectActive() ?? Promise.resolve()
   }
 
+  function applyDefaults() {
+    value = handle.props.defaultValue ?? null
+    inputText = handle.props.defaultValue ?? ''
+  }
+
+  // Restores the initial state without dispatching a change, like a native form reset.
+  function reset() {
+    closeSequenceId++
+    pendingInputValue = null
+    pendingChange = null
+    selectInputAfterClose = false
+
+    applyDefaults()
+    open = false
+    surfaceVisible = false
+    filterText = ''
+    activeValue = null
+    activeId = undefined
+
+    let selectedOption = getSelectedOption()
+    selectedId = selectedOption?.id
+    selectedLabel = selectedOption?.label ?? ''
+    setInputValue(inputText)
+    void handle.update()
+  }
+
   function registerInput(node: HTMLInputElement) {
     inputRef = node
     setInputValue(inputText)
@@ -677,6 +705,7 @@ function ComboboxProvider(
     openFromInputActivation,
     registerInput,
     registerSurface,
+    reset,
     setInputText,
     selectActive,
     syncPopoverMinWidth,
@@ -686,8 +715,7 @@ function ComboboxProvider(
 
   return () => {
     if (!hasInitialized) {
-      value = handle.props.defaultValue ?? null
-      inputText = handle.props.defaultValue ?? ''
+      applyDefaults()
       hasInitialized = true
     }
 
@@ -767,6 +795,7 @@ const inputMixin: MixinFactory<HTMLInputElement, [], ElementProps> = createMixin
     }),
     ref((node: HTMLInputElement, signal) => {
       context.registerInput(node)
+      onFormReset(node, signal, context.reset)
       signal.addEventListener('abort', () => {
         context.unregisterInput(node)
       })
