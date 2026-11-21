@@ -268,14 +268,6 @@ function hasRenderableHtml(html: string): boolean {
   return stripDoctypeMarkup(html).trim() !== ''
 }
 
-function emptyReadableStream(): ReadableStream<Uint8Array> {
-  return new ReadableStream({
-    start(controller) {
-      controller.close()
-    },
-  })
-}
-
 function getStyleLayerName(selector: string, layer: string = REMIX_UI_STYLE_LAYER): string {
   return `${layer}.${selector}`
 }
@@ -390,6 +382,7 @@ export function renderToStream(
   return new ReadableStream({
     async start(controller) {
       try {
+        if (closeIfCancelled(controller, context)) return
         let root = buildSegment(node, context, rootFrameState)
         // Await in document order so the first rejecting frame determines the error.
         for (let frame of context.blockingFrames) await frame
@@ -421,6 +414,8 @@ export function renderToStream(
           closeStream(controller)
           return
         }
+        // Stop frames that are still resolving or streaming now that the render has failed.
+        cancel(error)
         onError(error)
         controller.error(error)
       } finally {
@@ -493,45 +488,57 @@ function createServerComponentId(context: RenderContext): string {
   return `s${context.serverIdScope}-${context.serverIdCounter}`
 }
 
-async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<ResolvedFrameHtml> {
+async function splitFirstChunk(
+  stream: ReadableStream<Uint8Array>,
+  context: RenderContext,
+): Promise<ResolvedFrameHtml> {
+  let { signal } = context
   let reader = stream.getReader()
-  let decoder = new TextDecoder()
+
+  // The render owns the frame stream from here on. Aborting it cancels the stream whether it is
+  // still producing its first chunk, waiting to be forwarded, or being forwarded.
+  function cancel() {
+    reader.cancel(signal.reason).catch((error) => {
+      if (error !== signal.reason) context.onError(error)
+    })
+    // Cancelling closes pending reads synchronously, even if source cleanup is still pending.
+    release()
+  }
+  function release() {
+    signal.removeEventListener('abort', cancel)
+    reader.releaseLock()
+  }
+  async function read(): Promise<ReadableStreamReadResult<Uint8Array>> {
+    if (signal.aborted) return { done: true, value: undefined }
+    try {
+      let next = await reader.read()
+      if (next.done) release()
+      return next
+    } catch (error) {
+      release()
+      throw error
+    }
+  }
+  if (signal.aborted) {
+    cancel()
+  } else {
+    signal.addEventListener('abort', cancel, { once: true })
+  }
 
   // Decode every chunk up to and including the first renderable one exactly once. The bytes of a
   // character cut off at the end of that chunk belong to the tail, which is forwarded as raw bytes.
+  let decoder = new TextDecoder()
   let html = ''
   let pendingBytes: Uint8Array = new Uint8Array(0)
-  let found = false
-  while (true) {
-    let { value, done } = await reader.read()
-    if (done || !value) break
+  while (!hasRenderableHtml(html)) {
+    let next = await read()
+    if (next.done) return { html: '' }
 
-    html += decoder.decode(value, { stream: true })
-    let bytes = new Uint8Array(pendingBytes.length + value.length)
+    html += decoder.decode(next.value, { stream: true })
+    let bytes = new Uint8Array(pendingBytes.length + next.value.length)
     bytes.set(pendingBytes)
-    bytes.set(value, pendingBytes.length)
+    bytes.set(next.value, pendingBytes.length)
     pendingBytes = getIncompleteUtf8Suffix(bytes)
-
-    if (hasRenderableHtml(html)) {
-      found = true
-      break
-    }
-  }
-
-  if (!found) {
-    reader.releaseLock()
-    return { html: '', tail: emptyReadableStream() }
-  }
-
-  let released = false
-  function release() {
-    if (released) return
-    released = true
-    try {
-      reader.releaseLock()
-    } catch {
-      // ignore
-    }
   }
 
   let tail = new ReadableStream<Uint8Array>({
@@ -539,17 +546,19 @@ async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<Reso
       if (pendingBytes.length > 0) controller.enqueue(pendingBytes)
     },
     async pull(controller) {
-      let next = await reader.read()
+      let next = await read()
       if (next.done) {
         controller.close()
-        release()
-        return
+      } else {
+        controller.enqueue(next.value)
       }
-      controller.enqueue(next.value)
     },
-    cancel(reason) {
-      release()
-      return reader.cancel(reason)
+    async cancel(reason) {
+      try {
+        await reader.cancel(reason)
+      } finally {
+        release()
+      }
     },
   })
 
@@ -568,13 +577,14 @@ function getIncompleteUtf8Suffix(bytes: Uint8Array): Uint8Array {
 
 async function resolveFrameHtml(
   input: string | ReadableStream<Uint8Array>,
+  context: RenderContext,
 ): Promise<ResolvedFrameHtml> {
   if (typeof input === 'string') {
     let html = stripFlushMarkers(stripDoctypeMarkup(input))
     return { html }
   }
 
-  return splitFirstChunk(input)
+  return splitFirstChunk(input, context)
 }
 
 function buildSegment(
@@ -679,7 +689,7 @@ function buildFrameSegment(
     seg.content = buildSegment(props.fallback, context, frameState)
     let framePromise = Promise.resolve(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
-    ).then(async (resolved) => resolveFrameHtml(resolved))
+    ).then((resolved) => resolveFrameHtml(resolved, context))
     // The response stream can be cancelled before pending frames are drained.
     // Keep the promise observed so request aborts don't become unhandled.
     framePromise.catch(() => {})
@@ -688,7 +698,7 @@ function buildFrameSegment(
     let framePromise = Promise.resolve(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
     ).then(async (resolved) => {
-      let { html, tail } = await resolveFrameHtml(resolved)
+      let { html, tail } = await resolveFrameHtml(resolved, context)
       html = hoistClientEntryResourcesFromFrameHead(html, context.clientEntryHeadResources)
       seg.content = html
       if (tail) {
