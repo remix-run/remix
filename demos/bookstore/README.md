@@ -80,6 +80,12 @@ Navigation and prefetching use frames too:
 - Failure feedback remains visible independently of animation events, including with reduced motion. Enhanced cart failures use button feedback and inline field errors; document failures also show contextual error messages after the redirect.
 - Removing a focused cart row moves focus to the cart region, including when the cart becomes empty.
 
+## Error Pages
+
+- Unknown URLs render a 404 page inside the normal layout through the router's `defaultHandler`. Non-GET requests get a plain-text 404. Missing books, orders, and users render their own 404 pages from their controllers.
+- The [errorPage middleware](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/middleware/error-page.tsx) catches errors thrown by actions and later middleware, logs them, and renders a 500 page inside the normal layout without exposing the error message. It runs after `render()` so it can render that page.
+- Errors that escape the router, like failures in earlier middleware or while rendering a page, reach the `onError` handler in [server.ts](https://github.com/remix-run/remix/blob/main/demos/bookstore/server.ts), which returns a static HTML 500 page that doesn't depend on the app.
+
 ## Development
 
 - `pnpm dev` restarts the server when source files change.
@@ -103,7 +109,7 @@ pnpm db:reset
 
 ## Explore the Code
 
-- [Routes](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/routes.ts) and [router](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/router.ts): URL definitions and middleware.
+- [Routes](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/routes.ts) and [router](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/router.tsx): URL definitions and middleware.
 - [Books](https://github.com/remix-run/remix/tree/main/demos/bookstore/app/actions/books), [cart](https://github.com/remix-run/remix/tree/main/demos/bookstore/app/actions/cart), and [checkout](https://github.com/remix-run/remix/tree/main/demos/bookstore/app/actions/checkout): storefront flows.
 - [Auth](https://github.com/remix-run/remix/tree/main/demos/bookstore/app/actions/auth), [account](https://github.com/remix-run/remix/tree/main/demos/bookstore/app/actions/account), and [admin](https://github.com/remix-run/remix/tree/main/demos/bookstore/app/actions/admin): customer and store management.
 - [Shared UI](https://github.com/remix-run/remix/tree/main/demos/bookstore/app/ui) and [data schema](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/data/schema.ts): reusable components and database tables.
