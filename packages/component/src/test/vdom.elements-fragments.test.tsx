@@ -71,7 +71,7 @@ describe('vnode rendering', () => {
       expect(div2.style.color).toBe('blue')
     })
 
-    it('updates style objects by adding, changing, and removing properties', () => {
+    it('updates style objects by adding, changing, and removing properties, including in place', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
@@ -81,10 +81,17 @@ describe('vnode rendering', () => {
       expect(div.style.color).toBe('red')
       expect(div.style.marginTop).toBe('12px')
 
-      root.render(<div style={{ color: 'red', padding: 5 }}>X</div>)
+      let style: { color: string; padding?: number } = { color: 'red', padding: 5 }
+      root.render(<div style={style}>X</div>)
       expect(div.style.color).toBe('red')
       expect(div.style.marginTop).toBe('')
       expect(div.style.padding).toBe('5px')
+
+      style.color = 'blue'
+      delete style.padding
+      root.render(<div style={style}>X</div>)
+      expect(div.style.color).toBe('blue')
+      expect(div.style.padding).toBe('')
     })
   })
 

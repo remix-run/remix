@@ -111,6 +111,34 @@ describe('vnode rendering', () => {
       expect(element.settings).toBe(settings)
     })
 
+    it('updates attributes from objects mutated in place without reassigning the same property', () => {
+      let assignments = 0
+      class SameObjectElement extends HTMLElement {
+        #items: unknown
+        get items() {
+          return this.#items
+        }
+        set items(value) {
+          assignments++
+          this.#items = value
+        }
+      }
+
+      let tagName = 'x-remix-same-object-test'
+      if (!customElements.get(tagName)) customElements.define(tagName, SameObjectElement)
+
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let ids = [1, 2]
+      let items = ['a']
+      root.render(createElement(tagName, { 'data-ids': ids, items }))
+      ids.push(3)
+      root.render(createElement(tagName, { 'data-ids': ids, items }))
+
+      expect(container.firstElementChild?.getAttribute('data-ids')).toBe('1,2,3')
+      expect(assignments).toBe(1)
+    })
+
     it('blocks javascript URLs in executable URL attributes', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
