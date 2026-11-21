@@ -1,0 +1,1 @@
+Added the `Portal` component for rendering children into the document body or a custom container. In server-rendered apps, portals must be nested within a client entry to render their content.

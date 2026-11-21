@@ -8,7 +8,13 @@ import type {
 } from '../runtime/component.ts'
 import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/core/vnode.ts'
 import type { ElementFunction } from '../runtime/element-function.ts'
-import { Fragment, FRAME_NODE, createComponent, createFrameHandle } from '../runtime/component.ts'
+import {
+  Fragment,
+  FRAME_NODE,
+  Portal,
+  createComponent,
+  createFrameHandle,
+} from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
   getSelectValues,
@@ -1174,6 +1180,15 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
   function unwrapElement(element: RemixElement): unknown {
     let type = element.type
     let props = element.props
+
+    // Preserve placement when a portal is passed as JSX in client-entry props.
+    if (type === Portal) {
+      invariant(
+        props.container === undefined,
+        'Portals with custom containers cannot be serialized.',
+      )
+      return { $rmxPortal: true, props, key: serializeKey(element.key) }
+    }
 
     // Preserve Frame semantics through serialized props by emitting
     // a dedicated descriptor that can be revived on the client.
