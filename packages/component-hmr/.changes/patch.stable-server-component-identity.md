@@ -1,0 +1,1 @@
+Keep component identity stable across server HMR updates, so context providers and other same-module references continue to match after their module is re-evaluated instead of failing until the server restarts.
