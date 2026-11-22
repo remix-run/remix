@@ -97,7 +97,16 @@ function createRequestHandler(
     }
 
     if (url.pathname === '/') {
-      let setupJson = JSON.stringify({ testPaths, baseDir: process.cwd(), only: options.only })
+      let file = url.searchParams.get('file')
+      if (file !== null && !testPaths.includes(file)) {
+        sendText(res, 404, 'Unknown test file')
+        return
+      }
+      let setupJson = JSON.stringify({
+        testPaths: file === null ? testPaths : [file],
+        baseDir: process.cwd(),
+        only: options.only,
+      })
       let body =
         `<script type="application/json" id="test-setup">` +
         `${escapeJsonForScript(setupJson)}` +

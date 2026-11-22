@@ -1,9 +1,8 @@
-import { createMixin, renderMixinElement } from '../runtime/mixins/mixin.ts'
+import { createMixin, isMixinDescriptor, renderMixinElement } from '../runtime/mixins/mixin.ts'
 import type { MixinFactory, MixinType } from '../runtime/mixins/mixin.ts'
 import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
 import type { ElementProps } from '../runtime/core/vnode.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { isMixinDescriptor } from '../runtime/core/mix.ts'
 import { processStyleClass } from './style.ts'
 import type { CSSProps } from './style.ts'
 

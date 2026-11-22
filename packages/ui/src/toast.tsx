@@ -614,7 +614,7 @@ export function ItemContext(handle: Handle<ToastItemContextProps, ItemState>): (
 
 /** Optional presentation behavior for a toast item. */
 export interface ToastItemOptions {
-  /** Animates the inherited `--toast-countdown` fraction from 1 to 0. Defaults to false. */
+  /** Animates the inherited `--toast-countdown` fraction from 1 to 0 when supported. Defaults to false. */
   countdown?: boolean
 }
 
@@ -640,7 +640,13 @@ export const item = createMixin<HTMLElement, [options?: ToastItemOptions], Eleme
     function synchronizeCountdown() {
       animation?.cancel()
       animation = undefined
-      if (!host || !countdown || clock.duration === false) return
+      if (
+        !host ||
+        !countdown ||
+        clock.duration === false ||
+        typeof CSS.registerProperty !== 'function'
+      )
+        return
       registerCountdownProperty()
       animation = host.animate([{ '--toast-countdown': '1' }, { '--toast-countdown': '0' }], {
         duration: clock.duration,

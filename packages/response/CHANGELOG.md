@@ -2,6 +2,15 @@
 
 This is the changelog for [`response`](https://github.com/remix-run/remix/tree/main/packages/response). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.3
+
+### Patch Changes
+
+- Fix `compressResponse()` returning `406 Not Acceptable` when the client lists only encodings the server does not support, such as `Accept-Encoding: gzip` with `encodings: ['br']`. An unlisted `identity` encoding is acceptable, so the response is now sent uncompressed. Responses are still rejected when the client refuses `identity` with `identity;q=0` or `*;q=0`. ([#12297](https://github.com/remix-run/remix/pull/12297))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@1.1.1`](https://github.com/remix-run/remix/releases/tag/headers@1.1.1)
+
 ## v1.0.2
 
 ### Patch Changes

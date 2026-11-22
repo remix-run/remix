@@ -1249,15 +1249,15 @@ if (form.reportValidity()) {
 
 `reloadStart` is a `FrameReloadStartEvent`, which describes the effective request and how the reload ends. Its request fields correspond to `frame.reload()` options, with `body` exposed as `formData` and GET fields included in `src`:
 
-| Property    | Value                                                                                                                                                                |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src`       | The initiating reload's source, including any GET submission query. Relative values use the document base URL, as with `frame.reload()`.                             |
-| `method`    | The effective request method in lowercase: `get` or `post`.                                                                                                          |
-| `encType`   | The effective POST encoding: `application/x-www-form-urlencoded` (default), `multipart/form-data`, or `text/plain`. `null` for GET.                                  |
-| `formData`  | The submitted entries for a non-GET form submission or a POST `reload()`, otherwise `null`.                                                                          |
-| `element`   | The initiating `HTMLAnchorElement`, `HTMLAreaElement`, or `HTMLFormElement`. `null` for SVG links, `frame.reload()`, programmatic navigation, and history traversal. |
-| `submitter` | The actual submit button, or `null` when there is no submitter.                                                                                                      |
-| `finished`  | A `Promise<AbortSignal>` that follows this reload like `frame.reload()`. Rejects on failure.                                                                         |
+| Property    | Value                                                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src`       | The initiating reload's source, including any GET submission query. Relative values use the document base URL, as with `frame.reload()`.                                 |
+| `method`    | The effective request method in lowercase: `get` or `post`.                                                                                                              |
+| `encType`   | The effective POST encoding: `application/x-www-form-urlencoded` (default), `multipart/form-data`, or `text/plain`. `null` for GET.                                      |
+| `formData`  | The submitted entries for a non-GET form submission or a POST `reload()`, otherwise `null`.                                                                              |
+| `element`   | The initiating `HTMLAnchorElement`, `HTMLAreaElement`, `SVGAElement`, or `HTMLFormElement`. `null` for `frame.reload()`, programmatic navigation, and history traversal. |
+| `submitter` | The actual submit button, or `null` when there is no submitter.                                                                                                          |
+| `finished`  | A `Promise<AbortSignal>` that follows this reload like `frame.reload()`. Rejects on failure.                                                                             |
 
 `event.finished` follows the same contract as `frame.reload()`:
 
@@ -1271,29 +1271,31 @@ For a direct reload, `await event.finished` and `await frame.reload()` return th
 
 Rendering a validation response counts as a completed reload. The response carries its field errors.
 
-Descendant frames inherit the initiating request and origin details while their `finished` promises track their own reloads. A replaced reload gets no `reloadComplete`, so follow `finished` to learn how a particular reload ended. Use `reloadStart` for every reload of a frame, or `rmx:submission` for a form's own submissions.
+Descendant frames inherit the initiating request and origin details while their `finished` promises track their own reloads. A replaced reload gets no `reloadComplete`, so follow `finished` to learn how a particular reload ended. Use `reloadStart` for every reload of a frame, or `rmx:navigation` for a link's or form's own navigations.
 
-### Following a Form Submission
+### Following a Navigation
 
-`on('rmx:submission', handler, captureBoolean?)` follows form submissions that start Remix frame reloads. Its handler receives a typed `FormSubmissionEvent`, with the host inferred as `event.currentTarget`. Listen on a submit button for its submissions, or on the form for all of them.
+<a id="following-a-form-submission"></a>
+
+`on('rmx:navigation', handler, captureBoolean?)` follows links and form submissions that start Remix frame reloads. Its handler receives a typed `NavigationEvent`, with the host inferred as `event.currentTarget`. Listen on an HTML or SVG link, an image-map area, a submit button, or a form. A listener on an ancestor also receives bubbling navigations from those elements.
 
 To display submitted values while a save is pending:
 
 ```tsx
 import { clientEntry, on } from 'remix/component'
-import type { FormSubmissionEvent, Handle } from 'remix/component'
+import type { NavigationEvent, Handle } from 'remix/component'
 
 export const TitleForm = clientEntry(
   import.meta.url,
   function TitleForm(handle: Handle<{ action: string; title: string }>) {
-    let submission: FormSubmissionEvent | undefined
+    let submission: NavigationEvent | undefined
     let failed = false
 
     return () => (
       <form
         method="post"
         action={handle.props.action}
-        mix={on('rmx:submission', async (event, signal) => {
+        mix={on('rmx:navigation', async (event, signal) => {
           submission = event
           failed = false
           handle.update()
@@ -1322,14 +1324,37 @@ export const TitleForm = clientEntry(
 )
 ```
 
-The handler's signal aborts on the host's next submission or removal, so the check prevents stale updates. A cancelled reload resolves `finished` with an aborted signal, letting this example clear pending state without showing a failure. For success-only behavior such as announcing “Saved!”, use `let reloadSignal = await event.finished` and check `reloadSignal.aborted` first. If submitting removes the form itself, listen on an ancestor that stays mounted.
+The handler's signal aborts on the host's next navigation event or removal, so the check prevents stale updates. A cancelled navigation resolves `finished` with an aborted signal, letting this example clear pending state without showing a failure. For success-only behavior such as announcing “Saved!”, use `let navigationSignal = await event.finished` and check `navigationSignal.aborted` first. If submitting removes the form itself, listen on an ancestor that stays mounted.
 
-The event extends `SubmitEvent` and shares the [reload request and completion details](#following-a-reload), including the same `FormData` object and `finished` promise as the target frame's `reloadStart`. Its `form` property is always the owning `HTMLFormElement`, even when the submitter is external or detached. `submitter` is the actual submit button or `null`.
+The event extends `Event` with the [initiating reload request details](#following-a-reload). Its `to` is the initial browser destination and stays unchanged through redirects. Its `finished` promise waits through rendering, followed redirects, and navigation scroll and focus handling. It resolves with an aborted signal on cancellation or replacement and rejects on failure. On success, the signal returned by `finished` stays active after later navigations; `reloadStart.finished` tracks only the frame reload and can finish earlier. `element` identifies the initiating `HTMLAnchorElement`, `HTMLAreaElement`, `SVGAElement`, or owning `HTMLFormElement`, including when its submitter is external or detached, and is `null` for programmatic navigation and history traversal. `submitter` is present when a form has an actual submit button. `formData` and `encType` are optional and only present for POST submissions; GET values are encoded in `frameSrc`, the source passed to the initiating `resolveFrame` call (`src` on `reloadStart`).
 
-- Remix dispatches the event after the target and descendant frames' `reloadStart` events. It starts on the submit button and bubbles through the form, or starts on the form when there is no submitter, including `requestSubmit()` and `form.submit()` without one.
+- Remix dispatches the event when it accepts the navigation, before `reloadStart`. Redirects do not dispatch another event. It starts on the link or submit button and bubbles, or starts on the form when there is no submitter, including `requestSubmit()` and `form.submit()` without one.
 - An external or detached submitter receives a non-bubbling event, followed by a separate bubbling event on its owning form. Capture listeners on shared ancestors can receive both; bubbling listeners receive the form's event once.
-- The event is noncancelable. Cancel through native `submit`; `stopPropagation()` still controls delivery of `rmx:submission`.
-- Links, `navigate()`, `frame.reload()`, and forms that load a new document don't dispatch it.
+- The event is noncancelable. Cancel through native `click` or `submit`; `stopPropagation()` still controls delivery of `rmx:navigation`.
+- Navigations without a triggering element, such as `navigate()` and Back/Forward, dispatch directly on `window` with `element: null`. Listen on `window` in capture mode to observe all frame navigations.
+- Independent `frame.reload()`, `updateUrl()`, initial hydration, and links or forms that load a new document don't dispatch it.
+
+For a link-adjacent loading indicator, use the same pattern on an anchor:
+
+```tsx
+<a
+  href="/products"
+  mix={on('rmx:navigation', async (event, signal) => {
+    pending = true
+    handle.update()
+    try {
+      await event.finished
+    } catch {
+      // The runtime reports navigation failures.
+    }
+    if (signal.aborted) return
+    pending = false
+    handle.update()
+  })}
+>
+  Products {pending ? 'Loading…' : ''}
+</a>
+```
 
 ### Resolving Frames
 
@@ -1348,7 +1373,7 @@ run({
       fetch(url, init) {
         return fetch(url, {
           ...init,
-          cache: options?.transition?.navigationType === 'traverse' ? 'force-cache' : 'default',
+          cache: options?.navigationType === 'traverse' ? 'force-cache' : 'default',
         })
       },
     })
@@ -1358,7 +1383,7 @@ run({
 
 `force-cache` can reuse stale responses and falls back to the network on a cache miss. The server must allow storage with suitable `Cache-Control` and `Vary` headers. Decide when to bypass the cache after mutations or changes to the signed-in user.
 
-`options.transition` is the original browser `NavigationTransition` for a navigation-driven load. Its `navigationType` is `push`, `replace`, `traverse`, or `reload`, and `from` identifies the history entry being left. Client frames loaded while rendering the response inherit it. Independent loads and `frame.reload()` leave it undefined, even while another navigation is active.
+`options.navigationType` is the original navigation's effective `push`, `replace`, `traverse`, or `reload` behavior. `options.from` is the native `NavigationHistoryEntry` being left when it started. Client frames loaded while rendering the response inherit both fields. Independent loads and `frame.reload()` leave both undefined, even while another navigation is active. Redirects preserve the original metadata; the commit callback's `to` identifies the resolved destination.
 
 The `fetch` override receives an absolute URL string without a fragment and an always-present `RequestInit`, including the encoded form body, frame headers, abort signal, and `same-origin` mode. Relative sources resolve against `document.baseURI`. Forward these settings as in the example to preserve the default request behavior. The resolver validates the returned response. Custom fetch implementations own any changes to request and redirect policies.
 
@@ -1389,9 +1414,8 @@ run({
     return mod[exportName]
   },
   resolveFrame(src, options) {
-    let transition = options?.transition
-    let animate =
-      !options?.target && transition !== undefined && transition.navigationType !== 'reload'
+    let navigationType = options?.navigationType
+    let animate = !options?.target && navigationType !== undefined && navigationType !== 'reload'
 
     return defaultResolveFrame(src, options, {
       async commit(commitFrame, { signal }) {
@@ -1422,7 +1446,7 @@ run({
 
 The `fetch` and `commit` overrides can be supplied together. Return the response from `defaultResolveFrame` directly; cloning or replacing it loses the commit callback.
 
-`commit(commitFrame, { to, response, signal })` runs before the response body is consumed. `to` is the frame destination after redirects, including application-managed redirects whose response has no URL. Without a redirect, it is the requested source. Use `to` for destination-specific animation decisions; `options.transition` still describes the original navigation.
+`commit(commitFrame, { to, response, signal })` runs before the response body is consumed. `to` is the frame destination after redirects, including application-managed redirects whose response has no URL. Without a redirect, it is the requested source. Use `to` for destination-specific animation decisions; `options.navigationType` and `options.from` still describe the original navigation.
 
 `commitFrame()` starts rendering once. Its promise waits for rendering and, for navigation-driven loads, the enclosing navigation's URL, scroll, and focus handling, including a followed redirect's replacement navigation. Independent frame loads wait only for their own rendering. Navigation does not wait for the callback's post-commit animation.
 
@@ -1670,7 +1694,19 @@ run({
 
 The `processFrame` hook runs for each parsed response. Its `ProcessFrameContext` contains the requested `src` and `target`, triggering `element`, cancellation `signal`, consumed `response`, inert `fragment`, original `assets` with their attributes, and same-origin nested `frames`. Remix never mounts the fragment. Custom asset loading can also use `fetch(url, { priority: 'low', signal })`; applications own its queue, deduplication, and cache policy.
 
-Call `prefetchReferences()` for default asset hints, or pass `{ assets: selected }` to filter them. `assets: []` skips assets. Only supported original fragment elements are accepted, including those inside templates and manually selected nonresponsive `<img src>` elements; newly created elements, responsive images, and track preloads are ignored. Nested sources require explicit `{ frames }` selection, as shown [below](#prefetching-nested-frames).
+Call `prefetchReferences()` to prefetch discovered assets without fetching nested sources. Passing an object overrides only the fields supplied; omitted fields keep their defaults:
+
+- `assets` defaults to the discovered asset declarations. Pass `assets: []` to skip asset hints.
+- `frames` defaults to `[]`. Pass frame references to opt into nested fetches.
+
+For example, `prefetchReferences({ frames: [] })` still prefetches discovered assets, just like `prefetchReferences()`. To fetch nested sources with or without those assets:
+
+```ts
+prefetchReferences({ frames }) // Discovered assets and selected nested frames
+prefetchReferences({ assets: [], frames }) // Selected nested frames only
+```
+
+Pass `{ assets: selected }` to filter asset hints. Only supported original fragment elements are accepted, including those inside templates and manually selected nonresponsive `<img src>` elements; newly created elements, responsive images, and track preloads are ignored. See [prefetching nested frames](#prefetching-nested-frames) for selecting frame references.
 
 Returning without delegation skips native asset and nested-frame work. Call the continuation while the hook is active; after it settles or is cancelled, further calls do nothing. Repeated calls deduplicate references. `defaultPrefetch()` awaits the hook and all delegated work, even when the hook doesn't return that work's promise. Speculative failures don't affect navigation.
 
@@ -1702,7 +1738,7 @@ processFrame(prefetchReferences, { frames }) {
 }
 ```
 
-Pass `{ frames }` to select every source. Nested requests inherit hooks, the triggering element, and cancellation, preserve named-frame headers, and avoid repeated references and cycles. Prefetching can warm a source's cache, but doesn't guarantee navigation will avoid showing fallback content; resolved HTML may already have streamed in the containing response.
+Pass `{ frames }` to select every source while retaining default asset hints, or `{ assets: [], frames }` to fetch only the nested sources. Nested requests inherit hooks, the triggering element, and cancellation, preserve named-frame headers, and avoid repeated references and cycles. Prefetching can warm a source's cache, but doesn't guarantee navigation will avoid showing fallback content; resolved HTML may already have streamed in the containing response.
 
 #### Scheduling and Retaining Frame HTML
 

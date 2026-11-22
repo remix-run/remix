@@ -3,6 +3,7 @@ import { csrf } from 'remix/middleware/csrf'
 import { formData } from 'remix/middleware/form-data'
 import { render } from 'remix/middleware/render'
 import { session } from 'remix/middleware/session'
+import { staticFiles } from 'remix/middleware/static'
 
 import { assets, assetServer } from './actions/assets/controller.ts'
 import { auth } from './actions/auth/controller.tsx'
@@ -17,6 +18,12 @@ import { routes } from './routes.ts'
 
 export const router = createRouter({
   middleware: [
+    staticFiles('./public', {
+      cacheControl: 'no-store',
+      etag: false,
+      lastModified: false,
+      index: false,
+    }),
     session(sessionCookie, sessionStorage),
     formData(),
     csrf(),

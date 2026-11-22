@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/ui",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "description": "Headless, accessible UI primitives and animation utilities for Remix components",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -147,7 +147,7 @@
   },
   "dependencies": {
     "@remix-run/component": "workspace:^",
-    "@remix-run/data-schema": "workspace:*",
+    "@remix-run/data-schema": "workspace:^",
     "tabbable": "^6.3.0"
   },
   "devDependencies": {

@@ -2,6 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import { navigate, startNavigationListener } from '../runtime/navigation.ts'
 import type { FrameHandle } from '../runtime/component.ts'
+import type { NavigationEvent } from '../runtime/navigation.ts'
 import type { FrameNavigationOptions, ResolveFrameOptions } from '../runtime/frame-runtime.ts'
 import { withResolvers } from './utils.ts'
 import { reloadDocument } from '../runtime/frame.ts'
@@ -106,6 +107,7 @@ function startStubNavigationListener(
   options: Parameters<typeof startNavigationListener>[1] = stubFrames,
 ): (event: Event) => StubNavigationTransition {
   let stubNavigation = Object.assign(new EventTarget(), {
+    currentEntry: window.navigation.currentEntry,
     updateCurrentEntry: mock.fn(),
     navigate: mock.fn(),
     entries: mock.fn(() => []),
@@ -1329,6 +1331,8 @@ describe('navigate', () => {
     let navigateListener: EventListener | undefined
     let [transitionFinished, resolveTransitionFinished] = withResolvers<void>()
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       transition: { finished: transitionFinished } as NavigationTransition,
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
@@ -1433,7 +1437,8 @@ describe('navigate', () => {
   })
 
   it('removes traversal scroll styles as soon as the navigation fails', async (t) => {
-    let animationFrames = stubAnimationFrames(t)
+    // Hold animation frames so stylesheet removal must happen when the failure settles.
+    stubAnimationFrames(t)
     let dispatchNavigation = startStubNavigationListener(t)
     let adoptedStyleSheetCount = document.adoptedStyleSheets.length
 
@@ -1449,16 +1454,18 @@ describe('navigate', () => {
     let stylesheet = document.adoptedStyleSheets[adoptedStyleSheetCount]
 
     await transition.runHandler()
+    expect(document.adoptedStyleSheets).toContain(stylesheet)
+
     await transition.fail()
 
     expect(document.adoptedStyleSheets).not.toContain(stylesheet)
-    expect(animationFrames.pending()).toBe(0)
   })
 
   it('does not intercept anchors marked for document navigation', (t) => {
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
     let updateCurrentEntryMock = mock.fn()
     let stubNavigation = Object.assign(new EventTarget(), {
+      currentEntry: window.navigation.currentEntry,
       navigate: navigateMethodMock,
       updateCurrentEntry: updateCurrentEntryMock,
     })
@@ -1488,6 +1495,8 @@ describe('navigate', () => {
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
     let updateCurrentEntryMock = mock.fn()
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       navigate: navigateMethodMock,
       updateCurrentEntry: updateCurrentEntryMock,
       addEventListener(type: string, listener: EventListener) {
@@ -1642,6 +1651,7 @@ describe('navigate', () => {
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
     let updateCurrentEntryMock = mock.fn()
     let stubNavigation = Object.assign(new EventTarget(), {
+      currentEntry: window.navigation.currentEntry,
       navigate: navigateMethodMock,
       updateCurrentEntry: updateCurrentEntryMock,
     })
@@ -1703,7 +1713,7 @@ describe('navigate', () => {
     expect(reloadFrame).toHaveBeenCalledTimes(1)
     expect(reloadFrame.mock.calls[0]?.arguments[0]).toBe(namedFrame)
     expect(new URL(namedFrame.src, document.baseURI).pathname).toBe('/logo-frame')
-    expect(reloadFrame.mock.calls[0]?.arguments[1]?.element).toBe(undefined)
+    expect(reloadFrame.mock.calls[0]?.arguments[1]?.element).toBe(anchor)
   })
 
   it('intercepts anchors when sourceElement is a nested svg node', (t) => {
@@ -1711,6 +1721,8 @@ describe('navigate', () => {
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
     let updateCurrentEntryMock = mock.fn()
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       navigate: navigateMethodMock,
       updateCurrentEntry: updateCurrentEntryMock,
       addEventListener(type: string, listener: EventListener) {
@@ -2418,11 +2430,14 @@ describe('frame navigation sources', () => {
     let { anchor, event, dispatch, intercept, topFrame, namedFrame } = setup(t)
     anchor.removeAttribute('data-rmx-target')
     anchor.setAttribute('data-rmx-src', '/partial')
+    let events: NavigationEvent[] = []
+    window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
     let transition = dispatch(event)
     await transition.runHandler()
     await transition.succeed()
     expect(intercept).toHaveBeenCalledTimes(1)
     expect(topFrame.src).toBe(anchor.href)
+    expect(events[0]?.frameSrc).toBe(topFrame.src)
     expect(namedFrame.src).toBe('/initial-frame')
   })
 
@@ -2443,6 +2458,8 @@ describe('frame navigation sources', () => {
     let navigateListener: EventListener | undefined
     let reload = mock.fn()
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       transition: { finished: Promise.resolve() } as NavigationTransition,
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
@@ -2497,6 +2514,8 @@ describe('frame navigation sources', () => {
     let navigateListener: EventListener | undefined
     let reload = mock.fn()
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       transition: { finished: Promise.resolve() } as NavigationTransition,
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
@@ -2816,7 +2835,7 @@ describe('form navigation', () => {
     }
   })
 
-  it('pushes POST submission history for a different location', async () => {
+  it('pushes POST submission history and traverses without replaying submission metadata', async (t) => {
     let reload = mock.fn(async (_options?: ResolveFrameOptions) => ({
       signal: new AbortController().signal,
     }))
@@ -2834,6 +2853,8 @@ describe('form navigation', () => {
     form.action = destination.href
     form.method = 'post'
     document.body.append(form)
+    let events: NavigationEvent[] = []
+    window.addEventListener('rmx:navigation', (event) => events.push(event), { signal: t.signal })
 
     let entryBeforeSubmission = getCurrentNavigationEntry()
     let didNavigate = false
@@ -2851,6 +2872,12 @@ describe('form navigation', () => {
       if (didNavigate) await window.navigation.back().finished
       controller.abort()
     }
+    expect(events).toHaveLength(2)
+    expect(events[0]?.formData).toBeInstanceOf(FormData)
+    expect(events[1]?.navigationType).toBe('traverse')
+    expect(events[1]?.element).toBe(null)
+    expect(events[1]?.formData).toBe(undefined)
+    expect((await events[0]?.finished)?.aborted).toBe(false)
   })
 
   it('reloads a targeted frame with submitter-overridden submission metadata', async () => {
@@ -2887,6 +2914,8 @@ describe('form navigation', () => {
     button.setAttribute('data-rmx-target', 'account')
     form.append(input, button)
     document.body.append(form)
+    let event: NavigationEvent | undefined
+    form.addEventListener('rmx:navigation', (navigation) => (event = navigation))
 
     let navigationSucceeded = waitForNavigationSuccess()
     form.requestSubmit(button)
@@ -2901,6 +2930,14 @@ describe('form navigation', () => {
     expect(options?.method).toBe('post')
     expect(options?.encType).toBe('multipart/form-data')
     expect(options?.signal).toBeInstanceOf(AbortSignal)
+    expect(event?.element).toBe(form)
+    expect(event?.submitter).toBe(button)
+    expect(event?.frameTarget).toBe('account')
+    expect(event?.method).toBe('post')
+    expect(event?.encType).toBe(options?.encType)
+    expect(event?.formData).toBe(options?.formData)
+    expect(event?.navigationType).toBe(options?.navigationType)
+    expect(event?.from).toBe(options?.from)
     expect(window.navigation.currentEntry?.getState()).toEqual({
       target: 'account',
       src: destinationUrl,
@@ -2915,7 +2952,8 @@ describe('form navigation', () => {
   it('leaves POST submissions with a missing named target to document navigation', (t) => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
-      currentEntry: { url: window.location.href },
+      currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       updateCurrentEntry() {},
       addEventListener(type: string, listener: EventListener) {
         if (type === 'navigate') navigateListener = listener
@@ -3124,6 +3162,8 @@ describe('form navigation', () => {
   it('does not intercept forms that opt into document navigation', (t) => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       updateCurrentEntry: mock.fn(),
       addEventListener(type: string, listener: EventListener) {
         if (type === 'navigate') navigateListener = listener
@@ -3151,6 +3191,8 @@ describe('form navigation', () => {
   it('does not intercept dialog forms or forms submitted to a new browsing context', (t) => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
+      currentEntry: window.navigation.currentEntry,
+      entries: window.navigation.entries.bind(window.navigation),
       updateCurrentEntry: mock.fn(),
       addEventListener(type: string, listener: EventListener) {
         if (type === 'navigate') navigateListener = listener

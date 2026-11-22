@@ -22,7 +22,7 @@ export interface CookieOptions extends CookieProperties {
    *
    * See [RFC 6265](https://tools.ietf.org/html/rfc6265#section-4.1.1) for more details.
    *
-   * @default The default encoder percent-encodes the value and wraps it in base64.
+   * @default The default encoder stores the value as base64-encoded UTF-8.
    */
   encode?: (value: string) => string
   /**

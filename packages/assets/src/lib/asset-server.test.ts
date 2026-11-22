@@ -682,7 +682,9 @@ describe('asset-server', () => {
   })
 
   it('picks up source file changes without watch mode', async () => {
-    await write(dir, 'app/content/value.txt', 'hello\n')
+    let filePath = await write(dir, 'app/content/value.txt', 'hello\n')
+    // Same-size writes can share an mtime on filesystems with coarse timestamp resolution.
+    await fs.utimes(filePath, 1, 1)
     let assetServer = createTestServer(dir, {
       files: {
         extensions: ['.txt'],
@@ -696,6 +698,7 @@ describe('asset-server', () => {
     assert.equal(await firstResponse.text(), 'hello\n')
 
     await write(dir, 'app/content/value.txt', 'world\n')
+    await fs.utimes(filePath, 2, 2)
 
     let secondResponse = await get(assetServer, '/assets/app/content/value.txt')
     assert.ok(secondResponse)
@@ -2429,11 +2432,13 @@ describe('asset-server', () => {
   })
 
   it('updates source file fingerprints when source files change without watch mode', async () => {
-    await write(
+    let filePath = await write(
       dir,
       'app/images/logo.svg',
       '<svg xmlns="http://www.w3.org/2000/svg"><title>hello</title></svg>\n',
     )
+    // Same-size writes can share an mtime on filesystems with coarse timestamp resolution.
+    await fs.utimes(filePath, 1, 1)
     let assetServer = createTestServer(dir, {
       files: {
         extensions: ['.svg'],
@@ -2451,6 +2456,7 @@ describe('asset-server', () => {
       'app/images/logo.svg',
       '<svg xmlns="http://www.w3.org/2000/svg"><title>world</title></svg>\n',
     )
+    await fs.utimes(filePath, 2, 2)
 
     let secondHref = await assetServer.getHref('app/images/logo.svg')
     assert.notEqual(secondHref, firstHref)

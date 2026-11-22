@@ -373,6 +373,7 @@ export interface MockTracker {
 
   /**
    * Records setter calls while preserving the paired getter and descriptor flags.
+   * Property writes do not await the replacement's return value.
    * @param object The target to mock, preferably the accessor's descriptor owner.
    * @param methodName The string or symbol key to mock.
    * @param impl A replacement setter (defaults to the original).
@@ -382,7 +383,7 @@ export interface MockTracker {
   method<target extends object, key extends keyof target>(
     object: target,
     methodName: key,
-    impl: ((value: target[key]) => void) | undefined,
+    impl: ((value: target[key]) => unknown) | undefined,
     options: MockMethodOptions & { setter: true; getter?: false },
   ): MockFunction<(value: target[key]) => void>
 
@@ -503,7 +504,8 @@ export function createMockTracker(
   function method<target extends object, key extends keyof target>(
     object: target,
     methodName: key,
-    impl: ((value: target[key]) => void) | undefined,
+    // A void return here makes no-misused-promises flag unrelated async method replacements.
+    impl: ((value: target[key]) => unknown) | undefined,
     options: MockMethodOptions & { setter: true; getter?: false },
   ): MockFunction<(value: target[key]) => void>
   function method<target extends object, key extends keyof target>(

@@ -7,8 +7,20 @@ import {
 import { createMatcher } from 'remix/route-pattern/match'
 
 import { routes } from '../../routes.ts'
+import { installDebugBoundaries } from './debug-boundaries.ts'
 
 const bookDetailsMatcher = createMatcher(routes.books.show.pattern)
+const browsingPageMatchers = [
+  routes.home.pattern,
+  routes.books.index.pattern,
+  routes.books.genre.pattern,
+  routes.books.show.pattern,
+  routes.search.pattern,
+  routes.about.pattern,
+  routes.contact.index.pattern,
+  routes.auth.register.index.pattern,
+].map((pattern) => createMatcher(pattern))
+const disposeDebugBoundaries = installDebugBoundaries()
 
 export const app = run({
   async loadModule(moduleUrl: string, exportName: string) {
@@ -22,17 +34,18 @@ export const app = run({
   resolveFrame(src, options) {
     return defaultResolveFrame(src, options, {
       fetch(url, init) {
-        return fetch(url, {
-          ...init,
-          cache: options?.transition?.navigationType === 'traverse' ? 'force-cache' : 'default',
-        })
+        let reuseBrowsingHtml =
+          (init.method ?? 'GET').toUpperCase() === 'GET' &&
+          options?.navigationType === 'traverse' &&
+          browsingPageMatchers.some((matcher) => matcher.match(url) !== null)
+        return fetch(url, { ...init, cache: reuseBrowsingHtml ? 'force-cache' : undefined })
       },
       async commit(commitFrame, { signal, to }) {
-        let transition = options?.transition
+        let navigationType = options?.navigationType
         if (
           options?.target ||
-          !transition ||
-          transition.navigationType === 'reload' ||
+          !navigationType ||
+          navigationType === 'reload' ||
           !document.startViewTransition ||
           matchMedia('(prefers-reduced-motion: reduce)').matches ||
           signal.aborted
@@ -41,8 +54,8 @@ export const app = run({
         }
 
         let viewTransition = document.startViewTransition(commitFrame)
-        let from = transition.from.url
-        if (bookDetailsMatcher.match(to) || (from !== null && bookDetailsMatcher.match(from))) {
+        let from = options?.from?.url
+        if (bookDetailsMatcher.match(to) || (from != null && bookDetailsMatcher.match(from))) {
           viewTransition.types?.add('book-details')
         }
         let skip = () => viewTransition.skipTransition()
@@ -68,6 +81,7 @@ export const app = run({
 })
 
 if (import.meta.hot) {
+  import.meta.hot.dispose(disposeDebugBoundaries)
   import.meta.hot.on('server:update', async () => {
     try {
       await app.ready()

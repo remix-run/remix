@@ -9,12 +9,12 @@ import {
   getComponentError,
   type FrameContent,
   type FrameProps,
+  type FrameResolution,
   type Handle,
   type RenderFn,
   type ReloadOrigin,
 } from './component.ts'
 import { invariant } from './invariant.ts'
-import { createFormSubmissionEvent, encodeFormDataAsSearchParams } from './form-navigation.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
@@ -75,16 +75,6 @@ import {
   isHydrationEnd,
   isHydrationStart,
 } from './stream-protocol.ts'
-import { getDocumentModulePreloader, type ProcessClientEntryPreloads } from './module-preloader.ts'
-import { unwrapFrameResolution } from './spa-response.ts'
-import {
-  commitFrameResponse,
-  getFrameCommitNavigation,
-  setFrameCommitNavigation,
-  takeFrameCommit,
-  type FrameCommit,
-} from './frame-commit.ts'
-import { getDocumentImportMapManager } from './import-map-manager.ts'
 import { ESCAPED_OBJECT } from './props-serialization.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
@@ -291,7 +281,8 @@ export function reloadFrameForNavigation(
 export type FrameContext = {
   reloadOrigin?: ReloadOrigin
   nonce?: string
-  transition?: NavigationTransition
+  navigationType?: NavigationType
+  from?: NavigationHistoryEntry
   topFrame?: FrameHandle
   getContext: (type: ElementFunction) => unknown
   errorTarget: EventTarget
@@ -318,7 +309,8 @@ export type FrameContext = {
 
 type FrameInit = {
   nonce?: string
-  transition?: NavigationTransition
+  navigationType?: NavigationType
+  from?: NavigationHistoryEntry
   signal?: AbortSignal
   name?: string
   loading?: FrameProps['loading']
@@ -456,7 +448,8 @@ export type FrameInstance = {
 type RenderOptions = {
   reloadOrigin?: ReloadOrigin
   nonce?: string
-  transition?: NavigationTransition
+  navigationType?: NavigationType
+  from?: NavigationHistoryEntry
   documentHref?: string
   flushKind?: FlushKind
   reconciliationTracker?: ReconciliationTracker
@@ -556,7 +549,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   let context: FrameContext = {
     nonce: init.nonce,
-    transition: init.transition,
+    navigationType: init.navigationType,
+    from: init.from,
     topFrame: runtime.topFrame,
     getContext: (type) => runtime.getContext?.(type),
     ...getSharedFrameRuntime(runtime),
@@ -629,7 +623,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         runtime.serverFrameReload = {
           signal: options.signal,
           origin: options.reloadOrigin,
-          transition: options.transition,
+          navigationType: options.navigationType,
+          from: options.from,
           reconciliationTracker: options.reconciliationTracker,
           blockingFrameTracker: options.blockingFrameTracker,
         }
@@ -682,7 +677,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       ...context,
       reloadOrigin: options.reloadOrigin,
       nonce: options.nonce,
-      transition: options.transition,
+      navigationType: options.navigationType,
+      from: options.from,
       data: options.data,
       reconciliationTracker: options.reconciliationTracker,
       blockingFrameTracker: options.blockingFrameTracker,
@@ -756,7 +752,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let subFramesReady = hydrateContainer(container, context, {
       reconciliationTracker,
       nonce: context.nonce,
-      transition: context.transition,
+      navigationType: context.navigationType,
+      from: context.from,
       signal: init.signal,
     })
 
@@ -769,7 +766,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         await watchPendingFrameTemplate(currentMarker, {
           reconciliationTracker,
           nonce: context.nonce,
-          transition: context.transition,
+          navigationType: context.navigationType,
+          from: context.from,
           signal: init.signal,
         })
       } else if (currentMarker?.status === 'lazy' && loadState.content === 'pending') {
@@ -824,7 +822,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     return loadState.policy !== 'lazy' || loadState.content !== 'pending'
   }
 
-  function loadLazyFrame(signal?: AbortSignal, transition?: NavigationTransition): void {
+  function loadLazyFrame(
+    signal?: AbortSignal,
+    navigationType?: NavigationType,
+    from?: NavigationHistoryEntry,
+  ): void {
     // Viewport loading completes initial content; active reloads keep their lifecycle.
     let controller = startLoad(
       !signal && loadState.reload.status === 'idle' && loadState.content !== 'resolved'
@@ -836,7 +838,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       loadState.reload.status === 'idle' ? undefined : loadState.reload.origin,
     )
     // Resolution reports errors before rejecting.
-    void resolveAndRenderReload(controller, undefined, { transition }).catch(() => {})
+    void resolveAndRenderReload(controller, undefined, { navigationType, from }).catch(() => {})
   }
 
   function startDeferredLoad(): void {
@@ -992,24 +994,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
           previous.status === 'direct'
         ) {
           startSubFrameInheritedReloads(getContentNodes(), controller.signal, origin)
-        }
-        // A `reloadStart` listener can start a newer reload, which this submission no longer leads to.
-        let form = event.form
-        if (form && origin && !controller.signal.aborted) {
-          let target = origin?.submitter ?? form
-          // Form controls can shadow methods on their owning form.
-          let bubbles = Node.prototype.contains.call(form, target)
-          EventTarget.prototype.dispatchEvent.call(
-            target,
-            createFormSubmissionEvent({ ...origin, form, finished: finished.promise, bubbles }),
-          )
-          // External or detached submitters have no event path through their owning form.
-          if (!bubbles && !controller.signal.aborted) {
-            EventTarget.prototype.dispatchEvent.call(
-              form,
-              createFormSubmissionEvent({ ...origin, form, finished: finished.promise }),
-            )
-          }
         }
         return controller
       }
@@ -1203,7 +1187,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       clearPendingFrameTemplateWatch()
       if (marker.status === 'lazy') {
         if (isInheritedReload && shouldLoadForAncestorReload()) {
-          loadLazyFrame(options?.signal, options?.transition)
+          loadLazyFrame(options?.signal, options?.navigationType, options?.from)
         } else if (loadState.content !== 'resolved' && !currentLoadController()) {
           deferLoad(loadLazyFrame)
         }
@@ -1350,7 +1334,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         await render(content, {
           reloadOrigin: origin,
           nonce,
-          transition: options?.transition,
+          navigationType: options?.navigationType,
+          from: options?.from,
           documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
           signal: controller.signal,
           reconciliationTracker,
@@ -1463,7 +1448,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     options: RenderOptions = {},
     onResolved?: () => void,
   ): Promise<void> {
-    let { reconciliationTracker, signal, nonce, reloadOrigin, transition } = options
+    let { reconciliationTracker, signal, nonce, reloadOrigin, navigationType, from } = options
     if (isRenderAborted(signal)) return
     // A replayed template can reach the initial watcher before its shell accepts the marker.
     let rendering = pendingTemplateRender
@@ -1518,7 +1503,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         }
         try {
           await render(fragment, {
-            transition,
+            navigationType,
+            from,
             nonce,
             signal,
             reloadOrigin: renderOrigin,
@@ -1551,7 +1537,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     clearPendingFrameTemplateWatch()
     await render(template, {
       nonce,
-      transition,
+      navigationType,
+      from,
       reconciliationTracker,
       signal,
       reloadOrigin,
@@ -1757,18 +1744,8 @@ function createFrameInstance(
     loading: node.props.loading,
     src: getFrameSrc(node),
     getContext,
-    errorTarget: runtime.errorTarget,
-    loadModule: runtime.loadModule,
-    resolveFrame: runtime.resolveFrame,
-    pendingClientEntries: runtime.pendingClientEntries,
-    scheduler: runtime.scheduler,
-    styleManager: runtime.styleManager,
+    ...getSharedFrameRuntime(runtime),
     data: {},
-    moduleCache: runtime.moduleCache,
-    moduleLoads: runtime.moduleLoads,
-    frameInstances: runtime.frameInstances,
-    namedFrames: runtime.namedFrames,
-    processClientEntryPreloads: runtime.processClientEntryPreloads,
     disposeFallback,
   })
   runtime.frameInstances.set(start, instance)
@@ -1813,7 +1790,9 @@ function resolveClientFrame(
       runtime.resolveFrame(frameSrc, {
         signal,
         target: getFrameName(node),
-        ...(serverFrameReload?.transition ? { transition: serverFrameReload.transition } : {}),
+        ...(serverFrameReload?.navigationType
+          ? { navigationType: serverFrameReload.navigationType, from: serverFrameReload.from }
+          : {}),
       }),
     )
     .then(async (resolution) => {
@@ -1826,7 +1805,8 @@ function resolveClientFrame(
         await instance.render(nextContent, {
           reloadOrigin: serverFrameReload?.origin,
           nonce,
-          transition: serverFrameReload?.transition,
+          navigationType: serverFrameReload?.navigationType,
+          from: serverFrameReload?.from,
           signal,
           reconciliationTracker: serverFrameReload?.reconciliationTracker,
           blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
@@ -2329,7 +2309,7 @@ function hydrateRegion(
     let nonceManager = getNonceManager()
     nonceManager.addRootResourceNonces(root, resourceNonces)
     nonceManager.addRootResponseNonce(root, context.nonce)
-    if (!signal && !context.transition) {
+    if (!signal && !context.navigationType) {
       root.render(vElement)
       return
     }
@@ -2344,7 +2324,8 @@ function hydrateRegion(
 
     frameRuntime.serverFrameReload = {
       signal: signal ?? context.lifecycleSignal,
-      transition: context.transition,
+      navigationType: context.navigationType,
+      from: context.from,
       origin: context.reloadOrigin,
       reconciliationTracker: context.reconciliationTracker,
       blockingFrameTracker: context.blockingFrameTracker,
@@ -2418,7 +2399,8 @@ async function createSubFrames(
           let frameMarker: FrameMarkerData = { ...marker, id }
           let subFrame = createFrame([node, end], {
             nonce: context.nonce,
-            transition: context.transition,
+            navigationType: context.navigationType,
+            from: context.from,
             signal: options?.signal,
             src: frameMarker.src,
             marker: frameMarker,
@@ -2965,4 +2947,861 @@ function removeNoscriptContents(source: ParentNode): void {
   for (let template of source.querySelectorAll('template')) {
     removeNoscriptContents(template.content)
   }
+}
+
+type SourceElementNavigateEvent = NavigateEvent & {
+  sourceElement?: Element | null
+}
+
+type FormNavigateEvent = SourceElementNavigateEvent & {
+  formData?: FormData | null
+}
+
+type SubmitterElement = HTMLButtonElement | HTMLInputElement
+
+type PendingFormSubmission = {
+  form: HTMLFormElement
+  submitter: SubmitterElement | null
+  formData?: FormData
+  timeout: ReturnType<typeof setTimeout>
+  removeFormDataListener(): void
+}
+
+/** Browser-provided data for an intercepted form submission. */
+export interface FormSubmission {
+  /** Submitted form entries for non-GET submissions, when available. */
+  formData: FormData | undefined
+  /** Effective form method, including submitter overrides. */
+  method: string
+  /** Effective form encoding type, including submitter overrides. */
+  encType: string
+}
+
+/** Metadata and deferred submission data for an intercepted form navigation. */
+export interface FormNavigation {
+  /** The owning form captured before its submitter can be detached. */
+  form: HTMLFormElement
+  /** The native submit event's submitter, or `null` for a submission without one. */
+  submitter: SubmitterElement | null
+  /** Checks the submitter before the form for a submission attribute. */
+  hasAttribute(name: string): boolean
+  /** Reads a submission attribute, preferring the submitter-specific name when provided. */
+  getAttribute(name: string, submitterName?: string): string | null
+  /** Resolves browser-generated data for a non-GET submission. */
+  getSubmission: (() => Promise<FormSubmission>) | undefined
+  /** Submission details available synchronously when the navigation is accepted. */
+  submission: FormSubmission
+}
+
+const PENDING_FORM_SUBMISSION_TIMEOUT = 1000
+
+/**
+ * Tracks native form events and resolves their corresponding Navigation API events.
+ *
+ * @param signal Signal used to stop tracking form events.
+ * @returns A function that resolves form metadata for a navigation event.
+ */
+export function createFormNavigationResolver(
+  signal: AbortSignal,
+): (event: NavigateEvent) => FormNavigation | undefined {
+  // Index each submission by its form and submitter so detached submitters can still find their form.
+  let pendingSubmissions = new WeakMap<HTMLFormElement | SubmitterElement, PendingFormSubmission>()
+
+  function clearPending(pending: PendingFormSubmission) {
+    clearTimeout(pending.timeout)
+    pending.removeFormDataListener()
+    if (pendingSubmissions.get(pending.form) === pending) {
+      pendingSubmissions.delete(pending.form)
+    }
+    if (pending.submitter && pendingSubmissions.get(pending.submitter) === pending) {
+      pendingSubmissions.delete(pending.submitter)
+    }
+  }
+
+  // Cache the authoritative submitter and native data for the matching `navigate` event.
+  // Unmatched submits expire.
+  document.addEventListener(
+    'submit',
+    (event) => {
+      let form = event.target
+      if (!(form instanceof HTMLFormElement)) return
+
+      let eventSubmitter = event instanceof SubmitEvent ? event.submitter : null
+      let submitter =
+        eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
+          ? eventSubmitter
+          : null
+      function onFormData(formDataEvent: FormDataEvent) {
+        // Native formdata follows an uncanceled submit. Ignore snapshots made in submit handlers
+        // or after cancellation, and stop listening before later snapshots can replace this data.
+        if (event.eventPhase !== Event.NONE || event.defaultPrevented) return
+        // A canceled retry must not replace a submission whose navigation is still pending.
+        let existing = pendingSubmissions.get(pending.form)
+        if (existing) clearPending(existing)
+        pending.formData = formDataEvent.formData
+        pendingSubmissions.set(pending.form, pending)
+        if (submitter) pendingSubmissions.set(submitter, pending)
+        pending.removeFormDataListener()
+      }
+      let pending: PendingFormSubmission = {
+        form,
+        submitter,
+        timeout: setTimeout(() => clearPending(pending), PENDING_FORM_SUBMISSION_TIMEOUT),
+        removeFormDataListener() {
+          form.removeEventListener('formdata', onFormData)
+        },
+      }
+      form.addEventListener('formdata', onFormData, { signal })
+    },
+    { capture: true, signal },
+  )
+
+  return (event) => {
+    let sourceElement = (event as SourceElementNavigateEvent).sourceElement
+    if (!(sourceElement instanceof Element)) return
+
+    let form = getSourceForm(sourceElement, pendingSubmissions)
+    if (!form) return
+
+    let pending = pendingSubmissions.get(form)
+    // Some browsers dispatch `navigate` before `formdata` records the pending submission.
+    let submitter = pending
+      ? pending.submitter
+      : sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement
+        ? sourceElement
+        : null
+    let method = getFormMethod(form, submitter)
+    let encType = getFormEncType(form, submitter)
+    let target = getSubmissionAttribute(form, submitter, 'target', 'formtarget')
+    if (method === 'dialog' || target?.toLowerCase() === '_blank') return
+
+    let formEvent = event as FormNavigateEvent
+    let getSubmission: FormNavigation['getSubmission']
+    if (method.toLowerCase() === 'get') {
+      if (pending) clearPending(pending)
+    } else {
+      getSubmission = async () => {
+        if (pending) clearPending(pending)
+        return {
+          formData: formEvent.formData ?? pending?.formData,
+          method,
+          encType,
+        }
+      }
+    }
+    return {
+      form,
+      submitter,
+      submission: {
+        method,
+        encType,
+        formData: method === 'get' ? undefined : (formEvent.formData ?? pending?.formData),
+      },
+      hasAttribute(name) {
+        return submitter?.hasAttribute(name) === true || form.hasAttribute(name)
+      },
+      getAttribute(name, submitterName) {
+        return getSubmissionAttribute(form, submitter, name, submitterName)
+      },
+      getSubmission,
+    }
+  }
+}
+
+function getSourceForm(
+  sourceElement: Element,
+  pendingSubmissions: WeakMap<HTMLFormElement | SubmitterElement, PendingFormSubmission>,
+): HTMLFormElement | undefined {
+  // A form navigation's source element is the submitted form or its submit button.
+  // https://html.spec.whatwg.org/multipage/nav-history-apis.html#dom-navigateevent-sourceelement
+  if (sourceElement instanceof HTMLFormElement) return sourceElement
+  if (sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement) {
+    // `sourceElement.form` is null when the button was detached before the `navigate` event fired
+    // (e.g. a temporary button appended, clicked, and immediately removed). Fall back to the form
+    // reference captured at `submit` time when the button was still attached.
+    return sourceElement.form ?? pendingSubmissions.get(sourceElement)?.form
+  }
+}
+
+function getSubmissionAttribute(
+  form: HTMLFormElement,
+  submitter: SubmitterElement | null,
+  name: string,
+  submitterName?: string,
+): string | null {
+  submitterName ??= name
+  if (submitter?.hasAttribute(submitterName)) {
+    return submitter.getAttribute(submitterName)
+  }
+  return form.getAttribute(name)
+}
+
+function getFormMethod(form: HTMLFormElement, submitter: SubmitterElement | null): string {
+  if (submitter?.hasAttribute('formmethod')) {
+    return submitter.formMethod
+  }
+  return form.method
+}
+
+function getFormEncType(form: HTMLFormElement, submitter: SubmitterElement | null): string {
+  if (submitter?.hasAttribute('formenctype')) {
+    return submitter.formEnctype
+  }
+  return form.enctype
+}
+
+// Encodes form entries the way browsers do for `application/x-www-form-urlencoded` submissions:
+// line breaks become CRLF and files are replaced by their names.
+export function encodeFormDataAsSearchParams(formData: FormData): URLSearchParams {
+  let params = new URLSearchParams()
+  for (let [name, value] of formData) {
+    params.append(
+      normalizeFormLineBreaks(name),
+      normalizeFormLineBreaks(typeof value === 'string' ? value : value.name),
+    )
+  }
+  return params
+}
+
+export function normalizeFormLineBreaks(value: string): string {
+  return value.replace(/\r\n|\r|\n/g, '\r\n')
+}
+
+/** Context for a custom frame commit callback. */
+export interface FrameCommitContext {
+  /** Resolved frame destination after redirects, or the requested source when not redirected. */
+  to: string
+  /** Original frame response, still unconsumed when the callback starts. */
+  response: Response
+  /** Aborts when this frame update is cancelled, superseded, or disposed. */
+  signal: AbortSignal
+}
+
+/**
+ * Wraps the rendering of a resolved frame response.
+ *
+ * Calling `commitFrame()` starts rendering once. Its promise waits for rendering and any enclosing
+ * navigation, including followed redirects, scroll, and focus handling. Navigation does not wait
+ * for the callback's post-commit work.
+ *
+ * Cancellation resolves without a stale render; rendering failures reject. Returning or throwing
+ * without calling `commitFrame()` falls back to the default commit. Callback errors are reported
+ * on the runtime.
+ *
+ * @param commitFrame Starts the default frame commit and waits for the completed update.
+ * @param context Resolved destination, response, and cancellation context for this update.
+ * @returns Optional asynchronous work surrounding the commit, such as an animation.
+ */
+export type FrameCommit = (
+  commitFrame: () => Promise<void>,
+  context: FrameCommitContext,
+) => void | Promise<void>
+
+export interface FrameCommitNavigation {
+  signal: AbortSignal
+  finished: Promise<void>
+  pendingCommits: number
+}
+
+const frameCommits = new WeakMap<Response, FrameCommit>()
+const frameNavigations = new WeakMap<AbortSignal, FrameCommitNavigation>()
+
+export function setFrameCommit(response: Response, commit: FrameCommit): void {
+  frameCommits.set(response, commit)
+}
+
+export function takeFrameCommit(response: unknown): FrameCommit | undefined {
+  if (!(response instanceof Response)) return
+  let commit = frameCommits.get(response)
+  frameCommits.delete(response)
+  return commit
+}
+
+export function setFrameCommitNavigation(
+  signal: AbortSignal,
+  navigation: FrameCommitNavigation,
+): void {
+  frameNavigations.set(signal, navigation)
+}
+
+export function getFrameCommitNavigation(signal?: AbortSignal): FrameCommitNavigation | undefined {
+  return signal ? frameNavigations.get(signal) : undefined
+}
+
+export async function commitFrameResponse(
+  response: Response,
+  commit: FrameCommit,
+  render: () => Promise<void>,
+  options: {
+    to: string
+    signal: AbortSignal
+    commitSignal: AbortSignal
+    onError(error: unknown): void
+  },
+): Promise<void> {
+  let navigation = getFrameCommitNavigation(options.signal)
+  let signal = AbortSignal.any([
+    options.signal,
+    options.commitSignal,
+    ...(navigation ? [navigation.signal] : []),
+  ])
+  if (signal.aborted) return
+
+  if (navigation) {
+    navigation.pendingCommits++
+  }
+  let listeners = new AbortController()
+  let aborted = new Promise<void>((resolve) => {
+    signal.addEventListener('abort', () => resolve(), { once: true, signal: listeners.signal })
+  })
+  let started = Promise.withResolvers<void>()
+  let rendered: Promise<void> | undefined
+  let completed: Promise<void> | undefined
+  let renderFailure: { error: unknown } | undefined
+
+  function commitFrame(): Promise<void> {
+    if (!rendered) {
+      rendered = Promise.resolve()
+        .then(() => {
+          if (!signal.aborted) return render()
+        })
+        .catch((error) => {
+          renderFailure = { error }
+          throw error
+        })
+      completed = Promise.race([rendered.then(() => navigation?.finished), aborted])
+      // A callback can start the commit without awaiting its result.
+      void completed.catch(() => {})
+      started.resolve()
+    }
+    return completed ?? Promise.resolve()
+  }
+
+  let callback = Promise.resolve()
+    .then(() => {
+      if (!signal.aborted) return commit(commitFrame, { to: options.to, response, signal })
+    })
+    .catch((error) => {
+      if (!signal.aborted && (!renderFailure || renderFailure.error !== error)) {
+        options.onError(error)
+      }
+    })
+
+  // The wrapper can wait for navigation or animation completion after the renderer is released.
+  await Promise.race([started.promise, callback, aborted])
+  void commitFrame()
+  void Promise.allSettled([Promise.race([callback, aborted]), completed]).then(() => {
+    listeners.abort()
+    if (navigation) navigation.pendingCommits--
+  })
+  await Promise.race([rendered, aborted])
+}
+
+type ImportMap = {
+  imports?: ImportMapImports
+  scopes?: Record<string, ImportMapImports>
+  integrity?: Record<string, string>
+}
+
+type ImportMapAddress = string | null
+type ImportMapImports = Record<string, ImportMapAddress>
+type InstalledImportMapEntry = { href: ImportMapAddress; normalizedHref: ImportMapAddress }
+
+type InstalledImportMap = {
+  imports: Map<string, InstalledImportMapEntry>
+  scopes: Map<string, Map<string, InstalledImportMapEntry>>
+  integrity: Map<string, string>
+}
+
+interface ImportMapManager {
+  consumeImportMaps(source: ParentNode): 'ready' | 'conflict' | 'blocked'
+  disconnect(): void
+  shouldPreserveHeadNode(node: Node): boolean
+}
+
+const MANAGED_IMPORT_MAP_SELECTOR = 'script[data-rmx-import-map][type="importmap"]'
+const IMPORT_MAP_SELECTOR = 'script[type="importmap"]'
+const importMapManagers = new WeakMap<Document, ImportMapManager>()
+
+class ImportMapConflictError extends Error {}
+
+export function getDocumentImportMapManager(doc: Document): ImportMapManager {
+  let manager = importMapManagers.get(doc)
+  if (!manager) {
+    manager = createImportMapManager(doc)
+    importMapManagers.set(doc, manager)
+  }
+  return manager
+}
+
+export function resetDocumentImportMapManager(doc: Document): void {
+  importMapManagers.get(doc)?.disconnect()
+  importMapManagers.delete(doc)
+}
+
+function createImportMapManager(doc: Document): ImportMapManager {
+  let nonce = getNonceManager().moduleNonce
+  let installedImportMap = createInstalledImportMap()
+  let processedScripts = new WeakSet<HTMLScriptElement>()
+  let conflicted = false
+
+  function processImportMap(script: HTMLScriptElement): void {
+    if (processedScripts.has(script)) return
+    processedScripts.add(script)
+
+    let importMap = parseImportMap(script.textContent ?? '')
+    if (importMap) installImportMap(installedImportMap, importMap, script.baseURI)
+  }
+
+  function processImportMaps(): void {
+    for (let script of doc.querySelectorAll<HTMLScriptElement>(IMPORT_MAP_SELECTOR)) {
+      processImportMap(script)
+    }
+  }
+
+  function processMutations(mutations: MutationRecord[]): void {
+    for (let mutation of mutations) {
+      if (mutation.type !== 'childList') continue
+      for (let node of mutation.addedNodes) {
+        if (node instanceof HTMLScriptElement && node.matches(IMPORT_MAP_SELECTOR)) {
+          processImportMap(node)
+        }
+      }
+    }
+  }
+
+  let observer = new MutationObserver(processMutations)
+  observer.observe(doc, { childList: true })
+  observer.observe(doc.head, { childList: true })
+  processImportMaps()
+
+  return {
+    consumeImportMaps(source) {
+      if (conflicted) return 'blocked'
+      processMutations(observer.takeRecords())
+      processImportMaps()
+      let scripts = Array.from(
+        source.querySelectorAll<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR),
+      )
+      if (scripts.length === 0) return 'ready'
+
+      let pendingImportMap = cloneInstalledImportMap(installedImportMap)
+      let deltas: ImportMap[] = []
+      let baseUrl = doc.baseURI
+      try {
+        for (let script of scripts) {
+          let importMap = parseImportMap(script.textContent ?? '')
+          if (!importMap) continue
+          let delta = installImportMap(
+            pendingImportMap,
+            importMap,
+            baseUrl,
+            cloneInstalledImportMap(pendingImportMap),
+          )
+          if (delta) deltas.push(delta)
+        }
+      } catch (error) {
+        if (!(error instanceof ImportMapConflictError)) throw error
+        console.warn(error.message)
+        conflicted = true
+        return 'conflict'
+      }
+
+      for (let delta of deltas) {
+        let installedScript = appendImportMapScript(doc, delta, nonce)
+        processedScripts.add(installedScript)
+      }
+      installedImportMap = pendingImportMap
+      for (let script of scripts) script.remove()
+      return 'ready'
+    },
+    disconnect() {
+      observer.disconnect()
+    },
+    shouldPreserveHeadNode(node) {
+      return (
+        node.isConnected &&
+        node instanceof HTMLScriptElement &&
+        node.matches(MANAGED_IMPORT_MAP_SELECTOR)
+      )
+    },
+  }
+}
+
+function createInstalledImportMap(): InstalledImportMap {
+  return {
+    imports: new Map(),
+    scopes: new Map(),
+    integrity: new Map(),
+  }
+}
+
+function cloneInstalledImportMap(importMap: InstalledImportMap): InstalledImportMap {
+  return {
+    imports: new Map(importMap.imports),
+    scopes: new Map(Array.from(importMap.scopes, ([scope, imports]) => [scope, new Map(imports)])),
+    integrity: new Map(importMap.integrity),
+  }
+}
+
+// Adds entries that are new to `installed` (defaults to `target`) to `target` and returns them.
+// When `installed` is passed, entries it already maps to a different value throw a conflict.
+function installImportMap(
+  target: InstalledImportMap,
+  importMap: ImportMap,
+  baseUrl: string,
+  installed?: InstalledImportMap,
+): ImportMap | undefined {
+  let imports = installImports(target.imports, installed?.imports, importMap.imports, baseUrl)
+
+  let scopes: Record<string, ImportMapImports> = {}
+  for (let [scope, scopeImports] of Object.entries(importMap.scopes ?? {})) {
+    let normalizedScope = normalizeImportMapUrl(scope, baseUrl)
+    if (normalizedScope === null) continue
+    let targetScopeImports = target.scopes.get(normalizedScope)
+    if (!targetScopeImports) {
+      targetScopeImports = new Map()
+      target.scopes.set(normalizedScope, targetScopeImports)
+    }
+    let importsDelta = installImports(
+      targetScopeImports,
+      installed && (installed.scopes.get(normalizedScope) ?? new Map()),
+      scopeImports,
+      baseUrl,
+      scope,
+    )
+    if (importsDelta) scopes[scope] = importsDelta
+  }
+
+  let integrity: Record<string, string> = {}
+  for (let [url, metadata] of Object.entries(importMap.integrity ?? {})) {
+    let normalizedUrl = normalizeImportMapUrl(url, baseUrl)
+    if (normalizedUrl === null) continue
+    let installedMetadata = (installed ?? target).integrity.get(normalizedUrl)
+    if (installedMetadata !== undefined) {
+      if (installed && installedMetadata !== metadata) {
+        throw new ImportMapConflictError(
+          `[remix] Reloading page after import map integrity conflict for "${url}": ` +
+            `"${installedMetadata}" is already installed, but the new map points to "${metadata}"`,
+        )
+      }
+      continue
+    }
+    integrity[url] = metadata
+    if (!target.integrity.has(normalizedUrl)) target.integrity.set(normalizedUrl, metadata)
+  }
+
+  let delta: ImportMap = {}
+  if (imports) delta.imports = imports
+  if (hasEntries(scopes)) delta.scopes = scopes
+  if (hasEntries(integrity)) delta.integrity = integrity
+  return hasEntries(delta) ? delta : undefined
+}
+
+function installImports(
+  target: Map<string, InstalledImportMapEntry>,
+  installed: Map<string, InstalledImportMapEntry> | undefined,
+  imports: ImportMapImports | undefined,
+  baseUrl: string,
+  scope?: string,
+): ImportMapImports | undefined {
+  let delta: ImportMapImports = {}
+  for (let [specifier, href] of Object.entries(imports ?? {})) {
+    let normalizedSpecifier = normalizeImportMapSpecifier(specifier, baseUrl)
+    if (normalizedSpecifier === null) continue
+    let normalizedHref = normalizeImportMapAddress(href, baseUrl)
+    let installedEntry = (installed ?? target).get(normalizedSpecifier)
+    if (installedEntry) {
+      if (installed && installedEntry.normalizedHref !== normalizedHref) {
+        let scopeDescription = scope ? ` in scope "${scope}"` : ''
+        throw new ImportMapConflictError(
+          `[remix] Reloading page after import map conflict for "${specifier}"${scopeDescription}: ` +
+            `${formatImportMapAddress(installedEntry.href)} is already installed, but the new map points to ${formatImportMapAddress(href)}`,
+        )
+      }
+      continue
+    }
+    delta[specifier] = href
+    if (!target.has(normalizedSpecifier)) target.set(normalizedSpecifier, { href, normalizedHref })
+  }
+
+  return hasEntries(delta) ? delta : undefined
+}
+
+function hasEntries(record: object): boolean {
+  return Object.keys(record).length > 0
+}
+
+function appendImportMapScript(
+  doc: Document,
+  importMap: ImportMap,
+  nonce: string | undefined,
+): HTMLScriptElement {
+  let script = doc.createElement('script')
+  script.setAttribute('data-rmx-import-map', '')
+  script.type = 'importmap'
+  if (nonce) script.nonce = nonce
+  script.textContent = JSON.stringify(importMap)
+  doc.head.appendChild(script)
+  return script
+}
+
+function parseImportMap(json: string): ImportMap | null {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(json)
+  } catch {
+    return null
+  }
+
+  if (!parsed || typeof parsed !== 'object') return null
+  let importMap: ImportMap = {}
+
+  if ('imports' in parsed) {
+    let imports = parsed.imports
+    if (!isImportMapImports(imports)) return null
+    importMap.imports = imports
+  }
+
+  if ('scopes' in parsed) {
+    let scopes = parsed.scopes
+    if (!isScopedImportMapRecord(scopes)) return null
+    importMap.scopes = scopes
+  }
+
+  if ('integrity' in parsed) {
+    let integrity = parsed.integrity
+    if (!isImportMapIntegrity(integrity)) return null
+    importMap.integrity = integrity
+  }
+
+  return importMap
+}
+
+function isImportMapImports(value: unknown): value is ImportMapImports {
+  if (!value || typeof value !== 'object') return false
+  return Object.values(value).every((entry) => entry === null || typeof entry === 'string')
+}
+
+function isScopedImportMapRecord(value: unknown): value is Record<string, ImportMapImports> {
+  if (!value || typeof value !== 'object') return false
+  return Object.values(value).every(isImportMapImports)
+}
+
+function isImportMapIntegrity(value: unknown): value is Record<string, string> {
+  if (!value || typeof value !== 'object') return false
+  return Object.values(value).every((entry) => typeof entry === 'string')
+}
+
+function normalizeImportMapSpecifier(specifier: string, baseUrl: string): string | null {
+  if (
+    specifier.startsWith('/') ||
+    specifier.startsWith('./') ||
+    specifier.startsWith('../') ||
+    URL.canParse(specifier)
+  ) {
+    return normalizeImportMapUrl(specifier, baseUrl)
+  }
+  return specifier
+}
+
+function normalizeImportMapAddress(address: ImportMapAddress, baseUrl: string): ImportMapAddress {
+  if (address === null) return null
+  return normalizeImportMapUrl(address, baseUrl)
+}
+
+function normalizeImportMapUrl(value: string, baseUrl: string): string | null {
+  try {
+    return new URL(value, baseUrl).href
+  } catch {
+    return null
+  }
+}
+
+function formatImportMapAddress(address: ImportMapAddress | undefined): string {
+  return address === null ? 'null' : `"${address}"`
+}
+
+const SERVER_MODULE_PRELOAD_SELECTOR = 'link[data-rmx-module-preload][rel~="modulepreload" i][href]'
+
+interface ModulePreloader {
+  adoptInitialPreloadLinks(source: ParentNode): void
+  consumePreloadLinks(source: ParentNode, process?: ProcessClientEntryPreloads): Promise<void>
+  hasActivePreloads(): boolean
+  isActivePreload(node: Node): boolean
+}
+
+export type ProcessClientEntryPreloads = (preloads: string[]) => string[] | Promise<string[]>
+
+const modulePreloaders = new WeakMap<Document, ModulePreloader>()
+
+export function getDocumentModulePreloader(doc: Document): ModulePreloader {
+  let preloader = modulePreloaders.get(doc)
+  if (!preloader) {
+    preloader = createModulePreloader(doc)
+    modulePreloaders.set(doc, preloader)
+  }
+  return preloader
+}
+
+function createModulePreloader(doc: Document): ModulePreloader {
+  let nonce = getNonceManager().moduleNonce
+  let requestedUrls = new Set<string>()
+  let activeLinks = new WeakSet<HTMLLinkElement>()
+  let activeLinkCount = 0
+
+  function activateLink(link: HTMLLinkElement): void {
+    activeLinks.add(link)
+    activeLinkCount++
+  }
+
+  function deactivateLink(link: HTMLLinkElement): void {
+    if (activeLinks.delete(link)) activeLinkCount--
+  }
+
+  function preload(href: string): void {
+    let link = doc.createElement('link')
+    link.rel = 'modulepreload'
+    link.href = href
+    link.setAttribute('data-rmx-module-preload', '')
+    if (nonce) link.nonce = nonce
+    let url = link.href
+    if (requestedUrls.has(url)) return
+    requestedUrls.add(url)
+
+    activateLink(link)
+    link.addEventListener(
+      'load',
+      () => {
+        deactivateLink(link)
+        link.remove()
+      },
+      { once: true },
+    )
+    link.addEventListener(
+      'error',
+      () => {
+        deactivateLink(link)
+        link.remove()
+        requestedUrls.delete(url)
+      },
+      { once: true },
+    )
+    doc.head.append(link)
+  }
+
+  return {
+    adoptInitialPreloadLinks(source) {
+      for (let initialLink of source.querySelectorAll<HTMLLinkElement>(
+        SERVER_MODULE_PRELOAD_SELECTOR,
+      )) {
+        if (activeLinks.has(initialLink)) continue
+
+        // An identical link joins the document's existing module-map request and receives its own
+        // terminal event, even when the parser-created link settled before runtime startup.
+        let observerLink = doc.createElement('link')
+        observerLink.rel = 'modulepreload'
+        observerLink.href = initialLink.href
+        observerLink.setAttribute('data-rmx-module-preload', '')
+        if (initialLink.nonce) observerLink.nonce = initialLink.nonce
+        let url = initialLink.href
+        requestedUrls.add(url)
+        activateLink(initialLink)
+        activateLink(observerLink)
+
+        let settled = false
+        function settle(succeeded: boolean): void {
+          if (settled) return
+          settled = true
+          deactivateLink(initialLink)
+          deactivateLink(observerLink)
+          initialLink.remove()
+          observerLink.remove()
+          if (!succeeded) requestedUrls.delete(url)
+        }
+
+        observerLink.addEventListener('load', () => settle(true), { once: true })
+        observerLink.addEventListener('error', () => settle(false), { once: true })
+        doc.head.append(observerLink)
+      }
+    },
+    async consumePreloadLinks(source, process) {
+      let hrefs: string[] = []
+      for (let link of source.querySelectorAll<HTMLLinkElement>(SERVER_MODULE_PRELOAD_SELECTOR)) {
+        let href = link.getAttribute('href')
+        link.remove()
+        if (href) hrefs.push(href)
+      }
+      let processedHrefs = process ? await process(hrefs) : hrefs
+      for (let href of processedHrefs) preload(href)
+    },
+    hasActivePreloads() {
+      return activeLinkCount > 0
+    },
+    isActivePreload(node) {
+      return node instanceof HTMLLinkElement && activeLinks.has(node)
+    },
+  }
+}
+
+type SPAResponseData = {
+  node: RemixNode
+  redirectedTo?: string
+}
+
+export const spaResponses = new WeakMap<Response, SPAResponseData>()
+
+export async function unwrapFrameResolution(
+  resolution: FrameResolution,
+): Promise<{ content: FrameContent; redirectedTo?: string; nonce?: string }> {
+  if (!(resolution instanceof Response)) return { content: resolution }
+
+  let data = spaResponses.get(resolution)
+  if (data) {
+    return {
+      content: data.node,
+      redirectedTo: data.redirectedTo,
+    }
+  }
+
+  let content = resolution.body ?? (await resolution.text())
+  return {
+    content,
+    nonce: getResponseNonce(resolution),
+    redirectedTo: resolution.redirected && resolution.url ? resolution.url : undefined,
+  }
+}
+
+function getResponseNonce(response: Response): string | undefined {
+  let header =
+    response.headers.get('Content-Security-Policy') ??
+    response.headers.get('Content-Security-Policy-Report-Only')
+  let nonce: string | undefined
+  for (let policy of header?.split(',') ?? []) {
+    let directives = new Map<string, string[]>()
+    for (let directive of policy.split(';')) {
+      let tokens = directive.split(/[\t\n\f\r ]+/).filter(Boolean)
+      let name = tokens.shift()?.toLowerCase()
+      // CSP uses the first occurrence, even when its source list is empty.
+      if (name && !directives.has(name)) directives.set(name, tokens)
+    }
+    let scriptSources =
+      directives.get('script-src-elem') ??
+      directives.get('script-src') ??
+      directives.get('default-src')
+    let styleSources =
+      directives.get('style-src-elem') ??
+      directives.get('style-src') ??
+      directives.get('default-src')
+    for (let sources of [scriptSources, styleSources]) {
+      for (let source of sources ?? []) {
+        let value = /^'nonce-([a-z0-9+/_-]+={0,2})'$/i.exec(source)?.[1]
+        if (value === undefined) continue
+        // Only translate a single shared render nonce; differing values are ambiguous.
+        if (nonce !== undefined && nonce !== value) return undefined
+        nonce = value
+      }
+    }
+  }
+  return nonce
 }

@@ -1025,9 +1025,10 @@ settles, as in the [enhanced album form](#enhancing-forms-with-fetch-and-navigat
 for disabled controls, pending labels, progress indicators, and duplicate-submission prevention.
 
 For forms Remix handles as [frame navigations](#client-navigation), use
-[`on('rmx:submission', handler)`](../src/component/README.md#following-a-form-submission) to follow a button's or form's own
-submissions. The handler receives the submitted `formData` and a `finished` promise that follows
-the same `Promise<AbortSignal>` contract as `frame.reload()`.
+[`on('rmx:navigation', handler)`](../src/component/README.md#following-a-form-submission) to follow a button's or form's own
+submissions. The event carries the submitted `formData`. Its `finished` promise resolves with an
+`AbortSignal` after rendering and navigation complete, including redirects, and rejects on failure.
+Cancellation resolves with an aborted signal.
 [Add pending feedback](/forms-and-mutations/#add-pending-feedback) shows how to use it for a save button.
 
 Optimistic UI renders the expected result before the request completes. A hydrated form can render
@@ -1049,7 +1050,7 @@ export const FavoriteForm = clientEntry(
         <form
           method="post"
           action={handle.props.action}
-          mix={on("rmx:submission", async (event, signal) => {
+          mix={on("rmx:navigation", async (event, signal) => {
             submitted = event.formData?.get("favorite") === "true";
             failed = false;
             handle.update();

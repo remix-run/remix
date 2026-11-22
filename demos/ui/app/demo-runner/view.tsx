@@ -15,6 +15,8 @@ export function DemoIndexDocument(handle: Handle<{ demos: DemoFile[] }>) {
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>Remix UI Demos</title>
+          <link rel="icon" href="/favicon.ico" sizes="32x32" />
+          <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         </head>
         <body mix={bodyCss}>
           <main
@@ -195,6 +197,8 @@ export function DemoDocument(handle: Handle<{ DemoComponent: any; demo: DemoFile
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <script type="module" src="/assets/entry.js" />
           <title>{`${demo.title} | Remix Interface Demo`}</title>
+          <link rel="icon" href="/favicon.ico" sizes="32x32" />
+          <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         </head>
         <body mix={bodyCss}>
           <main
