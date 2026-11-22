@@ -1,0 +1,27 @@
+{
+  "fetchedAt": "2026-10-15T03:30:47.410658+00:00",
+  "notes": [
+    "Original responses kept unchanged, with official absolute destination URLs.",
+    "The homepage returned HTML to tested text/markdown requests. The demo serves its agents.md snapshot as the homepage Markdown representation."
+  ],
+  "assets": [
+    {
+      "path": "llms.txt",
+      "source": "https://www.shopify.com/llms.txt",
+      "bytes": 12520,
+      "sha256": "fd5d372a21847ff2333682645367699f10c44ded4a1dbf08d8e93d512beb765a"
+    },
+    {
+      "path": "agents.md",
+      "source": "https://www.shopify.com/agents.md",
+      "bytes": 12522,
+      "sha256": "097a1b9b91a45b91762f938214426f9309b51f0b2cc106152b7d0c00b765cfe6"
+    },
+    {
+      "path": "llms-full.txt",
+      "source": "https://www.shopify.com/llms-full.txt",
+      "bytes": 18863,
+      "sha256": "f856a9fa66942c04b79f75aea02bc9b674747ee74c0a99608500a8b53a681f4d"
+    }
+  ]
+}

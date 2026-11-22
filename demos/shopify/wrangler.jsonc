@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "remix-shopify-demo",
+  "main": "./worker.ts",
+  "compatibility_date": "2026-05-11",
+  "dev": {
+    "port": 44100,
+  },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/"],
+    "html_handling": "drop-trailing-slash",
+    "not_found_handling": "404-page",
+  },
+}

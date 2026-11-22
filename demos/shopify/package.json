@@ -1,0 +1,31 @@
+{
+  "name": "shopify-demo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "remix": "workspace:*"
+  },
+  "devDependencies": {
+    "@remix-run/assert": "workspace:^",
+    "@remix-run/test": "workspace:^",
+    "@types/node": "catalog:",
+    "esbuild": "^0.27.7",
+    "node-html-parser": "^7.0.2",
+    "typescript": "catalog:",
+    "wrangler": "^4.90.1"
+  },
+  "scripts": {
+    "dev": "node --watch --import remix/node-tsx server.ts",
+    "dev:worker": "pnpm prerender && wrangler dev",
+    "deploy": "pnpm prerender && wrangler deploy",
+    "deploy:check": "pnpm prerender && wrangler deploy --dry-run",
+    "start": "node --import remix/node-tsx server.ts",
+    "prerender": "node --import remix/node-tsx scripts/prerender.ts",
+    "preview": "node --import remix/node-tsx scripts/preview.ts",
+    "test": "remix test",
+    "typecheck": "tsc --noEmit"
+  }
+}
