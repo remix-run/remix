@@ -47,7 +47,9 @@ describe(`SPA (${mode})`, () => {
 
   it('loads a client route directly through the Vite history fallback', async (t) => {
     let page = await t.serve(await createViteTestServer())
-    await page.clock.install()
+    // Installing a clock alone keeps it ticking, which can expire pending UI on a busy runner.
+    await page.clock.install({ time: 0 })
+    await page.clock.pauseAt(60_000)
 
     await page.goto('/about')
     await page.getByRole('status').waitFor()
@@ -63,7 +65,8 @@ describe(`SPA (${mode})`, () => {
 
   it('navigates between routes and cancels a superseded load', async (t) => {
     let page = await t.serve(await createViteTestServer())
-    await page.clock.install()
+    await page.clock.install({ time: 0 })
+    await page.clock.pauseAt(60_000)
 
     await page.goto('/')
     await page.clock.runFor(loaderDelay)
@@ -81,7 +84,8 @@ describe(`SPA (${mode})`, () => {
 
   it('pushes new form destinations and replaces submissions to the active URL', async (t) => {
     let page = await t.serve(await createViteTestServer())
-    await page.clock.install()
+    await page.clock.install({ time: 0 })
+    await page.clock.pauseAt(60_000)
 
     await page.goto('/')
     await page.clock.runFor(loaderDelay)
