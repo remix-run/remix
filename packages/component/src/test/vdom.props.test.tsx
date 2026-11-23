@@ -111,6 +111,56 @@ describe('vnode rendering', () => {
       expect(element.settings).toBe(settings)
     })
 
+    it('sets custom element properties even when their getters throw', () => {
+      class HostPropsElement extends HTMLElement {
+        received: unknown = undefined
+
+        get settings(): unknown {
+          throw new Error('Settings are not ready to read')
+        }
+
+        set settings(value: unknown) {
+          this.received = value
+        }
+      }
+
+      let tagName = 'x-remix-host-props-throwing-getter-test'
+      if (!customElements.get(tagName)) customElements.define(tagName, HostPropsElement)
+
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(createElement(tagName, { settings: '' }))
+      root.flush()
+
+      let element = container.querySelector(tagName)
+      invariant(element instanceof HostPropsElement)
+      expect(element.received).toBe('')
+    })
+
+    it('keeps empty boolean props present when mounting and updating hidden modes', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(createElement('button', { disabled: '', hidden: 'until-found' }))
+      root.flush()
+
+      let button = container.querySelector('button')
+      invariant(button)
+      expect(button.disabled).toBe(true)
+      expect(button.getAttribute('hidden')).toBe('until-found')
+
+      root.render(createElement('button', { disabled: false, hidden: '' }))
+      root.flush()
+
+      expect(container.querySelector('button')).toBe(button)
+      expect(button.disabled).toBe(false)
+      expect(button.getAttribute('hidden')).toBe('')
+
+      root.render(createElement('button', { hidden: 'until-found' }))
+      root.flush()
+
+      expect(button.getAttribute('hidden')).toBe('until-found')
+    })
+
     it('blocks javascript URLs in executable URL attributes', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
