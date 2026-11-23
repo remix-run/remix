@@ -1,1 +1,1 @@
-Speed up one-shot browser test runs by reusing compiled scripts across test files and browsers. Watch mode and interactive browser runs continue to pick up edits on subsequent requests.
+Speed up one-shot browser test runs by reusing compiled scripts across test files and browsers. The runner checks file metadata before serving a cached script so source edits and replacements are picked up on subsequent requests.

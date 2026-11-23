@@ -7,11 +7,26 @@ import type { TestContext } from '../lib/context.ts'
 import { describe, it } from '../lib/framework.ts'
 
 describe('browser test script serving', () => {
-  it('reuses compiled scripts for a one-shot run', async (t) => {
+  it('refreshes a cached script after an in-place edit of the same size', async (t) => {
     let { file, url } = await createFixture(t, true)
+    let time = new Date(0)
+    await fsp.utimes(file, time, time)
     assert.match(await fetchScript(url), /"original"/)
-    await fsp.writeFile(file, 'export const value: string = "updated"')
+    await fsp.writeFile(file, 'export const value: string = "modified"')
+    assert.match(await fetchScript(url), /"modified"/)
+  })
+
+  it('refreshes a cached script after a same-size replacement with the original mtime', async (t) => {
+    let { file, url } = await createFixture(t, true)
+    let time = new Date(0)
+    await fsp.utimes(file, time, time)
     assert.match(await fetchScript(url), /"original"/)
+
+    let replacement = path.join(path.dirname(file), 'replacement.ts')
+    await fsp.writeFile(replacement, 'export const value: string = "replaced"')
+    await fsp.utimes(replacement, time, time)
+    await fsp.rename(replacement, file)
+    assert.match(await fetchScript(url), /"replaced"/)
   })
 
   it('serves updated scripts when caching is disabled', async (t) => {

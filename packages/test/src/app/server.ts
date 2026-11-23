@@ -29,6 +29,8 @@ interface BrowserTestServerOptions {
   cacheScripts?: boolean
 }
 
+type ScriptCache = Map<string, { version: string; code: string }>
+
 export async function startServer(
   browserFiles: string[],
   options: BrowserTestServerOptions = {},
@@ -92,7 +94,7 @@ function createRequestHandler(
   }
 
   let testPaths = browserFiles.map((f) => filePathToUrl(f, rootDir)!)
-  let scriptCache = options.cacheScripts ? new Map<string, string>() : undefined
+  let scriptCache: ScriptCache | undefined = options.cacheScripts ? new Map() : undefined
 
   return async (req, res) => {
     let url = new URL(req.url ?? '/', 'http://localhost')
@@ -133,12 +135,8 @@ function createRequestHandler(
       let filePath = urlPathToFilePath(url.pathname, rootDir)
       if (filePath) {
         try {
-          let code = scriptCache?.get(filePath)
-          if (code === undefined) {
-            code = await compileScript(res, filePath, url.pathname, rootDir)
-            if (code === undefined) return
-            scriptCache?.set(filePath, code)
-          }
+          let code = await getScriptCode(res, filePath, url.pathname, rootDir, scriptCache)
+          if (code === undefined) return
           res.writeHead(200, { 'Content-Type': 'application/javascript' })
           res.end(code)
           return
@@ -174,11 +172,12 @@ function urlPathToFilePath(urlPath: string, rootDir: string): string | null {
 const TS_EXTS = new Set(['.ts', '.tsx', '.mts', '.cts'])
 const JS_EXTS = new Set(['.js', '.mjs', '.cjs', '.jsx'])
 
-async function compileScript(
+async function getScriptCode(
   res: http.ServerResponse,
   filePath: string,
   urlPath: string,
   rootDir: string,
+  cache?: ScriptCache,
 ): Promise<string | undefined> {
   let ext = path.extname(filePath)
   let isTs = TS_EXTS.has(ext)
@@ -186,6 +185,15 @@ async function compileScript(
   if (!isTs && !isJs) {
     sendText(res, 400, `Unsupported script extension "${ext}" for ${urlPath}`)
     return
+  }
+
+  let version: string | undefined
+  if (cache) {
+    // Sample before reading so an edit during compilation invalidates this entry on the next request.
+    let { dev, ino, size, mtimeNs, ctimeNs } = await fsp.stat(filePath, { bigint: true })
+    version = `${dev}:${ino}:${size}:${mtimeNs}:${ctimeNs}`
+    let cached = cache.get(filePath)
+    if (cached?.version === version) return cached.code
   }
 
   let source = await fsp.readFile(filePath, 'utf-8')
@@ -204,11 +212,15 @@ async function compileScript(
   }
 
   try {
-    return await rewriteImports(code, filePath, rootDir)
+    code = await rewriteImports(code, filePath, rootDir)
   } catch (error) {
     logError(`Failed to rewrite imports for ${urlPath}`, error)
     sendText(res, 500, `Failed to rewrite imports for ${urlPath}`)
+    return
   }
+
+  if (version !== undefined) cache?.set(filePath, { version, code })
+  return code
 }
 
 // Rewrite every import/export specifier in the (already-transformed) source so
