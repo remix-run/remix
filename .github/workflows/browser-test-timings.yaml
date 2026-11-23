@@ -1,0 +1,176 @@
+name: Browser test timing comparison
+on:
+  push:
+    branches:
+      - brophdawg11/codex-browser-test-timings
+permissions:
+  contents: read
+jobs:
+
+  test_ubuntu:
+    name: test (ubuntu-latest) / ${{ matrix.variant }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: Baseline
+            sha: b42a817e3a00ddadee82a3373441f53e41fde081
+          - variant: Script cache
+            sha: aafa32126fdd85486d2d2fc3f2fe82d3422eefa2
+          - variant: HMR split
+            sha: 0a23c0fd45825cfb7b77c6ad4283ad7076460279
+          - variant: Toast clock
+            sha: eaa4b5b5f887b876098f04bbaae690263ae99d97
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ matrix.sha }}
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node-pnpm-cache
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Playwright version and runner image
+        id: playwright-version
+        shell: bash
+        run: |
+          echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:?Runner image is required}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright Browsers
+        id: cache-browsers
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.image }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: steps.cache-browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
+
+      - name: Run tests
+        run: pnpm test
+
+  test_windows:
+    name: test (windows-latest) / ${{ matrix.variant }}
+    runs-on: windows-2025
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: Baseline
+            sha: b42a817e3a00ddadee82a3373441f53e41fde081
+          - variant: Script cache
+            sha: aafa32126fdd85486d2d2fc3f2fe82d3422eefa2
+          - variant: HMR split
+            sha: 0a23c0fd45825cfb7b77c6ad4283ad7076460279
+          - variant: Toast clock
+            sha: eaa4b5b5f887b876098f04bbaae690263ae99d97
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ matrix.sha }}
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node-pnpm-cache
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Playwright version and runner image
+        id: playwright-version
+        shell: bash
+        run: |
+          echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:?Runner image is required}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright Browsers
+        id: cache-browsers
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: ~/AppData/Local/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.image }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: steps.cache-browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
+
+      # Keep dependency ordering on Windows. The unsorted `pnpm test` schedule overlaps the
+      # browser-heavy workspaces, which overloads this runner and times out e2e navigations.
+      - name: Run tests
+        run: pnpm --recursive --workspace-concurrency=4 --stream run test
+
+  test_webkit_macos:
+    name: test (WebKit, macOS) / ${{ matrix.variant }}
+    runs-on: macos-15
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: Baseline
+            sha: b42a817e3a00ddadee82a3373441f53e41fde081
+          - variant: Script cache
+            sha: aafa32126fdd85486d2d2fc3f2fe82d3422eefa2
+          - variant: Toast clock
+            sha: eaa4b5b5f887b876098f04bbaae690263ae99d97
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ matrix.sha }}
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node-pnpm-cache
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Playwright version and runner image
+        id: playwright-version
+        shell: bash
+        run: |
+          echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:?Runner image is required}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright Browsers
+        id: cache-browsers
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.image }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install WebKit
+        if: steps.cache-browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @remix-run/component exec playwright install webkit
+
+      - name: Run WebKit runner regressions
+        env:
+          REMIX_TEST_WEBKIT: '1'
+        run: pnpm --filter @remix-run/test run test src/test/browser-history-backoff.test.ts --type server --only WebKit
+
+      - name: Run WebKit tests
+        run: pnpm test:browser
