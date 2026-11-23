@@ -124,6 +124,9 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
   }
 
   if (canUseProperty(dom, name, isSvg, attr)) {
+    // An empty attribute means present, and the server renders `""` as one. As a boolean property,
+    // `""` would mean false.
+    if (value === '' && typeof dom[name] === 'boolean') value = true
     try {
       dom[name] = value == null ? '' : value
       return

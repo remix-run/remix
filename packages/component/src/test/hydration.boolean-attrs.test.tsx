@@ -133,6 +133,27 @@ describe('hydration', () => {
       expect(container.querySelector('button')).toBe(existingButton)
       expect(existingButton.disabled).toBe(false)
     })
+
+    it('keeps boolean attributes given an empty string present, as the server renders them', async () => {
+      // Untyped attribute objects, such as headless UI libraries' slot attributes, use "" for a
+      // present boolean attribute.
+      let attrs = { disabled: '', hidden: '' } as Record<string, unknown>
+      let html = await renderToString(<button {...attrs}>Click</button>)
+      container.innerHTML = html
+
+      let existingButton = container.querySelector('button')
+      invariant(existingButton)
+      expect(existingButton.disabled).toBe(true)
+      expect(existingButton.hidden).toBe(true)
+
+      let root = createRoot(container)
+      root.render(<button {...attrs}>Click</button>)
+      root.flush()
+
+      expect(container.querySelector('button')).toBe(existingButton)
+      expect(existingButton.disabled).toBe(true)
+      expect(existingButton.hidden).toBe(true)
+    })
   })
 
   it('keeps and replays form control edits made before hydration', async () => {
