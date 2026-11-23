@@ -3044,7 +3044,8 @@ export function createFormNavigationResolver(
         eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
           ? eventSubmitter
           : null
-      function onFormData(formDataEvent: FormDataEvent) {
+      function onFormData(formDataEvent: Event) {
+        if (!(formDataEvent instanceof FormDataEvent) || formDataEvent.target !== form) return
         // Native formdata follows an uncanceled submit. Ignore snapshots made in submit handlers
         // or after cancellation, and stop listening before later snapshots can replace this data.
         // Firefox can retain a nonzero eventPhase after native submit dispatch has ended.
@@ -3053,15 +3054,21 @@ export function createFormNavigationResolver(
         let existing = pendingSubmissions.get(pending.form)
         if (existing) clearPending(existing)
         let formData = formDataEvent.formData
-        let name = submitter?.name
-        let value = submitter?.value
-        if (submitter instanceof HTMLInputElement) {
-          if (submitter.type === 'image') {
-            name = name ? name + '.x' : 'x'
-            value = undefined
-          } else if (!submitter.hasAttribute('value')) {
-            // The browser serializes a localized default that is missing from input.value.
-            value = undefined
+        let name: string | undefined
+        let value: string | undefined
+        // A later snapshot made after the submitter was disabled can contain an unrelated
+        // field with the same name and value.
+        if (submitter && !submitter.matches(':disabled')) {
+          name = submitter.name
+          value = submitter.value
+          if (submitter instanceof HTMLInputElement) {
+            if (submitter.type === 'image') {
+              name = name ? name + '.x' : 'x'
+              value = undefined
+            } else if (!submitter.hasAttribute('value')) {
+              // The browser serializes a localized default that is missing from input.value.
+              value = undefined
+            }
           }
         }
         let count = name ? countFormDataEntries(formData, name, value) : 0
@@ -3078,10 +3085,10 @@ export function createFormNavigationResolver(
         submitter,
         timeout: setTimeout(() => clearPending(pending), PENDING_FORM_SUBMISSION_TIMEOUT),
         removeFormDataListener() {
-          form.removeEventListener('formdata', onFormData, true)
+          window.removeEventListener('formdata', onFormData, true)
         },
       }
-      form.addEventListener('formdata', onFormData, { capture: true, signal })
+      window.addEventListener('formdata', onFormData, { capture: true, signal })
     },
     { capture: true, signal },
   )

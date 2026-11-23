@@ -26,7 +26,7 @@ describe('form navigation', () => {
     form.action = window.location.href
     form.method = 'get'
     // Exercise the Navigation API source without a cached native formdata event.
-    document.addEventListener('formdata', (event) => event.stopImmediatePropagation(), {
+    window.addEventListener('formdata', (event) => event.stopImmediatePropagation(), {
       capture: true,
       signal: controller.signal,
     })
@@ -443,11 +443,21 @@ describe('form navigation', () => {
     form.append(button)
     document.body.append(form)
 
-    document.addEventListener(
+    window.addEventListener(
       'formdata',
       (event) => {
         button.disabled = true
         event.stopImmediatePropagation()
+      },
+      { capture: true, once: true, signal: controller.signal },
+    )
+    window.addEventListener(
+      'formdata',
+      (event) => {
+        if (event instanceof FormDataEvent) {
+          event.formData.append('intent', 'save')
+          event.formData.set('title', 'unrelated')
+        }
       },
       { capture: true, once: true, signal: controller.signal },
     )
@@ -468,15 +478,9 @@ describe('form navigation', () => {
     try {
       let navigationSucceeded = nextNavigation(controller.signal)
       form.requestSubmit(button)
-      document.addEventListener(
-        'formdata',
-        (event) => {
-          event.formData.append('intent', 'unrelated')
-          event.formData.append('intent', 'also unrelated')
-        },
-        { capture: true, once: true, signal: controller.signal },
-      )
-      expect(new FormData(form).getAll('intent')).toEqual(['unrelated', 'also unrelated'])
+      let unrelated = new FormData(form)
+      expect(unrelated.get('intent')).toBe('save')
+      expect(unrelated.get('title')).toBe('unrelated')
       await navigationSucceeded
 
       expect(navigationFormData).toBeInstanceOf(FormData)
@@ -775,15 +779,16 @@ describe('form navigation', () => {
     replacement.value = 'pending'
     replacement.disabled = true
     form.append(input, button, replacement)
-    form.addEventListener(
+    document.addEventListener(
       'formdata',
       () => {
         // The native submission's entry list already contains the original button entry.
         button.disabled = true
         button.name = 'pending-intent'
+        button.value = 'Saving…'
         replacement.disabled = false
       },
-      { once: true },
+      { capture: true, once: true, signal: controller.signal },
     )
     document.body.append(form)
 
@@ -894,7 +899,7 @@ describe('form navigation', () => {
     button.name = 'intent'
     button.value = 'save'
     form.append(button)
-    document.addEventListener(
+    window.addEventListener(
       'formdata',
       (event) => {
         if (event.target === form && button.value === 'publish') event.stopImmediatePropagation()
