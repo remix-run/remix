@@ -13,6 +13,15 @@ export { createOktaAuthProvider } from './lib/providers/okta.ts'
 export { startExternalAuth } from './lib/start-external-auth.ts'
 export { verifyCredentials } from './lib/verify-credentials.ts'
 export { createXAuthProvider } from './lib/providers/x.ts'
+export { createWebAuthnProvider } from './lib/providers/webauthn.ts'
+export {
+  finishWebAuthnRegistration,
+  startWebAuthnRegistration,
+} from './lib/webauthn-registration.ts'
+export {
+  finishWebAuthnAuthentication,
+  startWebAuthnAuthentication,
+} from './lib/webauthn-authentication.ts'
 
 export type { CredentialsAuthProviderOptions } from './lib/providers/credentials.ts'
 export type { Auth0AuthProviderOptions, Auth0AuthProfile } from './lib/providers/auth0.ts'
@@ -54,3 +63,26 @@ export type {
   OAuthTransaction,
 } from './lib/provider.ts'
 export type { StartExternalAuthOptions } from './lib/start-external-auth.ts'
+export type {
+  WebAuthnAlgorithm,
+  WebAuthnAuthenticationOptionsJSON,
+  WebAuthnAuthenticationResponseJSON,
+  WebAuthnCredential,
+  WebAuthnCredentialDescriptorJSON,
+  WebAuthnProvider,
+  WebAuthnProviderOptions,
+  WebAuthnRegistrationOptionsJSON,
+  WebAuthnRegistrationResponseJSON,
+  WebAuthnResidentKey,
+  WebAuthnUserVerification,
+} from './lib/providers/webauthn.ts'
+export type {
+  FinishedWebAuthnRegistrationResult,
+  FinishWebAuthnRegistrationOptions,
+  StartWebAuthnRegistrationOptions,
+} from './lib/webauthn-registration.ts'
+export type {
+  FinishedWebAuthnAuthenticationResult,
+  FinishWebAuthnAuthenticationOptions,
+  StartWebAuthnAuthenticationOptions,
+} from './lib/webauthn-authentication.ts'
