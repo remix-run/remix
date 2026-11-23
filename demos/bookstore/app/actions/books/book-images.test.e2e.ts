@@ -65,7 +65,10 @@ describe('book images', () => {
       let page = await context.newPage()
       await page.goto('/')
       let cover = page.locator('[data-test-slug] img').first()
-      await cover.evaluate((image: HTMLImageElement) => image.decode())
+      await page.waitForFunction(() => {
+        let image = document.querySelector('[data-test-slug] img')
+        return image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0
+      })
       assert.equal(
         await cover.evaluate((image: HTMLImageElement) => new URL(image.currentSrc).search),
         '?transform=book-image-768',
@@ -81,7 +84,7 @@ describe('book images', () => {
       requests = []
       await page.goto('/books/bbq?image=3')
       let selected = page.getByRole('img', { name: 'Image 3 of 3' })
-      await selected.evaluate((image: HTMLImageElement) => image.decode())
+      await expectSelectedImage(page, 3)
       let currentSrc = await selected.evaluate((image: HTMLImageElement) => {
         let url = new URL(image.currentSrc)
         return url.pathname + url.search

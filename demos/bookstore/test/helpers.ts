@@ -128,6 +128,8 @@ export async function expectSelectedImage(page: Page, imageNumber: number): Prom
     let viewport = image?.parentElement?.parentElement?.parentElement
     return (
       image instanceof HTMLImageElement &&
+      image.complete &&
+      image.naturalWidth > 0 &&
       viewport != null &&
       Math.abs(image.getBoundingClientRect().left - viewport.getBoundingClientRect().left) < 1
     )
