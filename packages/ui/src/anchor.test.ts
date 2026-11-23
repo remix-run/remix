@@ -559,12 +559,107 @@ describe('anchor page scrolling', () => {
     await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)')
   })
 
+  it('keeps a surface aligned inside an ancestor with individual translation', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'translate: 0px')
+  })
+
+  it('keeps a surface aligned inside an ancestor with individual rotation', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'rotate: 0deg')
+  })
+
+  it('keeps a surface aligned inside an ancestor with individual scaling', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'scale: 1')
+  })
+
+  it('keeps a surface aligned inside a perspective ancestor', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'perspective: 1000px')
+  })
+
+  it('keeps a surface aligned inside a filtered ancestor', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'filter: blur(0px)')
+  })
+
+  it('keeps a surface aligned inside a backdrop-filtered ancestor', async (t) => {
+    let property = CSS.supports('backdrop-filter', 'blur(0px)')
+      ? 'backdrop-filter'
+      : '-webkit-backdrop-filter'
+    await expectSurfaceToTrackAnchor(t, `${property}: blur(0px)`)
+  })
+
   it('keeps a surface aligned inside paint containment while the page scrolls', async (t) => {
     await expectSurfaceToTrackAnchor(t, 'contain: paint')
   })
 
+  it('keeps a surface aligned inside layout containment', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'contain: layout')
+  })
+
+  it('keeps a surface aligned inside strict containment', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'contain: strict')
+  })
+
+  it('keeps a surface aligned inside content containment', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'contain: content')
+  })
+
+  it('keeps a surface aligned inside combined containment', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'contain: size layout style')
+  })
+
+  it('keeps a surface aligned inside automatic content visibility', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'content-visibility: auto')
+  })
+
+  it('keeps a surface aligned when hidden content becomes automatically visible', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'content-visibility: hidden', { revealContent: true })
+  })
+
   it('keeps a surface aligned inside will-change containment while the page scrolls', async (t) => {
     await expectSurfaceToTrackAnchor(t, 'will-change: transform')
+  })
+
+  it('keeps a surface aligned when will-change lists transform after another property', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'will-change: opacity, transform')
+  })
+
+  it('keeps a surface aligned when will-change anticipates translation', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'will-change: translate')
+  })
+
+  it('keeps a surface aligned when will-change anticipates rotation', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'will-change: rotate')
+  })
+
+  it('keeps a surface aligned when will-change anticipates scaling', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'will-change: scale')
+  })
+
+  it('keeps a surface aligned when will-change anticipates perspective', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'will-change: perspective')
+  })
+
+  it('keeps a surface aligned when will-change anticipates filtering', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'will-change: filter')
+  })
+
+  it('keeps a surface aligned when will-change anticipates backdrop filtering', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'will-change: backdrop-filter')
+  })
+
+  it('keeps a surface aligned when will-change anticipates containment', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'will-change: contain')
+  })
+
+  it('keeps a surface aligned when will-change anticipates content visibility', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'will-change: content-visibility')
+  })
+
+  it('preserves viewport positioning inside size and style containment', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'contain: size style; margin: 100px 0 0 50px')
+  })
+
+  it('preserves viewport positioning inside inline-size and style containment', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'contain: inline-size style; margin: 100px 0 0 50px')
   })
 
   it('preserves viewport positioning inside an inline-size query container', async (t) => {
@@ -600,12 +695,27 @@ describe('anchor page scrolling', () => {
 
     await expectSurfaceToTrackAnchor(t, 'container-type: inline-size', { position })
   })
+
+  it('preserves viewport positioning for unrelated will-change properties', async (t) => {
+    await expectSurfaceToTrackAnchor(
+      t,
+      'will-change: opacity, transform-origin; margin: 100px 0 0 50px',
+    )
+  })
+
+  it('keeps a surface aligned inside a transformed shadow host', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', { shadow: true })
+  })
+
+  it('preserves viewport positioning inside an ordinary shadow host', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'margin: 100px 0 0 50px', { shadow: true })
+  })
 })
 
 async function expectSurfaceToTrackAnchor(
   t: TestContext,
   containingStyle: string,
-  options: { position?: typeof anchor } = {},
+  options: { shadow?: boolean; revealContent?: boolean; position?: typeof anchor } = {},
 ) {
   let originalStyle = document.body.getAttribute('style')
   let originalScroll = { left: window.scrollX, top: window.scrollY }
@@ -615,7 +725,8 @@ async function expectSurfaceToTrackAnchor(
   target.style.cssText = 'width: 80px; height: 28px;'
   let floating = document.createElement('div')
   floating.style.cssText = 'position: fixed; width: 120px; height: 80px;'
-  container.append(target, floating)
+  let root = options.shadow ? container.attachShadow({ mode: 'open' }) : container
+  root.append(target, floating)
   document.body.style.cssText = 'margin: 0; overflow-anchor: none;'
   document.body.append(container)
   let cleanup = () => {}
@@ -632,10 +743,21 @@ async function expectSurfaceToTrackAnchor(
     expect(window.scrollX).toBe(50)
     expect(window.scrollY).toBe(100)
   })
+  if (!options.revealContent) {
+    await t.waitFor(() => {
+      expect(target.getBoundingClientRect().width).toBe(80)
+      expect(floating.offsetHeight).toBe(80)
+    })
+  }
   cleanup = (options.position ?? anchor)(floating, target, { placement: 'bottom-start' })
+  if (options.revealContent) container.style.contentVisibility = 'auto'
 
-  expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-  expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+  await t.waitFor(() => {
+    expect(target.getBoundingClientRect().width).toBe(80)
+    expect(floating.offsetHeight).toBe(80)
+    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
+    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+  })
 
   window.scrollTo(100, 150)
   await t.waitFor(() => {
