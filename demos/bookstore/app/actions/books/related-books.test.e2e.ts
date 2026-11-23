@@ -62,6 +62,10 @@ describe('related books', () => {
     )
 
     let card = section.locator('[data-test-slug="bread-before-dawn"]')
+    // Exercise wider font metrics than the default macOS system font.
+    await card.evaluate((card) => {
+      card.style.fontFamily = 'Verdana, sans-serif'
+    })
     await card.getByRole('button', { name: 'Add to Cart', exact: true }).click()
     await card.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
     let buttons = await card.locator('.btn').evaluateAll((buttons) =>

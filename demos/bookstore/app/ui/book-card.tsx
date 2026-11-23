@@ -95,8 +95,8 @@ export function BookCard(handle: Handle<BookCardProps>) {
               '& .btn': {
                 flex: 1,
                 minWidth: 0,
-                padding: '0.5rem 0.125rem',
-                fontSize: '0.75rem',
+                padding: '0.5rem 0.0625rem',
+                fontSize: '0.6875rem',
                 textAlign: 'center',
                 whiteSpace: 'nowrap',
               },
