@@ -1,5 +1,6 @@
 import type { ElementProps, ElementType, RemixNode, Renderable } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
+import type { ErrorBoundaryProps } from './error-boundary.ts'
 import type { Key } from './key.ts'
 
 /**
@@ -453,6 +454,8 @@ export interface BuiltinElements {
   Fragment: FragmentProps
   /** Props accepted by the built-in frame component. */
   Frame: FrameProps
+  /** Props accepted by the built-in error boundary component. */
+  ErrorBoundary: ErrorBoundaryProps
 }
 
 /**

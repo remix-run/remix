@@ -29,6 +29,8 @@ export type {
 // -- Components --
 export { Fragment } from './runtime/component.ts'
 export { Frame } from './runtime/frame.ts'
+export { ErrorBoundary } from './runtime/error-boundary.ts'
+export type { ErrorBoundaryFallback, ErrorBoundaryProps } from './runtime/error-boundary.ts'
 export type {
   Task,
   Handle,

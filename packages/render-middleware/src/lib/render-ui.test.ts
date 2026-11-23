@@ -8,6 +8,7 @@ import {
   clientEntry,
   createElement,
   css,
+  ErrorBoundary,
   Frame,
   type Handle,
   type RemixNode,
@@ -366,6 +367,66 @@ describe('render', () => {
       /Failed to resolve frame: 404 Not Found/,
     )
     assert.equal(errors.length, 1)
+  })
+
+  it('responds normally and reports the error when an ErrorBoundary catches a render error', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+
+    function Reviews(): () => RemixNode {
+      throw new Error('Reviews failed')
+    }
+
+    router.get('/', (context) =>
+      context.render(
+        createElement(
+          'main',
+          {},
+          createElement(
+            ErrorBoundary,
+            { fallback: 'Reviews unavailable' },
+            createElement(Reviews, {}),
+          ),
+          createElement('footer', {}, 'Footer'),
+        ),
+      ),
+    )
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 200)
+    assert.ok(
+      (await response.text()).includes(
+        '<main><!-- rmx:eb:error -->Reviews unavailable<!-- /rmx:eb --><footer>Footer</footer></main>',
+      ),
+    )
+    assert.equal(errors.length, 1)
+    assert.equal((errors[0] as Error).message, 'Reviews failed')
+  })
+
+  it('renders an ErrorBoundary fallback when a blocking frame fails to resolve', async () => {
+    let errors: unknown[] = []
+    let middleware = render({ onError: (error) => errors.push(error) })
+    let router = createRouter({ middleware: [middleware] as const })
+
+    router.get('/', (context) =>
+      context.render(
+        createElement(
+          ErrorBoundary,
+          { fallback: 'Unavailable' },
+          createElement(Frame, { src: '/text' }),
+        ),
+      ),
+    )
+    router.get('/text', () => new Response('Not UI'))
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 200)
+    assert.ok((await response.text()).includes('<!-- rmx:eb:error -->Unavailable<!-- /rmx:eb -->'))
+    assert.equal(errors.length, 1)
+    assert.match(String(errors[0]), /Frame response must be HTML/)
   })
 
   it('renders frame bodies from context.render() in place without a leaked doctype', async () => {

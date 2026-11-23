@@ -13,6 +13,7 @@ For how components fit into a full Remix app, see the guides on [rendering UI](h
 - Composable `mix` behaviors: `on`, `ref`, `link`, `attrs`, `css`, and your own `createMixin()` mixins
 - Scoped `css()` styles with nesting and cascade layers
 - Server rendering, selective hydration with `clientEntry()`, streaming `<Frame>` regions, and client navigation
+- `<ErrorBoundary>` fallbacks for parts of the page that fail to render, on the server and in the browser
 
 ## Installation
 
@@ -977,7 +978,7 @@ window.addEventListener('pagehide', () => root.dispose(), { once: true })
 | `root.reconcile()`  | Renders the most recently supplied tree again.                                                                                                                |
 | `root.flush()`      | Applies pending DOM work and tasks synchronously, mainly for tests and integrations.                                                                          |
 | `root.dispose()`    | Removes the tree and releases its listeners and component resources.                                                                                          |
-| `error` event       | Dispatched when a component render or queued task fails.                                                                                                      |
+| `error` event       | Dispatched when a component render or queued task fails and no [error boundary](#error-boundaries) catches it.                                                |
 
 `createRangeRoot([start, end])` works the same way, but owns only the nodes between two sibling boundary nodes instead of a whole container.
 
@@ -1057,6 +1058,53 @@ The returned runtime emits `error` events for component errors, and has these me
 ### Trusted Content and Module Loading
 
 The initial document and HTML returned by `resolveFrame` are trusted application content. They can select client entry modules and contribute import maps, styles, and nested frames. Only return HTML from sources the application trusts to run code in the current page. The default resolver restricts requests and redirects to the document origin, but Remix does not sanitize the returned HTML, and same-origin user-generated content is not implicitly safe.
+
+## Error Boundaries
+
+`<ErrorBoundary>` renders a fallback in place of its children when they throw during setup or render. The rest of the page keeps rendering:
+
+```tsx
+import { ErrorBoundary, on } from 'remix/component'
+import type { Handle } from 'remix/component'
+
+function BookPage(handle: Handle<{ book: Book }>) {
+  return () => (
+    <main>
+      <h1>{handle.props.book.title}</h1>
+      <ErrorBoundary
+        fallback={(error, retry) => (
+          <div role="alert">
+            <p>Reviews failed to load.</p>
+            <button type="button" mix={on('click', retry)}>
+              Try again
+            </button>
+          </div>
+        )}
+      >
+        <Reviews bookId={handle.props.book.id} />
+      </ErrorBoundary>
+    </main>
+  )
+}
+```
+
+`fallback` is either content, such as `fallback={<p>Reviews failed to load.</p>}`, or a function that receives the thrown value and a `retry` function. Calling `retry()` renders the children again with new component instances. The boundary shows its fallback until you call `retry()` or the boundary is replaced, for example by changing its `key` in a list. When its parent renders again, the boundary renders the fallback again with the new props instead of retrying the children.
+
+What a boundary catches:
+
+| Where   | Caught                                                                                                                                   | Not caught                                                                                |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Server  | Setup and render errors in descendants, including client entries, and blocking `<Frame>`s (no `fallback`) whose content fails to resolve | `<Frame fallback>` content that fails after the first chunk is sent                       |
+| Browser | Setup and render errors in descendants during the first render, hydration, updates from a parent, and updates from `handle.update()`     | Event handlers, queued tasks, mixin lifecycle events, frame reloads, and other async work |
+| Either  | Errors thrown by a nested boundary's fallback, which go to the next boundary up                                                          | Errors thrown by the boundary's own fallback                                              |
+
+Catch errors from event handlers and async work yourself and store them in component state when you want to render them.
+
+On the server, the boundary's caught error is passed to the `onError` option of [`renderToStream()`](https://github.com/remix-run/remix/blob/main/packages/component/src/server/README.md) and the response renders normally, so `render()` middleware responds with your status instead of failing the request. `renderToString()` logs caught errors with `console.error()`. In the browser, the boundary removes the failed content, disposes its components, logs the error with `console.error()`, and renders the fallback. Caught errors are not dispatched as root `error` events, which are reserved for errors no boundary handled.
+
+The server renders the fallback with the real error, so don't render error details your users shouldn't see. The server does not send errors to the browser. When a client entry hydrates a boundary whose server render failed, the boundary hydrates the server-rendered fallback without rendering its children, and the fallback receives a generic `Error`. Call `retry()` to render the children in the browser. Fallbacks that render the error's message will show different text after hydration.
+
+Boundaries write `<!-- rmx:eb -->` and `<!-- /rmx:eb -->` comments around their content so the browser knows where the content starts and ends. A boundary whose server render failed starts with `<!-- rmx:eb:error -->`.
 
 Remix passes each serialized module specifier unchanged to `loadModule`. The loader decides how to resolve it, so client entries can use CDN URLs, development server URLs, or bare specifiers resolved through import maps. With `import(moduleUrl)`, relative specifiers resolve from the module containing that import, subject to the document's import map. Applications that restrict module sources should enforce that policy in their loader before importing code.
 

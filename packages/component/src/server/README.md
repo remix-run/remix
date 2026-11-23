@@ -17,7 +17,7 @@ import { renderToString } from 'remix/component/server'
 let html = await renderToString(<App />)
 ```
 
-Pass `nonce` when rendering under a [Content Security Policy](#content-security-policy). Render errors reject the returned promise.
+Pass `nonce` when rendering under a [Content Security Policy](#content-security-policy). Render errors reject the returned promise, except errors caught by an [`<ErrorBoundary>`](https://github.com/remix-run/remix/tree/main/packages/component#error-boundaries), which render the boundary's fallback and are logged with `console.error()`.
 
 ```tsx
 let nonce = crypto.getRandomValues(new Uint8Array(16)).toBase64()
@@ -65,7 +65,7 @@ return new Response(stream, {
 - **`signal`** - Cancels pending server rendering work. Pass `request.signal` so client disconnects can stop unresolved frame work without invoking `onError` for the disconnect itself.
 - **`resolveFrame(src, target, context)`** - Called when an eager `<Frame>` needs its content. Return a string of HTML, a `ReadableStream<Uint8Array>`, or a promise of either. `context.currentFrameSrc` is the URL for the frame that contains the `<Frame>`, and `context.topFrameSrc` is the outer document URL. `context.nonce` carries the enclosing render's nonce for nested renders. Required if your component tree contains eager `<Frame>` elements.
 - **`resolveClientEntry(entryId, component)`** - Resolves the public module URL, export name, optional import map, and optional module preload hrefs for a hydrated client entry.
-- **`onError(error)`** - Receives rendering errors and defaults to logging them. Fatal errors reject the stream even when a handler is supplied.
+- **`onError(error)`** - Receives rendering errors and defaults to logging them. Fatal errors reject the stream even when a handler is supplied. Errors caught by an [`<ErrorBoundary>`](https://github.com/remix-run/remix/tree/main/packages/component#error-boundaries) are also passed to `onError`, but the stream renders the boundary's fallback instead of rejecting.
 - **`nonce`** - CSP nonce for generated import maps, module preloads, and CSS mixin styles. Use a fresh, unpredictable value for each document response and the same value in its policy.
 
 ### Content Security Policy
@@ -104,6 +104,8 @@ When the stream encounters a `<Frame>` component:
 - **With `fallback`** (non-blocking): The fallback is rendered inline in the initial chunk. Once the frame resolves, a `<template>` element containing the real content is streamed at the end of the response. The client swaps it in automatically.
 
 The blocking and streaming behaviors use `loading="eager"`, which is the default.
+
+A blocking frame inside an [`<ErrorBoundary>`](https://github.com/remix-run/remix/tree/main/packages/component#error-boundaries) that fails to resolve renders the boundary's fallback instead of rejecting the stream. A non-blocking frame that fails after the initial chunk is sent can't be replaced, so it keeps showing its fallback and the error goes to `onError`.
 
 This means the first chunk always contains a complete, renderable page. Slow data sources don't block the initial paint.
 

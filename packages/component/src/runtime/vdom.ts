@@ -14,9 +14,9 @@ import {
   diffVNodes,
   findNextSiblingDomAnchor,
   isCommittedComponentNode,
-  renderComponent,
   restoreAncestorSelect,
   remove as removeVNode,
+  renderComponentUpdate,
   ROOT_VNODE,
   setActiveSchedulerUpdateParents,
   toVNode,
@@ -411,14 +411,13 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
           for (let [vnode, domParent] of vnodes) {
             if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
             if (!trackCascadingUpdate(vnode)) return
-            let curr = vnode._content
             // Calculate anchor at render time from current vdom position (never stale).
             // Needed for fragment self-updates that add children - without this, new children
             // would be appended after siblings. The keyed diff has placement logic, but unkeyed
             // diff relies on anchor for correct positioning.
             let anchor = findNextSiblingDomAnchor(vnode) || undefined
             try {
-              renderComponent(curr, vnode, domParent, vnode._context, anchor)
+              renderComponentUpdate(vnode, domParent, anchor)
             } catch (error) {
               dispatchError(error)
             }

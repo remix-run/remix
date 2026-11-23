@@ -118,6 +118,7 @@ Use a fallback for a region that may arrive later without making the surrounding
 Keep a frame blocking when the initial page does not make sense without it. A fallback is loading UI,
 not a generic error boundary. The frame resolver, the function that fetches a frame's `src` and
 returns its HTML, decides what happens when the request fails, along with your app's error handling.
+To show other content when a blocking frame fails, wrap it in `<ErrorBoundary>`.
 
 ## Render the response as a stream {#server-rendering-with-rendertostream-and-rendertostring}
 
