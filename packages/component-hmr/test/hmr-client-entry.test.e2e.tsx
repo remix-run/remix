@@ -395,7 +395,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
         timeout: browserStartupTimeout,
       })
       let reloaded = waitForNavigation(page, { waitUntil: 'commit' })
-      let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
+      let adopted = waitForConsoleMessage(page, 'Frame adoption complete', startup.promise)
       await fs.writeFile(
         clientFieldPath,
         clientFieldSource
