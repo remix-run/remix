@@ -8,7 +8,8 @@ import type { Locator, Page } from 'playwright'
 import { createTestRouter } from '../test/helpers.ts'
 import { assets } from './utils/assets.ts'
 
-const router = await createTestRouter()
+// Preserve all category labels for viewport geometry without encoding the full catalog.
+const router = await createTestRouter({ bookIds: [1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 33, 34, 45] })
 
 describe('bookstore prefetching', () => {
   it('returns to login on Back after logout', async (t) => {
@@ -158,7 +159,9 @@ describe('bookstore prefetching', () => {
         pathname.startsWith('/assets/') &&
         (request.resourceType() !== 'image' || pathname + search === coverHref)
       ) {
-        failedAssets.push(request.url())
+        failedAssets.push(
+          `${request.url()} (${request.failure()?.errorText}, ${request.resourceType()})`,
+        )
       }
     })
     await page.waitForFunction(() => {
