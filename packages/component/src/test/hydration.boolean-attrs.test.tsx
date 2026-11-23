@@ -2,6 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import { on } from '../index.ts'
 import { createRoot } from '../runtime/vdom.ts'
+import { createElement } from '../runtime/create-element.ts'
 import { renderToString } from '../server/stream.ts'
 import { invariant } from '../runtime/invariant.ts'
 
@@ -18,6 +19,32 @@ describe('hydration', () => {
   })
 
   describe('boolean attributes', () => {
+    it('keeps native global booleans on custom elements when mounting and hydrating', async (t) => {
+      let node = createElement('x-remix-native-global-booleans', { inert: '' })
+      container.innerHTML = await renderToString(node)
+      let existing = container.firstElementChild
+      invariant(existing instanceof HTMLElement)
+      expect(existing.inert).toBe(true)
+
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(node)
+      root.flush()
+
+      expect(container.firstElementChild).toBe(existing)
+      expect(existing.inert).toBe(true)
+
+      let clientContainer = document.createElement('div')
+      let clientRoot = createRoot(clientContainer)
+      t.after(() => clientRoot.dispose())
+      clientRoot.render(node)
+      clientRoot.flush()
+
+      let mounted = clientContainer.firstElementChild
+      invariant(mounted instanceof HTMLElement)
+      expect(mounted.inert).toBe(true)
+    })
+
     it('hydrates disabled attribute', async () => {
       let html = await renderToString(<button disabled>Click</button>)
       container.innerHTML = html
