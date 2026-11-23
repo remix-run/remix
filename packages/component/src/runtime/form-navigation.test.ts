@@ -669,6 +669,67 @@ describe('form navigation', () => {
       if (didNavigate) await window.navigation.back().finished
     }
   })
+
+  it('preserves submitter name and value when the submit button is disabled after submit', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+    let submission: FormSubmission | undefined
+
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        formNavigation = resolveFormNavigation(event)
+        event.intercept({
+          async handler() {
+            submission = await formNavigation?.getSubmission?.()
+          },
+        })
+      },
+      { signal: controller.signal },
+    )
+
+    let destination = new URL(window.location.href)
+    destination.searchParams.set('form-navigation', 'disabled-submitter')
+    let form = document.createElement('form')
+    form.action = destination.href
+    form.method = 'post'
+    let input = document.createElement('input')
+    input.name = 'title'
+    input.value = 'x'
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'save'
+    form.append(input, button)
+    form.addEventListener('submit', () => {
+      setTimeout(() => {
+        button.disabled = true
+      })
+    })
+    document.body.append(form)
+
+    let didNavigate = false
+    try {
+      let navigationSucceeded = nextNavigation(controller.signal)
+      form.requestSubmit(button)
+      await navigationSucceeded
+      didNavigate = true
+
+      expect(button.disabled).toBe(true)
+      expect(Array.from(formNavigation?.submission.formData?.entries() ?? [])).toEqual([
+        ['title', 'x'],
+        ['intent', 'save'],
+      ])
+      expect(Array.from(submission?.formData?.entries() ?? [])).toEqual([
+        ['title', 'x'],
+        ['intent', 'save'],
+      ])
+    } finally {
+      form.remove()
+      controller.abort()
+      if (didNavigate) await window.navigation.back().finished
+    }
+  })
 })
 
 function nextNavigation(signal: AbortSignal): Promise<void> {

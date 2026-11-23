@@ -3076,6 +3076,10 @@ export function createFormNavigationResolver(
     if (method === 'dialog' || target?.toLowerCase() === '_blank') return
 
     let formEvent = event as FormNavigateEvent
+    let formData =
+      method.toLowerCase() === 'get'
+        ? undefined
+        : (pending?.formData ?? formEvent.formData ?? undefined)
     let getSubmission: FormNavigation['getSubmission']
     if (method.toLowerCase() === 'get') {
       if (pending) clearPending(pending)
@@ -3083,7 +3087,7 @@ export function createFormNavigationResolver(
       getSubmission = async () => {
         if (pending) clearPending(pending)
         return {
-          formData: formEvent.formData ?? pending?.formData,
+          formData,
           method,
           encType,
         }
@@ -3095,7 +3099,7 @@ export function createFormNavigationResolver(
       submission: {
         method,
         encType,
-        formData: method === 'get' ? undefined : (formEvent.formData ?? pending?.formData),
+        formData,
       },
       hasAttribute(name) {
         return submitter?.hasAttribute(name) === true || form.hasAttribute(name)
