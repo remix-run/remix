@@ -20,7 +20,7 @@ describe('frame debug bookmarklet', () => {
       await createTestServer((request) => {
         requests.push(new URL(request.url).pathname)
         return new Response(
-          '<!doctype html><html><body><!--rmx:f:example--><div style="padding:24px">' +
+          '<!doctype html><html><head><link rel="icon" href="data:,"></head><body><!--rmx:f:example--><div style="padding:24px">' +
             '<!--rmx:h:example--><p>Book details</p><!--/rmx:h--></div><!--/rmx:f--></body></html>',
           { headers: { 'Content-Type': 'text/html' } },
         )
