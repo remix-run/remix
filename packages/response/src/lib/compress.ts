@@ -253,6 +253,10 @@ export function createCompressionOptions(
  * Reads from the input stream, compresses chunks through the compressor,
  * and returns a new ReadableStream with the compressed data.
  *
+ * The pump is pull-driven and stops while `controller.desiredSize <= 0`, so a
+ * paused consumer applies backpressure through to the source instead of
+ * buffering the entire compressed response in memory (see #12104).
+ *
  * @param input The input stream to compress
  * @param compressor The zlib compressor instance to use
  * @returns A new ReadableStream with the compressed data
@@ -264,93 +268,132 @@ export function compressStream(
   let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
   let cancelled = false
   let errored = false
+  let finishing = false
 
-  return new ReadableStream<Uint8Array>({
-    async start(controller) {
-      reader = input.getReader()
+  return new ReadableStream<Uint8Array>(
+    {
+      start(controller) {
+        reader = input.getReader()
 
-      compressor.on('data', (chunk: Buffer) => {
-        if (!cancelled && !errored) {
-          controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
-        }
-      })
+        compressor.on('data', (chunk: Buffer) => {
+          if (!cancelled && !errored) {
+            controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+          }
+        })
 
-      compressor.on('end', () => {
-        if (!cancelled && !errored) {
-          controller.close()
-        }
-      })
+        compressor.on('end', () => {
+          if (!cancelled && !errored) {
+            controller.close()
+          }
+        })
 
-      compressor.on('error', (error) => {
-        // Ignore duplicate error events
-        if (errored) {
+        compressor.on('error', (error) => {
+          // Ignore duplicate error events
+          if (errored) {
+            return
+          }
+          errored = true
+          if (!cancelled) {
+            controller.error(error)
+          }
+        })
+      },
+
+      async pull(controller) {
+        if (cancelled || errored || finishing || reader == null) {
           return
         }
-        errored = true
-        if (!cancelled) {
-          controller.error(error)
-        }
-      })
 
-      try {
-        while (true) {
-          if (cancelled || errored) {
-            break
-          }
+        try {
+          // Produce while the consumer still wants data. Stopping when
+          // desiredSize <= 0 applies output backpressure to the source.
+          while (!cancelled && !errored && !finishing && (controller.desiredSize ?? 1) > 0) {
+            let { done, value } = await reader.read()
 
-          let { done, value } = await reader.read()
+            if (cancelled || errored) {
+              return
+            }
 
-          if (cancelled || errored) {
-            break
-          }
-
-          if (done) {
-            compressor.end()
-            break
-          }
-
-          if (!value) {
-            continue
-          }
-
-          await new Promise<void>((resolve, reject) => {
-            let resolvedImmediately = false
-
-            let canContinue = compressor.write(Buffer.from(value), (error) => {
-              if (resolvedImmediately) {
-                return
+            if (done) {
+              finishing = true
+              compressor.end()
+              try {
+                reader.releaseLock()
+              } catch {
+                // Already released by cancel()
               }
-              if (error) {
-                reject(error)
-              } else {
+              reader = null
+              return
+            }
+
+            if (!value) {
+              continue
+            }
+
+            await new Promise<void>((resolve, reject) => {
+              let resolvedImmediately = false
+
+              let canContinue = compressor.write(Buffer.from(value), (error) => {
+                if (resolvedImmediately) {
+                  return
+                }
+                if (error) {
+                  reject(error)
+                } else {
+                  resolve()
+                }
+              })
+
+              if (canContinue) {
+                resolvedImmediately = true
                 resolve()
+              } else {
+                // Node zlib signals writable backpressure with a false return;
+                // resume when the compressor drains so we do not spin on write.
+                compressor.once('drain', () => {
+                  if (!resolvedImmediately) {
+                    resolve()
+                  }
+                })
               }
             })
+          }
+        } catch (error) {
+          errored = true
+          compressor.destroy(error as Error)
+          if (!cancelled) {
+            controller.error(error)
+          }
+          try {
+            reader?.releaseLock()
+          } catch {
+            // Already released
+          }
+          reader = null
+        }
+      },
 
-            if (canContinue) {
-              resolvedImmediately = true
-              resolve()
+      async cancel(reason) {
+        cancelled = true
+        // Destroy compressor first to unblock any pending write operations
+        compressor.destroy()
+        if (reader != null) {
+          try {
+            await reader.cancel(reason)
+          } finally {
+            try {
+              reader.releaseLock()
+            } catch {
+              // cancel() may already have released the lock
             }
-          })
+            reader = null
+          }
         }
-      } catch (error) {
-        errored = true
-        compressor.destroy(error as Error)
-        if (!cancelled) {
-          controller.error(error)
-        }
-      } finally {
-        reader.releaseLock()
-      }
+      },
     },
-
-    async cancel(reason) {
-      cancelled = true
-      // Destroy compressor first to unblock any pending write operations
-      compressor.destroy()
-      await reader?.cancel(reason)
-    },
-  })
+    // Keep a small queue so desiredSize reflects consumer demand promptly.
+    { highWaterMark: 1 },
+  )
 }
 
 function createCompressor(
