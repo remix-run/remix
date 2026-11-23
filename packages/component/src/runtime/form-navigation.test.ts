@@ -26,7 +26,10 @@ describe('form navigation', () => {
     form.action = window.location.href
     form.method = 'get'
     // Exercise the Navigation API source without a cached native formdata event.
-    form.addEventListener('formdata', (event) => event.stopImmediatePropagation())
+    document.addEventListener('formdata', (event) => event.stopImmediatePropagation(), {
+      capture: true,
+      signal: controller.signal,
+    })
     let button = document.createElement('button')
     button.formMethod = 'post'
     button.formEnctype = 'text/plain'
@@ -238,6 +241,8 @@ describe('form navigation', () => {
       didNavigate = true
 
       expect(submitterForm).toBe(null)
+      expect(formNavigation?.form).toBe(form)
+      expect(formNavigation?.submitter).toBe(button)
       expect(formNavigation?.getAttribute('data-rmx-target')).toBe('items')
       expect(formNavigation?.getSubmission).toBeUndefined()
       expect(new URL(window.location.href).searchParams.get('filter')).toBe('example')
@@ -415,6 +420,54 @@ describe('form navigation', () => {
         ['name', 'Ada'],
         ['intent', 'save'],
       ])
+    } finally {
+      form.remove()
+      controller.abort()
+      if (initialKey) await window.navigation.traverseTo(initialKey).finished
+    }
+  })
+
+  it('uses the navigation body when the native snapshot was blocked before an unrelated snapshot', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let initialKey = window.navigation.currentEntry?.key
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+    let submission: FormSubmission | undefined
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'post'
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'save'
+    form.append(button)
+    document.body.append(form)
+
+    document.addEventListener('formdata', (event) => event.stopImmediatePropagation(), {
+      capture: true,
+      once: true,
+      signal: controller.signal,
+    })
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        formNavigation = resolveFormNavigation(event)
+        event.intercept({
+          async handler() {
+            submission = await formNavigation?.getSubmission?.()
+          },
+        })
+      },
+      { signal: controller.signal },
+    )
+
+    try {
+      let navigationSucceeded = nextNavigation(controller.signal)
+      form.requestSubmit(button)
+      expect(new FormData(form).has('intent')).toBe(false)
+      await navigationSucceeded
+
+      expect(formNavigation?.submission.formData?.get('intent')).toBe('save')
+      expect(submission?.formData?.get('intent')).toBe('save')
     } finally {
       form.remove()
       controller.abort()
@@ -654,6 +707,8 @@ describe('form navigation', () => {
       didNavigate = true
 
       expect(submitterForm).toBe(null)
+      expect(formNavigation?.form).toBe(form)
+      expect(formNavigation?.submitter).toBe(tempButton)
       expect(submission?.method).toBe('post')
       expect(submission?.encType).toBe('application/x-www-form-urlencoded')
       expect(submission?.formData).toBeInstanceOf(FormData)
@@ -715,8 +770,10 @@ describe('form navigation', () => {
     try {
       let navigationSucceeded = nextNavigation(controller.signal)
       form.requestSubmit(button)
-      // A synthetic submit must not replace the pending native submission.
+      // Firefox runs the default action of a synthetic submit on a connected form.
+      form.addEventListener('submit', () => form.remove(), { once: true })
       form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+      document.body.append(form)
       await navigationSucceeded
       didNavigate = true
 
@@ -816,9 +873,13 @@ describe('form navigation', () => {
     button.name = 'intent'
     button.value = 'save'
     form.append(button)
-    form.addEventListener('formdata', (event) => {
-      if (button.value === 'publish') event.stopImmediatePropagation()
-    })
+    document.addEventListener(
+      'formdata',
+      (event) => {
+        if (event.target === form && button.value === 'publish') event.stopImmediatePropagation()
+      },
+      { capture: true, signal: controller.signal },
+    )
     document.body.append(form)
 
     try {

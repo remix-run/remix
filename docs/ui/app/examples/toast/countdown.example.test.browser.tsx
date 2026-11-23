@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import Example, { ToastRegion } from './countdown.example.tsx'
-import { button, element, mount, waitFor } from '../test-helpers.ts'
+import { button, element, mount } from '../test-helpers.ts'
 
 function countdownAnimation(host: HTMLElement): Animation {
   let animation = host
@@ -17,6 +17,7 @@ function countdownAnimation(host: HTMLElement): Animation {
 
 describe('Toast countdown example', () => {
   it('pauses the countdown with focus and dismisses after the remaining lifetime', async (t) => {
+    let timers = t.useFakeTimers()
     let result = await mount(
       t,
       <>
@@ -28,13 +29,19 @@ describe('Toast countdown example', () => {
     await result.act(() => trigger.click())
     let toastItem = element(result.container, '[data-toast]')
     assert.equal(toastItem.hidden, false)
-    await waitFor(() => assert.equal(countdownAnimation(toastItem).playState, 'running'))
+    await t.waitFor(() => assert.equal(countdownAnimation(toastItem).playState, 'running'), {
+      timeout: 3000,
+    })
     await result.act(() => button(toastItem, 'Dismiss notification').focus())
-    await waitFor(() => assert.equal(countdownAnimation(toastItem).playState, 'paused'))
+    await t.waitFor(() => assert.equal(countdownAnimation(toastItem).playState, 'paused'), {
+      timeout: 3000,
+    })
     await result.act(() => trigger.focus())
-    await waitFor(() => assert.equal(countdownAnimation(toastItem).playState, 'running'))
-    await new Promise((resolve) => setTimeout(resolve, 5100))
-    await waitFor(() => assert.equal(toastItem.isConnected, false))
+    await t.waitFor(() => assert.equal(countdownAnimation(toastItem).playState, 'running'), {
+      timeout: 3000,
+    })
+    await result.act(() => timers.advance(5000))
+    await t.waitFor(() => assert.equal(toastItem.isConnected, false), { timeout: 3000 })
   })
 
   it('renders a bar and SVG ring from the same countdown fraction', async (t) => {

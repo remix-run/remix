@@ -3044,7 +3044,8 @@ export function createFormNavigationResolver(
       function onFormData(formDataEvent: FormDataEvent) {
         // Native formdata follows an uncanceled submit. Ignore snapshots made in submit handlers
         // or after cancellation, and stop listening before later snapshots can replace this data.
-        if (event.eventPhase !== Event.NONE || event.defaultPrevented) return
+        // Firefox can retain a nonzero eventPhase after native submit dispatch has ended.
+        if (event.currentTarget !== null || event.defaultPrevented) return
         // A canceled retry must not replace a submission whose navigation is still pending.
         let existing = pendingSubmissions.get(pending.form)
         if (existing) clearPending(existing)
@@ -3058,10 +3059,10 @@ export function createFormNavigationResolver(
         submitter,
         timeout: setTimeout(() => clearPending(pending), PENDING_FORM_SUBMISSION_TIMEOUT),
         removeFormDataListener() {
-          form.removeEventListener('formdata', onFormData)
+          form.removeEventListener('formdata', onFormData, true)
         },
       }
-      form.addEventListener('formdata', onFormData, { signal })
+      form.addEventListener('formdata', onFormData, { capture: true, signal })
     },
     { capture: true, signal },
   )
@@ -3093,13 +3094,19 @@ export function createFormNavigationResolver(
     if (method === 'dialog' || target?.toLowerCase() === '_blank') return
 
     let isGet = method.toLowerCase() === 'get'
-    let formEvent = event as FormNavigateEvent
-    // A form source element can also come from form.submit(), which bypasses the submit event.
-    let formData = isGet
-      ? undefined
-      : ((pending?.submitter ? pending.formData : undefined) ??
-        formEvent.formData ??
-        pending?.formData)
+    let eventFormData = (event as FormNavigateEvent).formData
+    let formData = isGet ? undefined : (eventFormData ?? pending?.formData)
+    if (!isGet && eventFormData && pending?.formData && submitter?.matches(':disabled')) {
+      // Chromium and WebKit can rebuild the data after the submitter is disabled. Only prefer
+      // the capture if it contains an entry for the submitter that the navigation lost.
+      let name = submitter.name
+      if (submitter instanceof HTMLInputElement && submitter.type === 'image') {
+        name = name ? name + '.x' : 'x'
+      }
+      if (name && pending.formData.getAll(name).length > eventFormData.getAll(name).length) {
+        formData = pending.formData
+      }
+    }
     let getSubmission: FormNavigation['getSubmission'] = isGet
       ? undefined
       : async () => ({ formData, method, encType })
