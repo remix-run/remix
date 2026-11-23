@@ -31,6 +31,7 @@ const nodeTsxImportUrl = pathToFileURL(
 ).href
 const componentHmrNodeImportUrl = pathToFileURL(path.resolve(packageDir, 'src/node.ts')).href
 const consoleMessageTimeout = 5000
+const nodeHmrReadyTimeout = 15_000
 export const browserStartupTimeout = 15_000
 
 type HmrFixture = {
@@ -1145,8 +1146,16 @@ export async function startNodeHmrFixtureServer(
     notifyStateWaiters()
   })
 
-  await waitForState(() => proxyPort !== undefined, 'Timed out waiting for node-hmr proxy server.')
-  await waitForReadyEvent(0)
+  try {
+    await waitForState(
+      () => proxyPort !== undefined && readyEvents.length > 0,
+      'Timed out waiting for node-hmr fixture server.',
+      nodeHmrReadyTimeout,
+    )
+  } catch (error) {
+    await stopProcess(child, closed)
+    throw error
+  }
 
   return {
     baseUrl: `http://127.0.0.1:${proxyPort}`,
@@ -1171,7 +1180,11 @@ export async function startNodeHmrFixtureServer(
   }
 
   // Resolves once `check()` passes after process output, and rejects if the process exits first.
-  function waitForState(check: () => boolean, message: string): Promise<void> {
+  function waitForState(
+    check: () => boolean,
+    message: string,
+    timeoutMs = consoleMessageTimeout,
+  ): Promise<void> {
     let { promise, resolve, reject } = Promise.withResolvers<void>()
     let fail = () => {
       let exitText = exit ? ` Process exited with code ${exit.code} and signal ${exit.signal}.` : ''
@@ -1181,7 +1194,7 @@ export async function startNodeHmrFixtureServer(
       if (check()) resolve()
       else if (exit) fail()
     }
-    let timeout = setTimeout(fail, consoleMessageTimeout)
+    let timeout = setTimeout(fail, timeoutMs)
     stateWaiters.add(update)
     update()
     let result = promise.finally(() => {
@@ -1196,6 +1209,7 @@ export async function startNodeHmrFixtureServer(
     await waitForState(
       () => readyEvents[index] !== undefined,
       'Timed out waiting for node-hmr fixture server.',
+      nodeHmrReadyTimeout,
     )
 
     let event = readyEvents[index]
@@ -1627,11 +1641,10 @@ async function stopProcess(child: ChildProcess, closed: Promise<void>): Promise<
       timeout = setTimeout(() => resolve(true), 5_000)
     })
 
-    // IPC lets the fixture await app.close() on Windows too.
+    // IPC lets the fixture await app.close() on Windows too. If the channel closes
+    // while sending, still wait for exit or the kill fallback.
     if (child.connected) {
-      await new Promise<void>((resolve, reject) => {
-        child.send('shutdown', (error) => (error ? reject(error) : resolve()))
-      })
+      child.send('shutdown', () => {})
     }
 
     if (await Promise.race([closed.then(() => false), timedOut])) {
