@@ -112,6 +112,36 @@ afterEach(() => {
 })
 
 describe('anchor', () => {
+  it('preserves an inline fixed surface and tracks its anchor in viewport coordinates', (t) => {
+    let floating = document.createElement('div')
+    floating.style.position = 'fixed'
+    let anchorElement = document.createElement('button')
+    document.body.append(floating, anchorElement)
+
+    mockLayout(floating, { top: 0, left: 0, width: 120, height: 80 })
+    let layout = mockLayout(anchorElement, { top: 200, left: 200, width: 80, height: 28 })
+    let scrollX = 100
+    let scrollY = 200
+    t.mock.getter(window, 'scrollX', () => scrollX)
+    t.mock.getter(window, 'scrollY', () => scrollY)
+
+    let cleanup = anchor(floating, anchorElement, { placement: 'bottom-start' })
+    t.after(cleanup)
+
+    expect(floating.style.position).toBe('fixed')
+    expect(floating.style.top).toBe('228px')
+    expect(floating.style.left).toBe('200px')
+
+    scrollX = 150
+    scrollY = 250
+    layout.setRect({ top: 150, left: 150, width: 80, height: 28 })
+    window.dispatchEvent(new Event('scroll'))
+
+    expect(floating.style.position).toBe('fixed')
+    expect(floating.style.top).toBe('178px')
+    expect(floating.style.left).toBe('150px')
+  })
+
   it('positions a floating element below its anchor by default', () => {
     let floating = document.createElement('div')
     let anchorElement = document.createElement('button')

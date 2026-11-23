@@ -1,0 +1,1 @@
+Fixed `anchor()` overriding a floating surface's `position: fixed` with `position: absolute` when its anchor was not fixed, which could misplace surfaces inside positioned ancestors. Fixed-position surfaces retain their positioning and use viewport coordinates while scrolling.
