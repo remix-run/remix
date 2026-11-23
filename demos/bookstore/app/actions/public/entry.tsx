@@ -80,16 +80,17 @@ export const app = run({
           frameRequestManager.invalidate()
           return fetch(url, init).finally(() => frameRequestManager.invalidate())
         }
+        let existing = frameRequestManager.get(url, init)
+        if (existing) return existing
         let reuseBrowsingHtml =
-          options?.navigationType === 'traverse' &&
-          browsingPageMatchers.some((matcher) => matcher.match(url) !== null)
-        let requestInit = {
+          // Deferred lazy frames can load after the navigation metadata is no longer available.
+          relatedBooksMatcher.match(url) !== null ||
+          (options?.navigationType === 'traverse' &&
+            browsingPageMatchers.some((matcher) => matcher.match(url) !== null))
+        return fetch(url, {
           ...init,
           cache: reuseBrowsingHtml ? 'force-cache' : undefined,
-        } satisfies RequestInit
-        let existing = frameRequestManager.get(url, requestInit)
-        if (existing) return existing
-        return fetch(url, requestInit)
+        })
       },
       async commit(commitFrame, { signal, to }) {
         let navigationType = options?.navigationType
@@ -127,18 +128,7 @@ export const app = run({
           ? (outgoingBookId ?? incomingBookId)
           : (incomingBookId ?? outgoingBookId)
 
-        let viewTransition = document.startViewTransition(async () => {
-          await commitFrame()
-          if (goingBack && fromBook && toBook && !signal.aborted) {
-            // The restored lazy frame must contain the return card before the new snapshot.
-            let destinationBookId = document
-              .querySelector('[data-book-faceout]')
-              ?.getAttribute('data-book-faceout')
-            if (destinationBookId) {
-              await app.frames.get(`related-books-${destinationBookId}`)?.reload()
-            }
-          }
-        })
+        let viewTransition = document.startViewTransition(commitFrame)
         if (bookId) viewTransition.types?.add(`book-cover-${bookId}`)
         let skip = () => viewTransition.skipTransition()
         signal.addEventListener('abort', skip, { once: true })

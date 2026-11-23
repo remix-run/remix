@@ -67,6 +67,7 @@ Navigation and prefetching use frames too:
 - Cart mutations update the session cookie, preventing subsequent browsing navigations from reusing HTML cached for the previous cookie.
 - Cart documents and fragments explicitly disable caching. Checkout, account, admin, and auth handlers other than registration do not set the 30-second browsing cache policy.
 - Back and Forward can reuse stale browsing HTML from the browser cache beyond the 30-second window.
+- Related-frame GETs also use `force-cache` so lazy restoration can reuse stored HTML; prefetching follows normal cache freshness. Page transitions do not reload or wait for related frames to finish.
 
 ## Forms
 
@@ -81,7 +82,7 @@ Navigation and prefetching use frames too:
 ## UI
 
 - Page content, including book titles, cross-fades without sliding, while the header and footer stay steady. Page snapshots use the destination’s position and size, keeping the details panel steady when the catalog was scrolled.
-- Navigating to or from a product page moves and resizes only the book cover between its card and faceout views, including on Back and Forward. The shared [book transition mixin](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/book-transitions.ts), `bookCoverTransition(book.id)`, activates matching names using per-book transition types. Only books entering or leaving a faceout participate; other related cards cross-fade with the page. Browsers without transition types use only the page cross-fade.
+- Navigating to or from a product page moves and resizes only the book cover between its card and faceout views when both images are rendered, including on Back and Forward. The shared [book transition mixin](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/book-transitions.ts), `bookCoverTransition(book.id)`, activates matching names using per-book transition types. Only books entering or leaving a faceout participate; other related cards cross-fade with the page. Browsers without transition types use only the page cross-fade.
 - Animations respect reduced-motion preferences and fall back to ordinary updates in browsers without view transition support.
 - Remix lifecycle events drive interaction feedback: cart components listen for frame `reloadStart`, while the shared [PendingButton](https://github.com/remix-run/remix/blob/main/demos/bookstore/app/ui/public/pending-button.tsx) also supports `rmx:navigation`. Their `finished` promises determine completion. Abort and active-operation checks keep superseded work from overwriting current UI state.
 - Small state machines model pending and failure feedback in cart items and `PendingButton`. Cart quantities use a non-editable number between decrease and increase buttons. The number updates optimistically, while saved prices stay visible with pending spinners until the server confirms the change. Quantity buttons prevent overlapping writes and stop at one. Failed requests restore the saved quantity, show an error, and allow retry or reload. The buttons also submit ordinary forms without JavaScript.

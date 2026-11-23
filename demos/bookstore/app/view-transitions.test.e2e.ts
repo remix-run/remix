@@ -39,8 +39,24 @@ describe('bookstore view transitions', () => {
   })
 
   it('selects the outgoing related cover on Back, the incoming cover on Forward, and only the faceout when returning to the catalog', async (t) => {
+    let returning = false
+    let returningRelated = Promise.withResolvers<void>()
+    let releaseRelated = Promise.withResolvers<void>()
+    t.after(() => releaseRelated.resolve())
+    let router = await createTestRouter({ bookIds: transitionBookIds })
     let page = await t.serve(
-      await createTestServer((await createTestRouter({ bookIds: transitionBookIds })).fetch),
+      await createTestServer(async (request) => {
+        let response = await router.fetch(request)
+        if (new URL(request.url).pathname === '/books/bbq/related') {
+          // Keep the response out of the HTTP cache so Back exercises a pending lazy load.
+          response.headers.set('Cache-Control', 'no-store')
+          if (returning) {
+            returningRelated.resolve()
+            await releaseRelated.promise
+          }
+        }
+        return response
+      }),
     )
     await recordViewTransitions(page)
     await page.setViewportSize({ width: 1280, height: 1800 })
@@ -57,24 +73,37 @@ describe('bookstore view transitions', () => {
     await assertCoverStyle(page.locator('[data-book-faceout="11"]'), 11)
     await related.getByRole('heading', { name: 'Ash & Smoke', exact: true }).waitFor()
 
-    let relatedFrameRequests = 0
-    page.on('request', (request) => {
-      if (
-        new URL(request.url()).pathname === '/books/bbq/related' &&
-        request.headers()['x-remix-prefetch'] !== 'true'
-      ) {
-        relatedFrameRequests++
+    await page.evaluate(() => {
+      let fetchRequest = window.fetch
+      window.fetch = (input, init) => {
+        let url = new URL(input instanceof Request ? input.url : String(input), location.href)
+        if (
+          url.pathname === '/books/bbq/related' &&
+          new Headers(init?.headers).get('X-Remix-Prefetch') !== 'true'
+        ) {
+          document.documentElement.dataset.testRelatedCache = init?.cache ?? 'default'
+        }
+        return fetchRequest(input, init)
       }
     })
+    returning = true
     await page.goBack()
+    await returningRelated.promise
+    // The page transition completes while the related frame's normal load is still pending.
     await assertTransition(page, 2, 'book-cover-11')
+    assert.equal(await page.locator('html').getAttribute('data-test-related-cache'), 'force-cache')
+    releaseRelated.resolve()
+    returning = false
     await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
     await related.getByRole('heading', { name: 'Bread Before Dawn', exact: true }).waitFor()
     await assertCoverStyle(related.locator('[data-test-slug="bread-before-dawn"] img'), 11)
-    assert.ok(
-      relatedFrameRequests <= 1,
-      `Back loaded the related frame ${relatedFrameRequests} times`,
-    )
+    await page.evaluate(async () => {
+      let script = document.querySelector<HTMLScriptElement>('script[type="module"][src]')
+      if (!script) throw new Error('Missing app entry')
+      let { app } = await import(script.src)
+      await app.frames.get('related-books-1')?.reload()
+    })
+    assert.equal(await page.locator('html').getAttribute('data-test-related-cache'), 'force-cache')
 
     await page.goForward()
     await assertTransition(page, 3, 'book-cover-11')
