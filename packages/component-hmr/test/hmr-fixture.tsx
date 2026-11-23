@@ -1420,41 +1420,47 @@ export async function openHmrPage(
   }
 }
 
-export function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
+export function waitForConsoleMessage(
+  page: TestPage,
+  text: string,
+  startTimeoutAfter?: Promise<void>,
+): Promise<void> {
   attachPageDiagnostics(page)
-  let result = new Promise<void>((resolve, reject) => {
-    let timeoutMs =
-      text === '[remix] HMR connected' || text === 'Frame adoption complete'
-        ? browserStartupTimeout
-        : consoleMessageTimeout
-    let timeout = setTimeout(() => {
-      page.off('console', handleConsole)
-      reject(
-        new Error(`Timed out waiting for console message: ${text}\n${formatPageDiagnostics(page)}`),
-      )
-    }, timeoutMs)
-
-    page.on('console', handleConsole)
-
-    function handleConsole(message: { text(): string }) {
-      if (!message.text().includes(text)) return
+  let observed = Promise.withResolvers<void>()
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  // Register early so a console message emitted during loading is still captured.
+  page.on('console', handleConsole)
+  let result = Promise.resolve(startTimeoutAfter)
+    .then(() => {
+      let timeoutMs =
+        text === '[remix] HMR connected' || text === 'Frame adoption complete'
+          ? browserStartupTimeout
+          : consoleMessageTimeout
+      timeout = setTimeout(() => {
+        observed.reject(
+          new Error(
+            `Timed out waiting for console message: ${text}\n${formatPageDiagnostics(page)}`,
+          ),
+        )
+      }, timeoutMs)
+      return observed.promise
+    })
+    .finally(() => {
       clearTimeout(timeout)
       page.off('console', handleConsole)
-      resolve()
-    }
-  })
+    })
   // The triggering navigation can reject before the caller awaits this event.
   void result.catch(() => {})
   return result
+
+  function handleConsole(message: { text(): string }) {
+    if (message.text().includes(text)) observed.resolve()
+  }
 }
 
 // Resolves once the page has reloaded and the new document's client entries have hydrated.
 export function waitForReloadedApp(page: TestPage): Promise<void> {
-  let adopted = waitForConsoleMessage(page, 'Frame adoption complete')
-  let result = waitForNavigation(page).then(() => adopted)
-  // A failed update can leave this unawaited while the page is cleaned up.
-  void result.catch(() => {})
-  return result
+  return waitForConsoleMessage(page, 'Frame adoption complete', waitForNavigation(page))
 }
 
 export function waitForNavigation(
