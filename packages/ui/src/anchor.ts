@@ -65,6 +65,7 @@ export type AnchorOptions = {
 }
 
 const viewportPaddingPx = 16
+let containerTypeContainingBlock: boolean | undefined
 
 function isHorizontalPlacement(placement: ExtendedAnchorPlacement) {
   return placement.startsWith('left') || placement.startsWith('right')
@@ -701,6 +702,23 @@ function solveRelativeAlignmentAxis(options: {
   }
 }
 
+function containerTypeCreatesContainingBlock(document: Document) {
+  if (containerTypeContainingBlock !== undefined) return containerTypeContainingBlock
+
+  // Older browsers apply layout containment implicitly to query containers.
+  let container = document.createElement('div')
+  container.style.cssText = 'position: absolute; left: -10000px; top: 0; visibility: hidden;'
+  let fixed = document.createElement('div')
+  fixed.style.cssText = 'position: fixed; left: 0; top: 0;'
+  container.append(fixed)
+  document.documentElement.append(container)
+  let left = fixed.getBoundingClientRect().left
+  container.style.containerType = 'inline-size'
+  containerTypeContainingBlock = fixed.getBoundingClientRect().left !== left
+  container.remove()
+  return containerTypeContainingBlock
+}
+
 function hasFixedContainingBlock(floating: HTMLElement) {
   let parent: Node | null = floating.parentNode
 
@@ -725,7 +743,9 @@ function hasFixedContainingBlock(floating: HTMLElement) {
         /(^|,)\s*(transform|translate|rotate|scale|perspective|filter|backdrop-filter|contain|content-visibility)\s*(,|$)/.test(
           style.willChange,
         ) ||
-        (style.containerType !== '' && style.containerType !== 'normal') ||
+        (style.containerType !== '' &&
+          style.containerType !== 'normal' &&
+          containerTypeCreatesContainingBlock(floating.ownerDocument)) ||
         style.contentVisibility === 'auto' ||
         style.contentVisibility === 'hidden'
       ) {

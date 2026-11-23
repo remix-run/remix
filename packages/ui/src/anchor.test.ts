@@ -556,23 +556,61 @@ describe('anchor page scrolling', () => {
   })
 
   it('keeps a surface aligned inside a transformed ancestor while the page scrolls', async (t) => {
-    await expectContainedSurfaceToTrackAnchor(t, 'transform: translateZ(0)')
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)')
   })
 
   it('keeps a surface aligned inside paint containment while the page scrolls', async (t) => {
-    await expectContainedSurfaceToTrackAnchor(t, 'contain: paint')
+    await expectSurfaceToTrackAnchor(t, 'contain: paint')
   })
 
   it('keeps a surface aligned inside will-change containment while the page scrolls', async (t) => {
-    await expectContainedSurfaceToTrackAnchor(t, 'will-change: transform')
+    await expectSurfaceToTrackAnchor(t, 'will-change: transform')
+  })
+
+  it('preserves viewport positioning inside an inline-size query container', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'container-type: inline-size; margin: 100px 0 0 50px')
+  })
+
+  it('preserves viewport positioning inside a size query container', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'container-type: size; margin: 100px 0 0 50px')
+  })
+
+  it('keeps alignment when query containers implicitly apply layout containment', async (t) => {
+    let style = document.createElement('style')
+    // Emulate older query-container rules without sharing the normal capability cache.
+    style.textContent = '[style*="container-type:"] { contain: layout !important; }'
+    document.head.append(style)
+    t.after(() => style.remove())
+    let readStyle = getComputedStyle
+    t.mock.method(globalThis, 'getComputedStyle', (element, pseudo) => {
+      let computed = readStyle(element, pseudo)
+      if (computed.containerType === 'normal') return computed
+      // Implicit containment in older browsers was not reflected in computed `contain`.
+      return new Proxy(computed, {
+        get(target, key) {
+          if (key === 'contain') return 'none'
+          let value: unknown = Reflect.get(target, key, target)
+          return typeof value === 'function' ? value.bind(target) : value
+        },
+      })
+    })
+    let { anchor: position }: { anchor: typeof anchor } = await import(
+      new URL('./anchor.ts?legacy-query-containment', import.meta.url).href
+    )
+
+    await expectSurfaceToTrackAnchor(t, 'container-type: inline-size', { position })
   })
 })
 
-async function expectContainedSurfaceToTrackAnchor(t: TestContext, containingStyle: string) {
+async function expectSurfaceToTrackAnchor(
+  t: TestContext,
+  containingStyle: string,
+  options: { position?: typeof anchor } = {},
+) {
   let originalStyle = document.body.getAttribute('style')
   let originalScroll = { left: window.scrollX, top: window.scrollY }
   let container = document.createElement('div')
-  container.style.cssText = `position: relative; ${containingStyle}; width: 2000px; height: 2000px; padding: 300px 0 0 200px; box-sizing: border-box;`
+  container.style.cssText = `position: relative; ${containingStyle}; width: 2000px; height: 2000px; padding: 200px 0 0 200px; box-sizing: border-box;`
   let target = document.createElement('div')
   target.style.cssText = 'width: 80px; height: 28px;'
   let floating = document.createElement('div')
@@ -594,7 +632,7 @@ async function expectContainedSurfaceToTrackAnchor(t: TestContext, containingSty
     expect(window.scrollX).toBe(50)
     expect(window.scrollY).toBe(100)
   })
-  cleanup = anchor(floating, target, { placement: 'bottom-start' })
+  cleanup = (options.position ?? anchor)(floating, target, { placement: 'bottom-start' })
 
   expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
   expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
@@ -608,7 +646,7 @@ async function expectContainedSurfaceToTrackAnchor(t: TestContext, containingSty
   })
 
   cleanup()
-  cleanup = anchor(floating, target, { placement: 'bottom-start' })
+  cleanup = (options.position ?? anchor)(floating, target, { placement: 'bottom-start' })
   expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
   expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
 }
