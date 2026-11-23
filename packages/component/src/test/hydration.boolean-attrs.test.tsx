@@ -2,6 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import { on } from '../index.ts'
 import { createRoot } from '../runtime/vdom.ts'
+import { createElement } from '../runtime/create-element.ts'
 import { renderToString } from '../server/stream.ts'
 import { invariant } from '../runtime/invariant.ts'
 
@@ -18,6 +19,74 @@ describe('hydration', () => {
   })
 
   describe('boolean attributes', () => {
+    it('keeps array defaults for an empty-string multiple attribute across mounting and hydration', async (t) => {
+      let attrs: Record<string, unknown> = { multiple: '' }
+      let node = (
+        <form>
+          <select {...attrs} defaultValue={['a', 'b']}>
+            <option value="a">A</option>
+            <option value="b">B</option>
+          </select>
+        </form>
+      )
+      let clientContainer = document.createElement('div')
+      let clientRoot = createRoot(clientContainer)
+      t.after(() => clientRoot.dispose())
+      clientRoot.render(node)
+      clientRoot.flush()
+
+      let mountedForm = clientContainer.querySelector('form')
+      let mountedSelect = clientContainer.querySelector('select')
+      invariant(mountedForm && mountedSelect)
+      expect([...mountedSelect.selectedOptions].map((option) => option.value)).toEqual(['a', 'b'])
+      mountedSelect.value = 'a'
+      mountedForm.reset()
+      expect([...mountedSelect.selectedOptions].map((option) => option.value)).toEqual(['a', 'b'])
+
+      container.innerHTML = await renderToString(node)
+      let existingForm = container.querySelector('form')
+      let existingSelect = container.querySelector('select')
+      invariant(existingForm && existingSelect)
+      expect([...existingSelect.selectedOptions].map((option) => option.value)).toEqual(['a', 'b'])
+
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(node)
+      root.flush()
+
+      expect(container.querySelector('select')).toBe(existingSelect)
+      expect([...existingSelect.selectedOptions].map((option) => option.value)).toEqual(['a', 'b'])
+      existingSelect.value = 'a'
+      existingForm.reset()
+      expect([...existingSelect.selectedOptions].map((option) => option.value)).toEqual(['a', 'b'])
+    })
+
+    it('keeps native global booleans on custom elements when mounting and hydrating', async (t) => {
+      let node = createElement('x-remix-native-global-booleans', { inert: '' })
+      container.innerHTML = await renderToString(node)
+      let existing = container.firstElementChild
+      invariant(existing instanceof HTMLElement)
+      expect(existing.inert).toBe(true)
+
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(node)
+      root.flush()
+
+      expect(container.firstElementChild).toBe(existing)
+      expect(existing.inert).toBe(true)
+
+      let clientContainer = document.createElement('div')
+      let clientRoot = createRoot(clientContainer)
+      t.after(() => clientRoot.dispose())
+      clientRoot.render(node)
+      clientRoot.flush()
+
+      let mounted = clientContainer.firstElementChild
+      invariant(mounted instanceof HTMLElement)
+      expect(mounted.inert).toBe(true)
+    })
+
     it('hydrates disabled attribute', async () => {
       let html = await renderToString(<button disabled>Click</button>)
       container.innerHTML = html
@@ -132,6 +201,27 @@ describe('hydration', () => {
 
       expect(container.querySelector('button')).toBe(existingButton)
       expect(existingButton.disabled).toBe(false)
+    })
+
+    it('keeps boolean attributes given an empty string present, as the server renders them', async () => {
+      // Untyped attribute objects, such as headless UI libraries' slot attributes, use "" for a
+      // present boolean attribute.
+      let attrs = { disabled: '', hidden: '' } as Record<string, unknown>
+      let html = await renderToString(<button {...attrs}>Click</button>)
+      container.innerHTML = html
+
+      let existingButton = container.querySelector('button')
+      invariant(existingButton)
+      expect(existingButton.disabled).toBe(true)
+      expect(existingButton.hidden).toBe(true)
+
+      let root = createRoot(container)
+      root.render(<button {...attrs}>Click</button>)
+      root.flush()
+
+      expect(container.querySelector('button')).toBe(existingButton)
+      expect(existingButton.disabled).toBe(true)
+      expect(existingButton.hidden).toBe(true)
     })
   })
 

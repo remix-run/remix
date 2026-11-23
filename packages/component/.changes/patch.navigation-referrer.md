@@ -1,0 +1,3 @@
+Send the page being left as the `Referer` of a client navigation's request. The Navigation API commits the destination URL before Remix fetches it, so the request used to carry its own destination as the `Referer`. A server that redirects back after a form post, such as a cart endpoint that returns to the referring page, redirected to the form's action instead.
+
+Nested frame loads keep the document's default referrer. Links with an explicit `referrerpolicy` and links or forms with `rel="noreferrer"` use native document navigation so the browser preserves their referrer restrictions. These links are also excluded from anchor-based prefetching.

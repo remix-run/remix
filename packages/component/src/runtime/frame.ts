@@ -28,6 +28,7 @@ import {
   getFrameRuntime,
   getSharedFrameRuntime,
   isFrameRuntime,
+  navigationRequest,
   setClientEntryBoundaryOwner,
   type ClientEntryIdentity,
   type FrameMountState,
@@ -277,7 +278,7 @@ export function reloadFrameForNavigation(
   invariant(isFrameRuntime(runtime), 'Expected a frame runtime')
   let reload = runtime.reloadForNavigation
   invariant(reload, 'Expected frame runtime to support navigation reloads')
-  return reload(options)
+  return reload({ ...options, [navigationRequest]: true })
 }
 
 export type FrameContext = {
@@ -3040,7 +3041,8 @@ export function createFormNavigationResolver(
       function onFormData(formDataEvent: FormDataEvent) {
         // Native formdata follows an uncanceled submit. Ignore snapshots made in submit handlers
         // or after cancellation, and stop listening before later snapshots can replace this data.
-        if (event.eventPhase !== Event.NONE || event.defaultPrevented) return
+        // Firefox can retain a nonzero eventPhase after native submit dispatch has ended.
+        if (event.currentTarget !== null || event.defaultPrevented) return
         // A canceled retry must not replace a submission whose navigation is still pending.
         let existing = pendingSubmissions.get(pending.form)
         if (existing) clearPending(existing)
@@ -3139,7 +3141,7 @@ function getSubmissionAttribute(
   if (submitter?.hasAttribute(submitterName)) {
     return submitter.getAttribute(submitterName)
   }
-  return form.getAttribute(name)
+  return Element.prototype.getAttribute.call(form, name)
 }
 
 function getFormMethod(form: HTMLFormElement, submitter: SubmitterElement | null): string {

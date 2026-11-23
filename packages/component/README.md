@@ -1537,6 +1537,7 @@ function AccountPage() {
 ```
 
 - Every `data-rmx-src` override must resolve to the document origin, using `document.baseURI` for relative URLs.
+- Links with an explicit `referrerpolicy`, and links or forms with `rel="noreferrer"`, use document navigation so the browser applies their referrer restrictions.
 - Browsers ignore `data-rmx-history` without the client runtime and use their normal history behavior.
 - Scroll and focus controls accept the Navigation API values `"after-transition"` (the default) and `"manual"`. The equivalent options for `navigate()` and `link()` are `resetScroll: 'manual'` and `resetFocus: 'manual'`. Boolean options and `"true"`/`"false"` attribute values are still supported, where `true` means `"after-transition"` and `false` means `"manual"`.
 
@@ -1623,7 +1624,7 @@ Add `data-rmx-prefetch` to a link to load its destination before navigation:
 
 For application triggers, import `prefetch` from `remix/component` and call `prefetch(src, { target, signal })` or `prefetch(anchor, { signal })`. Anchor calls use the link's navigation source and frame target; they require no prefetch marker and accept no destination overrides. `prefetch()` returns `void`.
 
-Remix skips document-navigation links, downloads, targets other than `_self`, and named-frame links whose frame isn't mounted. Automatic triggers also honor Save-Data and `slow-2g` or `2g` connections; imperative calls bypass that network check.
+Remix skips document-navigation links, downloads, links with an explicit `referrerpolicy` or `rel="noreferrer"`, targets other than `_self`, and named-frame links whose frame isn't mounted. Automatic triggers also honor Save-Data and `slow-2g` or `2g` connections; imperative calls bypass that network check.
 
 HTML requests are same-origin `GET`s with low priority, frame navigation headers, and `X-Remix-Prefetch: true`. Remix skips unsuccessful or non-HTML responses and waits for browser idle time before parsing, with a one-second timeout and a timer fallback.
 

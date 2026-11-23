@@ -238,6 +238,8 @@ describe('form navigation', () => {
       didNavigate = true
 
       expect(submitterForm).toBe(null)
+      expect(formNavigation?.form).toBe(form)
+      expect(formNavigation?.submitter).toBe(button)
       expect(formNavigation?.getAttribute('data-rmx-target')).toBe('items')
       expect(formNavigation?.getSubmission).toBeUndefined()
       expect(new URL(window.location.href).searchParams.get('filter')).toBe('example')
@@ -654,6 +656,8 @@ describe('form navigation', () => {
       didNavigate = true
 
       expect(submitterForm).toBe(null)
+      expect(formNavigation?.form).toBe(form)
+      expect(formNavigation?.submitter).toBe(tempButton)
       expect(submission?.method).toBe('post')
       expect(submission?.encType).toBe('application/x-www-form-urlencoded')
       expect(submission?.formData).toBeInstanceOf(FormData)

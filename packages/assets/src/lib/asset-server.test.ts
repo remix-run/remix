@@ -498,6 +498,7 @@ describe('asset-server', () => {
     let response = await get(assetServer, '/assets/app/entry.ts')
     assert.ok(response)
     assert.equal(response.headers.get('Cache-Control'), 'no-cache')
+    assert.equal(response.headers.get('Vary'), null)
     assert.ok(response.headers.get('ETag'))
 
     let notModified = await get(assetServer, '/assets/app/entry.ts', {
@@ -6264,8 +6265,10 @@ describe('asset-server', () => {
         let eventsResponse = await get(assetServer, '/assets/__remix_hmr/events')
         assert.equal(eventsResponse, null)
 
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
+        let webKitHeaders = { 'User-Agent': 'AppleWebKit/605.1.15 Safari/605.1.15' }
+        let entryResponse = await get(assetServer, '/assets/app/entry.ts', webKitHeaders)
         assert.ok(entryResponse)
+        assert.equal(entryResponse.headers.get('Vary'), '*')
         let entryBody = await entryResponse.text()
 
         assert.match(entryBody, /from "\/assets\/__remix_hmr\/client\.js"/)
@@ -6273,12 +6276,50 @@ describe('asset-server', () => {
           entryBody,
           /import\.meta\.hot = __remixCreateHotContext\("\/assets\/app\/entry\.ts"\)/,
         )
+
+        let etag = entryResponse.headers.get('ETag')
+        assert.ok(etag)
+        let notModified = await get(assetServer, '/assets/app/entry.ts', {
+          ...webKitHeaders,
+          'If-None-Match': etag,
+        })
+        assert.ok(notModified)
+        assert.equal(notModified.status, 304)
+        assert.equal(notModified.headers.get('Vary'), '*')
+
+        let chromeHeaders = { 'User-Agent': 'AppleWebKit/537.36 Chrome/153.0.0.0 Safari/537.36' }
+        let chromeEntry = await get(assetServer, '/assets/app/entry.ts', chromeHeaders)
+        assert.ok(chromeEntry)
+        assert.equal(chromeEntry.status, 200)
+        assert.equal(chromeEntry.headers.get('Vary'), 'User-Agent, Accept-Encoding')
+
+        let chromeNotModified = await get(assetServer, '/assets/app/entry.ts', {
+          ...chromeHeaders,
+          'If-None-Match': etag,
+        })
+        assert.ok(chromeNotModified)
+        assert.equal(chromeNotModified.status, 304)
+        assert.equal(chromeNotModified.headers.get('Vary'), 'User-Agent, Accept-Encoding')
       } finally {
         await assetServer.close()
       }
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
+  })
+
+  it('keeps ordinary script cache headers when the HMR channel factory opts out', async (t) => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    let assetServer = createWatchedTestServer(dir, { hmr: async () => undefined })
+    t.after(() => assetServer.close())
+
+    let response = await get(assetServer, '/assets/app/entry.ts', {
+      'User-Agent': 'AppleWebKit/605.1.15 Safari/605.1.15',
+    })
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('Cache-Control'), 'no-cache')
+    assert.equal(response.headers.get('Vary'), null)
   })
 
   it('hot updates optimized barrel import graph changes while keeping CSS updates hot', async () => {

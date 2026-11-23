@@ -45,6 +45,54 @@ function controlledRestore(): Promise<void> {
 }
 
 describe('vdom controlled props', () => {
+  it('restores controlled checked supplied as an empty string', async (t) => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => root.dispose())
+    let attrs: Record<string, unknown> = { checked: '' }
+    root.render(<input type="checkbox" {...attrs} />)
+    root.flush()
+
+    let input = container.querySelector('input')
+    if (!input) throw new Error('Missing checkbox')
+    expect(input.checked).toBe(true)
+
+    input.checked = false
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+    await controlledRestore()
+
+    expect(input.checked).toBe(true)
+  })
+
+  it('keeps empty-string selected options as form reset defaults', (t) => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => root.dispose())
+    let attrs: Record<string, unknown> = { selected: '' }
+    root.render(
+      <form>
+        <select>
+          <option value="a">A</option>
+          <option value="b" {...attrs}>
+            B
+          </option>
+        </select>
+      </form>,
+    )
+    root.flush()
+
+    let form = container.querySelector('form')
+    let select = container.querySelector('select')
+    if (!form || !select) throw new Error('Missing form controls')
+    expect(select.value).toBe('b')
+
+    select.value = 'a'
+    form.reset()
+
+    expect(select.value).toBe('b')
+    expect(select.options[1].defaultSelected).toBe(true)
+  })
+
   it('restores controlled array values after an option component updates itself', (t) => {
     let container = document.createElement('div')
     let root = createRoot(container)

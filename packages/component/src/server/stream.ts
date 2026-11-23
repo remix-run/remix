@@ -793,7 +793,8 @@ function buildElementSegment(
     let value = processedProps.value ?? processedProps.defaultValue
     context.selectValues = getSelectValues(value)
     context.selectScalar =
-      !processedProps.multiple || (processedProps.value != null && !Array.isArray(value))
+      (processedProps.multiple !== '' && !processedProps.multiple) ||
+      (processedProps.value != null && !Array.isArray(value))
   }
   context.elementDepth++
   if (props.children != null) buildSegment(props.children, context, frameState, output)

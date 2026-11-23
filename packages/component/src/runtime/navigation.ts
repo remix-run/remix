@@ -1132,6 +1132,7 @@ function getSourceElementNavigation(
   if (linkElement instanceof Element) {
     if (linkElement.hasAttribute('data-rmx-document')) return
     if (linkElement.hasAttribute('download')) return
+    if (linkElement.hasAttribute('referrerpolicy') || hasNoReferrer(linkElement)) return
 
     return {
       ...getElementNavigation(linkElement, event, false),
@@ -1145,7 +1146,12 @@ function getSourceElementNavigation(
   }
 
   let formNavigation = resolveFormNavigation(event)
-  if (!formNavigation || formNavigation.hasAttribute('data-rmx-document')) return
+  if (
+    !formNavigation ||
+    formNavigation.hasAttribute('data-rmx-document') ||
+    hasNoReferrer(formNavigation.form)
+  )
+    return
 
   let replaceHistoryByDefault =
     formNavigation.getSubmission !== undefined &&
@@ -1161,6 +1167,18 @@ function getSourceElementNavigation(
     },
     getSubmission: formNavigation.getSubmission,
   }
+}
+
+export function hasNoReferrer(element: Element): boolean {
+  // A form control named getAttribute can shadow the method on its form.
+  let rel = Element.prototype.getAttribute.call(element, 'rel')
+  return (
+    rel !== null &&
+    rel
+      .toLowerCase()
+      .split(/[\t\n\f\r ]+/)
+      .includes('noreferrer')
+  )
 }
 
 function getElementNavigation(

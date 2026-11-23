@@ -661,6 +661,10 @@ describe('prefetch', () => {
     download.setAttribute('download', '')
     let documentNavigation = createIntentLink('/products/document')
     documentNavigation.setAttribute('data-rmx-document', '')
+    let noreferrer = createIntentLink('/products/noreferrer')
+    noreferrer.rel = 'noreferrer'
+    let referrerPolicy = createIntentLink('/products/referrer-policy')
+    referrerPolicy.referrerPolicy = 'origin'
     let named = createIntentLink('/products/named')
     named.setAttribute('data-rmx-target', 'details')
     let newTab = createIntentLink('/products/new-tab')
@@ -672,6 +676,8 @@ describe('prefetch', () => {
       unmarked,
       download,
       documentNavigation,
+      noreferrer,
+      referrerPolicy,
       named,
       newTab,
       crossOrigin,
@@ -1300,6 +1306,12 @@ describe('anchor prefetch ownership', () => {
     anchor.setAttribute('data-rmx-document', '')
     prefetch(anchor)
     anchor.removeAttribute('data-rmx-document')
+    anchor.rel = 'noreferrer'
+    prefetch(anchor)
+    anchor.removeAttribute('rel')
+    anchor.referrerPolicy = 'no-referrer'
+    prefetch(anchor)
+    anchor.removeAttribute('referrerpolicy')
     anchor.href = 'https://example.com/page'
     prefetch(anchor)
     expect(callback).not.toHaveBeenCalled()
@@ -1356,6 +1368,8 @@ describe('anchor prefetch ownership', () => {
     })
     let download = createIntentLink('/download')
     let documentNavigation = createIntentLink('/document')
+    let noreferrer = createIntentLink('/noreferrer')
+    let referrerPolicy = createIntentLink('/referrer-policy')
     let newTab = createIntentLink('/new-tab')
     let missingHref = createIntentLink('/missing-href')
     let crossOrigin = createIntentLink('/cross-origin')
@@ -1363,6 +1377,8 @@ describe('anchor prefetch ownership', () => {
     for (let anchor of [
       download,
       documentNavigation,
+      noreferrer,
+      referrerPolicy,
       newTab,
       missingHref,
       crossOrigin,
@@ -1370,11 +1386,13 @@ describe('anchor prefetch ownership', () => {
     ]) {
       prefetch(anchor)
     }
-    expect(signals).toHaveLength(6)
+    expect(signals).toHaveLength(8)
 
     let changed = nextDomMutation()
     download.download = 'page.html'
     documentNavigation.setAttribute('data-rmx-document', '')
+    noreferrer.rel = 'noreferrer'
+    referrerPolicy.referrerPolicy = 'origin'
     newTab.target = '_blank'
     missingHref.removeAttribute('href')
     crossOrigin.href = 'https://example.com/page'
