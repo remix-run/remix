@@ -558,7 +558,7 @@ spy.mock.restore()
 
 Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each file runs in its own document. Firefox uses a top-level window, while Chromium and WebKit use an iframe.
 
-Cookies and browser storage are shared between files; reset them in hooks or cleanup callbacks. WebKit also has [history update limits](#webkit-history-limits).
+Cookies and browser storage may persist between files. Each test file should set up the state it needs and clean up after itself. WebKit also has [history update limits](#webkit-history-limits).
 
 #### `render()`
 

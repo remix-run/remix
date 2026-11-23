@@ -269,13 +269,21 @@ describe('defaultResolveFrame commit', () => {
     expect(deferred.signal.aborted).toBe(false)
     expect(document.getElementById('commit-page')?.textContent).toBe('initial')
 
+    let abortedOnBack: boolean | undefined
+    window.navigation.addEventListener(
+      'navigate',
+      () => {
+        abortedOnBack = deferred.signal.aborted
+      },
+      { once: true, signal: t.signal },
+    )
     // WebKit can reject the traversal's finished promise even though Back renders successfully.
     // Wait for the restored frame's commit instead.
     void window.navigation.back().finished?.catch(() => {})
     await pending
     // Firefox can settle the interrupted navigation's promise before dispatching Back's navigate event.
     await restored.promise
-    expect(deferred.signal.aborted).toBe(true)
+    expect(abortedOnBack).toBe(true)
 
     await deferred.commitFrame()
     expect(document.getElementById('commit-page')?.textContent).toBe('initial')
