@@ -1,0 +1,1 @@
+Fix full-page HMR reloads in WebKit that could render stale JavaScript after a module was preloaded. With HMR enabled, the asset server sends `Vary: *` on compiled JavaScript responses to WebKit to force a fresh request. The Cache API rejects those responses.

@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=24.3.0"
+    "node": ">=24.3.0",
+    "bun": ">=1.4.3"
   },
   "dependencies": {
     "remix": "workspace:*",
