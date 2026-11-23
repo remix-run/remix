@@ -2963,6 +2963,7 @@ type PendingFormSubmission = {
   form: HTMLFormElement
   submitter: SubmitterElement | null
   formData?: FormData
+  supersedingSubmit?: Event
   timeout: ReturnType<typeof setTimeout>
   removeFormDataListener(): void
 }
@@ -3024,9 +3025,18 @@ export function createFormNavigationResolver(
     'submit',
     (event) => {
       let form = event.target
-      if (!(form instanceof HTMLFormElement)) return
+      if (!(form instanceof HTMLFormElement) || !event.isTrusted || !(event instanceof SubmitEvent))
+        return
 
-      let eventSubmitter = event instanceof SubmitEvent ? event.submitter : null
+      let previous = pendingSubmissions.get(form)
+      if (
+        previous &&
+        (!previous.supersedingSubmit || previous.supersedingSubmit.defaultPrevented)
+      ) {
+        previous.supersedingSubmit = event
+      }
+
+      let eventSubmitter = event.submitter
       let submitter =
         eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
           ? eventSubmitter
@@ -3064,35 +3074,35 @@ export function createFormNavigationResolver(
     if (!form) return
 
     let pending = pendingSubmissions.get(form)
-    // Some browsers dispatch `navigate` before `formdata` records the pending submission.
-    let submitter = pending
-      ? pending.submitter
-      : sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement
+    // Some browsers dispatch navigate before the new submission's formdata.
+    if (
+      pending &&
+      (sourceElement !== (pending.submitter ?? form) ||
+        (pending.supersedingSubmit && !pending.supersedingSubmit.defaultPrevented))
+    ) {
+      pending = undefined
+    }
+    let submitter =
+      sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement
         ? sourceElement
         : null
     let method = getFormMethod(form, submitter)
     let encType = getFormEncType(form, submitter)
     let target = getSubmissionAttribute(form, submitter, 'target', 'formtarget')
+    if (pending) clearPending(pending)
     if (method === 'dialog' || target?.toLowerCase() === '_blank') return
 
+    let isGet = method.toLowerCase() === 'get'
     let formEvent = event as FormNavigateEvent
-    let formData =
-      method.toLowerCase() === 'get'
-        ? undefined
-        : (pending?.formData ?? formEvent.formData ?? undefined)
-    let getSubmission: FormNavigation['getSubmission']
-    if (method.toLowerCase() === 'get') {
-      if (pending) clearPending(pending)
-    } else {
-      getSubmission = async () => {
-        if (pending) clearPending(pending)
-        return {
-          formData,
-          method,
-          encType,
-        }
-      }
-    }
+    // A form source element can also come from form.submit(), which bypasses the submit event.
+    let formData = isGet
+      ? undefined
+      : ((pending?.submitter ? pending.formData : undefined) ??
+        formEvent.formData ??
+        pending?.formData)
+    let getSubmission: FormNavigation['getSubmission'] = isGet
+      ? undefined
+      : async () => ({ formData, method, encType })
     return {
       form,
       submitter,
