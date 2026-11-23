@@ -817,10 +817,15 @@ export function createAssetServer<const transforms extends AssetRequestTransform
           )
         }
 
-        // WebKit can reuse preloaded modules across an HMR reload despite Cache-Control.
-        // A wildcard Vary forces a fresh request before reusing mutable JavaScript.
         if (resolvedOptions.hmr && !parsedRequestPathname.isSourceMapRequest) {
-          response.headers.set('Vary', '*')
+          let userAgent = request.headers.get('User-Agent') ?? ''
+          let isWebKit =
+            userAgent.includes('AppleWebKit') &&
+            !userAgent.includes('Chrome') &&
+            !userAgent.includes('Chromium')
+          // WebKit can reuse preloaded modules across reloads despite Cache-Control.
+          // Limit the wildcard to WebKit because the Cache API rejects those responses.
+          response.headers.set('Vary', isWebKit ? '*' : 'User-Agent')
         }
         return response
       } catch (error) {
