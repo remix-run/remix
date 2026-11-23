@@ -1,0 +1,1 @@
+Preserve the form and submitter for intercepted Firefox submissions, including when the submitter is removed before the navigation event. Submitter overrides and native form data remain available to the frame navigation.

@@ -7,6 +7,9 @@ import type { StyleManager } from '../style/stylesheet.ts'
 import type { ResourceNonces } from './nonce.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 
+// Unlike `from`, this marker must not propagate to nested frame loads.
+export const navigationRequest = Symbol('navigationRequest')
+
 /**
  * Loads a named client-entry export for hydration.
  *
@@ -77,6 +80,7 @@ export type PendingClientEntries = Map<
 >
 
 export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
+  [navigationRequest]?: true
   /** The initiating anchor, area, or owning form. */
   element?: HTMLAnchorElement | HTMLAreaElement | SVGAElement | HTMLFormElement
   /** The actual submitter captured by the native submit event. */

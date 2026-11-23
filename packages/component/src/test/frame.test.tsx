@@ -39,6 +39,11 @@ async function setupReloadBodyTest(t: TestContext) {
   return { app, requests }
 }
 
+async function expectBodylessRequest(request: Request): Promise<void> {
+  if ('body' in request) expect(request.body).toBeNull()
+  expect(await request.text()).toBe('')
+}
+
 async function setupInheritedReloadFinished(t: TestContext) {
   document.body.innerHTML = '<main>Initial</main>'
   let app = run({
@@ -807,7 +812,7 @@ describe('run', () => {
     expect(requests[0]!.method).toBe('POST')
     expect(requests[1]!.method).toBe('GET')
     expect(requests[1]!.url).toBe(new URL('/save', document.baseURI).href)
-    expect(requests[1]!.body).toBeNull()
+    await expectBodylessRequest(requests[1]!)
     expect(
       requests[0]!.headers.get('Content-Type')?.startsWith('multipart/form-data; boundary='),
     ).toBe(true)
@@ -1423,7 +1428,7 @@ describe('run', () => {
     expect(events[0]!.formData).toBeNull()
     expect(request.url).toBe(expectedUrl)
     expect(request.method).toBe('GET')
-    expect(request.body).toBeNull()
+    await expectBodylessRequest(request)
     expect(app.frames.top.src).toBe(`${expectedUrl}#results`)
     expect(document.body.textContent).toBe('Saved')
   })
@@ -1466,7 +1471,7 @@ describe('run', () => {
     expect(requests).toHaveLength(1)
     expect(requests[0]!.method).toBe('GET')
     expect(requests[0]!.url).toBe(new URL('/search?name=Ada', document.baseURI).href)
-    expect(requests[0]!.body).toBeNull()
+    await expectBodylessRequest(requests[0]!)
     expect(requests[0]!.headers.get('Content-Type')).toBeNull()
     expect(events).toHaveLength(1)
     expect(events[0]!.src).toBe(requests[0]!.url)
