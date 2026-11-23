@@ -66,7 +66,8 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       getPlaywrightLaunchOptions(options.playwrightUseOpts),
     )
     let pageOptions = getPlaywrightPageOptions(options.playwrightUseOpts)
-    if (browser.browserType().name() === 'webkit') {
+    let browserName = browser.browserType().name()
+    if (browserName === 'webkit') {
       // WebKit charges iframe history updates to the top-level document. Reuse one page,
       // navigating it between files to reset that budget while preserving browser storage.
       let context = await browser.newContext(pageOptions)
@@ -80,16 +81,16 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     for (let browserPage of executionPage ? [page, executionPage] : [page]) {
       browserPage.setDefaultTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
       browserPage.setDefaultNavigationTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
-      if (options.console) {
-        browserPage.on('console', (msg) =>
-          console.log(`${colors.dim('[browser console]')} ${msg.text()}`),
-        )
-      }
+    }
+    if (options.console) {
+      page
+        .context()
+        .on('console', (msg) => console.log(`${colors.dim('[browser console]')} ${msg.text()}`))
     }
 
     // Playwright's JS coverage is Chromium-only. Start before navigation so
     // the harness scripts and test modules are instrumented from first parse.
-    let coverageEnabled = options.coverage && browser.browserType().name() === 'chromium'
+    let coverageEnabled = options.coverage && browserName === 'chromium'
     if (coverageEnabled) {
       await page.coverage.startJSCoverage({ resetOnNavigation: false })
     }
@@ -129,6 +130,8 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     }
 
     let runnerUrl = new URL(options.baseUrl)
+    // Firefox can commit an intercepted iframe traversal twice. https://bugzilla.mozilla.org/2080513
+    if (browserName === 'firefox') runnerUrl.searchParams.set('isolation', 'window')
     if (executionPage) {
       runnerUrl.searchParams.set('runFiles', '1')
       await executionPage.route('**/history-quota?*', async (route) => {
@@ -318,9 +321,10 @@ async function waitForBrowserTests(page: Page, url: string): Promise<void> {
     let reason = failureText ? ` (${failureText})` : ''
     rejectScriptError(new Error(`Failed to load script: ${request.url()}${reason}`))
   }
-  page.on('request', onRequest)
-  page.on('response', onResponse)
-  page.on('requestfailed', onRequestFailed)
+  let source = new URL(url).searchParams.get('isolation') === 'window' ? page.context() : page
+  source.on('request', onRequest)
+  source.on('response', onResponse)
+  source.on('requestfailed', onRequestFailed)
   try {
     await Promise.race([
       page.goto(url).then((response) => {
@@ -332,8 +336,8 @@ async function waitForBrowserTests(page: Page, url: string): Promise<void> {
       errorPromise,
     ])
   } finally {
-    page.off('request', onRequest)
-    page.off('response', onResponse)
-    page.off('requestfailed', onRequestFailed)
+    source.off('request', onRequest)
+    source.off('response', onResponse)
+    source.off('requestfailed', onRequestFailed)
   }
 }

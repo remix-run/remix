@@ -273,9 +273,10 @@ describe('defaultResolveFrame commit', () => {
     // Wait for the restored frame's commit instead.
     void window.navigation.back().finished?.catch(() => {})
     await pending
+    // Firefox can settle the interrupted navigation's promise before dispatching Back's navigate event.
+    await restored.promise
     expect(deferred.signal.aborted).toBe(true)
 
-    await restored.promise
     await deferred.commitFrame()
     expect(document.getElementById('commit-page')?.textContent).toBe('initial')
     expect(window.location.href).toBe(initialUrl)
