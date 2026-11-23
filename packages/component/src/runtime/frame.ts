@@ -2,6 +2,7 @@ import { getNonceManager, type ResourceNonces } from './nonce.ts'
 import { jsx } from './core/vnode.ts'
 import {
   Fragment,
+  Portal,
   FRAME_NODE,
   createComponentErrorEvent,
   createFrameHandle,
@@ -42,6 +43,7 @@ import {
   type ResolveFrame,
 } from './frame-runtime.ts'
 import {
+  excludePortalRanges,
   findContextFromAncestry,
   insertDomNode,
   remove,
@@ -739,7 +741,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function clearFrameContent() {
-    for (let node of getContentNodes()) {
+    for (let node of excludePortalRanges(getContentNodes())) {
       node.parentNode?.removeChild(node)
     }
   }
@@ -2237,6 +2239,7 @@ function reviveSerializedValue(value: unknown): unknown {
 
   if (record.$rmxFrame === true) return reviveSerializedElement(Frame, record)
   if (record.$rmxFragment === true) return reviveSerializedElement(Fragment, record)
+  if (record.$rmxPortal === true) return reviveSerializedElement(Portal, record)
 
   if (record.$rmxMixin === 'css') {
     let args = reviveSerializedValue(record.args)
@@ -2262,7 +2265,7 @@ function reviveSerializedProperties(record: Record<string, unknown>): Record<str
 }
 
 function reviveSerializedElement(
-  type: string | typeof Frame | typeof Fragment,
+  type: string | typeof Frame | typeof Fragment | typeof Portal,
   record: Record<string, unknown>,
 ): RemixElement {
   let props = reviveSerializedObject(record.props)
@@ -2376,6 +2379,7 @@ async function createSubFrames(
   options?: RenderOptions,
 ): Promise<void> {
   let tasks: Promise<void>[] = []
+  nodes = excludePortalRanges(nodes)
 
   for (let i = 0; i < nodes.length; i++) {
     if (options?.signal?.aborted) break
@@ -2817,6 +2821,7 @@ function findHydrationMarkers(container: FrameContainer, data: RmxData['h']): Hy
   })
 
   function visit(nodes: Node[], parent?: Comment): void {
+    nodes = excludePortalRanges(nodes)
     let boundaries: typeof markers = []
     for (let i = 0; i < nodes.length; i++) {
       let node = nodes[i]
@@ -2853,6 +2858,7 @@ function findHydrationMarkers(container: FrameContainer, data: RmxData['h']): Hy
 // Visits nodes depth-first. A visitor that handles a range returns its last node, which skips the
 // rest of the range and its descendants.
 function walkNodes(nodes: Node[], visit: (node: Node) => Node | void, signal?: AbortSignal): void {
+  nodes = excludePortalRanges(nodes)
   for (let i = 0; i < nodes.length; i++) {
     if (signal?.aborted) break
 

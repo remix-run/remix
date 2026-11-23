@@ -1,4 +1,5 @@
 import { invariant } from './invariant.ts'
+import { excludePortalRanges } from './reconcile.ts'
 import {
   getFrameId,
   getHydrationId,
@@ -342,6 +343,7 @@ function createSiblingDiff(
   nextNodes: Node[],
   parent: ParentNode,
 ): SiblingDiff {
+  currentNodes = excludePortalRanges(currentNodes, parent)
   let currentUnits = parseSiblingUnits(currentNodes)
   let nextUnits = parseSiblingUnits(nextNodes)
   return {
@@ -929,7 +931,7 @@ function visitSubtree(node: Node, visit: (node: Node) => boolean | void): void {
     let next = stack.pop()!
     if (visit(next)) continue
 
-    for (let child of Array.from(next.childNodes)) {
+    for (let child of excludePortalRanges(Array.from(next.childNodes), next)) {
       stack.push(child)
     }
   }
