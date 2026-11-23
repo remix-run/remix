@@ -518,4 +518,20 @@ describe('vnode rendering', () => {
       expect(getComputedStyle(child).color).toBe('rgb(0, 0, 255)')
     })
   })
+
+  it('does not remove externally set attributes when prop stays undefined or null', () => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div data-x={undefined} data-y={null as any} />)
+
+    let div = container.querySelector('div')
+    invariant(div)
+    div.setAttribute('data-x', 'external')
+    div.setAttribute('data-y', 'external')
+
+    root.render(<div data-x={undefined} data-y={null as any} />)
+
+    expect(div.getAttribute('data-x')).toBe('external')
+    expect(div.getAttribute('data-y')).toBe('external')
+  })
 })
