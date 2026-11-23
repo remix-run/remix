@@ -93,6 +93,24 @@ export function getComponentError(event: Event): unknown {
 }
 
 /**
+ * Ignores a rejection from async runtime work once that work's signal has been
+ * aborted. Rejections from work whose signal is still live are re-thrown so
+ * they continue to surface as unhandled rejections.
+ *
+ * @param result The value returned by an event handler or task.
+ * @param signal The work's cancellation signal, when one was requested.
+ */
+export function ignoreAbortedRejection(result: unknown, signal?: AbortSignal): void {
+  if (result === null || (typeof result !== 'object' && typeof result !== 'function')) return
+  void Promise.resolve()
+    .then(() => result)
+    .catch((error: unknown) => {
+      if (signal?.aborted) return
+      throw error
+    })
+}
+
+/**
  * Task queued to run after a component update completes.
  */
 export type Task = (signal: AbortSignal) => void
@@ -133,9 +151,13 @@ export interface Handle<Props = Record<string, never>, ContextValue = NoContext>
   update(): Promise<AbortSignal>
 
   /**
-   * Schedules a task to run after the next update.
+   * Schedules a task to run after the next update. Async rejections are ignored
+   * when its render signal is aborted as the rejection is observed. Other returned
+   * rejections are reported through a new unhandled promise rejection.
    *
    * @param task Work receiving a signal aborted on the next render or component removal.
+   * Use a required signal parameter to enable render cancellation tracking.
+   * Catch failures inside the callback or return a handled promise chain.
    */
   queueTask(task: Task): void
 
@@ -576,9 +598,14 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
       renderController ??= new AbortController()
     }
 
-    signal ??= renderController?.signal
-    signal ??= sharedAbortedSignal ??= AbortSignal.abort()
-    return tasks.splice(0, tasks.length).map((task) => () => task(signal))
+    let taskSignal = signal ?? renderController?.signal
+    let queuedTasks = tasks.splice(0, tasks.length)
+    if (!taskSignal) {
+      // No task asked for a signal, so preserve the existing return-value behavior.
+      let placeholderSignal = (sharedAbortedSignal ??= AbortSignal.abort())
+      return queuedTasks.map((task) => () => task(placeholderSignal))
+    }
+    return queuedTasks.map((task) => () => ignoreAbortedRejection(task(taskSignal), taskSignal))
   }
 
   return {
