@@ -33,7 +33,6 @@ const anatomyCode = await highlightSource(`
         css({
           '&[data-state="open"]': {},
           '&[data-state="closed"]': {},
-          '&:disabled': {},
         }),
       ]}
     >
@@ -44,6 +43,7 @@ const anatomyCode = await highlightSource(`
         mix={[
           dialog.backdrop(),
           css({
+            '&[data-nested]': {},
             '&[data-state="open"]': {},
             '&[data-state="closed"]': {},
           }),
@@ -60,6 +60,9 @@ const anatomyCode = await highlightSource(`
               '&[data-state="open"]': {},
               '&[data-state="closed"]': {},
               '&[data-nested]': {},
+              '&[data-child-dialog-open]': {},
+              scale: 'calc(1 - var(--dialog-open-descendant-depth) * <scale-step>)',
+              translate: '0 calc(var(--dialog-open-descendant-depth) * <offset-step>)',
             }),
           ]}
         >
@@ -170,7 +173,16 @@ export default function DialogPage(handle: Handle<PageProps>) {
         <Example id="trap-focus-example" example={trapFocus} />
       </Section>
       <Section id="composition" title="Nesting">
-        <p>Put a child dialog context inside its parent's surface.</p>
+        <p>
+          Put a child dialog context inside its parent's surface. Use{' '}
+          <code>--dialog-open-descendant-depth</code>
+          to scale or offset dialogs behind it. The front dialog has depth 0, its parent has 1, and
+          the next parent has 2.
+        </p>
+        <p>
+          This example renders a backdrop for each dialog and uses <code>data-nested</code> to make
+          nested backdrops transparent. It also styles the dialogs behind the front one.
+        </p>
         <Example id="nested-example" example={nested} />
       </Section>
       <Section id="toasts" title="Stacking with other patterns">
@@ -361,7 +373,15 @@ export default function DialogPage(handle: Handle<PageProps>) {
             Surface and backdrop visibility, including exit motion.
           </ApiEntry>
           <ApiEntry name="data-nested" type="present | absent">
-            Identifies a nested surface.
+            Identifies surfaces and backdrops whose dialog has a parent dialog.
+          </ApiEntry>
+          <ApiEntry name="data-child-dialog-open" type="present | absent">
+            Identifies a surface with an open nested dialog above it.
+          </ApiEntry>
+          <ApiEntry name="--dialog-open-descendant-depth" type="number" defaultValue="0">
+            Depth of open descendant dialogs. The front dialog is 0, its parent is 1, and the next
+            parent is 2. It follows the deepest open child branch. Closing starts moving the parent
+            forward immediately. Other popup types and unrelated dialogs do not affect this value.
           </ApiEntry>
         </ApiTable>
       </Section>

@@ -330,7 +330,23 @@ const styles = {
     '&[data-highlighted]': { background: 'light-dark(#eeeef3, #303038)' },
     '&[data-menu-flash]': { background: 'light-dark(#d6d6e0, #4b4b56)' },
   }),
-  backdrop: css({ background: '#0006' }),
+  backdrop: css({
+    background: '#0006',
+    opacity: 1,
+    '&[data-nested]': {
+      opacity: 0,
+    },
+    transition: 'opacity 140ms ease',
+    '&[data-state="closed"]': {
+      opacity: 0,
+    },
+    '@starting-style': {
+      opacity: 0,
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  }),
   surface: css({
     colorScheme: 'light dark',
     boxSizing: 'border-box',
@@ -347,6 +363,39 @@ const styles = {
     color: 'light-dark(#202027, #eeeef2)',
     font: '14px/1.6 ui-sans-serif, system-ui, sans-serif',
     boxShadow: '0 16px 48px #0004',
+    opacity: 1,
+    scale: 'max(0.8, calc(1 - var(--dialog-open-descendant-depth, 0) * 0.07))',
+    translate: '0 calc(var(--dialog-open-descendant-depth, 0) * 16px)',
+    transition: 'opacity 140ms ease-out, scale 120ms ease-out, translate 120ms ease-out',
+    '&::after': {
+      content: "''",
+      position: 'absolute',
+      inset: 0,
+      borderRadius: 'inherit',
+      background: '#000',
+      opacity: 0,
+      pointerEvents: 'none',
+      transition: 'opacity 120ms ease-out',
+    },
+    '&[data-child-dialog-open]::after': {
+      opacity: 'min(0.5, calc(var(--dialog-open-descendant-depth, 0) * 0.3))',
+    },
+    '&[data-state="closed"]': {
+      opacity: 0,
+      scale: 0.97,
+      translate: '0 calc(6px + var(--dialog-open-descendant-depth, 0) * 16px)',
+    },
+    '@starting-style': {
+      opacity: 0,
+      scale: 0.97,
+      translate: '0 calc(6px + var(--dialog-open-descendant-depth, 0) * 16px)',
+    },
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+      '&::after': {
+        transition: 'none',
+      },
+    },
     '& h2': { margin: '0 0 20px', fontSize: '20px' },
   }),
   actions: css({ display: 'flex', flexWrap: 'wrap', gap: '12px' }),

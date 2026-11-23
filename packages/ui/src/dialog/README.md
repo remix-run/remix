@@ -99,7 +99,24 @@ Place a child `dialog.Context` inside its parent's surface. Escape and outside c
 
 A Remix popover anchored inside a dialog belongs to that dialog even when its surface is rendered elsewhere in the document. Its content remains focusable, interaction inside it does not dismiss the dialog, and closing the dialog releases the popup and its scroll lock. Ownership lasts for the open session, including when the anchor is removed. A non-modal or focus-trap-only child retains its modal parent's restrictions on the rest of the page.
 
-`data-state="open"` and `data-state="closed"` are available on triggers, surfaces, and backdrops. Nested surfaces also receive `data-nested`. Style transitions with these attributes and `@starting-style`; the surface and backdrop remain visible until exit motion finishes. Respect `prefers-reduced-motion` in consumer styles.
+`data-state="open"` and `data-state="closed"` are available on triggers, surfaces, and backdrops. Nested surfaces and backdrops also receive `data-nested`. Surfaces expose `--dialog-open-descendant-depth` as the depth of their open descendant dialogs. The front dialog is 0, its parent is 1, and the next parent is 2. The depth follows the deepest open child branch and does not include unrelated dialogs or other popup types. Closing updates the parent depth when dismissal begins, so the parent can move forward while the child exits. `data-child-dialog-open` is present when the depth is non-zero.
+
+```css
+.dialog {
+  scale: calc(1 - var(--dialog-open-descendant-depth, 0) * 0.05);
+  translate: 0 calc(var(--dialog-open-descendant-depth, 0) * 16px);
+}
+```
+
+Backdrops are optional. When rendering them, use `data-nested` to make child backdrops transparent, or keep them all visible to stack dimming.
+
+```css
+.backdrop[data-nested] {
+  opacity: 0;
+}
+```
+
+Style transitions with these attributes and `@starting-style`; the surface and backdrop remain visible until exit motion finishes. Respect `prefers-reduced-motion` in consumer styles.
 
 The `data-open` attribute remains on surfaces and backdrops while they are visible, including exit motion. Closed content is hidden with structural CSS. Inline server rendering produces hidden accessible markup; portals emit only a marker and mount their children in the browser.
 

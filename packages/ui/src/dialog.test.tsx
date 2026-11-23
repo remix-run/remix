@@ -52,6 +52,89 @@ function Example(handle: Handle<dialog.DialogContextProps>) {
   )
 }
 
+function NestedDepthDialog(
+  handle: Handle<{
+    child?: dialog.DialogContextProps
+    grandchild?: dialog.DialogContextProps
+    withChild?: boolean
+    withChildSurface?: boolean
+    popupOpen?: boolean
+  }>,
+) {
+  return () => (
+    <dialog.Context defaultOpen modal={false} closeOnOutsideClick={false}>
+      <button id="depth-parent-trigger" mix={dialog.trigger()}>
+        Open parent
+      </button>
+      <dialog.Portal>
+        <div data-depth-parent-backdrop mix={dialog.backdrop()} />
+        <dialog.SurfaceContext>
+          <section data-depth-parent aria-label="Parent" mix={dialog.surface()}>
+            <button id="depth-parent-close" mix={dialog.close()}>
+              Close parent
+            </button>
+            <popover.Context>
+              <button mix={popover.anchor({ placement: 'bottom-start' })}>Popup anchor</button>
+              <popover.Portal>
+                <popover.SurfaceContext>
+                  <div
+                    aria-label="Popup"
+                    mix={popover.surface({ open: handle.props.popupOpen ?? false, onHide() {} })}
+                  >
+                    <button>Popup action</button>
+                  </div>
+                </popover.SurfaceContext>
+              </popover.Portal>
+            </popover.Context>
+            {handle.props.withChild !== false && (
+              <dialog.Context modal={false} closeOnOutsideClick={false} {...handle.props.child}>
+                <button id="depth-child-trigger" mix={dialog.trigger()}>
+                  Open child
+                </button>
+                <dialog.Portal>
+                  <div data-depth-child-backdrop mix={dialog.backdrop()} />
+                  <dialog.SurfaceContext>
+                    {handle.props.withChildSurface !== false && (
+                      <section data-depth-child aria-label="Child" mix={dialog.surface()}>
+                        <button id="depth-child-close" mix={dialog.close()}>
+                          Close child
+                        </button>
+                        <dialog.Context
+                          modal={false}
+                          closeOnOutsideClick={false}
+                          {...handle.props.grandchild}
+                        >
+                          <button id="depth-grandchild-trigger" mix={dialog.trigger()}>
+                            Open grandchild
+                          </button>
+                          <dialog.Portal>
+                            <div data-depth-grandchild-backdrop mix={dialog.backdrop()} />
+                            <dialog.SurfaceContext>
+                              <section
+                                data-depth-grandchild
+                                aria-label="Grandchild"
+                                mix={dialog.surface()}
+                              >
+                                <button id="depth-grandchild-close" mix={dialog.close()}>
+                                  Close grandchild
+                                </button>
+                              </section>
+                            </dialog.SurfaceContext>
+                          </dialog.Portal>
+                        </dialog.Context>
+                      </section>
+                    )}
+                  </dialog.SurfaceContext>
+                </dialog.Portal>
+              </dialog.Context>
+            )}
+          </section>
+        </dialog.SurfaceContext>
+      </dialog.Portal>
+    </dialog.Context>
+  )
+}
+
 function DetachedPopup(handle: Handle<dialog.DialogContextProps>) {
   let open = false
   return () => (
@@ -283,6 +366,206 @@ describe('dialog', () => {
     await settle(root)
     expect(document.documentElement.style.overflow).toBe(overflow)
     expect(document.querySelector('[data-open]')).toBe(null)
+  })
+
+  it('exposes open descendant depths across three initially open portaled dialogs', async (t) => {
+    render(<NestedDepthDialog child={{ defaultOpen: true }} grandchild={{ defaultOpen: true }} />)
+    await t.waitFor(() => {
+      let parent = get(document.body, '[data-depth-parent]')
+      let child = get(document.body, '[data-depth-child]')
+      let grandchild = get(document.body, '[data-depth-grandchild]')
+      expect(getComputedStyle(parent).getPropertyValue('--dialog-open-descendant-depth')).toBe('2')
+      expect(getComputedStyle(child).getPropertyValue('--dialog-open-descendant-depth')).toBe('1')
+      expect(getComputedStyle(grandchild).getPropertyValue('--dialog-open-descendant-depth')).toBe(
+        '0',
+      )
+      expect(get(document.body, '[data-depth-parent-backdrop]').hasAttribute('data-nested')).toBe(
+        false,
+      )
+      expect(get(document.body, '[data-depth-child-backdrop]').hasAttribute('data-nested')).toBe(
+        true,
+      )
+      expect(
+        get(document.body, '[data-depth-grandchild-backdrop]').hasAttribute('data-nested'),
+      ).toBe(true)
+      expect(parent.hasAttribute('data-child-dialog-open')).toBe(true)
+      expect(child.hasAttribute('data-child-dialog-open')).toBe(true)
+      expect(grandchild.hasAttribute('data-child-dialog-open')).toBe(false)
+    })
+  })
+
+  it('updates open descendant depths when uncontrolled descendants close and reopen', async (t) => {
+    let { root } = render(<NestedDepthDialog />)
+    let parent = get(document.body, '[data-depth-parent]')
+    let child = get(document.body, '[data-depth-child]')
+    let grandchild = get(document.body, '[data-depth-grandchild]')
+    get<HTMLButtonElement>(document.body, '#depth-child-trigger').click()
+    root.flush()
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('1'),
+    )
+    get<HTMLButtonElement>(document.body, '#depth-grandchild-trigger').click()
+    root.flush()
+    await t.waitFor(() => {
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('2')
+      expect(child.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('1')
+    })
+    get<HTMLButtonElement>(document.body, '#depth-grandchild-close').click()
+    root.flush()
+    await t.waitFor(() => {
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('1')
+      expect(child.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0')
+    })
+    get<HTMLButtonElement>(document.body, '#depth-child-close').click()
+    root.flush()
+    await t.waitFor(() => expect(parent.hasAttribute('data-child-dialog-open')).toBe(false))
+    get<HTMLButtonElement>(document.body, '#depth-child-trigger').click()
+    root.flush()
+    await t.waitFor(() => {
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('1')
+      expect(child.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0')
+      expect(grandchild.hasAttribute('data-open')).toBe(false)
+      expect(child.hasAttribute('data-nested')).toBe(true)
+      expect(grandchild.hasAttribute('data-nested')).toBe(true)
+    })
+    get<HTMLButtonElement>(document.body, '#depth-parent-close').click()
+    root.flush()
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0'),
+    )
+    get<HTMLButtonElement>(document.body, '#depth-parent-trigger').click()
+    root.flush()
+    await t.waitFor(() => {
+      expect(parent.hasAttribute('data-open')).toBe(true)
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0')
+      expect(child.hasAttribute('data-open')).toBe(false)
+    })
+  })
+
+  it('reflects controlled open state rather than an unaccepted opening request', async (t) => {
+    let { root } = render(<NestedDepthDialog child={{ open: false }} />)
+    let parent = get(document.body, '[data-depth-parent]')
+    get<HTMLButtonElement>(document.body, '#depth-child-trigger').click()
+    root.flush()
+    expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0')
+    root.render(<NestedDepthDialog child={{ open: true }} />)
+    root.flush()
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('1'),
+    )
+    root.render(<NestedDepthDialog child={{ open: false }} />)
+    root.flush()
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0'),
+    )
+  })
+
+  it('removes an open child from its parent descendant depth when its context or surface unmounts', async (t) => {
+    let { root } = render(<NestedDepthDialog child={{ open: true }} grandchild={{ open: true }} />)
+    let parent = get(document.body, '[data-depth-parent]')
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('2'),
+    )
+    root.render(<NestedDepthDialog withChild={false} />)
+    root.flush()
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0'),
+    )
+    root.render(<NestedDepthDialog child={{ open: true }} withChildSurface={false} />)
+    root.flush()
+    expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0')
+    root.render(<NestedDepthDialog child={{ open: true }} />)
+    root.flush()
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('1'),
+    )
+    root.render(<NestedDepthDialog child={{ open: true }} withChildSurface={false} />)
+    root.flush()
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0'),
+    )
+  })
+
+  it('keeps the parent descendant depth when dismissal is cancelled', async (t) => {
+    let { root } = render(
+      <NestedDepthDialog
+        child={{
+          defaultOpen: true,
+          onOpenChange(open, event) {
+            if (!open) event.preventDefault()
+          },
+        }}
+      />,
+    )
+    let parent = get(document.body, '[data-depth-parent]')
+    let child = get(document.body, '[data-depth-child]')
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('1'),
+    )
+    get<HTMLButtonElement>(document.body, '#depth-child-close').click()
+    root.flush()
+    expect(child.getAttribute('data-state')).toBe('open')
+    expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('1')
+  })
+
+  it('moves the parent forward when child exit begins without interrupting the exit animation', async (t) => {
+    let { root } = render(<NestedDepthDialog child={{ defaultOpen: true }} />)
+    let parent = get(document.body, '[data-depth-parent]')
+    let child = get(document.body, '[data-depth-child]')
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('1'),
+    )
+    let animation = child.animate({ opacity: [1, 0] }, { duration: 1000 })
+    animation.pause()
+    t.after(() => animation.cancel())
+    get<HTMLButtonElement>(document.body, '#depth-child-close').click()
+    root.flush()
+    await t.waitFor(() => {
+      expect(child.getAttribute('data-state')).toBe('closed')
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0')
+    })
+    expect(child.hasAttribute('data-open')).toBe(true)
+    animation.finish()
+    await t.waitFor(() => expect(child.hasAttribute('data-open')).toBe(false))
+  })
+
+  it('does not change open descendant depths for a popup or an unrelated dialog', async (t) => {
+    let { root } = render(<NestedDepthDialog child={{ open: true }} />)
+    let parent = get(document.body, '[data-depth-parent]')
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('1'),
+    )
+    root.render(
+      <>
+        <NestedDepthDialog child={{ open: true }} popupOpen />
+        <dialog.Context defaultOpen modal={false} closeOnOutsideClick={false}>
+          <dialog.SurfaceContext>
+            <section data-unrelated aria-label="Unrelated" mix={dialog.surface()}>
+              <button>Action</button>
+            </section>
+          </dialog.SurfaceContext>
+        </dialog.Context>
+      </>,
+    )
+    root.flush()
+    await t.waitFor(() =>
+      expect(get(document.body, '[data-unrelated]').hasAttribute('data-open')).toBe(true),
+    )
+    expect(
+      get(document.body, '[data-depth-parent]').style.getPropertyValue(
+        '--dialog-open-descendant-depth',
+      ),
+    ).toBe('1')
+    expect(
+      get(document.body, '[data-depth-child]').style.getPropertyValue(
+        '--dialog-open-descendant-depth',
+      ),
+    ).toBe('0')
+    expect(
+      get(document.body, '[data-unrelated]').style.getPropertyValue(
+        '--dialog-open-descendant-depth',
+      ),
+    ).toBe('0')
   })
 
   it('keeps the parent modal and its scroll lock when a nested dialog closes', async () => {

@@ -111,6 +111,7 @@ type DialogContextValue = {
   readonly open: boolean
   readonly modal: DialogModal
   readonly nested: boolean
+  readonly openDescendantDepth: number
   readonly parentSurface: HTMLElement | null
   readonly closeOnEscape: boolean
   readonly closeOnOutsideClick: boolean
@@ -129,6 +130,9 @@ type DialogContextValue = {
   request(open: boolean, reason: DialogChangeReason, event?: Event, trigger?: HTMLElement): boolean
   complete(open: boolean): void
   syncBackdrop(): void
+  setOpenChildDepth(child: DialogContextValue, depth: number): void
+  syncNesting(): void
+  updateNestingStyles(): void
 }
 
 function DialogProvider(handle: Handle<DialogContextProps, DialogContextValue>): () => RemixNode {
@@ -136,6 +140,7 @@ function DialogProvider(handle: Handle<DialogContextProps, DialogContextValue>):
   let initialized = false
   let uncontrolledOpen = false
   let hasOpened = false
+  let openChildDepths = new Map<DialogContextValue, number>()
 
   function getOpen() {
     if (!initialized) {
@@ -157,6 +162,9 @@ function DialogProvider(handle: Handle<DialogContextProps, DialogContextValue>):
     },
     get nested() {
       return !!parent
+    },
+    get openDescendantDepth() {
+      return getOpen() ? Math.max(0, ...openChildDepths.values()) : 0
     },
     get closeOnEscape() {
       return handle.props.closeOnEscape !== false
@@ -199,11 +207,26 @@ function DialogProvider(handle: Handle<DialogContextProps, DialogContextValue>):
       return true
     },
     syncBackdrop() {},
+    setOpenChildDepth(child, depth) {
+      if ((openChildDepths.get(child) ?? 0) === depth) return
+      if (depth === 0) openChildDepths.delete(child)
+      else openChildDepths.set(child, depth)
+      context.syncNesting()
+    },
+    syncNesting() {
+      context.updateNestingStyles()
+      parent?.setOpenChildDepth(
+        context,
+        context.open && context.surface ? context.openDescendantDepth + 1 : 0,
+      )
+    },
+    updateNestingStyles() {},
     complete(open) {
       handle.props.onOpenChangeComplete?.(open)
     },
   }
   handle.context.set(context)
+  handle.signal.addEventListener('abort', () => parent?.setOpenChildDepth(context, 0))
   handle.queueTask(() => {
     handle.props.ref?.({
       get open() {
@@ -220,6 +243,7 @@ function DialogProvider(handle: Handle<DialogContextProps, DialogContextValue>):
   return () => {
     if (hasOpened && parent && !parent.open) uncontrolledOpen = false
     hasOpened ||= getOpen()
+    handle.queueTask(() => context.syncNesting())
     return handle.props.children
   }
 }
@@ -293,12 +317,22 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
     let previousOpen = false
     let transition = 0
     let surfaceNode: HTMLElement | null = null
+    let previousOpenDescendantDepth = ''
     let layer: ReturnType<typeof registerDismissableLayer> | undefined
     let focusScope: ReturnType<typeof activateFocusScope> | undefined
     let activeModal: DialogModal | undefined
     let unlockScroll = () => {}
     let latestOptions: DialogSurfaceOptions = {}
     let previouslyFocused: HTMLElement | null = null
+
+    context.updateNestingStyles = () => {
+      if (!surfaceNode) return
+      surfaceNode.style.setProperty(
+        '--dialog-open-descendant-depth',
+        String(context.openDescendantDepth),
+      )
+      surfaceNode.toggleAttribute('data-child-dialog-open', context.openDescendantDepth > 0)
+    }
 
     context.syncBackdrop = () => {
       if (surfaceNode?.hasAttribute('data-open')) context.backdrop?.setAttribute('data-open', '')
@@ -367,6 +401,8 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
       surfaceLifetime = new AbortController()
       context.surface = node
       surfaceNode = node
+      previousOpenDescendantDepth = node.style.getPropertyValue('--dialog-open-descendant-depth')
+      context.syncNesting()
       boundary.registerSurface(node, surfaceLifetime.signal)
     })
     handle.addEventListener('remove', () => {
@@ -376,9 +412,15 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
       surfaceNode = null
       if (!node) return
       hide(node)
+      if (previousOpenDescendantDepth)
+        node.style.setProperty('--dialog-open-descendant-depth', previousOpenDescendantDepth)
+      else node.style.removeProperty('--dialog-open-descendant-depth')
+      node.removeAttribute('data-child-dialog-open')
       if (context.surface === node) {
         context.surface = null
         context.syncBackdrop = () => {}
+        context.updateNestingStyles = () => {}
+        context.syncNesting()
       }
     })
 
@@ -455,8 +497,10 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
           'aria-describedby': props['aria-describedby'] ?? context.descriptionId,
           'data-state': open ? 'open' : 'closed',
           'data-nested': context.nested ? '' : undefined,
+          'data-child-dialog-open': context.openDescendantDepth > 0 ? '' : undefined,
         }),
         css({
+          '--dialog-open-descendant-depth': String(context.openDescendantDepth),
           position: 'fixed',
           zIndex: 'calc(var(--rmx-layer-base, 0) + var(--rmx-layer-order, 0))',
           '&:not([data-open])': { display: 'none' },
@@ -475,6 +519,7 @@ const backdropMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
     attrs({
       'aria-hidden': 'true',
       'data-state': context.open ? 'open' : 'closed',
+      'data-nested': context.nested ? '' : undefined,
     }),
     css({
       position: 'fixed',
@@ -555,9 +600,16 @@ const focusOnHideMixin = createMixin<HTMLElement, []>(
 export const Context = DialogProvider
 /** Adapts a native button to open or toggle its dialog. */
 export const trigger = triggerMixin
-/** Adapts an app-owned element to the dialog surface. */
+/**
+ * Adapts an element to the dialog surface.
+ * Exposes `--dialog-open-descendant-depth` as the depth of open descendant dialogs,
+ * starting at zero, and `data-child-dialog-open` when that depth is non-zero.
+ */
 export const surface = surfaceMixin
-/** Registers an optional, app-styled backdrop below the surface. */
+/**
+ * Registers an optional, app-styled backdrop below the surface.
+ * Exposes `data-nested` when its dialog has a parent dialog.
+ */
 export const backdrop = backdropMixin
 /** Adapts a native button to request closing its dialog. */
 export const close = closeMixin

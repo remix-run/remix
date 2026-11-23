@@ -19,9 +19,29 @@ export default function ExampleNestedDialog() {
                     <dialog.SurfaceContext>
                       <section mix={[dialog.surface(), styles.surface]}>
                         <h2 mix={dialog.title()}>Nested dialog</h2>
-                        <button mix={[dialog.close(), dialog.focusOnShow(), styles.button]}>
-                          Close
-                        </button>
+                        <div mix={styles.actions}>
+                          <dialog.Context>
+                            <button mix={[dialog.trigger(), styles.button]}>
+                              Open third dialog
+                            </button>
+                            <dialog.Portal>
+                              <div mix={[dialog.backdrop(), styles.backdrop]} />
+                              <dialog.SurfaceContext>
+                                <section mix={[dialog.surface(), styles.surface]}>
+                                  <h2 mix={dialog.title()}>Third dialog</h2>
+                                  <button
+                                    mix={[dialog.close(), dialog.focusOnShow(), styles.button]}
+                                  >
+                                    Close
+                                  </button>
+                                </section>
+                              </dialog.SurfaceContext>
+                            </dialog.Portal>
+                          </dialog.Context>
+                          <button mix={[dialog.close(), dialog.focusOnShow(), styles.button]}>
+                            Close
+                          </button>
+                        </div>
                       </section>
                     </dialog.SurfaceContext>
                   </dialog.Portal>
@@ -63,6 +83,9 @@ const styles = {
   backdrop: css({
     background: '#0006',
     opacity: 1,
+    '&[data-nested]': {
+      opacity: 0,
+    },
     transition: 'opacity 140ms ease',
     '&[data-state="closed"]': {
       opacity: 0,
@@ -91,15 +114,37 @@ const styles = {
     font: '14px/1.6 ui-sans-serif, system-ui, sans-serif',
     boxShadow: '0 16px 48px #0004',
     opacity: 1,
-    transition: 'opacity 140ms ease',
+    scale: 'max(0.8, calc(1 - var(--dialog-open-descendant-depth, 0) * 0.07))',
+    translate: '0 calc(var(--dialog-open-descendant-depth, 0) * 16px)',
+    transition: 'opacity 140ms ease-out, scale 120ms ease-out, translate 120ms ease-out',
+    '&::after': {
+      content: "''",
+      position: 'absolute',
+      inset: 0,
+      borderRadius: 'inherit',
+      background: '#000',
+      opacity: 0,
+      pointerEvents: 'none',
+      transition: 'opacity 120ms ease-out',
+    },
+    '&[data-child-dialog-open]::after': {
+      opacity: 'min(0.5, calc(var(--dialog-open-descendant-depth, 0) * 0.3))',
+    },
     '&[data-state="closed"]': {
       opacity: 0,
+      scale: 0.97,
+      translate: '0 calc(6px + var(--dialog-open-descendant-depth, 0) * 16px)',
     },
     '@starting-style': {
       opacity: 0,
+      scale: 0.97,
+      translate: '0 calc(6px + var(--dialog-open-descendant-depth, 0) * 16px)',
     },
     '@media (prefers-reduced-motion: reduce)': {
       transition: 'none',
+      '&::after': {
+        transition: 'none',
+      },
     },
     '& h2': {
       margin: '0 0 16px',
