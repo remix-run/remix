@@ -374,9 +374,10 @@ describe('bookstore prefetching', () => {
       await link.hover()
       await prefetched
       await link.evaluate((anchor: HTMLAnchorElement) => anchor.click())
+      // The flushed document proves navigation consumed the response while its body is open.
+      await page.getByRole('heading', { name: 'Contact Us', exact: true }).waitFor()
       assert.equal(requests, 1)
       release.resolve()
-      await page.getByRole('heading', { name: 'Contact Us', exact: true }).waitFor()
       await page.evaluate(async () => window.navigation.transition?.finished)
       assert.equal(requests, 1)
     },
