@@ -1,5 +1,4 @@
 import { FocusPortal } from './lib/focus-portal.tsx'
-import type { PortalProps } from './portal.tsx'
 import {
   attrs,
   createElement,
@@ -251,7 +250,12 @@ export const focusOnHide = focusOnHideMixin
 export const focusOnShow = focusOnShowMixin
 
 /** Options for rendering the popover surface outside its authored DOM ancestors. */
-export type PopoverPortalProps = PortalProps
+export interface PopoverPortalProps {
+  /** Surface content rendered at the destination. */
+  children?: RemixNode
+  /** Destination in the same document. Defaults to its body. Changing it remounts the content. */
+  container?: HTMLElement | null
+}
 
 /**
  * Portals one popover surface while coordinating its focus navigation.

@@ -1,6 +1,5 @@
 import { SurfacePortalOwner } from './lib/focus.tsx'
 import { FocusPortal, leaveFocusPortal } from './lib/focus-portal.tsx'
-import type { PortalProps } from './portal.tsx'
 import {
   attrs,
   createMixin,
@@ -1346,7 +1345,12 @@ export function onMenuSelect<target extends HTMLElement>(
 }
 
 /** Options for rendering the menu surface outside its authored DOM ancestors. */
-export type MenuPortalProps = PortalProps
+export interface MenuPortalProps {
+  /** Surface content rendered at the destination. */
+  children?: RemixNode
+  /** Destination in the same document. Defaults to its body. Changing it remounts the content. */
+  container?: HTMLElement | null
+}
 
 /**
  * Portals one menu surface while coordinating its focus navigation.

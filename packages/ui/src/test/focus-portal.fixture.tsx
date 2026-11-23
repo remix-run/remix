@@ -1,4 +1,4 @@
-import { Portal as PlainPortal } from '../portal.tsx'
+import { Portal as PlainPortal } from '@remix-run/component'
 import { createElement, createRoot, on, type Handle, type RemixNode } from '@remix-run/component'
 import * as dialog from '../dialog.ts'
 import * as popover from '../popover.ts'

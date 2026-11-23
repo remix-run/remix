@@ -1,6 +1,5 @@
 import { SurfacePortalOwner } from './lib/focus.tsx'
 import { FocusPortal, leaveFocusPortal } from './lib/focus-portal.tsx'
-import type { PortalProps } from './portal.tsx'
 import {
   attrs,
   createMixin,
@@ -571,7 +570,12 @@ function SelectSurfaceBoundary(handle: Handle<{ children?: RemixNode }>): () => 
 }
 
 /** Options for rendering the select surface outside its authored DOM ancestors. */
-export type SelectPortalProps = PortalProps
+export interface SelectPortalProps {
+  /** Surface content rendered at the destination. */
+  children?: RemixNode
+  /** Destination in the same document. Defaults to its body. Changing it remounts the content. */
+  container?: HTMLElement | null
+}
 
 /**
  * Portals one select surface while coordinating its focus navigation.

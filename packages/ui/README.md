@@ -18,7 +18,6 @@ Compose behavioral primitives with your own markup and styles:
 import { css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 import * as popover from '@remix-run/ui/popover'
-import { Portal } from '@remix-run/ui/portal'
 
 function ViewOptions(handle: Handle) {
   let open = false
@@ -43,27 +42,29 @@ function ViewOptions(handle: Handle) {
       >
         View options
       </button>
-      <Portal>
-        <div
-          mix={[
-            popover.surface({
-              open,
-              onHide() {
-                open = false
-                handle.update()
-              },
-            }),
-            css({
-              background: 'white',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              padding: '8px',
-            }),
-          ]}
-        >
-          Panel content
-        </div>
-      </Portal>
+      <popover.Portal>
+        <popover.SurfaceContext>
+          <div
+            mix={[
+              popover.surface({
+                open,
+                onHide() {
+                  open = false
+                  handle.update()
+                },
+              }),
+              css({
+                background: 'white',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                padding: '8px',
+              }),
+            ]}
+          >
+            Panel content
+          </div>
+        </popover.SurfaceContext>
+      </popover.Portal>
     </popover.Context>
   )
 }
@@ -79,7 +80,6 @@ function ViewOptions(handle: Handle) {
 - [`@remix-run/ui/listbox`](https://github.com/remix-run/remix/blob/main/packages/ui/src/listbox/README.md)
 - [`@remix-run/ui/menu`](https://github.com/remix-run/remix/blob/main/packages/ui/src/menu/README.md)
 - [`@remix-run/ui/popover`](https://github.com/remix-run/remix/blob/main/packages/ui/src/popover/README.md)
-- [`@remix-run/ui/portal`](https://github.com/remix-run/remix/blob/main/packages/ui/src/portal/README.md)
 - [`@remix-run/ui/select`](https://github.com/remix-run/remix/blob/main/packages/ui/src/select/README.md)
 - [`@remix-run/ui/tabs`](https://github.com/remix-run/remix/blob/main/packages/ui/src/tabs/README.md)
 - [`@remix-run/ui/toast`](https://github.com/remix-run/remix/blob/main/packages/ui/src/toast/README.md)

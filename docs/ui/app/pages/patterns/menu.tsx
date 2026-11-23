@@ -374,7 +374,8 @@ export default function MenuPage(handle: Handle<PageProps>) {
             The surface context and its content.
           </ApiEntry>
           <ApiEntry name="container" type="HTMLElement | null" defaultValue="document.body">
-            Destination in the same document. Changing it preserves child state.
+            Destination in the same document. Changing it remounts the content and resets its local
+            state.
           </ApiEntry>
         </ApiTable>
         <ApiTable id="portal-types">

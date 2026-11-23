@@ -15,4 +15,4 @@ Global `toast.root()` regions remain interactive while a modal dialog is open. T
 </dialog.Context>
 ```
 
-Use `dialog.Portal` to render outside clipping ancestors and coordinate non-modal keyboard and accessibility navigation with its declaration position. Its `container` prop selects a destination in the same document's light DOM. `dialog.Portal` must be declared outside a shadow root and use a container outside shadow roots. Keep `dialog.SurfaceContext` inside it, or omit the Portal for inline rendering.
+Use `dialog.Portal` to render outside clipping ancestors and coordinate non-modal keyboard and accessibility navigation with its declaration position. It uses the `Portal` component from `remix/component`. Its `container` prop selects a destination in the same document's light DOM. Changing the container remounts the content and resets its local state. `dialog.Portal` must be declared outside a shadow root and use a container outside shadow roots. Keep `dialog.SurfaceContext` inside it, or omit the Portal for inline rendering.

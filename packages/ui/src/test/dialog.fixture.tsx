@@ -1,5 +1,4 @@
-import { Portal } from '../portal.tsx'
-import { createRoot, on, type Handle } from '@remix-run/component'
+import { Portal, createRoot, on, type Handle } from '@remix-run/component'
 import * as dialog from '../dialog.ts'
 import * as popover from '../popover.ts'
 import * as menu from '../menu.tsx'

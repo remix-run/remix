@@ -2,11 +2,10 @@ import * as combobox from '@remix-run/ui/combobox'
 import * as dialog from '@remix-run/ui/dialog'
 import * as menu from '@remix-run/ui/menu'
 import * as popover from '@remix-run/ui/popover'
-import { Portal } from '@remix-run/ui/portal'
 import * as select from '@remix-run/ui/select'
 import * as toast from '@remix-run/ui/toast'
 import { animateEntrance, animateExit, prefersReducedMotion } from '@remix-run/ui/animation'
-import { css, on } from 'remix/component'
+import { Portal, css, on } from 'remix/component'
 import type { Handle } from 'remix/component'
 
 const toastManager = toast.createToastManager()

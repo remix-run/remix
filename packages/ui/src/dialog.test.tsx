@@ -1,9 +1,8 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
-import { createRoot, on, type Handle, type RemixNode } from '@remix-run/component'
+import { Portal, createRoot, on, type Handle, type RemixNode } from '@remix-run/component'
 import { renderToString } from '@remix-run/component/server'
 import * as dialog from './dialog.ts'
-import { Portal } from './portal.tsx'
 import * as popover from './popover.ts'
 import * as menu from './menu.tsx'
 

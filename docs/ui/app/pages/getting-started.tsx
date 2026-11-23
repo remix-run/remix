@@ -100,8 +100,8 @@ export default function GettingStarted() {
             <a href="/patterns/select/">selects</a> and <a href="/patterns/combobox/">comboboxes</a>
             . Backdrops sit below their dialogs, and nested popups appear above their parents. These
             patterns also coordinate dismissal so Escape closes the active child before its parent.
-            Use the pattern's <a href="/patterns/portal/#focus-boundaries">Portal</a> when ancestors
-            would clip a surface or create a stacking context that constrains its z-index.
+            Use the pattern's Portal component when ancestors would clip a surface or create a
+            stacking context that constrains its z-index.
           </p>
           <p>
             Each surface's CSS <code>z-index</code> adds its position in the shared stack to{' '}

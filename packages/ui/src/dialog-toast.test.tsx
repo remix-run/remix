@@ -1,10 +1,9 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
-import { createRoot, on, type Handle } from '@remix-run/component'
+import { Portal, createRoot, on, type Handle } from '@remix-run/component'
 import * as dialog from './dialog.ts'
 import * as popover from './popover.ts'
 import * as toast from './toast.tsx'
-import { Portal } from './portal.tsx'
 
 let roots: ReturnType<typeof createRoot>[] = []
 

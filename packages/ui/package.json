@@ -78,11 +78,7 @@
       "types": "./src/toggle.ts",
       "default": "./src/toggle.ts"
     },
-    "./package.json": "./package.json",
-    "./portal": {
-      "types": "./src/portal.tsx",
-      "default": "./src/portal.tsx"
-    }
+    "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
@@ -138,11 +134,7 @@
         "types": "./dist/toggle.d.ts",
         "default": "./dist/toggle.js"
       },
-      "./package.json": "./package.json",
-      "./portal": {
-        "types": "./dist/portal.d.ts",
-        "default": "./dist/portal.js"
-      }
+      "./package.json": "./package.json"
     }
   },
   "dependencies": {

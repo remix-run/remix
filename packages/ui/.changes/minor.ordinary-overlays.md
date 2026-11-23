@@ -88,8 +88,8 @@ Comboboxes:
  </combobox.Context>
 ```
 
-Portals preserve component context, frame, and state. DOM events, form ownership, and inherited styles follow the destination. Portaled children mount in the browser and are absent from server HTML. Dialogs and popovers share visual stacking and keyboard dismissal order; set `--rmx-layer-base` on the document root to offset that stack relative to application chrome. Ordinary external overlays can use `z-index`, but do not automatically join modal focus and dismissal ownership.
+Portals use the `Portal` component from `remix/component` and preserve component context and frame. Changing the container remounts the content and resets its local state. DOM events, form ownership, and inherited styles follow the destination. Portaled children mount in the browser and are absent from server HTML. Dialogs and popovers share visual stacking and keyboard dismissal order; set `--rmx-layer-base` on the document root to offset that stack relative to application chrome. Ordinary external overlays can use `z-index`, but do not automatically join modal focus and dismissal ownership.
 
 The `data-open` attribute remains while exit animations finish, preserving visual order and blocking dismissal of lower layers until the closing popup is hidden. Page scrolling remains locked until exit animations finish.
 
-`popover.Portal`, `menu.Portal`, `select.Portal`, and `combobox.Portal` accept `children` and a same-document `container`. Declare them outside shadow roots and use containers outside shadow roots. The generic `Portal` remains a rendering utility whose Tab navigation follows the destination DOM. Use the corresponding Portal component listed above for coordinated popup focus navigation.
+`popover.Portal`, `menu.Portal`, `select.Portal`, and `combobox.Portal` accept `children` and a same-document `container`. Declare them outside shadow roots and use containers outside shadow roots. The `Portal` component from `remix/component` is a rendering utility whose keyboard navigation follows the destination DOM. Use the corresponding Portal component listed above for coordinated popup focus navigation.

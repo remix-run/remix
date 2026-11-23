@@ -17,7 +17,6 @@ describe('UI docs pages', () => {
         'patterns/listbox',
         'patterns/menu',
         'patterns/popover',
-        'patterns/portal',
         'patterns/select',
         'patterns/tabs',
         'patterns/toast',

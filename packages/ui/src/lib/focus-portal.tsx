@@ -1,6 +1,5 @@
-import { css, ref, type Handle, type RemixNode } from '@remix-run/component'
+import { Portal, css, ref, type Handle, type RemixNode } from '@remix-run/component'
 import { focusable, tabbable } from 'tabbable'
-import { Portal } from '../portal.tsx'
 import { contains } from './contains.ts'
 import {
   FocusGuard,
@@ -359,7 +358,7 @@ export function FocusPortal(handle: Handle<PortalOptions>): () => RemixNode {
             })}
           />
         ) : null}
-        <Portal container={handle.props.container}>
+        <Portal container={handle.props.container ?? undefined}>
           {/* A display:contents destination cannot be reparented by aria-owns in Chromium. */}
           <div
             id={destinationId}

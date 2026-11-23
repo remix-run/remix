@@ -1,4 +1,4 @@
-import { Portal } from '@remix-run/ui/portal'
+import { Portal } from 'remix/component'
 import { css, on, type Handle } from '@remix-run/component'
 import * as dialog from '@remix-run/ui/dialog'
 
