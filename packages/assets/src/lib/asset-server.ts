@@ -789,32 +789,40 @@ export function createAssetServer<const transforms extends AssetRequestTransform
           isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
           requestedFingerprint: parsedRequestPathname.requestedFingerprint,
         })
+        let response: Response
         if (scriptResult.type === 'not-modified') {
-          return new Response(null, {
+          response = new Response(null, {
             status: 304,
             headers: { ETag: scriptResult.etag },
           })
+        } else {
+          let compiledScript = scriptResult.script
+
+          if (parsedRequestPathname.requestedFingerprint !== null) {
+            let fingerprint = parsedRequestPathname.isSourceMapRequest
+              ? compiledScript.sourceMap?.fingerprint
+              : compiledScript.fingerprint
+            if (fingerprint !== parsedRequestPathname.requestedFingerprint) return null
+          }
+
+          response = createCompiledAssetResponse(
+            compiledScript,
+            'application/javascript; charset=utf-8',
+            {
+              cacheControl: parsedRequestPathname.cacheControl,
+              ifNoneMatch,
+              isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
+              method: request.method,
+            },
+          )
         }
 
-        let compiledScript = scriptResult.script
-
-        if (parsedRequestPathname.requestedFingerprint !== null) {
-          let fingerprint = parsedRequestPathname.isSourceMapRequest
-            ? compiledScript.sourceMap?.fingerprint
-            : compiledScript.fingerprint
-          if (fingerprint !== parsedRequestPathname.requestedFingerprint) return null
+        // WebKit can reuse preloaded modules across an HMR reload despite Cache-Control.
+        // A wildcard Vary forces a fresh request before reusing mutable JavaScript.
+        if (resolvedOptions.hmr && !parsedRequestPathname.isSourceMapRequest) {
+          response.headers.set('Vary', '*')
         }
-
-        return createCompiledAssetResponse(
-          compiledScript,
-          'application/javascript; charset=utf-8',
-          {
-            cacheControl: parsedRequestPathname.cacheControl,
-            ifNoneMatch,
-            isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
-            method: request.method,
-          },
-        )
+        return response
       } catch (error) {
         // A direct request can race with the filesystem or fail a deeper allowFiles check while
         // compiling imports. In this fetch context, both cases should fall through as "not

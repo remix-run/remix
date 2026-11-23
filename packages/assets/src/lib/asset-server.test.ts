@@ -6266,6 +6266,7 @@ describe('asset-server', () => {
 
         let entryResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(entryResponse)
+        assert.equal(entryResponse.headers.get('Vary'), '*')
         let entryBody = await entryResponse.text()
 
         assert.match(entryBody, /from "\/assets\/__remix_hmr\/client\.js"/)
@@ -6273,6 +6274,13 @@ describe('asset-server', () => {
           entryBody,
           /import\.meta\.hot = __remixCreateHotContext\("\/assets\/app\/entry\.ts"\)/,
         )
+
+        let etag = entryResponse.headers.get('ETag')
+        assert.ok(etag)
+        let notModified = await get(assetServer, '/assets/app/entry.ts', { 'If-None-Match': etag })
+        assert.ok(notModified)
+        assert.equal(notModified.status, 304)
+        assert.equal(notModified.headers.get('Vary'), '*')
       } finally {
         await assetServer.close()
       }
