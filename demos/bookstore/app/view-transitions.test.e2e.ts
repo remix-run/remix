@@ -240,7 +240,7 @@ async function activeCoverTransitions(page: Page): Promise<string[]> {
 }
 
 async function sampleTransition(page: Page, progress: number) {
-  return page.evaluate((progress) => {
+  await page.evaluate((progress) => {
     for (let animation of document.getAnimations()) {
       if (
         animation.effect instanceof KeyframeEffect &&
@@ -250,6 +250,18 @@ async function sampleTransition(page: Page, progress: number) {
         if (typeof duration === 'number') animation.currentTime = duration * progress
       }
     }
+  }, progress)
+  await page.waitForFunction((progress) => {
+    let oldOpacity = Number(
+      getComputedStyle(document.documentElement, '::view-transition-old(bookstore-page)').opacity,
+    )
+    let newOpacity = Number(
+      getComputedStyle(document.documentElement, '::view-transition-new(bookstore-page)').opacity,
+    )
+    if (progress === 0) return oldOpacity === 1 && newOpacity === 0
+    return progress === 1 || (oldOpacity > 0 && oldOpacity < 1 && newOpacity > 0 && newOpacity < 1)
+  }, progress)
+  return page.evaluate(() => {
     function geometry(name: string) {
       let style = getComputedStyle(document.documentElement, `::view-transition-group(${name})`)
       return { transform: style.transform, width: style.width, height: style.height }
@@ -277,7 +289,7 @@ async function sampleTransition(page: Page, progress: number) {
       oldOpacity: Number(oldPage.opacity),
       newOpacity: Number(newPage.opacity),
     }
-  }, progress)
+  })
 }
 
 async function pauseViewTransitions(page: Page) {
