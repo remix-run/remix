@@ -352,6 +352,7 @@ function Notifications() {
           </section>
         )}
       </toast.Context>
+      <button id="toast-after">After notifications</button>
     </>
   )
 }

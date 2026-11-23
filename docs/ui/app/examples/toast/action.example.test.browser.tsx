@@ -30,7 +30,7 @@ describe('Toast action example', () => {
     assert.equal(announcement.querySelector('button'), null)
     await result.act(() => {
       trigger.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }),
+        new KeyboardEvent('keydown', { key: 'F6', bubbles: true, cancelable: true }),
       )
       action.focus()
       action.click()

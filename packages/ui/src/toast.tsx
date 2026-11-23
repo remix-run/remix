@@ -198,7 +198,6 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
   let region: HTMLElement | undefined
   let returnTo: HTMLElement | undefined
   let entering = false
-  let tabbing = false
   let presentations = new Map<string, { node: HTMLElement; clock: ToastClock }>()
   let previous = toastManager.items.map((toastItem) => toastItem.id)
   let interaction = createInteractionState((paused) => {
@@ -297,21 +296,6 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       region = node
       let doc = node.ownerDocument
       let win = doc.defaultView
-      doc.addEventListener(
-        'keydown',
-        (event) => {
-          if (event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey) return
-          tabbing = true
-        },
-        { capture: true, signal },
-      )
-      doc.addEventListener(
-        'keyup',
-        (event) => {
-          if (event.key === 'Tab') tabbing = false
-        },
-        { capture: true, signal },
-      )
       let unregisterRegion = registerModalExemptRegion({
         node,
         onScopeClose(branch, returnTarget) {
@@ -338,7 +322,6 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       doc.addEventListener(
         'pointerdown',
         (event) => {
-          tabbing = false
           if (
             !interaction.touchEngaged ||
             event.pointerType !== 'touch' ||
@@ -372,10 +355,9 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
         'focusin',
         (event) => {
           let active = activeElement(doc)
-          if (tabbing && isElement(event.relatedTarget) && !contains(node, event.relatedTarget))
-            returnTo = event.relatedTarget
-          tabbing = false
           if (active && (entering || active.matches(':focus-visible'))) {
+            if (!entering && isElement(event.relatedTarget) && !contains(node, event.relatedTarget))
+              returnTo = event.relatedTarget
             interaction.set('keyboardFocused', true)
           }
           refresh()

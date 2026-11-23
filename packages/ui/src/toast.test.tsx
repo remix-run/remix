@@ -295,7 +295,7 @@ describe('toast.root()', () => {
     assert.equal(result.container.querySelector('[data-toast]'), null)
     assert.ok(id)
   })
-  it('remembers ordinary Tab entry when the last notification closes', async (t) => {
+  it('remembers F6 entry when the last notification closes', async (t) => {
     let toastManager = createToastManager()
     let id = toastManager.add({ title: 'Notification' })
     let view = render(
@@ -322,7 +322,7 @@ describe('toast.root()', () => {
     await view.act(() => {
       origin.focus()
       origin.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }),
+        new KeyboardEvent('keydown', { key: 'F6', bubbles: true, cancelable: true }),
       )
       action.focus()
     })

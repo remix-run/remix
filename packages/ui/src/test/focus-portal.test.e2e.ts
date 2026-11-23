@@ -280,20 +280,29 @@ describe('Portal focus navigation', () => {
     ).toBe(true)
   })
 
-  it('restores the toast origin after ordinary keyboard entry and dismissal', async (t) => {
+  it('restores the toast origin after native keyboard entry and dismissal', async (t) => {
     let page = await openFixture(t, '/scoped?scenario=toast')
+    let tab = page.context().browser()?.browserType().name() === 'webkit' ? 'Alt+Tab' : 'Tab'
     await page.locator('#toast-origin').press('Enter')
-    await page.keyboard.press('Tab')
-    expect(
-      await page
-        .locator('#notifications')
-        .evaluate((node) => node.contains(document.activeElement)),
-    ).toBe(true)
-    await page.locator('#toast-action').press('Enter')
-    expect(
-      await page.locator('#toast-origin').evaluate((node) => node === document.activeElement),
-    ).toBe(true)
+    await page.keyboard.press(tab)
+    await page.keyboard.press(tab)
+    await page.locator('#toast-action:focus').waitFor()
+    await page.keyboard.press('Enter')
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('toast-origin')
   })
+
+  it('restores the following control after backward native keyboard entry and dismissal', async (t) => {
+    let page = await openFixture(t, '/scoped?scenario=toast')
+    let tab =
+      page.context().browser()?.browserType().name() === 'webkit' ? 'Alt+Shift+Tab' : 'Shift+Tab'
+    await page.locator('#toast-origin').press('Enter')
+    await page.locator('#toast-after').focus()
+    await page.keyboard.press(tab)
+    await page.locator('#toast-action:focus').waitFor()
+    await page.keyboard.press('Enter')
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('toast-after')
+  })
+
   it('does not establish a toast return target from pointer entry', async (t) => {
     let page = await openFixture(t, '/scoped?scenario=toast')
     await page.locator('#toast-origin').click()

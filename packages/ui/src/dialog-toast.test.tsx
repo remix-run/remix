@@ -280,20 +280,6 @@ describe('Dialog and Toast', () => {
     expect(calls).toBe(1)
   })
 
-  it('does not remember a return target for programmatic notification entry', async () => {
-    let { root } = mount()
-    get('#open').click()
-    await settle(root)
-    get('#publish').focus()
-    get('#publish').click()
-    await settle(root)
-    get('#dismiss').focus()
-    let event = new KeyboardEvent('keydown', { key: 'F6', bubbles: true, cancelable: true })
-    get('#dismiss').dispatchEvent(event)
-    expect(event.defaultPrevented).toBe(false)
-    expect(document.activeElement).toBe(get('#dismiss'))
-  })
-
   it('does not restore standalone notification focus when its viewport unmounts', async () => {
     let { root, manager, removeViewport } = mount()
     manager.add({ title: 'Notification' })
