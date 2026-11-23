@@ -725,7 +725,7 @@ describe('form navigation', () => {
     }
   })
 
-  it('preserves submitter name and value when the submit button is disabled after submit', async () => {
+  it('preserves the submitter entry when pending UI disables and renames the button', async () => {
     let controller = new AbortController()
     let resolveFormNavigation = createFormNavigationResolver(controller.signal)
     let formNavigation: ReturnType<typeof resolveFormNavigation>
@@ -759,8 +759,9 @@ describe('form navigation', () => {
     form.addEventListener(
       'formdata',
       () => {
-        // The native submission's entry list already contains the submitter.
+        // The native submission's entry list already contains the original button entry.
         button.disabled = true
+        button.name = 'pending-intent'
       },
       { once: true },
     )

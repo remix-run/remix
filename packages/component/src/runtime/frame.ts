@@ -2962,7 +2962,7 @@ type SubmitterElement = HTMLButtonElement | HTMLInputElement
 type PendingFormSubmission = {
   form: HTMLFormElement
   submitter: SubmitterElement | null
-  formData?: FormData
+  snapshot?: { formData: FormData; submitterEntryName: string | undefined }
   supersedingSubmit?: Event
   timeout: ReturnType<typeof setTimeout>
   removeFormDataListener(): void
@@ -3049,7 +3049,11 @@ export function createFormNavigationResolver(
         // A canceled retry must not replace a submission whose navigation is still pending.
         let existing = pendingSubmissions.get(pending.form)
         if (existing) clearPending(existing)
-        pending.formData = formDataEvent.formData
+        let submitterEntryName = submitter?.name
+        if (submitter instanceof HTMLInputElement && submitter.type === 'image') {
+          submitterEntryName = submitterEntryName ? submitterEntryName + '.x' : 'x'
+        }
+        pending.snapshot = { formData: formDataEvent.formData, submitterEntryName }
         pendingSubmissions.set(pending.form, pending)
         if (submitter) pendingSubmissions.set(submitter, pending)
         pending.removeFormDataListener()
@@ -3095,16 +3099,19 @@ export function createFormNavigationResolver(
 
     let isGet = method.toLowerCase() === 'get'
     let eventFormData = (event as FormNavigateEvent).formData
-    let formData = isGet ? undefined : (eventFormData ?? pending?.formData)
-    if (!isGet && eventFormData && pending?.formData && submitter?.matches(':disabled')) {
-      // Chromium and WebKit can rebuild the data after the submitter is disabled. Only prefer
-      // the capture if it contains an entry for the submitter that the navigation lost.
-      let name = submitter.name
-      if (submitter instanceof HTMLInputElement && submitter.type === 'image') {
-        name = name ? name + '.x' : 'x'
-      }
-      if (name && pending.formData.getAll(name).length > eventFormData.getAll(name).length) {
-        formData = pending.formData
+    let snapshot = pending?.snapshot
+    let formData = isGet ? undefined : (eventFormData ?? snapshot?.formData)
+    // Chromium and WebKit can rebuild the data after the submitter is disabled. Only prefer
+    // the capture if it contains an entry for the submitter that the navigation lost.
+    if (
+      !isGet &&
+      eventFormData &&
+      snapshot?.submitterEntryName &&
+      submitter?.matches(':disabled')
+    ) {
+      let name = snapshot.submitterEntryName
+      if (snapshot.formData.getAll(name).length > eventFormData.getAll(name).length) {
+        formData = snapshot.formData
       }
     }
     let getSubmission: FormNavigation['getSubmission'] = isGet
