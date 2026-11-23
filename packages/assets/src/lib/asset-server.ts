@@ -437,6 +437,8 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   let fileCompiler: FileCompiler | null = null
   let closed = false
   let unsubscribeBrowserHmrFileEvents: (() => void) | undefined
+  // Protect initial preloads while a configured channel starts without delaying script responses.
+  let varyHmrScripts = resolvedOptions.hmr !== null
   let browserHmrChannelPromise = createBrowserHmrChannel(
     resolvedOptions.hmr,
     handleBrowserHmrFileEvents,
@@ -445,11 +447,15 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       unsubscribeBrowserHmrFileEvents = unsubscribe
     },
   )
-  void browserHmrChannelPromise.catch(() => {
-    // The HMR client request and close() both await this promise. Attach a
-    // rejection handler now so async factory failures do not surface first as
-    // unhandled rejections.
-  })
+  void browserHmrChannelPromise.then(
+    (channel) => {
+      varyHmrScripts = channel !== null
+    },
+    () => {
+      // The HMR client request and close() still report the original factory failure.
+      varyHmrScripts = false
+    },
+  )
   let sendHmrPayload = resolvedOptions.hmr ? createHmrPayloadSender() : null
   let hmrPathnames = getHmrPathnames(resolvedOptions.basePath)
   let hmrDataKey = `remix/assets@1:${resolvedOptions.basePath}`
@@ -789,32 +795,46 @@ export function createAssetServer<const transforms extends AssetRequestTransform
           isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
           requestedFingerprint: parsedRequestPathname.requestedFingerprint,
         })
+        let response: Response
         if (scriptResult.type === 'not-modified') {
-          return new Response(null, {
+          response = new Response(null, {
             status: 304,
             headers: { ETag: scriptResult.etag },
           })
+        } else {
+          let compiledScript = scriptResult.script
+
+          if (parsedRequestPathname.requestedFingerprint !== null) {
+            let fingerprint = parsedRequestPathname.isSourceMapRequest
+              ? compiledScript.sourceMap?.fingerprint
+              : compiledScript.fingerprint
+            if (fingerprint !== parsedRequestPathname.requestedFingerprint) return null
+          }
+
+          response = createCompiledAssetResponse(
+            compiledScript,
+            'application/javascript; charset=utf-8',
+            {
+              cacheControl: parsedRequestPathname.cacheControl,
+              ifNoneMatch,
+              isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
+              method: request.method,
+            },
+          )
         }
 
-        let compiledScript = scriptResult.script
-
-        if (parsedRequestPathname.requestedFingerprint !== null) {
-          let fingerprint = parsedRequestPathname.isSourceMapRequest
-            ? compiledScript.sourceMap?.fingerprint
-            : compiledScript.fingerprint
-          if (fingerprint !== parsedRequestPathname.requestedFingerprint) return null
+        if (varyHmrScripts && !parsedRequestPathname.isSourceMapRequest) {
+          let userAgent = request.headers.get('User-Agent') ?? ''
+          let isWebKit =
+            userAgent.includes('AppleWebKit') &&
+            !userAgent.includes('Chrome') &&
+            !userAgent.includes('Chromium')
+          // WebKit can reuse preloaded modules across reloads despite Cache-Control.
+          // Limit the wildcard to WebKit because the Cache API rejects those responses.
+          // Keep Accept-Encoding on 304s when downstream middleware compresses the scripts.
+          response.headers.set('Vary', isWebKit ? '*' : 'User-Agent, Accept-Encoding')
         }
-
-        return createCompiledAssetResponse(
-          compiledScript,
-          'application/javascript; charset=utf-8',
-          {
-            cacheControl: parsedRequestPathname.cacheControl,
-            ifNoneMatch,
-            isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
-            method: request.method,
-          },
-        )
+        return response
       } catch (error) {
         // A direct request can race with the filesystem or fail a deeper allowFiles check while
         // compiling imports. In this fetch context, both cases should fall through as "not

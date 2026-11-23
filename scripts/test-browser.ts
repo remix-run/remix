@@ -11,8 +11,6 @@ if (refs.length !== 0 && refs.length !== 2) {
 const rootDir = process.cwd()
 const workspaces = getWorkspaceInfos(rootDir).filter(
   (workspace) =>
-    // component-hmr coverage follows separately once its WebKit reload failures are fixed.
-    workspace.dir !== 'packages/component-hmr' &&
     workspace.scripts.includes('test') &&
     ['playwright.config.ts', 'playwright.config.js'].some((file) =>
       fs.existsSync(path.join(rootDir, workspace.dir, file)),
