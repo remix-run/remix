@@ -771,6 +771,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/multiple-import-maps-polyfill':
+        specifier: workspace:^
+        version: link:../multiple-import-maps-polyfill
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
@@ -832,6 +835,9 @@ importers:
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
+      oxc-transform:
+        specifier: ^0.121.0
+        version: 0.121.0
       playwright:
         specifier: 'catalog:'
         version: 1.63.0

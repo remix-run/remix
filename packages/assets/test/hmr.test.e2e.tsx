@@ -708,8 +708,8 @@ describe('asset server HMR', () => {
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
   })
 
-  it('reloads the page when an accepted browser module export is added', async (t) => {
-    let fixture = await createHmrFixture()
+  it('reloads a preloaded entry when an accepted dependency export is added', async (t) => {
+    let fixture = await createHmrFixture({ preloadScripts: true })
 
     let page = await t.serve(await createHmrTestServer(fixture))
     t.after(fixture.close)
@@ -1504,6 +1504,7 @@ async function createHmrFixture(
     counterBarrelHmrBoundary?: boolean
     counterPackageImport?: boolean
     counterExtraExports?: string
+    preloadScripts?: boolean
   } = {},
 ): Promise<HmrFixture> {
   let tmpDir = path.join(packageDir, '.tmp')
@@ -1657,7 +1658,7 @@ async function createHmrFixture(
     rootDir,
     async renderDocument(assetServer) {
       documentRenderCount++
-      let { href, importMap } = await assetServer.getScriptEntry(
+      let { href, importMap, preloads } = await assetServer.getScriptEntry(
         path.join(rootDir, 'app/entry.tsx'),
       )
       if (options.conflictingInitialBareImport && documentRenderCount === 1) {
@@ -1674,6 +1675,9 @@ async function createHmrFixture(
         '    <title>HMR Test</title>',
         '    <link rel="stylesheet" href="/assets/app/styles.css">',
         `    <script type="importmap">${JSON.stringify(importMap)}</script>`,
+        ...(options.preloadScripts
+          ? preloads.map((preload) => `    <link rel="modulepreload" href="${preload}">`)
+          : []),
         '  </head>',
         '  <body>',
         '    <div id="app"></div>',
