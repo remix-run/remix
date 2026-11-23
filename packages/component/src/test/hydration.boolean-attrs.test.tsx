@@ -19,6 +19,48 @@ describe('hydration', () => {
   })
 
   describe('boolean attributes', () => {
+    it('keeps array defaults for an empty-string multiple attribute across mounting and hydration', async (t) => {
+      let attrs: Record<string, unknown> = { multiple: '' }
+      let node = (
+        <form>
+          <select {...attrs} defaultValue={['a', 'b']}>
+            <option value="a">A</option>
+            <option value="b">B</option>
+          </select>
+        </form>
+      )
+      let clientContainer = document.createElement('div')
+      let clientRoot = createRoot(clientContainer)
+      t.after(() => clientRoot.dispose())
+      clientRoot.render(node)
+      clientRoot.flush()
+
+      let mountedForm = clientContainer.querySelector('form')
+      let mountedSelect = clientContainer.querySelector('select')
+      invariant(mountedForm && mountedSelect)
+      expect([...mountedSelect.selectedOptions].map((option) => option.value)).toEqual(['a', 'b'])
+      mountedSelect.value = 'a'
+      mountedForm.reset()
+      expect([...mountedSelect.selectedOptions].map((option) => option.value)).toEqual(['a', 'b'])
+
+      container.innerHTML = await renderToString(node)
+      let existingForm = container.querySelector('form')
+      let existingSelect = container.querySelector('select')
+      invariant(existingForm && existingSelect)
+      expect([...existingSelect.selectedOptions].map((option) => option.value)).toEqual(['a', 'b'])
+
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(node)
+      root.flush()
+
+      expect(container.querySelector('select')).toBe(existingSelect)
+      expect([...existingSelect.selectedOptions].map((option) => option.value)).toEqual(['a', 'b'])
+      existingSelect.value = 'a'
+      existingForm.reset()
+      expect([...existingSelect.selectedOptions].map((option) => option.value)).toEqual(['a', 'b'])
+    })
+
     it('keeps native global booleans on custom elements when mounting and hydrating', async (t) => {
       let node = createElement('x-remix-native-global-booleans', { inert: '' })
       container.innerHTML = await renderToString(node)

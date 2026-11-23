@@ -136,7 +136,7 @@ describe('vnode rendering', () => {
       expect(element.settings).toBe('')
     })
 
-    it('sets custom element properties even when their getters throw', () => {
+    it('sets custom element properties even when their getters throw', (t) => {
       class HostPropsElement extends HTMLElement {
         received: unknown = undefined
 
@@ -154,6 +154,7 @@ describe('vnode rendering', () => {
 
       let container = document.createElement('div')
       let root = createRoot(container)
+      t.after(() => root.dispose())
       root.render(createElement(tagName, { settings: '' }))
       root.flush()
 
@@ -162,9 +163,10 @@ describe('vnode rendering', () => {
       expect(element.received).toBe('')
     })
 
-    it('keeps empty boolean props present when mounting and updating hidden modes', () => {
+    it('keeps empty boolean props present when mounting and updating hidden modes', (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
+      t.after(() => root.dispose())
       root.render(createElement('button', { disabled: '', hidden: 'until-found' }))
       root.flush()
 
