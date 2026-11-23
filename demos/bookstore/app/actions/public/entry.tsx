@@ -28,6 +28,7 @@ const disposeDebugBoundaries = installDebugBoundaries()
 const prefetchController = new AbortController()
 const frameRequestManager = createFrameRequestManager(prefetchController.signal)
 const relatedBookPrefetchManager = createRelatedBookPrefetchManager(prefetchController.signal)
+const pendingRelatedFrames = new Map<string, Promise<void>>()
 
 export const app = run({
   async loadModule(moduleUrl: string, exportName: string) {
@@ -74,6 +75,25 @@ export const app = run({
     )
   },
   resolveFrame(src, options) {
+    let target = options?.target
+    let pending =
+      target && relatedBooksMatcher.match(new URL(src, document.baseURI))
+        ? Promise.withResolvers<void>()
+        : undefined
+    let pendingSignal = options?.signal
+      ? AbortSignal.any([options.signal, prefetchController.signal])
+      : prefetchController.signal
+    function finish() {
+      pending?.resolve()
+      if (target && pendingRelatedFrames.get(target) === pending?.promise) {
+        pendingRelatedFrames.delete(target)
+      }
+      pendingSignal.removeEventListener('abort', finish)
+    }
+    if (target && pending) {
+      pendingRelatedFrames.set(target, pending.promise)
+      pendingSignal.addEventListener('abort', finish, { once: true })
+    }
     return defaultResolveFrame(src, options, {
       fetch(url, init) {
         if ((init.method ?? 'GET').toUpperCase() !== 'GET') {
@@ -101,7 +121,11 @@ export const app = run({
           matchMedia('(prefers-reduced-motion: reduce)').matches ||
           signal.aborted
         ) {
-          return commitFrame()
+          try {
+            return await commitFrame()
+          } finally {
+            finish()
+          }
         }
 
         let from = options?.from?.url
@@ -135,7 +159,16 @@ export const app = run({
               .querySelector('[data-book-faceout]')
               ?.getAttribute('data-book-faceout')
             if (destinationBookId) {
-              await app.frames.get(`related-books-${destinationBookId}`)?.reload()
+              let name = `related-books-${destinationBookId}`
+              let loading = pendingRelatedFrames.get(name)
+              // A visible lazy frame may already be loading or rendered after the page commit.
+              if (loading) {
+                await loading
+              } else if (
+                !document.querySelector(`[data-test-slug="${CSS.escape(fromBook.params.slug)}"]`)
+              ) {
+                await app.frames.get(name)?.reload()
+              }
             }
           }
         })
@@ -150,6 +183,9 @@ export const app = run({
           signal.removeEventListener('abort', skip)
         }
       },
+    }).catch((error) => {
+      finish()
+      throw error
     })
   },
   async processClientEntryPreloads(preloads) {
