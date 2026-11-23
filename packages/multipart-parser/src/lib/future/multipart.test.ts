@@ -110,6 +110,16 @@ async function readAll(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> 
 }
 
 describe('parseMultipartStream', () => {
+  it('preserves content when a long boundary spans input chunks', async () => {
+    let boundary = '0123456789'.repeat(7)
+    let content = 'field value '.repeat(32)
+    let message = createMultipartMessage(boundary, { field: content })
+    let parts = await parseAll(splitChunks(message, 79), { boundary })
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, content)
+  })
+
   it('accepts boundaries up to 70 characters', async () => {
     let longBoundary = 'b'.repeat(70)
     let parts = await parseAll([createMultipartMessage(longBoundary, { field: 'value' })], {

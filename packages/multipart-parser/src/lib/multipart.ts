@@ -108,7 +108,8 @@ export interface ParseMultipartOptions {
   maxParts?: number
   /**
    * The maximum allowed aggregate size of all part content in bytes. If this
-   * limit is exceeded, a `MaxTotalSizeExceededError` will be thrown.
+   * limit is exceeded, a `MaxTotalSizeExceededError` will be thrown. Headers,
+   * delimiters, preambles, and epilogues do not count toward this limit.
    *
    * @default `maxFileSize * 20 + 1048576` (1 MiB)
    */
