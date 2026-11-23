@@ -433,6 +433,7 @@ describe('form navigation', () => {
     let initialKey = window.navigation.currentEntry?.key
     let formNavigation: ReturnType<typeof resolveFormNavigation>
     let submission: FormSubmission | undefined
+    let navigationFormData: FormData | null = null
     let form = document.createElement('form')
     form.action = window.location.href
     form.method = 'post'
@@ -442,14 +443,18 @@ describe('form navigation', () => {
     form.append(button)
     document.body.append(form)
 
-    document.addEventListener('formdata', (event) => event.stopImmediatePropagation(), {
-      capture: true,
-      once: true,
-      signal: controller.signal,
-    })
+    document.addEventListener(
+      'formdata',
+      (event) => {
+        button.disabled = true
+        event.stopImmediatePropagation()
+      },
+      { capture: true, once: true, signal: controller.signal },
+    )
     window.navigation.addEventListener(
       'navigate',
       (event) => {
+        navigationFormData = event.formData
         formNavigation = resolveFormNavigation(event)
         event.intercept({
           async handler() {
@@ -463,11 +468,20 @@ describe('form navigation', () => {
     try {
       let navigationSucceeded = nextNavigation(controller.signal)
       form.requestSubmit(button)
-      expect(new FormData(form).has('intent')).toBe(false)
+      document.addEventListener(
+        'formdata',
+        (event) => {
+          event.formData.append('intent', 'unrelated')
+          event.formData.append('intent', 'also unrelated')
+        },
+        { capture: true, once: true, signal: controller.signal },
+      )
+      expect(new FormData(form).getAll('intent')).toEqual(['unrelated', 'also unrelated'])
       await navigationSucceeded
 
-      expect(formNavigation?.submission.formData?.get('intent')).toBe('save')
-      expect(submission?.formData?.get('intent')).toBe('save')
+      expect(navigationFormData).toBeInstanceOf(FormData)
+      expect(formNavigation?.submission.formData).toBe(navigationFormData)
+      expect(submission?.formData).toBe(navigationFormData)
     } finally {
       form.remove()
       controller.abort()
@@ -755,13 +769,19 @@ describe('form navigation', () => {
     let button = document.createElement('button')
     button.name = 'intent'
     button.value = 'save'
-    form.append(input, button)
+    let replacement = document.createElement('input')
+    replacement.type = 'hidden'
+    replacement.name = 'intent'
+    replacement.value = 'pending'
+    replacement.disabled = true
+    form.append(input, button, replacement)
     form.addEventListener(
       'formdata',
       () => {
         // The native submission's entry list already contains the original button entry.
         button.disabled = true
         button.name = 'pending-intent'
+        replacement.disabled = false
       },
       { once: true },
     )
