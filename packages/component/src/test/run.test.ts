@@ -59,6 +59,23 @@ describe('defaultResolveFrame', () => {
     expect(headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
   })
 
+  it('sends the page being left as the referrer of a navigation', async (t) => {
+    let fetchMock = t.mock.method(globalThis, 'fetch', async () => new Response('<p>Saved</p>'))
+    let from = new URL('/products/coat?size=m', window.location.href).href
+    let formData = new FormData()
+    formData.set('quantity', '1')
+
+    await defaultResolveFrame('/cart', {
+      method: 'post',
+      formData,
+      from: { url: from } as NavigationHistoryEntry,
+    })
+    await defaultResolveFrame('/cart')
+
+    expect(fetchMock.mock.calls[0]!.arguments[1]?.referrer).toBe(from)
+    expect(fetchMock.mock.calls[1]!.arguments[1]?.referrer).toBeUndefined()
+  })
+
   it('preserves an absolute frame URL under a cross-origin document base', async (t) => {
     let base = document.createElement('base')
     base.href = 'https://cdn.example.com/assets/'

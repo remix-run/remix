@@ -89,8 +89,8 @@ export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
 export interface DefaultResolveFrameOverrides {
   /**
    * Receives an absolute URL string without a fragment and prepared request settings, including
-   * form encoding, frame headers, abort signal, and `same-origin` mode. Relative sources resolve
-   * against `document.baseURI`. Can modify the request or return a cached response
+   * form encoding, frame headers, abort signal, referrer, and `same-origin` mode. Relative sources
+   * resolve against `document.baseURI`. Can modify the request or return a cached response
    * (defaults to `globalThis.fetch`).
    */
   fetch?(url: string, init: RequestInit): Promise<Response>
@@ -131,6 +131,8 @@ function getRequestBody(options?: ResolveFrameOptions): {
  *
  * Rejects non-HTML `3xx`/`4xx` responses and all `5xx` responses, including those returned by a
  * custom fetch implementation. The optional commit callback runs when Remix renders the response.
+ * A navigation's request sends the URL of the page being left (`options.from`) as its referrer,
+ * as a native navigation would.
  *
  * @param src Frame source to fetch.
  * @param options Frame target, navigation transition, form submission, and cancellation settings.
@@ -147,7 +149,14 @@ export async function defaultResolveFrame(
   let response = await fetchFrame(
     src,
     options?.target,
-    { body, method: options?.method, signal: options?.signal },
+    {
+      body,
+      method: options?.method,
+      signal: options?.signal,
+      // The Navigation API commits the destination URL before this request starts, so the browser's
+      // default referrer would be the destination instead of the page being left.
+      ...(options?.from?.url ? { referrer: options.from.url } : {}),
+    },
     encType,
     overrides?.fetch,
   )
