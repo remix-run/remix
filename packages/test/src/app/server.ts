@@ -24,9 +24,14 @@ const browserResolver = new ResolverFactory({
   tsconfig: 'auto',
 })
 
+interface BrowserTestServerOptions {
+  only?: SerializedOnlyPattern[]
+  cacheScripts?: boolean
+}
+
 export async function startServer(
   browserFiles: string[],
-  options: { only?: SerializedOnlyPattern[] } = {},
+  options: BrowserTestServerOptions = {},
 ): Promise<{ server: http.Server; port: number; baseUrl: string }> {
   let handle = createRequestHandler(browserFiles, options)
 
@@ -70,7 +75,7 @@ function isAddressInfo(address: ReturnType<http.Server['address']>): address is 
 
 function createRequestHandler(
   browserFiles: string[],
-  options: { only?: SerializedOnlyPattern[] } = {},
+  options: BrowserTestServerOptions,
 ): (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void> {
   let rootDir = getBrowserTestRootDir()
   let srcDir = IS_RUNNING_FROM_SRC
@@ -87,6 +92,7 @@ function createRequestHandler(
   }
 
   let testPaths = browserFiles.map((f) => filePathToUrl(f, rootDir)!)
+  let scriptCache = options.cacheScripts ? new Map<string, string>() : undefined
 
   return async (req, res) => {
     let url = new URL(req.url ?? '/', 'http://localhost')
@@ -127,7 +133,14 @@ function createRequestHandler(
       let filePath = urlPathToFilePath(url.pathname, rootDir)
       if (filePath) {
         try {
-          await serveScript(res, filePath, url.pathname, rootDir)
+          let code = scriptCache?.get(filePath)
+          if (code === undefined) {
+            code = await compileScript(res, filePath, url.pathname, rootDir)
+            if (code === undefined) return
+            scriptCache?.set(filePath, code)
+          }
+          res.writeHead(200, { 'Content-Type': 'application/javascript' })
+          res.end(code)
           return
         } catch (error) {
           logError(`Error serving ${url.pathname}`, error)
@@ -161,12 +174,12 @@ function urlPathToFilePath(urlPath: string, rootDir: string): string | null {
 const TS_EXTS = new Set(['.ts', '.tsx', '.mts', '.cts'])
 const JS_EXTS = new Set(['.js', '.mjs', '.cjs', '.jsx'])
 
-async function serveScript(
+async function compileScript(
   res: http.ServerResponse,
   filePath: string,
   urlPath: string,
   rootDir: string,
-): Promise<void> {
+): Promise<string | undefined> {
   let ext = path.extname(filePath)
   let isTs = TS_EXTS.has(ext)
   let isJs = JS_EXTS.has(ext)
@@ -191,15 +204,11 @@ async function serveScript(
   }
 
   try {
-    code = await rewriteImports(code, filePath, rootDir)
+    return await rewriteImports(code, filePath, rootDir)
   } catch (error) {
     logError(`Failed to rewrite imports for ${urlPath}`, error)
     sendText(res, 500, `Failed to rewrite imports for ${urlPath}`)
-    return
   }
-
-  res.writeHead(200, { 'Content-Type': 'application/javascript' })
-  res.end(code)
 }
 
 // Rewrite every import/export specifier in the (already-transformed) source so

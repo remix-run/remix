@@ -183,7 +183,10 @@ async function runRemixTestInCwd(invocationConfig: RemixTestConfig, cwd: string)
         let { startServer } = IS_RUNNING_FROM_SRC
           ? await importModule('./app/server.ts', import.meta)
           : await import(`./app/server.js`)
-        let result = await startServer(browserFiles, { only: config.only })
+        let result = await startServer(browserFiles, {
+          only: config.only,
+          cacheScripts: !config.watch && !config.browser.open,
+        })
         browserServer = result.server
         browserServerFilesKey = browserFilesKey
         browserBaseUrl = result.baseUrl
