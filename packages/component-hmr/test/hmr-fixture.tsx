@@ -31,7 +31,7 @@ const nodeTsxImportUrl = pathToFileURL(
 ).href
 const componentHmrNodeImportUrl = pathToFileURL(path.resolve(packageDir, 'src/node.ts')).href
 const consoleMessageTimeout = 5000
-const nodeHmrReadyTimeout = 30_000
+const nodeHmrReadyTimeout = 15_000
 export const browserStartupTimeout = 15_000
 
 type HmrFixture = {
