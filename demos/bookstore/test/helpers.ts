@@ -1,12 +1,17 @@
 import { createCookie } from 'remix/cookie'
+import { notInList } from 'remix/data-table'
 import { SetCookie, Cookie } from 'remix/headers'
 import { createMemorySessionStorage } from 'remix/session-storage/memory'
 
 import { db, loadAppMigrations, loadAppSeed } from '../app/db.ts'
+import { books } from '../app/data/schema.ts'
 import { createBookstoreRouter } from '../app/router.ts'
 
-export async function createTestRouter() {
+export async function createTestRouter(options: { bookIds?: number[] } = {}) {
   await db.reset({ migrations: await loadAppMigrations(), seed: await loadAppSeed() })
+  if (options.bookIds) {
+    await db.deleteMany(books, { where: notInList('id', options.bookIds) })
+  }
 
   let sessionCookie = createCookie('session', {
     secrets: ['s3cr3t-k3y-for-d3mo'],

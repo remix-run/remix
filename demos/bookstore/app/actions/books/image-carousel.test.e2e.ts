@@ -13,7 +13,7 @@ setTimeout(() => {
 
 describe('book image selection', () => {
   it('updates the URL without fetching and preserves selection through reloads and Back', async (t) => {
-    let router = await createTestRouter()
+    let router = await createTestRouter({ bookIds: [1, 2, 3] })
     let requests: URL[] = []
     let pageErrors: string[] = []
     let page = await t.serve(

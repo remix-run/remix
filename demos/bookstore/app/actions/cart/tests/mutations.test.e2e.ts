@@ -1091,7 +1091,7 @@ async function serveCart(
   path = '/cart',
   freezeTime = false,
 ): Promise<Page> {
-  let router = await createTestRouter()
+  let router = await createTestRouter({ bookIds: [1, 2, 3] })
   let page = await t.serve(
     await createTestServer(async (request) => {
       if (new URL(request.url).pathname === '/cart/api/add') return router.fetch(request)

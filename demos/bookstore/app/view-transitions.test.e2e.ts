@@ -5,9 +5,14 @@ import type { Page } from 'playwright'
 
 import { createTestRouter } from '../test/helpers.ts'
 
+// Two catalog rows plus the three cookbook relatives are enough to exercise scrolling and Back.
+const transitionBookIds = [1, 2, 3, 4, 5, 6, 11, 13, 33, 34]
+
 describe('bookstore view transitions', () => {
   it('reverses the selected related cover on Back and restores it on Forward', async (t) => {
-    let page = await t.serve(await createTestServer((await createTestRouter()).fetch))
+    let page = await t.serve(
+      await createTestServer((await createTestRouter({ bookIds: transitionBookIds })).fetch),
+    )
     await page.setViewportSize({ width: 1280, height: 1800 })
     await pauseViewTransitions(page)
     await page.goto('/books/bbq')
@@ -69,11 +74,13 @@ describe('bookstore view transitions', () => {
   })
 
   it('cross-fades content while moving only the cover from a scrolled catalog', async (t) => {
-    let page = await t.serve(await createTestServer((await createTestRouter()).fetch))
+    let page = await t.serve(
+      await createTestServer((await createTestRouter({ bookIds: transitionBookIds })).fetch),
+    )
     let errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     await pauseViewTransitions(page)
-    await page.goto('/books')
+    await page.goto('/books', { waitUntil: 'domcontentloaded' })
     let entry = await page.locator('script[type="module"][src]').getAttribute('src')
     assert.ok(entry)
     await page.evaluate(async (href) => {
@@ -145,7 +152,9 @@ describe('bookstore view transitions', () => {
   })
 
   it('moves only faceout covers when navigating through related cards and back to the catalog', async (t) => {
-    let page = await t.serve(await createTestServer((await createTestRouter()).fetch))
+    let page = await t.serve(
+      await createTestServer((await createTestRouter({ bookIds: transitionBookIds })).fetch),
+    )
     let errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     await page.setViewportSize({ width: 1280, height: 1800 })

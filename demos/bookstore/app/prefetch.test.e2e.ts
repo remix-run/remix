@@ -268,14 +268,17 @@ describe('bookstore prefetching', () => {
         return router.fetch(request)
       }),
     )
-    let prefetched = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/books/bbq',
-    )
-    await page.goto('/books')
-    await waitForNavigationRuntime(page)
+    let [prefetched] = await Promise.all([
+      page.waitForResponse((response) => new URL(response.url()).pathname === '/books/bbq'),
+      (async () => {
+        await page.goto('/books/genre/cookbook', { waitUntil: 'domcontentloaded' })
+        await waitForNavigationRuntime(page)
+        let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
+        await link.scrollIntoViewIfNeeded()
+      })(),
+    ])
     let link = page.locator('a[data-rmx-prefetch="viewport"][href="/books/bbq"]').first()
-    await link.scrollIntoViewIfNeeded()
-    assert.equal((await prefetched).headers()['cache-control'], 'no-store')
+    assert.equal(prefetched.headers()['cache-control'], 'no-store')
     if (await prefetchesAssets(page)) {
       await page.locator(`head link[rel="prefetch"][href$="${scriptHref}"]`).waitFor({
         state: 'attached',
