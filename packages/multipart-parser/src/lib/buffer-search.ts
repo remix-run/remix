@@ -15,31 +15,33 @@ export function createSearch(pattern: string): SearchFunction {
   let needle = encodeAsciiPattern(pattern)
 
   let search: SearchFunction
-  // Use the built-in Buffer.indexOf method on Node.js for better perf.
+  // Use the built-in Buffer.indexOf method on Node.js and Bun for better perf.
   let BufferClass = (globalThis as any).Buffer as
     | { prototype: { indexOf(this: Uint8Array, needle: Uint8Array, start: number): number } }
     | undefined
-  if (BufferClass && !('Bun' in globalThis || 'Deno' in globalThis)) {
+  if (BufferClass && !('Deno' in globalThis)) {
     search = (haystack, start = 0) => BufferClass.prototype.indexOf.call(haystack, needle, start)
   } else {
-    let needleEnd = needle.length - 1
-    // Uint32Array instead of Uint8Array to keep skip distances for long needles from wrapping
-    // back to 0 and stalling the search.
-    let skipTable = new Uint32Array(256).fill(needle.length)
-    for (let i = 0; i < needleEnd; ++i) {
-      skipTable[needle[i]] = needleEnd - i
+    // KMP uses prefix lengths to resume partial matches after a mismatch.
+    // Each prefix entry is the length of the longest proper prefix that is also a suffix.
+    let prefixes = new Uint32Array(needle.length)
+    for (let i = 1, matched = 0; i < needle.length; ++i) {
+      while (matched > 0 && needle[i] !== needle[matched]) {
+        matched = prefixes[matched - 1]
+      }
+      if (needle[i] === needle[matched]) ++matched
+      prefixes[i] = matched
     }
 
     search = (haystack, start = 0) => {
-      let haystackLength = haystack.length
-      let i = start + needleEnd
-
-      while (i < haystackLength) {
-        for (let j = needleEnd, k = i; j >= 0 && haystack[k] === needle[j]; --j, --k) {
-          if (j === 0) return k
+      for (let i = start, matched = 0; i < haystack.length; ++i) {
+        let byte = haystack[i]
+        while (matched > 0 && byte !== needle[matched]) {
+          matched = prefixes[matched - 1]
         }
-
-        i += skipTable[haystack[i]]
+        if (byte === needle[matched]) {
+          if (++matched === needle.length) return i - matched + 1
+        }
       }
 
       return -1

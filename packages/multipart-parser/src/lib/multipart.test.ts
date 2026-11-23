@@ -47,6 +47,16 @@ describe('MultipartParser', () => {
     assert.doesNotThrow(() => new MultipartParser('b'.repeat(70)))
   })
 
+  it('preserves content when a long boundary spans input chunks', () => {
+    let boundary = '0123456789'.repeat(7)
+    let content = 'field value '.repeat(32)
+    let message = createMultipartMessage(boundary, { field: content })
+    let parts = Array.from(parseMultipart(createChunkedIterable(message, 79), { boundary }))
+
+    assert.equal(parts.length, 1)
+    assert.equal(parts[0].text, content)
+  })
+
   it('rejects boundaries longer than 70 characters', () => {
     assert.throws(
       () => new MultipartParser('b'.repeat(71)),
