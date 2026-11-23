@@ -24,16 +24,11 @@ const browserResolver = new ResolverFactory({
   tsconfig: 'auto',
 })
 
-interface BrowserTestServerOptions {
-  only?: SerializedOnlyPattern[]
-  cacheScripts?: boolean
-}
-
 type ScriptCache = Map<string, { version: string; code: string }>
 
 export async function startServer(
   browserFiles: string[],
-  options: BrowserTestServerOptions = {},
+  options: { only?: SerializedOnlyPattern[] } = {},
 ): Promise<{ server: http.Server; port: number; baseUrl: string }> {
   let handle = createRequestHandler(browserFiles, options)
 
@@ -77,7 +72,7 @@ function isAddressInfo(address: ReturnType<http.Server['address']>): address is 
 
 function createRequestHandler(
   browserFiles: string[],
-  options: BrowserTestServerOptions,
+  options: { only?: SerializedOnlyPattern[] },
 ): (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void> {
   let rootDir = getBrowserTestRootDir()
   let srcDir = IS_RUNNING_FROM_SRC
@@ -94,7 +89,7 @@ function createRequestHandler(
   }
 
   let testPaths = browserFiles.map((f) => filePathToUrl(f, rootDir)!)
-  let scriptCache: ScriptCache | undefined = options.cacheScripts ? new Map() : undefined
+  let scriptCache: ScriptCache = new Map()
 
   return async (req, res) => {
     let url = new URL(req.url ?? '/', 'http://localhost')
@@ -110,6 +105,9 @@ function createRequestHandler(
         sendText(res, 404, 'Unknown test file')
         return
       }
+      // WebKit navigates separately for each file. Only a dashboard load starts a fresh run.
+      if (file === null) scriptCache = new Map()
+
       let setupJson = JSON.stringify({
         testPaths: file === null ? testPaths : [file],
         baseDir: process.cwd(),
@@ -177,7 +175,7 @@ async function getScriptCode(
   filePath: string,
   urlPath: string,
   rootDir: string,
-  cache?: ScriptCache,
+  cache: ScriptCache,
 ): Promise<string | undefined> {
   let ext = path.extname(filePath)
   let isTs = TS_EXTS.has(ext)
@@ -187,14 +185,11 @@ async function getScriptCode(
     return
   }
 
-  let version: string | undefined
-  if (cache) {
-    // Sample before reading so an edit during compilation invalidates this entry on the next request.
-    let { dev, ino, size, mtimeNs, ctimeNs } = await fsp.stat(filePath, { bigint: true })
-    version = `${dev}:${ino}:${size}:${mtimeNs}:${ctimeNs}`
-    let cached = cache.get(filePath)
-    if (cached?.version === version) return cached.code
-  }
+  // Sample before reading so an edit during compilation invalidates this entry on the next request.
+  let { dev, ino, size, mtimeNs, ctimeNs } = await fsp.stat(filePath, { bigint: true })
+  let version = `${dev}:${ino}:${size}:${mtimeNs}:${ctimeNs}`
+  let cached = cache.get(filePath)
+  if (cached?.version === version) return cached.code
 
   let source = await fsp.readFile(filePath, 'utf-8')
   let code: string
@@ -219,7 +214,7 @@ async function getScriptCode(
     return
   }
 
-  if (version !== undefined) cache?.set(filePath, { version, code })
+  cache.set(filePath, { version, code })
   return code
 }
 

@@ -8,7 +8,7 @@ import { describe, it } from '../lib/framework.ts'
 
 describe('browser test script serving', () => {
   it('refreshes a cached script after an in-place edit of the same size', async (t) => {
-    let { file, url } = await createFixture(t, true)
+    let { file, url } = await createFixture(t)
     let time = new Date(0)
     await fsp.utimes(file, time, time)
     assert.match(await fetchScript(url), /"original"/)
@@ -17,7 +17,7 @@ describe('browser test script serving', () => {
   })
 
   it('refreshes a cached script after a same-size replacement with the original mtime', async (t) => {
-    let { file, url } = await createFixture(t, true)
+    let { file, url } = await createFixture(t)
     let time = new Date(0)
     await fsp.utimes(file, time, time)
     assert.match(await fetchScript(url), /"original"/)
@@ -28,16 +28,9 @@ describe('browser test script serving', () => {
     await fsp.rename(replacement, file)
     assert.match(await fetchScript(url), /"replaced"/)
   })
-
-  it('serves updated scripts when caching is disabled', async (t) => {
-    let { file, url } = await createFixture(t, false)
-    assert.match(await fetchScript(url), /"original"/)
-    await fsp.writeFile(file, 'export const value: string = "updated"')
-    assert.match(await fetchScript(url), /"updated"/)
-  })
 })
 
-async function createFixture(t: TestContext, cacheScripts: boolean) {
+async function createFixture(t: TestContext) {
   let root = getBrowserTestRootDir()
   let parent = path.join(root, '.tmp')
   await fsp.mkdir(parent, { recursive: true })
@@ -46,7 +39,7 @@ async function createFixture(t: TestContext, cacheScripts: boolean) {
 
   let file = path.join(dir, 'script.ts')
   await fsp.writeFile(file, 'export const value: string = "original"')
-  let { server, baseUrl } = await startServer([], { cacheScripts })
+  let { server, baseUrl } = await startServer([])
   t.after(
     () =>
       new Promise<void>((resolve, reject) =>
