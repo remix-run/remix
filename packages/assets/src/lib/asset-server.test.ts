@@ -6291,7 +6291,7 @@ describe('asset-server', () => {
         let chromeEntry = await get(assetServer, '/assets/app/entry.ts', chromeHeaders)
         assert.ok(chromeEntry)
         assert.equal(chromeEntry.status, 200)
-        assert.equal(chromeEntry.headers.get('Vary'), 'User-Agent')
+        assert.equal(chromeEntry.headers.get('Vary'), 'User-Agent, Accept-Encoding')
 
         let chromeNotModified = await get(assetServer, '/assets/app/entry.ts', {
           ...chromeHeaders,
@@ -6299,13 +6299,27 @@ describe('asset-server', () => {
         })
         assert.ok(chromeNotModified)
         assert.equal(chromeNotModified.status, 304)
-        assert.equal(chromeNotModified.headers.get('Vary'), 'User-Agent')
+        assert.equal(chromeNotModified.headers.get('Vary'), 'User-Agent, Accept-Encoding')
       } finally {
         await assetServer.close()
       }
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
+  })
+
+  it('keeps ordinary script cache headers when the HMR channel factory opts out', async (t) => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    let assetServer = createWatchedTestServer(dir, { hmr: async () => undefined })
+    t.after(() => assetServer.close())
+
+    let response = await get(assetServer, '/assets/app/entry.ts', {
+      'User-Agent': 'AppleWebKit/605.1.15 Safari/605.1.15',
+    })
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('Cache-Control'), 'no-cache')
+    assert.equal(response.headers.get('Vary'), null)
   })
 
   it('hot updates optimized barrel import graph changes while keeping CSS updates hot', async () => {

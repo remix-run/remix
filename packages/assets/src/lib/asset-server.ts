@@ -437,6 +437,8 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   let fileCompiler: FileCompiler | null = null
   let closed = false
   let unsubscribeBrowserHmrFileEvents: (() => void) | undefined
+  // Protect initial preloads while a configured channel starts without delaying script responses.
+  let varyHmrScripts = resolvedOptions.hmr !== null
   let browserHmrChannelPromise = createBrowserHmrChannel(
     resolvedOptions.hmr,
     handleBrowserHmrFileEvents,
@@ -445,11 +447,15 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       unsubscribeBrowserHmrFileEvents = unsubscribe
     },
   )
-  void browserHmrChannelPromise.catch(() => {
-    // The HMR client request and close() both await this promise. Attach a
-    // rejection handler now so async factory failures do not surface first as
-    // unhandled rejections.
-  })
+  void browserHmrChannelPromise.then(
+    (channel) => {
+      varyHmrScripts = channel !== null
+    },
+    () => {
+      // The HMR client request and close() still report the original factory failure.
+      varyHmrScripts = false
+    },
+  )
   let sendHmrPayload = resolvedOptions.hmr ? createHmrPayloadSender() : null
   let hmrPathnames = getHmrPathnames(resolvedOptions.basePath)
   let hmrDataKey = `remix/assets@1:${resolvedOptions.basePath}`
@@ -817,7 +823,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
           )
         }
 
-        if (resolvedOptions.hmr && !parsedRequestPathname.isSourceMapRequest) {
+        if (varyHmrScripts && !parsedRequestPathname.isSourceMapRequest) {
           let userAgent = request.headers.get('User-Agent') ?? ''
           let isWebKit =
             userAgent.includes('AppleWebKit') &&
@@ -825,7 +831,8 @@ export function createAssetServer<const transforms extends AssetRequestTransform
             !userAgent.includes('Chromium')
           // WebKit can reuse preloaded modules across reloads despite Cache-Control.
           // Limit the wildcard to WebKit because the Cache API rejects those responses.
-          response.headers.set('Vary', isWebKit ? '*' : 'User-Agent')
+          // Keep Accept-Encoding on 304s when downstream middleware compresses the scripts.
+          response.headers.set('Vary', isWebKit ? '*' : 'User-Agent, Accept-Encoding')
         }
         return response
       } catch (error) {
