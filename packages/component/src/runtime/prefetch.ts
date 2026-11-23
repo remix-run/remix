@@ -1,5 +1,5 @@
 import { getNamedFrame, pendingPrefetchLinks } from './frame.ts'
-import { getInterceptableNavigation, getSameOriginUrl } from './navigation.ts'
+import { getInterceptableNavigation, getSameOriginUrl, hasNoReferrer } from './navigation.ts'
 
 /** Options for a URL prefetch trigger. */
 export interface PrefetchOptions {
@@ -268,6 +268,8 @@ function createAnchorPrefetching(
         'data-rmx-prefetch',
         'download',
         'data-rmx-document',
+        'rel',
+        'referrerpolicy',
         'data-rmx-target',
         'data-rmx-src',
         'target',
@@ -593,6 +595,8 @@ function getAnchorPrefetchRequest(
     !anchor.hasAttribute('href') ||
     anchor.hasAttribute('download') ||
     anchor.hasAttribute('data-rmx-document') ||
+    anchor.hasAttribute('referrerpolicy') ||
+    hasNoReferrer(anchor) ||
     (anchor.target !== '' && anchor.target !== '_self')
   ) {
     return

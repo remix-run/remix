@@ -27,6 +27,7 @@ import {
   getFrameRuntime,
   getSharedFrameRuntime,
   isFrameRuntime,
+  navigationRequest,
   setClientEntryBoundaryOwner,
   type ClientEntryIdentity,
   type FrameMountState,
@@ -275,7 +276,7 @@ export function reloadFrameForNavigation(
   invariant(isFrameRuntime(runtime), 'Expected a frame runtime')
   let reload = runtime.reloadForNavigation
   invariant(reload, 'Expected frame runtime to support navigation reloads')
-  return reload(options)
+  return reload({ ...options, [navigationRequest]: true })
 }
 
 export type FrameContext = {
@@ -3134,7 +3135,7 @@ function getSubmissionAttribute(
   if (submitter?.hasAttribute(submitterName)) {
     return submitter.getAttribute(submitterName)
   }
-  return form.getAttribute(name)
+  return Element.prototype.getAttribute.call(form, name)
 }
 
 function getFormMethod(form: HTMLFormElement, submitter: SubmitterElement | null): string {
