@@ -1,1 +1,1 @@
-Use native Buffer search on Bun and KMP for boundary matching in the JavaScript fallback.
+Improve multipart boundary search performance with native `Buffer.indexOf` on Bun and KMP in the JavaScript fallback.
