@@ -12,6 +12,7 @@ async function openDocs(t: TestContext) {
   })
   let page = await t.serve(await createTestServer(router.fetch))
   await page.goto('/patterns/dialog/')
+  await page.locator('html[data-test-hydrated]').waitFor({ state: 'attached' })
   return page
 }
 
