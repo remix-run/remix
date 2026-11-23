@@ -1,7 +1,9 @@
+import * as assert from 'remix/assert'
 import { createCookie } from 'remix/cookie'
 import { notInList } from 'remix/data-table'
 import { SetCookie, Cookie } from 'remix/headers'
 import { createMemorySessionStorage } from 'remix/session-storage/memory'
+import type { Page } from 'playwright'
 
 import { db, loadAppMigrations, loadAppSeed } from '../app/db.ts'
 import { books } from '../app/data/schema.ts'
@@ -118,4 +120,20 @@ export function loginAsAdmin(router: any): Promise<string> {
  */
 export function loginAsCustomer(router: any): Promise<string> {
   return login(router, 'customer@example.com', 'password123')
+}
+
+export async function expectSelectedImage(page: Page, imageNumber: number): Promise<void> {
+  await page.waitForFunction((selected) => {
+    let image = document.querySelector(`img[alt="Image ${selected} of 3"]`)
+    let viewport = image?.parentElement?.parentElement?.parentElement
+    return (
+      image instanceof HTMLImageElement &&
+      viewport != null &&
+      Math.abs(image.getBoundingClientRect().left - viewport.getBoundingClientRect().left) < 1
+    )
+  }, imageNumber)
+  assert.equal(
+    await page.getByRole('img', { name: `Image ${imageNumber} of 3` }).getAttribute('loading'),
+    'eager',
+  )
 }
