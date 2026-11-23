@@ -124,6 +124,10 @@ describe('startDocsShellBehavior', () => {
   it('keeps the navigation panel open while page navigation is pending', () => {
     let fixture = createShellFixture()
 
+    // Keep the test iframe in place. The fixture signals navigation completion below.
+    fixture.navigationLink.addEventListener('click', (event) => event.preventDefault(), {
+      once: true,
+    })
     fixture.mobileNavigationToggle.click()
     fixture.navigationLink.click()
 
