@@ -7,6 +7,7 @@ import {
 import { createMatcher } from 'remix/route-pattern/match'
 
 import { routes } from '../../routes.ts'
+import { transitionBookPage } from '../../ui/book-transitions.ts'
 import { installDebugBoundaries } from './debug-boundaries.ts'
 import { createFrameRequestManager } from './frame-request-manager.ts'
 import { createRelatedBookPrefetchManager } from './related-book-prefetch-manager.ts'
@@ -93,18 +94,6 @@ export const app = run({
         })
       },
       async commit(commitFrame, { signal, to }) {
-        let navigationType = options?.navigationType
-        if (
-          options?.target ||
-          !navigationType ||
-          navigationType === 'reload' ||
-          !document.startViewTransition ||
-          matchMedia('(prefers-reduced-motion: reduce)').matches ||
-          signal.aborted
-        ) {
-          return commitFrame()
-        }
-
         let from = options?.from?.url
         let toBook = bookDetailsMatcher.match(to)
         let fromBook = from != null ? bookDetailsMatcher.match(from) : null
@@ -116,29 +105,17 @@ export const app = run({
               )
               ?.closest('[data-book-id]')
           : null
-        let goingBack =
-          navigationType === 'traverse' &&
-          options?.from != null &&
-          navigation.currentEntry != null &&
-          navigation.currentEntry.index < options.from.index
-        let outgoingBookId = faceout?.getAttribute('data-book-faceout')
-        let incomingBookId = destinationCard?.getAttribute('data-book-id')
-        // Back returns the outgoing faceout to its card; forward navigation opens the next cover.
-        let bookId = goingBack
-          ? (outgoingBookId ?? incomingBookId)
-          : (incomingBookId ?? outgoingBookId)
-
-        let viewTransition = document.startViewTransition(commitFrame)
-        if (bookId) viewTransition.types?.add(`book-cover-${bookId}`)
-        let skip = () => viewTransition.skipTransition()
-        signal.addEventListener('abort', skip, { once: true })
-        void viewTransition.ready.catch(() => {})
-
-        try {
-          await viewTransition.finished
-        } finally {
-          signal.removeEventListener('abort', skip)
-        }
+        return transitionBookPage(commitFrame, {
+          target: options?.target,
+          navigationType: options?.navigationType,
+          fromIndex: options?.from?.index,
+          currentIndex: window.navigation?.currentEntry?.index,
+          faceoutBookId: faceout?.getAttribute('data-book-faceout'),
+          cardBookId: destinationCard?.getAttribute('data-book-id'),
+          reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+          signal,
+          startViewTransition: document.startViewTransition?.bind(document),
+        })
       },
     })
   },

@@ -16,6 +16,7 @@
       "demos/bookstore/app/actions/auth/login/login-schema.ts",
       "demos/bookstore/app/actions/auth/schemas.ts",
       "demos/bookstore/app/ui/restful-form.tsx",
+      "demos/bookstore/app/ui/book-transitions.ts",
       "demos/bookstore/app/images/*.png"
     ],
     "allowPackages": ["remix", "@remix-run/ui"],
