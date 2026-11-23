@@ -114,7 +114,7 @@ describe('cart submissions', () => {
   })
 
   it('redirects native toggles to the initiating page and flashes errors on the matching book once', async (t) => {
-    let router = await createTestRouter()
+    let router = await createTestRouter({ bookIds: [1, 2, 3] })
     let server = await createTestServer((request) => router.fetch(request))
     let runtimePage = await t.serve(server)
     let browser = runtimePage.context().browser()
