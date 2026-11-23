@@ -101,8 +101,14 @@ describe('bookstore view transitions', () => {
     assert.notEqual(middle.cover.transform, start.cover.transform)
     assert.equal(start.title, 'none')
     assert.deepEqual(middle.snapshotTransforms, ['none', 'none'])
-    assert.ok(middle.oldOpacity < start.oldOpacity)
-    assert.ok(middle.newOpacity > start.newOpacity)
+    assert.ok(
+      middle.oldOpacity < start.oldOpacity,
+      `Old snapshot opacity: ${start.oldOpacity} -> ${middle.oldOpacity}`,
+    )
+    assert.ok(
+      middle.newOpacity > start.newOpacity,
+      `New snapshot opacity: ${start.newOpacity} -> ${middle.newOpacity}`,
+    )
     let resetScroll = await page.evaluate(() => scrollY)
     assert.ok(Math.abs(resetScroll) <= 1, `Expected scroll near 0, received ${resetScroll}`)
     await page.evaluate(() => {
@@ -122,8 +128,14 @@ describe('bookstore view transitions', () => {
     assert.notEqual(middle.cover.transform, start.cover.transform)
     assert.equal(start.title, 'none')
     assert.deepEqual(middle.snapshotTransforms, ['none', 'none'])
-    assert.ok(middle.oldOpacity < start.oldOpacity)
-    assert.ok(middle.newOpacity > start.newOpacity)
+    assert.ok(
+      middle.oldOpacity < start.oldOpacity,
+      `Old snapshot opacity: ${start.oldOpacity} -> ${middle.oldOpacity}`,
+    )
+    assert.ok(
+      middle.newOpacity > start.newOpacity,
+      `New snapshot opacity: ${start.newOpacity} -> ${middle.newOpacity}`,
+    )
     let restoredScroll = await page.evaluate(() => scrollY)
     assert.ok(
       Math.abs(restoredScroll - originalScroll) <= 1,

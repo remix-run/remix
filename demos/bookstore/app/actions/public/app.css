@@ -162,6 +162,9 @@
   }
 
   @keyframes bookstore-page-out {
+    from {
+      opacity: 1;
+    }
     to {
       opacity: 0;
     }
@@ -170,6 +173,9 @@
   @keyframes bookstore-page-in {
     from {
       opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 
