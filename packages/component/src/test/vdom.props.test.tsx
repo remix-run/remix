@@ -111,6 +111,31 @@ describe('vnode rendering', () => {
       expect(element.settings).toBe(settings)
     })
 
+    it('passes empty strings through custom properties after boolean values', (t) => {
+      class HostPropsElement extends HTMLElement {
+        settings: string | boolean = false
+      }
+
+      let tagName = 'x-remix-host-props-empty-string-test'
+      if (!customElements.get(tagName)) customElements.define(tagName, HostPropsElement)
+
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(createElement(tagName, { settings: false }))
+      root.flush()
+
+      let element = container.querySelector(tagName)
+      invariant(element instanceof HostPropsElement)
+      expect(element.settings).toBe(false)
+
+      root.render(createElement(tagName, { settings: '' }))
+      root.flush()
+
+      expect(container.querySelector(tagName)).toBe(element)
+      expect(element.settings).toBe('')
+    })
+
     it('sets custom element properties even when their getters throw', () => {
       class HostPropsElement extends HTMLElement {
         received: unknown = undefined

@@ -128,7 +128,9 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
     // `""` would mean false. `hidden` can currently hold the string "until-found".
     if (value === '') {
       try {
-        if (name === 'hidden' || typeof dom[name] === 'boolean') value = true
+        if (name === 'hidden' || (!dom.localName.includes('-') && typeof dom[name] === 'boolean')) {
+          value = true
+        }
       } catch {}
     }
     try {
