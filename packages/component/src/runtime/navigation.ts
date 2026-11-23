@@ -1170,12 +1170,14 @@ function getSourceElementNavigation(
 }
 
 export function hasNoReferrer(element: Element): boolean {
+  // A form control named getAttribute can shadow the method on its form.
+  let rel = Element.prototype.getAttribute.call(element, 'rel')
   return (
-    element
-      .getAttribute('rel')
-      ?.toLowerCase()
+    rel !== null &&
+    rel
+      .toLowerCase()
       .split(/[\t\n\f\r ]+/)
-      .includes('noreferrer') ?? false
+      .includes('noreferrer')
   )
 }
 

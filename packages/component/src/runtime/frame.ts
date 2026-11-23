@@ -3134,7 +3134,7 @@ function getSubmissionAttribute(
   if (submitter?.hasAttribute(submitterName)) {
     return submitter.getAttribute(submitterName)
   }
-  return form.getAttribute(name)
+  return Element.prototype.getAttribute.call(form, name)
 }
 
 function getFormMethod(form: HTMLFormElement, submitter: SubmitterElement | null): string {

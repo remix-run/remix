@@ -3232,6 +3232,24 @@ describe('form navigation', () => {
     expect(intercept).not.toHaveBeenCalled()
   })
 
+  it('intercepts forms with a control named getAttribute', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    let input = document.createElement('input')
+    input.name = 'getAttribute'
+    form.append(input)
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createFormNavigateEvent(form, {
+        intercept,
+        destinationUrl: new URL('/public', window.location.href).href,
+      }),
+    )
+
+    expect(intercept).toHaveBeenCalledTimes(1)
+  })
+
   it('does not intercept dialog forms or forms submitted to a new browsing context', (t) => {
     let navigateListener: EventListener | undefined
     let stubNavigation = {
