@@ -593,6 +593,10 @@ function setPropertyReflection(element: Element, key: string, value: unknown): v
     return
   }
   if (!canReflectProperty(element, key)) return
+  if (key === 'checked' && value === '') {
+    patchHostProps({}, { checked: value }, element)
+    return
+  }
   element[key] = value == null ? '' : value
 }
 
@@ -1153,7 +1157,7 @@ function mountHostNode(
         setSelectDefaultValue(dom, value, scalar)
       }
     } else if (dom instanceof HTMLOptionElement) {
-      dom.defaultSelected = Boolean(hostProps.selected)
+      dom.defaultSelected = hostProps.selected === '' || Boolean(hostProps.selected)
     }
   }
 

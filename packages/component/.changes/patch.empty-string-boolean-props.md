@@ -1,0 +1,1 @@
+Keep a boolean attribute given an empty string, such as `disabled: ""` from an untyped attribute object, present in the browser as it is in server-rendered HTML. The server rendered `disabled=""`, but the browser runtime set the `disabled` property to `""`, which is false, so a control disabled in the server HTML became enabled at hydration without a warning.

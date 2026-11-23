@@ -124,6 +124,19 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
   }
 
   if (canUseProperty(dom, name, isSvg, attr)) {
+    // An empty attribute means present, and the server renders `""` as one. As a boolean property,
+    // `""` would mean false. `hidden` can currently hold the string "until-found".
+    if (value === '') {
+      try {
+        if (
+          name === 'hidden' ||
+          ((!dom.localName.includes('-') || name in HTMLElement.prototype) &&
+            typeof dom[name] === 'boolean')
+        ) {
+          value = true
+        }
+      } catch {}
+    }
     try {
       dom[name] = value == null ? '' : value
       return
