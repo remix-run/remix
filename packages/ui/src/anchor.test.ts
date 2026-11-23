@@ -1,5 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
+import type { TestContext } from '@remix-run/test'
 
 import { anchor } from './anchor.ts'
 
@@ -85,61 +86,28 @@ function mockLayout(element: HTMLElement, rectInit: RectInit) {
   }
 }
 
-let rafSpy: ReturnType<typeof mock.method>
-let cafSpy: ReturnType<typeof mock.method>
-
-beforeEach(() => {
-  rafSpy = mock.method(globalThis, 'requestAnimationFrame', () => 1)
-  cafSpy = mock.method(globalThis, 'cancelAnimationFrame', () => {})
-
-  Object.defineProperty(window, 'innerWidth', {
-    configurable: true,
-    value: 800,
-    writable: true,
-  })
-
-  Object.defineProperty(window, 'innerHeight', {
-    configurable: true,
-    value: 600,
-    writable: true,
-  })
-})
-
-afterEach(() => {
-  rafSpy.mock.restore!()
-  cafSpy.mock.restore!()
-  document.body.textContent = ''
-})
-
 describe('anchor', () => {
-  it('preserves an inline fixed surface and tracks its anchor in viewport coordinates', (t) => {
-    let floating = document.createElement('div')
-    floating.style.position = 'fixed'
-    let anchorElement = document.createElement('button')
-    document.body.append(floating, anchorElement)
+  let rafSpy: ReturnType<typeof mock.method>
+  let cafSpy: ReturnType<typeof mock.method>
+  let restoreViewport = () => {}
 
-    mockLayout(floating, { top: 0, left: 0, width: 120, height: 80 })
-    let layout = mockLayout(anchorElement, { top: 200, left: 200, width: 80, height: 28 })
-    let scrollX = 100
-    let scrollY = 200
-    t.mock.getter(window, 'scrollX', () => scrollX)
-    t.mock.getter(window, 'scrollY', () => scrollY)
+  beforeEach(() => {
+    rafSpy = mock.method(globalThis, 'requestAnimationFrame', () => 1)
+    cafSpy = mock.method(globalThis, 'cancelAnimationFrame', () => {})
 
-    let cleanup = anchor(floating, anchorElement, { placement: 'bottom-start' })
-    t.after(cleanup)
+    let width = mock.getter(window, 'innerWidth', () => 800)
+    let height = mock.getter(window, 'innerHeight', () => 600)
+    restoreViewport = () => {
+      width.mock.restore()
+      height.mock.restore()
+    }
+  })
 
-    expect(floating.style.position).toBe('fixed')
-    expect(floating.style.top).toBe('228px')
-    expect(floating.style.left).toBe('200px')
-
-    scrollX = 150
-    scrollY = 250
-    layout.setRect({ top: 150, left: 150, width: 80, height: 28 })
-    window.dispatchEvent(new Event('scroll'))
-
-    expect(floating.style.position).toBe('fixed')
-    expect(floating.style.top).toBe('178px')
-    expect(floating.style.left).toBe('150px')
+  afterEach(() => {
+    rafSpy.mock.restore!()
+    cafSpy.mock.restore!()
+    restoreViewport()
+    document.body.textContent = ''
   })
 
   it('positions a floating element below its anchor by default', () => {
@@ -191,6 +159,36 @@ describe('anchor', () => {
     expect(floating.style.left).toBe('200px')
 
     cleanup()
+  })
+
+  it('preserves an inline fixed surface and tracks its anchor in viewport coordinates', (t) => {
+    let floating = document.createElement('div')
+    floating.style.position = 'fixed'
+    let anchorElement = document.createElement('button')
+    document.body.append(floating, anchorElement)
+
+    mockLayout(floating, { top: 0, left: 0, width: 120, height: 80 })
+    let layout = mockLayout(anchorElement, { top: 200, left: 200, width: 80, height: 28 })
+    let scrollX = 100
+    let scrollY = 200
+    t.mock.getter(window, 'scrollX', () => scrollX)
+    t.mock.getter(window, 'scrollY', () => scrollY)
+
+    let cleanup = anchor(floating, anchorElement, { placement: 'bottom-start' })
+    t.after(cleanup)
+
+    expect(floating.style.position).toBe('fixed')
+    expect(floating.style.top).toBe('228px')
+    expect(floating.style.left).toBe('200px')
+
+    scrollX = 150
+    scrollY = 250
+    layout.setRect({ top: 150, left: 150, width: 80, height: 28 })
+    window.dispatchEvent(new Event('scroll'))
+
+    expect(floating.style.position).toBe('fixed')
+    expect(floating.style.top).toBe('178px')
+    expect(floating.style.left).toBe('150px')
   })
 
   it('supports horizontal and vertical offsets independently', () => {
@@ -504,3 +502,113 @@ describe('anchor', () => {
     expect(cancelAnimationFrame).toHaveBeenCalledWith(1)
   })
 })
+
+describe('anchor page scrolling', () => {
+  it('keeps a fixed surface aligned inside a positioned ancestor while the page scrolls', async (t) => {
+    let originalStyle = document.body.getAttribute('style')
+    let originalScroll = { left: window.scrollX, top: window.scrollY }
+    let style = document.createElement('style')
+    style.textContent = '.anchor-test-floating { position: fixed; width: 120px; height: 80px; }'
+    let container = document.createElement('div')
+    container.style.cssText = 'position: relative; margin: 400px 0 0 300px;'
+    let target = document.createElement('div')
+    target.style.cssText = 'width: 80px; height: 28px;'
+    let floating = document.createElement('div')
+    floating.className = 'anchor-test-floating'
+    container.append(target, floating)
+    document.body.style.cssText = 'margin: 0; width: 2000px; height: 2000px;'
+    document.head.append(style)
+    document.body.append(container)
+    let cleanup = () => {}
+    t.after(() => {
+      cleanup()
+      container.remove()
+      style.remove()
+      if (originalStyle === null) document.body.removeAttribute('style')
+      else document.body.setAttribute('style', originalStyle)
+      window.scrollTo(originalScroll)
+    })
+
+    window.scrollTo(100, 200)
+    await t.waitFor(() => {
+      expect(window.scrollX).toBe(100)
+      expect(window.scrollY).toBe(200)
+    })
+    cleanup = anchor(floating, target, { placement: 'bottom-start' })
+
+    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
+    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+    expect(getComputedStyle(floating).position).toBe('fixed')
+
+    window.scrollTo(150, 250)
+    await t.waitFor(() => {
+      expect(window.scrollX).toBe(150)
+      expect(window.scrollY).toBe(250)
+      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
+      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+    })
+
+    cleanup()
+    cleanup = anchor(floating, target, { placement: 'bottom-start' })
+    expect(floating.getBoundingClientRect().left).toBe(150)
+    expect(floating.getBoundingClientRect().top).toBe(178)
+    expect(getComputedStyle(floating).position).toBe('fixed')
+  })
+
+  it('keeps a surface aligned inside a transformed ancestor while the page scrolls', async (t) => {
+    await expectContainedSurfaceToTrackAnchor(t, 'transform: translateZ(0)')
+  })
+
+  it('keeps a surface aligned inside paint containment while the page scrolls', async (t) => {
+    await expectContainedSurfaceToTrackAnchor(t, 'contain: paint')
+  })
+
+  it('keeps a surface aligned inside will-change containment while the page scrolls', async (t) => {
+    await expectContainedSurfaceToTrackAnchor(t, 'will-change: transform')
+  })
+})
+
+async function expectContainedSurfaceToTrackAnchor(t: TestContext, containingStyle: string) {
+  let originalStyle = document.body.getAttribute('style')
+  let originalScroll = { left: window.scrollX, top: window.scrollY }
+  let container = document.createElement('div')
+  container.style.cssText = `position: relative; ${containingStyle}; width: 2000px; height: 2000px; padding: 300px 0 0 200px; box-sizing: border-box;`
+  let target = document.createElement('div')
+  target.style.cssText = 'width: 80px; height: 28px;'
+  let floating = document.createElement('div')
+  floating.style.cssText = 'position: fixed; width: 120px; height: 80px;'
+  container.append(target, floating)
+  document.body.style.cssText = 'margin: 0; overflow-anchor: none;'
+  document.body.append(container)
+  let cleanup = () => {}
+  t.after(() => {
+    cleanup()
+    container.remove()
+    if (originalStyle === null) document.body.removeAttribute('style')
+    else document.body.setAttribute('style', originalStyle)
+    window.scrollTo(originalScroll)
+  })
+
+  window.scrollTo(50, 100)
+  await t.waitFor(() => {
+    expect(window.scrollX).toBe(50)
+    expect(window.scrollY).toBe(100)
+  })
+  cleanup = anchor(floating, target, { placement: 'bottom-start' })
+
+  expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
+  expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+
+  window.scrollTo(100, 150)
+  await t.waitFor(() => {
+    expect(window.scrollX).toBe(100)
+    expect(window.scrollY).toBe(150)
+    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
+    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+  })
+
+  cleanup()
+  cleanup = anchor(floating, target, { placement: 'bottom-start' })
+  expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
+  expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+}

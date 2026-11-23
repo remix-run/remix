@@ -701,6 +701,43 @@ function solveRelativeAlignmentAxis(options: {
   }
 }
 
+function hasFixedContainingBlock(floating: HTMLElement) {
+  let parent: Node | null = floating.parentNode
+
+  while (parent) {
+    if (parent instanceof Element) {
+      let style = getComputedStyle(parent)
+      if (
+        [
+          'transform',
+          'translate',
+          'rotate',
+          'scale',
+          'perspective',
+          'filter',
+          'backdrop-filter',
+          '-webkit-backdrop-filter',
+        ].some((property) => {
+          let value = style.getPropertyValue(property)
+          return value !== '' && value !== 'none'
+        }) ||
+        /(^|\s)(layout|paint|strict|content)(\s|$)/.test(style.contain) ||
+        /(^|,)\s*(transform|translate|rotate|scale|perspective|filter|backdrop-filter|contain|content-visibility)\s*(,|$)/.test(
+          style.willChange,
+        ) ||
+        (style.containerType !== '' && style.containerType !== 'normal') ||
+        style.contentVisibility === 'auto' ||
+        style.contentVisibility === 'hidden'
+      ) {
+        return true
+      }
+    }
+    parent = parent instanceof ShadowRoot ? parent.host : parent.parentNode
+  }
+
+  return false
+}
+
 /**
  * Positions a floating element against a target and tracks geometry, scroll, and resize changes.
  *
@@ -742,7 +779,8 @@ export function anchor(
     anchorTarget instanceof HTMLElement && getComputedStyle(anchorTarget).position !== 'fixed'
   let isFixed =
     floating.hasAttribute('popover') ||
-    getComputedStyle(floating).position === 'fixed' ||
+    // Preserve viewport-fixed surfaces without changing the strategy inside containing blocks.
+    (getComputedStyle(floating).position === 'fixed' && !hasFixedContainingBlock(floating)) ||
     !anchorIsAbsolutePositioned
   let animationFrameId = 0
 
