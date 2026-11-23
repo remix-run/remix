@@ -1676,6 +1676,34 @@ describe('navigate', () => {
     controller.abort()
   })
 
+  it('leaves noreferrer links to native navigation', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/public'
+    anchor.rel = 'noopener NOREFERRER'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, { intercept, destinationUrl: anchor.href }),
+    )
+
+    expect(intercept).not.toHaveBeenCalled()
+  })
+
+  it('leaves explicit link referrer policies to native navigation', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/public'
+    anchor.referrerPolicy = 'origin'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, { intercept, destinationUrl: anchor.href }),
+    )
+
+    expect(intercept).not.toHaveBeenCalled()
+  })
+
   it('intercepts SVG anchors without exposing them as HTML origin elements', async (t) => {
     let reloadFrame = mock.fn((frame: FrameHandle, _options?: FrameNavigationOptions) =>
       stubFrames.reloadFrame(frame),
@@ -3186,6 +3214,22 @@ describe('form navigation', () => {
 
     expect(intercept).not.toHaveBeenCalled()
     controller.abort()
+  })
+
+  it('leaves noreferrer forms to native navigation', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.rel = 'noreferrer'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createFormNavigateEvent(form, {
+        intercept,
+        destinationUrl: new URL('/public', window.location.href).href,
+      }),
+    )
+
+    expect(intercept).not.toHaveBeenCalled()
   })
 
   it('does not intercept dialog forms or forms submitted to a new browsing context', (t) => {

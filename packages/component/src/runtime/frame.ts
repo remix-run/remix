@@ -27,6 +27,7 @@ import {
   getFrameRuntime,
   getSharedFrameRuntime,
   isFrameRuntime,
+  navigationRequest,
   setClientEntryBoundaryOwner,
   type ClientEntryIdentity,
   type FrameMountState,
@@ -275,7 +276,7 @@ export function reloadFrameForNavigation(
   invariant(isFrameRuntime(runtime), 'Expected a frame runtime')
   let reload = runtime.reloadForNavigation
   invariant(reload, 'Expected frame runtime to support navigation reloads')
-  return reload(options)
+  return reload({ ...options, [navigationRequest]: true })
 }
 
 export type FrameContext = {

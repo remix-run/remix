@@ -13,6 +13,7 @@ import { createStyleManager } from '../style/stylesheet.ts'
 import type { ComponentErrorEvent, Handle } from './component.ts'
 import {
   NamedFrameRegistry,
+  navigationRequest,
   type LoadModule,
   type ResolveFrame,
   type ResolveFrameOptions,
@@ -131,8 +132,9 @@ function getRequestBody(options?: ResolveFrameOptions): {
  *
  * Rejects non-HTML `3xx`/`4xx` responses and all `5xx` responses, including those returned by a
  * custom fetch implementation. The optional commit callback runs when Remix renders the response.
- * A navigation's request sends the URL of the page being left (`options.from`) as its referrer,
- * as a native navigation would.
+ * Requests initiated by the navigation runtime use the page being left as their referrer.
+ * Nested frame loads and independent calls retain the browser's default referrer.
+ * Custom resolvers should pass `options` through (or spread it) to preserve navigation referrers.
  *
  * @param src Frame source to fetch.
  * @param options Frame target, navigation transition, form submission, and cancellation settings.
@@ -155,7 +157,12 @@ export async function defaultResolveFrame(
       signal: options?.signal,
       // The Navigation API commits the destination URL before this request starts, so the browser's
       // default referrer would be the destination instead of the page being left.
-      ...(options?.from?.url ? { referrer: options.from.url } : {}),
+      ...(options &&
+      navigationRequest in options &&
+      options[navigationRequest] === true &&
+      options.from?.url
+        ? { referrer: options.from.url }
+        : {}),
     },
     encType,
     overrides?.fetch,

@@ -59,21 +59,64 @@ describe('defaultResolveFrame', () => {
     expect(headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
   })
 
-  it('sends the page being left as the referrer of a navigation', async (t) => {
-    let fetchMock = t.mock.method(globalThis, 'fetch', async () => new Response('<p>Saved</p>'))
-    let from = new URL('/products/coat?size=m', window.location.href).href
-    let formData = new FormData()
-    formData.set('quantity', '1')
-
-    await defaultResolveFrame('/cart', {
-      method: 'post',
-      formData,
-      from: { url: from } as NavigationHistoryEntry,
+  it('sends the submitting page as the referrer and leaves independent reloads at the default', async (t) => {
+    let initialUrl = window.location.href
+    let fetchMock = t.mock.method(
+      globalThis,
+      'fetch',
+      async () => new Response('<html><head></head><body><p>Saved</p></body></html>'),
+    )
+    let app = run({ loadModule: mock.fn() })
+    t.after(() => {
+      app.dispose()
+      window.history.replaceState(null, '', initialUrl)
     })
-    await defaultResolveFrame('/cart')
+    await app.ready()
+    let form = document.createElement('form')
+    form.method = 'post'
+    form.action = '?cart=save'
+    document.body.append(form)
+    let accepted = Promise.withResolvers<NavigationEvent>()
+    form.addEventListener('rmx:navigation', (event) => accepted.resolve(event), { once: true })
 
-    expect(fetchMock.mock.calls[0]!.arguments[1]?.referrer).toBe(from)
-    expect(fetchMock.mock.calls[1]!.arguments[1]?.referrer).toBeUndefined()
+    form.requestSubmit()
+    await (
+      await accepted.promise
+    ).finished
+    await app.frames.top.reload()
+
+    expect(fetchMock.mock.calls[0]?.arguments[1]?.method).toBe('post')
+    expect(fetchMock.mock.calls[0]?.arguments[1]?.referrer).toBe(initialUrl)
+    expect(fetchMock.mock.calls[1]?.arguments[1]?.referrer).toBeUndefined()
+  })
+
+  it('leaves nested frame referrers at the document default while inheriting navigation metadata', async (t) => {
+    let initialUrl = window.location.href
+    let destination = new URL('?nested-frame=referrer', initialUrl).href
+    let requested = Promise.withResolvers<ResolveFrameOptions | undefined>()
+    let fetchMock = t.mock.method(globalThis, 'fetch', async () => new Response('<p>Details</p>'))
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src, options) {
+        if (src === destination) {
+          return jsx(Frame, { src: '/nested-details', fallback: jsx('p', { children: 'Waiting' }) })
+        }
+        requested.resolve(options)
+        return defaultResolveFrame(src, options)
+      },
+    })
+    t.after(() => {
+      app.dispose()
+      window.history.replaceState(null, '', initialUrl)
+    })
+    await app.ready()
+
+    await navigate(destination, { history: 'replace' })
+    let options = await requested.promise
+
+    expect(options?.from?.url).toBe(initialUrl)
+    expect(options?.navigationType).toBe('replace')
+    expect(fetchMock.mock.calls[0]?.arguments[1]?.referrer).toBeUndefined()
   })
 
   it('preserves an absolute frame URL under a cross-origin document base', async (t) => {
