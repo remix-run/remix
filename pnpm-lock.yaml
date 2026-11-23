@@ -829,6 +829,9 @@ importers:
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
+      oxc-transform:
+        specifier: ^0.121.0
+        version: 0.121.0
       playwright:
         specifier: 'catalog:'
         version: 1.63.0
@@ -2386,7 +2389,7 @@ importers:
         specifier: workspace:^
         version: link:../component
       '@remix-run/data-schema':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../data-schema
     devDependencies:
       '@remix-run/assert':

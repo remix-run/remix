@@ -56,6 +56,10 @@ sqlite.close()
 
 Destructive lifecycle methods are unavailable when you pass an existing client.
 
+Each query parameter represents one value. The driver binds booleans as `1` or `0` and `Date` objects as UTC strings in SQLite's `current_timestamp` format, such as `'2026-06-01 12:00:00'` (with milliseconds only when they are nonzero), so they compare and sort with values SQLite writes itself. `db.exec()` returns these columns as strings; parse them as UTC, for example `new Date(value.replace(' ', 'T') + 'Z')`, since `new Date(value)` reads them as local time. It binds typed arrays, including `Buffer`, as blobs and rejects other objects, including arrays and Bun named-parameter objects. The query builder serializes values written to `json()` columns; in raw SQL, pass `JSON.stringify(value)`.
+
+Query builder results decode the values SQLite stores in another form: `json()` columns are parsed, `boolean()` columns read as `true` or `false`, and `timestamp()` columns read as `Date` objects. Timestamp text in another format, such as ISO strings or microseconds, and text in a `json()` column that is not valid JSON are returned unchanged, so a value read back still matches the stored text when used in a filter. Results from `db.exec()` keep SQLite's stored values.
+
 This is a good fit for local development, embedded deployments, and single-node services. Import any driver-specific types you need directly from your runtime's SQLite module.
 
 ## Database Capabilities

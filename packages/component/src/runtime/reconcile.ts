@@ -1217,11 +1217,15 @@ function insert(
     hydrationNode = null
   }
 
-  // Components, fragments, and empty nodes do not claim DOM nodes. Preserve
-  // client entry markers until their descendants can claim the boundary.
+  // Keep client entry markers for descendants or following siblings to claim. Empty strings
+  // need a placeholder before the marker because the server emits no Text node for them.
   hydrationNode = skipCommentsExceptBoundaryStart(
     hydrationNode ?? null,
-    node.kind === 'component' || node.kind === 'fragment' || node.kind === 'empty',
+    node.kind === 'component' ||
+      node.kind === 'fragment' ||
+      node.kind === 'empty' ||
+      (node.kind === 'text' && node._text === ''),
+    anchor,
   )
 
   if (hydrationNode && anchor && hydrationNode === anchor) {
@@ -1304,7 +1308,10 @@ function insert(
       return commitTextNode(node, vParent, svg, hydrationNode)
     }
     let dom = document.createTextNode(node._text)
-    insertDomNode(dom, domParent, anchor)
+    // The server renders nothing for an empty string, so hydration reaches the next sibling
+    // instead of a Text node. Insert before that sibling, where the child belongs, and leave it
+    // for the next child to claim.
+    insertDomNode(dom, domParent, hydrationNode?.parentNode === domParent ? hydrationNode : anchor)
     return commitTextNode(node, vParent, svg, dom)
   }
 
@@ -1420,8 +1427,10 @@ function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
 function skipCommentsExceptBoundaryStart(
   cursor: Node | null,
   preserveClientEntry: boolean,
+  anchor?: Node,
 ): Node | null {
   while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
+    if (cursor === anchor) return cursor
     if (isFrameStart(cursor)) return cursor
     if (preserveClientEntry && isHydrationStart(cursor)) return cursor
     cursor = cursor.nextSibling

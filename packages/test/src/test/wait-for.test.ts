@@ -74,7 +74,9 @@ describe('t.waitFor', () => {
     assert.equal(await t.waitFor(() => 3, { timeout: 2 ** 31 - 1, interval: 2 ** 31 - 1 }), 3)
   })
 
-  it('times out with the last failure even when the current attempt never settles', async (t) => {
+  // These tests rely only on the first retry, whose timer is scheduled after the timeout timer but
+  // expires first. A later retry can lose to the timeout on a busy event loop.
+  it('times out with the last failure', async (t) => {
     let attempts = 0
     let lastFailure = { reason: 'not ready' }
     await assert.rejects(
@@ -82,8 +84,7 @@ describe('t.waitFor', () => {
         () => {
           attempts++
           if (attempts === 1) throw new Error('first failure')
-          if (attempts === 2) throw lastFailure
-          return new Promise(() => {})
+          throw lastFailure
         },
         { interval: 0, timeout: 30 },
       ),
@@ -94,7 +95,28 @@ describe('t.waitFor', () => {
         return true
       },
     )
-    assert.equal(attempts, 3)
+  })
+
+  it('times out with the previous failure when the current attempt never settles', async (t) => {
+    let attempts = 0
+    let failure = { reason: 'not ready' }
+    await assert.rejects(
+      t.waitFor(
+        () => {
+          attempts++
+          if (attempts === 1) throw failure
+          return new Promise(() => {})
+        },
+        { interval: 0, timeout: 30 },
+      ),
+      (error: unknown) => {
+        assert.ok(error instanceof Error)
+        assert.equal(error.message, 'waitFor() timed out')
+        assert.equal(error.cause, failure)
+        return true
+      },
+    )
+    assert.equal(attempts, 2)
   })
 
   it('preserves an explicitly thrown undefined as the timeout cause', async (t) => {

@@ -1,1 +1,0 @@
-Fix focus moving to `<body>` when a frame navigation fails, such as a form submission whose response is a 5xx page. The page stays as it was, so focus now stays where the visitor left it. Navigations that succeed still reset focus unless they opt out with `data-rmx-reset-focus="manual"` or `resetFocus: 'manual'`.

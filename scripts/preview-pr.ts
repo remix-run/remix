@@ -68,6 +68,9 @@ const comments: { id: number; body: string }[] = []
 for (let page = 1; ; page++) {
   let result = github.api('GET', `issues/${prNumber}/comments?per_page=100&page=${page}`)
   if (!Array.isArray(result)) throw new Error('Invalid GitHub comments response')
+  // GitHub can return fewer than per_page items before the last page, so only an empty page
+  // marks the end.
+  if (result.length === 0) break
   for (let comment of result) {
     if (
       typeof comment !== 'object' ||
@@ -81,7 +84,6 @@ for (let page = 1; ; page++) {
     }
     comments.push({ id: comment.id, body: comment.body })
   }
-  if (result.length < 100) break
 }
 const sticky = comments.find((comment) => comment.body.includes(STICKY_MARKER))
 if (sticky) github.api('PATCH', `issues/comments/${sticky.id}`, { body })

@@ -64,6 +64,7 @@ export function Notifications() {
 - `add()` returns the notification ID. Reusing an ID replaces its complete content and options, restarts its timeout and preserves its position. Your renderer decides how to display custom `data` and actions.
 - Toasts stay open unless a timeout is supplied. Set `timeout` in milliseconds when publishing a toast.
 - Hover, keyboard focus, touch engagement, a hidden document or an unfocused window pause timers.
+- Countdown indicators require `CSS.registerProperty()`. Browsers without it skip the animation while timers and dismissal continue normally.
 - F6 enters the collection and returns to the previous element. Tab visits each notification before its controls. Leaving either Tab boundary returns focus. Escape dismisses the focused notification; closing it focuses a neighbour or returns to the previous element. Make the shortcut discoverable.
 - Announcements use the published title and description, excluding controls added by your renderer. Set `announcement` to replace the spoken message. Entering the collection clears the separate announcements and exposes the notifications for exploration. Actions remain available there; where possible, describe another way to perform them in the announcement.
 - Supply the region label and a visible dismiss control. If a toast has no title, give its host an accessible name with `aria-label` or `aria-labelledby`. Essential information should also be available in the page.
