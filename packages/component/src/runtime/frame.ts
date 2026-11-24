@@ -69,6 +69,7 @@ import type { CSSProps } from '../style/style.ts'
 import {
   createFrameStartMarker,
   findFlushMarker,
+  ESCAPED_OBJECT,
   FRAME_END_MARKER,
   type FlushKind,
   getFrameId,
@@ -79,7 +80,6 @@ import {
   isHydrationEnd,
   isHydrationStart,
 } from './stream-protocol.ts'
-import { ESCAPED_OBJECT } from './props-serialization.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 

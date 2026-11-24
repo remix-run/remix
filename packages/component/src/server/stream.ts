@@ -29,6 +29,7 @@ import {
   appendFlushMarker,
   createFrameStartMarker,
   createHydrationStartMarker,
+  ESCAPED_OBJECT,
   FRAME_END_MARKER,
   FRAME_TEMPLATE_END_MARKER,
   HYDRATION_END_MARKER,
@@ -37,11 +38,10 @@ import {
 } from '../runtime/stream-protocol.ts'
 import { composeMixedProps, isMixinDescriptor } from '../runtime/mixins/mixin.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/stylesheet.ts'
-import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
+import { cssMixinType } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
-import { createRemixElement, isRemixElement } from '../runtime/core/vnode.ts'
-import { ESCAPED_OBJECT, SERIALIZATION_TAGS } from '../runtime/props-serialization.ts'
+import { jsx, isRemixElement } from '../runtime/core/vnode.ts'
 
 interface VNode {
   type: ElementType
@@ -1069,7 +1069,7 @@ function createSsrMixinHandle(
   // Context lookups read the shared render context, so capture the parent before it moves on.
   let parentVNode = context.parentVNode
   let element = ((handle: { props: ElementProps; update(): Promise<AbortSignal> }) => () =>
-    createRemixElement(hostType, handle.props, null)) as ((handle: {
+    jsx(hostType, handle.props, null)) as ((handle: {
     props: ElementProps
     update(): Promise<AbortSignal>
   }) => () => RemixElement) & {
@@ -1174,6 +1174,15 @@ function buildComponentSegment(
   context.parentVNode = previousParentVNode
 }
 
+const SERIALIZATION_TAGS = [
+  '$rmx',
+  '$rmxFrame',
+  '$rmxFragment',
+  '$rmxPortal',
+  '$rmxMixin',
+  ESCAPED_OBJECT,
+]
+
 function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFrameState) {
   let escapedObjects = new WeakMap<object, { [ESCAPED_OBJECT]: Record<string, unknown> }>()
   let escapedContents = new WeakSet<object>()
@@ -1262,7 +1271,7 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
     // Mixin descriptors hold their setup function, which JSON drops. `css()`
     // only holds style data, so it's revived in the browser by name.
     if (isMixinDescriptor(value)) {
-      return isCSSMixinDescriptor(value)
+      return value.type === cssMixinType
         ? { $rmxMixin: 'css', args: value.args }
         : { $rmxMixin: null }
     }
