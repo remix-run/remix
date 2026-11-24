@@ -21,8 +21,7 @@ describe('module preloader', () => {
 
     links[1]?.dispatchEvent(new Event('load'))
     expect(doc.head.querySelector('link')).toBeNull()
-    expect(preloader.isActivePreload(link)).toBe(false)
-    expect(preloader.isActivePreload(links[1]!)).toBe(false)
+    for (let settledLink of links) expect(preloader.isActivePreload(settledLink)).toBe(false)
   })
 
   it('uses an observer when adopting preloads that may have loaded before runtime startup', () => {
