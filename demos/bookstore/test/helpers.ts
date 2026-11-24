@@ -3,7 +3,7 @@ import { SetCookie, Cookie } from 'remix/headers'
 import { createMemorySessionStorage } from 'remix/session-storage/memory'
 
 import { db, loadAppMigrations, loadAppSeed } from '../app/db.ts'
-import { createBookstoreRouter } from '../app/router.ts'
+import { createBookstoreRouter } from '../app/router.tsx'
 
 export async function createTestRouter() {
   await db.reset({ migrations: await loadAppMigrations(), seed: await loadAppSeed() })
