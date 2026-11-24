@@ -1,0 +1,1 @@
+Speed up server rendering of `css()` styles by reusing generated rules across renders. Each render used to hash and convert every distinct style object again. Rules are now kept by the style's serialized content, up to the 1,000 most recently used, so the HTML is unchanged and style objects mutated in place still render their current values.

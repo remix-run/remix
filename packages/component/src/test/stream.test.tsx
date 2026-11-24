@@ -1590,6 +1590,30 @@ describe('stream', () => {
       expect(spanMatches?.[0]).not.toBe(spanMatches?.[2])
     })
 
+    it('includes styles in every render that uses them', async () => {
+      let styles = { color: 'darkcyan', padding: 4 }
+      let first = await renderToString(<div mix={[css(styles)]}>First</div>)
+      let second = await renderToString(<div mix={[css(styles)]}>Second</div>)
+
+      let firstClass = first.match(/<div class="(rmxc-[a-z0-9]+)"/)?.[1]
+      expect(firstClass).toBeDefined()
+      expect(second).toContain(`<div class="${firstClass}">Second</div>`)
+      expect(first).toContain(`.${firstClass} {`)
+      expect(second).toContain(`.${firstClass} {`)
+      expect(second).toContain('color: darkcyan;')
+    })
+
+    it('renders the current values of a style object mutated between renders', async () => {
+      let styles = { color: 'darkkhaki' }
+      let first = await renderToString(<div mix={[css(styles)]}>Styled</div>)
+      styles.color = 'darkorchid'
+      let second = await renderToString(<div mix={[css(styles)]}>Styled</div>)
+
+      expect(first).toContain('color: darkkhaki;')
+      expect(second).toContain('color: darkorchid;')
+      expect(second).not.toContain('darkkhaki')
+    })
+
     it('repeats selector-addressed styles in each frame template that uses them', async () => {
       // Each frame owns its style rules independently on the client (per-frame
       // refcounted adoption), so every frame template must carry the full set
