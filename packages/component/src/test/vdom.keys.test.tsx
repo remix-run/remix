@@ -8,6 +8,37 @@ import { Fragment, type Handle, type RemixNode } from '../runtime/component.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {
+    it('keeps unkeyed matches in order after missing a child type', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <>
+          <b key="kept" />
+          <span />
+          <i />
+          <span />
+        </>,
+      )
+      let [keyed, skipped, italic, span] = Array.from(container.children)
+
+      root.render(
+        <>
+          <b key="kept" />
+          <em />
+          <i />
+          <span />
+          <span />
+        </>,
+      )
+      let children = container.children
+      expect(children[0]).toBe(keyed)
+      expect(children[1].localName).toBe('em')
+      expect(children[2]).toBe(italic)
+      expect(children[3]).toBe(span)
+      expect(children[4].localName).toBe('span')
+      expect(skipped.parentNode).toBe(null)
+    })
+
     it('appends keyed component before non-keyed sibling', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
