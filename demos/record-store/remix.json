@@ -4,23 +4,23 @@
     "rootDir": "../..",
     "basePath": "/assets",
     "mounts": {
-      "app": "demos/bookstore/app",
+      "app": "demos/record-store/app",
       "npm": "node_modules",
       "packages": "packages"
     },
     "allowFiles": [
-      "demos/bookstore/app/routes.ts",
-      "demos/bookstore/app/data/book-genres.ts",
-      "demos/bookstore/app/**/public/**",
-      "demos/bookstore/app/actions/auth/login/login-form.ts",
-      "demos/bookstore/app/actions/auth/login/login-schema.ts",
-      "demos/bookstore/app/actions/auth/schemas.ts",
-      "demos/bookstore/app/ui/restful-form.tsx",
-      "demos/bookstore/app/ui/book-transitions.ts",
-      "demos/bookstore/app/images/*.png"
+      "demos/record-store/app/routes.ts",
+      "demos/record-store/app/data/book-genres.ts",
+      "demos/record-store/app/**/public/**",
+      "demos/record-store/app/actions/auth/login/login-form.ts",
+      "demos/record-store/app/actions/auth/login/login-schema.ts",
+      "demos/record-store/app/actions/auth/schemas.ts",
+      "demos/record-store/app/ui/restful-form.tsx",
+      "demos/record-store/app/ui/book-transitions.ts",
+      "demos/record-store/app/images/*.png"
     ],
     "allowPackages": ["remix", "@remix-run/ui"],
-    "denyFiles": ["demos/bookstore/app/**/*.test.*"],
+    "denyFiles": ["demos/record-store/app/**/*.test.*"],
     "files": { "extensions": [".png"] }
   },
   "db": {
