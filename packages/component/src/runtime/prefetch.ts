@@ -589,7 +589,7 @@ export function fetchFrame(
   let url = new URL(src, document.baseURI)
   url.hash = ''
   let headers = new Headers(init.headers)
-  headers.set('Accept', 'text/html')
+  headers.set('Accept', 'text/html, text/event-stream')
   headers.set('X-Remix-Frame', 'true')
   if (target != null) headers.set('X-Remix-Target', target)
   return fetchImpl(url.href, { ...init, headers, mode: 'same-origin' })

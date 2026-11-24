@@ -53,7 +53,7 @@ describe('defaultResolveFrame', () => {
     expect(init?.body?.toString()).toBe('name=Ada+Lovelace')
     let headers = new Headers(init?.headers)
     expect(headers.get('Authorization')).toBe('Bearer example')
-    expect(headers.get('Accept')).toBe('text/html')
+    expect(headers.get('Accept')).toBe('text/html, text/event-stream')
     expect(headers.get('X-Remix-Frame')).toBe('true')
     expect(headers.get('X-Remix-Target')).toBe('details')
     expect(headers.get('Content-Type')).toBe('application/x-www-form-urlencoded')
@@ -146,7 +146,7 @@ describe('defaultResolveFrame', () => {
     let init = fetchMock.mock.calls[0]!.arguments[1]
     expect(init?.body).toBe(formData)
     let headers = new Headers(init?.headers)
-    expect(headers.get('Accept')).toBe('text/html')
+    expect(headers.get('Accept')).toBe('text/html, text/event-stream')
     expect(headers.get('X-Remix-Frame')).toBe('true')
     expect(headers.get('X-Remix-Target')).toBeNull()
     expect(headers.get('Content-Type')).toBeNull()

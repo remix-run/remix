@@ -790,7 +790,7 @@ describe('prefetch', () => {
       let [input, init] = call.arguments
       expect(input).toBe(src)
       let headers = new Headers(init?.headers)
-      expect(headers.get('Accept')).toBe('text/html')
+      expect(headers.get('Accept')).toBe('text/html, text/event-stream')
       expect(headers.get('X-Remix-Frame')).toBe('true')
       expect(headers.get('X-Remix-Target')).toBe('details')
       expect(headers.get('X-Remix-Prefetch')).toBe(index === 0 ? 'true' : null)
@@ -817,8 +817,7 @@ describe('prefetch', () => {
     expect(init?.mode).toBe('same-origin')
     expect(init?.priority).toBe('low')
     expect(new Headers(init?.headers).get('X-Remix-Frame')).toBe('true')
-    expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
-    expect(new Headers(init?.headers).get('X-Remix-Prefetch')).toBe('true')
+    expect(new Headers(init?.headers).get('Accept')).toBe('text/html, text/event-stream')
   })
 
   describe('viewport', () => {
@@ -1881,7 +1880,7 @@ describe('defaultPrefetch overrides', () => {
     expect(init?.mode).toBe('same-origin')
     expect(init?.priority).toBe('low')
     expect(init?.signal).toBeInstanceOf(AbortSignal)
-    expect(new Headers(init?.headers).get('Accept')).toBe('text/html')
+    expect(new Headers(init?.headers).get('Accept')).toBe('text/html, text/event-stream')
     expect(new Headers(init?.headers).get('X-Remix-Frame')).toBe('true')
     expect(new Headers(init?.headers).get('X-Remix-Target')).toBe('details')
     expect(new Headers(init?.headers).get('X-Remix-Prefetch')).toBe('true')
