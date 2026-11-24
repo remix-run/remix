@@ -150,6 +150,47 @@ describe('frames connected to an event stream', () => {
     }
   })
 
+  it('adds an append event after the content already rendered', async () => {
+    let events = createEventStream()
+    let root = renderLiveFrame(events)
+
+    try {
+      events.send('<ul id="log"><li>Started</li></ul>')
+      let log = await waitFor(() => container!.querySelector('#log'))
+
+      events.write('event: append\ndata: <li>Second</li>\n\n')
+      events.write('event: append\ndata: <li>Third</li>\n\n')
+
+      let appended = await waitFor(() =>
+        container!.querySelectorAll('li').length === 3 ? container!.querySelectorAll('li') : null,
+      )
+      expect([...appended].map((item) => item.textContent)).toEqual(['Started', 'Second', 'Third'])
+      // The appended items land beside the list, not inside it, because they are added to the
+      // frame rather than to any element in it.
+      expect(log.children.length).toBe(1)
+    } finally {
+      root.dispose()
+    }
+  })
+
+  it('replaces appended content on the next snapshot', async () => {
+    let events = createEventStream()
+    let root = renderLiveFrame(events)
+
+    try {
+      events.write('event: append\ndata: <p class="line">One</p>\n\n')
+      events.write('event: append\ndata: <p class="line">Two</p>\n\n')
+      await waitFor(() => (container!.querySelectorAll('.line').length === 2 ? true : null))
+
+      events.send('<p class="line">Only</p>')
+
+      await waitFor(() => (container!.querySelectorAll('.line').length === 1 ? true : null))
+      expect(container!.querySelector('.line')?.textContent).toBe('Only')
+    } finally {
+      root.dispose()
+    }
+  })
+
   it('closes the connection when the frame is disposed', async () => {
     let events = createEventStream()
     let root = renderLiveFrame(events)

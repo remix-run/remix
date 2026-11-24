@@ -585,7 +585,28 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let responseContext = { ...options, ...context, data: options.data }
     let hydrationContainer = container
 
-    if (source instanceof HTMLElement) {
+    if (flushKind === 'append' && source instanceof DocumentFragment) {
+      if (isRenderAborted(options.signal)) return
+
+      let appended = Array.from(source.childNodes)
+      let parent =
+        container.regionParent ??
+        (container.root instanceof Document ? container.doc.body : (container.root as ParentNode))
+      for (let node of appended) {
+        insertDomNode(node, parent, container.regionTailRef ?? undefined)
+      }
+
+      // Only the new nodes are hydrated; what the frame already showed keeps its client entries,
+      // its frames, and whatever state they hold.
+      hydrationContainer = {
+        doc: container.doc,
+        root: container.root,
+        childNodes: appended,
+        regionStart: container.regionStart,
+        regionTailRef: container.regionTailRef,
+        regionParent: container.regionParent,
+      }
+    } else if (source instanceof HTMLElement) {
       let head = source.querySelector('head')
       let body = source.querySelector('body')
       invariant(head && body, 'Missing document head or body')

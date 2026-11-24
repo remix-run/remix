@@ -1,4 +1,9 @@
-import { createEventParser, isEventStreamResponse, serializeEvent } from './event-stream.ts'
+import {
+  APPEND_EVENT,
+  createEventParser,
+  isEventStreamResponse,
+  serializeEvent,
+} from './event-stream.ts'
 
 /**
  * Requests a frame source, for a live connection's first request and for every reconnection.
@@ -13,6 +18,8 @@ export type RequestLiveFrame = (init: {
 
 const DEFAULT_RETRY_MS = 3000
 const MAX_RETRY_MS = 30_000
+// How many appended events a frame joining an open connection is caught up with.
+const MAX_REPLAYED_APPENDS = 64
 
 type Subscriber = ReadableStreamDefaultController<Uint8Array>
 
@@ -21,9 +28,10 @@ type LiveConnection = {
   headers: Headers
   request: RequestLiveFrame
   subscribers: Set<Subscriber>
-  // The most recent event, replayed to frames that join an open connection so they render the
-  // current state instead of waiting for the next one.
-  lastEvent?: Uint8Array
+  // What a frame joining an open connection is replayed, so it renders the current state instead
+  // of waiting for the next event: the most recent snapshot, then the appends that followed it.
+  snapshot?: Uint8Array
+  appends: Uint8Array[]
   lastEventId?: string
   retry: number
   controller: AbortController
@@ -118,6 +126,7 @@ function openConnection(
     headers,
     request,
     subscribers: new Set(),
+    appends: [],
     retry: DEFAULT_RETRY_MS,
     controller: new AbortController(),
     closed: false,
@@ -134,7 +143,8 @@ function subscribe(connection: LiveConnection, signal?: AbortSignal): Response {
     start(controller) {
       subscriber = controller
       connection.subscribers.add(controller)
-      if (connection.lastEvent) controller.enqueue(connection.lastEvent)
+      if (connection.snapshot) controller.enqueue(connection.snapshot)
+      for (let append of connection.appends) controller.enqueue(append)
     },
     cancel() {
       leave(connection, subscriber)
@@ -201,8 +211,14 @@ async function read(connection: LiveConnection, body: ReadableStream<Uint8Array>
         if (event.data === '') continue
 
         received += 1
-        let bytes = encoder.encode(serializeEvent(event.data))
-        connection.lastEvent = bytes
+        let bytes = encoder.encode(serializeEvent(event))
+        if (event.name === APPEND_EVENT) {
+          connection.appends.push(bytes)
+          if (connection.appends.length > MAX_REPLAYED_APPENDS) connection.appends.shift()
+        } else {
+          connection.snapshot = bytes
+          connection.appends = []
+        }
         for (let subscriber of [...connection.subscribers]) {
           try {
             subscriber.enqueue(bytes)

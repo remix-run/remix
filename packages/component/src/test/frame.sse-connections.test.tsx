@@ -145,6 +145,33 @@ describe('live frame connections', () => {
     expect(requests).toBe(1)
   })
 
+  it('catches up a joining frame with the snapshot and the appends since', async (t) => {
+    let events = createEventStream()
+    let requests = 0
+    t.mock.method(globalThis, 'fetch', async () => {
+      requests += 1
+      return events.response
+    })
+
+    let { show } = await mountFrames(t, ['/live'])
+    show()
+    events.send('<ul class="log"><li>Started</li></ul>')
+    events.write('event: append\ndata: <p class="line">One</p>\n\n')
+    events.write('event: append\ndata: <p class="line">Two</p>\n\n')
+    await waitFor(() => (document.querySelectorAll('.line').length === 2 ? true : null))
+
+    let joined = await mountFrames(t, ['/live'])
+    joined.show()
+
+    await waitFor(() => (document.querySelectorAll('.line').length === 2 ? true : null))
+    expect(document.querySelectorAll('.log').length).toBe(1)
+    expect([...document.querySelectorAll('.line')].map((line) => line.textContent)).toEqual([
+      'One',
+      'Two',
+    ])
+    expect(requests).toBe(1)
+  })
+
   it('closes the connection when the last frame goes away', async (t) => {
     let events = createEventStream()
     t.mock.method(globalThis, 'fetch', async () => events.response)

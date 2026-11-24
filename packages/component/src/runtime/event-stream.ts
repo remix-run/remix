@@ -2,12 +2,17 @@ import { appendFlushMarker, inferFlushKind } from './stream-protocol.ts'
 
 const LIVE_FRAME_STREAM = Symbol('LiveFrameStream')
 
+/** Event name that adds its HTML to a frame instead of replacing the frame's content. */
+export const APPEND_EVENT = 'append'
+
 type TaggedStream = ReadableStream<Uint8Array> & { [LIVE_FRAME_STREAM]?: true }
 
 /**
  * A block of a server-sent event stream, completed by its blank line.
  */
 export type ServerSentEvent = {
+  /** Event name from the block's `event:` field, `message` when it had none. */
+  name: string
   /** The block's `data:` fields joined with newlines, empty when it only set `id` or `retry`. */
   data: string
   /** Last event id announced by the block, when it carried one. */
@@ -53,13 +58,14 @@ export function markLiveFrameStream(
 /**
  * Creates an incremental server-sent event parser.
  *
- * Event names are ignored, so any name works, and comment lines such as `: ping` are dropped,
- * which makes them the keepalive for an otherwise idle connection.
+ * Comment lines such as `: ping` are dropped, which makes them the keepalive for an otherwise idle
+ * connection.
  *
  * @returns A function that takes decoded stream text and returns the event blocks it completed.
  */
 export function createEventParser(): (text: string) => ServerSentEvent[] {
   let buffer = ''
+  let name = ''
   let data = ''
   let id: string | undefined
   let retry: number | undefined
@@ -78,7 +84,13 @@ export function createEventParser(): (text: string) => ServerSentEvent[] {
 
     for (let line of parsed.lines) {
       if (line === '') {
-        events.push({ data: data.endsWith('\n') ? data.slice(0, -1) : data, id, retry })
+        events.push({
+          name: name === '' ? 'message' : name,
+          data: data.endsWith('\n') ? data.slice(0, -1) : data,
+          id,
+          retry,
+        })
+        name = ''
         data = ''
         id = undefined
         retry = undefined
@@ -93,6 +105,7 @@ export function createEventParser(): (text: string) => ServerSentEvent[] {
       if (value.startsWith(' ')) value = value.slice(1)
 
       if (field === 'data') data += value + '\n'
+      else if (field === 'event') name = value
       else if (field === 'id' && !value.includes('\0')) id = value
       else if (field === 'retry' && /^\d+$/.test(value)) retry = Number(value)
     }
@@ -104,21 +117,23 @@ export function createEventParser(): (text: string) => ServerSentEvent[] {
 /**
  * Serializes frame HTML as one server-sent event block.
  *
- * @param data Event payload, which may span several lines.
+ * @param event Event name and payload, which may span several lines.
  * @returns The block's wire text, including its terminating blank line.
  */
-export function serializeEvent(data: string): string {
-  return `${data
+export function serializeEvent(event: { name: string; data: string }): string {
+  let data = event.data
     .split('\n')
     .map((line) => `data: ${line}`)
-    .join('\n')}\n\n`
+    .join('\n')
+  return event.name === 'message' ? `${data}\n\n` : `event: ${event.name}\n${data}\n\n`
 }
 
 /**
  * Converts a server-sent event body into a stream of frame HTML batches.
  *
- * Every event's data is trusted frame HTML: a full snapshot of the frame's content that is diffed
- * into the live DOM, the same way a flushed HTML batch is.
+ * Every event's data is trusted frame HTML. An `append` event adds its HTML after what the frame
+ * already shows; every other event is a snapshot of the frame's content, diffed into the live DOM
+ * the same way a flushed HTML batch is.
  *
  * @param body Response body carrying the event stream.
  * @returns A stream of HTML batches tagged as live frame content.
@@ -146,7 +161,8 @@ export function createLiveFrameStream(
           for (let event of parse(decoder.decode(value, { stream: true }))) {
             if (event.data === '') continue
             let html = event.data
-            controller.enqueue(encoder.encode(appendFlushMarker(html, inferFlushKind(html))))
+            let kind = event.name === APPEND_EVENT ? 'append' : inferFlushKind(html)
+            controller.enqueue(encoder.encode(appendFlushMarker(html, kind)))
             enqueued = true
           }
 
