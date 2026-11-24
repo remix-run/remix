@@ -674,10 +674,12 @@
   "sideEffects": [
     "./src/cli-entry.ts",
     "./src/component-hmr/node.ts",
+    "./src/multiple-import-maps-polyfill.ts",
     "./src/node-hmr/runtime.ts",
     "./src/node-tsx.ts",
     "./dist/cli-entry.js",
     "./dist/component-hmr/node.js",
+    "./dist/multiple-import-maps-polyfill.js",
     "./dist/node-hmr/runtime.js",
     "./dist/node-tsx.js"
   ]

@@ -55,26 +55,32 @@
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
+        "browser": "./dist/browser/index.js",
         "default": "./dist/index.js"
       },
       "./dev/refresh": {
         "types": "./dist/dev/refresh.d.ts",
+        "browser": "./dist/browser/dev/refresh.js",
         "default": "./dist/dev/refresh.js"
       },
       "./jsx-dev-runtime": {
         "types": "./dist/jsx-runtime.d.ts",
+        "browser": "./dist/browser/jsx-runtime.js",
         "default": "./dist/jsx-runtime.js"
       },
       "./jsx-runtime": {
         "types": "./dist/jsx-runtime.d.ts",
+        "browser": "./dist/browser/jsx-runtime.js",
         "default": "./dist/jsx-runtime.js"
       },
       "./server": {
         "types": "./dist/server.d.ts",
+        "browser": "./dist/browser/server.js",
         "default": "./dist/server.js"
       },
       "./test": {
         "types": "./dist/test.d.ts",
+        "browser": "./dist/browser/test.js",
         "default": "./dist/test.js"
       },
       "./package.json": "./package.json"
@@ -85,14 +91,16 @@
     "@remix-run/multiple-import-maps-polyfill": "workspace:^",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
+    "esbuild": "^0.27.1",
     "playwright": "catalog:",
+    "rollup": "^4.60.3",
     "typescript": "catalog:"
   },
   "dependencies": {
     "@types/dom-navigation": "^1.0.7"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/build-browser.ts",
     "clean": "git clean -fdX",
     "lint": "pnpm -w exec oxlint packages/component --max-warnings=0",
     "lint:fix": "pnpm -w exec oxlint packages/component --fix --max-warnings=0",

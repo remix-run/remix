@@ -18,20 +18,7 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
-  "sideEffects": [
-    "./src/lib/core.ts",
-    "./src/lib/env.ts",
-    "./src/lib/features.ts",
-    "./src/lib/native-resolve.ts",
-    "./src/lib/polyfill.ts",
-    "./src/lib/trusted-types.ts",
-    "./dist/lib/core.js",
-    "./dist/lib/env.js",
-    "./dist/lib/features.js",
-    "./dist/lib/native-resolve.js",
-    "./dist/lib/polyfill.js",
-    "./dist/lib/trusted-types.js"
-  ],
+  "sideEffects": true,
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
@@ -53,11 +40,12 @@
     "@remix-run/node-fetch-server": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@types/node": "catalog:",
+    "esbuild": "^0.27.1",
     "playwright": "catalog:",
     "typescript": "catalog:"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/build-browser.ts",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "pnpm run build && remix test",

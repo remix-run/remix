@@ -2,7 +2,7 @@
   "$schema": "../../node_modules/remix/schema/remix.json",
   "test": {
     "files": ["**/*.test.{ts,tsx}"],
-    "browserFiles": ["**/*.test.{ts,tsx}"],
+    "browserFiles": ["src/**/*.test.{ts,tsx}"],
     "playwright": {
       "configFile": "./playwright.config.ts"
     },
