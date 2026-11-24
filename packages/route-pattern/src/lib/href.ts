@@ -77,7 +77,6 @@ export function createHref<source extends string>(
 
   let hasOrigin =
     patternParts.protocol !== null || patternParts.hostname !== null || patternParts.port !== null
-  let result = ''
   let targetOrigin: string | undefined
 
   if (hasOrigin) {
@@ -93,17 +92,17 @@ export function createHref<source extends string>(
 
     let port = patternParts.port === null ? '' : `:${patternParts.port}`
     targetOrigin = `${protocol}://${hostname}${port}`
-    result += targetOrigin
   }
 
-  let pathname = hrefPart(pattern, patternParts.pathname, params ?? {})
-  pathname = '/' + pathname.replace(/^\/+/, '')
-  result += pathname
+  let variables: Array<PathnameVariable> = []
+  let renderedPathname = hrefPart(pattern, patternParts.pathname, params ?? {}, variables)
+  let pathname = '/' + renderedPathname.replace(/^\/+/, '')
 
   let search = hrefSearch(patternParts.search, options?.searchParams)
   let searchSuffix = search === undefined ? '' : `?${search}`
-  result += searchSuffix
 
+  let pathnameProtocol = 'https:'
+  let relativePrefixLength = 0
   if (options?.baseURL !== undefined) {
     let baseURL = new URL(options.baseURL)
     let baseOrigin = baseURL.origin
@@ -111,14 +110,28 @@ export function createHref<source extends string>(
     if (targetURLOrigin === baseOrigin) {
       // Absolute URLs such as `mailto:` cannot resolve relative references.
       new URL('/', baseURL)
-      return relativeHref(pathname, searchSuffix, baseURL)
+      let relative = relativeHref(pathname, baseURL)
+      pathname = relative.pathname
+      relativePrefixLength = relative.prefixLength
+      pathnameProtocol = baseURL.protocol
+      targetOrigin = undefined
     }
   }
 
-  return result
+  let href = pathname + searchSuffix
+  // Relative formatting replaces a prefix and preserves the rest of the rendered path.
+  rejectVariableDotSegments(
+    pattern,
+    variables,
+    href,
+    pathname.length - renderedPathname.length,
+    relativePrefixLength,
+    pathnameProtocol,
+  )
+  return (targetOrigin ?? '') + href
 }
 
-function relativeHref(pathname: string, search: string, baseURL: URL): string {
+function relativeHref(pathname: string, baseURL: URL): { pathname: string; prefixLength: number } {
   let baseSegments = pathnameSegments(baseURL.pathname)
   if (!baseURL.pathname.endsWith('/')) baseSegments.pop()
 
@@ -144,8 +157,12 @@ function relativeHref(pathname: string, search: string, baseURL: URL): string {
   let result = relativeSegments.join('/')
   if (targetIsDirectory) result = result === '' ? './' : `${result}/`
   if (result === '') result = './'
-  if (/^[\\/]/.test(result) || /^[^/]*:/.test(result)) result = `./${result}`
-  return result + search
+  let prefixLength = (baseSegments.length - common) * '../'.length
+  if (/^[\\/]/.test(result) || /^[^/]*:/.test(result)) {
+    result = `./${result}`
+    prefixLength += './'.length
+  }
+  return { pathname: result, prefixLength }
 }
 
 function pathnameSegments(pathname: string): Array<string> {
@@ -154,17 +171,19 @@ function pathnameSegments(pathname: string): Array<string> {
   return segments
 }
 
+type PathnameVariable = { offset: number; name: string; value: string }
+
 function hrefPart(
   pattern: RoutePattern,
   part: PartPattern,
   params: Record<string, unknown>,
+  variables?: Array<PathnameVariable>,
 ): string {
   let separator = part.type === 'hostname' ? '.' : '/'
   let missingParams: Array<string> = []
 
   let href = ''
-  let dotParams: Array<{ offset: number; name: string; value: string }> = []
-  let stack: Array<{ begin: number; offset: number; dotParamCount: number }> = []
+  let stack: Array<{ begin: number; offset: number; variableCount: number }> = []
   let i = 0
   while (i < part.tokens.length) {
     let token = part.tokens[i]
@@ -179,7 +198,7 @@ function hrefPart(
       continue
     }
     if (token.type === '(') {
-      stack.push({ begin: i, offset: href.length, dotParamCount: dotParams.length })
+      stack.push({ begin: i, offset: href.length, variableCount: variables?.length ?? 0 })
       i += 1
       continue
     }
@@ -201,7 +220,7 @@ function hrefPart(
           continue
         }
         href = href.slice(0, frame.offset)
-        dotParams.length = frame.dotParamCount
+        if (variables) variables.length = frame.variableCount
         i = part.optionals.get(frame.begin)! + 1
         if (
           href.length > (stack.at(-1)?.offset ?? 0) &&
@@ -214,8 +233,9 @@ function hrefPart(
       }
       if (part.type === 'pathname' && token.type === ':') {
         let serialized = String(value)
-        if (serialized === '.' || serialized === '..') {
-          dotParams.push({ offset: href.length, name: token.name, value: serialized })
+        // The variable may supply part of an encoded dot next to literal pattern text.
+        if (variables && /^[.2e]{1,6}$/i.test(serialized)) {
+          variables.push({ offset: href.length, name: token.name, value: serialized })
         }
         href += encodePathnameVariableParam(pattern, token.name, serialized)
       } else if (part.type === 'pathname') {
@@ -240,27 +260,46 @@ function hrefPart(
   }
   if (stack.length !== 0) unreachable()
 
-  if (dotParams.length > 0) {
-    // Optional groups and literal suffixes can change whether an encoded dot is a whole segment.
-    let pathname = href.split(/[?#]/, 1)[0]
-    let paramIndex = 0
-    for (let match of pathname.matchAll(/(?:^|[/\\])(?:\.|%2e){1,2}(?=$|[/\\])/gi)) {
-      while (paramIndex < dotParams.length && dotParams[paramIndex].offset < match.index) {
-        paramIndex += 1
-      }
-      let param = dotParams[paramIndex]
-      if (param === undefined) break
-      if (param.offset < match.index + match[0].length) {
-        throw new CreateHrefError({
-          type: 'invalid-pathname-variable',
-          pattern,
-          paramName: param.name,
-          value: param.value,
-        })
-      }
+  return href
+}
+
+function rejectVariableDotSegments(
+  pattern: RoutePattern,
+  variables: Array<PathnameVariable>,
+  href: string,
+  offset: number,
+  relativePrefixLength: number,
+  protocol: string,
+): void {
+  if (variables.length === 0) return
+
+  // Keep offsets from the rendered href while applying the URL parser's whitespace rules.
+  let end = href.length
+  while (end > 0 && href.charCodeAt(end - 1) <= 0x20) end -= 1
+  let pathname = href.slice(0, end).split(/[?#]/, 1)[0]
+  let segmentPattern = /^(?:file|ftp|https?|wss?):$/.test(protocol) ? /[^/\\]+/g : /[^/]+/g
+  let variableIndex = 0
+  for (let match of pathname.matchAll(segmentPattern)) {
+    let start = match.index
+    if (start < relativePrefixLength) continue
+    while (variableIndex < variables.length && variables[variableIndex].offset + offset < start) {
+      variableIndex += 1
+    }
+    let variable = variables[variableIndex]
+    if (variable === undefined) break
+    if (variable.offset + offset >= start + match[0].length) continue
+
+    let segment = start === 0 ? match[0].replace(/^[\u0000-\u0020]+/, '') : match[0]
+    segment = segment.replace(/[\t\n\r]/g, '')
+    if (/^(?:\.|%2e){1,2}$/i.test(segment)) {
+      throw new CreateHrefError({
+        type: 'invalid-pathname-variable',
+        pattern,
+        paramName: variable.name,
+        value: variable.value,
+      })
     }
   }
-  return href
 }
 
 function hrefSearch(
