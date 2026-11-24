@@ -85,6 +85,7 @@ describe('frames', () => {
       finish.resolve()
       await replacement
     }
+    expect(root.innerHTML).toBe('<p>İstanbul</p>')
   })
 
   it('preserves doctype-looking text in frame script data', async (t) => {

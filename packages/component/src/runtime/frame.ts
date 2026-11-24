@@ -52,7 +52,7 @@ import {
   type VNodeParent,
 } from './reconcile.ts'
 import {
-  collectNodesBetween,
+  collectNodeRange,
   diffElementAttributes,
   diffNodes,
   findEndMarker,
@@ -364,7 +364,7 @@ export type FrameInstance = {
     content: InternalFrameContent,
     options?: RenderOptions,
   ) => Promise<void>
-  matchesIdentity: (src: string, name: string | undefined) => boolean
+  readonly identity: { src: string; name?: string } | undefined
   dispose: () => void
   handle: FrameHandle
 }
@@ -472,9 +472,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   let context: FrameContext = {
-    nonce: init.nonce,
-    navigationType: init.navigationType,
-    from: init.from,
     topFrame: runtime.topFrame,
     getContext: (type) => runtime.getContext?.(type),
     ...getSharedFrameRuntime(runtime),
@@ -588,17 +585,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     adoptFrameServerStyles(createElementContainer(source), context.styleManager)
     if (source instanceof DocumentFragment) removeEmptyHeads(source)
     mergeRmxDataFrom(options.data, source)
-    let responseContext = {
-      ...context,
-      signal: options.signal,
-      reloadOrigin: options.reloadOrigin,
-      nonce: options.nonce,
-      navigationType: options.navigationType,
-      from: options.from,
-      data: options.data,
-      reconciliationTracker: options.reconciliationTracker,
-      blockingFrameTracker: options.blockingFrameTracker,
-    }
+    let responseContext = { ...options, ...context, data: options.data }
     let hydrationContainer = container
 
     if (source instanceof HTMLElement) {
@@ -611,11 +598,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         ...responseContext,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
-      }
-      diffNodes([container.doc.head], [head], {
-        ...documentContext,
         shouldPreserveHeadNode: shouldPreserveManagedHeadNode,
-      })
+      }
+      diffNodes([container.doc.head], [head], documentContext)
       diffNodes([container.doc.body], [body], documentContext)
 
       hydrationContainer = createElementContainer(container.doc.body)
@@ -655,14 +640,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     if ((await initialClientEntryResources) === false) return
     if (isRenderAborted(init.signal)) return
     adoptFrameServerStyles(container, context.styleManager)
-    let options = {
-      reconciliationTracker,
-      nonce: context.nonce,
-      navigationType: context.navigationType,
-      from: context.from,
-      signal: init.signal,
-    }
-    let subFramesReady = hydrateContainer(container, context, options)
+    let initial = { nonce: init.nonce, navigationType: init.navigationType, from: init.from }
+    let options = { ...initial, reconciliationTracker, signal: init.signal }
+    let subFramesReady = hydrateContainer(container, { ...context, ...initial }, options)
 
     try {
       await subFramesReady
@@ -702,7 +682,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     completeInheritedReload,
     updateMarker,
     renderMarkerContent,
-    matchesIdentity: (src, name) => !disposed && frame.src === src && frameName === name,
+    get identity() {
+      return disposed ? undefined : { src: frame.src, name: frameName }
+    },
     dispose,
     handle: frame,
   }
@@ -2097,14 +2079,7 @@ function hydrateRegion(
 
     let previousServerFrameReload = frameRuntime.serverFrameReload
 
-    frameRuntime.serverFrameReload = {
-      signal: signal ?? context.lifecycleSignal,
-      navigationType: context.navigationType,
-      from: context.from,
-      origin: context.reloadOrigin,
-      reconciliationTracker: context.reconciliationTracker,
-      blockingFrameTracker: context.blockingFrameTracker,
-    }
+    frameRuntime.serverFrameReload = getRenderReload(signal ?? context.lifecycleSignal, context)
     try {
       root.render(vElement)
     } finally {
@@ -2137,9 +2112,10 @@ function createFrameRoot(
     styleManager: context.styleManager,
   }
   let root = Array.isArray(target) ? createRangeRoot(target, options) : createRoot(target, options)
+  let { errorTarget } = context
   root.addEventListener('error', (event: Event) => {
-    if (context.errorTarget === root) return
-    context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
+    if (errorTarget !== root)
+      errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   })
   return root
 }
@@ -2386,7 +2362,8 @@ async function renderFrameStream(
         let tail = buffer.slice(cursor)
         let opening = tail.lastIndexOf('<')
         let pending =
-          opening >= 0 && '<template'.startsWith(tail.slice(opening, opening + 9).toLowerCase())
+          opening >= 0 &&
+          '<template'.startsWith(tail.slice(opening, opening + '<template'.length).toLowerCase())
             ? opening
             : tail.length
         for (let match of tail.matchAll(/<template/gi)) pending = match.index
@@ -2458,7 +2435,7 @@ function createCommentContainer([start, end]: [Comment, Comment]): FrameContaine
     root: parent,
     regionStart: start,
     get childNodes() {
-      return collectNodesBetween(start, end)
+      return collectNodeRange(start.nextSibling, end)
     },
     regionTailRef: end,
     regionParent: parent,
