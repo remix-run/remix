@@ -59,6 +59,7 @@ import {
   diffElementAttributes,
   diffNodes,
   findEndMarker,
+  findOptionalEndMarker,
   getClientEntryKey,
 } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
@@ -226,30 +227,15 @@ function observeFrameLoad(targets: Element[], load: () => void): () => void {
   }
 }
 
-function createLinkedAbortController(...signals: Array<AbortSignal | undefined>): {
+function createLinkedAbortController(signal?: AbortSignal): {
   controller: AbortController
   disconnect: () => void
 } {
   let controller = new AbortController()
   let abort = () => controller.abort()
-
-  for (let signal of signals) {
-    if (!signal) continue
-    if (signal.aborted) {
-      controller.abort()
-      break
-    }
-    signal.addEventListener('abort', abort, { once: true })
-  }
-
-  return {
-    controller,
-    disconnect() {
-      for (let signal of signals) {
-        signal?.removeEventListener('abort', abort)
-      }
-    },
-  }
+  if (signal?.aborted) abort()
+  else signal?.addEventListener('abort', abort, { once: true })
+  return { controller, disconnect: () => signal?.removeEventListener('abort', abort) }
 }
 
 // Marker-less HTML is a whole document when it starts with a doctype or `<html>`.
@@ -339,11 +325,18 @@ type FrameInit = {
 // The active reload and its completion outcome. Superseded requests finish as aborted without
 // dispatching reloadComplete; ancestor resolution can continue an inherited reload.
 type FrameReloadState =
-  | { status: 'idle' }
+  | {
+      status: 'idle'
+      controller?: undefined
+      origin?: undefined
+      finished?: undefined
+      disconnect?: undefined
+    }
   // An ancestor reload is replacing this frame's content. It completes when that content renders
   // or the ancestor's signal aborts.
   | {
       status: 'inherited'
+      controller?: undefined
       disconnect: (() => void) | undefined
       finished: ReloadFinished
       origin?: ReloadOrigin
@@ -368,13 +361,11 @@ type PendingTemplateWatch = {
 }
 
 export type FrameInstance = {
-  commitResponse: (
-    response: Response,
-    commit: FrameCommit,
-    render: () => Promise<void>,
-    signal: AbortSignal,
-    to: string,
-  ) => Promise<void>
+  resolveClientFrame(
+    node: CommittedFrameNode,
+    runtime: FrameRuntime,
+    reload?: FrameRuntime['serverFrameReload'],
+  ): void
   render: (content: InternalFrameContent, options?: RenderOptions) => Promise<void>
   ready: () => Promise<void>
   flush: () => void
@@ -384,13 +375,6 @@ export type FrameInstance = {
   updateLoading: (loading: FrameProps['loading']) => void
   deferLoad: (load?: () => void) => void
   startDeferredLoad: () => void
-  startLoad: (
-    origin: FrameLoadOrigin,
-    signal?: AbortSignal,
-    reloadOrigin?: ReloadOrigin,
-  ) => AbortController
-  rejectLoad: (controller: AbortController, error: unknown) => void
-  completeLoad: (controller: AbortController, failure?: ReloadFailure) => void
   startInheritedReload: (
     signal?: AbortSignal,
     origin?: ReloadOrigin,
@@ -477,7 +461,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       pendingPrefetchLinks.has(node) ||
       nonceManager.shouldPreserveHeadNode(node) ||
       importMapManager.shouldPreserveHeadNode(node) ||
-      (modulePreloader.hasActivePreloads() && modulePreloader.isActivePreload(node))
+      modulePreloader.isActivePreload(node)
     )
   }
 
@@ -736,7 +720,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   let readyPromise = hydrateInitial()
 
   return {
-    commitResponse,
+    resolveClientFrame,
     render,
     ready: () => readyPromise,
     flush: () => context.scheduler.dequeue(),
@@ -748,9 +732,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     },
     deferLoad,
     startDeferredLoad,
-    startLoad,
-    rejectLoad,
-    completeLoad,
     startInheritedReload,
     rejectInheritedReloadFinished,
     completeInheritedReload,
@@ -778,7 +759,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
           ? 'ancestor'
           : 'direct',
       signal,
-      activeReload.status === 'idle' ? undefined : activeReload.origin,
+      activeReload.origin,
     )
     // Resolution reports errors before rejecting.
     void resolveAndRenderReload(controller, undefined, { navigationType, from }).catch(() => {})
@@ -861,6 +842,19 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     )
   }
 
+  function startReloadEvent(
+    signal?: AbortSignal,
+    request?: AbortController,
+  ): ReloadFinished | undefined {
+    let previous = eventController
+    previous?.abort()
+    // Aborting can synchronously start another reload or dispose the frame.
+    if (eventController !== previous) return
+    if (request) return createReloadFinished(request)
+    let { controller, disconnect } = createLinkedAbortController(signal)
+    return createReloadFinished(controller, disconnect)
+  }
+
   function startLoad(
     origin: FrameLoadOrigin,
     signal?: AbortSignal,
@@ -894,25 +888,18 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         : undefined
     let finished = continued?.finished
     if (!finished) {
-      let previousEventController = eventController
-      previousEventController?.abort()
-      // Abort listeners can synchronously start a newer reload or dispose the frame.
-      if (eventController !== previousEventController) {
+      finished = startReloadEvent(signal, origin === 'direct' ? controller : undefined)
+      if (!finished) {
         disconnect()
         controller.abort()
         return controller
       }
-      let eventReload =
-        origin === 'direct'
-          ? { controller, disconnect: undefined }
-          : createLinkedAbortController(signal)
-      finished = createReloadFinished(eventReload.controller, eventReload.disconnect)
     }
     eventController = finished.controller
-    if (!continued && previous.status !== 'idle') {
+    if (!continued) {
       settleReloadFinished(previous.finished, { aborted: true })
     }
-    if (origin === 'ancestor' && previous.status !== 'idle') reloadOrigin ??= previous.origin
+    if (origin === 'ancestor') reloadOrigin ??= previous.origin
     currentRequest = controller
     activeReload = { status: origin, controller, disconnect, finished, origin: reloadOrigin }
 
@@ -926,10 +913,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function completeLoad(controller: AbortController, failure?: ReloadFailure): void {
-    if (
-      (activeReload.status === 'direct' || activeReload.status === 'ancestor') &&
-      activeReload.controller === controller
-    ) {
+    if (activeReload.controller === controller) {
       let finished = activeReload.finished
       let outcome: ReloadFailure | undefined =
         failure ?? (controller.signal.aborted ? { aborted: true } : undefined)
@@ -944,7 +928,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function rejectLoad(controller: AbortController, error: unknown): void {
-    if (activeReload.status !== 'direct' && activeReload.status !== 'ancestor') return
     if (activeReload.controller !== controller) return
     activeReload.finished.reject(error)
     rejectSubFrameInheritedReloadFinished(getContentNodes(), error)
@@ -956,10 +939,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     takeOverRequest = false,
   ): void {
     if (signal?.aborted) return
-    if (
-      !takeOverRequest &&
-      (activeReload.status === 'direct' || activeReload.status === 'ancestor')
-    ) {
+    if (!takeOverRequest && activeReload.controller) {
       activeReload.origin = origin
       startSubFrameInheritedReloads(getContentNodes(), signal, origin)
       return
@@ -974,22 +954,18 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       signal.addEventListener('abort', abort, { once: true })
       disconnect = () => signal.removeEventListener('abort', abort)
     }
-    let continued = previous.status === 'idle' ? undefined : previous
-    let finished = continued?.finished
+    let finished = previous.finished
     if (!finished) {
-      let previousEventController = eventController
-      previousEventController?.abort()
-      if (eventController !== previousEventController) {
+      finished = startReloadEvent(signal)
+      if (!finished) {
         disconnect?.()
         previousController?.abort()
         return
       }
-      let eventReload = createLinkedAbortController(signal)
-      finished = createReloadFinished(eventReload.controller, eventReload.disconnect)
     }
     eventController = finished.controller
     activeReload = { status: 'inherited', disconnect, finished, origin }
-    if (!continued) {
+    if (!previous.finished) {
       notifyReloadStart(finished, origin)
     }
     if (previous.status !== 'inherited')
@@ -1029,8 +1005,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     currentRequest = undefined
     eventController?.abort()
     eventController = undefined
-    if (activeReload.status !== 'idle')
-      settleReloadFinished(activeReload.finished, { aborted: true })
+    settleReloadFinished(activeReload.finished, { aborted: true })
     leaveReloadState()
     init.disposeFallback?.()
     contentRoot?.dispose()
@@ -1173,6 +1148,89 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     })
   }
 
+  function resolveClientFrame(
+    node: CommittedFrameNode,
+    runtime: FrameRuntime,
+    serverFrameReload?: NonNullable<FrameRuntime['serverFrameReload']>,
+  ): void {
+    let frameSrc = node.props.src
+    let controller = startLoad(
+      serverFrameReload ? 'ancestor' : 'initial',
+      serverFrameReload?.signal,
+      serverFrameReload?.origin,
+    )
+    let { signal } = controller
+    let frameCommitted = Promise.withResolvers<void>()
+    let failure: ReloadFailure | undefined
+
+    let resolve = Promise.resolve()
+      .then(() =>
+        runtime.resolveFrame(frameSrc, {
+          signal,
+          target: getFrameName(node),
+          ...(serverFrameReload?.navigationType
+            ? { navigationType: serverFrameReload.navigationType, from: serverFrameReload.from }
+            : {}),
+        }),
+      )
+      .then(async (resolution) => {
+        await renderResolution(
+          resolution,
+          signal,
+          () => signal.aborted,
+          () => frameSrc,
+          (content, nonce) =>
+            render(content, {
+              clientStreamSignal: signal,
+              reloadOrigin: serverFrameReload?.origin,
+              nonce,
+              navigationType: serverFrameReload?.navigationType,
+              from: serverFrameReload?.from,
+              signal,
+              reconciliationTracker: serverFrameReload?.reconciliationTracker,
+              blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
+              onCommit: frameCommitted.resolve,
+            }),
+        )
+      })
+      .catch((error) => {
+        if ((serverFrameReload || node.props.loading === 'lazy') && !signal.aborted) {
+          failure = { error }
+          rejectLoad(controller, error)
+          runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
+        }
+      })
+      .finally(() => {
+        frameCommitted.resolve()
+        completeLoad(controller, failure)
+      })
+
+    if (!node.props.fallback) {
+      serverFrameReload?.reconciliationTracker?.waitFor(resolve)
+      serverFrameReload?.blockingFrameTracker?.waitFor(frameCommitted.promise)
+    }
+  }
+
+  async function renderResolution(
+    resolution: FrameResolution,
+    signal: AbortSignal,
+    isStale: () => boolean,
+    getSource: () => string,
+    renderContent: (content: FrameContent, nonce?: string, redirectedTo?: string) => Promise<void>,
+  ): Promise<FrameReloadResult> {
+    let commit = takeFrameCommit(resolution)
+    if (isStale()) return { signal }
+    let { content, nonce, redirectedTo } = await unwrapFrameResolution(resolution)
+    if (isStale()) return { signal }
+    let swap = () => renderContent(content, nonce, redirectedTo)
+    if (commit && resolution instanceof Response) {
+      await commitResponse(resolution, commit, swap, signal, redirectedTo ?? getSource())
+    } else {
+      await swap()
+    }
+    return { signal, redirectedTo: isStale() ? undefined : redirectedTo }
+  }
+
   function startReload(options?: FrameNavigationOptions): AbortController {
     let method = options?.method?.toLowerCase() ?? 'get'
     return startLoad('direct', options?.signal, {
@@ -1186,7 +1244,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   function leaveReloadState(): void {
-    if (activeReload.status !== 'idle') activeReload.disconnect?.()
+    activeReload.disconnect?.()
     activeReload = { status: 'idle' }
   }
 
@@ -1196,11 +1254,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     options?: FrameNavigationOptions,
   ): Promise<FrameReloadResult> {
     let isStale = () => currentRequest !== controller || controller.signal.aborted
-    let origin =
-      (activeReload.status === 'direct' || activeReload.status === 'ancestor') &&
-      activeReload.controller === controller
-        ? activeReload.origin
-        : undefined
+    let origin = activeReload.controller === controller ? activeReload.origin : undefined
     let failure: ReloadFailure | undefined
     try {
       let { element: _, submitter: __, form: ___, ...resolveOptions } = options ?? {}
@@ -1209,44 +1263,37 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         signal: controller.signal,
         target: frameName,
       })
-      let commit = takeFrameCommit(resolution)
-      if (isStale()) return { signal: controller.signal }
-      let { content, redirectedTo, nonce } = await unwrapFrameResolution(resolution)
-      if (isStale()) return { signal: controller.signal }
-      let swap = async () => {
-        let reconciliationTracker = createReconciliationTracker()
-        let blockingFrameTracker = createReconciliationTracker()
-        let commitStarted = false
-        await render(content, {
-          reloadOrigin: origin,
-          nonce,
-          navigationType: options?.navigationType,
-          from: options?.from,
-          documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
-          signal: controller.signal,
-          reconciliationTracker,
-          blockingFrameTracker,
-          onCommit() {
-            if (commitStarted) return
-            commitStarted = true
-            blockingFrameTracker.finalize()
-            if (committed) {
-              void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
-            }
-          },
-        })
-        reconciliationTracker.finalize()
-        await reconciliationTracker.ready()
-      }
-      if (commit && resolution instanceof Response) {
-        await commitResponse(resolution, commit, swap, controller.signal, redirectedTo ?? frame.src)
-      } else {
-        await swap()
-      }
-      return {
-        signal: controller.signal,
-        redirectedTo: isStale() ? undefined : redirectedTo,
-      }
+      return await renderResolution(
+        resolution,
+        controller.signal,
+        isStale,
+        () => frame.src,
+        async (content, nonce, redirectedTo) => {
+          let reconciliationTracker = createReconciliationTracker()
+          let blockingFrameTracker = createReconciliationTracker()
+          let commitStarted = false
+          await render(content, {
+            reloadOrigin: origin,
+            nonce,
+            navigationType: options?.navigationType,
+            from: options?.from,
+            documentHref: isDocumentNode(container.root) ? (redirectedTo ?? frame.src) : undefined,
+            signal: controller.signal,
+            reconciliationTracker,
+            blockingFrameTracker,
+            onCommit() {
+              if (commitStarted) return
+              commitStarted = true
+              blockingFrameTracker.finalize()
+              if (committed) {
+                void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
+              }
+            },
+          })
+          reconciliationTracker.finalize()
+          await reconciliationTracker.ready()
+        },
+      )
     } catch (error) {
       if (isStale()) return { signal: controller.signal }
       failure = { error }
@@ -1263,25 +1310,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     signal?: AbortSignal,
     origin?: ReloadOrigin,
   ): void {
-    walkNodes(
-      nodes,
-      (node) => {
-        if (!isFrameStart(node)) return
-        let end = findFrameEndMarker(node)
-        context.frameInstances.get(node)?.startInheritedReload(signal, origin)
-        return end
-      },
-      signal,
-    )
+    visitSubFrames(nodes, context, (child) => child.startInheritedReload(signal, origin), signal)
   }
 
   function rejectSubFrameInheritedReloadFinished(nodes: Node[], error: unknown): void {
-    walkNodes(nodes, (node) => {
-      if (!isFrameStart(node)) return
-      let end = findFrameEndMarker(node)
-      context.frameInstances.get(node)?.rejectInheritedReloadFinished(error)
-      return end
-    })
+    visitSubFrames(nodes, context, (child) => child.rejectInheritedReloadFinished(error))
   }
 
   function completeSubFrameInheritedReloads(
@@ -1439,8 +1472,8 @@ function diffFrame(
   anchor?: Node,
 ): CommittedFrameNode {
   let { frame } = context
-  let currSrc = getFrameSrc(curr)
-  let nextSrc = getFrameSrc(next)
+  let currSrc = curr.props.src
+  let nextSrc = next.props.src
   let currName = getFrameName(curr)
   let nextName = getFrameName(next)
 
@@ -1463,17 +1496,14 @@ function diffFrame(
   let serverFrameReload = frameRuntime?.serverFrameReload
 
   if (currSrc !== nextSrc) {
-    if (frameInstance) {
-      frameInstance.handle.src = nextSrc
-    }
-
+    frameInstance.handle.src = nextSrc
     if (frameRuntime) {
-      resolveClientFrame(committed, frameRuntime, serverFrameReload)
+      frameInstance.resolveClientFrame(committed, frameRuntime, serverFrameReload)
     }
-  } else if (frameRuntime && frameInstance && serverFrameReload) {
+  } else if (frameRuntime && serverFrameReload) {
     if (frameInstance.shouldLoadForAncestorReload()) {
       // Reload client frames whose content is loaded or already being requested.
-      resolveClientFrame(committed, frameRuntime, serverFrameReload)
+      frameInstance.resolveClientFrame(committed, frameRuntime, serverFrameReload)
     } else {
       frameInstance.completeInheritedReload()
     }
@@ -1514,7 +1544,7 @@ function insertFrame(
   // frame instance created during createSubFrames().
   if (isFrameStart(cursor?.current)) {
     let start = cursor.current
-    let end = findFrameEndComment(start)
+    let end = findOptionalEndMarker(start, isFrameStart, isFrameEnd)
     if (end) {
       let instance = runtime.frameInstances.get(start)
       if (!instance) {
@@ -1556,9 +1586,9 @@ function insertFrame(
     fallbackRoot,
   })
   if (node.props.loading === 'lazy') {
-    instance.deferLoad(() => resolveClientFrame(committed, runtime))
+    instance.deferLoad(() => instance.resolveClientFrame(committed, runtime))
   } else {
-    resolveClientFrame(committed, runtime, runtime.serverFrameReload)
+    instance.resolveClientFrame(committed, runtime, runtime.serverFrameReload)
   }
 
   return committed
@@ -1603,7 +1633,7 @@ function createFrameInstance(
   let instance = createFrame([start, end], {
     name: getFrameName(node),
     loading: node.props.loading,
-    src: getFrameSrc(node),
+    src: node.props.src,
     getContext,
     ...getSharedFrameRuntime(runtime),
     data: {},
@@ -1630,80 +1660,6 @@ function commitFrameNode(
   return committed
 }
 
-function resolveClientFrame(
-  node: CommittedFrameNode,
-  runtime: FrameRuntime,
-  serverFrameReload?: NonNullable<FrameRuntime['serverFrameReload']>,
-): void {
-  let frameSrc = getFrameSrc(node)
-  let instance = node._state.instance
-  let controller = instance.startLoad(
-    serverFrameReload ? 'ancestor' : 'initial',
-    serverFrameReload?.signal,
-    serverFrameReload?.origin,
-  )
-  let { signal } = controller
-  let frameCommitted = Promise.withResolvers<void>()
-  let failure: ReloadFailure | undefined
-
-  let resolve = Promise.resolve()
-    .then(() =>
-      runtime.resolveFrame(frameSrc, {
-        signal,
-        target: getFrameName(node),
-        ...(serverFrameReload?.navigationType
-          ? { navigationType: serverFrameReload.navigationType, from: serverFrameReload.from }
-          : {}),
-      }),
-    )
-    .then(async (resolution) => {
-      let commit = takeFrameCommit(resolution)
-      if (signal.aborted) return
-      let { content, nonce, redirectedTo } = await unwrapFrameResolution(resolution)
-      if (signal.aborted) return
-      let swap = async () => {
-        await instance.render(content, {
-          clientStreamSignal: signal,
-          reloadOrigin: serverFrameReload?.origin,
-          nonce,
-          navigationType: serverFrameReload?.navigationType,
-          from: serverFrameReload?.from,
-          signal,
-          reconciliationTracker: serverFrameReload?.reconciliationTracker,
-          blockingFrameTracker: serverFrameReload?.blockingFrameTracker,
-          onCommit: frameCommitted.resolve,
-        })
-      }
-      if (commit && resolution instanceof Response) {
-        await instance.commitResponse(resolution, commit, swap, signal, redirectedTo ?? frameSrc)
-      } else {
-        await swap()
-      }
-    })
-    .catch((error) => {
-      if ((serverFrameReload || node.props.loading === 'lazy') && !signal.aborted) {
-        failure = { error }
-        instance.rejectLoad(controller, error)
-        runtime.errorTarget.dispatchEvent(createComponentErrorEvent(error))
-      }
-    })
-    .finally(() => {
-      frameCommitted.resolve()
-      instance.completeLoad(controller, failure)
-    })
-
-  if (serverFrameReload?.reconciliationTracker && !node.props.fallback) {
-    serverFrameReload.reconciliationTracker.waitFor(resolve)
-  }
-  if (serverFrameReload?.blockingFrameTracker && !node.props.fallback) {
-    serverFrameReload.blockingFrameTracker.waitFor(frameCommitted.promise)
-  }
-}
-
-function getFrameSrc(node: FrameNode | CommittedFrameNode): string {
-  return node.props.src
-}
-
 function getFrameName(node: FrameNode | CommittedFrameNode): string | undefined {
   let name = node.props.name
   return typeof name === 'string' && name.length > 0 ? name : undefined
@@ -1711,22 +1667,6 @@ function getFrameName(node: FrameNode | CommittedFrameNode): string | undefined 
 
 function randomFrameId(): string {
   return `f${crypto.randomUUID().slice(0, 8)}`
-}
-
-function findFrameEndComment(start: Comment): Comment | null {
-  let depth = 1
-  let node: Node | null = start.nextSibling
-
-  while (node) {
-    if (isFrameStart(node)) depth++
-    else if (isFrameEnd(node)) {
-      depth--
-      if (depth === 0) return node
-    }
-    node = node.nextSibling
-  }
-
-  return null
 }
 
 function createReconciliationTracker(): ReconciliationTracker {
@@ -1784,8 +1724,7 @@ function createReconciliationTracker(): ReconciliationTracker {
 }
 
 function mergeRmxDataFrom(into: RmxData, root: ParentNode): void {
-  let scripts = Array.from(root.querySelectorAll('script#rmx-data'))
-  for (let script of scripts) {
+  for (let script of root.querySelectorAll('script#rmx-data')) {
     if (!(script instanceof HTMLScriptElement)) continue
     mergeRmxData(into, parseRmxDataScript(script))
     script.remove()
@@ -1798,8 +1737,7 @@ function clearRmxData(data: RmxData): void {
 }
 
 function removeEmptyHeads(fragment: DocumentFragment): void {
-  let heads = Array.from(fragment.querySelectorAll('head'))
-  for (let head of heads) {
+  for (let head of fragment.querySelectorAll('head')) {
     if (!head.childNodes.length) {
       head.remove()
     }
@@ -1810,7 +1748,7 @@ function adoptFrameServerStyles(container: FrameContainer, styleManager: StyleMa
   let styles: HTMLStyleElement[] = []
   let nodes =
     container.root instanceof Document
-      ? [...Array.from(container.doc.head.childNodes), ...Array.from(container.doc.body.childNodes)]
+      ? [...container.doc.head.childNodes, ...container.doc.body.childNodes]
       : container.childNodes
 
   walkNodes(nodes, (node) => {
@@ -2024,13 +1962,7 @@ const unserializableMixin = createMixin(() => {
 })
 
 function reviveSerializedValue(value: unknown): unknown {
-  if (value === null || value === undefined) return value
-  if (typeof value !== 'object') return value
-
-  if (Array.isArray(value)) {
-    return value.map((item) => reviveSerializedValue(item))
-  }
-
+  if (Array.isArray(value)) return value.map(reviveSerializedValue)
   if (!isRecord(value)) return value
   let record = value
 
@@ -2194,32 +2126,27 @@ async function createSubFrames(
       let id = getFrameId(node)
       let marker = context.data.f?.[id]
 
-      if (existingFrame) {
-        if (marker) {
-          let frameMarker: FrameMarkerData = { ...marker, id }
+      if (!marker) {
+        existingFrame?.clearPendingTemplateWatch()
+      } else {
+        let frameMarker = { ...marker, id }
+        if (existingFrame) {
           tasks.push(existingFrame.updateMarker(frameMarker, options))
         } else {
-          existingFrame.clearPendingTemplateWatch()
-        }
-      } else {
-        if (marker) {
-          let frameMarker: FrameMarkerData = { ...marker, id }
           let subFrame = createFrame([node, end], {
             nonce: context.nonce,
             navigationType: context.navigationType,
             from: context.from,
             signal: options?.signal,
-            src: frameMarker.src,
-            marker: frameMarker,
+            src: marker.src,
             topFrame: context.topFrame,
             getContext: context.getContext,
             ...getSharedFrameRuntime(context),
             data: context.data,
+            marker: frameMarker,
           })
           context.frameInstances.set(node, subFrame)
-          if (frameMarker.status === 'resolved') {
-            tasks.push(subFrame.ready())
-          }
+          if (marker.status === 'resolved') tasks.push(subFrame.ready())
         }
       }
 
@@ -2227,7 +2154,7 @@ async function createSubFrames(
       continue
     }
 
-    if (node.childNodes && node.childNodes.length > 0) {
+    if (node.childNodes.length > 0) {
       tasks.push(createSubFrames(Array.from(node.childNodes), context, options))
     }
   }
@@ -2261,16 +2188,29 @@ function removeVirtualRoots(nodes: Node[]): void {
   })
 }
 
+function visitSubFrames(
+  nodes: Node[],
+  context: FrameContext,
+  visit: (frame: FrameInstance, start: Comment) => void,
+  signal?: AbortSignal,
+): void {
+  walkNodes(
+    nodes,
+    (node) => {
+      if (!isFrameStart(node)) return
+      let end = findFrameEndMarker(node)
+      let frame = context.frameInstances.get(node)
+      if (frame) visit(frame, node)
+      return end
+    },
+    signal,
+  )
+}
+
 function disposeSubFrames(nodes: Node[], context: FrameContext): void {
-  walkNodes(nodes, (node) => {
-    if (!isFrameStart(node)) return
-    let end = findFrameEndMarker(node)
-    let subFrame = context.frameInstances.get(node)
-    if (subFrame) {
-      subFrame.dispose()
-      context.frameInstances.delete(node)
-    }
-    return end
+  visitSubFrames(nodes, context, (frame, start) => {
+    frame.dispose()
+    context.frameInstances.delete(start)
   })
 }
 
@@ -2344,7 +2284,7 @@ function collectFrameTemplates(node: Node, collect: (template: HTMLTemplateEleme
   }
 
   if (!(node instanceof Element)) return
-  let templates = Array.from(node.querySelectorAll('template'))
+  let templates = node.querySelectorAll('template')
   for (let template of templates) {
     if (!(template instanceof HTMLTemplateElement)) continue
     collect(template)
@@ -2456,7 +2396,6 @@ function extractTemplatesFromBuffer(
   }
 
   let tail = buffer.slice(cursor)
-  if (tail === '') return { html, remainder: '' }
 
   let tailStart = tail.toLowerCase().lastIndexOf('<template')
   if (tailStart === -1) {
@@ -2518,12 +2457,9 @@ async function renderFrameStream(
     let parsed = extractTemplatesFromBuffer(doc, buffer, publishFrameTemplate)
     html += parsed.html + parsed.remainder
 
-    if (html !== '') {
+    // An empty stream still replaces the existing frame content.
+    if (html || !appliedOnce) {
       await applyHtml(html, appliedOnce ? 'fragment' : inferFlushKind(html))
-    } else if (!appliedOnce) {
-      // A frame stream can legitimately resolve to empty content. Ensure the
-      // existing frame region is cleared instead of treated as a no-op.
-      await applyHtml('', 'fragment')
     }
   } finally {
     signal.removeEventListener('abort', abort)
@@ -3121,7 +3057,7 @@ type InstalledImportMapEntry = { href: ImportMapAddress; normalizedHref: ImportM
 type InstalledImportMap = {
   imports: Map<string, InstalledImportMapEntry>
   scopes: Map<string, Map<string, InstalledImportMapEntry>>
-  integrity: Map<string, string>
+  integrity: Map<string, InstalledImportMapEntry>
 }
 
 interface ImportMapManager {
@@ -3152,7 +3088,11 @@ export function resetDocumentImportMapManager(doc: Document): void {
 
 function createImportMapManager(doc: Document): ImportMapManager {
   let nonce = getNonceManager().moduleNonce
-  let installedImportMap = createInstalledImportMap()
+  let installedImportMap: InstalledImportMap = {
+    imports: new Map(),
+    scopes: new Map(),
+    integrity: new Map(),
+  }
   let processedScripts = new WeakSet<HTMLScriptElement>()
   let conflicted = false
 
@@ -3191,24 +3131,25 @@ function createImportMapManager(doc: Document): ImportMapManager {
       if (conflicted) return 'blocked'
       processMutations(observer.takeRecords())
       processImportMaps()
-      let scripts = Array.from(
-        source.querySelectorAll<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR),
-      )
+      let scripts = source.querySelectorAll<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR)
       if (scripts.length === 0) return 'ready'
 
-      let pendingImportMap = cloneInstalledImportMap(installedImportMap)
+      // Apply the response's maps as a group. A failure while preparing or appending a
+      // script must leave the registry available for a retry.
+      let pending: InstalledImportMap = {
+        imports: new Map(installedImportMap.imports),
+        scopes: new Map(
+          Array.from(installedImportMap.scopes, ([scope, entries]) => [scope, new Map(entries)]),
+        ),
+        integrity: new Map(installedImportMap.integrity),
+      }
       let deltas: ImportMap[] = []
       let baseUrl = doc.baseURI
       try {
         for (let script of scripts) {
           let importMap = parseImportMap(script.textContent ?? '')
           if (!importMap) continue
-          let delta = installImportMap(
-            pendingImportMap,
-            importMap,
-            baseUrl,
-            cloneInstalledImportMap(pendingImportMap),
-          )
+          let delta = installImportMap(pending, importMap, baseUrl, true)
           if (delta) deltas.push(delta)
         }
       } catch (error) {
@@ -3222,7 +3163,7 @@ function createImportMapManager(doc: Document): ImportMapManager {
         let installedScript = appendImportMapScript(doc, delta, nonce)
         processedScripts.add(installedScript)
       }
-      installedImportMap = pendingImportMap
+      installedImportMap = pending
       for (let script of scripts) script.remove()
       return 'ready'
     },
@@ -3239,103 +3180,67 @@ function createImportMapManager(doc: Document): ImportMapManager {
   }
 }
 
-function createInstalledImportMap(): InstalledImportMap {
-  return {
-    imports: new Map(),
-    scopes: new Map(),
-    integrity: new Map(),
-  }
-}
-
-function cloneInstalledImportMap(importMap: InstalledImportMap): InstalledImportMap {
-  return {
-    imports: new Map(importMap.imports),
-    scopes: new Map(Array.from(importMap.scopes, ([scope, imports]) => [scope, new Map(imports)])),
-    integrity: new Map(importMap.integrity),
-  }
-}
-
-// Adds entries that are new to `installed` (defaults to `target`) to `target` and returns them.
-// When `installed` is passed, entries it already maps to a different value throw a conflict.
+// Keep each spelling of a new entry in the script we append. Later scripts compare
+// against the first entry recorded for its normalized key.
 function installImportMap(
-  target: InstalledImportMap,
+  installed: InstalledImportMap,
   importMap: ImportMap,
   baseUrl: string,
-  installed?: InstalledImportMap,
+  checkConflicts = false,
 ): ImportMap | undefined {
-  let imports = installImports(target.imports, installed?.imports, importMap.imports, baseUrl)
-
-  let scopes: Record<string, ImportMapImports> = {}
-  for (let [scope, scopeImports] of Object.entries(importMap.scopes ?? {})) {
-    let normalizedScope = normalizeImportMapUrl(scope, baseUrl)
-    if (normalizedScope === null) continue
-    let targetScopeImports = target.scopes.get(normalizedScope)
-    if (!targetScopeImports) {
-      targetScopeImports = new Map()
-      target.scopes.set(normalizedScope, targetScopeImports)
-    }
-    let importsDelta = installImports(
-      targetScopeImports,
-      installed && (installed.scopes.get(normalizedScope) ?? new Map()),
-      scopeImports,
-      baseUrl,
-      scope,
-    )
-    if (importsDelta) scopes[scope] = importsDelta
-  }
-
-  let integrity: Record<string, string> = {}
-  for (let [url, metadata] of Object.entries(importMap.integrity ?? {})) {
-    let normalizedUrl = normalizeImportMapUrl(url, baseUrl)
-    if (normalizedUrl === null) continue
-    let installedMetadata = (installed ?? target).integrity.get(normalizedUrl)
-    if (installedMetadata !== undefined) {
-      if (installed && installedMetadata !== metadata) {
-        throw new ImportMapConflictError(
-          `[remix] Reloading page after import map integrity conflict for "${url}": ` +
-            `"${installedMetadata}" is already installed, but the new map points to "${metadata}"`,
-        )
+  let additions = new Set<InstalledImportMapEntry>()
+  function installEntries<address extends ImportMapAddress>(
+    target: Map<string, InstalledImportMapEntry>,
+    entries: Record<string, address> | undefined,
+    integrity: boolean,
+    scope?: string,
+  ): Record<string, address> | undefined {
+    if (!entries) return
+    let delta: Record<string, address> = {}
+    for (let [key, href] of Object.entries(entries)) {
+      let normalizedKey = integrity
+        ? normalizeImportMapUrl(key, baseUrl)
+        : normalizeImportMapSpecifier(key, baseUrl)
+      if (normalizedKey === null) continue
+      let normalizedHref = integrity || href === null ? href : normalizeImportMapUrl(href, baseUrl)
+      let existing = target.get(normalizedKey)
+      if (existing && !additions.has(existing)) {
+        if (checkConflicts && existing.normalizedHref !== normalizedHref) {
+          let scopeDescription = scope ? ` in scope "${scope}"` : ''
+          let kind = integrity ? 'integrity ' : ''
+          throw new ImportMapConflictError(
+            `[remix] Reloading page after import map ${kind}conflict for "${key}"${scopeDescription}: ` +
+              `${formatImportMapAddress(existing.href)} is already installed, but the new map points to ${formatImportMapAddress(href)}`,
+          )
+        }
+      } else {
+        delta[key] = href
+        if (!existing) {
+          let entry = { href, normalizedHref }
+          target.set(normalizedKey, entry)
+          additions.add(entry)
+        }
       }
-      continue
     }
-    integrity[url] = metadata
-    if (!target.integrity.has(normalizedUrl)) target.integrity.set(normalizedUrl, metadata)
+    return hasEntries(delta) ? delta : undefined
   }
 
   let delta: ImportMap = {}
+  let imports = installEntries(installed.imports, importMap.imports, false)
   if (imports) delta.imports = imports
-  if (hasEntries(scopes)) delta.scopes = scopes
-  if (hasEntries(integrity)) delta.integrity = integrity
-  return hasEntries(delta) ? delta : undefined
-}
-
-function installImports(
-  target: Map<string, InstalledImportMapEntry>,
-  installed: Map<string, InstalledImportMapEntry> | undefined,
-  imports: ImportMapImports | undefined,
-  baseUrl: string,
-  scope?: string,
-): ImportMapImports | undefined {
-  let delta: ImportMapImports = {}
-  for (let [specifier, href] of Object.entries(imports ?? {})) {
-    let normalizedSpecifier = normalizeImportMapSpecifier(specifier, baseUrl)
-    if (normalizedSpecifier === null) continue
-    let normalizedHref = normalizeImportMapAddress(href, baseUrl)
-    let installedEntry = (installed ?? target).get(normalizedSpecifier)
-    if (installedEntry) {
-      if (installed && installedEntry.normalizedHref !== normalizedHref) {
-        let scopeDescription = scope ? ` in scope "${scope}"` : ''
-        throw new ImportMapConflictError(
-          `[remix] Reloading page after import map conflict for "${specifier}"${scopeDescription}: ` +
-            `${formatImportMapAddress(installedEntry.href)} is already installed, but the new map points to ${formatImportMapAddress(href)}`,
-        )
-      }
-      continue
+  for (let [scope, scopeImports] of Object.entries(importMap.scopes ?? {})) {
+    let normalizedScope = normalizeImportMapUrl(scope, baseUrl)
+    if (normalizedScope === null) continue
+    let target = installed.scopes.get(normalizedScope)
+    if (!target) {
+      target = new Map()
+      installed.scopes.set(normalizedScope, target)
     }
-    delta[specifier] = href
-    if (!target.has(normalizedSpecifier)) target.set(normalizedSpecifier, { href, normalizedHref })
+    let entries = installEntries(target, scopeImports, false, scope)
+    if (entries) (delta.scopes ??= {})[scope] = entries
   }
-
+  let integrity = installEntries(installed.integrity, importMap.integrity, true)
+  if (integrity) delta.integrity = integrity
   return hasEntries(delta) ? delta : undefined
 }
 
@@ -3366,42 +3271,25 @@ function parseImportMap(json: string): ImportMap | null {
   }
 
   if (!parsed || typeof parsed !== 'object') return null
-  let importMap: ImportMap = {}
+  if ('imports' in parsed && !isImportMapImports(parsed.imports)) return null
+  if ('scopes' in parsed && !isImportMapRecord(parsed.scopes, isImportMapImports)) return null
+  if ('integrity' in parsed && !isImportMapRecord(parsed.integrity, isString)) return null
+  return parsed
+}
 
-  if ('imports' in parsed) {
-    let imports = parsed.imports
-    if (!isImportMapImports(imports)) return null
-    importMap.imports = imports
-  }
-
-  if ('scopes' in parsed) {
-    let scopes = parsed.scopes
-    if (!isScopedImportMapRecord(scopes)) return null
-    importMap.scopes = scopes
-  }
-
-  if ('integrity' in parsed) {
-    let integrity = parsed.integrity
-    if (!isImportMapIntegrity(integrity)) return null
-    importMap.integrity = integrity
-  }
-
-  return importMap
+function isString(value: unknown): value is string {
+  return typeof value === 'string'
 }
 
 function isImportMapImports(value: unknown): value is ImportMapImports {
-  if (!value || typeof value !== 'object') return false
-  return Object.values(value).every((entry) => entry === null || typeof entry === 'string')
+  return isImportMapRecord(value, (entry) => entry === null || isString(entry))
 }
 
-function isScopedImportMapRecord(value: unknown): value is Record<string, ImportMapImports> {
-  if (!value || typeof value !== 'object') return false
-  return Object.values(value).every(isImportMapImports)
-}
-
-function isImportMapIntegrity(value: unknown): value is Record<string, string> {
-  if (!value || typeof value !== 'object') return false
-  return Object.values(value).every((entry) => typeof entry === 'string')
+function isImportMapRecord<entry>(
+  value: unknown,
+  validate: (value: unknown) => value is entry,
+): value is Record<string, entry> {
+  return typeof value === 'object' && value !== null && Object.values(value).every(validate)
 }
 
 function normalizeImportMapSpecifier(specifier: string, baseUrl: string): string | null {
@@ -3414,11 +3302,6 @@ function normalizeImportMapSpecifier(specifier: string, baseUrl: string): string
     return normalizeImportMapUrl(specifier, baseUrl)
   }
   return specifier
-}
-
-function normalizeImportMapAddress(address: ImportMapAddress, baseUrl: string): ImportMapAddress {
-  if (address === null) return null
-  return normalizeImportMapUrl(address, baseUrl)
 }
 
 function normalizeImportMapUrl(value: string, baseUrl: string): string | null {
@@ -3458,82 +3341,49 @@ export function getDocumentModulePreloader(doc: Document): ModulePreloader {
 function createModulePreloader(doc: Document): ModulePreloader {
   let nonce = getNonceManager().moduleNonce
   let requestedUrls = new Set<string>()
-  let activeLinks = new WeakSet<HTMLLinkElement>()
+  let activeLinks = new WeakSet<Node>()
   let activeLinkCount = 0
 
-  function activateLink(link: HTMLLinkElement): void {
-    activeLinks.add(link)
-    activeLinkCount++
-  }
-
-  function deactivateLink(link: HTMLLinkElement): void {
-    if (activeLinks.delete(link)) activeLinkCount--
-  }
-
-  function preload(href: string): void {
+  function preload(href: string, initialLink?: HTMLLinkElement): void {
     let link = doc.createElement('link')
     link.rel = 'modulepreload'
     link.href = href
-    link.setAttribute('data-rmx-module-preload', '')
-    if (nonce) link.nonce = nonce
     let url = link.href
-    if (requestedUrls.has(url)) return
+    if (!initialLink && requestedUrls.has(url)) return
     requestedUrls.add(url)
+    link.setAttribute('data-rmx-module-preload', '')
+    let linkNonce = initialLink ? initialLink.nonce : nonce
+    if (linkNonce) link.nonce = linkNonce
 
-    activateLink(link)
-    link.addEventListener(
-      'load',
-      () => {
-        deactivateLink(link)
-        link.remove()
-      },
-      { once: true },
-    )
-    link.addEventListener(
-      'error',
-      () => {
-        deactivateLink(link)
-        link.remove()
-        requestedUrls.delete(url)
-      },
-      { once: true },
-    )
+    activeLinks.add(link)
+    activeLinkCount++
+    if (initialLink) {
+      activeLinks.add(initialLink)
+      activeLinkCount++
+    }
+
+    function settle(event: Event): void {
+      if (!activeLinks.delete(link)) return
+      activeLinkCount--
+      link.remove()
+      if (initialLink) {
+        activeLinks.delete(initialLink)
+        activeLinkCount--
+        initialLink.remove()
+      }
+      if (event.type === 'error') requestedUrls.delete(url)
+    }
+    link.addEventListener('load', settle, { once: true })
+    link.addEventListener('error', settle, { once: true })
     doc.head.append(link)
   }
 
   return {
     adoptInitialPreloadLinks(source) {
-      for (let initialLink of source.querySelectorAll<HTMLLinkElement>(
-        SERVER_MODULE_PRELOAD_SELECTOR,
-      )) {
-        if (activeLinks.has(initialLink)) continue
-
-        // An identical link joins the document's existing module-map request and receives its own
-        // terminal event, even when the parser-created link settled before runtime startup.
-        let observerLink = doc.createElement('link')
-        observerLink.rel = 'modulepreload'
-        observerLink.href = initialLink.href
-        observerLink.setAttribute('data-rmx-module-preload', '')
-        if (initialLink.nonce) observerLink.nonce = initialLink.nonce
-        let url = initialLink.href
-        requestedUrls.add(url)
-        activateLink(initialLink)
-        activateLink(observerLink)
-
-        let settled = false
-        function settle(succeeded: boolean): void {
-          if (settled) return
-          settled = true
-          deactivateLink(initialLink)
-          deactivateLink(observerLink)
-          initialLink.remove()
-          observerLink.remove()
-          if (!succeeded) requestedUrls.delete(url)
-        }
-
-        observerLink.addEventListener('load', () => settle(true), { once: true })
-        observerLink.addEventListener('error', () => settle(false), { once: true })
-        doc.head.append(observerLink)
+      // The duplicate joins the parser-created request and gets a terminal event even
+      // when the original link settled before runtime startup.
+      for (let link of source.querySelectorAll<HTMLLinkElement>(SERVER_MODULE_PRELOAD_SELECTOR)) {
+        if (!activeLinks.has(link)) preload(link.href, link)
       }
     },
     async consumePreloadLinks(source, process) {
@@ -3550,7 +3400,7 @@ function createModulePreloader(doc: Document): ModulePreloader {
       return activeLinkCount > 0
     },
     isActivePreload(node) {
-      return node instanceof HTMLLinkElement && activeLinks.has(node)
+      return activeLinks.has(node)
     },
   }
 }

@@ -2224,6 +2224,24 @@ describe('frames', () => {
     }
   })
 
+  it('keeps new aliases in the same import map and compares later maps against the first one', async (t) => {
+    let frame = createClientEntryResourceTestFrame()
+    let absolute = new URL('/alias.js', document.baseURI).href
+    let imports = { '/alias.js': '/first.js', [absolute]: '/second.js' }
+    let navigate = mockDocumentNavigation(t)
+    t.mock.method(console, 'warn', () => {})
+    try {
+      await frame.ready()
+      await frame.render(remixImportMapHead({ imports }))
+      expect(navigate).toHaveBeenCalledTimes(0)
+      expect(parseImportMapScript(getImportMapScripts().at(-1)!)).toEqual({ imports })
+      await frame.render(remixImportMapHead({ imports: { [absolute]: '/second.js' } }))
+      expect(navigate).toHaveBeenCalledTimes(1)
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('reloads without applying any maps or content when a late import map conflicts', async (t) => {
     document.documentElement.innerHTML = [
       '<head>',

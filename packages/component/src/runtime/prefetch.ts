@@ -1,5 +1,10 @@
 import { getNamedFrame, pendingPrefetchLinks } from './frame.ts'
-import { getInterceptableNavigation, getSameOriginUrl, hasNoReferrer } from './navigation.ts'
+import {
+  getInterceptableNavigation,
+  getSameOriginUrl,
+  hasNoReferrer,
+  isObject,
+} from './navigation.ts'
 
 /** Options for a URL prefetch trigger. */
 export interface PrefetchOptions {
@@ -168,24 +173,19 @@ export function prefetch(href: string, options?: PrefetchOptions): void
  */
 export function prefetch(href: string | HTMLAnchorElement, options?: PrefetchAnchorOptions): void
 export function prefetch(href: string | HTMLAnchorElement, options?: PrefetchOptions): void {
-  let request =
-    typeof href === 'string'
-      ? getPrefetchRequest(
-          href,
-          options ? { target: options.target, signal: options.signal } : undefined,
-        )
-      : getAnchorPrefetchRequest(href, options?.signal)
-  if (request && (typeof href === 'string' || hasPrefetchTarget(request))) {
-    dispatchPrefetch(request, typeof href === 'string' ? undefined : href)
+  if (typeof href === 'string') {
+    let request = getPrefetchRequest(
+      href,
+      options && { target: options.target, signal: options.signal },
+    )
+    if (request) dispatchPrefetch(request)
+  } else {
+    let request = getAnchorPrefetchRequest(href, options?.signal)
+    if (request && hasPrefetchTarget(request)) prefetchAnchor(request, href)
   }
 }
 
-function dispatchPrefetch(
-  request: PrefetchRequest,
-  anchor?: HTMLAnchorElement,
-  trigger?: 'intent' | 'viewport',
-): void | Promise<void> {
-  if (anchor) return prefetchAnchor(request, anchor, trigger)
+function dispatchPrefetch(request: PrefetchRequest): void | Promise<void> {
   let [src, options] = request
   let result = options ? prefetchFrame(src, options) : prefetchFrame(src)
   void Promise.resolve(result).catch(() => {})
@@ -195,7 +195,7 @@ function dispatchPrefetch(
 function createAnchorPrefetching(
   signal?: AbortSignal,
   updateViewport?: (anchor: HTMLAnchorElement) => void,
-): (request: PrefetchRequest, anchor: HTMLAnchorElement, trigger?: 'intent' | 'viewport') => void {
+): (request: PrefetchRequest, anchor: HTMLAnchorElement, declarative?: boolean) => void {
   interface Caller {
     controller: AbortController
     src: string
@@ -268,7 +268,7 @@ function createAnchorPrefetching(
     scan(document.documentElement)
   }
 
-  return function prefetch([src, options], anchor, trigger) {
+  return function prefetch([src, options], anchor, declarative = false) {
     if (signal?.aborted || options?.signal?.aborted || !anchor.isConnected) return
     observe()
     let controller = new AbortController()
@@ -282,7 +282,7 @@ function createAnchorPrefetching(
       controller,
       src,
       target: options?.target,
-      declarative: trigger !== undefined,
+      declarative,
     }
     callers.add(caller)
     pending.set(anchor, callers)
@@ -320,12 +320,12 @@ function createAnchorPrefetching(
  */
 export function startPrefetching(signal: AbortSignal, prefetchOverride?: PrefetchFrame): void {
   if (signal.aborted) return
+  let canIntercept = getInterceptableNavigation()
   let strategy = createFramePrefetch(signal)
-  let anchorStrategy = createAnchorPrefetching(
+  prefetchAnchor = createAnchorPrefetching(
     signal,
-    getInterceptableNavigation() ? startViewportPrefetching(signal) : undefined,
+    canIntercept ? startViewportPrefetching(signal) : undefined,
   )
-  prefetchAnchor = anchorStrategy
   defaultPrefetchFrame = strategy
   prefetchFrame = prefetchOverride ?? prefetchPage
   signal.addEventListener(
@@ -339,7 +339,7 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
     },
     { once: true },
   )
-  if (!getInterceptableNavigation()) return
+  if (!canIntercept) return
 
   // Hover and focus share an intent on the same link until both inputs leave it.
   interface Intent {
@@ -347,15 +347,24 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
     timer: ReturnType<typeof setTimeout> | undefined
     prefetched: boolean
   }
-  let pointerIntent: Intent | undefined
-  let focusIntent: Intent | undefined
-
-  function rest(anchor: HTMLAnchorElement): Intent {
-    if (pointerIntent?.anchor === anchor) return pointerIntent
-    if (focusIntent?.anchor === anchor) return focusIntent
-    let intent: Intent = { anchor, timer: undefined, prefetched: false }
-    intent.timer = setTimeout(() => trigger(intent), INTENT_DELAY_MS)
+  let intents: { pointer?: Intent; focus?: Intent } = {}
+  function enter(kind: keyof typeof intents, target: EventTarget | null): Intent | undefined {
+    let anchor = getIntentAnchor(target)
+    if (!anchor) return
+    let intent = intents.pointer?.anchor === anchor ? intents.pointer : intents.focus
+    if (intent?.anchor !== anchor) {
+      intent = { anchor, timer: undefined, prefetched: false }
+      let next = intent
+      intent.timer = setTimeout(() => trigger(next), INTENT_DELAY_MS)
+    }
+    setIntent(kind, intent)
     return intent
+  }
+  function setIntent(kind: keyof typeof intents, next?: Intent) {
+    let previous = intents[kind]
+    intents[kind] = next
+    if (previous && previous !== intents.pointer && previous !== intents.focus)
+      clearTimeout(previous.timer)
   }
   function trigger(intent: Intent) {
     clearTimeout(intent.timer)
@@ -369,57 +378,28 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
     }
     intent.prefetched = true
     let request = getAnchorPrefetchRequest(intent.anchor)
-    if (request && hasPrefetchTarget(request)) dispatchPrefetch(request, intent.anchor, 'intent')
+    if (request && hasPrefetchTarget(request)) prefetchAnchor(request, intent.anchor, true)
   }
-  function stopResting(intent: Intent | undefined) {
-    if (intent !== pointerIntent && intent !== focusIntent) clearTimeout(intent?.timer)
+  function leave(kind: keyof typeof intents, event: PointerEvent | FocusEvent) {
+    let anchor = intents[kind]?.anchor
+    if (
+      event.target instanceof Node &&
+      anchor?.contains(event.target) &&
+      !(event.relatedTarget instanceof Node && anchor.contains(event.relatedTarget))
+    ) {
+      setIntent(kind)
+    }
   }
-  function leave(event: PointerEvent | FocusEvent, intent: Intent | undefined): Intent | undefined {
-    if (!(event.target instanceof Node && intent?.anchor.contains(event.target))) return intent
-    let next = event.relatedTarget
-    return next instanceof Node && intent.anchor.contains(next) ? intent : undefined
-  }
-
   document.addEventListener(
     'pointerover',
     (event) => {
-      let anchor = getIntentAnchor(event.target)
-      if (!anchor || event.pointerType !== 'mouse') return
-      let previous = pointerIntent
-      pointerIntent = rest(anchor)
-      stopResting(previous)
+      if (event.pointerType === 'mouse') enter('pointer', event.target)
     },
     { signal },
   )
-  document.addEventListener(
-    'focusin',
-    (event) => {
-      let anchor = getIntentAnchor(event.target)
-      if (!anchor) return
-      let previous = focusIntent
-      focusIntent = rest(anchor)
-      stopResting(previous)
-    },
-    { signal },
-  )
-  document.addEventListener(
-    'pointerout',
-    (event) => {
-      let previous = pointerIntent
-      pointerIntent = leave(event, pointerIntent)
-      stopResting(previous)
-    },
-    { signal },
-  )
-  document.addEventListener(
-    'focusout',
-    (event) => {
-      let previous = focusIntent
-      focusIntent = leave(event, focusIntent)
-      stopResting(previous)
-    },
-    { signal },
-  )
+  document.addEventListener('focusin', (event) => enter('focus', event.target), { signal })
+  document.addEventListener('pointerout', (event) => leave('pointer', event), { signal })
+  document.addEventListener('focusout', (event) => leave('focus', event), { signal })
   document.addEventListener(
     'pointerdown',
     (event) => {
@@ -431,21 +411,16 @@ export function startPrefetching(signal: AbortSignal, prefetchOverride?: Prefetc
         !event.ctrlKey &&
         !event.metaKey &&
         !event.shiftKey
-      let anchor = getIntentAnchor(event.target)
-      if (!anchor || !opensHere) return
-      let previous = pointerIntent
-      pointerIntent = rest(anchor)
-      stopResting(previous)
-      trigger(pointerIntent)
+      let intent = opensHere && enter('pointer', event.target)
+      if (intent) trigger(intent)
     },
     { passive: true, signal },
   )
   signal.addEventListener(
     'abort',
     () => {
-      clearTimeout(pointerIntent?.timer)
-      clearTimeout(focusIntent?.timer)
-      pointerIntent = focusIntent = undefined
+      setIntent('pointer')
+      setIntent('focus')
     },
     { once: true },
   )
@@ -466,14 +441,14 @@ function startViewportPrefetching(
     return getAnchorPrefetchRequest(anchor)
   }
 
-  function prefetchAnchor(anchor: HTMLAnchorElement): void {
+  function prefetchEntered(anchor: HTMLAnchorElement): void {
     let request = getRequest(anchor)
     if (!request || !hasPrefetchTarget(request)) return
     let key = JSON.stringify(request)
     if (completed.get(anchor) === key) return
     completed.set(anchor, key)
     viewport.unobserve(anchor)
-    dispatchPrefetch(request, anchor, 'viewport')
+    prefetchAnchor(request, anchor, true)
   }
 
   function intersect(entries: IntersectionObserverEntry[]): void {
@@ -492,7 +467,7 @@ function startViewportPrefetching(
     for (let anchor of entered) {
       if (signal.aborted || document.hidden || scrolling !== undefined) break
       entered.delete(anchor)
-      prefetchAnchor(anchor)
+      prefetchEntered(anchor)
     }
   }
 
@@ -529,10 +504,6 @@ function startViewportPrefetching(
   function update(anchor: HTMLAnchorElement): void {
     viewport.unobserve(anchor)
     entered.delete(anchor)
-    if (!anchor.isConnected) {
-      completed.delete(anchor)
-      return
-    }
     // Named frames can still be hydrating here; check their registration when the link enters view.
     let request = getRequest(anchor)
     if (!request) {
@@ -555,14 +526,13 @@ function startViewportPrefetching(
 }
 
 function canPrefetchAutomatically(): boolean {
-  if (!('connection' in navigator)) return true
-  let connection = navigator.connection
-  if (typeof connection !== 'object' || connection === null) return true
-  if ('saveData' in connection && connection.saveData === true) return false
-  if ('effectiveType' in connection) {
-    return connection.effectiveType !== 'slow-2g' && connection.effectiveType !== '2g'
-  }
-  return true
+  let { connection }: Navigator & { connection?: { saveData?: boolean; effectiveType?: string } } =
+    navigator
+  return (
+    connection?.saveData !== true &&
+    connection?.effectiveType !== 'slow-2g' &&
+    connection?.effectiveType !== '2g'
+  )
 }
 
 function getIntentAnchor(target: EventTarget | null): HTMLAnchorElement | null {
@@ -577,10 +547,7 @@ function getAnchorPrefetchRequest(
 ): PrefetchRequest | undefined {
   if (
     !anchor.isConnected ||
-    !anchor.hasAttribute('href') ||
-    anchor.hasAttribute('download') ||
-    anchor.hasAttribute('data-rmx-document') ||
-    anchor.hasAttribute('referrerpolicy') ||
+    !anchor.matches('[href]:not([download],[data-rmx-document],[referrerpolicy])') ||
     hasNoReferrer(anchor) ||
     (anchor.target !== '' && anchor.target !== '_self')
   ) {
@@ -617,11 +584,14 @@ function getSameOriginHref(href: string): string | undefined {
   return url.href
 }
 
+export function isHtmlResponse(response: Response): boolean {
+  return response.headers.get('Content-Type')?.toLowerCase().includes('text/html') ?? false
+}
+
 export function fetchFrame(
   src: string,
   target: string | undefined,
   init: RequestInit,
-  contentType?: string,
   fetchImpl: (url: string, init: RequestInit) => Promise<Response> = globalThis.fetch,
 ): Promise<Response> {
   let url = new URL(src, document.baseURI)
@@ -630,7 +600,6 @@ export function fetchFrame(
   headers.set('Accept', 'text/html')
   headers.set('X-Remix-Frame', 'true')
   if (target != null) headers.set('X-Remix-Target', target)
-  if (contentType) headers.set('Content-Type', contentType)
   return fetchImpl(url.href, { ...init, headers, mode: 'same-origin' })
 }
 
@@ -732,10 +701,6 @@ function createFramePrefetch(
     visited: Set<string>,
   ): Promise<void> {
     let jobSignal = entry.controller.signal
-    let nestedOwner: PrefetchOwner = {
-      signal: jobSignal,
-      element: entry.element,
-    }
     try {
       let response = await fetchFrame(
         src,
@@ -746,30 +711,22 @@ function createFramePrefetch(
           priority: 'low',
           signal: jobSignal,
         },
-        undefined,
         overrides?.fetch,
       )
-      if (
-        jobSignal.aborted ||
-        !response.ok ||
-        !response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
-      ) {
+      if (jobSignal.aborted || !response.ok || !isHtmlResponse(response)) {
         await response.body?.cancel()
         return
       }
       let html = await response.text()
       if (jobSignal.aborted) return
       await new Promise<void>((resolve) => {
-        let cancelIdle: () => void
-        if (typeof requestIdleCallback === 'function') {
-          let handle = requestIdleCallback(finish, { timeout: IDLE_TIMEOUT_MS })
-          cancelIdle = () => cancelIdleCallback(handle)
-        } else {
-          let handle = setTimeout(finish, 0)
-          cancelIdle = () => clearTimeout(handle)
-        }
+        let idle = typeof requestIdleCallback === 'function'
+        let id = idle
+          ? requestIdleCallback(finish, { timeout: IDLE_TIMEOUT_MS })
+          : window.setTimeout(finish)
         function finish() {
-          cancelIdle()
+          if (idle) cancelIdleCallback(id)
+          else clearTimeout(id)
           jobSignal.removeEventListener('abort', finish)
           resolve()
         }
@@ -792,7 +749,12 @@ function createFramePrefetch(
       }
       let elements = getResponseElements(fragment)
       let discoveredAssets = Object.freeze(
-        elements.filter((element) => isAssetReference(element, baseURL)),
+        elements.filter(
+          (element) =>
+            !(element instanceof HTMLImageElement) &&
+            assetDestination(element) &&
+            getElementHref(element, baseURL),
+        ),
       )
       function prefetchAssets(
         elements: readonly Element[],
@@ -831,7 +793,15 @@ function createFramePrefetch(
           elements,
           baseURL,
           prefetchAssets,
-          (href, name) => traverse(href, name, nestedOwner, overrides, visited, entry),
+          (href, name) =>
+            traverse(
+              href,
+              name,
+              { signal: jobSignal, element: entry.element },
+              overrides,
+              visited,
+              entry,
+            ),
         )
       } else {
         await Promise.all(prefetchAssets(discoveredAssets))
@@ -893,7 +863,7 @@ function createFramePrefetch(
     overrides?: FramePrefetchOverrides,
   ): Promise<void> {
     let owner: PrefetchOwner = {
-      signal: options?.signal ?? new AbortController().signal,
+      signal: options?.signal ?? AbortSignal.any([]),
       element: options?.element,
     }
     let ready = traverse(src, options?.target, owner, overrides, new Set())
@@ -927,24 +897,27 @@ function getResponseElements(source: DocumentFragment): Element[] {
 
 const javaScriptTypes = new Set(['', 'module', 'text/javascript', 'application/javascript'])
 
-function isAssetReference(element: Element, baseURL: string): boolean {
+// Modules are prefetched as scripts with module credentials.
+function assetDestination(element: Element): string | undefined {
   if (element instanceof HTMLScriptElement) {
-    return (
-      getAssetHref(element.getAttribute('src'), baseURL) !== undefined &&
-      javaScriptTypes.has(element.type.toLowerCase())
-    )
+    let type = element.type.toLowerCase()
+    if (javaScriptTypes.has(type)) return type === 'module' ? 'module' : 'script'
+  } else if (element instanceof HTMLImageElement) {
+    if (!element.srcset) return 'image'
+  } else if (element instanceof HTMLLinkElement) {
+    let { relList, as } = element
+    let preload = relList.contains('preload')
+    if (preload && as === 'image' && element.imageSrcset.trim()) return
+    if (relList.contains('modulepreload')) return 'module'
+    if (relList.contains('stylesheet')) return 'style'
+    if (preload && PRELOAD_DESTINATIONS.includes(as)) return as
   }
-  return (
-    element instanceof HTMLLinkElement &&
-    !(
-      element.relList.contains('preload') &&
-      element.as === 'image' &&
-      element.imageSrcset.trim() !== ''
-    ) &&
-    (element.relList.contains('modulepreload') ||
-      element.relList.contains('stylesheet') ||
-      (element.relList.contains('preload') && PRELOAD_DESTINATIONS.includes(element.as))) &&
-    getAssetHref(element.getAttribute('href'), baseURL) !== undefined
+}
+
+function getElementHref(element: Element, baseURL: string): string | undefined {
+  return getAssetHref(
+    element.getAttribute(element instanceof HTMLLinkElement ? 'href' : 'src'),
+    baseURL,
   )
 }
 
@@ -959,40 +932,24 @@ function getAssetHref(value: string | null, baseURL: string): string | undefined
 }
 
 function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement | undefined {
-  if (element instanceof HTMLLinkElement) {
-    if (!isAssetReference(element, baseUrl)) return
-    if (
-      element.relList.contains('preload') &&
-      element.media &&
-      !matchMedia(element.media).matches
-    ) {
-      return
-    }
-  } else if (element instanceof HTMLScriptElement) {
-    if (!javaScriptTypes.has(element.type.toLowerCase())) {
-      return
-    }
-  } else if (!(element instanceof HTMLImageElement) || element.srcset) {
-    return
-  }
-  let href = getAssetHref(
-    element.getAttribute(element instanceof HTMLLinkElement ? 'href' : 'src'),
-    baseUrl,
+  let destination = assetDestination(element)
+  if (!destination) return
+  if (
+    element instanceof HTMLLinkElement &&
+    element.relList.contains('preload') &&
+    element.media &&
+    !matchMedia(element.media).matches
   )
+    return
+  let href = getElementHref(element, baseUrl)
   if (!href) return
 
-  let isModule =
-    element instanceof HTMLScriptElement
-      ? element.type.toLowerCase() === 'module'
-      : element instanceof HTMLLinkElement && element.relList.contains('modulepreload')
+  let isModule = destination === 'module'
   let link = document.createElement('link')
   // Ordinary prefetches don't evaluate modules or resolve their imports in the current import map.
   link.rel = 'prefetch'
   link.fetchPriority = 'low'
-  link.as = element instanceof HTMLImageElement ? 'image' : 'script'
-  if (element instanceof HTMLLinkElement && !isModule) {
-    link.as = element.relList.contains('stylesheet') ? 'style' : element.as
-  }
+  link.as = isModule ? 'script' : destination
   link.href = href
   for (let name of ['integrity', 'referrerpolicy']) {
     let value = element.getAttribute(name)
@@ -1093,17 +1050,10 @@ function prepareOverrides(
 }
 
 function getFrameHref(src: string, baseURL: string): string | undefined {
-  try {
-    let url = new URL(src, baseURL)
-    if (
-      (url.protocol === 'http:' || url.protocol === 'https:') &&
-      url.origin === window.location.origin
-    ) {
-      url.hash = ''
-      return url.href
-    }
-  } catch {
-    // Malformed frame references do not prevent other prefetches.
+  let url = getSameOriginUrl(src, baseURL)
+  if (url && (url.protocol === 'http:' || url.protocol === 'https:')) {
+    url.hash = ''
+    return url.href
   }
 }
 
@@ -1122,27 +1072,16 @@ function discoverFrames(elements: Element[], baseURL: string): PrefetchFrameRefe
     } catch {
       continue
     }
-    if (typeof data !== 'object' || data === null || !('f' in data)) continue
-    if (typeof data.f !== 'object' || data.f === null || Array.isArray(data.f)) continue
+    if (!isObject(data) || !isObject(data.f) || Array.isArray(data.f)) continue
     for (let frame of Object.values(data.f)) {
-      if (
-        typeof frame !== 'object' ||
-        frame === null ||
-        !('src' in frame) ||
-        typeof frame.src !== 'string' ||
-        !frame.src
-      )
-        continue
-      let target = 'name' in frame ? frame.name : undefined
+      if (!isObject(frame) || typeof frame.src !== 'string' || !frame.src) continue
+      let target = frame.name
       if (target !== undefined && typeof target !== 'string') continue
       let src = getFrameHref(frame.src, baseURL)
       if (!src) continue
-      let loading: PrefetchFrameReference['loading'] =
-        'status' in frame && frame.status === 'lazy' ? 'lazy' : 'eager'
+      let loading: PrefetchFrameReference['loading'] = frame.status === 'lazy' ? 'lazy' : 'eager'
       let fallback =
-        'fallback' in frame && typeof frame.fallback === 'boolean'
-          ? frame.fallback
-          : 'status' in frame && frame.status === 'pending'
+        typeof frame.fallback === 'boolean' ? frame.fallback : frame.status === 'pending'
       frames.push(Object.freeze({ src, target, loading, fallback }))
     }
   }

@@ -3,21 +3,22 @@ import { camelToKebab, normalizeCssValue } from '../../style/style.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
-function isFrameworkProp(name: string): boolean {
+function skipHostProp(name: string): boolean {
   return (
     name === 'children' ||
     name === 'mix' ||
     name === 'key' ||
     name === 'animate' ||
     name === 'innerHTML' ||
-    name === 'on'
+    name === 'class' ||
+    name === 'className' ||
+    !isAllowedHostPropName(name)
   )
 }
 
-function toLocalName(attrName: string): string {
-  let separatorIndex = attrName.indexOf(':')
-  if (separatorIndex === -1) return attrName
-  return attrName.slice(separatorIndex + 1)
+function removeAttribute(dom: Element, attr: string, ns?: string): void {
+  if (ns) dom.removeAttributeNS(ns, attr.slice(attr.indexOf(':') + 1))
+  else dom.removeAttribute(attr)
 }
 
 function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, name: string): void {
@@ -58,11 +59,9 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
   }
 
   for (let name in curr) {
-    if (isFrameworkProp(name)) continue
+    if (skipHostProp(name)) continue
     if (name === 'defaultValue' && dom instanceof HTMLSelectElement) continue
     if (name === 'value' && dom instanceof HTMLSelectElement && curr.value === undefined) continue
-    if (!isAllowedHostPropName(name)) continue
-    if (name === 'class' || name === 'className') continue
     if (name in next && next[name] != null) continue
 
     let { ns, attr } = normalizeAttributeName(name, isSvg)
@@ -70,15 +69,12 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
       clearRuntimePropertyOnRemoval(dom, name)
     }
 
-    if (ns) dom.removeAttributeNS(ns, toLocalName(attr))
-    else dom.removeAttribute(attr)
+    removeAttribute(dom, attr, ns)
   }
 
   for (let name in next) {
-    if (isFrameworkProp(name)) continue
+    if (skipHostProp(name)) continue
     if (name === 'defaultValue' && dom instanceof HTMLSelectElement) continue
-    if (!isAllowedHostPropName(name)) continue
-    if (name === 'class' || name === 'className') continue
 
     let nextValue = next[name]
     if (nextValue == null) continue
@@ -86,17 +82,7 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
     let prevValue = curr[name]
     if (prevValue === nextValue) continue
 
-    if (name === 'style' && isStyleObject(nextValue)) {
-      if (isStyleObject(prevValue)) {
-        patchStyleObject(dom, prevValue, nextValue)
-      } else {
-        dom.removeAttribute('style')
-        patchStyleObject(dom, undefined, nextValue)
-      }
-      continue
-    }
-
-    patchHostProp(dom, name, nextValue, isSvg)
+    patchHostProp(dom, name, nextValue, prevValue, isSvg)
   }
 
   if (dom instanceof HTMLSelectElement && wasMultiple !== dom.multiple && next.value == null) {
@@ -104,7 +90,13 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
   }
 }
 
-function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolean): void {
+function patchHostProp(
+  dom: Element,
+  name: string,
+  value: unknown,
+  previous: unknown,
+  isSvg: boolean,
+): void {
   let { ns, attr } = normalizeAttributeName(name, isSvg)
   value = sanitizeUrlAttribute(dom.localName, attr, value)
 
@@ -113,14 +105,17 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
     return
   }
 
-  if (attr === 'style' && isStyleObject(value)) {
-    patchStyleObject(dom, undefined, value)
-    return
-  }
-
-  if (attr === 'style' && typeof value === 'string') {
-    dom.setAttribute('style', value)
-    return
+  if (attr === 'style') {
+    if (isStyleObject(value)) {
+      let prev = name === 'style' && isStyleObject(previous) ? previous : undefined
+      if (!prev && name === 'style') dom.removeAttribute('style')
+      patchStyleObject(dom, prev, value)
+      return
+    }
+    if (typeof value === 'string') {
+      dom.setAttribute('style', value)
+      return
+    }
   }
 
   if (canUseProperty(dom, name, isSvg, attr)) {
@@ -153,8 +148,7 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
     if (ns) dom.setAttributeNS(ns, attr, attrValue)
     else dom.setAttribute(attr, attrValue)
   } else {
-    if (ns) dom.removeAttributeNS(ns, toLocalName(attr))
-    else dom.removeAttribute(attr)
+    removeAttribute(dom, attr, ns)
   }
 }
 
@@ -294,7 +288,7 @@ export function canUseProperty(
 ): element is Element & Record<string, unknown> {
   if (isSvg) return false
   if (ATTRIBUTE_FALLBACK_NAMES.has(name)) return false
-  if (isBooleanishStringAttribute(attr)) return false
+  if (BOOLEANISH_STRING_ATTRIBUTES.has(attr)) return false
   return name in element
 }
 
@@ -329,17 +323,12 @@ function computeAttributeName(name: string, isSvg: boolean): { ns?: string; attr
 
   if (!isSvg) {
     if (name === 'htmlFor') return { attr: 'for' }
-    if (name === 'tabIndex') return { attr: 'tabindex' }
     if (name === 'acceptCharset') return { attr: 'accept-charset' }
     if (name === 'httpEquiv') return { attr: 'http-equiv' }
     return { attr: name.toLowerCase() }
   }
 
   return normalizeSvgAttribute(name)
-}
-
-function isBooleanishStringAttribute(name: string): boolean {
-  return BOOLEANISH_STRING_ATTRIBUTES.has(name)
 }
 
 // Remix reads these by presence, so `true` renders an empty attribute and `false` omits it.
@@ -349,7 +338,7 @@ export function shouldStringifyBooleanAttribute(name: string): boolean {
   return (
     name.startsWith('aria-') ||
     (name.startsWith('data-') && !REMIX_BOOLEAN_ATTRIBUTES.has(name)) ||
-    isBooleanishStringAttribute(name) ||
+    BOOLEANISH_STRING_ATTRIBUTES.has(name) ||
     name === 'value'
   )
 }
@@ -383,7 +372,8 @@ export function getMergedClassName(props: ElementProps): string | undefined {
 const XLINK_NS = 'http://www.w3.org/1999/xlink'
 const XML_NS = 'http://www.w3.org/XML/1998/namespace'
 
-const CANONICAL_CAMEL_SVG_ATTRS = new Set([
+const SVG_ATTR_ALIASES = new Map<string, string>()
+for (let attr of [
   'accentHeight',
   'attributeName',
   'attributeType',
@@ -444,10 +434,8 @@ const CANONICAL_CAMEL_SVG_ATTRS = new Set([
   'edgeMode',
   'diffuseConstant',
   'markerUnits',
-])
-
-const SVG_ATTR_ALIASES = new Map<string, string>()
-for (let attr of CANONICAL_CAMEL_SVG_ATTRS) {
+]) {
+  SVG_ATTR_ALIASES.set(attr, attr)
   SVG_ATTR_ALIASES.set(svgCamelToKebab(attr), attr)
 }
 
@@ -467,15 +455,6 @@ const NAMESPACED_SVG_ATTRS = new Set([
   'xmlns:xlink',
 ])
 
-function normalizeSvgAttributeName(name: string): string {
-  let alias = SVG_ATTR_ALIASES.get(name)
-  if (alias) return alias
-
-  if (CANONICAL_CAMEL_SVG_ATTRS.has(name)) return name
-
-  return svgCamelToKebab(name)
-}
-
 function normalizeSvgAttribute(name: string): {
   ns?: string
   attr: string
@@ -490,7 +469,7 @@ function normalizeSvgAttribute(name: string): {
     }
   }
 
-  return { attr: normalizeSvgAttributeName(name) }
+  return { attr: SVG_ATTR_ALIASES.get(name) ?? svgCamelToKebab(name) }
 }
 
 function svgCamelToKebab(input: string): string {

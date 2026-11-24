@@ -527,9 +527,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
         console.warn(
           `Ignored handle.update() while ${getComponentName(config)} is running its setup function. The initial render includes setup changes.`,
         )
-        return new Promise((resolve) => {
-          tasks.push((signal) => resolve(signal))
-        })
+        return new Promise((resolve) => tasks.push(resolve))
       }
       if (phase !== 'idle') {
         throw new Error(
@@ -547,7 +545,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
       }
 
       return new Promise((resolve) => {
-        tasks.push((signal) => resolve(signal))
+        tasks.push(resolve)
         queue.enqueue(vnode, domParent)
       })
     },
@@ -593,28 +591,20 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
       renderController = undefined
       syncProps(props, nextProps)
 
-      if (renderFn === undefined) {
-        let initialize = config.type as unknown as (handle: Handle<ElementProps, C>) => unknown
-        let result: unknown
-        phase = 'setup'
-        try {
-          result = initialize(handle)
-        } finally {
-          phase = 'idle'
-        }
-
-        if (!isRenderFn(result)) {
-          throw new Error(
-            `${getComponentName(config)} must return a render function, received ${typeof result}`,
-          )
-        }
-
-        renderFn = result
-      }
-
       let element: RemixNode
-      phase = 'render'
       try {
+        if (renderFn === undefined) {
+          phase = 'setup'
+          let initialize = config.type as unknown as (handle: Handle<ElementProps, C>) => unknown
+          let result = initialize(handle)
+          if (!isRenderFn(result)) {
+            throw new Error(
+              `${getComponentName(config)} must return a render function, received ${typeof result}`,
+            )
+          }
+          renderFn = result
+        }
+        phase = 'render'
         element = renderFn()
       } finally {
         phase = 'idle'
