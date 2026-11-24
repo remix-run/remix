@@ -271,7 +271,10 @@ function isCommittedClientEntryNode(node: CommittedVNode): node is CommittedClie
   return node.kind === 'client-entry'
 }
 
-export function findContextFromAncestry(node: VNodeParent, type: ElementFunction): unknown {
+export function findContextFromAncestry(
+  node: VNodeParent | undefined,
+  type: ElementFunction,
+): unknown {
   let current: VNodeParent | undefined = node
   while (current) {
     if (current.kind === 'component' && current.type === type) {
@@ -448,6 +451,10 @@ const EMPTY_COMMITTED_CHILDREN: CommittedVNode[] = []
 // Option lists may change in a separate component or hydration root.
 const controlledSelectValues = new WeakMap<HTMLSelectElement, unknown>()
 
+// Context lookups start from the parent of the latest render. A parent captured at mount would
+// keep that render's whole vnode tree reachable for as long as the component or mixin lives.
+const contextParents = new WeakMap<ComponentHandle | MixinRuntime, VNodeParent>()
+
 class ControlledReflection {
   #element: Element
   #status: 'pending' | 'attached' | 'disposed' = 'pending'
@@ -553,9 +560,19 @@ function resolveNodeMixProps(
     state?.teardown()
     state = undefined
   } else {
-    state ??= new MixinRuntime(node.type, frame, scheduler, (type: Component | string | symbol) =>
-      typeof type === 'function' ? findContextFromAncestry(parent, type) : undefined,
-    )
+    if (!state) {
+      let runtime: MixinRuntime = new MixinRuntime(
+        node.type,
+        frame,
+        scheduler,
+        (type: Component | string | symbol) =>
+          typeof type === 'function'
+            ? findContextFromAncestry(contextParents.get(runtime), type)
+            : undefined,
+      )
+      state = runtime
+    }
+    contextParents.set(state, parent)
     props = state.resolve(node.type, props)
   }
   return {
@@ -715,6 +732,7 @@ function beginComponentNode(
   handle: ComponentHandle,
   context: ReconcileContext,
 ): MountingComponentNode {
+  contextParents.set(handle, parent)
   let mounting = node as unknown as MountingComponentNode
   mounting._parent = parent
   mounting._svg = svg
@@ -1540,7 +1558,8 @@ function diffComponent(
       id: componentId,
       frame,
       type: next.type,
-      getContext: (type: ElementFunction) => findContextFromAncestry(vParent, type),
+      getContext: (type: ElementFunction) =>
+        findContextFromAncestry(contextParents.get(handle), type),
       getFrameByName(name: string) {
         let runtime = getFrameRuntime(frame)
         return runtime?.namedFrames.get(name)
