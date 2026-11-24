@@ -32,6 +32,10 @@ describe('books handlers', () => {
     assertContains(html, 'Ash &amp; Smoke')
     assertContains(html, 'Rusty Char-Broil')
     assertContains(html, 'Add to Cart')
+    assert.deepEqual(
+      [...html.matchAll(/<img[^>]+loading="(eager|lazy)"/g)].map((match) => match[1]),
+      ['eager', 'lazy', 'lazy'],
+    )
   })
 
   it('GET /books/:slug returns 404 for non-existent book', async () => {
