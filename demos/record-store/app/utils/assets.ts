@@ -10,7 +10,7 @@ if (config.assets.files === undefined) throw new Error('Missing asset file confi
 const isDevelopment = process.env.NODE_ENV === 'development'
 const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
 
-export const bookImageWidths = [320, 480, 640, 768, 960] as const
+export const albumImageWidths = [320, 480, 640, 768, 960] as const
 
 export const browserHmrChannel = isHmr
   ? await (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
@@ -33,12 +33,12 @@ export const assets = createAssetServer({
     transforms: {
       // Each width produces its matching key; Object.fromEntries erases those literal keys.
       ...(Object.fromEntries(
-        bookImageWidths.map((width) => [`book-image-${width}`, createBookImageTransform(width)]),
+        albumImageWidths.map((width) => [`album-image-${width}`, createAlbumImageTransform(width)]),
       ) as Record<
-        `book-image-${(typeof bookImageWidths)[number]}`,
-        ReturnType<typeof createBookImageTransform>
+        `album-image-${(typeof albumImageWidths)[number]}`,
+        ReturnType<typeof createAlbumImageTransform>
       >),
-      'book-thumbnail': defineFileTransform({
+      'album-thumbnail': defineFileTransform({
         extensions: ['.png'],
         async transform(bytes) {
           return {
@@ -63,7 +63,7 @@ export const assets = createAssetServer({
   },
 })
 
-function createBookImageTransform(width: number) {
+function createAlbumImageTransform(width: number) {
   return defineFileTransform({
     extensions: ['.png'],
     async transform(bytes) {

@@ -18,8 +18,10 @@ export const CartButton = clientEntry(
         if (
           event.method !== 'post' ||
           new URL(event.src, document.baseURI).href !==
-            new URL(routes.fragments.cartToggle.href({ bookId: handle.props.id }), document.baseURI)
-              .href
+            new URL(
+              routes.fragments.cartToggle.href({ albumId: handle.props.id }),
+              document.baseURI,
+            ).href
         ) {
           return
         }
@@ -46,7 +48,7 @@ export const CartButton = clientEntry(
       return (
         <form
           method="POST"
-          action={routes.fragments.cartToggle.href({ bookId: id })}
+          action={routes.fragments.cartToggle.href({ albumId: id })}
           mix={[
             css({ display: 'contents' }),
             on('submit', (event) => {

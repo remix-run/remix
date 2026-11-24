@@ -43,14 +43,14 @@ type CartItemsProps = {
   canCheckout: boolean
   error?: string
   showErrorMessage?: boolean
-  errorBookId?: number
+  errorAlbumId?: number
   submission?: FormSubmission
 }
 
 type CartAction =
-  | { bookId: number; type: 'update'; quantity: number }
-  | { bookId: number; type: 'restore'; quantity: number }
-  | { bookId: number; type: 'remove' }
+  | { albumId: number; type: 'update'; quantity: number }
+  | { albumId: number; type: 'restore'; quantity: number }
+  | { albumId: number; type: 'remove' }
 
 type RemovedItem = {
   item: CartItemWithThumbnail
@@ -72,7 +72,7 @@ export const CartItems = clientEntry(
     }
 
     let removedItems = new Map<number, RemovedItem>()
-    let order = handle.props.items.map((item) => item.bookId)
+    let order = handle.props.items.map((item) => item.albumId)
     let rows = new Map<number, Element>()
     let mutation: Promise<void> | undefined
     let generation = 0
@@ -91,7 +91,7 @@ export const CartItems = clientEntry(
       if (removed.phase !== 'exiting') return
       await handle.update()
       if (handle.signal.aborted || removed.phase !== 'exiting') return
-      let row = rows.get(removed.item.bookId)
+      let row = rows.get(removed.item.albumId)
       // Keep the row mounted until its cells have actually finished collapsing.
       row?.getBoundingClientRect()
       await Promise.all(
@@ -101,12 +101,12 @@ export const CartItems = clientEntry(
       )
       if (
         handle.signal.aborted ||
-        removedItems.get(removed.item.bookId) !== removed ||
+        removedItems.get(removed.item.albumId) !== removed ||
         removed.phase !== 'exiting' ||
         !removed.confirmed
       )
         return
-      removedItems.delete(removed.item.bookId)
+      removedItems.delete(removed.item.albumId)
       handle.update()
     }
 
@@ -115,7 +115,7 @@ export const CartItems = clientEntry(
       removed.timer = setTimeout(() => {
         if (
           handle.signal.aborted ||
-          removedItems.get(removed.item.bookId) !== removed ||
+          removedItems.get(removed.item.albumId) !== removed ||
           removed.phase !== 'undo' ||
           removed.hovered ||
           removed.focused
@@ -123,7 +123,7 @@ export const CartItems = clientEntry(
           return
         removed.timer = undefined
         removed.phase = 'exiting'
-        let row = rows.get(removed.item.bookId)
+        let row = rows.get(removed.item.albumId)
         if (row?.contains(document.activeElement)) {
           row.closest<HTMLElement>('[role="region"]')?.focus({ preventScroll: true })
         }
@@ -166,13 +166,13 @@ export const CartItems = clientEntry(
 
     async function undo(removed: RemovedItem) {
       if (removed.phase !== 'undo' && removed.phase !== 'restore-failed') return
-      let row = rows.get(removed.item.bookId)
+      let row = rows.get(removed.item.albumId)
       let hadFocus = row?.contains(document.activeElement)
       clearTimeout(removed.timer)
       removed.phase = 'restoring'
       handle.update()
       let body = new FormData()
-      body.set('bookId', String(removed.item.bookId))
+      body.set('albumId', String(removed.item.albumId))
       body.set('quantity', String(removed.item.quantity))
       // Restoring waits for any active mutation, including an unfinished removal.
       await mutate(body)
@@ -190,11 +190,11 @@ export const CartItems = clientEntry(
       async (event) => {
         let formData = event.formData
         let method = formData?.get('_method') ?? event.method.toUpperCase()
-        let action: CartAction | undefined = formData?.has('bookId')
+        let action: CartAction | undefined = formData?.has('albumId')
           ? method === 'DELETE'
-            ? { bookId: Number(formData.get('bookId')), type: 'remove' }
+            ? { albumId: Number(formData.get('albumId')), type: 'remove' }
             : {
-                bookId: Number(formData.get('bookId')),
+                albumId: Number(formData.get('albumId')),
                 type: method === 'PATCH' ? 'update' : 'restore',
                 quantity: Number(formData.get('quantity')),
               }
@@ -204,7 +204,7 @@ export const CartItems = clientEntry(
           for (let removed of removedItems.values()) clearTimeout(removed.timer)
           removedItems.clear()
         } else if (action.type === 'remove') {
-          let item = handle.props.items.find((item) => item.bookId === action.bookId)
+          let item = handle.props.items.find((item) => item.albumId === action.albumId)
           if (item) {
             let removed: RemovedItem = {
               item: { ...item },
@@ -213,7 +213,7 @@ export const CartItems = clientEntry(
               hovered: false,
               focused: false,
             }
-            removedItems.set(item.bookId, removed)
+            removedItems.set(item.albumId, removed)
             startUndoCountdown(removed)
           }
         }
@@ -231,11 +231,11 @@ export const CartItems = clientEntry(
           if (handle.signal.aborted || state.status !== 'pending' || state.reload !== event) return
           state = { status: 'failed', action, source: 'request' }
         }
-        let removed = action && removedItems.get(action.bookId)
+        let removed = action && removedItems.get(action.albumId)
         if (removed && action?.type === 'remove') {
           if (state.status === 'failed') {
             clearTimeout(removed.timer)
-            if (removed.phase !== 'restoring') removedItems.delete(action.bookId)
+            if (removed.phase !== 'restoring') removedItems.delete(action.albumId)
           } else {
             removed.confirmed = true
             void finishExit(removed)
@@ -244,7 +244,7 @@ export const CartItems = clientEntry(
           if (state.status === 'failed') {
             removed.phase = 'restore-failed'
           } else {
-            removedItems.delete(action.bookId)
+            removedItems.delete(action.albumId)
           }
         }
         handle.update()
@@ -253,15 +253,15 @@ export const CartItems = clientEntry(
     )
 
     return () => {
-      let { items, canCheckout, error, showErrorMessage, errorBookId, submission, total } =
+      let { items, canCheckout, error, showErrorMessage, errorAlbumId, submission, total } =
         handle.props
-      let displayedItems = new Map(items.map((item) => [item.bookId, item]))
-      for (let [bookId, removed] of removedItems) displayedItems.set(bookId, removed.item)
-      for (let bookId of displayedItems.keys()) {
-        if (!order.includes(bookId)) order.push(bookId)
+      let displayedItems = new Map(items.map((item) => [item.albumId, item]))
+      for (let [albumId, removed] of removedItems) displayedItems.set(albumId, removed.item)
+      for (let albumId of displayedItems.keys()) {
+        if (!order.includes(albumId)) order.push(albumId)
       }
-      let visibleItems = order.flatMap((bookId) => {
-        let item = displayedItems.get(bookId)
+      let visibleItems = order.flatMap((albumId) => {
+        let item = displayedItems.get(albumId)
         return item ? [item] : []
       })
       let isPending =
@@ -272,8 +272,8 @@ export const CartItems = clientEntry(
       let requestFailed = state.status === 'failed' && state.source === 'request'
       let hasQuantityError =
         submission?.errors.fields.quantity &&
-        items.some((item) => item.bookId === Number(submission.values.bookId))
-      let failedBookId = errorBookId ?? Number(submission?.values.bookId)
+        items.some((item) => item.albumId === Number(submission.values.albumId))
+      let failedAlbumId = errorAlbumId ?? Number(submission?.values.albumId)
       let cartError =
         !isPending && !requestFailed && showErrorMessage && !hasQuantityError ? error : undefined
 
@@ -290,8 +290,8 @@ export const CartItems = clientEntry(
             ) : null}
             <p>Your cart is empty.</p>
             <p mix={css({ marginTop: '1rem' })}>
-              <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
-                Browse Books
+              <a data-rmx-prefetch="intent" href={routes.albums.index.href()} class="btn">
+                Browse Records
               </a>
             </p>
           </div>
@@ -315,7 +315,7 @@ export const CartItems = clientEntry(
             if (cartRegion) {
               await handle.update()
               rows
-                .get(Number(body.get('bookId')))
+                .get(Number(body.get('albumId')))
                 ?.querySelector<HTMLElement>('button[type="button"]')
                 ?.focus({ preventScroll: true })
             }
@@ -324,7 +324,7 @@ export const CartItems = clientEntry(
             await handle.update()
             if (!cartRegion.isConnected || handle.signal.aborted) return
             if (document.activeElement === cartRegion || document.activeElement === document.body) {
-              let row = rows.get(Number(body.get('bookId')))
+              let row = rows.get(Number(body.get('albumId')))
               let button = row?.querySelector<HTMLElement>(
                 'button[type="button"], form:has(input[value="DELETE"]) button',
               )
@@ -337,7 +337,7 @@ export const CartItems = clientEntry(
             <table mix={css({ tableLayout: 'fixed', minWidth: '44rem' })}>
               <thead>
                 <tr>
-                  <th>Book</th>
+                  <th>Record</th>
                   <th mix={css({ width: '6rem' })}>Price</th>
                   <th mix={css({ width: '9.5rem' })}>Quantity</th>
                   <th mix={css({ width: '7rem' })}>Subtotal</th>
@@ -346,19 +346,19 @@ export const CartItems = clientEntry(
               </thead>
               <tbody>
                 {visibleItems.map((item) => {
-                  let removed = removedItems.get(item.bookId)
+                  let removed = removedItems.get(item.albumId)
                   let isCompact = removed?.phase === 'undo' || removed?.phase === 'restore-failed'
                   let isExiting = removed?.phase === 'exiting'
                   let showRemoved = isCompact || isExiting
                   let isUpdating =
-                    pendingAction?.type === 'update' && pendingAction.bookId === item.bookId
+                    pendingAction?.type === 'update' && pendingAction.albumId === item.albumId
                   let isRemoving =
-                    pendingAction?.type === 'remove' && pendingAction.bookId === item.bookId
+                    pendingAction?.type === 'remove' && pendingAction.albumId === item.albumId
                   let itemSubmission =
-                    Number(submission?.values.bookId) === item.bookId ? submission : undefined
+                    Number(submission?.values.albumId) === item.albumId ? submission : undefined
                   let quantity =
                     pendingAction?.type === 'update' &&
-                    pendingAction.bookId === item.bookId &&
+                    pendingAction.albumId === item.albumId &&
                     Number.isSafeInteger(pendingAction.quantity) &&
                     pendingAction.quantity >= 1
                       ? pendingAction.quantity
@@ -368,12 +368,12 @@ export const CartItems = clientEntry(
                     : (!requestFailed
                         ? itemSubmission?.errors.fields.quantity?.join(' ')
                         : undefined) ||
-                      (failedAction?.type === 'update' && failedAction.bookId === item.bookId
+                      (failedAction?.type === 'update' && failedAction.albumId === item.albumId
                         ? requestFailed
                           ? 'Couldn’t update quantity. Try again.'
                           : (error ?? 'Couldn’t update quantity. Try again.')
                         : undefined)
-                  let quantityErrorId = `${handle.id}-quantity-error-${item.bookId}`
+                  let quantityErrorId = `${handle.id}-quantity-error-${item.albumId}`
                   let actionButtonStyle = css({
                     height: 'var(--cart-control-height)',
                     verticalAlign: 'top',
@@ -385,12 +385,12 @@ export const CartItems = clientEntry(
 
                   return (
                     <tr
-                      key={item.bookId}
+                      key={item.albumId}
                       inert={isExiting}
                       mix={[
                         ref((row, signal) => {
-                          rows.set(item.bookId, row)
-                          signal.addEventListener('abort', () => rows.delete(item.bookId), {
+                          rows.set(item.albumId, row)
+                          signal.addEventListener('abort', () => rows.delete(item.albumId), {
                             once: true,
                           })
                         }),
@@ -437,7 +437,7 @@ export const CartItems = clientEntry(
                           >
                             <a
                               data-rmx-prefetch="intent"
-                              href={routes.books.show.href({ slug: item.slug })}
+                              href={routes.albums.show.href({ slug: item.slug })}
                               mix={css({ color: showRemoved ? 'inherit' : undefined })}
                             >
                               {item.title}
@@ -445,7 +445,7 @@ export const CartItems = clientEntry(
                             {showRemoved ? <span> removed</span> : null}
                           </span>
                         </div>
-                        {cartError && failedBookId === item.bookId ? (
+                        {cartError && failedAlbumId === item.albumId ? (
                           <p role="alert" mix={itemErrorStyle}>
                             {cartError}
                           </p>
@@ -492,7 +492,7 @@ export const CartItems = clientEntry(
                             },
                           })}
                         >
-                          <input type="hidden" name="bookId" value={item.bookId} />
+                          <input type="hidden" name="albumId" value={item.albumId} />
                           <button
                             type="submit"
                             name="quantity"
@@ -606,7 +606,7 @@ export const CartItems = clientEntry(
                           </PendingButton>
                         ) : (
                           <form.Context
-                            id={`${handle.id}-remove-${item.bookId}`}
+                            id={`${handle.id}-remove-${item.albumId}`}
                             schema={CartItemRemoveForm}
                             submission={itemSubmission}
                           >
@@ -618,15 +618,15 @@ export const CartItems = clientEntry(
                               >
                                 <input
                                   type="hidden"
-                                  value={item.bookId}
-                                  mix={form.control(fields.bookId)}
+                                  value={item.albumId}
+                                  mix={form.control(fields.albumId)}
                                 />
 
                                 <PendingButton
                                   pending={isRemoving}
                                   failed={
                                     failedAction?.type === 'remove' &&
-                                    failedAction.bookId === item.bookId
+                                    failedAction.albumId === item.albumId
                                   }
                                   pendingLabel="Removing..."
                                   aria-disabled={isPending || undefined}
@@ -647,7 +647,7 @@ export const CartItems = clientEntry(
             </table>
           </div>
 
-          {cartError && !items.some((item) => item.bookId === failedBookId) ? (
+          {cartError && !items.some((item) => item.albumId === failedAlbumId) ? (
             <p role="alert" mix={css({ color: '#dc2626' })}>
               {cartError}
             </p>
@@ -662,7 +662,7 @@ export const CartItems = clientEntry(
 
             <a
               data-rmx-prefetch="intent"
-              href={routes.books.index.href()}
+              href={routes.albums.index.href()}
               class="btn btn-secondary"
             >
               Continue Shopping

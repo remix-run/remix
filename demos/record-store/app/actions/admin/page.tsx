@@ -16,15 +16,15 @@ export function AdminDashboardPage() {
         })}
       >
         <div class="card">
-          <h2>Manage Books</h2>
-          <p>Add, edit, or remove books from the catalog.</p>
+          <h2>Manage Records</h2>
+          <p>Add, edit, or remove records from the catalog.</p>
           <a
             data-rmx-prefetch="intent"
-            href={routes.admin.books.index.href()}
+            href={routes.admin.albums.index.href()}
             class="btn"
             mix={css({ marginTop: '1rem' })}
           >
-            View Books
+            View Albums
           </a>
         </div>
 

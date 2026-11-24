@@ -14,7 +14,7 @@ export interface DocumentProps {
 
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
-    let { title = 'Bookstore', head, children } = handle.props
+    let { title = 'Record Store', head, children } = handle.props
     let { scriptEntry, stylesheetHref } = getAssetEntry()
     let { href, importMap, preloads } = scriptEntry
     let nonce = getCspNonce(getContext())

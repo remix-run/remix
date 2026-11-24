@@ -26,7 +26,7 @@ describe('checkout handlers', () => {
     let addRequest = requestWithSession('https://remix.run/cart/api/add', sessionCookie, {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '1',
+        albumId: '1',
         slug: 'bbq',
       }),
     })
@@ -72,7 +72,7 @@ describe('checkout handlers', () => {
     let addResponse = await router.fetch(
       requestWithSession('https://remix.run/cart/api/add', sessionCookie, {
         method: 'POST',
-        body: new URLSearchParams({ bookId: '1', slug: 'bbq' }),
+        body: new URLSearchParams({ albumId: '1', slug: 'bbq' }),
       }),
     )
     sessionCookie = getSessionCookie(addResponse) ?? sessionCookie

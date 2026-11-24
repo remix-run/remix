@@ -21,7 +21,7 @@ describe('frame debug bookmarklet', () => {
         requests.push(new URL(request.url).pathname)
         return new Response(
           '<!doctype html><html><head><link rel="icon" href="data:,"></head><body><!--rmx:f:example--><div style="padding:24px">' +
-            '<!--rmx:h:example--><p>Book details</p><!--/rmx:h--></div><!--/rmx:f--></body></html>',
+            '<!--rmx:h:example--><p>Album details</p><!--/rmx:h--></div><!--/rmx:f--></body></html>',
           { headers: { 'Content-Type': 'text/html' } },
         )
       }),
@@ -39,7 +39,7 @@ describe('frame debug bookmarklet', () => {
     let errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     await toggleBookmarklet(page)
-    let overlay = page.locator('#bookstore-debug-boundaries')
+    let overlay = page.locator('#record-store-debug-boundaries')
     assert.equal(await overlay.locator('[data-boundary="frame"]').count(), 1)
     assert.equal(await overlay.locator('[data-boundary="client-entry"]').count(), 1)
     await toggleBookmarklet(page)
@@ -52,9 +52,9 @@ describe('frame debug bookmarklet', () => {
     assert.deepEqual(errors, [])
   })
 
-  it('reuses the bookstore inspector and preserves Cmd-D', async (t) => {
+  it('reuses the record store inspector and preserves Cmd-D', async (t) => {
     let page = await t.serve(await createTestServer((await createTestRouter()).fetch))
-    await page.goto('/books/bbq')
+    await page.goto('/albums/bbq')
     await page.evaluate(async () => {
       let script = document.querySelector<HTMLScriptElement>('script[type="module"][src]')
       if (!script) throw new Error('Missing app entry')
@@ -63,7 +63,7 @@ describe('frame debug bookmarklet', () => {
     })
     let errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
-    let overlay = page.locator('#bookstore-debug-boundaries')
+    let overlay = page.locator('#record-store-debug-boundaries')
     await page.keyboard.press('Meta+d')
     await overlay.waitFor()
     let original = await overlay.elementHandle()

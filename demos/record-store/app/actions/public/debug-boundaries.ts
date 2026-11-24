@@ -1,6 +1,6 @@
 export function installDebugBoundaries(mode: 'app' | 'bookmarklet' = 'app'): () => void {
   let overlay = document.createElement('div')
-  overlay.id = 'bookstore-debug-boundaries'
+  overlay.id = 'record-store-debug-boundaries'
   overlay.setAttribute('aria-hidden', 'true')
   let shadow = overlay.attachShadow({ mode: 'open' })
   let styles = new CSSStyleSheet()

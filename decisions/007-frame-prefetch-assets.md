@@ -2,7 +2,7 @@
 
 We chose HTML discovery with asset prefetch tags as the direction for Remix's default frame prefetching. Remix fetches a destination's HTML, parses it without activating the page, and creates prefetch hints for its explicit JavaScript, CSS, and image and font preload URLs. Navigation uses the normal frame resolver. The browser owns response caching and revalidation.
 
-This extends the HTML-only prefetching in [PR #12004][base-pr]. We evaluated four strategies in a dedicated prefetch demo, then promoted HTML discovery into the component runtime. The bookstore now demonstrates that default, including intent and viewport triggers, browser caching, and explicit image preloads. We removed the evaluation demo after moving its unique browser regression checks into the bookstore suite.
+This extends the HTML-only prefetching in [PR #12004][base-pr]. We evaluated four strategies in a dedicated prefetch demo, then promoted HTML discovery into the component runtime. The record store demo now demonstrates that default, including intent and viewport triggers, browser caching, and explicit image preloads. We removed the evaluation demo after moving its unique browser regression checks into the bookstore suite.
 
 ## Starting point
 

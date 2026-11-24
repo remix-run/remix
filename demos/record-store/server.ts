@@ -1,9 +1,9 @@
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
-import { createBookstoreRouter } from './app/router.ts'
+import { createRecordStoreRouter } from './app/router.ts'
 
-const router = createBookstoreRouter()
+const router = createRecordStoreRouter()
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 const hmrProxyPort = process.env.HMR_PROXY_PORT ? parseInt(process.env.HMR_PROXY_PORT, 10) : null
 const isHmr = process.env.REMIX_NODE_HMR === '1'
@@ -15,7 +15,7 @@ server.listen(port, () => {
     import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
   }
 
-  console.log(`Bookstore is running on http://localhost:${hmrProxyPort ?? port}`)
+  console.log(`Record Store is running on http://localhost:${hmrProxyPort ?? port}`)
   console.log('')
   console.log('Demo accounts:')
   console.log('  Admin:    admin@bookstore.com / admin123')

@@ -17,7 +17,7 @@ describe('PendingButton', () => {
     view.root.flush()
     assert.equal(button.textContent, 'Failed!')
     view.root.render(
-      <PendingButton failed aria-label="Remove book">
+      <PendingButton failed aria-label="Remove album">
         Remove
       </PendingButton>,
     )

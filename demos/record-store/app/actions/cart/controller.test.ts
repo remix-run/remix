@@ -2,7 +2,7 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import sharp from 'sharp'
 
-import { getBookImageHref } from '../../utils/book-images.ts'
+import { getAlbumImageHref } from '../../utils/album-images.ts'
 import {
   assertContains,
   createTestRouter,
@@ -13,11 +13,11 @@ import {
 const router = await createTestRouter()
 
 describe('cart handlers', () => {
-  it('POST /cart/api/add adds book to cart', async () => {
+  it('POST /cart/api/add adds album to cart', async () => {
     let response = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '1',
+        albumId: '1',
         slug: 'bbq',
       }),
       redirect: 'manual',
@@ -32,7 +32,7 @@ describe('cart handlers', () => {
     let addResponse = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '2',
+        albumId: '2',
         slug: 'heavy-metal',
       }),
       redirect: 'manual',
@@ -56,7 +56,7 @@ describe('cart handlers', () => {
     let addResponse1 = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '1',
+        albumId: '1',
         slug: 'bbq',
       }),
       redirect: 'manual',
@@ -69,7 +69,7 @@ describe('cart handlers', () => {
     let addRequest2 = requestWithSession('https://remix.run/cart/api/add', sessionId, {
       method: 'POST',
       body: new URLSearchParams({
-        bookId: '3',
+        albumId: '3',
         slug: 'three-ways',
       }),
     })
@@ -92,7 +92,7 @@ describe('cart handlers', () => {
 
     assert.equal(response.status, 200)
     assert.match(html, /<table\b/)
-    assertContains(html, '<th>Book</th>')
+    assertContains(html, '<th>Record</th>')
     assertContains(html, 'Heavy Metal Guitar Riffs')
     assertContains(html, 'Decrease quantity of Heavy Metal Guitar Riffs')
     assertContains(html, 'Increase quantity of Heavy Metal Guitar Riffs')
@@ -102,7 +102,7 @@ describe('cart handlers', () => {
     assertContains(html, 'Continue Shopping')
     assertContains(html, 'Login to Checkout')
 
-    let thumbnail = html.match(/src="([^" ]+\?transform=book-thumbnail)"/)
+    let thumbnail = html.match(/src="([^" ]+\?transform=album-thumbnail)"/)
     assert.ok(thumbnail)
     assertContains(html, 'width="48" height="64"')
     let image = await router.fetch(new URL(thumbnail[1], 'https://remix.run'))
@@ -114,7 +114,7 @@ describe('cart handlers', () => {
     assert.equal(metadata.width, 96)
     assert.equal(metadata.height, 128)
     let catalogImage = await router.fetch(
-      new URL(await getBookImageHref('/images/heavy-metal-1.png'), 'https://remix.run'),
+      new URL(await getAlbumImageHref('/images/heavy-metal-1.png'), 'https://remix.run'),
     )
     assert.equal(catalogImage.status, 200)
     assert.ok(bytes.byteLength < (await catalogImage.arrayBuffer()).byteLength)
@@ -126,7 +126,7 @@ describe('cart handlers', () => {
 
     assert.equal(response.status, 200)
     assertContains(html, 'Your cart is empty.')
-    assertContains(html, 'Browse Books')
+    assertContains(html, 'Browse Records')
   })
 
   it('PATCH /cart/items returns the updated HTML directly for frame submissions', async () => {
@@ -135,7 +135,7 @@ describe('cart handlers', () => {
       requestWithSession('https://remix.run/cart/items', session, {
         method: 'PATCH',
         headers: { 'X-Remix-Frame': 'true' },
-        body: new URLSearchParams({ bookId: '1', quantity: '1e2' }),
+        body: new URLSearchParams({ albumId: '1', quantity: '1e2' }),
       }),
     )
     assert.equal(response.status, 200)
@@ -154,7 +154,7 @@ describe('cart handlers', () => {
         requestWithSession('https://remix.run/cart/items', session, {
           method: 'PATCH',
           headers: { 'X-Remix-Frame': 'true' },
-          body: new URLSearchParams({ bookId: '1', quantity }),
+          body: new URLSearchParams({ albumId: '1', quantity }),
         }),
       )
       assert.equal(response.status, 400)
@@ -164,11 +164,11 @@ describe('cart handlers', () => {
       requestWithSession('https://remix.run/cart/items', session, {
         method: 'PATCH',
         headers: { 'X-Remix-Frame': 'true' },
-        body: new URLSearchParams({ bookId: '2', quantity: '3' }),
+        body: new URLSearchParams({ albumId: '2', quantity: '3' }),
       }),
     )
     assert.equal(missing.status, 404)
-    assertContains(await missing.text(), 'That book is no longer in your cart.')
+    assertContains(await missing.text(), 'That record is no longer in your cart.')
     let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
     assert.match(await cart.text(), /Total:\s*(?:<[^>]+>\s*)*\$16\.99/)
   })
@@ -178,7 +178,7 @@ describe('cart handlers', () => {
     await router.fetch(
       requestWithSession('https://remix.run/cart/api/add', session, {
         method: 'POST',
-        body: new URLSearchParams({ bookId: '2' }),
+        body: new URLSearchParams({ albumId: '2' }),
       }),
     )
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -186,7 +186,7 @@ describe('cart handlers', () => {
         requestWithSession('https://remix.run/cart/items', session, {
           method: 'DELETE',
           headers: { 'X-Remix-Frame': 'true' },
-          body: new URLSearchParams({ bookId: '1' }),
+          body: new URLSearchParams({ albumId: '1' }),
         }),
       )
       assert.equal(response.status, 200)
@@ -199,15 +199,15 @@ describe('cart handlers', () => {
     }
   })
 
-  it('POST /cart/items restores the saved quantity with trusted book details and is safe to retry', async () => {
+  it('POST /cart/items restores the saved quantity with trusted album details and is safe to retry', async () => {
     let session = await cartSession()
     await router.fetch(
       requestWithSession('https://remix.run/cart/items', session, {
         method: 'DELETE',
-        body: new URLSearchParams({ bookId: '1' }),
+        body: new URLSearchParams({ albumId: '1' }),
       }),
     )
-    let body = new URLSearchParams({ bookId: '1', quantity: '3', price: '0', title: 'Untrusted' })
+    let body = new URLSearchParams({ albumId: '1', quantity: '3', price: '0', title: 'Untrusted' })
     let restored = await router.fetch(
       requestWithSession('https://remix.run/cart/items', session, {
         method: 'POST',
@@ -234,25 +234,25 @@ describe('cart handlers', () => {
     assert.ok(!html.includes('Untrusted'))
   })
 
-  it('rejects malformed item IDs and missing books before changing the cart', async () => {
+  it('rejects malformed item IDs and missing albums before changing the cart', async () => {
     let session = await cartSession()
     for (let method of ['POST', 'PATCH', 'DELETE']) {
-      for (let bookId of ['', '0', '-1', '1.5', '1abc', '9007199254740992']) {
+      for (let albumId of ['', '0', '-1', '1.5', '1abc', '9007199254740992']) {
         let response = await router.fetch(
           requestWithSession('https://remix.run/cart/items', session, {
             method,
             headers: { 'X-Remix-Frame': 'true' },
-            body: new URLSearchParams({ bookId, quantity: '3' }),
+            body: new URLSearchParams({ albumId, quantity: '3' }),
           }),
         )
-        assert.equal(response.status, 400, `${method} ${bookId}`)
-        assertContains(await response.text(), 'Invalid book.')
+        assert.equal(response.status, 400, `${method} ${albumId}`)
+        assertContains(await response.text(), 'Invalid record.')
       }
       let missing = await router.fetch(
         requestWithSession('https://remix.run/cart/items', session, {
           method,
           headers: { 'X-Remix-Frame': 'true' },
-          body: new URLSearchParams({ bookId: '999999', quantity: '3' }),
+          body: new URLSearchParams({ albumId: '999999', quantity: '3' }),
         }),
       )
       assert.equal(missing.status, 404)
@@ -262,10 +262,10 @@ describe('cart handlers', () => {
   })
 })
 
-async function cartSession(bookId = '1'): Promise<string> {
+async function cartSession(albumId = '1'): Promise<string> {
   let response = await router.fetch('https://remix.run/cart/api/add', {
     method: 'POST',
-    body: new URLSearchParams({ bookId }),
+    body: new URLSearchParams({ albumId }),
   })
   let session = getSessionCookie(response)
   assert.ok(session)

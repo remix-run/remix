@@ -18,10 +18,10 @@ export function EmptyCheckoutPage() {
     <Layout>
       <div class="card">
         <h1>Checkout</h1>
-        <p>Your cart is empty. Add some books before checking out.</p>
+        <p>Your cart is empty. Add some records before checking out.</p>
         <p mix={css({ marginTop: '1rem' })}>
-          <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
-            Browse Books
+          <a data-rmx-prefetch="intent" href={routes.albums.index.href()} class="btn">
+            Browse Records
           </a>
         </p>
       </div>
@@ -42,7 +42,7 @@ export function CheckoutPage(handle: Handle<CheckoutPageProps>) {
           <table mix={css({ marginTop: '1rem' })}>
             <thead>
               <tr>
-                <th>Book</th>
+                <th>Record</th>
                 <th>Quantity</th>
                 <th>Price</th>
                 <th>Subtotal</th>

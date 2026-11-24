@@ -1,6 +1,6 @@
 import { createController } from 'remix/router'
 
-import { orders, orderItemsWithBook } from '../../../data/schema.ts'
+import { orders, orderItemsWithAlbum } from '../../../data/schema.ts'
 import { requireAuth } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
 import { getCurrentUser } from '../../../utils/context.ts'
@@ -16,7 +16,7 @@ export default createController(routes.account.orders, {
       let userOrders = await db.findMany(orders, {
         where: { user_id: user.id },
         orderBy: ['created_at', 'asc'],
-        with: { items: orderItemsWithBook },
+        with: { items: orderItemsWithAlbum },
       })
 
       return render(<AccountOrdersIndexPage orders={userOrders} />)
@@ -29,7 +29,7 @@ export default createController(routes.account.orders, {
         orderId === undefined
           ? undefined
           : await db.find(orders, orderId, {
-              with: { items: orderItemsWithBook },
+              with: { items: orderItemsWithAlbum },
             })
 
       if (!order || order.user_id !== user.id) {

@@ -10,7 +10,7 @@ import { Field } from './field.tsx'
 
 const Settings = fd.object({ name: fd.text(s.string()) })
 
-describe('bookstore Field', () => {
+describe('record store Field', () => {
   it('connects a bound field inside a RESTful form', (t) => {
     let view = render(
       <form.Context schema={Settings}>
@@ -21,7 +21,7 @@ describe('bookstore Field', () => {
               label="Name"
               defaultValue="Ada"
               placeholder="Your name"
-              class="bookstore-input"
+              class="record-store-input"
               maxLength={40}
             />
           </RestfulForm>
@@ -36,7 +36,7 @@ describe('bookstore Field', () => {
     assert.equal(label.control, input)
     assert.equal(input.value, 'Ada')
     assert.equal(input.placeholder, 'Your name')
-    assert.equal(input.className, 'bookstore-input')
+    assert.equal(input.className, 'record-store-input')
     assert.equal(input.maxLength, 40)
     assert.equal(method.value, 'PUT')
 

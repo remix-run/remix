@@ -5,21 +5,21 @@ import * as fd from 'remix/data-schema/experimental/form'
 import type { FormSubmission } from 'remix/data-schema/experimental/form'
 import { redirect } from 'remix/response/redirect'
 
-import { books } from '../../../data/schema.ts'
+import { albums } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
-import { getBookImageHref } from '../../../utils/book-images.ts'
+import { getAlbumImageHref } from '../../../utils/album-images.ts'
 import { getCartTotal } from '../../../utils/cart.ts'
 import { getCurrentCart, getCurrentUserSafely } from '../../../utils/context.ts'
 import { removeCartItem, restoreCartItem, updateCart } from '../cart-api.ts'
 import { CartItems } from './public/cart-items.tsx'
 import { CartItemRemoveForm, CartItemUpdateForm } from './public/schema.ts'
 
-type CartError = { status: number; message: string; bookId?: number; submission?: FormSubmission }
+type CartError = { status: number; message: string; albumId?: number; submission?: FormSubmission }
 
 const cartErrorSchema = s.object({
   status: s.number(),
   message: s.string(),
-  bookId: s.optional(s.number()),
+  albumId: s.optional(s.number()),
   submission: s.optional(
     s.object({
       values: s.record(s.string(), s.union([s.string(), s.boolean(), s.array(s.string())])),
@@ -50,7 +50,7 @@ export default createController(routes.cart.fragments, {
       }
       let error = await updateCart({ db, session, ...submission.value })
 
-      return mutationResponse(context, error && { ...error, bookId: submission.value.bookId })
+      return mutationResponse(context, error && { ...error, albumId: submission.value.albumId })
     },
 
     async itemsRemove(context) {
@@ -65,7 +65,7 @@ export default createController(routes.cart.fragments, {
       }
       let error = await removeCartItem({ db, session, ...submission.value })
 
-      return mutationResponse(context, error && { ...error, bookId: submission.value.bookId })
+      return mutationResponse(context, error && { ...error, albumId: submission.value.albumId })
     },
 
     async itemsRestore(context) {
@@ -79,7 +79,7 @@ export default createController(routes.cart.fragments, {
         })
       }
       let error = await restoreCartItem({ db, session, ...submission.value })
-      return mutationResponse(context, error && { ...error, bookId: submission.value.bookId })
+      return mutationResponse(context, error && { ...error, albumId: submission.value.albumId })
     },
   },
 })
@@ -110,28 +110,28 @@ async function renderCartItems(
     headers: { 'Cache-Control': 'no-store' },
   }
 
-  let bookRows = await db.findMany(books, {
+  let albumRows = await db.findMany(albums, {
     where: inList(
       'id',
-      cart.items.map((item) => item.bookId),
+      cart.items.map((item) => item.albumId),
     ),
   })
   let covers = await Promise.all(
-    bookRows.map(async (book) => ({
-      id: book.id,
-      href: await getBookImageHref(book.cover_url, 'book-thumbnail'),
+    albumRows.map(async (album) => ({
+      id: album.id,
+      href: await getAlbumImageHref(album.cover_url, 'album-thumbnail'),
     })),
   )
   let thumbnails = new Map(covers.map((cover) => [cover.id, cover.href]))
 
   return render(
     <CartItems
-      items={cart.items.map((item) => ({ ...item, thumbnailUrl: thumbnails.get(item.bookId) }))}
+      items={cart.items.map((item) => ({ ...item, thumbnailUrl: thumbnails.get(item.albumId) }))}
       total={total}
       canCheckout={!!user}
       error={error?.message}
       showErrorMessage={showErrorMessage}
-      errorBookId={error?.bookId}
+      errorAlbumId={error?.albumId}
       submission={error?.submission}
     />,
     responseInit,

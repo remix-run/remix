@@ -18,7 +18,7 @@ describe('router', () => {
     assert.ok(response.headers.get('Content-Security-Policy'))
 
     let html = await response.text()
-    assert.ok(html.includes('Welcome to the Bookstore'))
+    assert.ok(html.includes('Welcome to the Record Store'))
   })
 
   it('returns 404 for unknown routes', async () => {
@@ -28,10 +28,10 @@ describe('router', () => {
   })
 
   it('serves responsive WebP variants shared by catalog and product pages with immutable fingerprints', async () => {
-    let response = await router.fetch('https://remix.run/books')
+    let response = await router.fetch('https://remix.run/albums')
     let html = await response.text()
     let cover = html.match(
-      /src="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=book-image-640)"/,
+      /src="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=album-image-640)"/,
     )
     assert.ok(cover)
 
@@ -63,10 +63,10 @@ describe('router', () => {
     assert.equal(source.headers.get('Content-Type'), 'image/png')
     assert.deepEqual(new Uint8Array(await source.arrayBuffer()), new Uint8Array(original))
 
-    let product = await router.fetch('https://remix.run/books/bbq')
+    let product = await router.fetch('https://remix.run/albums/bbq')
     let productHtml = await product.text()
     let preload = productHtml.match(
-      /<link rel="preload" as="image"[^>]* href="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=book-image-640)"/,
+      /<link rel="preload" as="image"[^>]* href="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=album-image-640)"/,
     )
     assert.ok(preload)
     let productHead = productHtml.match(/<head>([\s\S]*?)<\/head>/)?.[1]
@@ -89,9 +89,9 @@ describe('router', () => {
   it('caches browsing frames privately for 30 seconds while keeping documents uncached', async () => {
     for (let path of [
       '/',
-      '/books',
-      '/books/genre/cookbook',
-      '/books/bbq',
+      '/albums',
+      '/albums/genre/cookbook',
+      '/albums/bbq',
       '/search?q=smoke',
       '/about',
       '/contact',
@@ -130,7 +130,7 @@ describe('router', () => {
     await frame.text()
   })
 
-  it('does not opt cart fragments or missing books into caching', async () => {
+  it('does not opt cart fragments or missing albums into caching', async () => {
     let cart = await router.fetch('https://remix.run/cart/items', {
       headers: { 'X-Remix-Frame': 'true' },
     })
@@ -138,7 +138,7 @@ describe('router', () => {
     assert.equal(cart.headers.get('Cache-Control'), 'no-store')
     await cart.text()
 
-    let missing = await router.fetch('https://remix.run/books/does-not-exist', {
+    let missing = await router.fetch('https://remix.run/albums/does-not-exist', {
       headers: { 'X-Remix-Frame': 'true' },
     })
     assert.equal(missing.status, 404)

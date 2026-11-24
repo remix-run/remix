@@ -1,38 +1,37 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 
-import type { BookWithCover } from '../utils/book-images.ts'
+import type { AlbumWithCover } from '../utils/album-images.ts'
 import { routes } from '../routes.ts'
-import { BookCard, BookCoverPreload } from '../ui/book-card.tsx'
+import { AlbumCard, AlbumCoverPreload } from '../ui/album-card.tsx'
 import { Layout } from '../ui/layout.tsx'
 
 interface HomePageProps {
-  featuredBooks: BookWithCover[]
+  featuredAlbums: AlbumWithCover[]
 }
 
 export function HomePage(handle: Handle<HomePageProps>) {
   return () => {
-    let { featuredBooks } = handle.props
+    let { featuredAlbums } = handle.props
 
     return (
-      <Layout head={<BookCoverPreload book={featuredBooks[0]} />}>
+      <Layout head={<AlbumCoverPreload album={featuredAlbums[0]} />}>
         <div class="card">
-          <h1>Welcome to the Bookstore</h1>
+          <h1>Welcome to the Record Store</h1>
           <p mix={css({ margin: '1rem 0' })}>
-            Discover your next favorite book from our curated collection of fiction, non-fiction,
-            and more.
+            Browse the catalog to find your next favorite record.
           </p>
           <p>
-            <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
-              Browse Books
+            <a data-rmx-prefetch="intent" href={routes.albums.index.href()} class="btn">
+              Browse Records
             </a>
           </p>
         </div>
 
-        <h2 mix={css({ margin: '2rem 0 1rem' })}>Featured Books</h2>
+        <h2 mix={css({ margin: '2rem 0 1rem' })}>Featured Records</h2>
         <div class="grid">
-          {featuredBooks.map((book) => (
-            <BookCard book={book} />
+          {featuredAlbums.map((album) => (
+            <AlbumCard album={album} />
           ))}
         </div>
       </Layout>

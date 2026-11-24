@@ -1,5 +1,5 @@
 export interface CartItem {
-  bookId: number
+  albumId: number
   slug: string
   title: string
   price: number
@@ -22,29 +22,29 @@ export function getCart(value: unknown): Cart {
 
 export function addToCart(
   cart: Cart,
-  bookId: number,
+  albumId: number,
   slug: string,
   title: string,
   price: number,
   quantity: number = 1,
 ): Cart {
-  let existingItem = cart.items.find((item) => item.bookId === bookId)
+  let existingItem = cart.items.find((item) => item.albumId === albumId)
   if (existingItem) {
     existingItem.quantity += quantity
   } else {
-    cart.items.push({ bookId, slug, title, price, quantity })
+    cart.items.push({ albumId, slug, title, price, quantity })
   }
 
   return cart
 }
 
-export function updateCartItem(cart: Cart, bookId: number, quantity: number): Cart | undefined {
-  let item = cart.items.find((item) => item.bookId === bookId)
+export function updateCartItem(cart: Cart, albumId: number, quantity: number): Cart | undefined {
+  let item = cart.items.find((item) => item.albumId === albumId)
 
   if (!item) return undefined
 
   if (quantity <= 0) {
-    cart.items = cart.items.filter((item) => item.bookId !== bookId)
+    cart.items = cart.items.filter((item) => item.albumId !== albumId)
   } else {
     item.quantity = quantity
   }
@@ -52,8 +52,8 @@ export function updateCartItem(cart: Cart, bookId: number, quantity: number): Ca
   return cart
 }
 
-export function removeFromCart(cart: Cart, bookId: number): Cart {
-  cart.items = cart.items.filter((item) => item.bookId !== bookId)
+export function removeFromCart(cart: Cart, albumId: number): Cart {
+  cart.items = cart.items.filter((item) => item.albumId !== albumId)
   return cart
 }
 

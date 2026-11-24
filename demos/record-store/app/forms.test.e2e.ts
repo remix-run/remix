@@ -7,7 +7,7 @@ import { createTestRouter } from '../test/helpers.ts'
 import { db } from './db.ts'
 import { users } from './data/schema.ts'
 
-describe('bookstore form submissions', () => {
+describe('record store form submissions', () => {
   it('roundtrips field and form errors through hydrated submissions', async (t) => {
     let router = await createTestRouter()
     let submissions = 0

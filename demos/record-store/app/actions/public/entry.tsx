@@ -7,19 +7,19 @@ import {
 import { createMatcher } from 'remix/route-pattern/match'
 
 import { routes } from '../../routes.ts'
-import { transitionBookPage } from '../../ui/book-transitions.ts'
+import { transitionAlbumPage } from '../../ui/album-transitions.ts'
 import { installDebugBoundaries } from './debug-boundaries.ts'
 import { createFrameRequestManager } from './frame-request-manager.ts'
-import { createRelatedBookPrefetchManager } from './related-book-prefetch-manager.ts'
+import { createRelatedAlbumPrefetchManager } from './related-album-prefetch-manager.ts'
 import { prefetchResponsiveImages } from './prefetch-responsive-images.ts'
 
-const bookDetailsMatcher = createMatcher(routes.books.show.pattern)
-const relatedBooksMatcher = createMatcher(routes.books.related.pattern)
+const albumDetailsMatcher = createMatcher(routes.albums.show.pattern)
+const relatedAlbumsMatcher = createMatcher(routes.albums.related.pattern)
 const browsingPageMatchers = [
   routes.home.pattern,
-  routes.books.index.pattern,
-  routes.books.genre.pattern,
-  routes.books.show.pattern,
+  routes.albums.index.pattern,
+  routes.albums.genre.pattern,
+  routes.albums.show.pattern,
   routes.search.pattern,
   routes.about.pattern,
   routes.contact.index.pattern,
@@ -28,7 +28,7 @@ const browsingPageMatchers = [
 const disposeDebugBoundaries = installDebugBoundaries()
 const prefetchController = new AbortController()
 const frameRequestManager = createFrameRequestManager(prefetchController.signal)
-const relatedBookPrefetchManager = createRelatedBookPrefetchManager(prefetchController.signal)
+const relatedAlbumPrefetchManager = createRelatedAlbumPrefetchManager(prefetchController.signal)
 
 export const app = run({
   async loadModule(moduleUrl: string, exportName: string) {
@@ -53,8 +53,8 @@ export const app = run({
         async processFrame(prefetchReferences, context) {
           // Queue lazy related frames discovered in the prefetched details HTML.
           // Card hover/focus starts them; if intent preceded discovery, start them now.
-          if (bookDetailsMatcher.match(context.src)) {
-            relatedBookPrefetchManager.queueRelatedBooks(context)
+          if (albumDetailsMatcher.match(context.src)) {
+            relatedAlbumPrefetchManager.queueRelatedAlbums(context)
           }
 
           // Related covers and page image preloads use responsive image candidates.
@@ -62,7 +62,7 @@ export const app = run({
           let images = context.fragment.querySelectorAll(
             'link[rel="preload"][as="image"][imagesrcset]',
           )
-          if (relatedBooksMatcher.match(context.src)) {
+          if (relatedAlbumsMatcher.match(context.src)) {
             images = context.fragment.querySelectorAll('img[src]')
           }
           // Prefetch default assets; nested frames require explicit selection.
@@ -85,7 +85,7 @@ export const app = run({
         if (existing) return existing
         let reuseBrowsingHtml =
           // Deferred lazy frames can load after the navigation metadata is no longer available.
-          relatedBooksMatcher.match(url) !== null ||
+          relatedAlbumsMatcher.match(url) !== null ||
           (options?.navigationType === 'traverse' &&
             browsingPageMatchers.some((matcher) => matcher.match(url) !== null))
         return fetch(url, {
@@ -95,23 +95,23 @@ export const app = run({
       },
       async commit(commitFrame, { signal, to }) {
         let from = options?.from?.url
-        let toBook = bookDetailsMatcher.match(to)
-        let fromBook = from != null ? bookDetailsMatcher.match(from) : null
-        let faceout = fromBook ? document.querySelector('[data-book-faceout]') : null
-        let destinationCard = toBook
+        let toAlbum = albumDetailsMatcher.match(to)
+        let fromAlbum = from != null ? albumDetailsMatcher.match(from) : null
+        let faceout = fromAlbum ? document.querySelector('[data-album-faceout]') : null
+        let destinationCard = toAlbum
           ? document
               .querySelector(
-                `a[href="${CSS.escape(routes.books.show.href({ slug: toBook.params.slug }))}"]`,
+                `a[href="${CSS.escape(routes.albums.show.href({ slug: toAlbum.params.slug }))}"]`,
               )
-              ?.closest('[data-book-id]')
+              ?.closest('[data-album-id]')
           : null
-        return transitionBookPage(commitFrame, {
+        return transitionAlbumPage(commitFrame, {
           target: options?.target,
           navigationType: options?.navigationType,
           fromIndex: options?.from?.index,
           currentIndex: window.navigation?.currentEntry?.index,
-          faceoutBookId: faceout?.getAttribute('data-book-faceout'),
-          cardBookId: destinationCard?.getAttribute('data-book-id'),
+          faceoutAlbumId: faceout?.getAttribute('data-album-faceout'),
+          cardAlbumId: destinationCard?.getAttribute('data-album-id'),
           reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
           signal,
           startViewTransition: document.startViewTransition?.bind(document),

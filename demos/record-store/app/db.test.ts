@@ -3,27 +3,30 @@ import { beforeEach, describe, it } from 'remix/test'
 import { sql } from 'remix/data-table'
 
 import { db, loadAppMigrations, loadAppSeed } from './db.ts'
-import { books, users } from './data/schema.ts'
-import { bookGenres } from './data/book-genres.ts'
+import { albums, users } from './data/schema.ts'
+import { albumGenres } from './data/album-genres.ts'
 import { verifyPassword } from './utils/password-hash.ts'
 
 beforeEach(async () => {
   await db.reset({ migrations: await loadAppMigrations(), seed: await loadAppSeed() })
 })
 
-describe('bookstore database seed', () => {
-  it('distributes all 50 books across the ten supported categories', async () => {
-    let catalog = await db.findMany(books)
+describe('record store database seed', () => {
+  it('distributes all 50 albums across the ten supported categories', async () => {
+    let catalog = await db.findMany(albums)
     assert.equal(catalog.length, 50)
-    assert.deepEqual([...new Set(catalog.map((book) => book.genre))].sort(), [...bookGenres].sort())
+    assert.deepEqual(
+      [...new Set(catalog.map((album) => album.genre))].sort(),
+      [...albumGenres].sort(),
+    )
   })
 
-  it('consolidates existing genres without changing books or orders and rolls back original genres', async () => {
+  it('consolidates existing genres without changing albums or orders and rolls back original genres', async () => {
     let migrations = await loadAppMigrations()
-    let consolidated = await db.findMany(books, { orderBy: ['id', 'asc'] })
+    let consolidated = await db.findMany(albums, { orderBy: ['id', 'asc'] })
     await db.migrate(migrations, { direction: 'down', step: 1 })
     await db.exec(sql`
-      update books set genre = case id
+      update albums set genre = case id
         when 2 then 'music'
         when 8 then 'science-fiction'
         when 9 then 'romance'
@@ -53,22 +56,22 @@ describe('bookstore database seed', () => {
         else genre
       end
     `)
-    let original = await db.findMany(books, { orderBy: ['id', 'asc'] })
-    assert.equal(new Set(original.map((book) => book.genre)).size, 26)
-    let orderItems = await db.exec(sql`select * from order_items order by order_id, book_id`)
+    let original = await db.findMany(albums, { orderBy: ['id', 'asc'] })
+    assert.equal(new Set(original.map((album) => album.genre)).size, 26)
+    let orderItems = await db.exec(sql`select * from order_items order by order_id, album_id`)
 
     await db.migrate(migrations)
     await db.migrate(migrations)
 
-    assert.deepEqual(await db.findMany(books, { orderBy: ['id', 'asc'] }), consolidated)
+    assert.deepEqual(await db.findMany(albums, { orderBy: ['id', 'asc'] }), consolidated)
     assert.deepEqual(
-      (await db.exec(sql`select * from order_items order by order_id, book_id`)).rows,
+      (await db.exec(sql`select * from order_items order by order_id, album_id`)).rows,
       orderItems.rows,
     )
     assert.deepEqual((await db.exec(sql`pragma foreign_key_check`)).rows, [])
 
     await db.migrate(migrations, { direction: 'down', step: 1 })
-    assert.deepEqual(await db.findMany(books, { orderBy: ['id', 'asc'] }), original)
+    assert.deepEqual(await db.findMany(albums, { orderBy: ['id', 'asc'] }), original)
   })
 
   it('stores verifiable password hashes for seeded users', async () => {
