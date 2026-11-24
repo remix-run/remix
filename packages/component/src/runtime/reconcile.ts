@@ -1755,7 +1755,7 @@ function diffChildren(
   cursor?: HydrationCursor,
   anchor?: Node,
 ): CommittedVNode[] {
-  let hasKeys = hasKeyedChildren(next)
+  let hasKeys = next.some((child) => child.key != null)
   let committed: Array<VNodeInput | CommittedVNode> = next
 
   if (curr === null) {
@@ -1833,13 +1833,6 @@ function canBulkClearNode(node: CommittedVNode): boolean {
   return false
 }
 
-function hasKeyedChildren(children: Array<{ key?: Key }>): boolean {
-  for (let i = 0; i < children.length; i++) {
-    if (children[i].key != null) return true
-  }
-  return false
-}
-
 function warnDuplicateKeys(children: Array<{ key?: Key }>): void {
   let seenKeys = new Set<Key>()
   let duplicateKeys: Set<Key> | undefined
@@ -1879,17 +1872,20 @@ function patchKeyedChildren(
   }
   let committed: Array<VNodeInput | CommittedVNode> = next
 
-  let matchAnalysis = analyzeKeyedChildMatches(curr.length, matches)
-  if (matchAnalysis.hasRemovals) {
+  let inserted = 0
+  let lastOldIndex = -1
+  let needsPlacement = false
+  for (let oldIndex of matches) {
+    if (oldIndex < 0) inserted++
+    else if (inserted > 0 || oldIndex < lastOldIndex) needsPlacement = true
+    lastOldIndex = oldIndex
+  }
+
+  if (matches.length - inserted < curr.length) {
     let usedOldIndexes = new Uint8Array(curr.length)
-
-    for (let index = 0; index < matches.length; index++) {
-      let oldIndex = matches[index]
-      if (oldIndex >= 0) {
-        usedOldIndexes[oldIndex] = 1
-      }
+    for (let oldIndex of matches) {
+      if (oldIndex >= 0) usedOldIndexes[oldIndex] = 1
     }
-
     for (let oldIndex = 0; oldIndex < curr.length; oldIndex++) {
       if (usedOldIndexes[oldIndex] === 0) {
         remove(curr[oldIndex], domParent, context)
@@ -1902,9 +1898,9 @@ function patchKeyedChildren(
   // and moved by the placement pass. Hydration keeps the list end anchor
   // because it marks where adoption stops.
   // A matched child without a DOM anchor still needs placement if it starts rendering DOM.
-  let stableIndexes = matchAnalysis.canSkipPlacement
-    ? null
-    : getStableIndexes(matches, (oldIndex) => !!findFirstDomAnchor(curr[oldIndex]))
+  let stableIndexes = needsPlacement
+    ? getStableIndexes(matches, (oldIndex) => !!findFirstDomAnchor(curr[oldIndex]))
+    : null
   let stableCursor = 0
   let cachedStableIndex = -1
   let stableAnchor: Node | undefined
@@ -1961,13 +1957,14 @@ function patchKeyedChildren(
 }
 
 // Keyed child matches are arrays of old indexes (-1 = no match / new node),
-// parallel to `next`. Plain numbers instead of wrapper objects keep large
-// keyed diffs (1000-row tables) allocation-free.
+// parallel to `next`. Each match needs only its old index.
 function matchKeyedChildren(curr: CommittedVNode[], next: VNodeInput[]): number[] {
   let oldKeys = new Map<Key, number>()
+  let lastUnkeyed = new Map<CommittedVNode['type'], number>()
   for (let i = 0; i < curr.length; i++) {
     let key = curr[i].key
     if (key != null) oldKeys.set(key, i)
+    else lastUnkeyed.set(curr[i].type, i)
   }
 
   let nextUnkeyed = 0
@@ -1979,7 +1976,8 @@ function matchKeyedChildren(curr: CommittedVNode[], next: VNodeInput[]): number[
         oldKeys.delete(key)
         return index
       }
-    } else {
+    } else if ((lastUnkeyed.get(type) ?? -1) >= nextUnkeyed) {
+      // A miss must leave the cursor available for later children of other types.
       for (let i = nextUnkeyed; i < curr.length; i++) {
         if (curr[i].key == null && curr[i].type === type) {
           nextUnkeyed = i + 1
@@ -2033,32 +2031,6 @@ function matchCommonKeyedChanges(curr: CommittedVNode[], next: VNodeInput[]): nu
     matches.push(oldIndex)
   }
   return firstMismatch < 0 || swapped ? matches : null
-}
-
-function analyzeKeyedChildMatches(
-  currentLength: number,
-  matches: readonly number[],
-): { hasRemovals: boolean; canSkipPlacement: boolean } {
-  let hasRemovals = matches.length !== currentLength
-  let canSkipPlacement = true
-  let lastOldIndex = -1
-  let sawNewNode = false
-
-  for (let index = 0; index < matches.length; index++) {
-    let oldIndex = matches[index]
-    if (oldIndex < 0) {
-      hasRemovals = true
-      sawNewNode = true
-      continue
-    }
-
-    if (sawNewNode || oldIndex < lastOldIndex) {
-      canSkipPlacement = false
-    }
-    lastOldIndex = oldIndex
-  }
-
-  return { hasRemovals, canSkipPlacement }
 }
 
 // Return positions of the longest increasing subsequence of reusable old indexes.
