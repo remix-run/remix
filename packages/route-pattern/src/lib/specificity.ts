@@ -62,7 +62,7 @@ export const descending = (a: Match, b: Match): number => compare(a, b) * -1
  * @returns -1 if `a` is less specific, 1 if `a` is more specific, 0 if tied.
  */
 export function compare(a: Match, b: Match): -1 | 0 | 1 {
-  if (a.url.href !== b.url.href) {
+  if (a.url !== b.url && a.url.href !== b.url.href) {
     throw new Error(`Cannot compare matches for different URLs: ${a.url.href} vs ${b.url.href}`)
   }
   let aParts = a.pattern._parts
@@ -74,9 +74,7 @@ export function compare(a: Match, b: Match): -1 | 0 | 1 {
   let portResult = comparePort(aParts.port, bParts.port)
   if (portResult !== 0) return portResult
 
-  let hostname = decodeHostname(a.url.hostname)
-
-  let hostnameResult = compareHostname(hostname, a.paramsMeta.hostname, b.paramsMeta.hostname)
+  let hostnameResult = compareHostnameMeta(a.url, a.paramsMeta.hostname, b.paramsMeta.hostname)
   if (hostnameResult !== 0) return hostnameResult
 
   let pathnameResult = comparePathname(a.paramsMeta.pathname, b.paramsMeta.pathname)
@@ -105,47 +103,108 @@ function comparePort(a: RoutePatternParts['port'], b: RoutePatternParts['port'])
   return 0
 }
 
-function compareHostname(
+function compareHostnameMeta(
+  url: URL,
+  a: Match['paramsMeta']['hostname'],
+  b: Match['paramsMeta']['hostname'],
+): -1 | 0 | 1 {
+  if (a.length === 0 && b.length === 0) return 0
+  if (a.length === 0) return 1
+  if (b.length === 0) return -1
+  if (
+    a.length === 1 &&
+    b.length === 1 &&
+    a[0].type === b[0].type &&
+    a[0].begin === b[0].begin &&
+    a[0].end === b[0].end
+  ) {
+    return 0
+  }
+
+  let hostname = decodeHostname(url.hostname)
+  return compareHostnameRanges(hostname, a, b)
+}
+
+export function compareHostnameRanges(
   hostname: string,
   a: Match['paramsMeta']['hostname'],
   b: Match['paramsMeta']['hostname'],
 ): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
-  if (a.length === 0 && b.length > 0) return 1
-  if (a.length > 0 && b.length === 0) return -1
-
-  // Encoding of hostname chars: 0 = static, 1 = variable (:), 2 = wildcard (*)
-  // Note: `Int8Array` defaults to 0 for all indices not explicitly set.
-
-  let aEncoding = new Int8Array(hostname.length)
-  for (let range of a) {
-    aEncoding.fill(range.type === ':' ? 1 : 2, range.begin, range.end)
+  if (a.length === 0) return 1
+  if (b.length === 0) return -1
+  if (
+    a.length === 1 &&
+    b.length === 1 &&
+    a[0].type === b[0].type &&
+    a[0].begin === b[0].begin &&
+    a[0].end === b[0].end
+  ) {
+    return 0
   }
 
-  let bEncoding = new Int8Array(hostname.length)
-  for (let range of b) {
-    bEncoding.fill(range.type === ':' ? 1 : 2, range.begin, range.end)
-  }
+  // Compare labels right-to-left, and characters within each label left-to-right.
+  let segEnd = hostname.length
+  while (segEnd >= 0) {
+    let dot = segEnd === 0 ? -1 : hostname.lastIndexOf('.', segEnd - 1)
+    let segBegin = dot + 1
 
-  // Build segments right-to-left: desc order by begin
-  let segments: Array<{ begin: number; end: number }> = []
-  let end = hostname.length
-  for (let i = hostname.length - 1; i >= 0; i--) {
-    if (hostname[i] === '.') {
-      segments.push({ begin: i + 1, end })
-      end = i
-    }
-  }
-  segments.push({ begin: 0, end }) // leftmost segment
+    let cmp = compareRangeSlice(a, b, segBegin, segEnd)
+    if (cmp !== 0) return cmp
 
-  for (let segment of segments) {
-    for (let j = segment.begin; j < segment.end; j++) {
-      if (aEncoding[j] < bEncoding[j]) return 1 // a is more specific
-      if (aEncoding[j] > bEncoding[j]) return -1 // b is more specific
-    }
+    if (dot === -1) break
+    segEnd = dot
   }
 
   return 0
+}
+
+function compareRangeSlice(
+  a: Match['paramsMeta']['hostname'],
+  b: Match['paramsMeta']['hostname'],
+  segBegin: number,
+  segEnd: number,
+): -1 | 0 | 1 {
+  if (segBegin >= segEnd) return 0
+
+  let aIndex = 0
+  while (aIndex < a.length && a[aIndex].end <= segBegin) aIndex += 1
+  let bIndex = 0
+  while (bIndex < b.length && b[bIndex].end <= segBegin) bIndex += 1
+
+  let pos = segBegin
+  while (pos < segEnd) {
+    let aRange = aIndex < a.length && a[aIndex].begin < segEnd ? a[aIndex] : undefined
+    let bRange = bIndex < b.length && b[bIndex].begin < segEnd ? b[bIndex] : undefined
+
+    if (aRange === undefined && bRange === undefined) return 0
+
+    let aActive = aRange !== undefined && aRange.begin <= pos
+    let bActive = bRange !== undefined && bRange.begin <= pos
+
+    let aSpec = aActive ? (aRange!.type === ':' ? 1 : 2) : 0
+    let bSpec = bActive ? (bRange!.type === ':' ? 1 : 2) : 0
+    if (aSpec < bSpec) return 1
+    if (aSpec > bSpec) return -1
+
+    let nextA = aRange === undefined ? segEnd : aActive ? aRange.end : aRange.begin
+    let nextB = bRange === undefined ? segEnd : bActive ? bRange.end : bRange.begin
+    let nextPos = nextA < nextB ? nextA : nextB
+    if (nextPos > segEnd) nextPos = segEnd
+    pos = nextPos
+
+    if (aRange !== undefined && aRange.end <= pos) aIndex += 1
+    if (bRange !== undefined && bRange.end <= pos) bIndex += 1
+  }
+
+  return 0
+}
+
+export function comparePathnameRanges(
+  a: Match['paramsMeta']['pathname'],
+  b: Match['paramsMeta']['pathname'],
+): -1 | 0 | 1 {
+  return comparePathname(a, b)
 }
 
 function comparePathname(
@@ -153,8 +212,8 @@ function comparePathname(
   b: Match['paramsMeta']['pathname'],
 ): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
-  if (a.length === 0 && b.length > 0) return 1
-  if (a.length > 0 && b.length === 0) return -1
+  if (a.length === 0) return 1
+  if (b.length === 0) return -1
 
   let i = 0
   let aIndex = 0
@@ -168,7 +227,7 @@ function comparePathname(
     if (bRange === undefined) return -1 // b is fully static from here
 
     // Skip to the minimum begin of the two current ranges
-    i = Math.min(aRange.begin, bRange.begin)
+    i = aRange.begin < bRange.begin ? aRange.begin : bRange.begin
 
     if (i < aRange.begin) return 1 // a has static content at i
     if (i < bRange.begin) return -1 // b has static content at i
@@ -176,8 +235,7 @@ function comparePathname(
     if (aRange.type === ':' && bRange.type === '*') return 1 // a is more specific
     if (aRange.type === '*' && bRange.type === ':') return -1 // b is more specific
 
-    let minEnd = Math.min(aRange.end, bRange.end)
-    i = minEnd
+    i = aRange.end < bRange.end ? aRange.end : bRange.end
 
     // Advance range indices if we've reached their ends
     if (i >= aRange.end) aIndex += 1
@@ -188,31 +246,27 @@ function comparePathname(
 }
 
 function compareSearch(a: RoutePatternParts['search'], b: RoutePatternParts['search']): -1 | 0 | 1 {
-  let aSpecificity = searchSpecificity(a)
-  let bSpecificity = searchSpecificity(b)
+  if (a.size === 0 && b.size === 0) return 0
 
-  if (aSpecificity.keyValue > bSpecificity.keyValue) return 1
-  if (aSpecificity.keyValue < bSpecificity.keyValue) return -1
-
-  if (aSpecificity.key > bSpecificity.key) return 1
-  if (aSpecificity.key < bSpecificity.key) return -1
-
-  return 0
-}
-
-function searchSpecificity(constraints: RoutePatternParts['search']): {
-  key: number
-  keyValue: number
-} {
-  let specificity = { key: 0, keyValue: 0 }
-
-  for (let constraint of constraints.values()) {
-    if (constraint.size === 0) {
-      specificity.key += 1
-      continue
-    }
-    specificity.keyValue += constraint.size
+  let aKeyValue = 0
+  let aKey = 0
+  for (let constraint of a.values()) {
+    if (constraint.size === 0) aKey += 1
+    else aKeyValue += constraint.size
   }
 
-  return specificity
+  let bKeyValue = 0
+  let bKey = 0
+  for (let constraint of b.values()) {
+    if (constraint.size === 0) bKey += 1
+    else bKeyValue += constraint.size
+  }
+
+  if (aKeyValue > bKeyValue) return 1
+  if (aKeyValue < bKeyValue) return -1
+
+  if (aKey > bKey) return 1
+  if (aKey < bKey) return -1
+
+  return 0
 }
