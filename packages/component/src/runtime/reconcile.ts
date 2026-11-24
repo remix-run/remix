@@ -21,7 +21,7 @@ import type { RemixNode } from './core/vnode.ts'
 import { normalizeUnsafeHTMLProps } from './unsafe-html.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
-import { isEntry, skipComments, logHydrationMismatch } from './client-entries.ts'
+import { isEntry, logHydrationMismatch } from './client-entries.ts'
 import type { Scheduler } from './vdom.ts'
 import {
   MixinRuntime,
@@ -918,12 +918,11 @@ function reconcileVNodes(
   if (!curr && cursor) {
     // The anchor ends this hydration range. Leave client entry markers for the next
     // component to claim, including when empty text needs an inserted placeholder.
-    let hydrationNode = skipCommentsExceptBoundaryStart(
+    let hydrationNode = nextHydrationNode(
       cursor.current ?? null,
       node.kind !== 'host' && node.kind !== 'frame' && (node.kind !== 'text' || node._text === ''),
       anchor,
     )
-    if (hydrationNode === anchor) hydrationNode = null
     cursor.current = hydrationNode
     if (
       vParent.kind !== 'root' &&
@@ -1071,7 +1070,7 @@ function insertHost(
       // Type mismatch - try single-advance retry to handle browser extension injections
       // at the start of containers. Skip this node and try the next sibling once, and
       // leave the skipped node in place if the next sibling matches.
-      let nextSibling = skipComments(hydrationNode.nextSibling)
+      let nextSibling = nextHydrationNode(hydrationNode.nextSibling, false, anchor)
       if (nextSibling instanceof Element && getHydrationTagName(nextSibling, svg) === node.type) {
         match = nextSibling
       }
@@ -1120,13 +1119,14 @@ function reconcileText(
           // node can also contain the start of the next text child.
           let remainder = text.slice(dom.length)
           let sibling = dom.nextSibling
-          while (remainder && sibling instanceof Text && remainder.startsWith(sibling.data)) {
+          while (remainder && sibling !== anchor && sibling instanceof Text) {
+            if (!remainder.startsWith(sibling.data)) {
+              if (sibling.data.startsWith(remainder)) sibling.deleteData(0, remainder.length)
+              break
+            }
             remainder = remainder.slice(sibling.length)
             sibling.remove()
             sibling = dom.nextSibling
-          }
-          if (remainder && sibling instanceof Text && sibling.data.startsWith(remainder)) {
-            sibling.deleteData(0, remainder.length)
           }
         } else {
           logHydrationMismatch('text mismatch', dom.data, text)
@@ -1331,13 +1331,12 @@ function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
   }
 }
 
-function skipCommentsExceptBoundaryStart(
+function nextHydrationNode(
   cursor: Node | null,
   preserveClientEntry: boolean,
   anchor?: Node,
 ): Node | null {
-  while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
-    if (cursor === anchor) return cursor
+  while (cursor && cursor !== anchor && cursor.nodeType === Node.COMMENT_NODE) {
     let portalEnd = getPortalRangeEnd(cursor)
     if (portalEnd) {
       cursor = portalEnd.nextSibling
@@ -1347,7 +1346,7 @@ function skipCommentsExceptBoundaryStart(
     if (preserveClientEntry && isHydrationStart(cursor)) return cursor
     cursor = cursor.nextSibling
   }
-  return cursor
+  return cursor === anchor ? null : cursor
 }
 
 export function renderComponent(
