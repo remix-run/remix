@@ -1,6 +1,8 @@
 import { createSchema, fail } from './schema.ts'
 import type { Schema } from './schema.ts'
 
+const maxBigintStringLength = 4_096
+
 /**
  * Coerce input into a number.
  *
@@ -114,7 +116,7 @@ export function coerceDate(): Schema<unknown, Date> {
  * Accepts:
  * - `bigint` values as-is
  * - integer `number` values
- * - integer strings parsed via `BigInt(...)`
+ * - integer strings up to 4,096 UTF-16 code units, including surrounding whitespace
  *
  * @returns A schema that produces a `bigint`
  */
@@ -129,6 +131,18 @@ export function coerceBigint(): Schema<unknown, bigint> {
     }
 
     if (typeof value === 'string') {
+      if (value.length > maxBigintStringLength) {
+        return fail(
+          `Expected bigint string of at most ${maxBigintStringLength} characters`,
+          context.path,
+          {
+            code: 'coerce.bigint',
+            input: value,
+            parseOptions: context.options,
+          },
+        )
+      }
+
       let trimmed = value.trim()
 
       if (trimmed.length === 0) {

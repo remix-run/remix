@@ -319,6 +319,8 @@ let query = parse(Query, {
 })
 ```
 
+For `coerce.bigint()`, the maximum string length is 4,096 UTF-16 code units, including surrounding whitespace.
+
 ## Discriminated unions
 
 Pick the right schema based on a discriminator property.
