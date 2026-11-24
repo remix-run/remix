@@ -45,6 +45,46 @@ function controlledRestore(): Promise<void> {
 }
 
 describe('vdom controlled props', () => {
+  it('only attaches control listeners when a returning input becomes controlled', async (t) => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    let removal = Promise.withResolvers<void>()
+    t.after(() => {
+      root.dispose()
+      removal.resolve()
+    })
+    let persist = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => event.persistNode(() => removal.promise))
+      return () => handle.element
+    })
+    function field(value?: string) {
+      return <input key="field" value={value} mix={persist()} />
+    }
+    root.render(field())
+    let input = container.querySelector('input')
+    if (!input) throw new Error('Missing input')
+    let add = t.mock.method(input, 'addEventListener')
+    input.value = 'draft'
+
+    root.render(null)
+    root.render(field())
+    root.flush()
+    expect(container.firstChild).toBe(input)
+    expect(input.value).toBe('draft')
+    let listeners = add.mock.calls.map((call) => call.arguments[0])
+    expect(listeners).not.toContain('input')
+    expect(listeners).not.toContain('change')
+
+    root.render(null)
+    root.render(field('saved'))
+    root.flush()
+    expect(container.firstChild).toBe(input)
+    input.value = 'edit'
+    input.dispatchEvent(new Event('change'))
+    await controlledRestore()
+    expect(input.value).toBe('saved')
+  })
+
   it('restores controlled checked supplied as an empty string', async (t) => {
     let container = document.createElement('div')
     let root = createRoot(container)
@@ -548,12 +588,13 @@ describe('vdom controlled props', () => {
   it('does not control value/checked when prop value is undefined', async () => {
     let container = document.createElement('div')
     let root = createRoot(container)
-    root.render(
+    let fields = (
       <>
         <input id="text" value={undefined} />
         <input id="check" type="checkbox" checked={undefined} />
-      </>,
+      </>
     )
+    root.render(fields)
     root.flush()
 
     let text = container.querySelector('#text') as HTMLInputElement
@@ -565,8 +606,19 @@ describe('vdom controlled props', () => {
     check.dispatchEvent(new Event('change', { bubbles: true }))
 
     await controlledRestore()
+    root.render(fields)
     expect(text.value).toBe('user typed')
     expect(check.checked).toBe(true)
+
+    let cleared: Record<string, unknown> = { value: null, checked: null }
+    root.render(
+      <>
+        <input id="text" {...cleared} />
+        <input id="check" type="checkbox" {...cleared} />
+      </>,
+    )
+    expect(text.value).toBe('')
+    expect(check.checked).toBe(false)
   })
 
   it('restores controlled value on native change for select when no update happens', async () => {

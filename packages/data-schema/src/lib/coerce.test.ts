@@ -158,6 +158,29 @@ describe('coerce', () => {
     assertFailure(bad)
   })
 
+  it('accepts bigint strings at the maximum length', () => {
+    let schema = coerceBigint()
+    let result = schema['~standard'].validate('42'.padStart(4_096, '0'))
+
+    assertSuccess(result)
+    assert.equal(result.value, 42n)
+  })
+
+  it('returns a length issue for longer bigint strings', () => {
+    let schema = coerceBigint()
+    let result = schema['~standard'].validate('42'.padStart(4_097, '0'))
+
+    assertFailure(result)
+    assert.equal(result.issues[0].message, 'Expected bigint string of at most 4096 characters')
+  })
+
+  it('includes surrounding whitespace in the bigint string length', () => {
+    let schema = coerceBigint()
+    let result = schema['~standard'].validate('42'.padStart(4_097, ' '))
+
+    assertFailure(result)
+  })
+
   it('passes through bigint values', () => {
     let schema = coerceBigint()
     let result = schema['~standard'].validate(BigInt(999))

@@ -1,0 +1,273 @@
+import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
+import sharp from 'sharp'
+
+import { getAlbumImageHref } from '../../utils/album-images.ts'
+import {
+  assertContains,
+  createTestRouter,
+  getSessionCookie,
+  requestWithSession,
+} from '../../../test/helpers.ts'
+
+const router = await createTestRouter()
+
+describe('cart handlers', () => {
+  it('POST /cart/api/add adds album to cart', async () => {
+    let response = await router.fetch('https://remix.run/cart/api/add', {
+      method: 'POST',
+      body: new URLSearchParams({
+        albumId: '1',
+        slug: 'overpass-stereo',
+      }),
+      redirect: 'manual',
+    })
+
+    assert.equal(response.status, 302)
+    assert.ok(response.headers.get('Location')?.includes('/cart'))
+  })
+
+  it('GET /cart shows cart items', async () => {
+    // First, add item to cart to get a session
+    let addResponse = await router.fetch('https://remix.run/cart/api/add', {
+      method: 'POST',
+      body: new URLSearchParams({
+        albumId: '2',
+        slug: 'shred-till-dawn',
+      }),
+      redirect: 'manual',
+    })
+
+    let sessionId = getSessionCookie(addResponse)
+    assert.ok(sessionId)
+
+    // Now view cart with session
+    let request = requestWithSession('https://remix.run/cart', sessionId)
+    let response = await router.fetch(request)
+
+    assert.equal(response.status, 200)
+    let html = await response.text()
+    assertContains(html, 'Shopping Cart')
+    assertContains(html, 'Shred Till Dawn')
+  })
+
+  it('cart persists state across requests with same session', async () => {
+    // Add first item
+    let addResponse1 = await router.fetch('https://remix.run/cart/api/add', {
+      method: 'POST',
+      body: new URLSearchParams({
+        albumId: '1',
+        slug: 'overpass-stereo',
+      }),
+      redirect: 'manual',
+    })
+
+    let sessionId = getSessionCookie(addResponse1)
+    assert.ok(sessionId)
+
+    // Add second item with same session
+    let addRequest2 = requestWithSession('https://remix.run/cart/api/add', sessionId, {
+      method: 'POST',
+      body: new URLSearchParams({
+        albumId: '3',
+        slug: 'last-bell-first-kiss',
+      }),
+    })
+    await router.fetch(addRequest2)
+
+    // View cart - should have both items
+    let cartRequest = requestWithSession('https://remix.run/cart', sessionId)
+    let cartResponse = await router.fetch(cartRequest)
+
+    let html = await cartResponse.text()
+    assertContains(html, 'Overpass Stereo')
+    assertContains(html, 'Last Bell, First Kiss')
+  })
+
+  it('GET /cart/items renders the table, total, and actions', async () => {
+    let session = await cartSession('2')
+    let request = requestWithSession('https://remix.run/cart/items', session)
+    let response = await router.fetch(request)
+    let html = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.match(html, /<table\b/)
+    assertContains(html, '<th>Record</th>')
+    assertContains(html, 'Shred Till Dawn')
+    assertContains(html, 'Decrease quantity of Shred Till Dawn')
+    assertContains(html, 'Increase quantity of Shred Till Dawn')
+    assertContains(html, 'Remove')
+    assertContains(html, 'Total:')
+    assertContains(html, '$14.99')
+    assertContains(html, 'Continue Shopping')
+    assertContains(html, 'Login to Checkout')
+
+    let thumbnail = html.match(/src="([^" ]+\?transform=album-thumbnail)"/)
+    assert.ok(thumbnail)
+    assertContains(html, 'width="48" height="48"')
+    let image = await router.fetch(new URL(thumbnail[1], 'https://remix.run'))
+    assert.equal(image.status, 200)
+    assert.equal(image.headers.get('Content-Type'), 'image/webp')
+    assert.equal(image.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
+    let bytes = new Uint8Array(await image.arrayBuffer())
+    let metadata = await sharp(bytes).metadata()
+    assert.equal(metadata.width, 96)
+    assert.equal(metadata.height, 96)
+    let catalogImage = await router.fetch(
+      new URL(await getAlbumImageHref('/images/shred-till-dawn-1.png'), 'https://remix.run'),
+    )
+    assert.equal(catalogImage.status, 200)
+    assert.ok(bytes.byteLength < (await catalogImage.arrayBuffer()).byteLength)
+  })
+
+  it('GET /cart/items renders empty state when cart is empty', async () => {
+    let response = await router.fetch('https://remix.run/cart/items')
+    let html = await response.text()
+
+    assert.equal(response.status, 200)
+    assertContains(html, 'Your cart is empty.')
+    assertContains(html, 'Browse Records')
+  })
+
+  it('PATCH /cart/items returns the updated HTML directly for frame submissions', async () => {
+    let session = await cartSession()
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'PATCH',
+        headers: { 'X-Remix-Frame': 'true' },
+        body: new URLSearchParams({ albumId: '1', quantity: '1e2' }),
+      }),
+    )
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('Location'), null)
+    assert.equal(response.headers.get('Cache-Control'), 'no-store')
+    let html = await response.text()
+    assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$1599\.00/)
+    assertContains(html, 'action="/cart/items"')
+    assert.ok(!html.includes('<html'))
+  })
+
+  it('rejects invalid quantities and missing items without losing the cart', async () => {
+    let session = await cartSession()
+    for (let quantity of ['', '0', '-1', '1.5', '2abc', '9007199254740992']) {
+      let response = await router.fetch(
+        requestWithSession('https://remix.run/cart/items', session, {
+          method: 'PATCH',
+          headers: { 'X-Remix-Frame': 'true' },
+          body: new URLSearchParams({ albumId: '1', quantity }),
+        }),
+      )
+      assert.equal(response.status, 400)
+      assertContains(await response.text(), 'Invalid quantity')
+    }
+    let missing = await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'PATCH',
+        headers: { 'X-Remix-Frame': 'true' },
+        body: new URLSearchParams({ albumId: '2', quantity: '3' }),
+      }),
+    )
+    assert.equal(missing.status, 404)
+    assertContains(await missing.text(), 'That record is no longer in your cart.')
+    let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
+    assert.match(await cart.text(), /Total:\s*(?:<[^>]+>\s*)*\$15\.99/)
+  })
+
+  it('DELETE /cart/items removes only the requested item and is safe to retry', async () => {
+    let session = await cartSession()
+    await router.fetch(
+      requestWithSession('https://remix.run/cart/api/add', session, {
+        method: 'POST',
+        body: new URLSearchParams({ albumId: '2' }),
+      }),
+    )
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let response = await router.fetch(
+        requestWithSession('https://remix.run/cart/items', session, {
+          method: 'DELETE',
+          headers: { 'X-Remix-Frame': 'true' },
+          body: new URLSearchParams({ albumId: '1' }),
+        }),
+      )
+      assert.equal(response.status, 200)
+      assert.equal(response.headers.get('Location'), null)
+      assert.equal(response.headers.get('Cache-Control'), 'no-store')
+      let html = await response.text()
+      assert.ok(!html.includes('Overpass Stereo'))
+      assertContains(html, 'Shred Till Dawn')
+      assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$14\.99/)
+    }
+  })
+
+  it('POST /cart/items restores the saved quantity with trusted album details and is safe to retry', async () => {
+    let session = await cartSession()
+    await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'DELETE',
+        body: new URLSearchParams({ albumId: '1' }),
+      }),
+    )
+    let body = new URLSearchParams({ albumId: '1', quantity: '3', price: '0', title: 'Untrusted' })
+    let restored = await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'POST',
+        headers: { 'X-Remix-Frame': 'true' },
+        body,
+      }),
+    )
+    assert.equal(restored.status, 200)
+    assert.equal(restored.headers.get('Location'), null)
+    assert.match(await restored.text(), /Total:\s*(?:<[^>]+>\s*)*\$47\.97/)
+
+    let retry = await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'POST',
+        body,
+      }),
+    )
+    assert.equal(retry.status, 303)
+    assert.equal(retry.headers.get('Location'), '/cart')
+    let cart = await router.fetch(requestWithSession('https://remix.run/cart/items', session))
+    let html = await cart.text()
+    assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$47\.97/)
+    assertContains(html, 'Overpass Stereo')
+    assert.ok(!html.includes('Untrusted'))
+  })
+
+  it('rejects malformed item IDs and missing albums before changing the cart', async () => {
+    let session = await cartSession()
+    for (let method of ['POST', 'PATCH', 'DELETE']) {
+      for (let albumId of ['', '0', '-1', '1.5', '1abc', '9007199254740992']) {
+        let response = await router.fetch(
+          requestWithSession('https://remix.run/cart/items', session, {
+            method,
+            headers: { 'X-Remix-Frame': 'true' },
+            body: new URLSearchParams({ albumId, quantity: '3' }),
+          }),
+        )
+        assert.equal(response.status, 400, `${method} ${albumId}`)
+        assertContains(await response.text(), 'Invalid record.')
+      }
+      let missing = await router.fetch(
+        requestWithSession('https://remix.run/cart/items', session, {
+          method,
+          headers: { 'X-Remix-Frame': 'true' },
+          body: new URLSearchParams({ albumId: '999999', quantity: '3' }),
+        }),
+      )
+      assert.equal(missing.status, 404)
+    }
+    let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
+    assert.match(await cart.text(), /Total:\s*(?:<[^>]+>\s*)*\$15\.99/)
+  })
+})
+
+async function cartSession(albumId = '1'): Promise<string> {
+  let response = await router.fetch('https://remix.run/cart/api/add', {
+    method: 'POST',
+    body: new URLSearchParams({ albumId }),
+  })
+  let session = getSessionCookie(response)
+  assert.ok(session)
+  return session
+}

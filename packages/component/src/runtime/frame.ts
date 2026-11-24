@@ -4,6 +4,7 @@ import {
   Fragment,
   Portal,
   FRAME_NODE,
+  PORTAL_NODE,
   createComponentErrorEvent,
   createFrameHandle,
   createFrameReloadStartEvent,
@@ -19,14 +20,16 @@ import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
-import type { Scheduler, VirtualRoot } from './vdom.ts'
-import { createRangeRoot, createRoot } from './vdom.ts'
+import type { VirtualRoot } from './vdom.ts'
+import { createRangeRoot, createRoot, missingFrameRuntime } from './vdom.ts'
 import {
   createFrameRuntime,
   disposeClientEntryBoundary,
   getClientEntryBoundaryOwner,
   getFrameRuntime,
   getSharedFrameRuntime,
+  pendingPrefetchLinks,
+  spaResponses,
   isFrameRuntime,
   navigationRequest,
   setClientEntryBoundaryOwner,
@@ -36,11 +39,8 @@ import {
   type FrameReloadResult,
   type FrameReloadTransition,
   type FrameRuntime,
-  type LoadModule,
-  type NamedFrameRegistry,
-  type PendingClientEntries,
+  type SharedFrameRuntime,
   type ReconciliationTracker,
-  type ResolveFrame,
 } from './frame-runtime.ts'
 import {
   excludePortalRanges,
@@ -55,7 +55,7 @@ import {
   type VNodeParent,
 } from './reconcile.ts'
 import {
-  collectNodesBetween,
+  collectNodeRange,
   diffElementAttributes,
   diffNodes,
   findEndMarker,
@@ -65,10 +65,11 @@ import {
 import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
 import { css } from '../style/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
-import type { CSSProps } from '../style/style.ts'
+import type { CSSProps } from '../style/css-mixin.ts'
 import {
   createFrameStartMarker,
-  findFlushMarker,
+  findFlushMarkers,
+  ESCAPED_OBJECT,
   FRAME_END_MARKER,
   type FlushKind,
   getFrameId,
@@ -79,7 +80,6 @@ import {
   isHydrationEnd,
   isHydrationStart,
 } from './stream-protocol.ts'
-import { ESCAPED_OBJECT } from './props-serialization.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -93,6 +93,7 @@ type HydrationData = {
   moduleUrl: string
   exportName: string
   props: Record<string, unknown>
+  [PORTAL_NODE]?: true
 }
 
 type RmxData = {
@@ -106,31 +107,6 @@ export type VirtualRootMarker = Comment & {
 
 type FrameMarkerData = FrameData & {
   id: string
-}
-
-// Frames of the most recently started run() runtime, for module-level helpers that have no
-// runtime reference: targeted prefetching and updateUrl().
-let appFrames: Handle['frames'] | undefined
-
-export function setAppFrames(frames: Handle['frames']): () => void {
-  appFrames = frames
-  return () => {
-    if (appFrames === frames) appFrames = undefined
-  }
-}
-
-export function setTopFrameSource(src: string): void {
-  if (appFrames) appFrames.top.src = src
-}
-
-/**
- * Returns a named frame handle.
- *
- * @param name Name of the frame to look up.
- * @returns The matching frame handle, or `undefined` when not found.
- */
-export function getNamedFrame(name: string): FrameHandle | undefined {
-  return appFrames?.get(name)
 }
 
 type InternalFrameContent = FrameContent | DocumentFragment
@@ -152,8 +128,6 @@ let frameLoadPool:
       dispose: () => void
     }
   | undefined
-
-export const pendingPrefetchLinks = new WeakSet<Node>()
 
 function observeFrameLoad(targets: Element[], load: () => void): () => void {
   let pool = frameLoadPool
@@ -267,26 +241,15 @@ export function reloadFrameForNavigation(
   return reload({ ...options, [navigationRequest]: true })
 }
 
-export type FrameContext = {
+export type FrameContext = SharedFrameRuntime & {
   reloadOrigin?: ReloadOrigin
   nonce?: string
   navigationType?: NavigationType
   from?: NavigationHistoryEntry
   topFrame?: FrameHandle
   getContext: (type: ElementFunction) => unknown
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
   frame: FrameHandle
-  styleManager: StyleManager
   data: RmxData
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, FrameInstance>
-  namedFrames: NamedFrameRegistry
-  processClientEntryPreloads?: ProcessClientEntryPreloads
   lifecycleSignal: AbortSignal
   regionTailRef?: ChildNode | null
   regionParent?: ParentNode | null
@@ -296,7 +259,7 @@ export type FrameContext = {
   blockingFrameTracker?: ReconciliationTracker
 }
 
-type FrameInit = {
+type FrameInit = Omit<SharedFrameRuntime, 'styleManager'> & {
   nonce?: string
   navigationType?: NavigationType
   from?: NavigationHistoryEntry
@@ -306,19 +269,9 @@ type FrameInit = {
   topFrame?: FrameHandle
   getContext?: (type: ElementFunction) => unknown
   src: string
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
   styleManager?: StyleManager
   marker?: FrameMarkerData
   data: RmxData
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, FrameInstance>
-  namedFrames: NamedFrameRegistry
-  processClientEntryPreloads?: ProcessClientEntryPreloads
   disposeFallback?: () => void
 }
 
@@ -388,7 +341,7 @@ export type FrameInstance = {
     content: InternalFrameContent,
     options?: RenderOptions,
   ) => Promise<void>
-  matchesIdentity: (src: string, name: string | undefined) => boolean
+  readonly identity: { src: string; name?: string } | undefined
   dispose: () => void
   handle: FrameHandle
 }
@@ -400,7 +353,6 @@ type RenderOptions = {
   from?: NavigationHistoryEntry
   documentHref?: string
   clientStreamSignal?: AbortSignal
-  flushKind?: FlushKind
   reconciliationTracker?: ReconciliationTracker
   blockingFrameTracker?: ReconciliationTracker
   onCommit?: () => void
@@ -471,8 +423,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     initialClientEntryResources = consumeClientEntryResources(container.root)
   }
 
-  // Merge any rmx-data found in the current document once at startup.
-  mergeRmxDataFrom(init.data, container.doc)
+  if (container.doc.getElementById('rmx-data')) mergeRmxDataFrom(init.data, container.doc)
 
   let runtime = createFrameRuntime({
     ...init,
@@ -493,18 +444,16 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   let frameName = init.marker?.name ?? init.name
   if (frameName) {
-    init.namedFrames.register(frameName, frame)
+    init.registry.register(frameName, frame)
   }
 
   let context: FrameContext = {
-    nonce: init.nonce,
-    navigationType: init.navigationType,
-    from: init.from,
     topFrame: runtime.topFrame,
     getContext: (type) => runtime.getContext?.(type),
     ...getSharedFrameRuntime(runtime),
     frame,
-    data: init.data,
+    // Child frames share newly discovered document data, then release their own references.
+    data: init.marker ? { ...init.data } : init.data,
     lifecycleSignal: lifecycleController.signal,
     regionTailRef: container.regionTailRef,
     regionParent: container.regionParent,
@@ -528,9 +477,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   async function renderContent(
     content: InternalFrameContent,
     options: ActiveRenderOptions,
+    flushKind?: FlushKind,
   ): Promise<void> {
     if (isRenderAborted(options.signal)) return
     startRendering()
+
+    function applyBatch(html: string, kind: FlushKind) {
+      return renderContent(html, options, kind)
+    }
 
     if (content instanceof ReadableStream) {
       let signal = options.signal
@@ -539,7 +493,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       await renderFrameStream(
         content,
         container.doc,
-        (html, flushKind) => render(html, { ...options, flushKind }),
+        applyBatch,
         options.nonce,
         signal,
         options.clientStreamSignal,
@@ -547,7 +501,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       return
     }
 
-    if (isRemixNodeFrameContent(content)) {
+    if (typeof content !== 'string' && !isDocumentFragmentNode(content)) {
       init.disposeFallback?.()
       if (!contentRoot) {
         let currentNodes = getContentNodes()
@@ -565,14 +519,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       if (isRenderAborted(options.signal)) return
       let previousServerFrameReload = runtime.serverFrameReload
       if (options.signal) {
-        runtime.serverFrameReload = {
-          signal: options.signal,
-          origin: options.reloadOrigin,
-          navigationType: options.navigationType,
-          from: options.from,
-          reconciliationTracker: options.reconciliationTracker,
-          blockingFrameTracker: options.blockingFrameTracker,
-        }
+        runtime.serverFrameReload = getRenderReload(options.signal, options)
       }
 
       try {
@@ -594,18 +541,15 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
     let source: HTMLElement | DocumentFragment
     if (typeof content === 'string') {
-      let flushed = await consumeFlushBatches(content, async (html, flushKind) => {
-        await render(html, { ...options, flushKind })
-      })
-      if (flushed.applied) {
-        if (flushed.remainder !== '') {
-          await render(flushed.remainder, { ...options, flushKind: 'fragment' })
+      if (!flushKind) {
+        let remainder = await consumeFlushBatches(content, applyBatch)
+        if (remainder !== content) {
+          if (remainder) await applyBatch(remainder, 'fragment')
+          return
         }
-        return
       }
       source =
-        container.root instanceof Document &&
-        (options.flushKind ?? inferFlushKind(content)) === 'document'
+        container.root instanceof Document && (flushKind ?? inferFlushKind(content)) === 'document'
           ? parseDocument(container.doc, content)
           : createFragmentFromString(container.doc, content)
     } else {
@@ -618,16 +562,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     adoptFrameServerStyles(createElementContainer(source), context.styleManager)
     if (source instanceof DocumentFragment) removeEmptyHeads(source)
     mergeRmxDataFrom(options.data, source)
-    let responseContext = {
-      ...context,
-      reloadOrigin: options.reloadOrigin,
-      nonce: options.nonce,
-      navigationType: options.navigationType,
-      from: options.from,
-      data: options.data,
-      reconciliationTracker: options.reconciliationTracker,
-      blockingFrameTracker: options.blockingFrameTracker,
-    }
+    let responseContext = { ...options, ...context, data: options.data }
     let hydrationContainer = container
 
     if (source instanceof HTMLElement) {
@@ -640,12 +575,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         ...responseContext,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
-        signal: options.signal,
-      }
-      diffNodes([container.doc.head], [head], {
-        ...documentContext,
         shouldPreserveHeadNode: shouldPreserveManagedHeadNode,
-      })
+      }
+      diffNodes([container.doc.head], [head], documentContext)
       diffNodes([container.doc.body], [body], documentContext)
 
       hydrationContainer = createElementContainer(container.doc.body)
@@ -653,12 +585,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     } else {
       if (isRenderAborted(options.signal)) return
 
-      diffNodes(container.childNodes, Array.from(source.childNodes), {
-        ...responseContext,
-        regionTailRef: container.regionTailRef,
-        regionParent: container.regionParent,
-        signal: options.signal,
-      })
+      diffNodes(container.childNodes, Array.from(source.childNodes), responseContext)
     }
 
     let subFramesReady = hydrateContainer(hydrationContainer, responseContext, options)
@@ -685,22 +612,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   async function hydrateInitial(): Promise<void> {
-    let reconciliationTracker = createReconciliationTracker()
-
-    if ((await initialClientEntryResources) === false) return
-    if (isRenderAborted(init.signal)) return
-    adoptFrameServerStyles(container, context.styleManager)
-    let options = {
-      reconciliationTracker,
-      nonce: context.nonce,
-      navigationType: context.navigationType,
-      from: context.from,
-      signal: init.signal,
-    }
-    let subFramesReady = hydrateContainer(container, context, options)
-
     try {
-      await subFramesReady
+      if ((await initialClientEntryResources) === false || isRenderAborted(init.signal)) return
+      adoptFrameServerStyles(container, context.styleManager)
+      let reconciliationTracker = createReconciliationTracker()
+      let initial = { nonce: init.nonce, navigationType: init.navigationType, from: init.from }
+      let options = { ...initial, reconciliationTracker, signal: init.signal }
+      await hydrateContainer(container, { ...context, ...initial }, options)
 
       if (isRenderAborted(init.signal)) return
 
@@ -710,8 +628,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         deferLoad(loadLazyFrame)
       }
 
-      reconciliationTracker.finalize()
-      await reconciliationTracker.ready()
+      await reconciliationTracker.finish()
     } finally {
       clearRmxData(context.data)
     }
@@ -737,7 +654,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     completeInheritedReload,
     updateMarker,
     renderMarkerContent,
-    matchesIdentity: (src, name) => !disposed && frame.src === src && frameName === name,
+    get identity() {
+      return disposed ? undefined : { src: frame.src, name: frameName }
+    },
     dispose,
     handle: frame,
   }
@@ -1023,7 +942,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
 
     if (frameName) {
-      init.namedFrames.unregister(frameName, frame)
+      init.registry.unregister(frameName, frame)
     }
   }
 
@@ -1284,14 +1203,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
             onCommit() {
               if (commitStarted) return
               commitStarted = true
-              blockingFrameTracker.finalize()
-              if (committed) {
-                void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
-              }
+              let ready = blockingFrameTracker.finish()
+              if (committed) void ready.then(committed.resolve, committed.reject)
             },
           })
-          reconciliationTracker.finalize()
-          await reconciliationTracker.ready()
+          await reconciliationTracker.finish()
         },
       )
     } catch (error) {
@@ -1327,7 +1243,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       if (eventController !== finished.controller) return
       if (!isFrameStart(node)) return
       let end = findFrameEndMarker(node)
-      context.frameInstances.get(node)?.completeInheritedReload(failure)
+      context.registry.instances.get(node)?.completeInheritedReload(failure)
       return end
     })
   }
@@ -1532,21 +1448,17 @@ function insertFrame(
 ): CommittedFrameNode {
   let { frame, styles } = context
   let runtime = getFrameRuntime(frame)
-  if (!runtime || runtime.canResolveFrames === false) {
-    throw new Error(
-      'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
-    )
-  }
+  if (!runtime) missingFrameRuntime()
 
   let getContext = (type: ElementFunction) => findContextFromAncestry(vParent, type)
 
   // Hydration path: adopt server-rendered frame markers and reuse the existing
-  // frame instance created during createSubFrames().
+  // frame instance created during hydration.
   if (isFrameStart(cursor?.current)) {
     let start = cursor.current
     let end = findOptionalEndMarker(start, isFrameStart, isFrameEnd)
     if (end) {
-      let instance = runtime.frameInstances.get(start)
+      let instance = runtime.registry.instances.get(start)
       if (!instance) {
         instance = createFrameInstance(node, start, end, runtime, getContext)
       } else {
@@ -1639,7 +1551,7 @@ function createFrameInstance(
     data: {},
     disposeFallback,
   })
-  runtime.frameInstances.set(start, instance)
+  runtime.registry.instances.set(start, instance)
   return instance
 }
 
@@ -1670,55 +1582,28 @@ function randomFrameId(): string {
 }
 
 function createReconciliationTracker(): ReconciliationTracker {
-  let pending = 0
-  let finalized = false
-  let failed = false
-  let failure: unknown
+  let ready = Promise.withResolvers<void>()
+  // finish() releases the first count once the initial work has been scheduled.
+  let pending = 1
+  let failure: { error: unknown } | undefined
 
-  let resolveReady: (() => void) | undefined
-  let rejectReady: ((error: unknown) => void) | undefined
-  let readyPromise = new Promise<void>((resolve, reject) => {
-    resolveReady = resolve
-    rejectReady = reject
-  })
-
-  function maybeSettle() {
-    if (!finalized || pending !== 0) return
-    if (failed) rejectReady?.(failure)
-    else resolveReady?.()
-    resolveReady = undefined
-    rejectReady = undefined
-  }
-
-  function track(): () => void {
-    pending++
-    let completed = false
-    return () => {
-      if (completed) return
-      completed = true
-      pending--
-      maybeSettle()
-    }
+  function complete() {
+    if (--pending !== 0) return
+    if (failure) ready.reject(failure.error)
+    else ready.resolve()
   }
 
   return {
-    track,
     waitFor(task) {
-      let complete = track()
+      pending++
       void task.then(complete, (error) => {
-        if (!failed) {
-          failed = true
-          failure = error
-        }
+        failure ??= { error }
         complete()
       })
     },
-    finalize() {
-      finalized = true
-      maybeSettle()
-    },
-    ready() {
-      return readyPromise
+    finish() {
+      complete()
+      return ready.promise
     },
   }
 }
@@ -1726,7 +1611,9 @@ function createReconciliationTracker(): ReconciliationTracker {
 function mergeRmxDataFrom(into: RmxData, root: ParentNode): void {
   for (let script of root.querySelectorAll('script#rmx-data')) {
     if (!(script instanceof HTMLScriptElement)) continue
-    mergeRmxData(into, parseRmxDataScript(script))
+    let { h, f } = parseRmxDataScript(script)
+    if (h) copyOwnRmxEntries((into.h ??= {}), h)
+    if (f) copyOwnRmxEntries((into.f ??= {}), f)
     script.remove()
   }
 }
@@ -1777,16 +1664,27 @@ function adoptFrameServerStyles(container: FrameContainer, styleManager: StyleMa
 
 function parseRmxDataScript(script: HTMLScriptElement): RmxData {
   try {
-    return JSON.parse(script.textContent || '{}')
+    let source = script.textContent || '{}'
+    let data: RmxData = JSON.parse(source)
+    // A JSON escape can spell part of the tag. Inspect the decoded props in either case.
+    if (data.h && !Object.hasOwn(Portal, PORTAL_NODE) && /\$rmxPortal|\\u/.test(source)) {
+      for (let entry of Object.values(data.h)) {
+        if (entry && hasSerializedPortal(entry.props)) entry[PORTAL_NODE] = true
+      }
+    }
+    return data
   } catch {
     console.error('[createFrame] Failed to parse rmx-data script')
     return {}
   }
 }
 
-function mergeRmxData(into: RmxData, from: RmxData): void {
-  if (from.h) copyOwnRmxEntries((into.h ??= {}), from.h)
-  if (from.f) copyOwnRmxEntries((into.f ??= {}), from.f)
+function hasSerializedPortal(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(hasSerializedPortal)
+  if (!isRecord(value)) return false
+  let escaped = value[ESCAPED_OBJECT]
+  if (isRecord(escaped)) return Object.values(escaped).some(hasSerializedPortal)
+  return value.$rmxPortal === true || Object.values(value).some(hasSerializedPortal)
 }
 
 function copyOwnRmxEntries<T>(target: Record<string, T>, source: Record<string, T>): void {
@@ -1800,23 +1698,27 @@ function hydrateContainer(
   container: FrameContainer,
   context: FrameContext,
   options?: RenderOptions,
-): Promise<void> {
+): Promise<void> | undefined {
   let hydrationData = context.data.h
-  let hydrationMarkers = findHydrationMarkers(container, hydrationData)
+  let markers: HydrationMarker[] = []
+  let parent = container.regionStart && frameClientEntryParents.get(container.regionStart)
+  let frames: Array<() => void> = []
+  let subFramesReady = visit(container.childNodes, parent)
   let hydrations: Array<{
     marker: HydrationMarker
     entry: HydrationData
     complete: () => void
   }> = []
 
-  for (let marker of hydrationMarkers) {
+  for (let marker of markers) {
     let entry = hydrationData?.[marker.id]
     if (!entry) continue
-    if (!context.pendingClientEntries.has(marker.start)) {
-      context.pendingClientEntries.set(marker.start, [marker.end, undefined])
+    if (!context.registry.entries.has(marker.start)) {
+      context.registry.entries.set(marker.start, [marker.end, undefined])
     }
     let { promise, resolve } = Promise.withResolvers<void>()
     pendingClientEntryHydrations.set(marker.start, promise)
+    options?.reconciliationTracker?.waitFor(promise)
     hydrations.push({
       marker,
       entry,
@@ -1829,19 +1731,83 @@ function hydrateContainer(
     })
   }
 
-  // Register frame metadata before a cached client entry can adopt its frame markers.
-  let subFramesReady = createSubFrames(container.childNodes, context, options)
+  // A cached entry can synchronously adopt a frame. Register all owners before rendering it.
+  for (let start of frames) start()
   for (let { marker, entry, complete } of hydrations) {
-    scheduleHydrationMarker(
-      marker,
-      entry,
-      context,
-      complete,
-      options?.reconciliationTracker,
-      options?.signal,
-    )
+    scheduleHydrationMarker(marker, entry, context, complete, options?.signal)
   }
   return subFramesReady
+
+  function visit(nodes: Node[], parent?: Comment): Promise<void> | undefined {
+    let tasks: Promise<void>[] = []
+    nodes = excludePortalRanges(nodes)
+    let boundaries: typeof markers = []
+    for (let i = 0; i < nodes.length; i++) {
+      let node = nodes[i]
+
+      // Nested frames discover their own entries, inheriting this pass's enclosing boundary.
+      if (isFrameStart(node)) {
+        if (parent) frameClientEntryParents.set(node, parent)
+        else frameClientEntryParents.delete(node)
+        let end = findFrameEndMarker(node)
+        i = findMarkerRangeEndIndex(nodes, end, i)
+        let task = Promise.withResolvers<void>()
+        tasks.push(task.promise)
+        frames.push(() => task.resolve(startFrame(node, end)))
+        continue
+      }
+
+      if (isHydrationStart(node)) {
+        let id = getHydrationId(node)
+        // Fill in the end before starting hydration. Markers stay in parent-first order.
+        let boundary = { id, start: node, end: node, parent }
+        markers.push(boundary)
+        boundaries.push(boundary)
+        if (hydrationData?.[id] || pendingClientEntryHydrations.has(node)) parent = node
+      } else if (isHydrationEnd(node)) {
+        let boundary = boundaries.pop()
+        if (boundary) {
+          boundary.end = node
+          parent = boundary.parent
+        }
+      }
+      if (node.firstChild) {
+        let nested = visit(Array.from(node.childNodes), parent)
+        if (nested) tasks.push(nested)
+      }
+    }
+    if (boundaries.length) throw new Error('End marker not found')
+    if (tasks.length) return Promise.all(tasks).then(() => {})
+  }
+
+  async function startFrame(node: Comment, end: Comment): Promise<void> {
+    if (options?.signal?.aborted) return
+    let existingFrame = context.registry.instances.get(node)
+    let id = getFrameId(node)
+    let marker = context.data.f?.[id]
+
+    if (!marker) {
+      existingFrame?.clearPendingTemplateWatch()
+      return
+    }
+    let frameMarker = { ...marker, id }
+    if (existingFrame) return existingFrame.updateMarker(frameMarker, options)
+
+    let subFrame = createFrame([node, end], {
+      nonce: context.nonce,
+      navigationType: context.navigationType,
+      from: context.from,
+      signal: options?.signal,
+      src: marker.src,
+      topFrame: context.topFrame,
+      getContext: context.getContext,
+      ...getSharedFrameRuntime(context),
+      data: context.data,
+      marker: frameMarker,
+    })
+    context.registry.instances.set(node, subFrame)
+    if (marker.status === 'resolved') return subFrame.ready()
+  }
 }
 
 function scheduleHydrationMarker(
@@ -1849,7 +1815,6 @@ function scheduleHydrationMarker(
   entry: HydrationData,
   context: FrameContext,
   onComplete: () => void,
-  reconciliationTracker?: ReconciliationTracker,
   signal?: AbortSignal,
 ): void {
   if (signal?.aborted || context.lifecycleSignal.aborted) {
@@ -1857,7 +1822,6 @@ function scheduleHydrationMarker(
     return
   }
 
-  let done = reconciliationTracker?.track()
   let identity: ClientEntryIdentity = {
     moduleUrl: entry.moduleUrl,
     exportName: entry.exportName,
@@ -1865,7 +1829,6 @@ function scheduleHydrationMarker(
   let key = getClientEntryKey(identity)
   let props: Record<string, unknown> | undefined = entry.props
   let completed = false
-
   let complete = () => {
     if (completed) return
     completed = true
@@ -1873,7 +1836,6 @@ function scheduleHydrationMarker(
     signal?.removeEventListener('abort', complete)
     context.lifecycleSignal.removeEventListener('abort', complete)
     onComplete()
-    done?.()
   }
 
   signal?.addEventListener('abort', complete, { once: true })
@@ -1883,62 +1845,61 @@ function scheduleHydrationMarker(
     if (signal?.aborted || context.lifecycleSignal.aborted) return
     if (!isHydrationMarkerLive(marker, context)) return
     if (!props) return
-    let pending = context.pendingClientEntries.get(marker.start)
+    let pending = context.registry.entries.get(marker.start)
     let vElement = pending?.[1] ?? createElement(component, props)
-    context.pendingClientEntries.set(marker.start, [marker.end, vElement])
+    context.registry.entries.set(marker.start, [marker.end, vElement])
     hydrateRegion(vElement, marker.start, marker.end, identity, context, signal, pending?.[2])
   }
 
   let parentHydration = marker.parent && pendingClientEntryHydrations.get(marker.parent)
-  let cached = context.moduleCache.get(key)
-  if (cached && !parentHydration) {
-    hydrateWithComponent(cached)
+  let component =
+    context.registry.modules.get(key) ?? loadClientEntry(key, identity, marker.id, context)
+  let portal =
+    entry[PORTAL_NODE] && !Object.hasOwn(Portal, PORTAL_NODE) ? import('./portal.ts') : undefined
+  if (typeof component === 'function' && !parentHydration && !portal) {
+    hydrateWithComponent(component)
     complete()
     return
   }
 
-  let component = cached ?? getOrStartModuleLoad(key, identity, marker.id, context)
   // Imports can finish in any order, but setup must wait for the owning entry's context.
-  Promise.all([component, parentHydration])
-    .then(([component]) => {
-      if (component) {
-        hydrateWithComponent(component)
-      }
-    })
-    .finally(() => {
-      complete()
-    })
+  Promise.all([component, parentHydration, portal])
+    .then(
+      ([component]) => {
+        if (component) hydrateWithComponent(component)
+      },
+      (error) => console.error(`[createFrame] Failed to load Portal for ${marker.id}:`, error),
+    )
+    .finally(complete)
 }
 
-function getOrStartModuleLoad(
+function loadClientEntry(
   key: string,
   identity: ClientEntryIdentity,
   markerId: string,
   context: FrameContext,
 ): Promise<ElementFunction | undefined> {
-  let inFlight = context.moduleLoads.get(key)
-  if (inFlight) return inFlight
+  let { promise, resolve } = Promise.withResolvers<ElementFunction | undefined>()
+  context.registry.modules.set(key, promise)
+  void load()
+  return promise
 
-  let loadPromise = (async () => {
+  async function load(): Promise<void> {
     try {
-      let mod = await context.loadModule(identity.moduleUrl, identity.exportName)
-      if (!isElementFunction(mod)) {
+      let component = await context.loadModule(identity.moduleUrl, identity.exportName)
+      if (!isElementFunction(component)) {
         throw new Error(
           `Export "${identity.exportName}" from "${identity.moduleUrl}" is not a function`,
         )
       }
-      context.moduleCache.set(key, mod)
-      return mod
+      context.registry.modules.set(key, component)
+      resolve(component)
     } catch (error) {
+      context.registry.modules.delete(key)
+      resolve(undefined)
       console.error(`[createFrame] Failed to load module for ${markerId}:`, error)
-      return undefined
-    } finally {
-      context.moduleLoads.delete(key)
     }
-  })()
-
-  context.moduleLoads.set(key, loadPromise)
-  return loadPromise
+  }
 }
 
 function createElement(component: ElementFunction, props: Record<string, unknown>): RemixElement {
@@ -2027,6 +1988,17 @@ function isCSSProps(value: unknown): value is CSSProps {
   return true
 }
 
+function getRenderReload(signal: AbortSignal, options: RenderOptions) {
+  let {
+    reloadOrigin: origin,
+    navigationType,
+    from,
+    reconciliationTracker,
+    blockingFrameTracker,
+  } = options
+  return { signal, origin, navigationType, from, reconciliationTracker, blockingFrameTracker }
+}
+
 function hydrateRegion(
   vElement: RemixElement,
   start: Comment,
@@ -2038,7 +2010,7 @@ function hydrateRegion(
 ): void {
   if (signal?.aborted) return
 
-  context.pendingClientEntries.delete(start)
+  context.registry.entries.delete(start)
 
   // During a server frame reload, expose the reload signal and reconciliation
   // tracker to client frames created while this entry renders so blocking
@@ -2060,14 +2032,7 @@ function hydrateRegion(
 
     let previousServerFrameReload = frameRuntime.serverFrameReload
 
-    frameRuntime.serverFrameReload = {
-      signal: signal ?? context.lifecycleSignal,
-      navigationType: context.navigationType,
-      from: context.from,
-      origin: context.reloadOrigin,
-      reconciliationTracker: context.reconciliationTracker,
-      blockingFrameTracker: context.blockingFrameTracker,
-    }
+    frameRuntime.serverFrameReload = getRenderReload(signal ?? context.lifecycleSignal, context)
     try {
       root.render(vElement)
     } finally {
@@ -2100,66 +2065,12 @@ function createFrameRoot(
     styleManager: context.styleManager,
   }
   let root = Array.isArray(target) ? createRangeRoot(target, options) : createRoot(target, options)
+  let { errorTarget } = context
   root.addEventListener('error', (event: Event) => {
-    if (context.errorTarget === root) return
-    context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
+    if (errorTarget !== root)
+      errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   })
   return root
-}
-
-async function createSubFrames(
-  nodes: Node[],
-  context: FrameContext,
-  options?: RenderOptions,
-): Promise<void> {
-  let tasks: Promise<void>[] = []
-  nodes = excludePortalRanges(nodes)
-
-  for (let i = 0; i < nodes.length; i++) {
-    if (options?.signal?.aborted) break
-
-    let node = nodes[i]
-
-    if (isFrameStart(node)) {
-      let end = findFrameEndMarker(node)
-      let existingFrame = context.frameInstances.get(node)
-      let id = getFrameId(node)
-      let marker = context.data.f?.[id]
-
-      if (!marker) {
-        existingFrame?.clearPendingTemplateWatch()
-      } else {
-        let frameMarker = { ...marker, id }
-        if (existingFrame) {
-          tasks.push(existingFrame.updateMarker(frameMarker, options))
-        } else {
-          let subFrame = createFrame([node, end], {
-            nonce: context.nonce,
-            navigationType: context.navigationType,
-            from: context.from,
-            signal: options?.signal,
-            src: marker.src,
-            topFrame: context.topFrame,
-            getContext: context.getContext,
-            ...getSharedFrameRuntime(context),
-            data: context.data,
-            marker: frameMarker,
-          })
-          context.frameInstances.set(node, subFrame)
-          if (marker.status === 'resolved') tasks.push(subFrame.ready())
-        }
-      }
-
-      i = findMarkerRangeEndIndex(nodes, end, i)
-      continue
-    }
-
-    if (node.childNodes.length > 0) {
-      tasks.push(createSubFrames(Array.from(node.childNodes), context, options))
-    }
-  }
-
-  await Promise.all(tasks)
 }
 
 function isHydrationMarkerLive(marker: HydrationMarker, context: FrameContext): boolean {
@@ -2199,7 +2110,7 @@ function visitSubFrames(
     (node) => {
       if (!isFrameStart(node)) return
       let end = findFrameEndMarker(node)
-      let frame = context.frameInstances.get(node)
+      let frame = context.registry.instances.get(node)
       if (frame) visit(frame, node)
       return end
     },
@@ -2210,7 +2121,7 @@ function visitSubFrames(
 function disposeSubFrames(nodes: Node[], context: FrameContext): void {
   visitSubFrames(nodes, context, (frame, start) => {
     frame.dispose()
-    context.frameInstances.delete(start)
+    context.registry.instances.delete(start)
   })
 }
 
@@ -2241,17 +2152,23 @@ function setupTemplateObserver(id: string): () => void {
   let observer = new MutationObserver((mutations) => {
     for (let mutation of mutations) {
       for (let node of mutation.addedNodes) {
-        collectFrameTemplates(node, observeTemplate)
+        observeTemplates(node)
       }
     }
     publishCompleteTemplates()
   })
 
-  function observeTemplate(template: HTMLTemplateElement): void {
-    if (template.id !== id || pending.has(template)) return
-    pending.add(template)
-    // Template contents are a separate fragment, outside the observed document subtree.
-    observer.observe(template.content, { childList: true })
+  function observeTemplates(node: Node): void {
+    if (node instanceof HTMLTemplateElement) {
+      if (node.id !== id || pending.has(node)) return
+      pending.add(node)
+      // Template contents are a separate fragment, outside the observed document subtree.
+      observer.observe(node.content, { childList: true })
+    } else if (node instanceof Element) {
+      for (let template of node.querySelectorAll('template')) {
+        if (template instanceof HTMLTemplateElement) observeTemplates(template)
+      }
+    }
   }
 
   function publishCompleteTemplates(): void {
@@ -2267,7 +2184,7 @@ function setupTemplateObserver(id: string): () => void {
   }
 
   observer.observe(root, { childList: true, subtree: true })
-  collectFrameTemplates(root, observeTemplate)
+  observeTemplates(root)
   document.addEventListener('DOMContentLoaded', publishCompleteTemplates, { once: true })
 
   return () => {
@@ -2277,33 +2194,16 @@ function setupTemplateObserver(id: string): () => void {
   }
 }
 
-function collectFrameTemplates(node: Node, collect: (template: HTMLTemplateElement) => void): void {
-  if (node instanceof HTMLTemplateElement) {
-    collect(node)
-    return
-  }
-
-  if (!(node instanceof Element)) return
-  let templates = node.querySelectorAll('template')
-  for (let template of templates) {
-    if (!(template instanceof HTMLTemplateElement)) continue
-    collect(template)
-  }
-}
-
 export function publishFrameTemplate(
   id: string,
   fragment: DocumentFragment,
   options?: { inertScripts?: boolean },
 ): void {
   let listeners = frameTemplateListeners.get(id)
-  if (!listeners || listeners.size === 0) {
+  if (!listeners) {
     let queue = bufferedFrameTemplates.get(id)
-    if (!queue) {
-      queue = []
-      bufferedFrameTemplates.set(id, queue)
-    }
-    queue.push(fragment)
+    if (queue) queue.push(fragment)
+    else bufferedFrameTemplates.set(id, [fragment])
     return
   }
 
@@ -2340,7 +2240,7 @@ function makeSvgScriptsInert(source: ParentNode): void {
 
 export function consumeFrameTemplate(id: string): DocumentFragment | null {
   let queue = bufferedFrameTemplates.get(id)
-  if (!queue || queue.length === 0) return null
+  if (!queue) return null
 
   let fragment = queue.shift() ?? null
   if (queue.length === 0) {
@@ -2358,55 +2258,12 @@ function subscribeFrameTemplate(id: string, listener: FrameTemplateListener): ()
   }
   listeners.add(listener)
   return () => {
-    let current = frameTemplateListeners.get(id)
-    if (!current) return
-    current.delete(listener)
-    if (current.size === 0) {
-      frameTemplateListeners.delete(id)
-    }
+    if (listeners.delete(listener) && listeners.size === 0) frameTemplateListeners.delete(id)
   }
-}
-
-type StreamTemplateParseResult = {
-  html: string
-  remainder: string
 }
 
 const COMPLETE_TEMPLATE_WITH_ID_PATTERN =
   /<template\b[^>]*\bid=(?:"[^"]+"|'[^']+')[^>]*>[\s\S]*?<\/template>/gi
-
-function extractTemplatesFromBuffer(
-  doc: Document,
-  buffer: string,
-  onTemplate: (id: string, fragment: DocumentFragment) => void,
-): StreamTemplateParseResult {
-  let html = ''
-  let cursor = 0
-
-  for (let match of buffer.matchAll(COMPLETE_TEMPLATE_WITH_ID_PATTERN)) {
-    html += buffer.slice(cursor, match.index)
-
-    let parsed = createFragmentFromString(doc, match[0])
-    let template = parsed.querySelector('template')
-    if (template instanceof HTMLTemplateElement && template.id) {
-      onTemplate(template.id, takeFrameTemplateContent(template))
-    }
-
-    cursor = match.index + match[0].length
-  }
-
-  let tail = buffer.slice(cursor)
-
-  let tailStart = tail.toLowerCase().lastIndexOf('<template')
-  if (tailStart === -1) {
-    return { html: html + tail, remainder: '' }
-  }
-
-  return {
-    html: html + tail.slice(0, tailStart),
-    remainder: tail.slice(tailStart),
-  }
-}
 
 async function renderFrameStream(
   stream: ReadableStream<Uint8Array>,
@@ -2431,31 +2288,48 @@ async function renderFrameStream(
   }
   signal.addEventListener('abort', abort, { once: true })
 
-  function rewriteAndPublishTemplate(id: string, fragment: DocumentFragment): void {
-    getNonceManager().prepareResponse(fragment, responseNonce)
-    publishFrameTemplate(id, fragment, { inertScripts: true })
-  }
-
   try {
     while (true) {
       let { done, value } = await reader.read()
-      if (done) break
+      if (done) {
+        // A template kept from the previous chunk is incomplete. Flushing the UTF-8 decoder
+        // can only append a replacement character, never a closing tag.
+        html += buffer + decoder.decode()
+      } else {
+        let previousLength = html.length
+        buffer += decoder.decode(value, { stream: true })
+        let cursor = 0
+        for (let match of buffer.matchAll(COMPLETE_TEMPLATE_WITH_ID_PATTERN)) {
+          html += buffer.slice(cursor, match.index)
+          cursor = match.index + match[0].length
 
-      buffer += decoder.decode(value, { stream: true })
-      let parsed = extractTemplatesFromBuffer(doc, buffer, rewriteAndPublishTemplate)
-      buffer = parsed.remainder
+          let template = createFragmentFromString(doc, match[0]).querySelector('template')
+          if (template instanceof HTMLTemplateElement && template.id) {
+            let fragment = takeFrameTemplateContent(template)
+            getNonceManager().prepareResponse(fragment, responseNonce)
+            publishFrameTemplate(template.id, fragment, { inertScripts: true })
+          }
+        }
 
-      if (parsed.html !== '') {
-        html += parsed.html
-        let flushed = await consumeFlushBatches(html, applyHtml)
-        appliedOnce = flushed.applied || appliedOnce
-        html = flushed.remainder
+        // Hold the unfinished template, including an opening tag split between chunks.
+        let tail = buffer.slice(cursor)
+        let opening = tail.lastIndexOf('<')
+        let pending =
+          opening >= 0 &&
+          '<template'.startsWith(tail.slice(opening, opening + '<template'.length).toLowerCase())
+            ? opening
+            : tail.length
+        for (let match of tail.matchAll(/<template/gi)) pending = match.index
+        html += tail.slice(0, pending)
+        buffer = tail.slice(pending)
+        if (html.length === previousLength) continue
       }
-    }
 
-    buffer += decoder.decode()
-    let parsed = extractTemplatesFromBuffer(doc, buffer, publishFrameTemplate)
-    html += parsed.html + parsed.remainder
+      let remainder = await consumeFlushBatches(html, applyHtml)
+      if (remainder !== html) appliedOnce = true
+      html = remainder
+      if (done) break
+    }
 
     // An empty stream still replaces the existing frame content.
     if (html || !appliedOnce) {
@@ -2470,20 +2344,13 @@ async function renderFrameStream(
 async function consumeFlushBatches(
   html: string,
   applyHtml: (html: string, flushKind: FlushKind) => Promise<void>,
-): Promise<{ applied: boolean; remainder: string }> {
-  let applied = false
+): Promise<string> {
   let cursor = 0
-  let marker = findFlushMarker(html, cursor)
-
-  while (marker) {
-    let batch = html.slice(cursor, marker.index)
-    await applyHtml(batch, marker.kind)
-    applied = true
-    cursor = marker.endIndex
-    marker = findFlushMarker(html, cursor)
+  for (let marker of findFlushMarkers(html)) {
+    await applyHtml(html.slice(cursor, marker.index), marker[1] as FlushKind)
+    cursor = marker.index + marker[0].length
   }
-
-  return { applied, remainder: html.slice(cursor) }
+  return html.slice(cursor)
 }
 
 type FrameContainer = {
@@ -2521,7 +2388,7 @@ function createCommentContainer([start, end]: [Comment, Comment]): FrameContaine
     root: parent,
     regionStart: start,
     get childNodes() {
-      return collectNodesBetween(start, end)
+      return collectNodeRange(start.nextSibling, end)
     },
     regionTailRef: end,
     regionParent: parent,
@@ -2535,63 +2402,11 @@ function createFragmentFromString(doc: Document, content: string): DocumentFragm
   return template.content
 }
 
-function isRemixNodeFrameContent(content: InternalFrameContent): content is RemixNode {
-  return !(
-    content instanceof ReadableStream ||
-    isDocumentFragmentNode(content) ||
-    typeof content === 'string'
-  )
-}
-
 type HydrationMarker = {
   id: string
   start: Comment
   end: Comment
   parent?: Comment
-}
-
-function findHydrationMarkers(container: FrameContainer, data: RmxData['h']): HydrationMarker[] {
-  let markers: Array<Omit<HydrationMarker, 'end'> & { end?: Comment }> = []
-  let parent = container.regionStart && frameClientEntryParents.get(container.regionStart)
-  visit(container.childNodes, parent)
-  return markers.map(({ id, start, end, parent }) => {
-    if (!end) throw new Error('End marker not found')
-    return { id, start, end, parent }
-  })
-
-  function visit(nodes: Node[], parent?: Comment): void {
-    nodes = excludePortalRanges(nodes)
-    let boundaries: typeof markers = []
-    for (let i = 0; i < nodes.length; i++) {
-      let node = nodes[i]
-
-      // Nested frames discover their own entries, inheriting this pass's enclosing boundary.
-      if (isFrameStart(node)) {
-        if (parent) frameClientEntryParents.set(node, parent)
-        else frameClientEntryParents.delete(node)
-        let end = findFrameEndMarker(node)
-        i = findMarkerRangeEndIndex(nodes, end, i)
-        continue
-      }
-
-      if (isHydrationStart(node)) {
-        let id = getHydrationId(node)
-        let boundary = { id, start: node, parent }
-        markers.push(boundary)
-        boundaries.push(boundary)
-        if (data?.[id] || pendingClientEntryHydrations.has(node)) parent = node
-      } else if (isHydrationEnd(node)) {
-        let boundary = boundaries.pop()
-        if (boundary) {
-          boundary.end = node
-          parent = boundary.parent
-        }
-      }
-      if (node.childNodes.length > 0) {
-        visit(Array.from(node.childNodes), parent)
-      }
-    }
-  }
 }
 
 // Visits nodes depth-first. A visitor that handles a range returns its last node, which skips the
@@ -2708,7 +2523,8 @@ type SubmitterElement = HTMLButtonElement | HTMLInputElement
 type PendingFormSubmission = {
   form: HTMLFormElement
   submitter: SubmitterElement | null
-  formData?: FormData
+  snapshot?: { formData: FormData; submitterEntryName: string | undefined }
+  supersedingSubmit?: Event
   timeout: ReturnType<typeof setTimeout>
   removeFormDataListener(): void
 }
@@ -2770,9 +2586,18 @@ export function createFormNavigationResolver(
     'submit',
     (event) => {
       let form = event.target
-      if (!(form instanceof HTMLFormElement)) return
+      if (!(form instanceof HTMLFormElement) || !event.isTrusted || !(event instanceof SubmitEvent))
+        return
 
-      let eventSubmitter = event instanceof SubmitEvent ? event.submitter : null
+      let previous = pendingSubmissions.get(form)
+      if (
+        previous &&
+        (!previous.supersedingSubmit || previous.supersedingSubmit.defaultPrevented)
+      ) {
+        previous.supersedingSubmit = event
+      }
+
+      let eventSubmitter = event.submitter
       let submitter =
         eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
           ? eventSubmitter
@@ -2785,7 +2610,11 @@ export function createFormNavigationResolver(
         // A canceled retry must not replace a submission whose navigation is still pending.
         let existing = pendingSubmissions.get(pending.form)
         if (existing) clearPending(existing)
-        pending.formData = formDataEvent.formData
+        let submitterEntryName = submitter?.name
+        if (submitter instanceof HTMLInputElement && submitter.type === 'image') {
+          submitterEntryName = submitterEntryName ? submitterEntryName + '.x' : 'x'
+        }
+        pending.snapshot = { formData: formDataEvent.formData, submitterEntryName }
         pendingSubmissions.set(pending.form, pending)
         if (submitter) pendingSubmissions.set(submitter, pending)
         pending.removeFormDataListener()
@@ -2795,10 +2624,10 @@ export function createFormNavigationResolver(
         submitter,
         timeout: setTimeout(() => clearPending(pending), PENDING_FORM_SUBMISSION_TIMEOUT),
         removeFormDataListener() {
-          form.removeEventListener('formdata', onFormData)
+          form.removeEventListener('formdata', onFormData, true)
         },
       }
-      form.addEventListener('formdata', onFormData, { signal })
+      form.addEventListener('formdata', onFormData, { capture: true, signal })
     },
     { capture: true, signal },
   )
@@ -2811,38 +2640,51 @@ export function createFormNavigationResolver(
     if (!form) return
 
     let pending = pendingSubmissions.get(form)
-    // Some browsers dispatch `navigate` before `formdata` records the pending submission.
-    let submitter = pending
-      ? pending.submitter
-      : sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement
+    // Some browsers dispatch navigate before the new submission's formdata.
+    if (
+      pending &&
+      (sourceElement !== (pending.submitter ?? form) ||
+        (pending.supersedingSubmit && !pending.supersedingSubmit.defaultPrevented))
+    ) {
+      pending = undefined
+    }
+    let submitter =
+      sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement
         ? sourceElement
         : null
     let method = getFormMethod(form, submitter)
     let encType = getFormEncType(form, submitter)
     let target = getSubmissionAttribute(form, submitter, 'target', 'formtarget')
+    if (pending) clearPending(pending)
     if (method === 'dialog' || target?.toLowerCase() === '_blank') return
 
-    let formEvent = event as FormNavigateEvent
-    let getSubmission: FormNavigation['getSubmission']
-    if (method.toLowerCase() === 'get') {
-      if (pending) clearPending(pending)
-    } else {
-      getSubmission = async () => {
-        if (pending) clearPending(pending)
-        return {
-          formData: formEvent.formData ?? pending?.formData,
-          method,
-          encType,
-        }
+    let isGet = method.toLowerCase() === 'get'
+    let eventFormData = (event as FormNavigateEvent).formData
+    let snapshot = pending?.snapshot
+    let formData = isGet ? undefined : (eventFormData ?? snapshot?.formData)
+    // Chromium and WebKit can rebuild the data after the submitter is disabled. Only prefer
+    // the capture if it contains an entry for the submitter that the navigation lost.
+    if (
+      !isGet &&
+      eventFormData &&
+      snapshot?.submitterEntryName &&
+      submitter?.matches(':disabled')
+    ) {
+      let name = snapshot.submitterEntryName
+      if (snapshot.formData.getAll(name).length > eventFormData.getAll(name).length) {
+        formData = snapshot.formData
       }
     }
+    let getSubmission: FormNavigation['getSubmission'] = isGet
+      ? undefined
+      : async () => ({ formData, method, encType })
     return {
       form,
       submitter,
       submission: {
         method,
         encType,
-        formData: method === 'get' ? undefined : (formEvent.formData ?? pending?.formData),
+        formData,
       },
       hasAttribute(name) {
         return submitter?.hasAttribute(name) === true || form.hasAttribute(name)
@@ -3054,11 +2896,8 @@ type ImportMapAddress = string | null
 type ImportMapImports = Record<string, ImportMapAddress>
 type InstalledImportMapEntry = { href: ImportMapAddress; normalizedHref: ImportMapAddress }
 
-type InstalledImportMap = {
-  imports: Map<string, InstalledImportMapEntry>
-  scopes: Map<string, Map<string, InstalledImportMapEntry>>
-  integrity: Map<string, InstalledImportMapEntry>
-}
+// A scope uses its absolute URL. The top-level imports and integrity entries use false and true.
+type InstalledImportMap = Map<string | boolean, Map<string, InstalledImportMapEntry>>
 
 interface ImportMapManager {
   consumeImportMaps(source: ParentNode): 'ready' | 'conflict' | 'blocked'
@@ -3088,11 +2927,7 @@ export function resetDocumentImportMapManager(doc: Document): void {
 
 function createImportMapManager(doc: Document): ImportMapManager {
   let nonce = getNonceManager().moduleNonce
-  let installedImportMap: InstalledImportMap = {
-    imports: new Map(),
-    scopes: new Map(),
-    integrity: new Map(),
-  }
+  let installed: InstalledImportMap = new Map()
   let processedScripts = new WeakSet<HTMLScriptElement>()
   let conflicted = false
 
@@ -3101,7 +2936,7 @@ function createImportMapManager(doc: Document): ImportMapManager {
     processedScripts.add(script)
 
     let importMap = parseImportMap(script.textContent ?? '')
-    if (importMap) installImportMap(installedImportMap, importMap, script.baseURI)
+    if (importMap) installImportMap(installed, importMap, script.baseURI)
   }
 
   function processImportMaps(): void {
@@ -3134,22 +2969,15 @@ function createImportMapManager(doc: Document): ImportMapManager {
       let scripts = source.querySelectorAll<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR)
       if (scripts.length === 0) return 'ready'
 
-      // Apply the response's maps as a group. A failure while preparing or appending a
-      // script must leave the registry available for a retry.
-      let pending: InstalledImportMap = {
-        imports: new Map(installedImportMap.imports),
-        scopes: new Map(
-          Array.from(installedImportMap.scopes, ([scope, entries]) => [scope, new Map(entries)]),
-        ),
-        integrity: new Map(installedImportMap.integrity),
-      }
+      // Check the whole response for conflicts before installing the first script.
+      let pending: InstalledImportMap = new Map()
       let deltas: ImportMap[] = []
       let baseUrl = doc.baseURI
       try {
         for (let script of scripts) {
           let importMap = parseImportMap(script.textContent ?? '')
           if (!importMap) continue
-          let delta = installImportMap(pending, importMap, baseUrl, true)
+          let delta = installImportMap(installed, importMap, baseUrl, pending)
           if (delta) deltas.push(delta)
         }
       } catch (error) {
@@ -3162,8 +2990,8 @@ function createImportMapManager(doc: Document): ImportMapManager {
       for (let delta of deltas) {
         let installedScript = appendImportMapScript(doc, delta, nonce)
         processedScripts.add(installedScript)
+        installImportMap(installed, delta, baseUrl)
       }
-      installedImportMap = pending
       for (let script of scripts) script.remove()
       return 'ready'
     },
@@ -3186,26 +3014,30 @@ function installImportMap(
   installed: InstalledImportMap,
   importMap: ImportMap,
   baseUrl: string,
-  checkConflicts = false,
+  pending?: InstalledImportMap,
 ): ImportMap | undefined {
-  let additions = new Set<InstalledImportMapEntry>()
+  let additions = pending ? new Set<InstalledImportMapEntry>() : undefined
   function installEntries<address extends ImportMapAddress>(
-    target: Map<string, InstalledImportMapEntry>,
     entries: Record<string, address> | undefined,
     integrity: boolean,
     scope?: string,
   ): Record<string, address> | undefined {
     if (!entries) return
-    let delta: Record<string, address> = {}
+    let namespace = scope === undefined ? integrity : normalizeImportMapUrl(scope, baseUrl)
+    if (namespace === null) return
+    let groups = pending ?? installed
+    let target = groups.get(namespace)
+    let previous = pending && installed.get(namespace)
+    let delta: Record<string, address> | undefined
     for (let [key, href] of Object.entries(entries)) {
       let normalizedKey = integrity
         ? normalizeImportMapUrl(key, baseUrl)
         : normalizeImportMapSpecifier(key, baseUrl)
       if (normalizedKey === null) continue
       let normalizedHref = integrity || href === null ? href : normalizeImportMapUrl(href, baseUrl)
-      let existing = target.get(normalizedKey)
-      if (existing && !additions.has(existing)) {
-        if (checkConflicts && existing.normalizedHref !== normalizedHref) {
+      let existing = target?.get(normalizedKey) ?? previous?.get(normalizedKey)
+      if (existing && !additions?.has(existing)) {
+        if (pending && existing.normalizedHref !== normalizedHref) {
           let scopeDescription = scope ? ` in scope "${scope}"` : ''
           let kind = integrity ? 'integrity ' : ''
           throw new ImportMapConflictError(
@@ -3214,38 +3046,31 @@ function installImportMap(
           )
         }
       } else {
-        delta[key] = href
+        if (pending) (delta ??= Object.create(null))[key] = href
         if (!existing) {
           let entry = { href, normalizedHref }
+          if (!target) {
+            target = new Map()
+            groups.set(namespace, target)
+          }
           target.set(normalizedKey, entry)
-          additions.add(entry)
+          additions?.add(entry)
         }
       }
     }
-    return hasEntries(delta) ? delta : undefined
+    return delta
   }
 
   let delta: ImportMap = {}
-  let imports = installEntries(installed.imports, importMap.imports, false)
+  let imports = installEntries(importMap.imports, false)
   if (imports) delta.imports = imports
   for (let [scope, scopeImports] of Object.entries(importMap.scopes ?? {})) {
-    let normalizedScope = normalizeImportMapUrl(scope, baseUrl)
-    if (normalizedScope === null) continue
-    let target = installed.scopes.get(normalizedScope)
-    if (!target) {
-      target = new Map()
-      installed.scopes.set(normalizedScope, target)
-    }
-    let entries = installEntries(target, scopeImports, false, scope)
-    if (entries) (delta.scopes ??= {})[scope] = entries
+    let entries = installEntries(scopeImports, false, scope)
+    if (entries) (delta.scopes ??= Object.create(null))[scope] = entries
   }
-  let integrity = installEntries(installed.integrity, importMap.integrity, true)
+  let integrity = installEntries(importMap.integrity, true)
   if (integrity) delta.integrity = integrity
-  return hasEntries(delta) ? delta : undefined
-}
-
-function hasEntries(record: object): boolean {
-  return Object.keys(record).length > 0
+  return Object.keys(delta).length ? delta : undefined
 }
 
 function appendImportMapScript(
@@ -3321,7 +3146,6 @@ const SERVER_MODULE_PRELOAD_SELECTOR = 'link[data-rmx-module-preload][rel~="modu
 interface ModulePreloader {
   adoptInitialPreloadLinks(source: ParentNode): void
   consumePreloadLinks(source: ParentNode, process?: ProcessClientEntryPreloads): Promise<void>
-  hasActivePreloads(): boolean
   isActivePreload(node: Node): boolean
 }
 
@@ -3342,7 +3166,6 @@ function createModulePreloader(doc: Document): ModulePreloader {
   let nonce = getNonceManager().moduleNonce
   let requestedUrls = new Set<string>()
   let activeLinks = new WeakSet<Node>()
-  let activeLinkCount = 0
 
   function preload(href: string, initialLink?: HTMLLinkElement): void {
     let link = doc.createElement('link')
@@ -3356,19 +3179,13 @@ function createModulePreloader(doc: Document): ModulePreloader {
     if (linkNonce) link.nonce = linkNonce
 
     activeLinks.add(link)
-    activeLinkCount++
-    if (initialLink) {
-      activeLinks.add(initialLink)
-      activeLinkCount++
-    }
+    if (initialLink) activeLinks.add(initialLink)
 
     function settle(event: Event): void {
       if (!activeLinks.delete(link)) return
-      activeLinkCount--
       link.remove()
       if (initialLink) {
         activeLinks.delete(initialLink)
-        activeLinkCount--
         initialLink.remove()
       }
       if (event.type === 'error') requestedUrls.delete(url)
@@ -3396,21 +3213,11 @@ function createModulePreloader(doc: Document): ModulePreloader {
       let processedHrefs = process ? await process(hrefs) : hrefs
       for (let href of processedHrefs) preload(href)
     },
-    hasActivePreloads() {
-      return activeLinkCount > 0
-    },
     isActivePreload(node) {
       return activeLinks.has(node)
     },
   }
 }
-
-type SPAResponseData = {
-  node: RemixNode
-  redirectedTo?: string
-}
-
-export const spaResponses = new WeakMap<Response, SPAResponseData>()
 
 export async function unwrapFrameResolution(
   resolution: FrameResolution,

@@ -17,6 +17,7 @@ import {
 } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
+  getMergedClassName,
   getSelectValues,
   isAllowedHostPropName,
   normalizeAttributeName,
@@ -29,6 +30,7 @@ import {
   appendFlushMarker,
   createFrameStartMarker,
   createHydrationStartMarker,
+  ESCAPED_OBJECT,
   FRAME_END_MARKER,
   FRAME_TEMPLATE_END_MARKER,
   HYDRATION_END_MARKER,
@@ -37,11 +39,10 @@ import {
 } from '../runtime/stream-protocol.ts'
 import { composeMixedProps, isMixinDescriptor } from '../runtime/mixins/mixin.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/stylesheet.ts'
-import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
+import { cssMixinType } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
-import { createRemixElement, isRemixElement } from '../runtime/core/vnode.ts'
-import { ESCAPED_OBJECT, SERIALIZATION_TAGS } from '../runtime/props-serialization.ts'
+import { jsx, isRemixElement } from '../runtime/core/vnode.ts'
 
 interface VNode {
   type: ElementType
@@ -984,7 +985,7 @@ function renderAttributes(
 
     let value = props[key]
     if (value === undefined || value === null) continue
-    let attrName = transformAttributeName(key, isSvg)
+    let attrName = normalizeAttributeName(key, isSvg).attr
     if (typeof value === 'boolean') {
       if (shouldStringifyBooleanAttribute(attrName)) {
         attrs += ` ${attrName}="${value}"`
@@ -1069,7 +1070,7 @@ function createSsrMixinHandle(
   // Context lookups read the shared render context, so capture the parent before it moves on.
   let parentVNode = context.parentVNode
   let element = ((handle: { props: ElementProps; update(): Promise<AbortSignal> }) => () =>
-    createRemixElement(hostType, handle.props, null)) as ((handle: {
+    jsx(hostType, handle.props, null)) as ((handle: {
     props: ElementProps
     update(): Promise<AbortSignal>
   }) => () => RemixElement) & {
@@ -1158,11 +1159,11 @@ function buildComponentSegment(
       }
       return undefined
     },
-    getFrameByName() {
-      return undefined
-    },
-    getTopFrame() {
-      return frameState.topFrame
+    frames: {
+      get top() {
+        return frameState.topFrame
+      },
+      get: () => undefined,
     },
   })
 
@@ -1173,6 +1174,15 @@ function buildComponentSegment(
   buildSegment(renderedNode, context, frameState, output)
   context.parentVNode = previousParentVNode
 }
+
+const SERIALIZATION_TAGS = [
+  '$rmx',
+  '$rmxFrame',
+  '$rmxFragment',
+  '$rmxPortal',
+  '$rmxMixin',
+  ESCAPED_OBJECT,
+]
 
 function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFrameState) {
   let escapedObjects = new WeakMap<object, { [ESCAPED_OBJECT]: Record<string, unknown> }>()
@@ -1241,11 +1251,11 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
           }
           return undefined
         },
-        getFrameByName() {
-          return undefined
-        },
-        getTopFrame() {
-          return frameState.topFrame
+        frames: {
+          get top() {
+            return frameState.topFrame
+          },
+          get: () => undefined,
         },
       })
 
@@ -1262,7 +1272,7 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
     // Mixin descriptors hold their setup function, which JSON drops. `css()`
     // only holds style data, so it's revived in the browser by name.
     if (isMixinDescriptor(value)) {
-      return isCSSMixinDescriptor(value)
+      return value.type === cssMixinType
         ? { $rmxMixin: 'css', args: value.args }
         : { $rmxMixin: null }
     }
@@ -1491,10 +1501,6 @@ function escapeScriptTextContent(value: string): string {
   )
 }
 
-function transformAttributeName(name: string, isSvg: boolean): string {
-  return normalizeAttributeName(name, isSvg).attr
-}
-
 function finalizeHtml(root: Segment[], context: RenderContext): string {
   let preloads = collectModulePreloadTags(context.clientEntryHeadResources, context.nonce)
   let styles = collectStyleTags(context)
@@ -1605,11 +1611,7 @@ function processStyleProps(props: ElementProps): ElementProps {
     return props
   }
 
-  let classAttr = typeof props.class === 'string' ? props.class : ''
-  let className = typeof props.className === 'string' ? props.className : ''
-  let mergedClassName = classAttr
-  if (className) mergedClassName = classAttr ? `${classAttr} ${className}` : className
-
+  let mergedClassName = getMergedClassName(props)
   let processedProps: ElementProps
   if (mergedClassName) {
     // Copy without `delete`, which would leave the props object in slow dictionary mode.

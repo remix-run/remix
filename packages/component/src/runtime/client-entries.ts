@@ -137,16 +137,3 @@ export function isEntry(component: unknown): component is EntryComponent {
 export function logHydrationMismatch(...msg: any[]) {
   console.error('Hydration mismatch:', ...msg)
 }
-
-/**
- * Advances a DOM cursor past consecutive comment nodes.
- *
- * @param cursor Starting DOM node.
- * @returns The first non-comment node, or `null` when none remains.
- */
-export function skipComments(cursor: Node | null): Node | null {
-  while (cursor && cursor.nodeType === Node.COMMENT_NODE) {
-    cursor = cursor.nextSibling
-  }
-  return cursor
-}

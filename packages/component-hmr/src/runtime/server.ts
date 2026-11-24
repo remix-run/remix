@@ -1,3 +1,4 @@
+import { getComponentModuleInvalidationMessage } from '../lib/module-boundary.ts'
 import { getCurrentComponentForHmr, registerComponentForHmr } from '../lib/server-runtime.ts'
 
 /**
@@ -6,6 +7,7 @@ import { getCurrentComponentForHmr, registerComponentForHmr } from '../lib/serve
  * This is an internal protocol surface for transformed modules, not an application API.
  */
 export const __componentHmrServerRuntime__ = {
+  getComponentModuleInvalidationMessage,
   getCurrentComponentForHmr,
   registerComponentForHmr,
 }

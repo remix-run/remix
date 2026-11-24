@@ -789,6 +789,11 @@ const inputMixin: MixinFactory<HTMLInputElement, [], ElementProps> = createMixin
       void context.setInputText(event.currentTarget.value)
     }),
     on('keydown', (event) => {
+      // Safari may end composition before delivering the confirming keydown.
+      if (event.isComposing || event.keyCode === 229) {
+        return
+      }
+
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault()

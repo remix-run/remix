@@ -192,6 +192,44 @@ describe('createHref', () => {
         )
       })
 
+      it('rejects standalone dot segments', () => {
+        let pattern = RoutePattern.parse('/posts/:id')
+        assert.throws(() => createHref(pattern, { id: '.' }), {
+          details: { type: 'invalid-pathname-variable', pattern, paramName: 'id', value: '.' },
+        })
+        assert.throws(
+          () => createHref(pattern, { id: '..' }),
+          hrefError('invalid-pathname-variable'),
+        )
+      })
+
+      it('checks the complete segment when a pathname variable has a literal suffix', () => {
+        assert.throws(
+          () => createHref('/posts/:id.', { id: '.' }),
+          hrefError('invalid-pathname-variable'),
+        )
+        assert.equal(createHref('/posts/:id.json', { id: '..' }), '/posts/%2E%2E.json')
+      })
+
+      it('rejects dot segments assembled from literal text and a variable', () => {
+        let pattern = RoutePattern.parse('/posts/%2:id')
+        assert.throws(() => createHref(pattern, { id: 'e' }), {
+          details: { type: 'invalid-pathname-variable', pattern, paramName: 'id', value: 'e' },
+        })
+      })
+
+      it('accounts for whitespace removed by the URL parser', () => {
+        assert.throws(
+          () => createHref('/posts/\t:id', { id: '.' }),
+          hrefError('invalid-pathname-variable'),
+        )
+        assert.throws(
+          () => createHref('/posts/:id. ', { id: '.' }),
+          hrefError('invalid-pathname-variable'),
+        )
+        assert.equal(createHref('/posts/:id. ?page', { id: '.' }), '/posts/%2E. ?page=')
+      })
+
       it('ignores extra params', () => {
         assert.equal(createHref('/posts/:id', { id: '123', page: '2', sort: 'desc' }), '/posts/123')
       })
@@ -374,6 +412,30 @@ describe('createHref', () => {
   })
 
   describe('pattern with optionals', () => {
+    it('validates dot segments only in optional groups that are included', () => {
+      let pattern = 'https://example.com/posts(/:id/:view)'
+      let options = { baseURL: 'https://example.com/' }
+      assert.equal(createHref(pattern, { id: '..' }, options), 'posts')
+      assert.throws(
+        () => createHref(pattern, { id: '..', view: 'preview' }, options),
+        hrefError('invalid-pathname-variable'),
+      )
+    })
+
+    it('discards variable positions from omitted optional groups', () => {
+      assert.equal(createHref('/posts(/:id/:view)/..', { id: '..' }), '/posts/..')
+
+      let pattern = RoutePattern.parse('/posts(/:id/:view)/:slug')
+      assert.throws(() => createHref(pattern, { id: '..', slug: '.' }), {
+        details: {
+          type: 'invalid-pathname-variable',
+          pattern,
+          paramName: 'slug',
+          value: '.',
+        },
+      })
+    })
+
     it('includes optional with static content', () => {
       assert.equal(createHref('/posts(/edit)'), '/posts/edit')
       assert.equal(createHref('products(.md)'), '/products.md')
@@ -657,6 +719,13 @@ describe('createHref', () => {
       )
     })
 
+    it('keeps the current-directory reference for a variable route', () => {
+      assert.equal(
+        createHref('/users/:id/', { id: '2' }, { baseURL: 'https://example.com/users/2/edit' }),
+        './',
+      )
+    })
+
     it('relativizes explicit same-origin patterns and keeps cross-origin targets absolute', () => {
       assert.equal(
         createHref(
@@ -686,6 +755,27 @@ describe('createHref', () => {
           baseURL: 'https://example.com/current',
         }),
         './docs:latest',
+      )
+    })
+
+    it('checks whitespace at the start of a relative reference', () => {
+      let baseURL = 'https://example.com/posts/index'
+      assert.throws(
+        () => createHref('/posts/ :id', { id: '.' }, { baseURL }),
+        hrefError('invalid-pathname-variable'),
+      )
+      assert.equal(createHref('/posts/ :id', { id: '.' }), '/posts/ %2E')
+    })
+
+    it('uses the base protocol to determine pathname separators', () => {
+      let pattern = String.raw`/posts/name\\:id`
+      assert.throws(
+        () => createHref(pattern, { id: '.' }, { baseURL: 'https://example.com/' }),
+        hrefError('invalid-pathname-variable'),
+      )
+      assert.equal(
+        createHref(pattern, { id: '.' }, { baseURL: 'custom://example.com/' }),
+        String.raw`posts/name\%2E`,
       )
     })
 

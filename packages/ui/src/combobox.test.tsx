@@ -1,4 +1,4 @@
-import { expect } from '@remix-run/assert'
+import { expect, ok } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
 
 import { createRoot, type Handle, type Props, type RemixNode } from '@remix-run/component'
@@ -125,12 +125,16 @@ function expectInputSelectionCleared(input: HTMLInputElement) {
   expect(input.selectionEnd).toBe(input.value.length)
 }
 
-function key(target: HTMLElement, key: string, options: { repeat?: boolean } = {}) {
+function key(
+  target: HTMLElement,
+  key: string,
+  options: Pick<KeyboardEventInit, 'repeat' | 'isComposing' | 'keyCode'> = {},
+) {
   let event = new KeyboardEvent('keydown', {
     bubbles: true,
     cancelable: true,
     key,
-    repeat: options.repeat,
+    ...options,
   })
   target.dispatchEvent(event)
   return event
@@ -312,6 +316,69 @@ describe('Combobox', () => {
     expect(list.id).toBe(input.getAttribute('aria-controls'))
   })
 
+  it('filters composing draft text without committing the IME confirmation', async () => {
+    let changes: ComboboxChangeEvent[] = []
+    let { container, root } = renderApp(
+      <div
+        mix={onComboboxChange((event) => {
+          changes.push(event)
+        })}
+      >
+        <TestCombobox defaultValue="tokyo" name="city">
+          <TestComboboxOption label="東京" value="tokyo" />
+          <TestComboboxOption label="京都" value="kyoto" />
+        </TestCombobox>
+      </div>,
+    )
+    let input = container.querySelector<HTMLInputElement>('input[type="text"]')
+    let hiddenInput = container.querySelector<HTMLInputElement>('input[type="hidden"]')
+    ok(input)
+    ok(hiddenInput)
+    let tokyo = getOptionByText(container, '東京')
+    let kyoto = getOptionByText(container, '京都')
+    input.focus()
+    input.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
+    input.value = '京'
+    input.dispatchEvent(
+      new InputEvent('input', {
+        bubbles: true,
+        data: '京',
+        inputType: 'insertCompositionText',
+        isComposing: true,
+      }),
+    )
+    await settle(root)
+
+    expect(input.value).toBe('京')
+    expect(input.getAttribute('aria-expanded')).toBe('true')
+    expect(input.getAttribute('aria-activedescendant')).toBe(null)
+    expect(tokyo.hidden).toBe(true)
+    expect(kyoto.hidden).toBe(false)
+    expect(hiddenInput.value).toBe('')
+    expect(changes).toHaveLength(1)
+    expect(changes[0]?.value).toBe(null)
+
+    let navigation = key(input, 'ArrowDown', { isComposing: true })
+    let confirmation = key(input, 'Enter', { isComposing: true })
+    input.value = '京都'
+    input.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '京都' }))
+    input.dispatchEvent(
+      new InputEvent('input', { bubbles: true, data: '京都', inputType: 'insertFromComposition' }),
+    )
+    await settle(root)
+
+    expect(navigation.defaultPrevented).toBe(false)
+    expect(confirmation.defaultPrevented).toBe(false)
+    expect(input.value).toBe('京都')
+    expect(input.getAttribute('aria-expanded')).toBe('true')
+    expect(input.getAttribute('aria-activedescendant')).toBe(null)
+    expect(document.activeElement).toBe(input)
+    expect(hiddenInput.value).toBe('')
+    expect(tokyo.hidden).toBe(true)
+    expect(kyoto.hidden).toBe(false)
+    expect(changes).toHaveLength(1)
+  })
+
   it('allows real typing without resetting the input value between characters', async () => {
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
@@ -477,6 +544,97 @@ describe('Combobox', () => {
     await settle(root)
 
     expect(input.getAttribute('aria-activedescendant')).toBe(remix.id)
+  })
+
+  it('leaves IME keys alone while the popup is closed', async () => {
+    let { container, root } = renderApp(renderCombobox({ defaultValue: 'react' }))
+    let input = container.querySelector<HTMLInputElement>('input[type="text"]')
+    let hiddenInput = container.querySelector<HTMLInputElement>('input[type="hidden"]')
+    ok(input)
+    ok(hiddenInput)
+    input.focus()
+    input.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
+
+    for (let name of ['ArrowDown', 'ArrowUp', 'Enter', 'Escape']) {
+      let event = key(input, name, { isComposing: true })
+      await settle(root)
+
+      expect(event.defaultPrevented).toBe(false)
+      expect(input.getAttribute('aria-expanded')).toBe('false')
+      expect(input.getAttribute('aria-activedescendant')).toBe(null)
+      expect(input.value).toBe('react')
+      expect(hiddenInput.value).toBe('react')
+    }
+  })
+
+  it('does not navigate, select, or dismiss an open popup with IME keys', async () => {
+    let changes: ComboboxChangeEvent[] = []
+    let { container, root } = renderObservedCombobox(changes)
+    let input = container.querySelector<HTMLInputElement>('input[type="text"]')
+    let hiddenInput = container.querySelector<HTMLInputElement>('input[type="hidden"]')
+    ok(input)
+    ok(hiddenInput)
+    let remix = getOptionByText(container, 'Remix')
+    input.focus()
+    key(input, 'ArrowDown')
+    await settle(root)
+    input.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
+
+    for (let name of ['ArrowDown', 'ArrowUp', 'Enter', 'Escape']) {
+      let event = key(input, name, { isComposing: true })
+      await settle(root)
+
+      expect(event.defaultPrevented).toBe(false)
+      expect(input.getAttribute('aria-expanded')).toBe('true')
+      expect(input.getAttribute('aria-activedescendant')).toBe(remix.id)
+      expect(hiddenInput.value).toBe('')
+      expect(remix.hasAttribute('data-combobox-flash')).toBe(false)
+      expect(changes).toHaveLength(0)
+      expect(document.activeElement).toBe(input)
+    }
+  })
+
+  it('ignores Safari IME confirmation after compositionend and resumes normal selection', async (t) => {
+    holdAnimationFrames(t)
+    timers = t.useFakeTimers()
+    let changes: ComboboxChangeEvent[] = []
+    let { container, root } = renderObservedCombobox(changes)
+    let input = container.querySelector<HTMLInputElement>('input[type="text"]')
+    let hiddenInput = container.querySelector<HTMLInputElement>('input[type="hidden"]')
+    let surface = container.querySelector<HTMLElement>('[popover]')
+    ok(input)
+    ok(hiddenInput)
+    ok(surface)
+    let remix = getOptionByText(container, 'Remix')
+    input.focus()
+    key(input, 'ArrowDown')
+    await settle(root)
+    input.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
+    input.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }))
+
+    let confirmation = key(input, 'Enter', { isComposing: false, keyCode: 229 })
+    await settle(root)
+
+    expect(confirmation.defaultPrevented).toBe(false)
+    expect(input.getAttribute('aria-expanded')).toBe('true')
+    expect(input.getAttribute('aria-activedescendant')).toBe(remix.id)
+    expect(hiddenInput.value).toBe('')
+    expect(remix.hasAttribute('data-combobox-flash')).toBe(false)
+    expect(changes).toHaveLength(0)
+
+    let selection = key(input, 'Enter')
+    await settle(root)
+    expect(selection.defaultPrevented).toBe(true)
+    expect(hiddenInput.value).toBe('remix')
+
+    await finishSelectionFlash(root)
+    await finishCloseTransition(surface)
+    await settle(root)
+    await finishInputCommit(root)
+    expect(input.value).toBe('Remix framework')
+    expect(input.getAttribute('aria-expanded')).toBe('false')
+    expect(changes).toHaveLength(1)
+    expect(changes[0]?.value).toBe('remix')
   })
 
   it('scrolls the active descendant into view during keyboard navigation', async () => {

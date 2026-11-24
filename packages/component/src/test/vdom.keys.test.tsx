@@ -8,6 +8,37 @@ import { Fragment, type Handle, type RemixNode } from '../runtime/component.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {
+    it('keeps unkeyed matches in order after missing a child type', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <>
+          <b key="kept" />
+          <span />
+          <i />
+          <span />
+        </>,
+      )
+      let [keyed, skipped, italic, span] = Array.from(container.children)
+
+      root.render(
+        <>
+          <b key="kept" />
+          <em />
+          <i />
+          <span />
+          <span />
+        </>,
+      )
+      let children = container.children
+      expect(children[0]).toBe(keyed)
+      expect(children[1].localName).toBe('em')
+      expect(children[2]).toBe(italic)
+      expect(children[3]).toBe(span)
+      expect(children[4].localName).toBe('span')
+      expect(skipped.parentNode).toBe(null)
+    })
+
     it('appends keyed component before non-keyed sibling', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
@@ -761,9 +792,62 @@ describe('vnode rendering (keys)', () => {
     })
   })
 
+  describe('state-preserving keyed moves', () => {
+    it(
+      'preserves focus and custom element lifecycles when a keyed component moves',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      (t) => {
+        let { render, container } = createConnectedRoot(t)
+        class Widget extends HTMLElement {
+          events: string[] = []
+          connectedCallback() {
+            this.events.push('connected')
+          }
+          disconnectedCallback() {
+            this.events.push('disconnected')
+          }
+        }
+        customElements.define('rmx-keyed-legacy-move', Widget)
+        customElements.define(
+          'rmx-keyed-native-move',
+          class extends Widget {
+            connectedMoveCallback() {
+              this.events.push('moved')
+            }
+          },
+        )
+        function Card(handle: Handle<{ children: RemixNode }>) {
+          return () => <section>{handle.props.children}</section>
+        }
+        let card = (
+          <Card key="a">
+            {createElement('rmx-keyed-native-move', { tabIndex: 0 })}
+            {createElement('rmx-keyed-legacy-move', {})}
+          </Card>
+        )
+        let b = <span key="b">B</span>
+        let c = <span key="c">C</span>
+        render([b, c, card])
+        let native = container.querySelector('rmx-keyed-native-move')
+        let legacy = container.querySelector('rmx-keyed-legacy-move')
+        invariant(native instanceof Widget && legacy instanceof Widget)
+        native.focus()
+        native.addEventListener('blur', () => native.events.push('blurred'), { signal: t.signal })
+
+        render([card, b, c])
+
+        expect(container.firstElementChild).toBe(native.parentNode)
+        expect(document.activeElement).toBe(native)
+        expect(native.events).toEqual(['connected', 'moved'])
+        expect(legacy.events).toEqual(['connected', 'disconnected', 'connected'])
+      },
+    )
+  })
+
   describe('focus and selection across keyed moves', () => {
-    it('keeps focus and selection on a text input that a keyed reorder moves', (t) => {
+    it('restores focus and selection on a moved input when native moves are unavailable', (t) => {
       let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
       let item = (key: string) => <input key={key} id={key} type="text" />
       render(['a', 'b', 'c'].map(item))
       let input = getInput(container, 'a')
@@ -780,6 +864,7 @@ describe('vnode rendering (keys)', () => {
 
     it('restores ancestor scroll after focus handlers run during a keyed move', (t) => {
       let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
       container.style.cssText = 'height: 40px; overflow: auto; overflow-anchor: none'
       let item = (key: string) => (
         <input key={key} id={key} style={{ display: 'block', height: '60px' }} />

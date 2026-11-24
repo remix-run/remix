@@ -773,6 +773,7 @@ describe('vnode mixins', () => {
   })
 
   it('dispatches reclaimed on persisted reuse without rerunning insert or remove', async () => {
+    let setupCalls = 0
     let insertCalls = 0
     let reclaimedCalls = 0
     let removeCalls = 0
@@ -780,6 +781,7 @@ describe('vnode mixins', () => {
     let pending = Promise.withResolvers<void>()
 
     let withReclaimLifecycle = createMixin((handle) => {
+      setupCalls++
       handle.addEventListener('insert', () => {
         insertCalls++
       })
@@ -817,9 +819,31 @@ describe('vnode mixins', () => {
 
     expect(insertCalls).toBe(1)
     expect(reclaimedCalls).toBe(1)
+    expect(setupCalls).toBe(1)
     expect(removeCalls).toBe(0)
 
     pending.resolve()
+  })
+
+  it('updates raw HTML when a keyed element returns during removal', () => {
+    let pending = Promise.withResolvers<void>()
+    let keep = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => event.persistNode(() => pending.promise))
+      return () => {}
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div key="item" mix={keep()} innerHTML={unsafeHTML('<b>First</b>')} />)
+    let item = container.firstElementChild
+    invariant(item)
+
+    root.render(null)
+    root.render(<div key="item" mix={keep()} innerHTML={unsafeHTML('<i>Second</i>')} />)
+    pending.resolve()
+
+    expect(container.firstElementChild).toBe(item)
+    expect(item.innerHTML).toBe('<i>Second</i>')
+    root.dispose()
   })
 
   it('defers host removal when beforeRemove.persistNode is used', async () => {

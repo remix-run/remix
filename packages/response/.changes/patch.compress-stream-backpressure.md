@@ -1,0 +1,1 @@
+Fix `compressStream()` (used by `compressResponse()` and `compression()`) buffering compressed responses in memory without applying downstream backpressure to the source stream and zlib compressor, and fix cancelling a compressed response stream after the source stream has finished throwing a released-reader `TypeError`.

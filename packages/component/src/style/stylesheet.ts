@@ -181,3 +181,80 @@ export function createStyleManager(): StyleManager {
     dispose,
   }
 }
+
+export type DOMStyleProperties = {
+  [key in keyof Omit<
+    CSSStyleDeclaration,
+    'item' | 'setProperty' | 'removeProperty' | 'getPropertyValue' | 'getPropertyPriority'
+  >]?: string | number | null | undefined
+}
+export type AllStyleProperties = {
+  [key: string]: string | number | null | undefined
+}
+export interface StyleProps extends AllStyleProperties, DOMStyleProperties {
+  cssText?: string | null
+}
+
+// Convert camelCase CSS properties to kebab-case, restoring the leading dash on
+// vendor prefixes (`webkitLineClamp`, `msFlex` -> `-webkit-line-clamp`, `-ms-flex`).
+// Custom properties are case-sensitive, so they're returned as written.
+// Property names repeat constantly across renders; cache conversions instead
+// of running a regex each time.
+const CAMEL_TO_KEBAB_CACHE_LIMIT = 256
+const camelToKebabCache = new Map<string, string>()
+
+export function camelToKebab(str: string): string {
+  if (str.startsWith('--')) return str
+  let cached = camelToKebabCache.get(str)
+  if (cached === undefined) {
+    cached = str
+      .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+      .replace(/^(webkit|moz|ms|o)-/, '-$1-')
+    if (camelToKebabCache.size >= CAMEL_TO_KEBAB_CACHE_LIMIT) {
+      let oldest = camelToKebabCache.keys().next()
+      if (!oldest.done) camelToKebabCache.delete(oldest.value)
+    }
+    camelToKebabCache.set(str, cached)
+  }
+  return cached
+}
+
+// Properties whose grammar accepts a standalone number, including shorthands
+// and number/length unions. Numbers select the unitless branch; use a string
+// with units to select a length. Audited against @webref/css 8.7.8 and legacy
+// properties in mdn-data 2.27.1, retaining existing legacy entries.
+// https://github.com/w3c/webref/tree/main/packages/css
+// Vendor prefixes are optional: WebkitLineClamp and msFlex use the line-clamp
+// and flex entries; WebKit's mask-box-image aliases need their own.
+const NUMERIC_CSS_PROP = new RegExp(
+  '^(?:-(?:webkit|moz|ms|o)-)?(?:' +
+    'animation(?:-iteration-count)?|aspect-ratio|bookmark-level|' +
+    '(?:border-image|mask-border|mask-box-image)(?:-outset|-slice|-width)?|' +
+    'box-(?:flex|flex-group|ordinal-group)|column(?:s|-count|-span)|' +
+    'flex(?:-grow|-line-count|-negative|-order|-positive|-shrink)?|float-defer|' +
+    'font-(?:size-adjust|weight)|force-broken-image-icon|' +
+    'grid-(?:area|(?:column|row)(?:-end|-span|-start)?)|hyphenate-limit-(?:chars|lines)|' +
+    'initial-letter|line-(?:clamp|height)|math-depth|max-lines|opacity|order|orphans|' +
+    'reading-order|scale|shape-image-threshold|tab-size|voice-balance|widows|z-index|zoom|' +
+    // SVG
+    '(?:fill|flood|stop|stroke)-opacity|stroke-(?:dasharray|dashoffset|miterlimit|width)' +
+    ')$',
+)
+
+// Numbers default to pixels, except for unitless properties, custom properties,
+// and zero. Other units (such as time or angle) must be explicit strings.
+// Returns undefined for values that shouldn't be emitted (nullish and non-finite numbers).
+export function normalizeCssValue(key: string, value: unknown): string | undefined {
+  if (value == null) return undefined
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return undefined
+    if (value !== 0 && !key.startsWith('--') && !NUMERIC_CSS_PROP.test(camelToKebab(key))) {
+      return `${value}px`
+    }
+  }
+  return String(value)
+}
+
+export function isStyleObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}

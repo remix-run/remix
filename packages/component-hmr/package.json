@@ -56,6 +56,7 @@
     }
   },
   "dependencies": {
+    "@typescript-eslint/scope-manager": "^8.72.2",
     "magic-string": "^0.30.21",
     "oxc-parser": "^0.121.0",
     "source-map-js": "^1.2.1"

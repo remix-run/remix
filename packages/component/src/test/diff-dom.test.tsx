@@ -15,8 +15,7 @@ function attachClientEntryOwner(
 
 function diffDomNodes(current: Node[], next: Node[], data: FrameContext['data'] = {}) {
   diffNodes(current, next, {
-    frameInstances: new WeakMap(),
-    pendingClientEntries: new Map(),
+    registry: { instances: new WeakMap() },
     data,
   } as any)
 }
@@ -34,8 +33,7 @@ function diffHead(
   shouldPreserveHeadNode?: (node: Node) => boolean,
 ) {
   diffNodes([current.head], [parseHead(nextHead).head], {
-    frameInstances: new WeakMap(),
-    pendingClientEntries: new Map(),
+    registry: { instances: new WeakMap() },
     data: {},
     shouldPreserveHeadNode,
   } as any)
@@ -59,7 +57,7 @@ function recordMutations(target: Node) {
 type TestFrame = {
   dispose(): void
   isDisplayingResolvedContent(): boolean
-  matchesIdentity(src: string, name: string | undefined): boolean
+  readonly identity: { src: string; name?: string } | undefined
   renderMarkerContent(): Promise<void>
 }
 
@@ -72,8 +70,7 @@ function diffDom(
   let template = document.createElement('template')
   template.innerHTML = next
   diffNodes(Array.from(container.childNodes), Array.from(template.content.childNodes), {
-    frameInstances,
-    pendingClientEntries: new Map(),
+    registry: { instances: frameInstances },
     data: data ?? {},
   } as any)
 }
@@ -498,6 +495,53 @@ describe('diffNodes', () => {
       expect(secondDisposeCount).toBe(1)
     })
 
+    it('keeps a user key distinct from a client entry with the same identity text', () => {
+      let container = document.createElement('div')
+      let key = JSON.stringify(['/entry.js', 'Entry'])
+      let keyed = `<button data-rmx-key='${key}'>Keyed</button>`
+      container.innerHTML = `<!-- rmx:h:one --><input><!-- /rmx:h -->${keyed}`
+      let start = container.firstChild
+      invariant(start instanceof Comment)
+      attachClientEntryOwner(start)
+      let input = container.querySelector('input')
+      let button = container.querySelector('button')
+
+      diffDom(container, `${keyed}<!-- rmx:h:two --><input><!-- /rmx:h -->`, {
+        h: { two: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} } },
+      })
+
+      expect(container.firstChild).toBe(button)
+      expect(button?.nextSibling).toBe(start)
+      expect(container.querySelector('input')).toBe(input)
+    })
+
+    it('rechecks an entry whose owner changes while an earlier sibling updates', (t) => {
+      let container = document.createElement('div')
+      container.innerHTML = '<b></b><!-- rmx:h:old --><input><!-- /rmx:h -->'
+      let start = container.childNodes[1]
+      invariant(start instanceof Comment)
+      attachClientEntryOwner(start)
+      let first = container.firstElementChild!
+      let oldInput = container.querySelector('input')
+      let set = first.setAttribute.bind(first)
+      let disposals = 0
+      t.mock.method(first, 'setAttribute', (name: string, value: string) => {
+        set(name, value)
+        attachClientEntryOwner(start, () => disposals++, {
+          moduleUrl: '/different.js',
+          exportName: 'Entry',
+        })
+      })
+
+      diffDom(container, '<b title="updated"></b><!-- rmx:h:new --><input><!-- /rmx:h -->', {
+        h: { new: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} } },
+      })
+
+      expect(start.parentNode).toBeNull()
+      expect(container.querySelector('input')).not.toBe(oldInput)
+      expect(disposals).toBe(1)
+    })
+
     it('does not let an unmatched boundary consume a later semantic match', () => {
       let container = document.createElement('div')
       container.innerHTML = '<!-- rmx:h:current --><button>Stateful</button><!-- /rmx:h -->'
@@ -713,7 +757,7 @@ describe('diffNodes', () => {
       frameInstances.set(start, {
         dispose() {},
         isDisplayingResolvedContent: () => true,
-        matchesIdentity: (src, name) => src === '/same' && name === undefined,
+        identity: { src: '/same' },
         async renderMarkerContent() {
           renderCount++
         },
@@ -882,6 +926,60 @@ describe('diffNodes', () => {
   })
 
   describe('live browser state', () => {
+    it(
+      'keeps the iframe document, animation, and top-layer state of a moved element',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      async (t) => {
+        let container = document.createElement('div')
+        let style = '<style>@keyframes rmx-move { to { opacity: 0.5 } }</style>'
+        let moving =
+          '<section data-rmx-key="a" style="animation: rmx-move 10s infinite">' +
+          '<iframe srcdoc=""></iframe><dialog><input></dialog><div popover="manual"></div></section>'
+        let rest = '<p data-rmx-key="b">B</p><p data-rmx-key="c">C</p>'
+        container.innerHTML = style + moving + rest
+        let section = container.querySelector('section')
+        let iframe = container.querySelector('iframe')
+        let dialog = container.querySelector('dialog')
+        let input = container.querySelector('input')
+        let popover = container.querySelector('[popover]')
+        invariant(section && iframe && dialog && input && popover instanceof HTMLElement)
+        let loaded = new Promise<void>((resolve) => {
+          iframe.addEventListener('load', () => resolve(), { once: true, signal: t.signal })
+        })
+        document.body.append(container)
+        t.after(() => container.remove())
+        await loaded
+        let iframeDocument = iframe.contentDocument
+        invariant(iframeDocument)
+        let animation = section.getAnimations()[0]
+        invariant(animation)
+        animation.pause()
+        await animation.ready
+        animation.currentTime = 500
+        dialog.showModal()
+        popover.showPopover()
+        input.focus()
+        input.value = 'frame draft'
+        input.setSelectionRange(0, 5)
+        let mutations = recordMutations(container)
+
+        diffDom(container, style + rest + moving)
+
+        expect(container.lastChild).toBe(section)
+        expect(mutations().removed).toContain(section)
+        expect(iframe.contentDocument).toBe(iframeDocument)
+        expect(section.getAnimations()[0]).toBe(animation)
+        expect(animation.currentTime).toBe(500)
+        expect(animation.playState).toBe('paused')
+        expect(dialog.matches(':modal')).toBe(true)
+        expect(popover.matches(':popover-open')).toBe(true)
+        expect(document.activeElement).toBe(input)
+        expect(input.value).toBe('frame draft')
+        expect(input.selectionStart).toBe(0)
+        expect(input.selectionEnd).toBe(5)
+      },
+    )
+
     it('preserves current details open state when incoming html removes open', () => {
       let container = document.createElement('div')
       container.innerHTML = '<details open><summary>Toggle</summary><p>Body</p></details>'

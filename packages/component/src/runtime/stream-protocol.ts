@@ -1,5 +1,7 @@
 import { invariant } from './invariant.ts'
 
+export const ESCAPED_OBJECT = '$rmxObject'
+
 export type FlushKind = 'document' | 'fragment'
 
 // Comment markers the server writes around frames and client entries, and the client creates and
@@ -66,21 +68,9 @@ export function appendFlushMarker(html: string, kind: FlushKind): string {
 }
 
 export function stripFlushMarkers(html: string): string {
-  FLUSH_MARKER_PATTERN.lastIndex = 0
   return html.replace(FLUSH_MARKER_PATTERN, '')
 }
 
-export function findFlushMarker(
-  html: string,
-  startIndex: number,
-): { index: number; endIndex: number; kind: FlushKind } | undefined {
-  FLUSH_MARKER_PATTERN.lastIndex = startIndex
-  let match = FLUSH_MARKER_PATTERN.exec(html)
-  if (!match) return undefined
-
-  return {
-    index: match.index,
-    endIndex: FLUSH_MARKER_PATTERN.lastIndex,
-    kind: match[1] as FlushKind,
-  }
+export function findFlushMarkers(html: string) {
+  return html.matchAll(FLUSH_MARKER_PATTERN)
 }

@@ -36,6 +36,8 @@ patchedDependencies:
     hash: 9de972030ab106a5cb051ec55fefe7492089a14fd422a48a61aa0dca4e66f5bb
     path: patches/playwright-core@1.63.0.patch
 
+packageExtensionsChecksum: sha256-Ri2l4ZxTnate0Ijm1toJrqDOXJAZ8sxKmcNw/f8Gzz0=
+
 importers:
 
   .:
@@ -78,28 +80,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      typescript:
-        specifier: 'catalog:'
-        version: 7.0.2
-
-  demos/bookstore:
-    dependencies:
-      '@remix-run/ui':
-        specifier: workspace:^
-        version: link:../../packages/ui
-      remix:
-        specifier: workspace:*
-        version: link:../../packages/remix
-    devDependencies:
-      '@types/dom-navigation':
-        specifier: ^1.0.7
-        version: 1.0.7
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      playwright:
-        specifier: 'catalog:'
-        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -189,6 +169,31 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+
+  demos/record-store:
+    dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../packages/ui
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -802,6 +807,9 @@ importers:
 
   packages/component-hmr:
     dependencies:
+      '@typescript-eslint/scope-manager':
+        specifier: ^8.72.2
+        version: 8.72.2
       magic-string:
         specifier: ^0.30.21
         version: 0.30.21
@@ -4698,6 +4706,18 @@ packages:
   '@types/ws@8.5.12':
     resolution: {integrity: sha512-3tPRkv1EtkDpzlgyKyI8pGsGZAGPEaXeu0DOj5DI25Ja91bdAYddYHbADRYVrZMRbfW+1l5YwXVDKohDJNQxkQ==}
 
+  '@typescript-eslint/scope-manager@8.72.2':
+    resolution: {integrity: sha512-iIoMJ6/8c1/QpFNyFjU0d1YzPco4MsZjQw0k3V+vfzNWAFmUmvhlyMoYEoYYDQZXc+J6Gi1X5XcxlzW2taIIGQ==}
+    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@typescript-eslint/types@8.72.2':
+    resolution: {integrity: sha512-Xfn37OLZx03+PCU7qWx9DTv2FCRh1E6fk2+wONeNY15HXIwtcwuveaSwVpGAUptkNmPQegRxW5JyRel9T7wrog==}
+    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@typescript-eslint/visitor-keys@8.72.2':
+    resolution: {integrity: sha512-NAGrjn0Pitjqzq/GkgMC4kBYm233PQ8GffyQ9+kTA3AlNQYEzOf25EIM02BAHZv5FRJSpHpJk+OGUxVkOB93GQ==}
+    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
   '@typescript/analyze-trace@0.10.1':
     resolution: {integrity: sha512-RnlSOPh14QbopGCApgkSx5UBgGda5MX1cHqp2fsqfiDyCwGL/m1jaeB9fzu7didVS81LQqGZZuxFBcg8YU8EVw==}
     hasBin: true
@@ -5262,6 +5282,10 @@ packages:
   escape-string-regexp@5.0.0:
     resolution: {integrity: sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw==}
     engines: {node: '>=12'}
+
+  eslint-visitor-keys@5.0.1:
+    resolution: {integrity: sha512-tD40eHxA35h0PEIZNeIjkHoDR4YjjJp34biM0mDvplBe//mB+IHCqHDGV7pxF+7MklTvighcCPPZC7ynWyjdTA==}
+    engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
   esprima@4.0.1:
     resolution: {integrity: sha512-eGuFFw7Upda+g4p+QHvnW0RyTX/SVeJBDM/gCtMARO0cLuT2HcEKnTPvhjV6aGeqrCB/sbNop0Kszm0jsaWU4A==}
@@ -8147,6 +8171,20 @@ snapshots:
     dependencies:
       '@types/node': 24.10.4
 
+  '@typescript-eslint/scope-manager@8.72.2':
+    dependencies:
+      '@typescript-eslint/types': 8.72.2
+      '@typescript-eslint/visitor-keys': 8.72.2
+
+  '@typescript-eslint/types@8.72.2':
+    dependencies:
+      typescript: 6.0.3
+
+  '@typescript-eslint/visitor-keys@8.72.2':
+    dependencies:
+      '@typescript-eslint/types': 8.72.2
+      eslint-visitor-keys: 5.0.1
+
   '@typescript/analyze-trace@0.10.1':
     dependencies:
       chalk: 4.1.2
@@ -8738,6 +8776,8 @@ snapshots:
   escape-html@1.0.3: {}
 
   escape-string-regexp@5.0.0: {}
+
+  eslint-visitor-keys@5.0.1: {}
 
   esprima@4.0.1: {}
 

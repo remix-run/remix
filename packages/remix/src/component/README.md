@@ -437,12 +437,7 @@ A scalar controlled value selects the first matching option; arrays on multiple 
 
 ## Keys
 
-Give list items a `key` when a list can be reordered, filtered, or added to. Elements and components with matching keys are moved instead of recreated, so they keep:
-
-- their DOM nodes
-- component state in setup scope
-- focus and text selection
-- input values the user has typed
+Give each list item a stable `key` so Remix can reuse its DOM nodes and component state when the list changes. Here, `key={item.id}` keeps the text you type in each input with its item when you reverse the list.
 
 ```tsx
 import { on } from 'remix/component'
@@ -476,9 +471,13 @@ function ReorderableList(handle: Handle) {
 }
 ```
 
-Keys can be strings, numbers, or bigints, and must be unique among siblings. Use stable IDs from your data. An array index works only if the list never reorders, and a value created during render, such as `Math.random()`, makes every render look like a new item.
+Keys can be strings, numbers, or bigints and must be unique among siblings. An array index identifies a position, so it can refer to a different item after an insertion, removal, or reorder. A key generated with `Math.random()` makes Remix recreate the item on every render.
 
 `key` exists only in the component tree and isn't rendered to HTML. To keep server-rendered siblings matched to the same live elements when a frame reloads, add a `data-rmx-key` attribute. See [Preserving Client-Owned DOM](#preserving-client-owned-dom).
+
+When keyed rendering or a frame reload moves a single matched element within its parent, Remix uses [`moveBefore()`](https://developer.mozilla.org/en-US/docs/Web/API/Element/moveBefore) where available. A focused input keeps focus and its selection, iframes keep their documents, CSS animations continue, and modal dialogs and popovers stay open. Remix reinserts multi-node fragments, frames, and hydration boundaries. It also uses insertion in browsers without `moveBefore()`. Reinsertion can reset browser state.
+
+A custom element can define [`connectedMoveCallback()`](https://html.spec.whatwg.org/multipage/custom-elements.html#preserving-custom-element-state-when-moved) to skip its usual disconnect and connect callbacks during a native move. Keep DOM edits in that callback within the element. Remix manages the surrounding siblings and boundary markers.
 
 ## Events
 
