@@ -4,6 +4,8 @@ import {
   brotliDecompress,
   inflate,
   constants,
+  createBrotliCompress,
+  createGzip,
   createGunzip,
   createBrotliDecompress,
   createInflate,
@@ -2069,6 +2071,116 @@ describe('compressResponse()', () => {
         assert.equal(chunks.length, 2, 'Should receive all data chunks including final')
         let fullText = chunks.map((c) => new TextDecoder().decode(c)).join('')
         assert.equal(fullText, 'test final')
+      })
+
+      it('applies downstream backpressure and pauses real compressor when unread', async () => {
+        let totalChunks = 64
+        let chunkSize = 64 * 1024
+        let pulledChunks = 0
+
+        // Deterministic incompressible-ish chunk pattern so gzip emits compressed output quickly
+        function makeChunk(index: number): Uint8Array {
+          let bytes = new Uint8Array(chunkSize)
+          for (let i = 0; i < chunkSize; i++) {
+            bytes[i] = (i * 31 + index * 17 + (i >> 8)) & 0xff
+          }
+          return bytes
+        }
+
+        let source = new ReadableStream<Uint8Array>({
+          pull(controller) {
+            if (pulledChunks >= totalChunks) {
+              controller.close()
+              return
+            }
+            controller.enqueue(makeChunk(pulledChunks++))
+          },
+        })
+
+        let compressor = createGzip()
+        let paused = Promise.withResolvers<void>()
+        compressor.once('pause', () => paused.resolve())
+
+        let compressed = compressStream(source, compressor)
+
+        // Wait until downstream queue fills and pauses the compressor
+        await paused.promise
+
+        let pulledWhileUnread = pulledChunks
+        assert.ok(
+          pulledWhileUnread < totalChunks,
+          `Expected backpressure to stop reading before all ${totalChunks} chunks (pulled ${pulledWhileUnread})`,
+        )
+
+        // Now drain the stream and verify full round-trip integrity
+        let reader = compressed.getReader()
+        let compressedChunks: Uint8Array[] = []
+        while (true) {
+          let { done, value } = await reader.read()
+          if (done) break
+          if (value) compressedChunks.push(value)
+        }
+
+        assert.equal(pulledChunks, totalChunks)
+        let decompressed = await gunzipAsync(Buffer.concat(compressedChunks))
+        assert.equal(decompressed.length, totalChunks * chunkSize)
+        assert.deepEqual(new Uint8Array(decompressed.subarray(0, chunkSize)), makeChunk(0))
+        assert.deepEqual(
+          new Uint8Array(decompressed.subarray((totalChunks - 1) * chunkSize)),
+          makeChunk(totalChunks - 1),
+        )
+      })
+
+      it('round-trips a multi-chunk stream through brotli without deadlocking under backpressure', async () => {
+        let totalChunks = 24
+        let chunkSize = 32 * 1024
+        let pulledChunks = 0
+
+        let source = new ReadableStream<Uint8Array>({
+          pull(controller) {
+            if (pulledChunks >= totalChunks) {
+              controller.close()
+              return
+            }
+            let bytes = new Uint8Array(chunkSize)
+            bytes.fill(pulledChunks & 0xff)
+            pulledChunks++
+            controller.enqueue(bytes)
+          },
+        })
+
+        let compressed = compressStream(source, createBrotliCompress())
+        let reader = compressed.getReader()
+        let compressedChunks: Uint8Array[] = []
+
+        while (true) {
+          let { done, value } = await reader.read()
+          if (done) break
+          if (value) compressedChunks.push(value)
+        }
+
+        let decompressed = await brotliDecompressAsync(Buffer.concat(compressedChunks))
+        assert.equal(decompressed.length, totalChunks * chunkSize)
+        assert.equal(decompressed[0], 0)
+        assert.equal(decompressed[(totalChunks - 1) * chunkSize], (totalChunks - 1) & 0xff)
+      })
+
+      it('does not throw when cancelled after the upstream input has already finished', async () => {
+        let source = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('Hello, World!'.repeat(100)))
+            controller.close()
+          },
+        })
+        let readerReleased = observeReaderRelease(source)
+
+        let compressed = compressStream(source, createGzip())
+
+        // Wait until the upstream stream has been completely read and its reader lock released
+        await readerReleased
+
+        // Cancelling the output stream afterwards should succeed cleanly without throwing
+        await compressed.cancel('client disconnected')
       })
     })
   })
