@@ -1,6 +1,5 @@
 import type * as dom from '../dom.d.ts'
 import type { Handle, RenderFn } from '../component.ts'
-import { invariant } from '../invariant.ts'
 
 /**
  * Any valid element type accepted by JSX or {@link import('../create-element.ts').createElement}.
@@ -99,21 +98,7 @@ export type Props<T extends keyof JSX.IntrinsicElements> = NormalizeMixProp<
  * @param key Optional reconciliation key.
  * @returns A Remix virtual element.
  */
-export function jsx(type: ElementType, props: ElementProps, key?: any): RemixElement
 export function jsx(type: ElementType, props: ElementProps, key?: any): RemixElement {
-  return createRemixElement(type, props, key)
-}
-
-export { jsx as jsxDEV, jsx as jsxs }
-
-// Shared across module instances, and enumerable so element spreads retain their identity.
-export const REMIX_ELEMENT = Symbol.for('remix.element')
-
-export function createRemixElement(
-  type: ElementType,
-  props: ElementProps | null | undefined,
-  key?: any,
-): RemixElement {
   return {
     [REMIX_ELEMENT]: true,
     $rmx: true,
@@ -122,6 +107,11 @@ export function createRemixElement(
     type,
   }
 }
+
+export { jsx as jsxDEV, jsx as jsxs }
+
+// Shared across module instances, and enumerable so element spreads retain their identity.
+const REMIX_ELEMENT = Symbol.for('remix.element')
 
 export function isRemixElement(node: unknown): node is RemixElement {
   if (typeof node !== 'object' || node === null) return false
@@ -144,8 +134,8 @@ function normalizeElementProps(props: ElementProps | null | undefined): ElementP
   if (isNormalizedMix(props.mix)) return props
 
   let { mix, ...rest } = props
-  let normalizedMix = normalizeMixValue(mix)
-  return normalizedMix === undefined ? rest : { ...rest, mix: normalizedMix }
+  let normalized = Array.isArray(mix) ? mix.flat(Infinity).filter(Boolean) : mix ? [mix] : []
+  return normalized.length ? { ...rest, mix: normalized } : rest
 }
 
 function isNormalizedMix(mix: unknown): boolean {
@@ -157,35 +147,14 @@ function isNormalizedMix(mix: unknown): boolean {
   return true
 }
 
-function normalizeMixValue(mix: unknown): unknown[] | undefined {
-  if (!mix) return undefined
-
-  let normalizedMix: unknown[] = []
-  flattenMixValue(mix, normalizedMix)
-  return normalizedMix.length === 0 ? undefined : normalizedMix
-}
-
-function flattenMixValue(mix: unknown, out: unknown[]): void {
-  if (!mix) return
-
-  if (!Array.isArray(mix)) {
-    out.push(mix)
-    return
-  }
-
-  for (let item of mix) {
-    flattenMixValue(item, out)
-  }
-}
-
 export type EmptyChild = boolean | null | undefined
 export type PrimitiveChild = string | number | bigint
 
-export function isEmptyChild(value: RemixNode): value is EmptyChild {
+export function isEmptyChild(value: unknown): value is EmptyChild {
   return value == null || typeof value === 'boolean'
 }
 
-export function isPrimitiveChild(value: RemixNode): value is PrimitiveChild {
+export function isPrimitiveChild(value: unknown): value is PrimitiveChild {
   let type = typeof value
   return type === 'string' || type === 'number' || type === 'bigint'
 }
@@ -200,19 +169,8 @@ export function normalizeChildren(children: readonly RemixNode[]): RemixNode[] {
   return children as RemixNode[]
 }
 
-export function assertRemixNodes(values: readonly unknown[]): asserts values is RemixNode[] {
-  for (let value of values) {
-    invariant(isRemixNode(value), 'Invalid child node')
-  }
-}
-
 export function isRemixNode(value: unknown): value is RemixNode {
-  if (value == null) return true
-  let type = typeof value
-  if (type === 'string' || type === 'number' || type === 'bigint' || type === 'boolean') {
-    return true
-  }
-  if (isRemixElement(value)) return true
+  if (isEmptyChild(value) || isPrimitiveChild(value) || isRemixElement(value)) return true
   if (!Array.isArray(value)) return false
   for (let child of value) {
     if (!isRemixNode(child)) return false

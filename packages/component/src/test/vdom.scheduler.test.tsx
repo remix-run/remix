@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { createRoot } from '../runtime/vdom.ts'
+import { createRoot, createScheduler } from '../runtime/vdom.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 
 describe('vnode rendering', () => {
@@ -56,6 +56,19 @@ describe('vnode rendering', () => {
 
       expect(appRenderCount).toBe(3)
       expect(childRenderCount).toBe(3)
+    })
+
+    it('keeps a commit listener active when another listener is removed twice', () => {
+      let scheduler = createScheduler(document, new EventTarget())
+      let commits = 0
+      let removed = () => {}
+      scheduler.addEventListener('commit', () => commits++)
+      scheduler.addEventListener('commit', removed)
+      scheduler.removeEventListener('commit', removed)
+      scheduler.removeEventListener('commit', removed)
+      scheduler.enqueueWork([() => {}])
+      scheduler.dequeue()
+      expect(commits).toBe(1)
     })
 
     it('only runs tasks once', async () => {

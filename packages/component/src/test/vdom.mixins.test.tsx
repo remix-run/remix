@@ -50,6 +50,20 @@ describe('vnode mixins', () => {
     expect(seenProps).toEqual([{ title: 'base' }, { title: 'base-one' }])
   })
 
+  it('ignores all returned descriptors when a nested descriptor is invalid', (t) => {
+    let errors = t.mock.method(console, 'error', () => {})
+    let title = createMixin((handle) => () => <handle.element title="unexpected" />)
+    let invalid = title()
+    Reflect.set(invalid, 'type', null)
+    let group = createMixin(() => () => [title(), [invalid]])
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={group()} />)
+    expect(errors).toHaveBeenCalledTimes(1)
+    expect(container.innerHTML).toBe('<div></div>')
+  })
+
   it('composes mixins in order and does not leak mix to the DOM', () => {
     let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
       <handle.element {...props} title={title} />
@@ -482,6 +496,32 @@ describe('vnode mixins', () => {
     expect(calls).toEqual(['before:0', 'commit:1'])
   })
 
+  it('exposes each mixin slot signal during its owner’s scheduled update', async () => {
+    let signals: AbortSignal[] = []
+    let matches: boolean[] = []
+    let observe = createMixin((handle) => {
+      let signal = handle.signal
+      signals.push(signal)
+      handle.addEventListener('beforeUpdate', () => matches.push(handle.signal === signal))
+      handle.addEventListener('commit', () => matches.push(handle.signal === signal))
+    })
+
+    let update: (() => Promise<AbortSignal>) | undefined
+    function Owner(handle: Handle) {
+      update = () => handle.update()
+      return () => <div mix={[observe(), observe()]} />
+    }
+
+    let root = createRoot(document.createElement('div'))
+    root.render(<Owner />)
+    invariant(update)
+    await update()
+    expect(matches).toEqual([true, true, true, true])
+    expect(signals[0]).not.toBe(signals[1])
+    root.dispose()
+    expect(signals.map((signal) => signal.aborted)).toEqual([true, true])
+  })
+
   it('keeps running commit listeners after removing a listener that was never added', () => {
     let commits = 0
     let withCommit = createMixin((handle) => {
@@ -733,6 +773,7 @@ describe('vnode mixins', () => {
   })
 
   it('dispatches reclaimed on persisted reuse without rerunning insert or remove', async () => {
+    let setupCalls = 0
     let insertCalls = 0
     let reclaimedCalls = 0
     let removeCalls = 0
@@ -740,6 +781,7 @@ describe('vnode mixins', () => {
     let pending = Promise.withResolvers<void>()
 
     let withReclaimLifecycle = createMixin((handle) => {
+      setupCalls++
       handle.addEventListener('insert', () => {
         insertCalls++
       })
@@ -777,9 +819,31 @@ describe('vnode mixins', () => {
 
     expect(insertCalls).toBe(1)
     expect(reclaimedCalls).toBe(1)
+    expect(setupCalls).toBe(1)
     expect(removeCalls).toBe(0)
 
     pending.resolve()
+  })
+
+  it('updates raw HTML when a keyed element returns during removal', () => {
+    let pending = Promise.withResolvers<void>()
+    let keep = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => event.persistNode(() => pending.promise))
+      return () => {}
+    })
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div key="item" mix={keep()} innerHTML={unsafeHTML('<b>First</b>')} />)
+    let item = container.firstElementChild
+    invariant(item)
+
+    root.render(null)
+    root.render(<div key="item" mix={keep()} innerHTML={unsafeHTML('<i>Second</i>')} />)
+    pending.resolve()
+
+    expect(container.firstElementChild).toBe(item)
+    expect(item.innerHTML).toBe('<i>Second</i>')
+    root.dispose()
   })
 
   it('defers host removal when beforeRemove.persistNode is used', async () => {

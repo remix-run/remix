@@ -7,6 +7,9 @@ import type { StyleManager } from '../style/stylesheet.ts'
 import type { ResourceNonces } from './nonce.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 
+// Unlike `from`, this marker must not propagate to nested frame loads.
+export const navigationRequest = Symbol('navigationRequest')
+
 /**
  * Loads a named client-entry export for hydration.
  *
@@ -71,12 +74,10 @@ export interface ResolveFrameOptions {
   signal?: AbortSignal
 }
 
-export type PendingClientEntries = Map<
-  Comment,
-  [Comment, RemixElement | undefined, ResourceNonces?]
->
+type PendingClientEntries = Map<Comment, [Comment, RemixElement | undefined, ResourceNonces?]>
 
 export type FrameNavigationOptions = Omit<ResolveFrameOptions, 'target'> & {
+  [navigationRequest]?: true
   /** The initiating anchor, area, or owning form. */
   element?: HTMLAnchorElement | HTMLAreaElement | SVGAElement | HTMLFormElement
   /** The actual submitter captured by the native submit event. */
@@ -97,10 +98,8 @@ export type FrameReloadTransition = {
 }
 
 export type ReconciliationTracker = {
-  track: () => () => void
   waitFor: (task: Promise<void>) => void
-  finalize: () => void
-  ready: () => Promise<void>
+  finish: () => Promise<void>
 }
 
 export interface FrameFallbackRoot {
@@ -114,7 +113,11 @@ export type FrameMountState = {
   fallbackRoot?: FrameFallbackRoot
 }
 
-export class NamedFrameRegistry {
+export class FrameRegistry {
+  entries: PendingClientEntries = new Map()
+  modules = new Map<string, ElementFunction | Promise<ElementFunction | undefined>>()
+  instances = new WeakMap<Comment, FrameInstance>()
+
   #framesByName = new Map<string, FrameHandle[]>()
 
   register(name: string, frame: FrameHandle): void {
@@ -146,22 +149,20 @@ export class NamedFrameRegistry {
 
 const FRAME_RUNTIME = Symbol('FrameRuntime')
 
-export type FrameRuntime = {
-  [FRAME_RUNTIME]: true
-  canResolveFrames?: boolean
-  getContext?: (type: ElementFunction) => unknown
-  topFrame?: FrameHandle
+export type SharedFrameRuntime = {
   errorTarget: EventTarget
   loadModule: LoadModule
   resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
   scheduler: Scheduler
   styleManager: StyleManager
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, FrameInstance>
-  namedFrames: NamedFrameRegistry
+  registry: FrameRegistry
   processClientEntryPreloads?: ProcessClientEntryPreloads
+}
+
+export type FrameRuntime = SharedFrameRuntime & {
+  [FRAME_RUNTIME]: true
+  getContext?: (type: ElementFunction) => unknown
+  topFrame?: FrameHandle
   serverFrameReload:
     | {
         signal: AbortSignal
@@ -175,33 +176,14 @@ export type FrameRuntime = {
   reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
 }
 
-export type SharedFrameRuntime = Pick<
-  FrameRuntime,
-  | 'errorTarget'
-  | 'loadModule'
-  | 'resolveFrame'
-  | 'pendingClientEntries'
-  | 'scheduler'
-  | 'styleManager'
-  | 'moduleCache'
-  | 'moduleLoads'
-  | 'frameInstances'
-  | 'namedFrames'
-  | 'processClientEntryPreloads'
->
-
 export function getSharedFrameRuntime(source: SharedFrameRuntime): SharedFrameRuntime {
   return {
     errorTarget: source.errorTarget,
     loadModule: source.loadModule,
     resolveFrame: source.resolveFrame,
-    pendingClientEntries: source.pendingClientEntries,
     scheduler: source.scheduler,
     styleManager: source.styleManager,
-    moduleCache: source.moduleCache,
-    moduleLoads: source.moduleLoads,
-    frameInstances: source.frameInstances,
-    namedFrames: source.namedFrames,
+    registry: source.registry,
     processClientEntryPreloads: source.processClientEntryPreloads,
   }
 }
@@ -220,22 +202,9 @@ export function getFrameRuntime(frame: FrameHandle): FrameRuntime | undefined {
   return isFrameRuntime(runtime) ? runtime : undefined
 }
 
-export function createFrameRuntime(init: {
-  topFrame?: FrameHandle
-  getContext?: (type: ElementFunction) => unknown
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
-  styleManager: StyleManager
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, FrameInstance>
-  namedFrames: NamedFrameRegistry
-  processClientEntryPreloads?: ProcessClientEntryPreloads
-  reloadForNavigation?: (options?: FrameNavigationOptions) => FrameReloadTransition
-}): FrameRuntime {
+export function createFrameRuntime(
+  init: SharedFrameRuntime & Pick<FrameRuntime, 'topFrame' | 'getContext' | 'reloadForNavigation'>,
+): FrameRuntime {
   return {
     [FRAME_RUNTIME]: true,
     topFrame: init.topFrame,
@@ -300,3 +269,12 @@ export function disposeClientEntryBoundary(marker: Comment): boolean {
   owner.root.dispose()
   return true
 }
+
+export const pendingPrefetchLinks = new WeakSet<Node>()
+
+type SPAResponseData = {
+  node: RemixNode
+  redirectedTo?: string
+}
+
+export const spaResponses = new WeakMap<Response, SPAResponseData>()

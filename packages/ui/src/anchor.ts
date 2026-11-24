@@ -381,12 +381,12 @@ function getOverflowAmount(
   )
 }
 
-function hasRectChanged(currentRect: DOMRect, previousRect: DOMRect) {
+function hasRectChanged(currentRect: DOMRect, previousRect: DOMRect, minimumChange = 1) {
   return (
-    Math.abs(currentRect.top - previousRect.top) >= 1 ||
-    Math.abs(currentRect.left - previousRect.left) >= 1 ||
-    Math.abs(currentRect.right - previousRect.right) >= 1 ||
-    Math.abs(currentRect.bottom - previousRect.bottom) >= 1
+    Math.abs(currentRect.top - previousRect.top) >= minimumChange ||
+    Math.abs(currentRect.left - previousRect.left) >= minimumChange ||
+    Math.abs(currentRect.right - previousRect.right) >= minimumChange ||
+    Math.abs(currentRect.bottom - previousRect.bottom) >= minimumChange
   )
 }
 
@@ -532,7 +532,7 @@ function getFlippedPlacement(
   placementHeight: number,
   collisionWidth: number,
   collisionHeight: number,
-  anchorIsAbsolutePositioned: boolean,
+  isFixed: boolean,
   inset: boolean,
   offset: number,
   offsetX: number,
@@ -542,7 +542,7 @@ function getFlippedPlacement(
 ) {
   let hasScroll = window.scrollY > 0
 
-  if (placement.startsWith('top') && anchorIsAbsolutePositioned && hasScroll) {
+  if (placement.startsWith('top') && !isFixed && hasScroll) {
     if (anchorRect.top - placementHeight < 0) {
       return placement
     }
@@ -701,6 +701,58 @@ function solveRelativeAlignmentAxis(options: {
   }
 }
 
+let fixedOffsetParentSupported: boolean | undefined
+
+function supportsFixedOffsetParent(document: Document) {
+  if (fixedOffsetParentSupported !== undefined) return fixedOffsetParentSupported
+  // Older engines report null even when a fixed surface has a containing block.
+  let container = document.createElement('div')
+  container.style.cssText =
+    'all: initial !important; position: absolute !important; left: -10000px !important; top: 0 !important; width: 0 !important; height: 0 !important; transform: translateZ(0) !important; visibility: hidden !important;'
+  let fixed = document.createElement('div')
+  fixed.style.cssText =
+    'all: initial !important; position: fixed !important; left: 0 !important; top: 0 !important; width: 0 !important; height: 0 !important;'
+  container.append(fixed)
+  document.documentElement.append(container)
+  let containingBlock = fixed.offsetParent
+  container.style.setProperty('transform', 'none', 'important')
+  fixedOffsetParentSupported = containingBlock === container && fixed.offsetParent === null
+  container.remove()
+  return fixedOffsetParentSupported
+}
+
+function getPositionOrigin(floating: HTMLElement, isFixed: boolean) {
+  let parent = floating.offsetParent
+  if (!(parent instanceof HTMLElement)) return { left: 0, top: 0 }
+  // Unlike bounding rectangles, layout offsets exclude the surface's own transforms.
+  // They also retain layout offsets hidden by offsetParent's shadow-tree retargeting.
+  let style = getComputedStyle(floating)
+  let left =
+    floating.offsetLeft - Number.parseFloat(style.left) - Number.parseFloat(style.marginLeft)
+  let top = floating.offsetTop - Number.parseFloat(style.top) - Number.parseFloat(style.marginTop)
+  // Layout offsets are integers, so subtracting the used inset and margin can leave a rounding remainder.
+  if (Math.abs(left) < 1) left = 0
+  if (Math.abs(top) < 1) top = 0
+  if (parent !== floating.ownerDocument.body || getComputedStyle(parent).position !== 'static') {
+    let rect = parent.getBoundingClientRect()
+    left +=
+      rect.left +
+      parent.clientLeft +
+      window.scrollX -
+      (parent === floating.ownerDocument.scrollingElement ? 0 : parent.scrollLeft)
+    top +=
+      rect.top +
+      parent.clientTop +
+      window.scrollY -
+      (parent === floating.ownerDocument.scrollingElement ? 0 : parent.scrollTop)
+  }
+  if (isFixed) {
+    left -= window.scrollX
+    top -= window.scrollY
+  }
+  return { left, top }
+}
+
 /**
  * Positions a floating element against a target and tracks geometry, scroll, and resize changes.
  *
@@ -720,6 +772,7 @@ export function anchor(
 ): () => void {
   let lastAnchorRect: DOMRect
   let lastFloatingDimensions: FloatingDimensions
+  let lastFloatingRect: DOMRect
 
   if (!(floating instanceof HTMLElement)) {
     throw new TypeError('anchor() expected a floating HTMLElement')
@@ -740,7 +793,12 @@ export function anchor(
 
   let anchorIsAbsolutePositioned =
     anchorTarget instanceof HTMLElement && getComputedStyle(anchorTarget).position !== 'fixed'
-  let isFixed = floating.hasAttribute('popover') || !anchorIsAbsolutePositioned
+  let adjustPositionOrigin = !floating.hasAttribute('popover') && anchorIsAbsolutePositioned
+  let isFixed =
+    floating.hasAttribute('popover') ||
+    !anchorIsAbsolutePositioned ||
+    (getComputedStyle(floating).position === 'fixed' &&
+      supportsFixedOffsetParent(floating.ownerDocument))
   let animationFrameId = 0
 
   function updatePosition(
@@ -770,7 +828,7 @@ export function anchor(
       placementHeight,
       naturalDimensions.width,
       naturalDimensions.height,
-      anchorIsAbsolutePositioned,
+      isFixed,
       inset,
       offset,
       offsetX,
@@ -897,7 +955,7 @@ export function anchor(
         position.left = constrainToAxis(position.left, dimensions.width, minX, maxX)
       }
 
-      if (!isFixed && window.scrollY > 0 && position.top < viewport.top) {
+      if (adjustPositionOrigin && window.scrollY > 0 && position.top < viewport.top) {
         position.top = viewport.top
       }
 
@@ -936,10 +994,16 @@ export function anchor(
     }
 
     floating.style.position = isFixed ? 'fixed' : 'absolute'
+    if (adjustPositionOrigin) {
+      let origin = getPositionOrigin(floating, isFixed)
+      position.left -= origin.left
+      position.top -= origin.top
+    }
     floating.style.inset = 'auto'
     floating.style.top = `${position.top}px`
     floating.style.left = `${position.left}px`
 
+    lastFloatingRect = floating.getBoundingClientRect()
     lastAnchorRect = anchorRect
     lastFloatingDimensions = dimensions
   }
@@ -951,6 +1015,7 @@ export function anchor(
     let currentDimensions = getFloatingDimensions(floating, relativeTo)
     if (
       hasRectChanged(currentRect, lastAnchorRect) ||
+      hasRectChanged(floating.getBoundingClientRect(), lastFloatingRect, 0.01) ||
       hasFloatingDimensionsChanged(currentDimensions, lastFloatingDimensions)
     ) {
       updatePosition(currentRect, currentDimensions)

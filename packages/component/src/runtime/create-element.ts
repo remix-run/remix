@@ -1,4 +1,5 @@
-import { assertRemixNodes, jsx, normalizeChildren } from './core/vnode.ts'
+import { isRemixNode, jsx, normalizeChildren } from './core/vnode.ts'
+import { invariant } from './invariant.ts'
 import type { ElementProps, ElementType, RemixElement } from './core/vnode.ts'
 
 /**
@@ -20,7 +21,7 @@ export function createElement(
       console.error(new Error('mixin elements must not receive children'))
     }
   } else {
-    assertRemixNodes(children)
+    invariant(children.every(isRemixNode), 'Invalid child node')
     nextProps.children = normalizeChildren(children)
   }
 

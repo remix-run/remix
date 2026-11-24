@@ -1,6 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
-import { navigate, startNavigationListener } from '../runtime/navigation.ts'
+import { navigate } from '../runtime/navigation.ts'
+import { startNavigationListener } from '../runtime/run.ts'
 import type { FrameHandle } from '../runtime/component.ts'
 import type { NavigationEvent } from '../runtime/navigation.ts'
 import type { FrameNavigationOptions, ResolveFrameOptions } from '../runtime/frame-runtime.ts'
@@ -1679,6 +1680,34 @@ describe('navigate', () => {
     controller.abort()
   })
 
+  it('leaves noreferrer links to native navigation', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/public'
+    anchor.rel = 'noopener NOREFERRER'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, { intercept, destinationUrl: anchor.href }),
+    )
+
+    expect(intercept).not.toHaveBeenCalled()
+  })
+
+  it('leaves explicit link referrer policies to native navigation', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let anchor = document.createElement('a')
+    anchor.href = '/public'
+    anchor.referrerPolicy = 'origin'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createAnchorNavigateEvent(anchor, { intercept, destinationUrl: anchor.href }),
+    )
+
+    expect(intercept).not.toHaveBeenCalled()
+  })
+
   it('intercepts SVG anchors without exposing them as HTML origin elements', async (t) => {
     let reloadFrame = mock.fn((frame: FrameHandle, _options?: FrameNavigationOptions) =>
       stubFrames.reloadFrame(frame),
@@ -3192,6 +3221,40 @@ describe('form navigation', () => {
 
     expect(intercept).not.toHaveBeenCalled()
     controller.abort()
+  })
+
+  it('leaves noreferrer forms to native navigation', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    form.rel = 'noreferrer'
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createFormNavigateEvent(form, {
+        intercept,
+        destinationUrl: new URL('/public', window.location.href).href,
+      }),
+    )
+
+    expect(intercept).not.toHaveBeenCalled()
+  })
+
+  it('intercepts forms with a control named getAttribute', (t) => {
+    let dispatchNavigation = startStubNavigationListener(t)
+    let form = document.createElement('form')
+    let input = document.createElement('input')
+    input.name = 'getAttribute'
+    form.append(input)
+    let intercept = mock.fn()
+
+    dispatchNavigation(
+      createFormNavigateEvent(form, {
+        intercept,
+        destinationUrl: new URL('/public', window.location.href).href,
+      }),
+    )
+
+    expect(intercept).toHaveBeenCalledTimes(1)
   })
 
   it('does not intercept dialog forms or forms submitted to a new browsing context', (t) => {

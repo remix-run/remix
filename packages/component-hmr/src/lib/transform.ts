@@ -1,10 +1,12 @@
-import MagicString from 'magic-string'
-import { parseSync } from 'oxc-parser'
 import {
-  SourceMapConsumer,
-  SourceMapGenerator,
-  type RawSourceMap,
-} from 'source-map-js/source-map.js'
+  analyze,
+  type Scope,
+  type ScopeManager,
+  type Variable,
+} from '@typescript-eslint/scope-manager'
+import MagicString from 'magic-string'
+import { parseSync, visitorKeys } from 'oxc-parser'
+import { SourceMapGenerator } from 'source-map-js/source-map.js'
 
 /**
  * Result of analyzing and optionally rewriting a Remix component module for HMR.
@@ -63,10 +65,14 @@ type ComponentMatch = {
   bodyEnd: number
   bodyStart: number
   directExport: boolean
+  statementStart: number | null
+  statementEnd: number | null
   fullEnd: number
   fullStart: number
   name: string
-  params: string
+  params: SourceFragment
+  wrapperParams: string
+  functionExpressionName: string | null
   renderArgument: AstNode
   setupHash: string
   setupStatements: AstNode[]
@@ -79,7 +85,9 @@ type ClientEntryMatch = {
   functionName: string
   functionStart: number
   name: string
-  params: string
+  params: SourceFragment
+  wrapperParams: string
+  functionExpressionName: string | null
   renderArgument: AstNode
   setupHash: string
   setupStatements: AstNode[]
@@ -92,10 +100,13 @@ type TrackedExport = {
   localName: string
 }
 
-type SourceMapHint = {
-  generatedSnippet: string
-  originalSnippet: string
-  originalStart: number
+type SourceFragment = string | MagicString
+
+type SourceEdit = {
+  kind: 'overwrite' | 'prepend' | 'append'
+  start: number
+  end: number
+  fragments: SourceFragment[]
 }
 
 /**
@@ -123,118 +134,181 @@ export function transformComponentsForBrowser(
   }
   let { componentMatches, clientEntryMatches, trackedExports } = matchResult
 
+  let referenceInfo = createReferenceInfo(ast)
+  if (!referenceInfo) return createUnchangedResult(source)
+  let setupBindings = new Map<ComponentMatch | ClientEntryMatch, Variable[]>()
+  for (let match of [...componentMatches, ...clientEntryMatches]) {
+    let bindings = getComponentSetupBindings(match, referenceInfo)
+    if (!bindings) return createUnchangedResult(source)
+    setupBindings.set(match, bindings)
+    let hoistedVarNames = getHoistedSetupVarNames(match, bindings)
+    if (hoistedVarNames.length) {
+      match.setupHash = hashSource([match.setupHash, ...hoistedVarNames].join('\n'))
+    }
+  }
+  let identifiers = {
+    componentHmr: getUnusedName('__remixComponentHmr__', referenceInfo.names),
+    componentRefresh: getUnusedName('__remixComponentRefresh__', referenceInfo.names),
+    componentNames: getUnusedName('__remixComponentHmrComponentNames__', referenceInfo.names),
+    acceptComponentModule: getUnusedName(
+      '__remixComponentHmrAcceptComponentModule__',
+      referenceInfo.names,
+    ),
+    previousExports: getUnusedName('__remixComponentHmrPreviousExports__', referenceInfo.names),
+    invalidationMessage: getUnusedName(
+      '__remixComponentHmrInvalidationMessage__',
+      referenceInfo.names,
+    ),
+  }
   let importSpecifiers = getComponentHmrImportSpecifiers(options.importSource)
-  let rewritten = new MagicString(source)
+  let edits: SourceEdit[] = []
   let componentNames: string[] = []
-  let sourceMapHints: SourceMapHint[] = []
 
   for (let match of componentMatches) {
     componentNames.push(match.name)
 
-    let implementation = createHmrImplementationBody(match, source, options.moduleUrl)
-    let implementationName = `__remixComponentHmrImpl_${match.name}__`
-    let exportPrefix = match.directExport ? 'export ' : ''
-    let replacement = [
-      `function ${implementationName}(${match.params}) ${implementation.body}`,
-      `${exportPrefix}function ${match.name}(${match.params}) {`,
-      `  return __remixComponentHmr__.getCurrentComponentForHmr(${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
-      `}`,
-      `__remixComponentHmr__.registerComponentForHmr(__remixComponentRefresh__, ${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}, ${implementationName}, ${JSON.stringify(
-        match.setupHash,
-      )}, ${match.name});`,
-    ].join('\n')
+    let componentIdentifiers = {
+      ...identifiers,
+      implementation: getUnusedName(`__remixComponentHmrImpl_${match.name}__`, referenceInfo.names),
+      wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, referenceInfo.names),
+    }
 
-    sourceMapHints.push(...implementation.sourceMapHints)
-    rewritten.overwrite(match.fullStart, match.fullEnd, replacement)
+    let implementation = createHmrImplementationBody(
+      match,
+      source,
+      options.moduleUrl,
+      setupBindings.get(match) ?? [],
+      referenceInfo,
+      componentIdentifiers,
+    )
+
+    let implementationSource = createImplementationSource(
+      match,
+      componentIdentifiers.implementation,
+      implementation,
+      match.wrapperParams,
+    )
+    let wrapperSource = [
+      `function ${match.functionExpressionName ?? match.name}(${match.wrapperParams}) {`,
+      `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}).apply(void 0, arguments);`,
+      `}`,
+    ].join('\n')
+    let registrationSource = `const ${componentIdentifiers.wrapper} = ${match.name};\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${componentIdentifiers.componentRefresh}, ${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${JSON.stringify(match.setupHash)}, ${componentIdentifiers.wrapper});`
+    rewriteComponentMatch(edits, match, implementationSource, wrapperSource, registrationSource)
   }
 
   for (let match of clientEntryMatches) {
     componentNames.push(match.name)
 
-    let implementation = createHmrImplementationBody(match, source, options.moduleUrl)
-    let implementationName = `__remixComponentHmrImpl_${match.name}__`
+    let componentIdentifiers = {
+      ...identifiers,
+      implementation: getUnusedName(`__remixComponentHmrImpl_${match.name}__`, referenceInfo.names),
+      wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, referenceInfo.names),
+    }
+
+    let selfWrapper = getComponentSelfBindings(match, referenceInfo).length
+      ? getUnusedName(`__remixComponentHmrSelfWrapper_${match.name}__`, referenceInfo.names)
+      : null
+    let implementation = createHmrImplementationBody(
+      match,
+      source,
+      options.moduleUrl,
+      setupBindings.get(match) ?? [],
+      referenceInfo,
+      componentIdentifiers,
+      selfWrapper ?? componentIdentifiers.wrapper,
+    )
+
     let wrapperSource = [
-      `function ${match.functionName}(${match.params}) {`,
-      `  return __remixComponentHmr__.getCurrentComponentForHmr(${JSON.stringify(
+      `function ${match.functionName}(${match.wrapperParams}) {`,
+      `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(
         options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
+      )}, ${JSON.stringify(match.name)}).apply(void 0, arguments);`,
       `}`,
     ].join('\n')
 
-    rewritten.prependLeft(
-      match.statementStart,
-      `function ${implementationName}(${match.params}) ${implementation.body}\n`,
-    )
-    sourceMapHints.push(...implementation.sourceMapHints)
-    rewritten.overwrite(match.functionStart, match.functionEnd, wrapperSource)
-    rewritten.appendLeft(
-      match.statementEnd,
-      `\n__remixComponentHmr__.registerComponentForHmr(__remixComponentRefresh__, ${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}, ${implementationName}, ${JSON.stringify(
-        match.setupHash,
-      )}, ${match.name});`,
+    edits.push(
+      {
+        kind: 'prepend',
+        start: match.statementStart,
+        end: match.statementStart,
+        fragments: [
+          selfWrapper ? `let ${selfWrapper};\n` : '',
+          ...createImplementationSource(
+            match,
+            componentIdentifiers.implementation,
+            implementation,
+            match.wrapperParams,
+          ),
+          '\n',
+        ],
+      },
+      {
+        kind: 'overwrite',
+        start: match.functionStart,
+        end: match.functionEnd,
+        fragments: [selfWrapper ? `(${selfWrapper} = ${wrapperSource})` : wrapperSource],
+      },
+      {
+        kind: 'append',
+        start: match.statementEnd,
+        end: match.statementEnd,
+        fragments: [
+          `\nconst ${componentIdentifiers.wrapper} = ${match.name};\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${componentIdentifiers.componentRefresh}, ${JSON.stringify(
+            options.moduleUrl,
+          )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${JSON.stringify(
+            match.setupHash,
+          )}, ${componentIdentifiers.wrapper});`,
+        ],
+      },
     )
   }
 
-  rewritten.prepend(
-    [
-      `import { __componentHmrBrowserRuntime__ as __remixComponentHmr__ } from ${JSON.stringify(
-        importSpecifiers.browserRuntimeSpecifier,
-      )};`,
-      `import * as __remixComponentRefresh__ from ${JSON.stringify(importSpecifiers.refreshSpecifier)};`,
-      ``,
-    ].join('\n'),
-  )
-  rewritten.append(
-    [
-      ``,
-      `if (import.meta.hot) {`,
-      `  let __remixComponentHmrComponentNames__ = ${JSON.stringify(componentNames)};`,
-      `  let __remixComponentHmrAcceptComponentModule__ = ${createComponentNamesCheckSource(
-        options.moduleUrl,
-        '__remixComponentHmrComponentNames__',
-        {
-          spaces: 0,
-          clientEntryNames: clientEntryMatches.map((match) => match.name),
-        },
-      )};`,
-      `  let __remixComponentHmrPreviousExports__ = ${createPreviousExportsSource(trackedExports)};`,
-      `  import.meta.hot.accept((module) => {`,
-      `    if (!__remixComponentHmrAcceptComponentModule__) return;`,
-      `    if (module && typeof module === 'object') {`,
-      `      let __remixComponentHmrInvalidationMessage__ = ${createUpdatedExportsCheckSource(
-        'module',
-        '__remixComponentHmrPreviousExports__',
-        '__remixComponentHmrComponentNames__',
-      )};`,
-      `      if (__remixComponentHmrInvalidationMessage__) {`,
-      `        import.meta.hot.invalidate(__remixComponentHmrInvalidationMessage__);`,
-      `        return;`,
-      `      }`,
-      `      __remixComponentHmr__.updateComponentModuleForHmr(__remixComponentRefresh__, ${JSON.stringify(
-        options.moduleUrl,
-      )}, module);`,
-      `    } else {`,
-      `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
-      `    }`,
-      `  });`,
-      `}`,
-    ].join('\n'),
-  )
+  let imports = [
+    `import { __componentHmrBrowserRuntime__ as ${identifiers.componentHmr} } from ${JSON.stringify(
+      importSpecifiers.browserRuntimeSpecifier,
+    )};`,
+    `import * as ${identifiers.componentRefresh} from ${JSON.stringify(importSpecifiers.refreshSpecifier)};`,
+    ``,
+  ].join('\n')
+  let footer = [
+    ``,
+    `if (import.meta.hot) {`,
+    `  let ${identifiers.componentNames} = ${JSON.stringify(componentNames)};`,
+    `  let ${identifiers.acceptComponentModule} = ${createComponentNamesCheckSource(
+      options.moduleUrl,
+      identifiers.componentNames,
+      {
+        spaces: 0,
+        clientEntryNames: clientEntryMatches.map((match) => match.name),
+      },
+    )};`,
+    `  let ${identifiers.previousExports} = ${createPreviousExportsSource(trackedExports)};`,
+    `  import.meta.hot.accept((module) => {`,
+    `    if (!${identifiers.acceptComponentModule}) return;`,
+    `    if (module && typeof module === 'object') {`,
+    `      let ${identifiers.invalidationMessage} = ${identifiers.componentHmr}.getComponentModuleInvalidationMessage(module, ${identifiers.previousExports}, ${identifiers.componentNames});`,
+    `      if (${identifiers.invalidationMessage}) {`,
+    `        import.meta.hot.invalidate(${identifiers.invalidationMessage});`,
+    `        return;`,
+    `      }`,
+    `      ${identifiers.componentHmr}.updateComponentModuleForHmr(${identifiers.componentRefresh}, ${JSON.stringify(
+      options.moduleUrl,
+    )}, module);`,
+    `    } else {`,
+    `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
+    `    }`,
+    `  });`,
+    `}`,
+  ].join('\n')
 
-  let code = rewritten.toString()
+  let fragments = assembleModule(source, edits, imports, footer)
+  let code = fragments.join('')
 
   return {
     code,
     componentNames,
-    map: options.sourceMap
-      ? generateSourceMap(rewritten, code, source, options.moduleUrl, sourceMapHints)
-      : null,
+    map: options.sourceMap ? generateSourceMap(fragments, code, source, options.moduleUrl) : null,
     transformed: true,
   }
 }
@@ -264,117 +338,162 @@ export function transformComponentsForServer(
   }
   let { componentMatches, clientEntryMatches, trackedExports } = matchResult
 
+  let referenceInfo = createReferenceInfo(ast)
+  if (!referenceInfo) return createUnchangedResult(source)
+  for (let match of [...componentMatches, ...clientEntryMatches]) {
+    // Rewriting a named self-binding cannot preserve names looked up by direct eval.
+    if (match.functionExpressionName && !getComponentSetupBindings(match, referenceInfo)) {
+      return createUnchangedResult(source)
+    }
+  }
+  let names = referenceInfo.names
+  let identifiers = {
+    componentHmr: getUnusedName('__remixComponentHmr__', names),
+    componentNames: getUnusedName('__remixComponentHmrComponentNames__', names),
+    acceptComponentModule: getUnusedName('__remixComponentHmrAcceptComponentModule__', names),
+    previousExports: getUnusedName('__remixComponentHmrPreviousExports__', names),
+    invalidationMessage: getUnusedName('__remixComponentHmrInvalidationMessage__', names),
+  }
   let importSpecifiers = getComponentHmrImportSpecifiers(options.importSource)
-  let rewritten = new MagicString(source)
+  let edits: SourceEdit[] = []
   let componentNames: string[] = []
-  let sourceMapHints: SourceMapHint[] = []
 
   for (let match of componentMatches) {
     componentNames.push(match.name)
 
-    let implementationName = `__remixComponentHmrImpl_${match.name}__`
-    let exportPrefix = match.directExport ? 'export ' : ''
-    let bodySource = source.slice(match.bodyStart, match.bodyEnd)
-    let replacement = [
-      `function ${implementationName}(${match.params}) ${bodySource}`,
-      `${exportPrefix}function ${match.name}(${match.params}) {`,
-      `  return __remixComponentHmr__.getCurrentComponentForHmr(${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
-      `}`,
-      `__remixComponentHmr__.registerComponentForHmr(${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}, ${implementationName});`,
-    ].join('\n')
+    let componentIdentifiers = {
+      ...identifiers,
+      implementation: getUnusedName(`__remixComponentHmrImpl_${match.name}__`, names),
+      wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, names),
+      self: getUnusedName(`__remixComponentHmrSelf_${match.name}__`, names),
+    }
 
-    sourceMapHints.push({
-      generatedSnippet: bodySource,
-      originalSnippet: bodySource,
-      originalStart: match.bodyStart,
-    })
-    rewritten.overwrite(match.fullStart, match.fullEnd, replacement)
+    let selfBindings = getComponentSelfBindings(match, referenceInfo)
+    let bodySnippet = rewriteReferences(
+      { type: 'BlockStatement', start: match.bodyStart, end: match.bodyEnd },
+      selfBindings,
+      source,
+      componentIdentifiers.self,
+      referenceInfo,
+    )
+    let bodySource = [bodySnippet]
+    let implementationSource = createImplementationSource(
+      match,
+      componentIdentifiers.implementation,
+      bodySource,
+      rewriteSelfParams(match, source, selfBindings, componentIdentifiers.self, referenceInfo),
+    )
+    let wrapperSource = [
+      `function ${match.functionExpressionName ?? match.name}(${match.wrapperParams}) {`,
+      `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}).apply(void 0, arguments);`,
+      `}`,
+    ].join('\n')
+    let registrationSource = `const ${componentIdentifiers.wrapper} = ${match.name};\n${createSelfBindingSource(selfBindings, componentIdentifiers.self, componentIdentifiers.wrapper)}\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation});`
+    rewriteComponentMatch(edits, match, implementationSource, wrapperSource, registrationSource)
   }
 
   for (let match of clientEntryMatches) {
     componentNames.push(match.name)
 
-    let implementationName = `__remixComponentHmrImpl_${match.name}__`
-    let bodySource = source.slice(match.bodyStart, match.bodyEnd)
+    let componentIdentifiers = {
+      ...identifiers,
+      implementation: getUnusedName(`__remixComponentHmrImpl_${match.name}__`, names),
+      wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, names),
+      self: getUnusedName(`__remixComponentHmrSelf_${match.name}__`, names),
+    }
+
+    let selfBindings = getComponentSelfBindings(match, referenceInfo)
+    let selfWrapper = selfBindings.length
+      ? getUnusedName(`__remixComponentHmrSelfWrapper_${match.name}__`, names)
+      : null
+    let bodySnippet = rewriteReferences(
+      { type: 'BlockStatement', start: match.bodyStart, end: match.bodyEnd },
+      selfBindings,
+      source,
+      componentIdentifiers.self,
+      referenceInfo,
+    )
+    let bodySource = [bodySnippet]
     let wrapperSource = [
-      `function ${match.functionName}(${match.params}) {`,
-      `  return __remixComponentHmr__.getCurrentComponentForHmr(${JSON.stringify(
+      `function ${match.functionName}(${match.wrapperParams}) {`,
+      `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(
         options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
+      )}, ${JSON.stringify(match.name)}).apply(void 0, arguments);`,
       `}`,
     ].join('\n')
 
-    rewritten.prependLeft(
-      match.statementStart,
-      `function ${implementationName}(${match.params}) ${bodySource}\n`,
+    let implementationSource = createImplementationSource(
+      match,
+      componentIdentifiers.implementation,
+      bodySource,
+      rewriteSelfParams(match, source, selfBindings, componentIdentifiers.self, referenceInfo),
     )
-    sourceMapHints.push({
-      generatedSnippet: bodySource,
-      originalSnippet: bodySource,
-      originalStart: match.bodyStart,
-    })
-    rewritten.overwrite(match.functionStart, match.functionEnd, wrapperSource)
-    rewritten.appendLeft(
-      match.statementEnd,
-      `\n__remixComponentHmr__.registerComponentForHmr(${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}, ${implementationName});`,
+    edits.push(
+      {
+        kind: 'append',
+        start: match.statementStart,
+        end: match.statementStart,
+        fragments: [selfWrapper ? `let ${selfWrapper};\n` : '', ...implementationSource, '\n'],
+      },
+      {
+        kind: 'overwrite',
+        start: match.functionStart,
+        end: match.functionEnd,
+        fragments: [selfWrapper ? `(${selfWrapper} = ${wrapperSource})` : wrapperSource],
+      },
+      {
+        kind: 'append',
+        start: match.statementEnd,
+        end: match.statementEnd,
+        fragments: [
+          `\nconst ${componentIdentifiers.wrapper} = ${match.name};\n${createSelfBindingSource(selfBindings, componentIdentifiers.self, selfWrapper ?? componentIdentifiers.wrapper)}\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${JSON.stringify(
+            options.moduleUrl,
+          )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation});`,
+        ],
+      },
     )
   }
 
-  rewritten.prepend(
-    [
-      `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from ${JSON.stringify(
-        importSpecifiers.serverRuntimeSpecifier,
-      )};`,
-      ``,
-    ].join('\n'),
-  )
-  rewritten.append(
-    [
-      ``,
-      `if (import.meta.hot) {`,
-      `  let __remixComponentHmrComponentNames__ = ${JSON.stringify(componentNames)};`,
-      `  let __remixComponentHmrAcceptComponentModule__ = ${createComponentNamesCheckSource(
-        options.moduleUrl,
-        '__remixComponentHmrComponentNames__',
-        {
-          spaces: 0,
-          clientEntryNames: clientEntryMatches.map((match) => match.name),
-        },
-      )};`,
-      `  let __remixComponentHmrPreviousExports__ = ${createPreviousExportsSource(trackedExports)};`,
-      `  import.meta.hot.accept((module) => {`,
-      `    if (!__remixComponentHmrAcceptComponentModule__) return;`,
-      `    if (!module || typeof module !== 'object') {`,
-      `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
-      `      return;`,
-      `    }`,
-      `    let __remixComponentHmrInvalidationMessage__ = ${createUpdatedExportsCheckSource(
-        'module',
-        '__remixComponentHmrPreviousExports__',
-        '__remixComponentHmrComponentNames__',
-      )};`,
-      `    if (__remixComponentHmrInvalidationMessage__) {`,
-      `      import.meta.hot.invalidate(__remixComponentHmrInvalidationMessage__);`,
-      `    }`,
-      `  });`,
-      `}`,
-    ].join('\n'),
-  )
+  let imports = [
+    `import { __componentHmrServerRuntime__ as ${identifiers.componentHmr} } from ${JSON.stringify(
+      importSpecifiers.serverRuntimeSpecifier,
+    )};`,
+    ``,
+  ].join('\n')
+  let footer = [
+    ``,
+    `if (import.meta.hot) {`,
+    `  let ${identifiers.componentNames} = ${JSON.stringify(componentNames)};`,
+    `  let ${identifiers.acceptComponentModule} = ${createComponentNamesCheckSource(
+      options.moduleUrl,
+      identifiers.componentNames,
+      {
+        spaces: 0,
+        clientEntryNames: clientEntryMatches.map((match) => match.name),
+      },
+    )};`,
+    `  let ${identifiers.previousExports} = ${createPreviousExportsSource(trackedExports)};`,
+    `  import.meta.hot.accept((module) => {`,
+    `    if (!${identifiers.acceptComponentModule}) return;`,
+    `    if (!module || typeof module !== 'object') {`,
+    `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
+    `      return;`,
+    `    }`,
+    `    let ${identifiers.invalidationMessage} = ${identifiers.componentHmr}.getComponentModuleInvalidationMessage(module, ${identifiers.previousExports}, ${identifiers.componentNames});`,
+    `    if (${identifiers.invalidationMessage}) {`,
+    `      import.meta.hot.invalidate(${identifiers.invalidationMessage});`,
+    `    }`,
+    `  });`,
+    `}`,
+  ].join('\n')
 
-  let code = rewritten.toString()
+  let fragments = assembleModule(source, edits, imports, footer)
+  let code = fragments.join('')
 
   return {
     code,
     componentNames,
-    map: options.sourceMap
-      ? generateSourceMap(rewritten, code, source, options.moduleUrl, sourceMapHints)
-      : null,
+    map: options.sourceMap ? generateSourceMap(fragments, code, source, options.moduleUrl) : null,
     transformed: true,
   }
 }
@@ -391,85 +510,118 @@ function getComponentHmrImportSpecifiers(importSource: string): {
   }
 }
 
+function assembleModule(
+  source: string,
+  edits: readonly SourceEdit[],
+  imports: string,
+  footer: string,
+): SourceFragment[] {
+  // Match the existing transform: the final overwrite of a shared statement survives.
+  let overwrites = new Map<string, SourceEdit>()
+  for (let edit of edits) {
+    if (edit.kind === 'overwrite') overwrites.set(`${edit.start}:${edit.end}`, edit)
+  }
+  let placements = { prepend: 0, append: 1, overwrite: 2 }
+  let ordered = edits
+    .filter(
+      (edit) => edit.kind !== 'overwrite' || overwrites.get(`${edit.start}:${edit.end}`) === edit,
+    )
+    .map((edit, index) => ({ edit, index }))
+    .sort(
+      (left, right) =>
+        left.edit.start - right.edit.start ||
+        placements[left.edit.kind] - placements[right.edit.kind] ||
+        (left.edit.kind === 'prepend' ? right.index - left.index : left.index - right.index),
+    )
+  let fragments: SourceFragment[] = [imports]
+  let original = new MagicString(source)
+  let offset = 0
+  for (let { edit } of ordered) {
+    if (edit.start < offset) throw new Error('Overlapping component HMR edits')
+    if (edit.start > offset) fragments.push(original.snip(offset, edit.start))
+    fragments.push(...edit.fragments)
+    offset = edit.end
+  }
+  if (offset < source.length) fragments.push(original.snip(offset, source.length))
+  fragments.push(footer)
+  return fragments
+}
+
 function generateSourceMap(
-  rewritten: MagicString,
+  fragments: readonly SourceFragment[],
   code: string,
   source: string,
   sourceName: string,
-  hints: readonly SourceMapHint[],
 ): string {
-  let sourceMap = rewritten.generateMap({
-    hires: true,
-    includeContent: true,
-    source: sourceName,
-  })
-
-  if (hints.length === 0) return sourceMap.toString()
-
-  let consumer = new SourceMapConsumer(JSON.parse(sourceMap.toString()) as RawSourceMap)
-  let generator = SourceMapGenerator.fromSourceMap(consumer)
-
-  let generatedSearchStart = 0
-  for (let hint of hints) {
-    let generatedStart = code.indexOf(hint.generatedSnippet, generatedSearchStart)
-    if (generatedStart === -1) {
-      generatedStart = code.indexOf(hint.generatedSnippet)
+  let generator = new SourceMapGenerator()
+  let codePositions = createSourceMapPositions(code)
+  let sourcePositions = createSourceMapPositions(source)
+  let offset = 0
+  for (let fragment of fragments) {
+    let content = fragment.toString()
+    if (content.length === 0) continue
+    // Each fragment starts unmapped until an authored mapping supplies its location.
+    generator.addMapping({ generated: codePositions.getPosition(offset) })
+    if (typeof fragment !== 'string') {
+      let fragmentPositions = createSourceMapPositions(content)
+      let map = fragment.generateDecodedMap({ hires: true })
+      for (let [line, segments] of map.mappings.entries()) {
+        for (let segment of segments) {
+          let generated = codePositions.getPosition(
+            offset + fragmentPositions.getIndexFromLfPosition(line + 1, segment[0]),
+          )
+          generator.addMapping(
+            segment.length === 1
+              ? { generated }
+              : {
+                  generated,
+                  original: sourcePositions.getPosition(
+                    sourcePositions.getIndexFromLfPosition(segment[2] + 1, segment[3]),
+                  ),
+                  source: sourceName,
+                },
+          )
+        }
+      }
     }
-    if (generatedStart === -1) continue
-
-    addSourceMapHint(generator, code, source, sourceName, hint, generatedStart)
-    generatedSearchStart = generatedStart + hint.generatedSnippet.length
+    offset += content.length
   }
-
-  return JSON.stringify(generator.toJSON())
+  generator.setSourceContent(sourceName, source)
+  return generator.toString()
 }
 
-function addSourceMapHint(
-  generator: SourceMapGenerator,
-  generatedSource: string,
-  originalSource: string,
-  sourceName: string,
-  hint: SourceMapHint,
-  generatedStart: number,
-): void {
-  let generatedLines = hint.generatedSnippet.split('\n')
-  let originalLines = hint.originalSnippet.split('\n')
-  let generatedOffset = 0
-  let originalOffset = 0
-
-  for (let index = 0; index < Math.min(generatedLines.length, originalLines.length); index++) {
-    let generatedLine = generatedLines[index] ?? ''
-    let originalLine = originalLines[index] ?? ''
-    let columns = Math.min(generatedLine.length, originalLine.length)
-
-    for (let column = 0; column < columns; column++) {
-      if (generatedLine[column] !== originalLine[column]) continue
-
-      generator.addMapping({
-        generated: getLineAndColumnAtIndex(
-          generatedSource,
-          generatedStart + generatedOffset + column,
-        ),
-        original: getLineAndColumnAtIndex(
-          originalSource,
-          hint.originalStart + originalOffset + column,
-        ),
-        source: sourceName,
-      })
+function createSourceMapPositions(source: string) {
+  // MagicString counts LF only; translate through offsets into JavaScript line positions.
+  let lfLineStarts = [0]
+  let lineStarts = [0]
+  for (let index = 0; index < source.length; index++) {
+    let char = source[index]
+    if (char === '\n') lfLineStarts.push(index + 1)
+    if (
+      char === '\n' ||
+      (char === '\r' && source[index + 1] !== '\n') ||
+      char === '\u2028' ||
+      char === '\u2029'
+    ) {
+      lineStarts.push(index + 1)
     }
-
-    generatedOffset += generatedLine.length + 1
-    originalOffset += originalLine.length + 1
   }
-
-  generator.setSourceContent(sourceName, originalSource)
-}
-
-function getLineAndColumnAtIndex(source: string, index: number): { column: number; line: number } {
-  let lines = source.slice(0, index).split('\n')
   return {
-    column: lines.at(-1)?.length ?? 0,
-    line: lines.length,
+    getIndexFromLfPosition(line: number, column: number): number {
+      let start = lfLineStarts[line - 1]
+      if (start === undefined) throw new Error('Unexpected component HMR source map position')
+      return start + column
+    },
+    getPosition(index: number): { line: number; column: number } {
+      let low = 0
+      let high = lineStarts.length
+      while (low + 1 < high) {
+        let middle = Math.floor((low + high) / 2)
+        if (lineStarts[middle] <= index) low = middle
+        else high = middle
+      }
+      return { line: low + 1, column: index - lineStarts[low] }
+    },
   }
 }
 
@@ -478,6 +630,8 @@ function parseModule(source: string): AstNode | null {
     let result = parseSync('module.tsx', source, {
       lang: 'tsx',
       sourceType: 'module',
+      astType: 'ts',
+      range: true,
     })
     return isAstNode(result.program) ? result.program : null
   } catch {
@@ -542,8 +696,10 @@ function findMatches(
       let componentMatch = getVariableComponentMatch(declaration, source, {
         directExport,
         exportedNames,
-        fullEnd: directExport ? item.end : statement.end,
-        fullStart: directExport ? item.start : statement.start,
+        fullEnd: declaration.end,
+        fullStart: declaration.start,
+        statementStart: directExport ? item.start : statement.start,
+        statementEnd: directExport ? item.end : statement.end,
       })
       if (componentMatch) componentMatches.push(componentMatch)
     }
@@ -623,38 +779,9 @@ function createPreviousExportsSource(trackedExports: readonly TrackedExport[]): 
     `{`,
     ...trackedExports.map(
       (trackedExport) =>
-        `  ${JSON.stringify(trackedExport.exportedName)}: ${trackedExport.localName},`,
+        `  [${JSON.stringify(trackedExport.exportedName)}]: ${trackedExport.localName},`,
     ),
     `}`,
-  ].join('\n')
-}
-
-function createUpdatedExportsCheckSource(
-  nextExportsName: string,
-  previousExportsName: string,
-  componentExportNamesName: string,
-): string {
-  return [
-    `(() => {`,
-    `  let __remixComponentHmrPreviousExportNames__ = Object.keys(${previousExportsName});`,
-    `  for (let name of __remixComponentHmrPreviousExportNames__) {`,
-    `    if (!Object.prototype.hasOwnProperty.call(${nextExportsName}, name)) {`,
-    `      return 'Updated component module removed export "' + name + '"';`,
-    `    }`,
-    `  }`,
-    `  for (let name of Object.keys(${nextExportsName})) {`,
-    `    if (!Object.prototype.hasOwnProperty.call(${previousExportsName}, name)) {`,
-    `      return 'Updated component module added export "' + name + '"';`,
-    `    }`,
-    `  }`,
-    `  for (let name of __remixComponentHmrPreviousExportNames__) {`,
-    `    if (${componentExportNamesName}.includes(name)) continue;`,
-    `    if (${previousExportsName}[name] !== ${nextExportsName}[name]) {`,
-    `      return 'Updated component module changed non-component export "' + name + '"';`,
-    `    }`,
-    `  }`,
-    `  return null;`,
-    `})()`,
   ].join('\n')
 }
 
@@ -678,6 +805,8 @@ function getFunctionDeclarationMatch(
     fullStart: options.fullStart,
     name,
     params: getParamsSource(node, source),
+    wrapperParams: getWrapperParamsSource(node, source),
+    functionExpressionName: null,
     source,
   })
 }
@@ -690,6 +819,8 @@ function getVariableComponentMatch(
     exportedNames: ReadonlySet<string>
     fullEnd: number
     fullStart: number
+    statementStart: number
+    statementEnd: number
   },
 ): ComponentMatch | null {
   let name = getIdentifierName(getNode(node, 'id'))
@@ -703,8 +834,12 @@ function getVariableComponentMatch(
     directExport: options.directExport,
     fullEnd: options.fullEnd,
     fullStart: options.fullStart,
+    statementStart: options.statementStart,
+    statementEnd: options.statementEnd,
     name,
     params: getParamsSource(init, source),
+    wrapperParams: getWrapperParamsSource(init, source),
+    functionExpressionName: getIdentifierName(getNode(init, 'id')),
     source,
   })
 }
@@ -739,8 +874,15 @@ function getClientEntryMatch(
     functionStart: componentFunction.start,
     name,
     params: getParamsSource(componentFunction, source),
+    wrapperParams: getWrapperParamsSource(componentFunction, source),
+    functionExpressionName: getIdentifierName(getNode(componentFunction, 'id')),
     renderArgument: getRenderArgument(body)!,
-    setupHash: getSetupHash(body, source),
+    setupHash: getSetupHash(
+      body,
+      source,
+      getParamsSource(componentFunction, source),
+      getIdentifierName(getNode(componentFunction, 'id')),
+    ),
     setupStatements: getSetupStatements(body),
     statementEnd: options.statementEnd,
     statementStart: options.statementStart,
@@ -762,10 +904,14 @@ function getClientEntryComponentFunction(call: AstNode): AstNode | null {
 function createComponentMatch(options: {
   body: AstNode | null
   directExport: boolean
+  statementStart?: number
+  statementEnd?: number
   fullEnd: number
   fullStart: number
   name: string
-  params: string
+  params: SourceFragment
+  wrapperParams: string
+  functionExpressionName: string | null
   source: string
 }): ComponentMatch | null {
   if (!options.body) return null
@@ -776,404 +922,460 @@ function createComponentMatch(options: {
     bodyEnd: options.body.end,
     bodyStart: options.body.start,
     directExport: options.directExport,
+    statementStart: options.statementStart ?? null,
+    statementEnd: options.statementEnd ?? null,
     fullEnd: options.fullEnd,
     fullStart: options.fullStart,
     name: options.name,
     params: options.params,
+    wrapperParams: options.wrapperParams,
+    functionExpressionName: options.functionExpressionName,
     renderArgument,
-    setupHash: getSetupHash(options.body, options.source),
+    setupHash: getSetupHash(
+      options.body,
+      options.source,
+      options.params,
+      options.functionExpressionName,
+    ),
     setupStatements: getSetupStatements(options.body),
   }
 }
 
-function createHmrImplementationBody(
-  match: Pick<ComponentMatch, 'name' | 'renderArgument' | 'setupHash' | 'setupStatements'>,
-  source: string,
-  moduleUrl: string,
-): { body: string; sourceMapHints: SourceMapHint[] } {
-  let setupStateNames = getSetupStateNames(match.setupStatements)
-  let renderReferencedDeclarationNames = getRenderReferencedSetupDeclarationNames(
-    match.renderArgument,
-    match.setupStatements,
-  )
-  let renderStateNames = new Set(setupStateNames)
-  for (let name of renderReferencedDeclarationNames) renderStateNames.add(name)
-  let setupSource = createSetupSource(
-    match.setupStatements,
-    setupStateNames,
-    renderReferencedDeclarationNames,
-    source,
-  )
-  let renderSource = rewriteReferences(match.renderArgument, renderStateNames, source)
+type ReferenceInfo = {
+  manager: ScopeManager
+  names: Set<string>
+  nodes: Map<number, { node: AstNode; parent: AstNode | null }>
+  parents: WeakMap<AstNode, AstNode | null>
+}
 
-  return {
-    body: [
-      `{`,
-      `  let __remixComponentHmrHandle__ = __remixComponentHmr__.getComponentHandleForHmr(arguments[0], ${JSON.stringify(
-        moduleUrl,
-      )}, ${JSON.stringify(match.name)});`,
-      `  let __s__ = __remixComponentHmr__.getComponentHmrState(__remixComponentHmrHandle__);`,
-      `  if (__remixComponentHmr__.setupComponentForHmr(__remixComponentHmrHandle__, __s__, ${JSON.stringify(
-        moduleUrl,
-      )}, ${JSON.stringify(match.name)}, ${JSON.stringify(match.setupHash)}, (__s__) => {`,
-      indent(setupSource, 4),
-      `  }, ${match.name})) {`,
-      `    return () => null;`,
-      `  }`,
-      `  __remixComponentHmr__.registerComponentRenderForHmr(__remixComponentRefresh__, ${JSON.stringify(
-        moduleUrl,
-      )}, ${JSON.stringify(match.name)}, __remixComponentHmrHandle__, ${renderSource}, ${match.name});`,
-      `  return function () {`,
-      `    return __remixComponentHmr__.callComponentRenderForHmr(__remixComponentHmrHandle__, ...arguments);`,
-      `  };`,
-      `}`,
-    ].join('\n'),
-    sourceMapHints: [
-      {
-        generatedSnippet: renderSource,
-        originalSnippet: source.slice(match.renderArgument.start, match.renderArgument.end),
-        originalStart: match.renderArgument.start,
-      },
-    ],
+function createReferenceInfo(program: AstNode): ReferenceInfo | null {
+  // Oxc's astType: 'ts' output uses TS-ESTree shapes. scope-manager only consumes node
+  // shapes and ranges, not the loc/comments/tokens metadata required by its types.
+  let manager: ScopeManager
+  try {
+    manager = analyze(program as unknown as Parameters<typeof analyze>[0], {
+      sourceType: 'module',
+      childVisitorKeys: visitorKeys,
+      lib: [],
+      jsxPragma: null,
+    })
+  } catch {
+    return null
+  }
+  resolveImplicitArguments(manager)
+  return { manager, ...getAstInfo(program) }
+}
+
+function resolveImplicitArguments(manager: ScopeManager): void {
+  // scope-manager excludes implicit arguments when resolving parameter defaults against
+  // body declarations. Unlike body declarations, this binding exists while defaults run.
+  for (let scope of manager.scopes) {
+    for (let reference of scope.references) {
+      if (!reference.isValueReference || reference.identifier.name !== 'arguments') continue
+      let owner: Scope | null = reference.from
+      while (
+        owner &&
+        (owner.type !== 'function' || owner.block.type === 'ArrowFunctionExpression')
+      ) {
+        owner = owner.upper
+      }
+      let binding = owner?.set.get('arguments')
+      if (!binding || binding === reference.resolved) continue
+      if (reference.resolved) {
+        let index = reference.resolved.references.indexOf(reference)
+        if (index !== -1) reference.resolved.references.splice(index, 1)
+      }
+      reference.resolved = binding
+      binding.references.push(reference)
+      for (let scope: Scope | null = owner; scope; scope = scope.upper) {
+        scope.through = scope.through.filter((item) => item !== reference)
+      }
+    }
   }
 }
 
-function createSetupSource(
-  statements: readonly AstNode[],
-  setupStateNames: ReadonlySet<string>,
-  renderReferencedDeclarationNames: ReadonlySet<string>,
-  source: string,
-): string {
-  let lines: string[] = []
-  let initializedStateNames = new Set<string>()
-  let hoistedFunctionStateNames = new Set<string>()
-
-  // Function declarations initialize shared var bindings before any setup statements run.
-  for (let statement of statements) {
-    if (statement.type !== 'FunctionDeclaration') continue
-    let name = getIdentifierName(getNode(statement, 'id'))
-    if (name && setupStateNames.has(name) && renderReferencedDeclarationNames.has(name)) {
-      hoistedFunctionStateNames.add(name)
+function getAstInfo(program: AstNode): Omit<ReferenceInfo, 'manager'> {
+  let names = new Set<string>()
+  let nodes: ReferenceInfo['nodes'] = new Map()
+  let parents: ReferenceInfo['parents'] = new WeakMap()
+  function visit(node: AstNode, parent: AstNode | null): void {
+    nodes.set(node.start, { node, parent })
+    parents.set(node, parent)
+    let name = getIdentifierName(node)
+    if (name) names.add(name)
+    for (let key of visitorKeys[node.type] ?? []) {
+      let child = getNode(node, key)
+      if (child) visit(child, node)
+      else for (let item of getNodeArray(node, key)) visit(item, node)
     }
   }
-  for (let name of hoistedFunctionStateNames) {
-    lines.push(`__s__.${name} = ${name};`)
+  visit(program, null)
+  return { names, nodes, parents }
+}
+
+function getUnusedName(base: string, names: Set<string>): string {
+  let name = base
+  let suffix = 0
+  while (names.has(name)) name = `${base}${++suffix}`
+  names.add(name)
+  return name
+}
+
+function getComponentSetupBindings(
+  match: ComponentMatch | ClientEntryMatch,
+  referenceInfo: ReferenceInfo,
+): Variable[] | null {
+  let scope = referenceInfo.manager.scopes.find(
+    (scope) =>
+      scope.type === 'function' &&
+      isAstNode(scope.block) &&
+      getNode(scope.block, 'body')?.start === match.bodyStart,
+  )
+  if (!scope) return null
+  for (let { node, parent } of referenceInfo.nodes.values()) {
+    if (
+      node.type !== 'ReturnStatement' ||
+      getNode(node, 'argument') === match.renderArgument ||
+      node.start >= match.renderArgument.start ||
+      node.start < match.bodyStart
+    )
+      continue
+    while (
+      parent &&
+      !['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression'].includes(
+        parent.type,
+      )
+    )
+      parent = referenceInfo.parents.get(parent) ?? null
+    if (parent && getNode(parent, 'body')?.start === match.bodyStart) return null
   }
-
-  for (let statement of statements) {
-    if (isSetupRuntimeDeclaration(statement)) {
-      let name = getIdentifierName(getNode(statement, 'id'))
-      if (name && renderReferencedDeclarationNames.has(name)) {
-        lines.push(rewriteReferences(statement, setupStateNames, source))
-        if (!hoistedFunctionStateNames.has(name)) lines.push(`__s__.${name} = ${name};`)
-        continue
-      }
+  let inSetup = (start: number, end: number) =>
+    match.setupStatements.some((statement) => start >= statement.start && end <= statement.end)
+  let bindings: Variable[] = []
+  // Named function expressions have an immutable self-binding in the enclosing name scope.
+  if (scope.upper?.type === 'function-expression-name') {
+    for (let variable of scope.upper.variables) {
+      if (variable.references.some((ref) => ref.isValueReference)) bindings.push(variable)
     }
-
-    if (statement.type === 'VariableDeclaration') {
-      for (let declaration of getNodeArray(statement, 'declarations')) {
-        let pattern = getNode(declaration, 'id')
-        if (!pattern) continue
-
-        let names = getBindingNames(pattern)
-        names = names.filter((name) => setupStateNames.has(name))
-        if (names.length === 0) continue
-
-        let init = getNode(declaration, 'init')
-        if (pattern?.type === 'Identifier') {
-          let name = names[0]
-          if (name === undefined) continue
-          if (!init && statement.kind === 'var' && hoistedFunctionStateNames.has(name)) {
-            initializedStateNames.add(name)
-            continue
-          }
-          lines.push(
-            init
-              ? `__s__.${name} = ${rewriteReferences(init, initializedStateNames, source, setupStateNames)};`
-              : `__s__.${name} = undefined;`,
-          )
-          initializedStateNames.add(name)
-          continue
-        }
-
-        lines.push(`{`)
-        let patternSource = rewriteBindingPatternReferences(
-          pattern,
-          initializedStateNames,
-          setupStateNames,
-          source,
-        )
-        lines.push(
-          init
-            ? `  let ${patternSource} = ${rewriteReferences(init, initializedStateNames, source, setupStateNames)};`
-            : `  let ${patternSource};`,
-        )
-        for (let name of names) {
-          lines.push(`  __s__.${name} = ${name};`)
-          initializedStateNames.add(name)
-        }
-        lines.push(`}`)
-      }
+  }
+  for (let variable of scope.variables) {
+    // TypeScript's this parameter is erased and has no runtime binding.
+    if (!variable.isValueVariable || variable.name === 'this') continue
+    if (variable.identifiers.length === 0) {
+      // The implicit arguments binding has references but no declaration identifier.
+      if (variable.name === 'arguments' && variable.references.length > 0) bindings.push(variable)
       continue
     }
-
-    lines.push(rewriteReferences(statement, initializedStateNames, source, setupStateNames))
+    let retained = variable.identifiers.some((id) => inSetup(...id.range))
+    let parameter = variable.defs.some((def) => def.type === 'Parameter')
+    let hoisted = variable.defs.some((def) => def.type === 'Variable' && def.parent.kind === 'var')
+    if (retained || parameter || hoisted) bindings.push(variable)
+    else if (
+      variable.references.some(
+        (ref) =>
+          ref.isValueReference &&
+          (inSetup(...ref.identifier.range) ||
+            (ref.identifier.range[0] >= match.renderArgument.start &&
+              ref.identifier.range[1] <= match.renderArgument.end)),
+      )
+    )
+      return null
   }
+  // Direct eval can reference lexical bindings that never appear as identifier nodes.
+  for (let nestedScope of referenceInfo.manager.scopes) {
+    for (let ref of nestedScope.references) {
+      let [start, end] = ref.identifier.range
+      if (
+        ref.resolved ||
+        ref.identifier.name !== 'eval' ||
+        start < scope.block.range[0] ||
+        end > match.bodyEnd
+      )
+        continue
+      let entry = referenceInfo.nodes.get(start)
+      if (entry) {
+        let expression = entry.node
+        let parent = entry.parent
+        while (
+          parent &&
+          [
+            'ParenthesizedExpression',
+            'TSAsExpression',
+            'TSSatisfiesExpression',
+            'TSTypeAssertion',
+            'TSNonNullExpression',
+            'TSInstantiationExpression',
+          ].includes(parent.type) &&
+          getNode(parent, 'expression') === expression
+        ) {
+          expression = parent
+          parent = referenceInfo.parents.get(parent) ?? null
+        }
+        if (parent?.type === 'CallExpression' && getNode(parent, 'callee') === expression)
+          return null
+      }
+    }
+  }
+  return bindings
+}
 
-  return lines.join('\n')
+function getHoistedSetupVarNames(
+  match: ComponentMatch | ClientEntryMatch,
+  bindings: readonly Variable[],
+): string[] {
+  return bindings
+    .filter((binding) =>
+      binding.defs.some(
+        (def) =>
+          def.type === 'Variable' &&
+          def.parent.kind === 'var' &&
+          !match.setupStatements.some(
+            (statement) =>
+              def.name.range[0] >= statement.start && def.name.range[1] <= statement.end,
+          ),
+      ),
+    )
+    .map((binding) => binding.name)
+}
+
+function createHmrImplementationBody(
+  match: ComponentMatch | ClientEntryMatch,
+  source: string,
+  moduleUrl: string,
+  bindings: readonly Variable[],
+  referenceInfo: ReferenceInfo,
+  moduleIdentifiers: {
+    componentHmr: string
+    componentRefresh: string
+    implementation: string
+    wrapper: string
+  },
+  selfWrapper = moduleIdentifiers.wrapper,
+): SourceFragment[] {
+  let names = new Set(referenceInfo.names)
+  let identifiers = {
+    ...moduleIdentifiers,
+    state: getUnusedName('__remixComponentHmrState__', names),
+    handle: getUnusedName('__remixComponentHmrHandle__', names),
+    next: getUnusedName('__remixComponentHmrNext__', names),
+    self: getUnusedName('__remixComponentHmrSelf__', names),
+  }
+  let selfBindings = getComponentSelfBindings(match, referenceInfo)
+  let setupSource: SourceFragment[] = []
+  for (let statement of match.setupStatements) {
+    setupSource.push(
+      rewriteReferences(statement, selfBindings, source, identifiers.self, referenceInfo),
+      '\n',
+    )
+  }
+  // Unreachable var declarations still create function-scope cells. Retain those cells
+  // without executing the initializers, destructuring, or enclosing statements.
+  let hoistedVarNames = getHoistedSetupVarNames(match, bindings)
+  if (hoistedVarNames.length) setupSource.push(`\nvar ${hoistedVarNames.join(', ')};`)
+  for (let binding of bindings) {
+    let immutable =
+      (binding.name === 'arguments' && binding.identifiers.length === 0) ||
+      binding.defs.some(
+        (def) =>
+          (def.type === 'Variable' && def.parent.kind === 'const') ||
+          (def.type === 'FunctionName' && def.node.type === 'FunctionExpression'),
+      )
+    let setter = immutable
+      ? ''
+      : `, (${identifiers.next}) => { ${binding.name} = ${identifiers.next}; }`
+    setupSource.push(
+      `\n${identifiers.componentHmr}.retainComponentHmrBinding(${identifiers.state}, ${JSON.stringify(binding.name)}, () => ${selfBindings.includes(binding) ? `${identifiers.self}.${binding.name}` : binding.name}${setter});`,
+    )
+  }
+  let renderSnippet = rewriteReferences(
+    match.renderArgument,
+    bindings,
+    source,
+    identifiers.state,
+    referenceInfo,
+  )
+
+  // Evaluate native parameters only when setup runs, and retain their lexical cells with
+  // the body bindings. Refreshed renders must share defaults and destructured values too.
+  return [
+    `{\n`,
+    createSelfBindingSource(selfBindings, identifiers.self, selfWrapper),
+    '\n',
+    `  let ${identifiers.handle} = ${identifiers.componentHmr}.getComponentHandleForHmr(arguments[0], ${JSON.stringify(moduleUrl)}, ${JSON.stringify(match.name)});\n`,
+    `  let ${identifiers.state} = ${identifiers.componentHmr}.getComponentHmrState(${identifiers.handle});\n`,
+    `  if (${identifiers.componentHmr}.setupComponentForHmr(${identifiers.handle}, ${identifiers.state}, ${JSON.stringify(moduleUrl)}, ${JSON.stringify(match.name)}, ${JSON.stringify(match.setupHash)}, () => {\n`,
+    `    (function (`,
+    rewriteSelfParams(match, source, selfBindings, identifiers.self, referenceInfo),
+    `) {\n`,
+    ...setupSource,
+    '\n',
+    `    }).apply(this, arguments);\n`,
+    `  }, ${identifiers.wrapper})) {\n`,
+    `    return () => null;\n`,
+    `  }\n`,
+    `  ${identifiers.componentHmr}.registerComponentRenderForHmr(${identifiers.componentRefresh}, ${JSON.stringify(moduleUrl)}, ${JSON.stringify(match.name)}, ${identifiers.handle}, `,
+    renderSnippet,
+    `, ${identifiers.wrapper});\n`,
+    `  return function () {\n`,
+    `    return ${identifiers.componentHmr}.callComponentRenderForHmr(${identifiers.handle}, ...arguments);\n`,
+    `  };\n`,
+    `}`,
+  ]
+}
+
+function getComponentSelfBindings(
+  match: ComponentMatch | ClientEntryMatch,
+  info: ReferenceInfo,
+): Variable[] {
+  let scope = info.manager.scopes.find(
+    (scope) =>
+      scope.type === 'function' &&
+      isAstNode(scope.block) &&
+      getNode(scope.block, 'body')?.start === match.bodyStart,
+  )
+  return scope?.upper?.type === 'function-expression-name'
+    ? scope.upper.variables.filter((binding) =>
+        binding.references.some((ref) => ref.isValueReference),
+      )
+    : []
+}
+
+function createSelfBindingSource(
+  bindings: readonly Variable[],
+  selfName: string,
+  wrapperName: string,
+): string {
+  return bindings.length
+    ? `const ${selfName} = { ${bindings.map((binding) => `get ${binding.name}() { return ${wrapperName}; }`).join(', ')} };`
+    : ''
+}
+
+function rewriteSelfParams(
+  match: ComponentMatch | ClientEntryMatch,
+  source: string,
+  bindings: readonly Variable[],
+  stateName: string,
+  info: ReferenceInfo,
+): SourceFragment {
+  let scope = info.manager.scopes.find(
+    (scope) =>
+      scope.type === 'function' &&
+      isAstNode(scope.block) &&
+      getNode(scope.block, 'body')?.start === match.bodyStart,
+  )
+  if (!scope || !isAstNode(scope.block)) return match.params
+  let params = getNodeArray(scope.block, 'params')
+  if (!params.length) return ''
+  return rewriteReferences(
+    { type: 'Parameters', start: params[0].start, end: params[params.length - 1].end },
+    bindings,
+    source,
+    stateName,
+    info,
+  )
 }
 
 function rewriteReferences(
   root: AstNode,
-  stateNames: ReadonlySet<string>,
+  bindings: readonly Variable[],
   source: string,
-  deferredStateNames: ReadonlySet<string> = stateNames,
-): string {
-  let snippet = source.slice(root.start, root.end)
-  if (stateNames.size === 0 && deferredStateNames.size === 0) return snippet
-
-  let rewritten = new MagicString(snippet)
-  let rewrittenRanges = new Set<string>()
-  let functions: AstNode[] = []
-
-  visitWithScope(root, null, new Set(), (node, parent, shadowedNames) => {
-    if (
-      node.type === 'FunctionDeclaration' ||
-      node.type === 'FunctionExpression' ||
-      node.type === 'ArrowFunctionExpression'
-    ) {
-      functions.push(node)
-    }
-    if (node.type !== 'Identifier' && node.type !== 'JSXIdentifier') return
-    let name = getIdentifierName(node)
-    if (!name) return
-    // Code inside a nested function can't run until it's called, so it may reference setup
-    // variables declared after it.
-    let isDeferred = functions.some((fn) => fn.start <= node.start && node.end <= fn.end)
-    if (!(isDeferred ? deferredStateNames : stateNames).has(name)) return
-    if (shadowedNames.has(name)) return
-    if (!shouldRewriteIdentifier(node, parent)) return
-
-    if (parent && isShorthandProperty(parent, node)) {
-      let key = `${parent.start}:${parent.end}`
-      if (rewrittenRanges.has(key)) return
-      rewritten.overwrite(
-        parent.start - root.start,
-        parent.end - root.start,
-        `${name}: __s__.${name}`,
-      )
-      rewrittenRanges.add(key)
-      return
-    }
-
-    rewritten.overwrite(node.start - root.start, node.end - root.start, `__s__.${name}`)
-  })
-
-  return rewritten.toString()
-}
-
-function rewriteBindingPatternReferences(
-  pattern: AstNode,
-  stateNames: ReadonlySet<string>,
-  deferredStateNames: ReadonlySet<string>,
-  source: string,
-): string {
-  let snippet = source.slice(pattern.start, pattern.end)
-  if (stateNames.size === 0 && deferredStateNames.size === 0) return snippet
-
-  let rewritten = new MagicString(snippet)
-
-  visitBindingPattern(pattern, (node) => {
-    let replacement = rewriteReferences(node, stateNames, source, deferredStateNames)
-    rewritten.overwrite(node.start - pattern.start, node.end - pattern.start, replacement)
-  })
-
-  return rewritten.toString()
-}
-
-function visitBindingPattern(pattern: AstNode, onExpression: (node: AstNode) => void): void {
-  if (pattern.type === 'AssignmentPattern') {
-    let left = getNode(pattern, 'left')
-    let right = getNode(pattern, 'right')
-    if (left) visitBindingPattern(left, onExpression)
-    if (right) onExpression(right)
-    return
-  }
-
-  if (pattern.type === 'RestElement') {
-    let argument = getNode(pattern, 'argument')
-    if (argument) visitBindingPattern(argument, onExpression)
-    return
-  }
-
-  if (pattern.type === 'ArrayPattern') {
-    for (let element of getNodeArray(pattern, 'elements')) {
-      visitBindingPattern(element, onExpression)
-    }
-    return
-  }
-
-  if (pattern.type === 'ObjectPattern') {
-    for (let property of getNodeArray(pattern, 'properties')) {
-      if (property.type === 'RestElement') {
-        visitBindingPattern(property, onExpression)
-        continue
-      }
-
-      let key = getNode(property, 'key')
-      if (property.computed === true && key) {
-        onExpression(key)
-      }
-
-      let value = getNode(property, 'value')
-      if (value) visitBindingPattern(value, onExpression)
-    }
-  }
-}
-
-function shouldRewriteIdentifier(node: AstNode, parent: AstNode | null): boolean {
-  if (!parent) return true
-  if (node.type === 'JSXIdentifier') {
-    if (parent.type === 'JSXAttribute' && getNode(parent, 'name') === node) return false
-    if (parent.type === 'JSXNamespacedName') return false
-    if (parent.type === 'JSXMemberExpression' && getNode(parent, 'property') === node) return false
-    return true
-  }
-  if (parent.type === 'VariableDeclarator' && getNode(parent, 'id') === node) return false
-  if (parent.type === 'FunctionDeclaration' && getNode(parent, 'id') === node) return false
-  if (parent.type === 'FunctionExpression' && getNode(parent, 'id') === node) return false
-  if (parent.type === 'MemberExpression' && parent.property === node && !parent.computed) {
-    return false
-  }
-  if (isStaticPropertyKey(parent, node)) {
-    return isShorthandProperty(parent, node)
-  }
-  return true
-}
-
-function visitWithScope(
-  node: AstNode,
-  parent: AstNode | null,
-  shadowedNames: ReadonlySet<string>,
-  callback: (node: AstNode, parent: AstNode | null, shadowedNames: ReadonlySet<string>) => void,
-): void {
-  let nextShadowedNames = getShadowedNames(node, shadowedNames)
-
-  callback(node, parent, nextShadowedNames)
-
-  for (let value of Object.values(node)) {
-    if (isAstNode(value)) {
-      visitWithScope(value, node, nextShadowedNames, callback)
-    } else if (Array.isArray(value)) {
-      for (let item of value) {
-        if (isAstNode(item)) visitWithScope(item, node, nextShadowedNames, callback)
-      }
-    }
-  }
-}
-
-function getSetupStateNames(statements: readonly AstNode[]): Set<string> {
-  let names = new Set<string>()
-
-  for (let statement of statements) {
-    if (statement.type !== 'VariableDeclaration') continue
-
-    for (let declaration of getNodeArray(statement, 'declarations')) {
-      let pattern = getNode(declaration, 'id')
-      if (!pattern) continue
-      for (let name of getBindingNames(pattern)) {
-        names.add(name)
-      }
-    }
-  }
-
-  return names
-}
-
-function getRenderReferencedSetupDeclarationNames(
-  renderArgument: AstNode,
-  setupStatements: readonly AstNode[],
-): Set<string> {
-  let declarationNames = new Set<string>()
-
-  for (let statement of setupStatements) {
-    if (!isSetupRuntimeDeclaration(statement)) continue
-    let name = getIdentifierName(getNode(statement, 'id'))
-    if (name) declarationNames.add(name)
-  }
-
-  return getReferencedNames(renderArgument, declarationNames)
-}
-
-function isSetupRuntimeDeclaration(node: AstNode): boolean {
-  return (
-    node.type === 'FunctionDeclaration' ||
-    node.type === 'ClassDeclaration' ||
-    node.type === 'TSEnumDeclaration'
-  )
-}
-
-function getReferencedNames(root: AstNode, names: ReadonlySet<string>): Set<string> {
-  let referencedNames = new Set<string>()
-
-  visitWithScope(root, null, new Set(), (node, parent, shadowedNames) => {
-    if (node.type !== 'Identifier' && node.type !== 'JSXIdentifier') return
-    let name = getIdentifierName(node)
-    if (!name || !names.has(name)) return
-    if (shadowedNames.has(name)) return
-    if (!shouldRewriteIdentifier(node, parent)) return
-    referencedNames.add(name)
-  })
-
-  return referencedNames
-}
-
-function getShadowedNames(node: AstNode, inherited: ReadonlySet<string>): ReadonlySet<string> {
-  let bindings = getScopeBindings(node)
-  if (bindings.length === 0) return inherited
-
-  let shadowed = new Set(inherited)
+  stateName: string,
+  info: ReferenceInfo,
+): MagicString {
+  let rewritten = new MagicString(source).snip(root.start, root.end)
+  let starts = new Set<number>()
+  let nameWrappers: { start: number; end: number; key: string }[] = []
   for (let binding of bindings) {
-    shadowed.add(binding)
-  }
-  return shadowed
-}
-
-function getScopeBindings(node: AstNode): string[] {
-  let bindings: string[] = []
-
-  if (
-    node.type === 'FunctionDeclaration' ||
-    node.type === 'FunctionExpression' ||
-    node.type === 'ArrowFunctionExpression'
-  ) {
-    for (let param of getNodeArray(node, 'params')) {
-      bindings.push(...getBindingNames(param))
-    }
-  }
-
-  if (node.type === 'Program' || node.type === 'BlockStatement') {
-    for (let statement of getNodeArray(node, 'body')) {
-      if (statement.type === 'VariableDeclaration') {
-        for (let declaration of getNodeArray(statement, 'declarations')) {
-          let pattern = getNode(declaration, 'id')
-          if (pattern) bindings.push(...getBindingNames(pattern))
+    for (let reference of binding.references) {
+      let [start, end] = reference.identifier.range
+      if (!reference.isValueReference || start < root.start || end > root.end || starts.has(start))
+        continue
+      starts.add(start)
+      let entry = info.nodes.get(start)
+      if (!entry) continue
+      let { node, parent } = entry
+      let expression = node
+      let expressionParent = parent
+      while (
+        expressionParent &&
+        [
+          'TSAsExpression',
+          'TSSatisfiesExpression',
+          'TSTypeAssertion',
+          'TSNonNullExpression',
+          'TSInstantiationExpression',
+          'ParenthesizedExpression',
+          'ChainExpression',
+        ].includes(expressionParent.type) &&
+        getNode(expressionParent, 'expression') === expression
+      ) {
+        expression = expressionParent
+        expressionParent = info.parents.get(expression) ?? null
+      }
+      if (
+        expressionParent &&
+        ((expressionParent.type === 'AssignmentPattern' &&
+          getNode(expressionParent, 'left') === expression) ||
+          (expressionParent.type === 'AssignmentExpression' &&
+            getNode(expressionParent, 'left') === expression &&
+            ['=', '||=', '&&=', '??='].includes(String(expressionParent.operator))))
+      ) {
+        let right = getNode(expressionParent, 'right')
+        let initializer = right
+        while (
+          initializer &&
+          [
+            'TSAsExpression',
+            'TSSatisfiesExpression',
+            'TSTypeAssertion',
+            'TSNonNullExpression',
+            'TSInstantiationExpression',
+            'ParenthesizedExpression',
+          ].includes(initializer.type)
+        )
+          initializer = getNode(initializer, 'expression')
+        if (
+          right &&
+          initializer &&
+          (initializer.type === 'ArrowFunctionExpression' ||
+            (['FunctionExpression', 'ClassExpression'].includes(initializer.type) &&
+              !getNode(initializer, 'id')))
+        ) {
+          // Identifier assignments infer names; property assignments do not. A property
+          // initializer preserves that inference without introducing another lexical scope.
+          let key = JSON.stringify(binding.name)
+          nameWrappers.push({ start: right.start, end: right.end, key })
         }
       }
-
-      if (statement.type === 'FunctionDeclaration') {
-        let name = getIdentifierName(getNode(statement, 'id'))
-        if (name) bindings.push(name)
+      let replacement = `${stateName}.${binding.name}`
+      let property = parent?.type === 'AssignmentPattern' ? info.parents.get(parent) : parent
+      if (
+        property &&
+        property.type === 'Property' &&
+        property.shorthand === true &&
+        isSameNodeRange(getNode(property, 'key'), node)
+      ) {
+        replacement = `[${JSON.stringify(binding.name)}]: ${replacement}`
+      } else if (
+        expressionParent &&
+        ((expressionParent.type === 'CallExpression' &&
+          getNode(expressionParent, 'callee') === expression) ||
+          (expressionParent.type === 'TaggedTemplateExpression' &&
+            getNode(expressionParent, 'tag') === expression))
+      ) {
+        // A bare function call must not acquire the HMR state object as its receiver.
+        replacement = `(0, ${replacement})`
       }
-
-      if (statement.type === 'ClassDeclaration' || statement.type === 'TSEnumDeclaration') {
-        let name = getIdentifierName(getNode(statement, 'id'))
-        if (name) bindings.push(name)
-      }
+      rewritten.overwrite(start, end, replacement)
     }
   }
-
-  return bindings
+  // Nested initializers can share an end offset. Close inner wrappers first,
+  // independently of the order their bindings were declared.
+  for (let { start, end, key } of nameWrappers.sort((a, b) => b.start - a.start)) {
+    rewritten.prependLeft(start, `({ [${key}]: `)
+    rewritten.appendLeft(end, ` })[${key}]`)
+  }
+  return rewritten
 }
 
 function getBindingNames(pattern: AstNode): string[] {
@@ -1223,27 +1425,6 @@ function collectBindingNames(pattern: AstNode, names: string[]): void {
   }
 }
 
-function isShorthandProperty(parent: AstNode, node: AstNode): boolean {
-  return (
-    isPropertyNode(parent) &&
-    isSameNodeRange(getNode(parent, 'key'), node) &&
-    isSameNodeRange(getNode(parent, 'value'), node) &&
-    parent.shorthand === true
-  )
-}
-
-function isStaticPropertyKey(parent: AstNode, node: AstNode): boolean {
-  return (
-    isPropertyNode(parent) &&
-    isSameNodeRange(getNode(parent, 'key'), node) &&
-    parent.computed !== true
-  )
-}
-
-function isPropertyNode(node: AstNode): boolean {
-  return node.type === 'Property' || node.type === 'ObjectProperty'
-}
-
 function isSameNodeRange(left: AstNode | null, right: AstNode): boolean {
   return left !== null && left.start === right.start && left.end === right.end
 }
@@ -1266,15 +1447,6 @@ function getRenderArgument(body: AstNode): AstNode | null {
     (statement) => statement.type === 'ReturnStatement',
   )
   return returnStatement ? getNode(returnStatement, 'argument') : null
-}
-
-function indent(source: string, spaces: number): string {
-  let prefix = ' '.repeat(spaces)
-  return source
-    .split('\n')
-    .filter((line) => line.length > 0)
-    .map((line) => `${prefix}${line}`)
-    .join('\n')
 }
 
 function getExportDeclaration(node: AstNode): AstNode | null {
@@ -1387,13 +1559,97 @@ function isComponentExport(
   return options.directExport || options.exportedNames.has(name)
 }
 
-function getParamsSource(node: AstNode, source: string): string {
-  let params = getNodeArray(node, 'params')
-  if (params.length === 0) return ''
-  return source.slice(params[0].start, params[params.length - 1].end)
+function rewriteComponentMatch(
+  edits: SourceEdit[],
+  match: ComponentMatch,
+  implementationSource: SourceFragment[],
+  wrapperSource: string,
+  registrationSource: string,
+): void {
+  if (match.statementStart !== null && match.statementEnd !== null) {
+    edits.push(
+      {
+        kind: 'append',
+        start: match.statementStart,
+        end: match.statementStart,
+        fragments: [...implementationSource, '\n'],
+      },
+      {
+        kind: 'overwrite',
+        start: match.fullStart,
+        end: match.fullEnd,
+        fragments: [`${match.name} = ${wrapperSource}`],
+      },
+      {
+        kind: 'append',
+        start: match.statementEnd,
+        end: match.statementEnd,
+        fragments: [`\n${registrationSource}`],
+      },
+    )
+  } else {
+    let exportPrefix = match.directExport ? 'export ' : ''
+    edits.push({
+      kind: 'overwrite',
+      start: match.fullStart,
+      end: match.fullEnd,
+      fragments: [
+        ...implementationSource,
+        `\n${exportPrefix}${wrapperSource}\n${registrationSource}`,
+      ],
+    })
+  }
 }
 
-function getSetupHash(body: AstNode, source: string): string {
+function createImplementationSource(
+  match: ComponentMatch | ClientEntryMatch,
+  implementationName: string,
+  body: SourceFragment[],
+  params = match.params,
+): SourceFragment[] {
+  return [
+    match.functionExpressionName
+      ? `let ${implementationName} = function ${match.functionExpressionName}(`
+      : `function ${implementationName}(`,
+    params,
+    ') ',
+    ...body,
+    match.functionExpressionName ? ';' : '',
+  ]
+}
+
+function getWrapperParamsSource(node: AstNode, source: string): string {
+  let { names } = getAstInfo(node)
+  return getNodeArray(node, 'params')
+    .map((param, index) => {
+      if (param.type === 'Identifier') return source.slice(param.start, param.end)
+      if (param.type === 'AssignmentPattern') {
+        let left = getNode(param, 'left')
+        let name =
+          left?.type === 'Identifier'
+            ? source.slice(left.start, left.end)
+            : getUnusedName(`__remixComponentHmrArg${index}__`, names)
+        return `${name} = void 0`
+      }
+      if (param.type === 'RestElement')
+        return `...${getUnusedName(`__remixComponentHmrArg${index}__`, names)}`
+      return getUnusedName(`__remixComponentHmrArg${index}__`, names)
+    })
+    .join(', ')
+}
+
+function getParamsSource(node: AstNode, source: string): SourceFragment {
+  let params = getNodeArray(node, 'params')
+  if (params.length === 0) return ''
+  return new MagicString(source).snip(params[0].start, params[params.length - 1].end)
+}
+
+function getSetupHash(
+  body: AstNode,
+  source: string,
+  params: SourceFragment,
+  functionExpressionName: string | null,
+): string {
   let statements = getNodeArray(body, 'body')
   let returnIndex = statements.findIndex((statement) => statement.type === 'ReturnStatement')
   let setupStart = body.start + 1
@@ -1407,7 +1663,14 @@ function getSetupHash(body: AstNode, source: string): string {
           .filter((statement) => statement.type === 'FunctionDeclaration')
           .map((statement) => source.slice(statement.start, statement.end))
 
-  return hashSource([source.slice(setupStart, setupEnd), ...hoistedDeclarations].join('\n'))
+  return hashSource(
+    [
+      params,
+      functionExpressionName ?? '',
+      source.slice(setupStart, setupEnd),
+      ...hoistedDeclarations,
+    ].join('\n'),
+  )
 }
 
 function isNamedCallExpression(node: AstNode | null, name: string): node is AstNode {

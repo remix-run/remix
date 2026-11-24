@@ -13,7 +13,7 @@ import {
   resetDocumentImportMapManager,
 } from '../runtime/frame.ts'
 import {
-  NamedFrameRegistry,
+  FrameRegistry,
   type LoadModule,
   type ResolveFrameOptions,
 } from '../runtime/frame-runtime.ts'
@@ -38,13 +38,9 @@ function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestF
     src: 'https://example.com/initial',
     errorTarget: new EventTarget(),
     loadModule: () => () => () => null,
-    pendingClientEntries: new Map(),
     scheduler: createScheduler(document, new EventTarget()),
     data: {},
-    moduleCache: new Map(),
-    moduleLoads: new Map(),
-    frameInstances: new WeakMap(),
-    namedFrames: new NamedFrameRegistry(),
+    registry: new FrameRegistry(),
     ...options,
   })
 }
@@ -54,6 +50,42 @@ describe('frames', () => {
     resetDocumentImportMapManager(document)
     resetNonceManager()
     document.documentElement.innerHTML = '<head></head><body></body>'
+  })
+
+  it('publishes a frame template before EOF when its opening tag spans network chunks', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    let frame = createTestFrame(root, { resolveFrame: () => '' })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    let encoder = new TextEncoder()
+    let drained = Promise.withResolvers<void>()
+    let finish = Promise.withResolvers<void>()
+    let stream = new ReadableStream<Uint8Array>(
+      {
+        start(controller) {
+          controller.enqueue(encoder.encode('<p>İstanbul</p><TeM'))
+          controller.enqueue(encoder.encode('plate id="chunk-split-frame"><b>Ready</b></template>'))
+        },
+        async pull(controller) {
+          drained.resolve()
+          await finish.promise
+          controller.close()
+        },
+      },
+      { highWaterMark: 0 },
+    )
+
+    let replacement = frame.handle.replace(stream)
+    await drained.promise
+    try {
+      expect(consumeFrameTemplate('chunk-split-frame')?.textContent).toBe('Ready')
+    } finally {
+      finish.resolve()
+      await replacement
+    }
+    expect(root.innerHTML).toBe('<p>İstanbul</p>')
   })
 
   it('preserves doctype-looking text in frame script data', async (t) => {
@@ -179,14 +211,10 @@ describe('frames', () => {
           ].join(''),
         ])
       },
-      pendingClientEntries: new Map(),
       scheduler,
       styleManager,
       data,
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -397,13 +425,9 @@ describe('frames', () => {
           ),
         ])
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, new EventTarget()),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -1131,6 +1155,131 @@ describe('frames', () => {
     }
   })
 
+  it('retries a client entry after its loader throws synchronously', async (t) => {
+    let root = document.createElement('div')
+    let html = '<!-- rmx:h:h1 --><p>Server</p><!-- /rmx:h -->' + rmxDataScript('hydrated')
+    root.innerHTML = html
+    document.body.append(root)
+
+    let error = new Error('Entry unavailable')
+    let report = t.mock.method(console, 'error', () => {})
+    let attempts = 0
+    let frame = createTestFrame(root, {
+      loadModule() {
+        if (++attempts === 1) throw error
+        return (handle: Handle<{ label: string }>) => () =>
+          jsx('p', { children: handle.props.label })
+      },
+      resolveFrame: () => html,
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    expect(report).toHaveBeenCalledWith('[createFrame] Failed to load module for h1:', error)
+    expect(root.querySelector('p')?.textContent).toBe('Server')
+
+    await frame.handle.reload()
+    expect(attempts).toBe(2)
+    expect(root.querySelector('p')?.textContent).toBe('hydrated')
+  })
+
+  it('keeps hydration data for a sibling frame while its preloads are pending', async (t) => {
+    let first = document.createComment(' rmx:f:first ')
+    let earlier = document.createElement('section')
+    earlier.append(first, document.createComment(' /rmx:f '))
+    document.body.append(earlier)
+    let later = document.createElement('section')
+    later.innerHTML = [
+      '<!-- rmx:f:later --><!-- rmx:h:h1 --><p>Server</p><!-- /rmx:h --><!-- /rmx:f -->',
+      '<link data-rmx-module-preload rel="modulepreload" href="/later.js">',
+      rmxDataScript('Hydrated'),
+    ].join('')
+    document.body.append(later)
+
+    let registry = new FrameRegistry()
+    let pending = Promise.withResolvers<string[]>()
+    let requested = Promise.withResolvers<void>()
+    let frame = createTestFrame(document, {
+      registry,
+      data: {
+        f: {
+          first: { src: '/first', status: 'resolved' },
+          later: { src: '/later', status: 'resolved' },
+        },
+      },
+      processClientEntryPreloads(hrefs) {
+        if (hrefs.includes('/later.js')) {
+          requested.resolve()
+          return pending.promise
+        }
+        return hrefs
+      },
+      loadModule: () => (handle: Handle<{ label: string }>) => () =>
+        jsx('p', { children: handle.props.label }),
+      resolveFrame: () => '',
+    })
+    t.after(() => {
+      pending.resolve([])
+      frame.dispose()
+    })
+
+    await requested.promise
+    let sibling = registry.instances.get(first)
+    if (!sibling) throw new Error('Expected the first frame to be mounted')
+    await sibling.ready()
+    pending.resolve([])
+    await frame.ready()
+    expect(later.querySelector('p')?.textContent).toBe('Hydrated')
+  })
+
+  it('releases hydration data when a frame is aborted during preload processing', async (t) => {
+    let root = document.createElement('section')
+    root.innerHTML = '<!-- rmx:h:h1 --><p>Server</p><!-- /rmx:h -->' + rmxDataScript('Hydrated')
+    document.body.append(root)
+
+    let data = {}
+    let controller = new AbortController()
+    let preloads = Promise.withResolvers<string[]>()
+    let frame = createTestFrame(root, {
+      data,
+      signal: controller.signal,
+      processClientEntryPreloads: () => preloads.promise,
+      resolveFrame: () => '',
+    })
+    t.after(() => frame.dispose())
+
+    expect(data).not.toEqual({})
+    controller.abort()
+    preloads.resolve([])
+    await frame.ready()
+
+    expect(data).toEqual({})
+    expect(root.querySelector('p')?.textContent).toBe('Server')
+  })
+
+  it('shares late document data across sibling frames during startup', async (t) => {
+    document.body.innerHTML = [
+      '<!-- rmx:f:first --><!-- /rmx:f -->',
+      '<!-- rmx:f:later --><!-- rmx:h:h1 --><p>Server</p><!-- /rmx:h --><!-- /rmx:f -->',
+    ].join('')
+    let frame = createTestFrame(document, {
+      data: {
+        f: {
+          first: { src: '/first', status: 'resolved' },
+          later: { src: '/later', status: 'resolved' },
+        },
+      },
+      resolveFrame: () => '',
+      loadModule: () => (handle: Handle<{ label: string }>) => () =>
+        jsx('p', { children: handle.props.label }),
+    })
+    t.after(() => frame.dispose())
+
+    document.body.insertAdjacentHTML('beforeend', rmxDataScript('Hydrated'))
+    await frame.ready()
+    expect(document.querySelector('p')?.textContent).toBe('Hydrated')
+  })
+
   it('releases pending hydration metadata when its frame is disposed', async () => {
     document.body.innerHTML = [
       '<!-- rmx:h:h1 -->',
@@ -1147,8 +1296,7 @@ describe('frames', () => {
         return modulePromise
       },
       resolveFrame: () => '',
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
+      registry: new FrameRegistry(),
     }
     let data = {}
     let frame = createTestFrame(document, { ...sharedOptions, data })
@@ -1206,14 +1354,10 @@ describe('frames', () => {
         throw new Error('Unexpected client entry')
       },
       resolveFrame: () => '',
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, errorTarget),
       styleManager,
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     frame.dispose()
@@ -1253,13 +1397,9 @@ describe('frames', () => {
       resolveFrame() {
         return response
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, new EventTarget()),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -1291,13 +1431,9 @@ describe('frames', () => {
           statusText: 'Not Found',
         })
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, errorTarget),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -1328,13 +1464,9 @@ describe('frames', () => {
           statusText: 'Service Unavailable',
         })
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, errorTarget),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -1363,13 +1495,9 @@ describe('frames', () => {
         resolvedOptions = options
         return htmlStream(['<main id="result">Saved</main>'])
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, new EventTarget()),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
     let formData = new FormData()
     formData.set('displayName', 'Ada')
@@ -1458,10 +1586,10 @@ describe('frames', () => {
     if (!from) throw new Error('Expected a current navigation entry')
     let navigation = { navigationType: 'traverse', from } satisfies ResolveFrameOptions
     let nextNavigation = { navigationType: 'replace', from } satisfies ResolveFrameOptions
-    let namedFrames = new NamedFrameRegistry()
+    let registry = new FrameRegistry()
     let loads: Array<Pick<ResolveFrameOptions, 'navigationType' | 'from'>> = []
     let frame = createTestFrame(document, {
-      namedFrames,
+      registry,
       loadModule: () => Entry,
       resolveFrame(src, options) {
         if (src === 'https://example.com/initial') return html
@@ -1475,11 +1603,11 @@ describe('frames', () => {
     renderClientFrame = true
 
     await reloadFrameForNavigation(frame.handle, navigation).finished
-    let serverFrame = namedFrames.get('server-wrapper')
+    let serverFrame = registry.get('server-wrapper')
     expect(serverFrame).toBeDefined()
     await reloadFrameForNavigation(frame.handle, nextNavigation).finished
 
-    expect(namedFrames.get('server-wrapper')).toBe(serverFrame)
+    expect(registry.get('server-wrapper')).toBe(serverFrame)
     expect(loads).toEqual([navigation, nextNavigation])
     expect(document.getElementById('client-child')?.textContent).toBe('Client content')
 
@@ -1755,13 +1883,9 @@ describe('frames', () => {
           })
         })
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, new EventTarget()),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
     let controller = new AbortController()
 
@@ -1798,13 +1922,9 @@ describe('frames', () => {
           },
         })
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, new EventTarget()),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
     let controller = new AbortController()
 
@@ -2224,6 +2344,24 @@ describe('frames', () => {
     }
   })
 
+  it('keeps new aliases in the same import map and compares later maps against the first one', async (t) => {
+    let frame = createClientEntryResourceTestFrame()
+    let absolute = new URL('/alias.js', document.baseURI).href
+    let imports = { '/alias.js': '/first.js', [absolute]: '/second.js' }
+    let navigate = mockDocumentNavigation(t)
+    t.mock.method(console, 'warn', () => {})
+    try {
+      await frame.ready()
+      await frame.render(remixImportMapHead({ imports }))
+      expect(navigate).toHaveBeenCalledTimes(0)
+      expect(parseImportMapScript(getImportMapScripts().at(-1)!)).toEqual({ imports })
+      await frame.render(remixImportMapHead({ imports: { [absolute]: '/second.js' } }))
+      expect(navigate).toHaveBeenCalledTimes(1)
+    } finally {
+      frame.dispose()
+    }
+  })
+
   it('reloads without applying any maps or content when a late import map conflicts', async (t) => {
     document.documentElement.innerHTML = [
       '<head>',
@@ -2291,6 +2429,128 @@ describe('frames', () => {
       expect(getImportMapScripts()).toHaveLength(1)
       expect(document.querySelector('main')).toBeNull()
     } finally {
+      frame.dispose()
+    }
+  })
+
+  it('checks scoped mappings against earlier scripts in the same frame response', async (t) => {
+    let frame = createClientEntryResourceTestFrame()
+    let navigate = mockDocumentNavigation(t)
+    t.mock.method(console, 'warn', () => {})
+    try {
+      await frame.ready()
+      let absoluteScope = new URL('/widgets/', document.baseURI).href
+      await frame.render(
+        remixImportMapHead({ scopes: { '/widgets/': { shared: '/first.js' } } }) +
+          remixImportMapHead({ scopes: { [absoluteScope]: { shared: '/second.js' } } }) +
+          '<main>New content</main>',
+      )
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(getImportMapScripts()).toHaveLength(0)
+      expect(document.querySelector('main')).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('records imports, scopes, and integrity separately when they share a URL', async () => {
+    let frame = createClientEntryResourceTestFrame()
+    let maps = {
+      imports: { '/widget.js': '/global.js', ['__proto__']: '/other.js' },
+      scopes: {
+        '/light/': { '/widget.js': '/light.js' },
+        '/dark/': { '/widget.js': '/dark.js' },
+        ['__proto__']: { shared: '/other.js' },
+      },
+      integrity: { '/widget.js': 'sha256-test' },
+    }
+    try {
+      await frame.ready()
+      await frame.render(remixImportMapHead(maps) + remixImportMapHead(maps))
+      await frame.render(remixImportMapHead(maps))
+      let scripts = getImportMapScripts()
+      expect(scripts).toHaveLength(1)
+      expect(parseImportMapScript(scripts[0]!)).toEqual(maps)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('discards staged mappings when appending the import map fails', async (t) => {
+    let frame = createClientEntryResourceTestFrame()
+    let navigate = mockDocumentNavigation(t)
+    try {
+      await frame.ready()
+      let failure = new Error('Could not append the import map')
+      let append = t.mock.method(document.head, 'appendChild', () => {
+        throw failure
+      })
+      await expect(
+        frame.render(remixImportMapHead({ imports: { shared: '/failed.js' } })),
+      ).rejects.toBe(failure)
+      expect(getImportMapScripts()).toHaveLength(0)
+      append.mock.restore()
+
+      let retry = { imports: { shared: '/retry.js' } }
+      await frame.render(remixImportMapHead(retry) + '<main>Ready</main>')
+      expect(navigate).not.toHaveBeenCalled()
+      expect(parseImportMapScript(getImportMapScripts()[0]!)).toEqual(retry)
+      expect(document.querySelector('main')?.textContent).toBe('Ready')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('keeps a successfully appended map when the next append fails', async (t) => {
+    let frame = createClientEntryResourceTestFrame()
+    let first = { imports: { first: '/first.js' } }
+    let retry = { imports: { second: '/retry.js' } }
+    try {
+      await frame.ready()
+      let failure = new Error('Second append failed')
+      let append = t.mock.method(document.head, 'appendChild')
+      append.mock.mockImplementationOnce(() => {
+        throw failure
+      }, 1)
+      await expect(
+        frame.render(
+          remixImportMapHead(first) + remixImportMapHead({ imports: { second: '/failed.js' } }),
+        ),
+      ).rejects.toBe(failure)
+      expect(getImportMapScripts()).toHaveLength(1)
+      append.mock.restore()
+
+      await frame.render(remixImportMapHead(first) + remixImportMapHead(retry))
+      expect(getImportMapScripts().map(parseImportMapScript)).toEqual([first, retry])
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('records the managed map that was installed before an observer edits its script', async (t) => {
+    let original = { imports: { shared: '/original.js' } }
+    let edited = { imports: { shared: '/edited.js' } }
+    let observer = new MutationObserver((records) => {
+      for (let record of records) {
+        for (let script of record.addedNodes) {
+          if (script instanceof HTMLScriptElement && script.type === 'importmap') {
+            script.textContent = JSON.stringify(edited)
+          }
+        }
+      }
+    })
+    observer.observe(document.head, { childList: true })
+    let frame = createClientEntryResourceTestFrame()
+    let navigate = mockDocumentNavigation(t)
+    t.mock.method(console, 'warn', () => {})
+    try {
+      await frame.ready()
+      await frame.render(remixImportMapHead(original))
+      expect(parseImportMapScript(getImportMapScripts()[0]!)).toEqual(edited)
+      await frame.render(remixImportMapHead(edited))
+      expect(navigate).toHaveBeenCalledTimes(1)
+    } finally {
+      observer.disconnect()
       frame.dispose()
     }
   })
@@ -2388,14 +2648,10 @@ describe('frames', () => {
       errorTarget,
       loadModule: () => () => null,
       resolveFrame: () => '',
-      pendingClientEntries: new Map(),
       scheduler,
       styleManager,
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     await frame.ready()
@@ -2442,14 +2698,10 @@ describe('frames', () => {
           'document',
         )
       },
-      pendingClientEntries: new Map(),
       scheduler,
       styleManager,
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -2545,14 +2797,10 @@ describe('frames', () => {
           rmxDataScript('fragment', '/fragment-entry.js', 'FragmentEntry'),
         ].join('')
       },
-      pendingClientEntries: new Map(),
       scheduler,
       styleManager,
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -2615,14 +2863,10 @@ describe('frames', () => {
           'document',
         )
       },
-      pendingClientEntries: new Map(),
       scheduler,
       styleManager,
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -2663,14 +2907,10 @@ describe('frames', () => {
           'document',
         )
       },
-      pendingClientEntries: new Map(),
       scheduler,
       styleManager,
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -2723,14 +2963,10 @@ function createClientEntryResourceTestFrame(): ReturnType<typeof createFrame> {
     resolveFrame() {
       return ''
     },
-    pendingClientEntries: new Map(),
     scheduler,
     styleManager,
     data: {},
-    moduleCache: new Map(),
-    moduleLoads: new Map(),
-    frameInstances: new WeakMap(),
-    namedFrames: new NamedFrameRegistry(),
+    registry: new FrameRegistry(),
   })
 }
 

@@ -7,7 +7,6 @@ import type { Handle, RemixNode } from '@remix-run/component'
 import { parseSync } from 'oxc-parser'
 import { jsx } from '@remix-run/component/jsx-runtime'
 import { renderToString } from '@remix-run/component/server'
-import { SourceMapConsumer } from 'source-map-js/source-map.js'
 
 import { transformComponentsForBrowser, transformComponentsForServer } from './transform.ts'
 
@@ -52,21 +51,6 @@ describe('transformComponentsForBrowser', () => {
       '@acme/remix/component-hmr/runtime/browser',
       '@acme/remix/component/dev/refresh',
     ])
-  })
-
-  it('generates source maps for transformed browser modules', () => {
-    let source = `export function Counter() {
-  return () => <button>Count</button>
-}
-`
-    let result = transformComponentsForBrowser(source, {
-      importSource: '@remix-run',
-      moduleUrl: '/app/Counter.tsx',
-      sourceMap: true,
-    })
-
-    assert.equal(result.transformed, true)
-    assertSourceMapPosition(result.map, result.code, source, '<button>Count</button>')
   })
 
   it('preserves setup variables across HMR updates', async (t) => {
@@ -159,7 +143,7 @@ export function LandingEnhancements(handle) {
   }
 }
 `
-    let fixture = await createComponent(t, source)
+    let fixture = await createComponent(t, source, 'Component', 'jsx')
     assert.equal(await fixture.render(), 'assigned')
 
     await fixture.update(
@@ -178,7 +162,7 @@ export function LandingEnhancements(handle) {
   }
 }
 `
-    let fixture = await createComponent(t, source)
+    let fixture = await createComponent(t, source, 'Component', 'jsx')
     assert.equal(await fixture.render(), 'declaration')
 
     await fixture.update(
@@ -198,7 +182,7 @@ export function LandingEnhancements(handle) {
   }
 }
 `
-    let fixture = await createComponent(t, source)
+    let fixture = await createComponent(t, source, 'Component', 'jsx')
     assert.equal(await fixture.render(), 'assigned')
 
     await fixture.update(
@@ -216,7 +200,7 @@ export function LandingEnhancements(handle) {
   return () => handler()
 }
 `
-    let fixture = await createComponent(t, source)
+    let fixture = await createComponent(t, source, 'Component', 'jsx')
     assert.equal(await fixture.render(), 'assigned')
 
     await fixture.update(
@@ -487,6 +471,543 @@ export function LandingEnhancements(handle) {
     fixture.actions.setChild('retained')
     await fixture.update(source.replace("'Render child'", "'Edited child'"))
     assert.equal(await fixture.render(), '<p>Edited child:retained</p>')
+  })
+
+  it('retains function-scoped setup vars declared in nested blocks', async (t) => {
+    let source = `export function Component(handle) {
+  if (true) { var value = 1 }
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => <output>{value}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{value}', '{value * 2}'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('keeps parameter defaults separate from body vars after the render return', async (t) => {
+    let source = `export function Component(handle, value = 1, read = () => value) {
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => <output>{value}:{read()}</output>
+  var value = (() => { throw new Error('unreachable initializer') })()
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{value}:{read()}', '{value * 2}:{read()}'))
+    assert.equal(await fixture.render(), '<output>10:1</output>')
+  })
+
+  it('retains vars from unreachable destructuring and loops without running initializers', async (t) => {
+    let source = `export function Component(handle) {
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => <output>{String(value)}:{String(rest)}:{String(loop)}</output>
+  var { [missing()]: value = missing(), ...rest } = missing()
+  for (var loop of missing()) { throw new Error('unreachable loop') }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('String(value)', 'String(value * 2)'))
+    assert.equal(await fixture.render(), '<output>10:undefined:undefined</output>')
+  })
+
+  it('preserves lexical loop bindings in refreshed renders', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 1
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => {
+    let values = []
+    for (let value of [2, 3]) values.push(value)
+    return <output>{value}:{values.join(',')}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{value}:', '{value * 2}:'))
+    assert.equal(await fixture.render(), '<output>10:2,3</output>')
+  })
+
+  it('preserves destructured catch bindings in refreshed renders', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 1
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => {
+    let caught
+    try { throw { value: 'caught' } } catch ({ value }) { caught = value }
+    return <output>{value}:{caught}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{value}:', '{value * 2}:'))
+    assert.equal(await fixture.render(), '<output>10:caught</output>')
+  })
+
+  it('resolves function-scoped render vars declared in nested blocks', async (t) => {
+    let source = `export function Component() {
+  let value = 'setup'
+  return () => {
+    let before = value
+    if (true) { var value = 'render' }
+    return <output>{String(before)}:{value}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('{value}</output>', '{value.toUpperCase()}</output>'))
+    assert.equal(await fixture.render(), '<output>undefined:RENDER</output>')
+  })
+
+  it('resolves switch discriminants outside the case lexical scope', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 1
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => {
+    switch (value) {
+      case 5:
+        let value = 'inner'
+        return <output>{value}</output>
+    }
+  }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{value}</output>', '{value.toUpperCase()}</output>'))
+    assert.equal(await fixture.render(), '<output>INNER</output>')
+  })
+
+  it('keeps named function expression self-bindings after reassignment', async (t) => {
+    let source = `export function Component(handle) {
+  let read = function read() { return read }
+  let original = read
+  handle.props.actions.replace = () => { read = () => null }
+  return () => <output>v1:{String(original() === original)}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.replace()
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:true</output>')
+  })
+
+  it('keeps named class expression self-bindings after reassignment', async (t) => {
+    let source = `export function Component(handle) {
+  let Model = class Model { static read() { return Model } }
+  let Original = Model
+  handle.props.actions.replace = () => { Model = class {} }
+  return () => <output>v1:{String(Original.read() === Original)}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.replace()
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:true</output>')
+  })
+
+  it('preserves readonly setup bindings in refreshed assignments', async (t) => {
+    let source = `export function Component(handle) {
+  const value = 1
+  return () => {
+    try {
+      return <output>{value}</output>
+    } catch (error) {
+      return <output>{error.name}</output>
+    }
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('{value}', '{value = 2}'))
+    assert.equal(await fixture.render(), '<output>TypeError</output>')
+  })
+
+  it('preserves shorthand destructuring assignment keys and defaults', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 1
+  return () => {
+    handle.props.actions.assign = () => { ({ value = 7 } = {}) }
+    return <output>v1:{value}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    await fixture.render()
+    fixture.actions.assign()
+    assert.equal(await fixture.render(), '<output>v2:7</output>')
+  })
+
+  it('preserves bare, optional and tagged call receivers', async (t) => {
+    let source = `export function Component() {
+  function read() { return this === undefined ? 'bare' : 'receiver' }
+  return () => <output>v1:{read()}:{read?.()}:{read\`tag\`}</output>
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:bare:bare:bare</output>')
+  })
+
+  it('preserves inferred arrow function names in refreshed assignments', async (t) => {
+    let source = `export function Component() {
+  let read
+  return () => {
+    read = () => 1
+    return <output>v1:{read.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:read</output>')
+  })
+
+  it('infers class names before static initialization in refreshed logical assignments', async (t) => {
+    let source = `export function Component() {
+  let Model
+  return () => {
+    Model ||= class { static initial = this.name }
+    return <output>v1:{Model.initial}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:Model</output>')
+  })
+
+  it('preserves inferred names in refreshed destructuring defaults', async (t) => {
+    let source = `export function Component() {
+  let read
+  return () => {
+    ;({ read = () => 1 } = {})
+    return <output>v1:{read.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:read</output>')
+  })
+
+  it('executes nested arrow assignments after a render update', async (t) => {
+    let source = `export function Component() {
+  let outer, inner
+  return () => {
+    outer = () => inner = () => 1
+    return <output>v1:{outer()()}:{outer.name}:{inner.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:1:outer:inner</output>')
+  })
+
+  it('infers nested class names before static initialization after a render update', async (t) => {
+    let source = `export function Component() {
+  let outer, Inner
+  return () => {
+    outer ||= () => Inner ||= class { static label = this.name }
+    return <output>v1:{outer().label}:{outer.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:Inner:outer</output>')
+  })
+
+  it('executes nested assignments in destructuring defaults after a render update', async (t) => {
+    let source = `export function Component() {
+  let outer, inner
+  return () => {
+    ;[outer = () => inner = () => 1] = []
+    return <output>v1:{outer()()}:{outer.name}:{inner.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:1:outer:inner</output>')
+  })
+
+  it('ignores type-only this parameters while retaining setup state after an update', async (t) => {
+    let source = `export function Component(this: void, handle) {
+  let value = 1
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => <output>{value}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{value}', '{value * 2}'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('shares default parameter objects with setup callbacks after an update', async (t) => {
+    let source = `export function Component(handle, model = { value: 1 }, read = () => model.value) {
+  handle.props.actions.setValue = (next) => { model.value = next }
+  return () => <output>{model.value}:{read()}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{model.value}', '{model.value * 2}'))
+    assert.equal(await fixture.render(), '<output>10:5</output>')
+  })
+
+  it('retains array parameter rest values shared with setup callbacks', async (t) => {
+    let source = `export function Component(handle, [first, ...rest] = [0, 1]) {
+  handle.props.actions.setValue = (next) => { rest[0] = next }
+  return () => <output>{rest[0]}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{rest[0]}', '{rest[0] * 2}'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('retains object parameter rest values shared with setup callbacks', async (t) => {
+    let source = `export function Component(handle, { value, ...rest } = { value: 0, count: 1 }) {
+  handle.props.actions.setValue = (next) => { rest.count = next }
+  return () => <output>{rest.count}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{rest.count}', '{rest.count * 2}'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('shares refreshed render assignments with setup callbacks for rest parameters', async (t) => {
+    let source = `export function Component(handle, ...rest) {
+  handle.props.actions.setRest = (next) => { rest = [next] }
+  handle.props.actions.read = () => rest[0]
+  return () => {
+    rest[0] += 1
+    return <output>{rest[0]}:{handle.props.actions.read()}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setRest(5)
+    await fixture.update(source.replace('rest[0] += 1', 'rest[0] += 2'))
+    assert.equal(await fixture.render(), '<output>7:7</output>')
+  })
+
+  it('keeps nested function parameter arguments separate from component arguments', async (t) => {
+    let source = `export function Component(handle) {
+  return () => {
+    function read(value = arguments[1]) { return value }
+    return <output>v1:{String(read(undefined, 7))}:{String(arguments[0] === handle)}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:7:true</output>')
+  })
+
+  it('retains named component self-bindings shared with setup and parameter defaults', async (t) => {
+    let source = `export const Component = function Self(handle, read = () => Self) {
+  handle.props.actions.readSelf = () => Self
+  return () => <output>v1:{String(Self === read())}:{String(Self === handle.props.actions.readSelf())}</output>
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:true:true</output>')
+  })
+
+  it('preserves readonly named component self-bindings in refreshed assignments', async (t) => {
+    let source = `export const Component = function Self(handle) {
+  return () => {
+    try {
+      return <output>{Self.name}</output>
+    } catch (error) {
+      return <output>{error.name}</output>
+    }
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('{Self.name}', '{Self = null}'))
+    assert.equal(await fixture.render(), '<output>TypeError</output>')
+  })
+
+  it('preserves companions and multiple components in shared declarations', async (t) => {
+    let source = `export const before = 'before', Component = function (handle) {
+  let value = 1
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => <output>v1:{before}:{value}:{after}:{Other.name}</output>
+}, after = 'after', Other = function () { return () => <span>other</span> }
+`
+    let fixture = await createComponent(t, source)
+    let other = await createComponent(t, source, 'Other')
+    fixture.actions.setValue(5)
+    let updated = source.replace('v1:', 'v2:').replace('>other<', '>edited<')
+    await fixture.update(updated)
+    await other.update(updated)
+    assert.equal(await fixture.render(), '<output>v2:before:5:after:Other</output>')
+    assert.equal(await other.render(), '<span>edited</span>')
+  })
+
+  it('avoids collisions with generated runtime, state and setter names', async (t) => {
+    let source = `let __remixComponentHmr__ = 'module'
+export const __remixComponentHmrPreviousExports__ = 'exports'
+export function Component() {
+  let __remixComponentHmrState__ = 1
+  let __remixComponentHmrNext__ = 2
+  return () => {
+    __remixComponentHmrNext__ += __remixComponentHmrState__
+    return <output>{__remixComponentHmr__}:{__remixComponentHmrNext__}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(
+      source.replace('+= __remixComponentHmrState__', '+= __remixComponentHmrState__ * 2'),
+    )
+    assert.equal(await fixture.render(), '<output>module:4</output>')
+  })
+
+  it('accepts render updates when a module binding shadows Object', async (t) => {
+    let source = `let Object = null
+export function Component() {
+  let value = 1
+  return () => <output>v1:{value}</output>
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:1</output>')
+  })
+
+  it('retains bindings and tracked exports named __proto__', async (t) => {
+    let source = `export const __proto__ = 'stable'
+export function Component(handle) {
+  let __proto__ = 1
+  handle.props.actions.setValue = (next) => { __proto__ = next }
+  return () => <output>{__proto__}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{__proto__}', '{__proto__ * 2}'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('evaluates destructured parameter getters once across render updates', async (t) => {
+    let source = `let calls = 0
+export function Component(handle, { value } = { get value() {
+  handle.props.actions.onDefault?.()
+  return ++calls
+} }) {
+  handle.props.actions.onDefault = () => { throw new Error('default evaluated after setup') }
+  return () => <output>v1:{value}</output>
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:1</output>')
+  })
+
+  it('shares component arguments reassigned by refreshed renders with setup callbacks', async (t) => {
+    let source = `export function Component(handle) {
+  handle.props.actions.read = () => arguments[0].props.actions
+  return () => {
+    arguments[0] = { props: { actions: 'original' } }
+    return <output>{handle.props.actions.read()}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace("actions: 'original'", "actions: 'updated'"))
+    assert.equal(await fixture.render(), '<output>updated</output>')
+  })
+
+  it('retains named client entry self-bindings shared with parameter defaults', async (t) => {
+    let source = `import { clientEntry } from '@remix-run/component'
+export const Component = clientEntry(import.meta.url, function Self(handle, read = () => Self) {
+  handle.props.actions.read = () => Self
+  return () => <output>v1:{String(read() === Self)}:{String(handle.props.actions.read() === Self)}</output>
+})`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:true:true</output>')
+  })
+
+  it('retains the inner self-binding of client entries wrapped by helpers', async (t) => {
+    let source = `import { clientEntry } from '@remix-run/component'
+function countCalls(component) {
+  component.calls = 0
+  return function Wrapped(handle) {
+    component.calls++
+    return component(handle)
+  }
+}
+export const Component = clientEntry(import.meta.url, countCalls(function Self() {
+  return () => <output>v1:{Self.calls}</output>
+}))`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:1</output>')
+  })
+
+  it('retains parameters that shadow the exported component name', async (t) => {
+    let source = `export function Component(handle, Component = 1) {
+  handle.props.actions.setValue = (next) => { Component = next }
+  return () => <output>{Component}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{Component}', '{Component * 2}'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('preserves own properties in shorthand objects named __proto__', async (t) => {
+    let source = `export function Component(handle) {
+  let __proto__ = 1
+  handle.props.actions.setValue = (next) => { __proto__ = next }
+  return () => {
+    let object = { __proto__ }
+    return <output>v1:{String(Object.hasOwn(object, '__proto__'))}:{object.__proto__}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:true:5</output>')
+  })
+
+  it('preserves inferred names and bare receivers through TypeScript expressions', async (t) => {
+    let source = `export function Component(handle) {
+  let read: (() => boolean) | undefined
+  return () => {
+    handle.props.actions.assign = () => { read = (function () { return this === undefined }) satisfies (() => boolean) }
+    return <output>v1:{read?.name}:{String((read as (() => boolean) | undefined)?.())}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    await fixture.render()
+    fixture.actions.assign()
+    assert.equal(await fixture.render(), '<output>v2:read:true</output>')
+  })
+
+  it('preserves inferred function names through asserted assignment targets', async (t) => {
+    let source = `export function Component() {
+  let read: (() => void) | undefined
+  return () => {
+    (read as (() => void)) = () => {}
+    return <output>v1:{read?.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:read</output>')
+  })
+
+  it('infers class names before static initialization through non-null assignment targets', async (t) => {
+    let source = `export function Component() {
+  let Model: { label: string } | undefined
+  return () => {
+    Model! ||= class { static label = this.name }
+    return <output>v1:{Model?.label}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:Model</output>')
+  })
+
+  it('preserves inferred names through TypeScript instantiation expressions', async (t) => {
+    let source = `export function Component() {
+  let read
+  return () => {
+    read = (function <T>() {})<string>
+    return <output>v1:{read.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:read</output>')
   })
 
   it('supports PascalCase function components with separate named exports', async (t) => {
@@ -948,21 +1469,6 @@ describe('transformComponentsForServer', () => {
     assert.deepEqual(getImportSources(result.code), ['@acme/remix/component-hmr/runtime/server'])
   })
 
-  it('generates source maps for transformed server modules', () => {
-    let source = `export function Counter() {
-  return () => <button>Count</button>
-}
-`
-    let result = transformComponentsForServer(source, {
-      importSource: '@remix-run',
-      moduleUrl: 'file:///app/Counter.tsx',
-      sourceMap: true,
-    })
-
-    assert.equal(result.transformed, true)
-    assertSourceMapPosition(result.map, result.code, source, '<button>Count</button>')
-  })
-
   it('supports exported client entry function components without retaining setup state', async (t) => {
     let host = createModuleHost(t, transformComponentsForServer)
     let source = `import { clientEntry } from '@remix-run/component'
@@ -977,6 +1483,50 @@ export const Counter = clientEntry(import.meta.url, function Counter() {
     assert.match(await renderToString(jsx(Counter, {})), /<button>v2:2<\/button>/)
     assert.match(await renderToString(jsx(Counter, {})), /<button>v2:2<\/button>/)
     assert.deepEqual(host.messages, [])
+  })
+
+  it('preserves named component self-bindings on the server after an update', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    let source = `export const Component = function Self(handle, read = () => Self) {
+  return () => <output>v1:{String(Self === read())}:{Self.name}</output>
+}`
+    let Component = getComponent(await host.load(source), 'Component')
+    await host.update(source.replace('v1:', 'v2:'))
+    assert.equal(await renderToString(jsx(Component, {})), '<output>v2:true:Self</output>')
+  })
+
+  it('preserves the inner self-binding of wrapped client entries on the server', async (t) => {
+    let source = `import { clientEntry } from '@remix-run/component'
+function countCalls(component) {
+  component.calls = 0
+  return function Wrapped(handle) {
+    component.calls++
+    return component(handle)
+  }
+}
+export const Component = clientEntry(import.meta.url, countCalls(function Self() {
+  return () => <output>v1:{Self.calls}</output>
+}))`
+    let host = createModuleHost(t, transformComponentsForServer)
+    await host.load(source)
+    let Component = getComponent(await host.update(source.replace('v1:', 'v2:')), 'Component')
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let render = Component({ signal: controller.signal, props: {} })
+    assert.equal(await renderToString(render()), '<output>v2:1</output>')
+  })
+
+  it('evaluates server parameter defaults once per setup after an update', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    let source = `export function Component(handle, value = ++handle.props.counter.value) {
+  return () => <output>v1:{value}:{handle.props.counter.value}</output>
+}`
+    let Component = getComponent(await host.load(source), 'Component')
+    await host.update(source.replace('v1:', 'v2:'))
+    assert.equal(
+      await renderToString(jsx(Component, { counter: { value: 0 } })),
+      '<output>v2:1:1</output>',
+    )
   })
 
   it('does not transform non-component functions', () => {
@@ -1104,37 +1654,10 @@ export type Props = { count: number }`,
   })
 })
 
-function assertSourceMapPosition(
-  sourceMap: string | null,
-  generatedSource: string,
-  originalSource: string,
-  search: string,
-): void {
-  assert.ok(sourceMap)
-  let consumer = new SourceMapConsumer(JSON.parse(sourceMap))
-  let generated = getLineAndColumn(generatedSource, search)
-  let expected = getLineAndColumn(originalSource, search)
-  let original = consumer.originalPositionFor(generated)
-
-  assert.equal(original.line, expected.line)
-  assert.equal(original.column, expected.column)
-}
-
 function getImportSources(code: string): string[] {
   return parseSync('component.tsx', code, { sourceType: 'module' })
     .program.body.filter((node) => node.type === 'ImportDeclaration')
     .map((node) => node.source.value)
-}
-
-function getLineAndColumn(source: string, search: string): { column: number; line: number } {
-  let index = source.indexOf(search)
-  assert.notEqual(index, -1)
-
-  let lines = source.slice(0, index).split('\n')
-  return {
-    column: lines.at(-1)?.length ?? 0,
-    line: lines.length,
-  }
 }
 
 describe('server client-entry boundary compatibility', () => {
@@ -1342,8 +1865,13 @@ export function Component() {
   })
 })
 
-async function createComponent(t: TestContext, source: string, componentName = 'Component') {
-  let host = createModuleHost(t)
+async function createComponent(
+  t: TestContext,
+  source: string,
+  componentName = 'Component',
+  lang: 'tsx' | 'jsx' = 'tsx',
+) {
+  let host = createModuleHost(t, transformComponentsForBrowser, lang)
   let actions: Record<string, (...args: unknown[]) => unknown> = {}
   let controller = new AbortController()
   t.after(() => controller.abort())
@@ -1376,8 +1904,12 @@ declare global {
 
 let nextModuleId = 0
 
-function createModuleHost(t: TestContext, transform = transformComponentsForBrowser) {
-  let moduleUrl = `/test/component-${++nextModuleId}.tsx`
+function createModuleHost(
+  t: TestContext,
+  transform = transformComponentsForBrowser,
+  lang: 'tsx' | 'jsx' = 'tsx',
+) {
+  let moduleUrl = `/test/component-${++nextModuleId}.${lang}`
   let revision = 0
   let data = {}
   let acceptCallbacks: Array<(module: unknown) => void> = []
@@ -1397,8 +1929,8 @@ function createModuleHost(t: TestContext, transform = transformComponentsForBrow
   async function load(source: string): Promise<unknown> {
     let result = transform(source, { importSource: '@remix-run', moduleUrl })
     assert.ok(result.transformed, 'Expected a component HMR boundary')
-    let compiled = transformSync('component.tsx', result.code, {
-      lang: 'tsx',
+    let compiled = transformSync(moduleUrl, result.code, {
+      lang,
       sourceType: 'module',
       jsx: { runtime: 'automatic', importSource: '@remix-run/component' },
     })

@@ -15,8 +15,7 @@ function attachClientEntryOwner(
 
 function diffDomNodes(current: Node[], next: Node[], data: FrameContext['data'] = {}) {
   diffNodes(current, next, {
-    frameInstances: new WeakMap(),
-    pendingClientEntries: new Map(),
+    registry: { instances: new WeakMap() },
     data,
   } as any)
 }
@@ -34,8 +33,7 @@ function diffHead(
   shouldPreserveHeadNode?: (node: Node) => boolean,
 ) {
   diffNodes([current.head], [parseHead(nextHead).head], {
-    frameInstances: new WeakMap(),
-    pendingClientEntries: new Map(),
+    registry: { instances: new WeakMap() },
     data: {},
     shouldPreserveHeadNode,
   } as any)
@@ -59,7 +57,7 @@ function recordMutations(target: Node) {
 type TestFrame = {
   dispose(): void
   isDisplayingResolvedContent(): boolean
-  matchesIdentity(src: string, name: string | undefined): boolean
+  readonly identity: { src: string; name?: string } | undefined
   renderMarkerContent(): Promise<void>
 }
 
@@ -72,8 +70,7 @@ function diffDom(
   let template = document.createElement('template')
   template.innerHTML = next
   diffNodes(Array.from(container.childNodes), Array.from(template.content.childNodes), {
-    frameInstances,
-    pendingClientEntries: new Map(),
+    registry: { instances: frameInstances },
     data: data ?? {},
   } as any)
 }
@@ -498,6 +495,53 @@ describe('diffNodes', () => {
       expect(secondDisposeCount).toBe(1)
     })
 
+    it('keeps a user key distinct from a client entry with the same identity text', () => {
+      let container = document.createElement('div')
+      let key = JSON.stringify(['/entry.js', 'Entry'])
+      let keyed = `<button data-rmx-key='${key}'>Keyed</button>`
+      container.innerHTML = `<!-- rmx:h:one --><input><!-- /rmx:h -->${keyed}`
+      let start = container.firstChild
+      invariant(start instanceof Comment)
+      attachClientEntryOwner(start)
+      let input = container.querySelector('input')
+      let button = container.querySelector('button')
+
+      diffDom(container, `${keyed}<!-- rmx:h:two --><input><!-- /rmx:h -->`, {
+        h: { two: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} } },
+      })
+
+      expect(container.firstChild).toBe(button)
+      expect(button?.nextSibling).toBe(start)
+      expect(container.querySelector('input')).toBe(input)
+    })
+
+    it('rechecks an entry whose owner changes while an earlier sibling updates', (t) => {
+      let container = document.createElement('div')
+      container.innerHTML = '<b></b><!-- rmx:h:old --><input><!-- /rmx:h -->'
+      let start = container.childNodes[1]
+      invariant(start instanceof Comment)
+      attachClientEntryOwner(start)
+      let first = container.firstElementChild!
+      let oldInput = container.querySelector('input')
+      let set = first.setAttribute.bind(first)
+      let disposals = 0
+      t.mock.method(first, 'setAttribute', (name: string, value: string) => {
+        set(name, value)
+        attachClientEntryOwner(start, () => disposals++, {
+          moduleUrl: '/different.js',
+          exportName: 'Entry',
+        })
+      })
+
+      diffDom(container, '<b title="updated"></b><!-- rmx:h:new --><input><!-- /rmx:h -->', {
+        h: { new: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} } },
+      })
+
+      expect(start.parentNode).toBeNull()
+      expect(container.querySelector('input')).not.toBe(oldInput)
+      expect(disposals).toBe(1)
+    })
+
     it('does not let an unmatched boundary consume a later semantic match', () => {
       let container = document.createElement('div')
       container.innerHTML = '<!-- rmx:h:current --><button>Stateful</button><!-- /rmx:h -->'
@@ -713,7 +757,7 @@ describe('diffNodes', () => {
       frameInstances.set(start, {
         dispose() {},
         isDisplayingResolvedContent: () => true,
-        matchesIdentity: (src, name) => src === '/same' && name === undefined,
+        identity: { src: '/same' },
         async renderMarkerContent() {
           renderCount++
         },

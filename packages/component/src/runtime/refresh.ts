@@ -11,7 +11,7 @@ export type ComponentStalenessCheck = (type: Function) => boolean
 
 export let componentStalenessCheck: ComponentStalenessCheck | null = null
 
-const roots = new Set<VirtualRoot>()
+export const roots = new Set<VirtualRoot>()
 
 /**
  * Installs the process-wide component compatibility check used during development refreshes.
@@ -31,16 +31,4 @@ export function registerRoot(root: VirtualRoot): void {
 
 export function unregisterRoot(root: VirtualRoot): void {
   roots.delete(root)
-}
-
-/**
- * Immediately schedules reconciliation for every active component root using its current element.
- *
- * HMR runtimes call this after installing updated component implementations so mounted trees render
- * the new code while preserving compatible component state.
- */
-export function reconcileRoots(): void {
-  for (let root of roots) {
-    root.reconcile()
-  }
 }

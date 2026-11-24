@@ -4,7 +4,7 @@ import type { FrameHandle, FrameReloadStartEvent, Handle, RemixNode } from '../r
 import type { NavigationEvent } from '../runtime/navigation.ts'
 import { Fragment } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
-import { Frame, getNamedFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
+import { Frame, reloadFrameForNavigation } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import type { ResolveFrame } from '../runtime/frame-runtime.ts'
@@ -3367,6 +3367,7 @@ describe('run', () => {
         { $rmx: 'unknown', type: 'article', props: { children: 'Data' } },
         { $rmxFrame: true, props: { src: '/data' }, key: 'frame' },
         { $rmxFragment: true, props: { children: 'Data' }, key: 'fragment' },
+        { $rmxPortal: true, props: { children: 'Data' }, key: 'portal' },
         { $rmxMixin: 'css', args: [{ color: 'red' }] },
         { $rmxMixin: null },
         { $rmxMixin: 'unknown', args: [1] },
@@ -3385,6 +3386,7 @@ describe('run', () => {
       { $rmx: 0 },
       { $rmxFrame: true, props: { src: '/data' } },
       { $rmxFragment: true, props: { children: 'Data' } },
+      { $rmxPortal: true, props: { children: 'Data' } },
       { $rmxMixin: 'css', args: [{ color: 'red' }] },
       { $rmxMixin: null },
       { $rmxObject: { $rmxMixin: 'css', args: [] } },
@@ -4357,14 +4359,14 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
-  it('returns undefined when an internal named frame lookup misses', async () => {
+  it('returns undefined when a named frame is missing', async () => {
     document.body.innerHTML = await drain(renderToStream(<main />))
 
     let app = run({ loadModule: mock.fn() })
 
     try {
       await app.ready()
-      expect(getNamedFrame('missing-frame')).toBeUndefined()
+      expect(app.frames.get('missing-frame')).toBeUndefined()
     } finally {
       app.dispose()
     }
@@ -5879,6 +5881,44 @@ describe('run', () => {
     expect(document.getElementById('reload-error-value')?.textContent).toBe('Initial')
 
     app.dispose()
+  })
+
+  it('forwards its request abort reason when a child reload supersedes a pending read', async (t) => {
+    document.body.innerHTML = '<main>Initial</main>'
+    let read = Promise.withResolvers<void>()
+    let cancelled = Promise.withResolvers<unknown>()
+    let firstSignal: AbortSignal | undefined
+    let app = run({
+      loadModule() {
+        throw Error('No entry')
+      },
+      resolveFrame(src, options) {
+        if (src !== '/child') return <Frame name="child" src="/child" fallback={<p>Loading</p>} />
+        if (firstSignal) return '<p>Fresh</p>'
+        firstSignal = options?.signal
+        return new ReadableStream<Uint8Array>(
+          {
+            pull() {
+              read.resolve()
+            },
+            cancel(reason) {
+              cancelled.resolve(reason)
+            },
+          },
+          { highWaterMark: 0 },
+        )
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    await app.frames.top.reload()
+    await read.promise
+    let child = app.frames.get('child')
+    invariant(child && firstSignal)
+    await child.reload()
+    expect(firstSignal.aborted).toBe(true)
+    expect(await cancelled.promise).toBe(firstSignal.reason)
+    expect(document.body.textContent).toBe('Fresh')
   })
 
   it('cancels a superseded reload fetch without reporting an error', async (t) => {

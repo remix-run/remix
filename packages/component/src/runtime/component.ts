@@ -465,8 +465,7 @@ type ComponentConfig = {
   type: ElementFunction
   frame: FrameHandle
   getContext: (type: ElementFunction) => unknown
-  getFrameByName: (name: string) => FrameHandle | undefined
-  getTopFrame?: () => FrameHandle | undefined
+  frames: Handle['frames']
   signal?: AbortSignal
 }
 
@@ -527,9 +526,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
         console.warn(
           `Ignored handle.update() while ${getComponentName(config)} is running its setup function. The initial render includes setup changes.`,
         )
-        return new Promise((resolve) => {
-          tasks.push((signal) => resolve(signal))
-        })
+        return new Promise((resolve) => tasks.push(resolve))
       }
       if (phase !== 'idle') {
         throw new Error(
@@ -547,7 +544,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
       }
 
       return new Promise((resolve) => {
-        tasks.push((signal) => resolve(signal))
+        tasks.push(resolve)
         queue.enqueue(vnode, domParent)
       })
     },
@@ -555,14 +552,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
       tasks.push(task)
     },
     frame: config.frame,
-    frames: {
-      get top() {
-        return config.getTopFrame?.() ?? config.frame
-      },
-      get(name: string) {
-        return config.getFrameByName(name)
-      },
-    },
+    frames: config.frames,
     context,
     get signal() {
       return config.signal ?? (connectedController ??= new AbortController()).signal
@@ -593,28 +583,20 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
       renderController = undefined
       syncProps(props, nextProps)
 
-      if (renderFn === undefined) {
-        let initialize = config.type as unknown as (handle: Handle<ElementProps, C>) => unknown
-        let result: unknown
-        phase = 'setup'
-        try {
-          result = initialize(handle)
-        } finally {
-          phase = 'idle'
-        }
-
-        if (!isRenderFn(result)) {
-          throw new Error(
-            `${getComponentName(config)} must return a render function, received ${typeof result}`,
-          )
-        }
-
-        renderFn = result
-      }
-
       let element: RemixNode
-      phase = 'render'
       try {
+        if (renderFn === undefined) {
+          phase = 'setup'
+          let initialize = config.type as unknown as (handle: Handle<ElementProps, C>) => unknown
+          let result = initialize(handle)
+          if (!isRenderFn(result)) {
+            throw new Error(
+              `${getComponentName(config)} must return a render function, received ${typeof result}`,
+            )
+          }
+          renderFn = result
+        }
+        phase = 'render'
         element = renderFn()
       } finally {
         phase = 'idle'
@@ -693,6 +675,34 @@ export const FRAME_NODE = Symbol('FrameNode')
 export function Fragment(handle: Handle<FragmentProps>): RenderFn {
   void handle
   return () => null // reconciler renders
+}
+
+/** Props accepted by the built-in {@link Portal} component. */
+export interface PortalProps {
+  /** Children to render at the destination while retaining their component context and frame. */
+  children?: RemixNode
+  /**
+   * Destination in the same document as the portal. Defaults to that document's body when omitted.
+   * Changing the destination element remounts the children and resets their local state. If the
+   * destination is removed, children stay attached to that element until the container changes or
+   * the portal is disposed.
+   */
+  container?: HTMLElement
+}
+
+/**
+ * Renders children into another DOM container without adding a wrapper element.
+ * Renders nothing on the server. Inside a client entry, portal children render in the browser during
+ * hydration and subsequent updates. Without a client entry, the portal stays absent. DOM events,
+ * inherited styles, form ownership, and keyboard navigation follow the destination's DOM ancestry
+ * and order.
+ *
+ * @param handle Component handle containing the portal props.
+ * @returns An empty server render function.
+ */
+export function Portal(handle: Handle<PortalProps>): RenderFn {
+  void handle
+  return () => null
 }
 
 /**
