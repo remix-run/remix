@@ -8,6 +8,58 @@ import { expectNodeOrder } from './utils.ts'
 import { on } from '../index.ts'
 
 describe('createRangeRoot', () => {
+  it(
+    'keeps later fragment nodes in place when a native callback crosses a stable sibling',
+    { skip: typeof Element.prototype.moveBefore !== 'function' },
+    (t) => {
+      let container = document.createElement('div')
+      document.body.append(container)
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      let outside = document.createElement('aside')
+      container.append(start, end, outside)
+      let root = createRangeRoot([start, end])
+      t.after(() => {
+        root.dispose()
+        container.remove()
+      })
+      customElements.define(
+        'rmx-range-native-cross-stable',
+        class extends HTMLElement {
+          connectedMoveCallback() {
+            start.after(this)
+          }
+        },
+      )
+      let header = <header key="header">Header</header>
+      let b = <p key="b">B</p>
+      let c = <p key="c">C</p>
+      let moving = (
+        <Fragment key="a">
+          first{createElement('rmx-range-native-cross-stable', {})}
+          <span>Kept</span>last
+        </Fragment>
+      )
+      root.render([header, b, c, moving])
+      let [, before, first, second, text, custom, kept, last] = Array.from(container.childNodes)
+
+      root.render([header, moving, b, c])
+
+      expectNodeOrder(container.childNodes, [
+        start,
+        custom,
+        before,
+        text,
+        kept,
+        last,
+        first,
+        second,
+        end,
+        outside,
+      ])
+    },
+  )
+
   it('keeps later fragment nodes inside the range after a fallback callback moves outside', (t) => {
     let container = document.createElement('div')
     document.body.append(container)

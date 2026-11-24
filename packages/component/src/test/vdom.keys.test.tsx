@@ -794,6 +794,38 @@ describe('vnode rendering (keys)', () => {
   })
 
   describe('focus and selection across keyed moves', () => {
+    it('keeps later fragment nodes in place when a fallback callback crosses a stable sibling', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let armed = false
+      customElements.define(
+        'rmx-keyed-fallback-cross-stable',
+        class extends HTMLElement {
+          connectedCallback() {
+            if (!armed) return
+            armed = false
+            container.prepend(this)
+          }
+        },
+      )
+      let header = <header key="header">Header</header>
+      let b = <p key="b">B</p>
+      let c = <p key="c">C</p>
+      let moving = (
+        <Fragment key="a">
+          first{createElement('rmx-keyed-fallback-cross-stable', {})}
+          <span>Kept</span>last
+        </Fragment>
+      )
+      render([header, b, c, moving])
+      let [before, first, second, text, custom, kept, last] = Array.from(container.childNodes)
+      armed = true
+
+      render([header, moving, b, c])
+
+      expectNodeOrder(container.childNodes, [custom, before, text, kept, last, first, second])
+    })
+
     it('does not collect past a keyed fragment whose last node was removed by a callback', (t) => {
       let { render, container } = createConnectedRoot(t)
       Object.defineProperty(container, 'moveBefore', { value: undefined })

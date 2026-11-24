@@ -1995,7 +1995,12 @@ export class SiblingPlacement {
       !(this.#start.compareDocumentPosition(this.#end) & Node.DOCUMENT_POSITION_FOLLOWING)
     )
       return undefined
-    return this.getRetainedNode(this.#anchors) ?? this.#end
+    while (this.#anchors.length) {
+      let node = this.#anchors.at(-1)
+      if (node && this.contains(node)) return node
+      this.#anchors.pop()
+    }
+    return this.#end
   }
 
   contains(node: Node): boolean {
@@ -2010,16 +2015,9 @@ export class SiblingPlacement {
     )
   }
 
-  getRetainedNode(nodes: Node[]): Node | undefined {
-    while (nodes.length) {
-      let node = nodes.at(-1)
-      if (node && this.contains(node)) return node
-      nodes.pop()
-    }
-  }
-
   retain(first: Node | null, last = first): void {
-    if (!first || !this.contains(first)) return
+    // Retention does not move DOM. Validate candidate positions only when an anchor is used.
+    if (first?.parentNode !== this.parent) return
     if (!last || first === last || last.parentNode !== this.parent) {
       this.#anchors.push(first)
       return
@@ -2043,27 +2041,24 @@ export function moveNodesBefore(placement: SiblingPlacement, nodes: Node[]): voi
   let before = placement.anchor
   if (before === undefined) return
   let end = nodes.at(-1)
-  if (end?.parentNode === parent && (isFrameEnd(end) || isHydrationEnd(end))) {
-    // Place the inert ownership marker first so callback-created siblings remain inside it.
-    moveNodeBefore(parent, end, before)
-    for (let node of nodes) {
-      if (node === end || end.parentNode !== parent) break
-      if (placement.contains(node) && node.nextSibling !== end) moveNodeBefore(parent, node, end)
-    }
-    for (let i = nodes.length - 1; i >= 0; i--) placement.retain(nodes[i])
-    return
-  }
+  if (!end) return
+  let temporary = !(end.parentNode === parent && (isFrameEnd(end) || isHydrationEnd(end)))
+  let doc = end.ownerDocument
+  invariant(doc, 'Expected document for DOM range')
+  let marker = temporary ? doc.createComment('') : end
+  if (temporary) parent.insertBefore(marker, before)
+  else moveNodeBefore(parent, marker, before)
 
-  // Keep source-order callbacks for unmarked ranges, anchoring after the retained prefix.
-  let placed: Node[] = []
-  for (let node of nodes) {
-    if (!placement.contains(node)) continue
-    let fallback = placement.anchor
-    if (fallback === undefined) break
-    let previous = placement.getRetainedNode(placed)
-    let ref = previous ? previous.nextSibling : fallback
-    if (node !== ref && node.nextSibling !== ref) moveNodeBefore(parent, node, ref)
-    placed.push(node)
+  // Keep a fixed destination through callbacks, including callbacks that relocate themselves.
+  try {
+    for (let node of nodes) {
+      if (node === marker || !placement.contains(marker)) break
+      if (placement.contains(node) && node.nextSibling !== marker) {
+        moveNodeBefore(parent, node, marker)
+      }
+    }
+  } finally {
+    if (temporary) marker.parentNode?.removeChild(marker)
   }
   for (let i = nodes.length - 1; i >= 0; i--) placement.retain(nodes[i])
 }

@@ -245,7 +245,7 @@ export function diffNodes(
   let placement = new SiblingPlacement(parent, regionTailRef, regionHeadRef)
   for (let i = nextUnits.length - 1; i >= 0; i--) {
     let unit = nextUnits[i]
-    if (unit.match && !placement.contains(unit.start)) continue
+    if (unit.match && unit.start.parentNode !== parent) continue
     if (stable.has(i)) placement.retain(unit.start, unit.end ?? unit.start)
     else placeSiblingUnitBefore(unit, placement)
   }
@@ -434,6 +434,7 @@ function getBoundaryKey(
 }
 
 function placeSiblingUnitBefore(unit: SiblingUnit, placement: SiblingPlacement): void {
+  if (unit.match && !placement.contains(unit.start)) return
   if (!unit.kind) {
     placement.move(unit.start)
     return
