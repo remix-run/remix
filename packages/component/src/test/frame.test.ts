@@ -52,6 +52,41 @@ describe('frames', () => {
     document.documentElement.innerHTML = '<head></head><body></body>'
   })
 
+  it('publishes a frame template before EOF when its opening tag spans network chunks', async (t) => {
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    let frame = createTestFrame(root, { resolveFrame: () => '' })
+    t.after(() => frame.dispose())
+    await frame.ready()
+
+    let encoder = new TextEncoder()
+    let drained = Promise.withResolvers<void>()
+    let finish = Promise.withResolvers<void>()
+    let stream = new ReadableStream<Uint8Array>(
+      {
+        start(controller) {
+          controller.enqueue(encoder.encode('<p>İstanbul</p><TeM'))
+          controller.enqueue(encoder.encode('plate id="chunk-split-frame"><b>Ready</b></template>'))
+        },
+        async pull(controller) {
+          drained.resolve()
+          await finish.promise
+          controller.close()
+        },
+      },
+      { highWaterMark: 0 },
+    )
+
+    let replacement = frame.handle.replace(stream)
+    await drained.promise
+    try {
+      expect(consumeFrameTemplate('chunk-split-frame')?.textContent).toBe('Ready')
+    } finally {
+      finish.resolve()
+      await replacement
+    }
+  })
+
   it('preserves doctype-looking text in frame script data', async (t) => {
     let root = document.createElement('div')
     root.innerHTML = '<p>Initial</p>'
