@@ -6,6 +6,6 @@ Standalone roots only allocate frame registries when configured to resolve frame
 
 Mixins can read their own `handle.signal` in `beforeUpdate` and `commit` listeners when their component schedules an update.
 
-Component updates now look for a DOM insertion point only when they need one. A keyed element that returns while its removal is pending reuses its existing mixin without running setup twice.
+Component updates now look for a DOM insertion point only when they need one. A keyed element that returns while its removal is pending reuses its existing mixin without running setup twice and picks up changes to its `innerHTML`.
 
 Range roots keep hydration inside their boundaries, even when a server-rendered tag differs from the client tag or text spans several DOM nodes.

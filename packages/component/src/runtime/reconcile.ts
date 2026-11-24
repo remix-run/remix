@@ -732,7 +732,8 @@ function diffHost(
     // Restore listeners and controlled values before reconciling a returning host's children.
     patchHostProps(previous, resolved, dom)
     setupHostNode(committed, scheduler)
-  } else if (previous.innerHTML != resolved.innerHTML) {
+  }
+  if (previous.innerHTML != resolved.innerHTML) {
     setHostInnerHTML(dom, resolved.innerHTML ?? '')
   }
 
