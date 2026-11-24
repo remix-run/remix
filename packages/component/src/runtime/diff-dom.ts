@@ -23,19 +23,18 @@ export function getClientEntryKey(identity: ClientEntryIdentity): string {
 }
 
 function getClientEntryComparisonUrl(moduleUrl: string): string {
-  return moduleUrl.replace(/^[^?#]*\?([^#]*)/, (prefix: string, query: string) => {
+  return moduleUrl.replace(/^([^?#]*)\?([^#]*)/, (prefix: string, path: string, query: string) => {
     let segments = query.split('&')
-    let matches = segments.filter((segment) => HMR_TIMESTAMP_QUERY_SEGMENT_PATTERN.test(segment))
-    if (matches.length !== 1) return prefix
-    segments.splice(segments.indexOf(matches[0]), 1)
-    let path = prefix.slice(0, prefix.indexOf('?'))
-    return segments.length ? path + '?' + segments.join('&') : path
+    let kept = segments.filter((segment) => !HMR_TIMESTAMP_QUERY_SEGMENT_PATTERN.test(segment))
+    if (kept.length !== segments.length - 1) return prefix
+    return kept.length ? path + '?' + kept.join('&') : path
   })
 }
 
 type NodeSiblingUnit = {
-  kind: 'node'
+  kind?: never
   start: Node
+  end?: never
 }
 
 type BoundarySiblingUnit = {
@@ -55,31 +54,28 @@ type SiblingUnit = (NodeSiblingUnit | BoundarySiblingUnit) & {
 
 const REMIX_PRESERVE_DOM_ATTRIBUTE = 'data-rmx-preserve-dom'
 
-export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
-  let parent = curr[0]?.parentNode ?? context.regionParent ?? null
-  invariant(parent, 'Parent node not found')
-
-  // When diffing a bounded region (e.g. between frame comments), we should insert new
-  // nodes before the region tail ref rather than appending to the parent.
-  let regionTailRef: ChildNode | null =
-    context.regionTailRef ??
-    (curr.length > 0 ? (curr[curr.length - 1].nextSibling as ChildNode | null) : null)
-
-  diffSiblingUnits(curr, next, parent, regionTailRef, context)
-}
-
 // Sibling matching has already paired the elements by tag and split marker ranges into units.
 function diffMatchedNode(current: Node, next: Node, context: FrameContext): void {
   if (isElement(current) && isElement(next)) {
-    if (shouldPreserveDomElement(current, next)) return
+    if (next.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) {
+      current.toggleAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE, true)
+      return
+    }
     diffElementAttributes(current, next)
-    if (!shouldPreserveElementChildren(current, next)) diffElementChildren(current, next, context)
+    if (
+      current instanceof HTMLTextAreaElement &&
+      next instanceof HTMLTextAreaElement &&
+      current.value !== next.value
+    )
+      return
+    if (current.firstChild || next.firstChild) diffElementChildren(current, next, context)
   } else if (current.nodeValue !== next.nodeValue) {
     current.nodeValue = next.nodeValue
   }
 }
 
 export function diffElementAttributes(current: Element, next: Element): void {
+  if (!current.hasAttributes() && !next.hasAttributes()) return
   let prevAttrNames = current.getAttributeNames()
   let nextAttrNames = next.getAttributeNames()
   let preservedNames = next.getAttribute('data-rmx-preserve-attrs')?.split(/[\t\n\f\r ]+/)
@@ -99,9 +95,8 @@ export function diffElementAttributes(current: Element, next: Element): void {
   for (let name of nextAttrNames) {
     if (preservedNames?.includes(name)) continue
     // Header CSP hides nonce attributes, but their IDL properties retain the value.
-    let prevVal =
-      name === 'nonce' && 'nonce' in current ? current.nonce : current.getAttribute(name)
-    let nextVal = name === 'nonce' && 'nonce' in next ? next.nonce : next.getAttribute(name)
+    let prevVal = readAttribute(current, name)
+    let nextVal = readAttribute(next, name)
     if (prevVal !== nextVal) {
       if (shouldPreserveLiveAttribute(current, next, name)) continue
       current.setAttribute(name, nextVal == null ? '' : String(nextVal))
@@ -109,60 +104,28 @@ export function diffElementAttributes(current: Element, next: Element): void {
   }
 }
 
-function shouldPreserveDomElement(current: Element, next: Element): boolean {
-  if (!next.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) return false
-  if (!current.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) {
-    current.setAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE, '')
-  }
-  return true
+function readAttribute(node: Element, name: string) {
+  return name === 'nonce' && 'nonce' in node ? node.nonce : node.getAttribute(name)
 }
 
 function shouldPreserveLiveAttribute(current: Element, next: Element, name: string): boolean {
   if (name === 'open') {
-    if (current instanceof HTMLDetailsElement && next instanceof HTMLDetailsElement) {
+    if (current instanceof HTMLDetailsElement && next instanceof HTMLDetailsElement)
       return current.open !== next.open
-    }
-
-    if (current instanceof HTMLDialogElement && next instanceof HTMLDialogElement) {
+    if (current instanceof HTMLDialogElement && next instanceof HTMLDialogElement)
       return current.open !== next.open
-    }
   }
-
-  if (name === 'checked') {
-    if (current instanceof HTMLInputElement && next instanceof HTMLInputElement) {
-      return current.checked !== next.checked
-    }
+  if (current instanceof HTMLInputElement && next instanceof HTMLInputElement) {
+    if (name === 'checked') return current.checked !== next.checked
+    if (name === 'value' && shouldPreserveInputValue(current)) return current.value !== next.value
   }
-
-  if (name === 'value') {
-    if (
-      current instanceof HTMLInputElement &&
-      next instanceof HTMLInputElement &&
-      shouldPreserveInputValue(current)
-    ) {
-      return current.value !== next.value
-    }
-  }
-
-  if (name === 'selected') {
-    if (current instanceof HTMLOptionElement && next instanceof HTMLOptionElement) {
-      return current.selected !== next.selected
-    }
-  }
-
-  if (name === 'popover') {
-    return isPopoverOpen(current) !== isPopoverOpen(next)
-  }
-
-  return false
-}
-
-function shouldPreserveElementChildren(current: Element, next: Element): boolean {
-  if (current instanceof HTMLTextAreaElement && next instanceof HTMLTextAreaElement) {
-    return current.value !== next.value
-  }
-
-  return false
+  if (
+    name === 'selected' &&
+    current instanceof HTMLOptionElement &&
+    next instanceof HTMLOptionElement
+  )
+    return current.selected !== next.selected
+  return name === 'popover' && isPopoverOpen(current) !== isPopoverOpen(next)
 }
 
 function shouldPreserveInputValue(input: HTMLInputElement): boolean {
@@ -184,42 +147,45 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
   if (shouldPreserveHeadNode && isDocumentHead(current)) {
     // Only preserved nodes after every diffed child can anchor the diff. Using a
     // leading one would move every diffed node in front of it.
-    let lastDiffedIndex = currentChildren.findLastIndex((node) => !shouldPreserveHeadNode(node))
-    regionTailRef = currentChildren[lastDiffedIndex + 1] ?? null
-    currentChildren = currentChildren.filter((node) => !shouldPreserveHeadNode(node))
+    regionTailRef = current.firstChild
+    currentChildren = currentChildren.filter((node) => {
+      if (shouldPreserveHeadNode(node)) return false
+      regionTailRef = node.nextSibling
+      return true
+    })
   }
-  diffSiblingUnits(currentChildren, Array.from(next.childNodes), current, regionTailRef, context)
+  diffNodes(currentChildren, Array.from(next.childNodes), context, current, regionTailRef)
 }
 
-function diffSiblingUnits(
+export function diffNodes(
   currentNodes: Node[],
   nextNodes: Node[],
-  parent: ParentNode,
-  regionTailRef: ChildNode | null,
   context: FrameContext,
+  parent = currentNodes[0]?.parentNode ?? context.regionParent,
+  regionTailRef = context.regionTailRef ?? currentNodes.at(-1)?.nextSibling ?? null,
 ): void {
-  let currentUnits = parseSiblingUnits(excludePortalRanges(currentNodes, parent))
-  let nextUnits = parseSiblingUnits(nextNodes)
-  matchSiblingUnits(currentUnits, nextUnits, isDocumentHead(parent), context)
+  invariant(parent, 'Parent node not found')
+  let currentUnits = parseSiblingUnits(excludePortalRanges(currentNodes, parent), context, false)
+  let nextUnits = parseSiblingUnits(nextNodes, context, true)
+  matchSiblingUnits(currentUnits, nextUnits, isDocumentHead(parent))
   // Patch each matched unit and reuse its slot to record what will occupy this position.
   for (let i = 0; i < nextUnits.length; i++) {
     let nextUnit = nextUnits[i]
     let currentUnit = nextUnit.match
     if (!currentUnit) continue
-    if (currentUnit.kind === 'node' && nextUnit.kind === 'node') {
+    if (!currentUnit.kind) {
       diffMatchedNode(currentUnit.start, nextUnit.start, context)
       nextUnits[i] = currentUnit
       continue
     }
 
-    invariant(currentUnit.kind !== 'node' && nextUnit.kind !== 'node', 'Expected boundaries')
+    invariant(nextUnit.kind, 'Expected boundary')
 
-    // Comment markers can represent owned DOM ranges, not standalone comments. If
-    // the incoming range no longer has the same identity, replace the whole range
-    // before regular node diffing mutates either marker.
-    if (!shouldPreserveBoundaryUnit(currentUnit, nextUnit, context)) {
-      let oldNodes = collectNodeRange(currentUnit.start, currentUnit.end)
-      for (let node of collectNodeRange(nextUnit.start, nextUnit.end)) {
+    // Updating an earlier sibling can synchronously change this boundary's owner.
+    let activeKey = getBoundaryKey(currentUnit, context, false)
+    if (activeKey === undefined || activeKey !== getBoundaryKey(nextUnit, context, true)) {
+      let oldNodes = collectNodeRange(currentUnit.start, currentUnit.end, true)
+      for (let node of collectNodeRange(nextUnit.start, nextUnit.end, true)) {
         parent.insertBefore(node, currentUnit.start)
       }
       for (let node of oldNodes) removeNode(node, parent, context)
@@ -231,10 +197,11 @@ function diffSiblingUnits(
       let frame = context.registry.instances.get(currentUnit.start)
       let marker = getFrameMarkerData(nextUnit.start, context)
       if (frame && marker?.status === 'resolved') {
-        let fragment = currentUnit.start.ownerDocument.createDocumentFragment()
         // Move the original response nodes so runtime metadata remains associated with them.
-        for (let node of collectNodesBetween(nextUnit.start, nextUnit.end))
-          fragment.appendChild(node)
+        let fragment = createFragment(
+          currentUnit.start.ownerDocument,
+          collectNodeRange(nextUnit.start.nextSibling, nextUnit.end),
+        )
         let render = frame.renderMarkerContent(
           { ...marker, id: getFrameId(nextUnit.start) },
           fragment,
@@ -251,7 +218,7 @@ function diffSiblingUnits(
         context.reconciliationTracker?.waitFor(render)
       } else if (!frame?.isDisplayingResolvedContent()) {
         diffNodes(
-          collectNodesBetween(currentUnit.start, currentUnit.end),
+          collectNodeRange(currentUnit.start.nextSibling, currentUnit.end),
           nextNodes.slice(nextUnit.startIndex + 1, nextUnit.endIndex),
           { ...context, regionParent: parent, regionTailRef: currentUnit.end },
         )
@@ -261,25 +228,17 @@ function diffSiblingUnits(
   }
 
   // Obsolete siblings must go before placement so surviving nodes keep focus.
-  for (let i = 0; i < currentUnits.length; i++) {
-    if (currentUnits[i].currentIndex === undefined)
-      removeSiblingUnit(currentUnits[i], parent, context)
+  for (let current of currentUnits) {
+    if (!current.match) removeSiblingUnit(current, parent, context)
   }
 
   let stable = getStableCommittedIndexes(nextUnits, parent)
   let anchor: Node | null = regionTailRef
   for (let i = nextUnits.length - 1; i >= 0; i--) {
     let unit = nextUnits[i]
-    let first = unit.start
-    let ref = anchor?.parentNode === parent ? anchor : null
-
-    if (stable.has(i)) {
-      anchor = first
-      continue
-    }
-
-    placeSiblingUnitBefore(unit, parent, ref)
-    if (first.parentNode === parent) anchor = first
+    if (!stable.has(i))
+      placeSiblingUnitBefore(unit, parent, anchor?.parentNode === parent ? anchor : null)
+    if (unit.start.parentNode === parent) anchor = unit.start
   }
 }
 
@@ -287,68 +246,37 @@ function matchSiblingUnits(
   currentUnits: SiblingUnit[],
   nextUnits: SiblingUnit[],
   inHead: boolean,
-  context: FrameContext,
 ): void {
-  function match(nextIndex: number, currentIndex: number): void {
-    let current = currentUnits[currentIndex]
-    current.currentIndex = currentIndex
-    nextUnits[nextIndex].match = current
+  function match(next: SiblingUnit, current: SiblingUnit) {
+    next.match = current
+    current.match = next
   }
 
-  // Reserve globally matched keyed elements and semantic boundaries before
-  // positionally pairing the remaining ordinary siblings.
-  let keyToIndex = new Map<string, number>()
-
-  for (let i = 0; i < currentUnits.length; i++) {
-    let key = currentUnits[i].key
-    if (key !== undefined) keyToIndex.set(key, i)
+  // Explicit keys keep the last old element. Repeated boundaries pair in source order.
+  let keyed = new Map<string, SiblingUnit[]>()
+  for (let i = currentUnits.length - 1; i >= 0; i--) {
+    let unit = currentUnits[i]
+    unit.currentIndex = i
+    if (unit.key === undefined) continue
+    let units = keyed.get(unit.key)
+    if (!units) keyed.set(unit.key, [unit])
+    else if (unit.kind) units.push(unit)
   }
-
-  for (let i = 0; i < nextUnits.length; i++) {
-    let nextUnit = nextUnits[i]
-    let matchIndex = -1
-    let key = nextUnit.key
-
-    if (key !== undefined) {
-      let keyedIndex = keyToIndex.get(key)
-      if (
-        keyedIndex !== undefined &&
-        currentUnits[keyedIndex].currentIndex === undefined &&
-        currentUnits[keyedIndex].start.nodeName === nextUnit.start.nodeName
-      ) {
-        matchIndex = keyedIndex
-      }
+  for (let next of nextUnits) {
+    if (next.key === undefined) continue
+    let units = keyed.get(next.key)
+    if (units?.at(-1)?.start.nodeName === next.start.nodeName) {
+      match(next, units.pop()!)
     }
-
-    // Boundary identities behave like implicit keys. Repeated boundaries with
-    // the same identity are paired in source order because server markers do
-    // not carry a separate application key.
-    if (matchIndex === -1 && nextUnit.kind !== 'node') {
-      for (let j = 0; j < currentUnits.length; j++) {
-        let currentUnit = currentUnits[j]
-        if (currentUnit.currentIndex !== undefined || currentUnit.kind !== nextUnit.kind) continue
-        if (shouldPreserveBoundaryUnit(currentUnit, nextUnit, context)) {
-          matchIndex = j
-          break
-        }
-      }
-    }
-
-    if (matchIndex !== -1) match(i, matchIndex)
   }
 
   let cursor = 0
-  for (let nextIndex = 0; nextIndex < nextUnits.length; nextIndex++) {
-    if (nextUnits[nextIndex].match) continue
-    while (currentUnits[cursor]?.currentIndex !== undefined) cursor++
-    if (cursor === currentUnits.length) break
-    let currentIndex = cursor++
-    let currentUnit = currentUnits[currentIndex]
-    let nextUnit = nextUnits[nextIndex]
-
-    if (currentUnit.identity !== undefined && currentUnit.identity === nextUnit.identity) {
-      match(nextIndex, currentIndex)
-    }
+  for (let next of nextUnits) {
+    if (next.match) continue
+    while (currentUnits[cursor]?.match) cursor++
+    let current = currentUnits[cursor++]
+    if (!current) break
+    if (next.identity !== undefined && next.identity === current.identity) match(next, current)
   }
 
   // Head resources are routinely added or removed ahead of shared ones, which
@@ -356,77 +284,52 @@ function matchSiblingUnits(
   // within each identity so they are reused instead of recreated. Outside the
   // head this could hand one element's live state, like typed input, to another.
   if (inHead) {
-    let currentIndexesByIdentity = new Map<string, number[]>()
-    for (let i = 0; i < currentUnits.length; i++) {
-      let currentUnit = currentUnits[i]
-      if (currentUnit.currentIndex !== undefined || currentUnit.identity === undefined) continue
-      let identity = currentUnit.identity
-      let indexes = currentIndexesByIdentity.get(identity)
-      if (indexes) indexes.push(i)
-      else currentIndexesByIdentity.set(identity, [i])
-    }
-
-    for (let i = 0; i < nextUnits.length; i++) {
-      let nextUnit = nextUnits[i]
-      if (nextUnit.match || nextUnit.identity === undefined) continue
-      let currentIndex = currentIndexesByIdentity.get(nextUnit.identity)?.shift()
-      if (currentIndex !== undefined) match(i, currentIndex)
+    let remaining = Map.groupBy(currentUnits.toReversed(), (unit) =>
+      unit.match ? undefined : unit.identity,
+    )
+    for (let next of nextUnits) {
+      if (next.match || next.identity === undefined) continue
+      let current = remaining.get(next.identity)?.pop()
+      if (current) match(next, current)
     }
   }
 }
 
 function isDocumentHead(node: ParentNode): boolean {
-  return isElement(node) && node === node.ownerDocument.head
+  return node === node.ownerDocument?.head
 }
 
 // Preserved elements never move, so any other unit can only stay in place if it
 // already sits between the same preserved neighbors it needs to end up between.
 function getStableCommittedIndexes(committed: SiblingUnit[], parent: ParentNode): Set<number> {
   let stable = new Set<number>()
-  let upperBounds = new Array<number>(committed.length)
-  let upperBound = Infinity
-  for (let i = committed.length - 1; i >= 0; i--) {
-    upperBounds[i] = upperBound
-    let unit = committed[i]
-    if (
-      unit.kind === 'node' &&
-      isPreservedDomElement(unit.start) &&
-      unit.start.parentNode === parent
-    ) {
-      stable.add(i)
-      upperBound = unit.currentIndex ?? -1
-    }
-  }
+  let matches: number[] = []
+  let lower = -1
+  let first = 0
+  for (let end = 0; end <= committed.length; end++) {
+    let unit = committed[end]
+    if (unit && !(isPreservedDomElement(unit.start) && unit.start.parentNode === parent)) continue
 
-  let committedIndexes: number[] = []
-  let currentIndexes: number[] = []
-  let lowerBound = -1
-  for (let i = 0; i < committed.length; i++) {
-    let matchIndex = committed[i].currentIndex ?? -1
-    if (stable.has(i)) {
-      lowerBound = matchIndex
-      continue
+    let upper = unit ? (unit.currentIndex ?? -1) : Infinity
+    for (let i = first; i < end; i++) {
+      let candidate = committed[i]
+      let index = candidate.currentIndex ?? -1
+      matches[i] =
+        index > lower && index < upper && candidate.start.parentNode === parent ? index : -1
     }
-    if (
-      matchIndex <= lowerBound ||
-      matchIndex >= upperBounds[i] ||
-      committed[i].start.parentNode !== parent
-    ) {
-      continue
+    if (unit) {
+      stable.add(end)
+      matches[end] = -1
+      lower = upper
+      first = end + 1
     }
-    committedIndexes.push(i)
-    currentIndexes.push(matchIndex)
   }
-
-  for (let index of getStableIndexes(currentIndexes)) {
-    stable.add(committedIndexes[index])
-  }
+  for (let index of getStableIndexes(matches)) stable.add(index)
   return stable
 }
 
 function getUnkeyedNodeIdentity(node: Node): string | undefined {
-  if (isTextNode(node)) return '#text'
-  if (isCommentNode(node)) return '#comment'
+  if (node.nodeType === Node.TEXT_NODE || isCommentNode(node)) return node.nodeName
   if (!isElement(node)) return undefined
 
   // A link's rel and href identify the resource it loads, and a meta tag's name
@@ -450,7 +353,7 @@ function getUnkeyedNodeIdentity(node: Node): string | undefined {
   }
 }
 
-function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
+function parseSiblingUnits(nodes: Node[], context: FrameContext, incoming: boolean): SiblingUnit[] {
   let units: SiblingUnit[] = []
 
   for (let i = 0; i < nodes.length; i++) {
@@ -467,9 +370,8 @@ function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
     invariant(!isFrameEnd(node), 'Unexpected frame end marker')
     let key = isElement(node) ? (node.getAttribute('data-rmx-key') ?? undefined) : undefined
     units.push({
-      kind: 'node',
       start: node,
-      key,
+      key: key === undefined ? undefined : 'node:' + key,
       identity: key === undefined ? getUnkeyedNodeIdentity(node) : undefined,
     })
   }
@@ -481,56 +383,73 @@ function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
     isStart: (node: Node) => boolean,
     isEnd: (node: Node) => node is Comment,
   ): number {
-    let endIndex = findEndIndex(nodes, startIndex, isStart, isEnd)
+    let depth = 1
+    let endIndex = startIndex
+    while (++endIndex < nodes.length) {
+      let end = nodes[endIndex]
+      if (isStart(end)) depth++
+      else if (isEnd(end) && --depth === 0) {
+        let unit: SiblingUnit = { kind, start, end, startIndex, endIndex }
+        unit.key = getBoundaryKey(unit, context, incoming)
+        units.push(unit)
+        return endIndex
+      }
+    }
     invariant(
-      endIndex > startIndex,
+      false,
       kind === 'frame' ? 'Frame end marker not found' : 'Hydration end marker not found',
     )
-    let end = nodes[endIndex]
-    invariant(
-      isEnd(end),
-      kind === 'frame' ? 'Expected frame end marker' : 'Expected hydration end marker',
-    )
-    units.push({ kind, start, end, startIndex, endIndex })
-    return endIndex
   }
 
   return units
 }
 
-function shouldPreserveBoundaryUnit(
-  current: BoundarySiblingUnit,
-  next: BoundarySiblingUnit,
+function getBoundaryKey(
+  unit: BoundarySiblingUnit,
   context: FrameContext,
-): boolean {
-  if (current.kind !== next.kind) return false
-  return current.kind === 'frame'
-    ? shouldPreserveFrameStartMarker(current.start, next.start, context)
-    : shouldPreserveHydrationStartMarker(current.start, next.start, context)
+  incoming: boolean,
+): string | undefined {
+  let start = unit.start
+  if (unit.kind === 'frame') {
+    let frame = incoming
+      ? getFrameMarkerData(start, context)
+      : context.registry.instances.get(start)?.identity
+    // Object keys keep frames separate from client-entry tuple keys and prefixed element keys.
+    if (frame) return JSON.stringify({ src: frame.src, name: frame.name })
+  } else {
+    let entry = incoming
+      ? context.data.h?.[getHydrationId(start)]
+      : getClientEntryBoundaryOwner(start)?.identity
+    if (entry) return getClientEntryKey(entry)
+  }
 }
 
 function placeSiblingUnitBefore(unit: SiblingUnit, parent: ParentNode, ref: Node | null): void {
-  if (unit.kind === 'node') {
-    if (unit.start.parentNode !== parent || unit.start.nextSibling !== ref) {
-      parent.insertBefore(unit.start, ref)
-    }
+  if (unit.start.parentNode === parent && (unit.end ?? unit.start).nextSibling === ref) return
+  if (!unit.kind) {
+    parent.insertBefore(unit.start, ref)
     return
   }
 
-  if (unit.start.parentNode === parent && unit.end.nextSibling === ref) return
+  parent.insertBefore(
+    createFragment(unit.start.ownerDocument, collectNodeRange(unit.start, unit.end, true)),
+    ref,
+  )
+}
 
-  let fragment = unit.start.ownerDocument.createDocumentFragment()
-  for (let node of collectNodeRange(unit.start, unit.end)) fragment.appendChild(node)
-  parent.insertBefore(fragment, ref)
+function createFragment(doc: Document, nodes: Node[]): DocumentFragment {
+  let fragment = doc.createDocumentFragment()
+  for (let node of nodes) fragment.appendChild(node)
+  return fragment
 }
 
 function removeSiblingUnit(unit: SiblingUnit, parent: ParentNode, context: FrameContext): void {
-  if (unit.kind === 'node') {
+  if (!unit.kind) {
     removeNode(unit.start, parent, context)
     return
   }
 
-  for (let node of collectNodeRange(unit.start, unit.end)) {
+  for (let node of collectNodeRange(unit.start, unit.end, true)) {
     removeNode(node, parent, context)
   }
 }
@@ -539,67 +458,8 @@ function isPreservedDomElement(node: Node): node is Element {
   return isElement(node) && node.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)
 }
 
-function findEndIndex(
-  nodes: Node[],
-  startIndex: number,
-  isStart: (node: Node) => boolean,
-  isEnd: (node: Node) => boolean,
-): number {
-  let depth = 1
-
-  for (let j = startIndex + 1; j < nodes.length; j++) {
-    let node = nodes[j]
-    if (isStart(node)) depth++
-    else if (isEnd(node)) {
-      depth--
-      if (depth === 0) return j
-    }
-  }
-
-  return startIndex
-}
-
-function isTextNode(node: Node): node is Text {
-  return node.nodeType === Node.TEXT_NODE
-}
-
 function isElement(node: Node): node is Element {
   return node.nodeType === Node.ELEMENT_NODE
-}
-
-function shouldPreserveFrameStartMarker(
-  current: Comment,
-  next: Comment,
-  context: FrameContext,
-): boolean {
-  let nextData = getFrameMarkerData(next, context)
-  let currentFrame = context.registry.instances.get(current)
-
-  return (
-    currentFrame !== undefined &&
-    nextData !== undefined &&
-    currentFrame.matchesIdentity(nextData.src, nextData.name)
-  )
-}
-
-function shouldPreserveHydrationStartMarker(
-  current: Comment,
-  next: Comment,
-  context: FrameContext,
-): boolean {
-  let currentOwner = getClientEntryBoundaryOwner(current)
-  let nextData = getHydrationMarkerData(next, context)
-
-  return (
-    currentOwner !== undefined &&
-    nextData !== undefined &&
-    getClientEntryKey(currentOwner.identity) === getClientEntryKey(nextData)
-  )
-}
-
-function getHydrationMarkerData(marker: Comment, context: FrameContext) {
-  let id = getHydrationId(marker)
-  return context.data.h?.[id]
 }
 
 function getFrameMarkerData(marker: Comment, context: FrameContext) {
@@ -607,16 +467,14 @@ function getFrameMarkerData(marker: Comment, context: FrameContext) {
   return context.data.f?.[id]
 }
 
-function collectNodeRange(start: Node, end: Node): Node[] {
+export function collectNodeRange(start: Node | null, end: Node, includeEnd = false): Node[] {
   let nodes: Node[] = []
-  let node: Node | null = start
-
-  while (node) {
+  let node = start
+  while (node && node !== end) {
     nodes.push(node)
-    if (node === end) break
     node = node.nextSibling
   }
-
+  if (includeEnd && node) nodes.push(node)
   return nodes
 }
 
@@ -674,14 +532,4 @@ export function findOptionalEndMarker(
     else if (isEnd(node) && --depth === 0) return node
   }
   return null
-}
-
-export function collectNodesBetween(start: Comment, end: Comment): Node[] {
-  let nodes: Node[] = []
-  let node = start.nextSibling
-  while (node && node !== end) {
-    nodes.push(node)
-    node = node.nextSibling
-  }
-  return nodes
 }

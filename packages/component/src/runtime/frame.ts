@@ -52,7 +52,7 @@ import {
   type VNodeParent,
 } from './reconcile.ts'
 import {
-  collectNodesBetween,
+  collectNodeRange,
   diffElementAttributes,
   diffNodes,
   findEndMarker,
@@ -65,7 +65,7 @@ import { createMixin } from './mixins/mixin.ts'
 import type { CSSProps } from '../style/css-mixin.ts'
 import {
   createFrameStartMarker,
-  findFlushMarker,
+  findFlushMarkers,
   ESCAPED_OBJECT,
   FRAME_END_MARKER,
   type FlushKind,
@@ -364,7 +364,7 @@ export type FrameInstance = {
     content: InternalFrameContent,
     options?: RenderOptions,
   ) => Promise<void>
-  matchesIdentity: (src: string, name: string | undefined) => boolean
+  readonly identity: { src: string; name?: string } | undefined
   dispose: () => void
   handle: FrameHandle
 }
@@ -376,7 +376,6 @@ type RenderOptions = {
   from?: NavigationHistoryEntry
   documentHref?: string
   clientStreamSignal?: AbortSignal
-  flushKind?: FlushKind
   reconciliationTracker?: ReconciliationTracker
   blockingFrameTracker?: ReconciliationTracker
   onCommit?: () => void
@@ -473,9 +472,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   let context: FrameContext = {
-    nonce: init.nonce,
-    navigationType: init.navigationType,
-    from: init.from,
     topFrame: runtime.topFrame,
     getContext: (type) => runtime.getContext?.(type),
     ...getSharedFrameRuntime(runtime),
@@ -504,9 +500,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   async function renderContent(
     content: InternalFrameContent,
     options: ActiveRenderOptions,
+    flushKind?: FlushKind,
   ): Promise<void> {
     if (isRenderAborted(options.signal)) return
     startRendering()
+
+    function applyBatch(html: string, kind: FlushKind) {
+      return renderContent(html, options, kind)
+    }
 
     if (content instanceof ReadableStream) {
       let signal = options.signal
@@ -515,7 +516,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       await renderFrameStream(
         content,
         container.doc,
-        (html, flushKind) => render(html, { ...options, flushKind }),
+        applyBatch,
         options.nonce,
         signal,
         options.clientStreamSignal,
@@ -523,7 +524,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       return
     }
 
-    if (isRemixNodeFrameContent(content)) {
+    if (typeof content !== 'string' && !isDocumentFragmentNode(content)) {
       init.disposeFallback?.()
       if (!contentRoot) {
         let currentNodes = getContentNodes()
@@ -541,14 +542,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       if (isRenderAborted(options.signal)) return
       let previousServerFrameReload = runtime.serverFrameReload
       if (options.signal) {
-        runtime.serverFrameReload = {
-          signal: options.signal,
-          origin: options.reloadOrigin,
-          navigationType: options.navigationType,
-          from: options.from,
-          reconciliationTracker: options.reconciliationTracker,
-          blockingFrameTracker: options.blockingFrameTracker,
-        }
+        runtime.serverFrameReload = getRenderReload(options.signal, options)
       }
 
       try {
@@ -570,18 +564,15 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
     let source: HTMLElement | DocumentFragment
     if (typeof content === 'string') {
-      let flushed = await consumeFlushBatches(content, async (html, flushKind) => {
-        await render(html, { ...options, flushKind })
-      })
-      if (flushed.applied) {
-        if (flushed.remainder !== '') {
-          await render(flushed.remainder, { ...options, flushKind: 'fragment' })
+      if (!flushKind) {
+        let remainder = await consumeFlushBatches(content, applyBatch)
+        if (remainder !== content) {
+          if (remainder) await applyBatch(remainder, 'fragment')
+          return
         }
-        return
       }
       source =
-        container.root instanceof Document &&
-        (options.flushKind ?? inferFlushKind(content)) === 'document'
+        container.root instanceof Document && (flushKind ?? inferFlushKind(content)) === 'document'
           ? parseDocument(container.doc, content)
           : createFragmentFromString(container.doc, content)
     } else {
@@ -594,16 +585,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     adoptFrameServerStyles(createElementContainer(source), context.styleManager)
     if (source instanceof DocumentFragment) removeEmptyHeads(source)
     mergeRmxDataFrom(options.data, source)
-    let responseContext = {
-      ...context,
-      reloadOrigin: options.reloadOrigin,
-      nonce: options.nonce,
-      navigationType: options.navigationType,
-      from: options.from,
-      data: options.data,
-      reconciliationTracker: options.reconciliationTracker,
-      blockingFrameTracker: options.blockingFrameTracker,
-    }
+    let responseContext = { ...options, ...context, data: options.data }
     let hydrationContainer = container
 
     if (source instanceof HTMLElement) {
@@ -616,12 +598,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         ...responseContext,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
-        signal: options.signal,
-      }
-      diffNodes([container.doc.head], [head], {
-        ...documentContext,
         shouldPreserveHeadNode: shouldPreserveManagedHeadNode,
-      })
+      }
+      diffNodes([container.doc.head], [head], documentContext)
       diffNodes([container.doc.body], [body], documentContext)
 
       hydrationContainer = createElementContainer(container.doc.body)
@@ -629,12 +608,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     } else {
       if (isRenderAborted(options.signal)) return
 
-      diffNodes(container.childNodes, Array.from(source.childNodes), {
-        ...responseContext,
-        regionTailRef: container.regionTailRef,
-        regionParent: container.regionParent,
-        signal: options.signal,
-      })
+      diffNodes(container.childNodes, Array.from(source.childNodes), responseContext)
     }
 
     let subFramesReady = hydrateContainer(hydrationContainer, responseContext, options)
@@ -666,14 +640,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     if ((await initialClientEntryResources) === false) return
     if (isRenderAborted(init.signal)) return
     adoptFrameServerStyles(container, context.styleManager)
-    let options = {
-      reconciliationTracker,
-      nonce: context.nonce,
-      navigationType: context.navigationType,
-      from: context.from,
-      signal: init.signal,
-    }
-    let subFramesReady = hydrateContainer(container, context, options)
+    let initial = { nonce: init.nonce, navigationType: init.navigationType, from: init.from }
+    let options = { ...initial, reconciliationTracker, signal: init.signal }
+    let subFramesReady = hydrateContainer(container, { ...context, ...initial }, options)
 
     try {
       await subFramesReady
@@ -713,7 +682,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     completeInheritedReload,
     updateMarker,
     renderMarkerContent,
-    matchesIdentity: (src, name) => !disposed && frame.src === src && frameName === name,
+    get identity() {
+      return disposed ? undefined : { src: frame.src, name: frameName }
+    },
     dispose,
     handle: frame,
   }
@@ -1698,7 +1669,9 @@ function createReconciliationTracker(): ReconciliationTracker {
 function mergeRmxDataFrom(into: RmxData, root: ParentNode): void {
   for (let script of root.querySelectorAll('script#rmx-data')) {
     if (!(script instanceof HTMLScriptElement)) continue
-    mergeRmxData(into, parseRmxDataScript(script))
+    let { h, f } = parseRmxDataScript(script)
+    if (h) copyOwnRmxEntries((into.h ??= {}), h)
+    if (f) copyOwnRmxEntries((into.f ??= {}), f)
     script.remove()
   }
 }
@@ -1754,11 +1727,6 @@ function parseRmxDataScript(script: HTMLScriptElement): RmxData {
     console.error('[createFrame] Failed to parse rmx-data script')
     return {}
   }
-}
-
-function mergeRmxData(into: RmxData, from: RmxData): void {
-  if (from.h) copyOwnRmxEntries((into.h ??= {}), from.h)
-  if (from.f) copyOwnRmxEntries((into.f ??= {}), from.f)
 }
 
 function copyOwnRmxEntries<T>(target: Record<string, T>, source: Record<string, T>): void {
@@ -2067,6 +2035,17 @@ function isCSSProps(value: unknown): value is CSSProps {
   return true
 }
 
+function getRenderReload(signal: AbortSignal, options: RenderOptions) {
+  let {
+    reloadOrigin: origin,
+    navigationType,
+    from,
+    reconciliationTracker,
+    blockingFrameTracker,
+  } = options
+  return { signal, origin, navigationType, from, reconciliationTracker, blockingFrameTracker }
+}
+
 function hydrateRegion(
   vElement: RemixElement,
   start: Comment,
@@ -2100,14 +2079,7 @@ function hydrateRegion(
 
     let previousServerFrameReload = frameRuntime.serverFrameReload
 
-    frameRuntime.serverFrameReload = {
-      signal: signal ?? context.lifecycleSignal,
-      navigationType: context.navigationType,
-      from: context.from,
-      origin: context.reloadOrigin,
-      reconciliationTracker: context.reconciliationTracker,
-      blockingFrameTracker: context.blockingFrameTracker,
-    }
+    frameRuntime.serverFrameReload = getRenderReload(signal ?? context.lifecycleSignal, context)
     try {
       root.render(vElement)
     } finally {
@@ -2140,9 +2112,10 @@ function createFrameRoot(
     styleManager: context.styleManager,
   }
   let root = Array.isArray(target) ? createRangeRoot(target, options) : createRoot(target, options)
+  let { errorTarget } = context
   root.addEventListener('error', (event: Event) => {
-    if (context.errorTarget === root) return
-    context.errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
+    if (errorTarget !== root)
+      errorTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   })
   return root
 }
@@ -2226,17 +2199,23 @@ function setupTemplateObserver(id: string): () => void {
   let observer = new MutationObserver((mutations) => {
     for (let mutation of mutations) {
       for (let node of mutation.addedNodes) {
-        collectFrameTemplates(node, observeTemplate)
+        observeTemplates(node)
       }
     }
     publishCompleteTemplates()
   })
 
-  function observeTemplate(template: HTMLTemplateElement): void {
-    if (template.id !== id || pending.has(template)) return
-    pending.add(template)
-    // Template contents are a separate fragment, outside the observed document subtree.
-    observer.observe(template.content, { childList: true })
+  function observeTemplates(node: Node): void {
+    if (node instanceof HTMLTemplateElement) {
+      if (node.id !== id || pending.has(node)) return
+      pending.add(node)
+      // Template contents are a separate fragment, outside the observed document subtree.
+      observer.observe(node.content, { childList: true })
+    } else if (node instanceof Element) {
+      for (let template of node.querySelectorAll('template')) {
+        if (template instanceof HTMLTemplateElement) observeTemplates(template)
+      }
+    }
   }
 
   function publishCompleteTemplates(): void {
@@ -2252,7 +2231,7 @@ function setupTemplateObserver(id: string): () => void {
   }
 
   observer.observe(root, { childList: true, subtree: true })
-  collectFrameTemplates(root, observeTemplate)
+  observeTemplates(root)
   document.addEventListener('DOMContentLoaded', publishCompleteTemplates, { once: true })
 
   return () => {
@@ -2262,33 +2241,16 @@ function setupTemplateObserver(id: string): () => void {
   }
 }
 
-function collectFrameTemplates(node: Node, collect: (template: HTMLTemplateElement) => void): void {
-  if (node instanceof HTMLTemplateElement) {
-    collect(node)
-    return
-  }
-
-  if (!(node instanceof Element)) return
-  let templates = node.querySelectorAll('template')
-  for (let template of templates) {
-    if (!(template instanceof HTMLTemplateElement)) continue
-    collect(template)
-  }
-}
-
 export function publishFrameTemplate(
   id: string,
   fragment: DocumentFragment,
   options?: { inertScripts?: boolean },
 ): void {
   let listeners = frameTemplateListeners.get(id)
-  if (!listeners || listeners.size === 0) {
+  if (!listeners) {
     let queue = bufferedFrameTemplates.get(id)
-    if (!queue) {
-      queue = []
-      bufferedFrameTemplates.set(id, queue)
-    }
-    queue.push(fragment)
+    if (queue) queue.push(fragment)
+    else bufferedFrameTemplates.set(id, [fragment])
     return
   }
 
@@ -2325,7 +2287,7 @@ function makeSvgScriptsInert(source: ParentNode): void {
 
 export function consumeFrameTemplate(id: string): DocumentFragment | null {
   let queue = bufferedFrameTemplates.get(id)
-  if (!queue || queue.length === 0) return null
+  if (!queue) return null
 
   let fragment = queue.shift() ?? null
   if (queue.length === 0) {
@@ -2343,55 +2305,12 @@ function subscribeFrameTemplate(id: string, listener: FrameTemplateListener): ()
   }
   listeners.add(listener)
   return () => {
-    let current = frameTemplateListeners.get(id)
-    if (!current) return
-    current.delete(listener)
-    if (current.size === 0) {
-      frameTemplateListeners.delete(id)
-    }
+    if (listeners.delete(listener) && listeners.size === 0) frameTemplateListeners.delete(id)
   }
-}
-
-type StreamTemplateParseResult = {
-  html: string
-  remainder: string
 }
 
 const COMPLETE_TEMPLATE_WITH_ID_PATTERN =
   /<template\b[^>]*\bid=(?:"[^"]+"|'[^']+')[^>]*>[\s\S]*?<\/template>/gi
-
-function extractTemplatesFromBuffer(
-  doc: Document,
-  buffer: string,
-  onTemplate: (id: string, fragment: DocumentFragment) => void,
-): StreamTemplateParseResult {
-  let html = ''
-  let cursor = 0
-
-  for (let match of buffer.matchAll(COMPLETE_TEMPLATE_WITH_ID_PATTERN)) {
-    html += buffer.slice(cursor, match.index)
-
-    let parsed = createFragmentFromString(doc, match[0])
-    let template = parsed.querySelector('template')
-    if (template instanceof HTMLTemplateElement && template.id) {
-      onTemplate(template.id, takeFrameTemplateContent(template))
-    }
-
-    cursor = match.index + match[0].length
-  }
-
-  let tail = buffer.slice(cursor)
-
-  let tailStart = tail.toLowerCase().lastIndexOf('<template')
-  if (tailStart === -1) {
-    return { html: html + tail, remainder: '' }
-  }
-
-  return {
-    html: html + tail.slice(0, tailStart),
-    remainder: tail.slice(tailStart),
-  }
-}
 
 async function renderFrameStream(
   stream: ReadableStream<Uint8Array>,
@@ -2416,31 +2335,48 @@ async function renderFrameStream(
   }
   signal.addEventListener('abort', abort, { once: true })
 
-  function rewriteAndPublishTemplate(id: string, fragment: DocumentFragment): void {
-    getNonceManager().prepareResponse(fragment, responseNonce)
-    publishFrameTemplate(id, fragment, { inertScripts: true })
-  }
-
   try {
     while (true) {
       let { done, value } = await reader.read()
-      if (done) break
+      if (done) {
+        // A template kept from the previous chunk is incomplete. Flushing the UTF-8 decoder
+        // can only append a replacement character, never a closing tag.
+        html += buffer + decoder.decode()
+      } else {
+        let previousLength = html.length
+        buffer += decoder.decode(value, { stream: true })
+        let cursor = 0
+        for (let match of buffer.matchAll(COMPLETE_TEMPLATE_WITH_ID_PATTERN)) {
+          html += buffer.slice(cursor, match.index)
+          cursor = match.index + match[0].length
 
-      buffer += decoder.decode(value, { stream: true })
-      let parsed = extractTemplatesFromBuffer(doc, buffer, rewriteAndPublishTemplate)
-      buffer = parsed.remainder
+          let template = createFragmentFromString(doc, match[0]).querySelector('template')
+          if (template instanceof HTMLTemplateElement && template.id) {
+            let fragment = takeFrameTemplateContent(template)
+            getNonceManager().prepareResponse(fragment, responseNonce)
+            publishFrameTemplate(template.id, fragment, { inertScripts: true })
+          }
+        }
 
-      if (parsed.html !== '') {
-        html += parsed.html
-        let flushed = await consumeFlushBatches(html, applyHtml)
-        appliedOnce = flushed.applied || appliedOnce
-        html = flushed.remainder
+        // Hold the unfinished template, including an opening tag split between chunks.
+        let tail = buffer.slice(cursor)
+        let opening = tail.lastIndexOf('<')
+        let pending =
+          opening >= 0 &&
+          '<template'.startsWith(tail.slice(opening, opening + '<template'.length).toLowerCase())
+            ? opening
+            : tail.length
+        for (let match of tail.matchAll(/<template/gi)) pending = match.index
+        html += tail.slice(0, pending)
+        buffer = tail.slice(pending)
+        if (html.length === previousLength) continue
       }
-    }
 
-    buffer += decoder.decode()
-    let parsed = extractTemplatesFromBuffer(doc, buffer, publishFrameTemplate)
-    html += parsed.html + parsed.remainder
+      let remainder = await consumeFlushBatches(html, applyHtml)
+      if (remainder !== html) appliedOnce = true
+      html = remainder
+      if (done) break
+    }
 
     // An empty stream still replaces the existing frame content.
     if (html || !appliedOnce) {
@@ -2455,20 +2391,13 @@ async function renderFrameStream(
 async function consumeFlushBatches(
   html: string,
   applyHtml: (html: string, flushKind: FlushKind) => Promise<void>,
-): Promise<{ applied: boolean; remainder: string }> {
-  let applied = false
+): Promise<string> {
   let cursor = 0
-  let marker = findFlushMarker(html, cursor)
-
-  while (marker) {
-    let batch = html.slice(cursor, marker.index)
-    await applyHtml(batch, marker.kind)
-    applied = true
-    cursor = marker.endIndex
-    marker = findFlushMarker(html, cursor)
+  for (let marker of findFlushMarkers(html)) {
+    await applyHtml(html.slice(cursor, marker.index), marker[1] as FlushKind)
+    cursor = marker.index + marker[0].length
   }
-
-  return { applied, remainder: html.slice(cursor) }
+  return html.slice(cursor)
 }
 
 type FrameContainer = {
@@ -2506,7 +2435,7 @@ function createCommentContainer([start, end]: [Comment, Comment]): FrameContaine
     root: parent,
     regionStart: start,
     get childNodes() {
-      return collectNodesBetween(start, end)
+      return collectNodeRange(start.nextSibling, end)
     },
     regionTailRef: end,
     regionParent: parent,
@@ -2518,14 +2447,6 @@ function createFragmentFromString(doc: Document, content: string): DocumentFragm
   template.innerHTML = content.trim()
   removeNoscriptContents(template.content)
   return template.content
-}
-
-function isRemixNodeFrameContent(content: InternalFrameContent): content is RemixNode {
-  return !(
-    content instanceof ReadableStream ||
-    isDocumentFragmentNode(content) ||
-    typeof content === 'string'
-  )
 }
 
 type HydrationMarker = {

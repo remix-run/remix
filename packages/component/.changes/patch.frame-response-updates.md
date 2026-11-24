@@ -1,0 +1,1 @@
+Show streamed child frame content as soon as its template arrives, even when the opening tag spans two network chunks. Frame updates also reuse reordered client entries and nested frames without repeatedly searching the same list.
