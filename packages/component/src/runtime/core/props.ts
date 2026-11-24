@@ -61,7 +61,7 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
   for (let name in curr) {
     if (skipHostProp(name)) continue
     if (name === 'defaultValue' && dom instanceof HTMLSelectElement) continue
-    if (name === 'value' && dom instanceof HTMLSelectElement && curr.value === undefined) continue
+    if ((name === 'value' || name === 'checked') && curr[name] === undefined) continue
     if (name in next && next[name] != null) continue
 
     let { ns, attr } = normalizeAttributeName(name, isSvg)

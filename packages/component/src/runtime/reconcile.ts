@@ -897,9 +897,7 @@ function diffHost(
   if (reclaimed) {
     // Restore listeners and controlled values before reconciling a returning host's children.
     patchHostProps(previous, resolved.props, dom)
-    syncDirectEventListeners(committed)
-    committed._controlledState ??= new ControlledReflection(committed, scheduler)
-    syncControlledReflection(committed, scheduler)
+    setupHostNode(committed, scheduler)
   } else if (previous.innerHTML != resolved.props.innerHTML) {
     setHostInnerHTML(dom, resolved.props.innerHTML ?? '')
   }
