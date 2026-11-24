@@ -1,26 +1,6 @@
 @layer docs-base {
   * {
     box-sizing: border-box;
-    scrollbar-color: var(--rmx-color-border-default) transparent;
-    scrollbar-width: thin;
-  }
-
-  *::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  *::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  *::-webkit-scrollbar-thumb {
-    border-radius: var(--rmx-radius-full);
-    background: var(--rmx-color-border-default);
-  }
-
-  *::-webkit-scrollbar-thumb:hover {
-    background: var(--rmx-color-border-strong);
   }
 
   html {

@@ -6,7 +6,6 @@ import type { AlbumImage } from '../../utils/album-images.ts'
 import { getAlbumGenreLabel } from '../../data/album-genres.ts'
 import { routes } from '../../routes.ts'
 import { ImageCarousel, faceoutImageSizes } from './public/image-carousel.tsx'
-import { albumCoverTransition } from '../../ui/album-transitions.ts'
 import { Layout } from '../../ui/layout.tsx'
 
 export interface ShowPageProps {
@@ -67,30 +66,22 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
             </p>
 
             <div
-              data-album-faceout={album.id}
-              mix={[
-                albumCoverTransition(album.id),
-                css({
-                  // Keep one carousel mounted as it moves into the card on small screens.
-                  position: 'absolute',
-                  top: 0,
-                  left: 'calc(-300px - 2rem)',
-                  width: '300px',
-                  aspectRatio: '1 / 1',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                  overflow: 'hidden',
-                  '@media (max-width: 768px)': {
-                    position: 'relative',
-                    left: 'auto',
-                    width: '100%',
-                    maxWidth: '300px',
-                    margin: '1rem 0',
-                  },
-                }),
-              ]}
+              mix={css({
+                // Keep one carousel mounted as it moves into the card on small screens.
+                position: 'absolute',
+                top: 0,
+                left: 'calc(-300px - 2rem)',
+                width: '300px',
+                '@media (max-width: 768px)': {
+                  position: 'relative',
+                  left: 'auto',
+                  width: '100%',
+                  maxWidth: '300px',
+                  margin: '1rem 0',
+                },
+              })}
             >
-              <ImageCarousel images={imageUrls} startIndex={startIndex} />
+              <ImageCarousel albumId={album.id} images={imageUrls} startIndex={startIndex} />
             </div>
 
             <p class="price" mix={css({ fontSize: '2rem', margin: '1rem 0' })}>

@@ -5,6 +5,7 @@ import type { AlbumWithCover } from '../../utils/album-images.ts'
 import { getAlbumGenreLabel } from '../../data/album-genres.ts'
 import { routes } from '../../routes.ts'
 import { AlbumCard, AlbumCoverPreload } from '../../ui/album-card.tsx'
+import { AlbumSearchForm } from '../../ui/album-search-form.tsx'
 import { Layout } from '../../ui/layout.tsx'
 
 export interface IndexPageProps {
@@ -21,21 +22,7 @@ export function IndexPage(handle: Handle<IndexPageProps>) {
         <h1>Browse Records</h1>
 
         <div class="card" mix={css({ marginBottom: '2rem' })}>
-          <form
-            action={routes.search.href()}
-            method="GET"
-            mix={css({ display: 'flex', gap: '0.5rem' })}
-          >
-            <input
-              type="search"
-              name="q"
-              placeholder="Search records by title, artist, or description..."
-              mix={css({ flex: 1, padding: '0.5rem' })}
-            />
-            <button type="submit" class="btn">
-              Search
-            </button>
-          </form>
+          <AlbumSearchForm />
         </div>
 
         <div class="card" mix={css({ marginBottom: '2rem' })}>
