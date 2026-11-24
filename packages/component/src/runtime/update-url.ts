@@ -1,5 +1,4 @@
-import { setTopFrameSource } from './frame.ts'
-import { isRuntimeNavigation } from './navigation.ts'
+import { appFrames, isRuntimeNavigation } from './navigation.ts'
 
 interface PendingUrlUpdate {
   controller: AbortController
@@ -100,7 +99,7 @@ export async function updateUrl(href: string, options?: UpdateUrlOptions): Promi
     }
     controller.signal.throwIfAborted()
     if (navigation?.currentEntry?.id !== updatedEntry?.id) return abortUrlUpdate(controller)
-    setTopFrameSource(src)
+    if (appFrames) appFrames.top.src = src
     return controller.signal
   } catch (error) {
     if (

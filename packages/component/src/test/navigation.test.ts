@@ -1,6 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
-import { navigate, startNavigationListener } from '../runtime/navigation.ts'
+import { navigate } from '../runtime/navigation.ts'
+import { startNavigationListener } from '../runtime/run.ts'
 import type { FrameHandle } from '../runtime/component.ts'
 import type { NavigationEvent } from '../runtime/navigation.ts'
 import type { FrameNavigationOptions, ResolveFrameOptions } from '../runtime/frame-runtime.ts'
