@@ -1,7 +1,70 @@
 import type { TestContext } from '@remix-run/test'
+import { expect } from '@remix-run/assert'
 
 import { invariant } from '../runtime/invariant.ts'
 import { stripFlushMarkers } from '../runtime/stream-protocol.ts'
+
+// Capture native browser state so a reorder cannot pass by restoring focus or
+// reusing element objects after their browsing contexts and animations reset.
+export async function prepareMoveState(t: TestContext, container: HTMLElement) {
+  let iframe = container.querySelector('iframe')
+  let input = container.querySelector('input')
+  let animated = container.querySelector('[data-move-animation]')
+  let dialog = container.querySelector('dialog')
+  let popover = container.querySelector('[popover]')
+  invariant(iframe && input && animated && dialog && popover instanceof HTMLElement)
+
+  let loaded = new Promise<void>((resolve) => {
+    iframe.addEventListener('load', () => resolve(), { once: true, signal: t.signal })
+  })
+  iframe.srcdoc = ''
+  await loaded
+  let iframeDocument = iframe.contentDocument
+  invariant(iframeDocument)
+  iframeDocument.body.dataset.state = 'retained'
+
+  let style = document.createElement('style')
+  style.textContent = `
+    @keyframes rmx-move-test { from { opacity: 0.5 } to { opacity: 1 } }
+    [data-move-animation] { animation: rmx-move-test 10s infinite }
+  `
+  document.head.append(style)
+  t.after(() => style.remove())
+  let animation = animated.getAnimations()[0]
+  invariant(animation)
+  animation.pause()
+  await animation.ready
+  animation.currentTime = 500
+
+  dialog.showModal()
+  popover.showPopover()
+  input.value = 'Hello World'
+  input.focus()
+  input.setSelectionRange(6, 11)
+  let blurCount = 0
+  input.addEventListener('blur', () => blurCount++, { signal: t.signal })
+
+  let observer = new MutationObserver(() => {})
+  observer.observe(container, { childList: true, subtree: true })
+  t.after(() => observer.disconnect())
+
+  return () => {
+    let removed = observer.takeRecords().flatMap((record) => Array.from(record.removedNodes))
+    expect(removed.some((node) => node.contains(iframe))).toBe(true)
+    expect(iframe.contentDocument).toBe(iframeDocument)
+    expect(iframe.contentDocument?.body.dataset.state).toBe('retained')
+    expect(animated.getAnimations()[0]).toBe(animation)
+    expect(animation.currentTime).toBe(500)
+    expect(animation.playState).toBe('paused')
+    expect(dialog.matches(':modal')).toBe(true)
+    expect(popover.matches(':popover-open')).toBe(true)
+    expect(document.activeElement).toBe(input)
+    expect(blurCount).toBe(0)
+    expect(input.value).toBe('Hello World')
+    expect(input.selectionStart).toBe(6)
+    expect(input.selectionEnd).toBe(11)
+  }
+}
 
 export type Assert<T extends true> = T
 

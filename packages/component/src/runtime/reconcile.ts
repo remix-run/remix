@@ -1926,6 +1926,30 @@ function domRangeContainsNode(first: Node, last: Node, node: Node): boolean {
   return false
 }
 
+export function canMoveBefore(parent: ParentNode, node: Node): boolean {
+  return (
+    typeof parent.moveBefore === 'function' &&
+    node.parentNode !== null &&
+    // Native moves require the same shadow-including root, even for detached DOM.
+    parent.getRootNode({ composed: true }) === node.getRootNode({ composed: true }) &&
+    (node.nodeType === Node.ELEMENT_NODE ||
+      node.nodeType === Node.TEXT_NODE ||
+      node.nodeType === Node.CDATA_SECTION_NODE ||
+      node.nodeType === Node.PROCESSING_INSTRUCTION_NODE ||
+      node.nodeType === Node.COMMENT_NODE) &&
+    // Document element/text placement has stricter rules than insertBefore().
+    (parent.nodeType !== Node.DOCUMENT_NODE ||
+      (node.nodeType !== Node.ELEMENT_NODE &&
+        node.nodeType !== Node.TEXT_NODE &&
+        node.nodeType !== Node.CDATA_SECTION_NODE))
+  )
+}
+
+export function moveNodeBefore(parent: ParentNode, node: Node, before: Node | null): void {
+  if (canMoveBefore(parent, node)) parent.moveBefore(node, before)
+  else parent.insertBefore(node, before)
+}
+
 function moveDomRange(domParent: ParentNode, first: Node, last: Node, before: Node | null): void {
   let portals = portalContainers.get(domParent)
   let current: Node | null = first
@@ -1937,7 +1961,7 @@ function moveDomRange(domParent: ParentNode, first: Node, last: Node, before: No
       continue
     }
     let next: Node | null = current === last ? null : current.nextSibling
-    domParent.insertBefore(current, before)
+    moveNodeBefore(domParent, current, before)
     if (current === last) break
     current = next
   }

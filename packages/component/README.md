@@ -480,6 +480,10 @@ Keys can be strings, numbers, or bigints, and must be unique among siblings. Use
 
 `key` exists only in the component tree and isn't rendered to HTML. To keep server-rendered siblings matched to the same live elements when a frame reloads, add a `data-rmx-key` attribute. See [Preserving Client-Owned DOM](#preserving-client-owned-dom).
 
+When the browser supports [`moveBefore()`](https://developer.mozilla.org/en-US/docs/Web/API/Element/moveBefore), eligible moves also preserve iframe loading, CSS animations, uninterrupted focus, and open dialog and popover state. This applies to keyed client rendering and matched elements and live boundary ranges during frame reloads. New insertions, incompatible moves, and browsers without `moveBefore()` use `insertBefore()`; these moves can reset browser-managed state.
+
+Custom elements must define [`connectedMoveCallback()`](https://html.spec.whatwg.org/multipage/custom-elements.html#preserving-custom-element-state-when-moved) to replace their disconnect/connect callbacks during native moves. An empty method opts out of teardown and initialization; use its body for work that depends on the element's new position.
+
 ## Events
 
 `on(type, handler, capture?)` is a mixin that attaches a DOM event listener to its host. The event type is checked against the host element, and `event.currentTarget` is typed as that element:
@@ -1483,7 +1487,7 @@ Use `data-rmx-preserve-dom` on the smallest element whose live DOM should belong
 ```
 
 - The runtime still renders the element's children during server rendering and hydrates any initial client entries inside it. The attribute only affects later frame reloads. When incoming frame HTML has `data-rmx-preserve-dom` on a matched element, the runtime keeps that element's current attributes and children instead of applying incoming changes below it.
-- Add `data-rmx-key` when the element can move among siblings, so reloads match the same live element before falling back to matching by position.
+- Add `data-rmx-key` so reloads match the same live element before falling back to matching by position. Matched `data-rmx-preserve-dom` elements stay stationary while siblings move around them.
 - Avoid wrapping Remix-owned UI that should keep receiving server-driven frame updates. A client entry inside `data-rmx-preserve-dom` hydrates from the initial HTML, but later frame reloads won't patch new server-rendered children or props through the preserved element. Put the client entry outside the preserved element when it needs future frame data, or put `data-rmx-preserve-dom` inside the client entry around only the imperative DOM.
 
 ### Preserving Client-Owned Attributes

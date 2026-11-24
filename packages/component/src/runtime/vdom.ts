@@ -506,6 +506,9 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
 /*
  * Adapted from https://github.com/facebook/react/blob/main/packages/react-dom-bindings/src/client/ReactInputSelection.js
  * Copyright (c) Meta Platforms, Inc. and affiliates. MIT License.
+ *
+ * Native moveBefore() preserves focus for eligible moves; this remains necessary
+ * for browsers without it and for other DOM updates that detach the focused node.
  */
 function restoreFocus(
   element: Element,

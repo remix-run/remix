@@ -5,6 +5,7 @@ import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { createElement } from '../runtime/create-element.ts'
 import { Fragment, type Handle, type RemixNode } from '../runtime/component.ts'
+import { prepareMoveState } from './utils.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {
@@ -793,6 +794,113 @@ describe('vnode rendering (keys)', () => {
   })
 
   describe('focus and selection across keyed moves', () => {
+    it(
+      'uses connectedMoveCallback only for custom elements that define it',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      (t) => {
+        let connections = 0
+        let disconnections = 0
+        let moves = 0
+        let legacyConnections = 0
+        let legacyDisconnections = 0
+        let tag = 'rmx-keyed-native-move'
+        let legacyTag = 'rmx-keyed-legacy-move'
+        customElements.define(
+          tag,
+          class extends HTMLElement {
+            connectedCallback() {
+              connections++
+            }
+            disconnectedCallback() {
+              disconnections++
+            }
+            connectedMoveCallback() {
+              moves++
+            }
+          },
+        )
+        customElements.define(
+          legacyTag,
+          class extends HTMLElement {
+            connectedCallback() {
+              legacyConnections++
+            }
+            disconnectedCallback() {
+              legacyDisconnections++
+            }
+          },
+        )
+        let { render } = createConnectedRoot(t)
+        let moving = (
+          <div key="a">
+            {createElement(tag, {})}
+            {createElement(legacyTag, {})}
+          </div>
+        )
+        let b = <span key="b">B</span>
+        let c = <span key="c">C</span>
+        render([moving, b, c])
+
+        render([b, c, moving])
+
+        expect(connections).toBe(1)
+        expect(disconnections).toBe(0)
+        expect(moves).toBe(1)
+        expect(legacyConnections).toBe(2)
+        expect(legacyDisconnections).toBe(1)
+      },
+    )
+
+    it(
+      'preserves browser state when a keyed fragment range moves in either direction',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      async (t) => {
+        let { render, container } = createConnectedRoot(t)
+        let moving = (
+          <Fragment key="a">
+            start
+            <iframe />
+            <div data-move-animation="" />
+            <dialog>
+              <input />
+            </dialog>
+            <div popover="manual" />
+            end
+          </Fragment>
+        )
+        let b = <span key="b">B</span>
+        let c = <span key="c">C</span>
+        render([moving, b, c])
+        let assertState = await prepareMoveState(t, container)
+
+        render([b, c, moving])
+        assertState()
+        expect(container.textContent).toBe('BCstartend')
+
+        render([moving, b, c])
+        assertState()
+        expect(container.textContent).toBe('startendBC')
+      },
+    )
+
+    it('restores focus and selection when native moves are unavailable', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let item = (key: string) => <input key={key} id={key} />
+      render(['a', 'b', 'c'].map(item))
+      let input = getInput(container, 'a')
+      input.value = 'Hello World'
+      input.focus()
+      input.setSelectionRange(6, 11)
+
+      expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(Array.from(container.children, (node) => node.id)).toEqual(['b', 'c', 'a'])
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(6)
+      expect(input.selectionEnd).toBe(11)
+    })
+
     it('keeps focus and selection on a text input that a keyed reorder moves', (t) => {
       let { render, container } = createConnectedRoot(t)
       let item = (key: string) => <input key={key} id={key} type="text" />
@@ -811,6 +919,7 @@ describe('vnode rendering (keys)', () => {
 
     it('restores ancestor scroll after focus handlers run during a keyed move', (t) => {
       let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
       container.style.cssText = 'height: 40px; overflow: auto; overflow-anchor: none'
       let item = (key: string) => (
         <input key={key} id={key} style={{ display: 'block', height: '60px' }} />

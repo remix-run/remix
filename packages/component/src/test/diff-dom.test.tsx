@@ -4,6 +4,7 @@ import { invariant } from '../runtime/invariant.ts'
 import { diffNodes } from '../runtime/diff-dom.ts'
 import type { FrameContext } from '../runtime/frame.ts'
 import { setClientEntryBoundaryOwner, type ClientEntryIdentity } from '../runtime/frame-runtime.ts'
+import { prepareMoveState } from './utils.ts'
 
 function attachClientEntryOwner(
   marker: Comment,
@@ -76,6 +77,79 @@ function diffDom(
 }
 
 describe('diffNodes', () => {
+  describe('state-preserving moves', () => {
+    it(
+      'preserves browser state when a keyed element moves',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      async (t) => {
+        let container = document.createElement('div')
+        document.body.append(container)
+        t.after(() => container.remove())
+        let moving =
+          '<section data-rmx-key="a"><iframe srcdoc=""></iframe><div data-move-animation></div>' +
+          '<dialog><input></dialog><div popover="manual"></div></section>'
+        let rest = '<p data-rmx-key="b">B</p><p data-rmx-key="c">C</p>'
+        container.innerHTML = moving + rest
+        let section = container.firstChild
+        let assertState = await prepareMoveState(t, container)
+
+        diffDom(container, rest + moving)
+
+        expect(container.lastChild).toBe(section)
+        assertState()
+      },
+    )
+
+    it(
+      'preserves browser state and ordering when a live hydration range moves',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      async (t) => {
+        let container = document.createElement('div')
+        document.body.append(container)
+        t.after(() => container.remove())
+        let moving =
+          '<!-- rmx:h:a -->start<iframe srcdoc=""></iframe><div data-move-animation></div>' +
+          '<dialog><input></dialog><div popover="manual"></div>end<!-- /rmx:h -->'
+        let rest = '<p data-rmx-key="b">B</p><p data-rmx-key="c">C</p>'
+        container.innerHTML = moving + rest
+        let start = container.firstChild
+        invariant(start instanceof Comment)
+        attachClientEntryOwner(start)
+        let range = Array.from(container.childNodes).slice(0, -2)
+        let assertState = await prepareMoveState(t, container)
+        let data = { h: { a: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} } } }
+
+        diffDom(container, rest + moving, data)
+        expect(Array.from(container.childNodes).slice(2)).toEqual(range)
+        assertState()
+
+        diffDom(container, moving + rest, data)
+        expect(Array.from(container.childNodes).slice(0, -2)).toEqual(range)
+        assertState()
+      },
+    )
+
+    it('retains range ordering with insertBefore when native moves are unavailable', (t) => {
+      let container = document.createElement('div')
+      document.body.append(container)
+      t.after(() => container.remove())
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let moving = '<!-- rmx:h:a -->start<input>end<!-- /rmx:h -->'
+      let rest = '<p data-rmx-key="b">B</p><p data-rmx-key="c">C</p>'
+      container.innerHTML = moving + rest
+      let start = container.firstChild
+      invariant(start instanceof Comment)
+      attachClientEntryOwner(start)
+      let range = Array.from(container.childNodes).slice(0, -2)
+
+      diffDom(container, rest + moving, {
+        h: { a: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} } },
+      })
+
+      expect(Array.from(container.childNodes).slice(2)).toEqual(range)
+    })
+  })
+
   describe('basic diffing', () => {
     it('diffs text nodes', () => {
       let container = document.createElement('div')

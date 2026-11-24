@@ -1,5 +1,10 @@
 import { invariant } from './invariant.ts'
-import { excludePortalRanges, getStableIndexes } from './reconcile.ts'
+import {
+  canMoveBefore,
+  excludePortalRanges,
+  getStableIndexes,
+  moveNodeBefore,
+} from './reconcile.ts'
 import {
   getFrameId,
   getHydrationId,
@@ -427,14 +432,19 @@ function getBoundaryKey(
 function placeSiblingUnitBefore(unit: SiblingUnit, parent: ParentNode, ref: Node | null): void {
   if (unit.start.parentNode === parent && (unit.end ?? unit.start).nextSibling === ref) return
   if (!unit.kind) {
-    parent.insertBefore(unit.start, ref)
+    moveNodeBefore(parent, unit.start, ref)
     return
   }
 
-  parent.insertBefore(
-    createFragment(unit.start.ownerDocument, collectNodeRange(unit.start, unit.end, true)),
-    ref,
-  )
+  let nodes = collectNodeRange(unit.start, unit.end, true)
+  // Do not stage live ranges in a fragment: that would disconnect their contents
+  // before moveBefore() can preserve their browser-managed state.
+  if (nodes.every((node) => canMoveBefore(parent, node))) {
+    for (let node of nodes) parent.moveBefore(node, ref)
+    return
+  }
+
+  parent.insertBefore(createFragment(unit.start.ownerDocument, nodes), ref)
 }
 
 function createFragment(doc: Document, nodes: Node[]): DocumentFragment {
