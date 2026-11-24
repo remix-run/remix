@@ -15,14 +15,13 @@ describe('module preloader', () => {
 
     let links = doc.head.querySelectorAll('link')
     expect(links).toHaveLength(2)
-    expect(preloader.hasActivePreloads()).toBe(true)
     expect(links[0]).toBe(link)
     expect(preloader.isActivePreload(links[0]!)).toBe(true)
     expect(preloader.isActivePreload(links[1]!)).toBe(true)
 
     links[1]?.dispatchEvent(new Event('load'))
     expect(doc.head.querySelector('link')).toBeNull()
-    expect(preloader.hasActivePreloads()).toBe(false)
+    for (let settledLink of links) expect(preloader.isActivePreload(settledLink)).toBe(false)
   })
 
   it('uses an observer when adopting preloads that may have loaded before runtime startup', () => {
@@ -49,14 +48,13 @@ describe('module preloader', () => {
     preloader.adoptInitialPreloadLinks(doc)
 
     doc.head.querySelectorAll('link')[1]?.dispatchEvent(new Event('error'))
-    expect(preloader.hasActivePreloads()).toBe(false)
+    expect(doc.head.querySelector('link[rel="modulepreload"]')).toBeNull()
 
     let retry = doc.createElement('template')
     retry.innerHTML =
       '<link data-rmx-module-preload rel="modulepreload" href="/assets/island.js" />'
     preloader.consumePreloadLinks(retry.content)
     expect(doc.head.querySelectorAll('link[rel="modulepreload"]')).toHaveLength(1)
-    expect(preloader.hasActivePreloads()).toBe(true)
   })
 
   it('does not adopt authored initial preloads', () => {
@@ -97,14 +95,12 @@ describe('module preloader', () => {
 
     let links = doc.head.querySelectorAll('link[rel="modulepreload"]')
     expect(links).toHaveLength(1)
-    expect(preloader.hasActivePreloads()).toBe(true)
     expect(links[0]?.hasAttribute('data-rmx-module-preload')).toBe(true)
     expect(preloader.isActivePreload(links[0]!)).toBe(true)
     expect(response.content.querySelector('link')).toBeNull()
 
     links[0]?.dispatchEvent(new Event('load'))
     expect(doc.head.querySelector('link[rel="modulepreload"]')).toBeNull()
-    expect(preloader.hasActivePreloads()).toBe(false)
     expect(preloader.isActivePreload(links[0]!)).toBe(false)
 
     let repeatedResponse = doc.createElement('template')

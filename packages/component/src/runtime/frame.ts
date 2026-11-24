@@ -2848,11 +2848,8 @@ type ImportMapAddress = string | null
 type ImportMapImports = Record<string, ImportMapAddress>
 type InstalledImportMapEntry = { href: ImportMapAddress; normalizedHref: ImportMapAddress }
 
-type InstalledImportMap = {
-  imports: Map<string, InstalledImportMapEntry>
-  scopes: Map<string, Map<string, InstalledImportMapEntry>>
-  integrity: Map<string, InstalledImportMapEntry>
-}
+// A scope uses its absolute URL. The top-level imports and integrity entries use false and true.
+type InstalledImportMap = Map<string | boolean, Map<string, InstalledImportMapEntry>>
 
 interface ImportMapManager {
   consumeImportMaps(source: ParentNode): 'ready' | 'conflict' | 'blocked'
@@ -2882,11 +2879,7 @@ export function resetDocumentImportMapManager(doc: Document): void {
 
 function createImportMapManager(doc: Document): ImportMapManager {
   let nonce = getNonceManager().moduleNonce
-  let installedImportMap: InstalledImportMap = {
-    imports: new Map(),
-    scopes: new Map(),
-    integrity: new Map(),
-  }
+  let installed: InstalledImportMap = new Map()
   let processedScripts = new WeakSet<HTMLScriptElement>()
   let conflicted = false
 
@@ -2895,7 +2888,7 @@ function createImportMapManager(doc: Document): ImportMapManager {
     processedScripts.add(script)
 
     let importMap = parseImportMap(script.textContent ?? '')
-    if (importMap) installImportMap(installedImportMap, importMap, script.baseURI)
+    if (importMap) installImportMap(installed, importMap, script.baseURI)
   }
 
   function processImportMaps(): void {
@@ -2928,22 +2921,15 @@ function createImportMapManager(doc: Document): ImportMapManager {
       let scripts = source.querySelectorAll<HTMLScriptElement>(MANAGED_IMPORT_MAP_SELECTOR)
       if (scripts.length === 0) return 'ready'
 
-      // Apply the response's maps as a group. A failure while preparing or appending a
-      // script must leave the registry available for a retry.
-      let pending: InstalledImportMap = {
-        imports: new Map(installedImportMap.imports),
-        scopes: new Map(
-          Array.from(installedImportMap.scopes, ([scope, entries]) => [scope, new Map(entries)]),
-        ),
-        integrity: new Map(installedImportMap.integrity),
-      }
+      // Check the whole response for conflicts before installing the first script.
+      let pending: InstalledImportMap = new Map()
       let deltas: ImportMap[] = []
       let baseUrl = doc.baseURI
       try {
         for (let script of scripts) {
           let importMap = parseImportMap(script.textContent ?? '')
           if (!importMap) continue
-          let delta = installImportMap(pending, importMap, baseUrl, true)
+          let delta = installImportMap(installed, importMap, baseUrl, pending)
           if (delta) deltas.push(delta)
         }
       } catch (error) {
@@ -2956,8 +2942,8 @@ function createImportMapManager(doc: Document): ImportMapManager {
       for (let delta of deltas) {
         let installedScript = appendImportMapScript(doc, delta, nonce)
         processedScripts.add(installedScript)
+        installImportMap(installed, delta, baseUrl)
       }
-      installedImportMap = pending
       for (let script of scripts) script.remove()
       return 'ready'
     },
@@ -2980,26 +2966,30 @@ function installImportMap(
   installed: InstalledImportMap,
   importMap: ImportMap,
   baseUrl: string,
-  checkConflicts = false,
+  pending?: InstalledImportMap,
 ): ImportMap | undefined {
-  let additions = new Set<InstalledImportMapEntry>()
+  let additions = pending ? new Set<InstalledImportMapEntry>() : undefined
   function installEntries<address extends ImportMapAddress>(
-    target: Map<string, InstalledImportMapEntry>,
     entries: Record<string, address> | undefined,
     integrity: boolean,
     scope?: string,
   ): Record<string, address> | undefined {
     if (!entries) return
-    let delta: Record<string, address> = {}
+    let namespace = scope === undefined ? integrity : normalizeImportMapUrl(scope, baseUrl)
+    if (namespace === null) return
+    let groups = pending ?? installed
+    let target = groups.get(namespace)
+    let previous = pending && installed.get(namespace)
+    let delta: Record<string, address> | undefined
     for (let [key, href] of Object.entries(entries)) {
       let normalizedKey = integrity
         ? normalizeImportMapUrl(key, baseUrl)
         : normalizeImportMapSpecifier(key, baseUrl)
       if (normalizedKey === null) continue
       let normalizedHref = integrity || href === null ? href : normalizeImportMapUrl(href, baseUrl)
-      let existing = target.get(normalizedKey)
-      if (existing && !additions.has(existing)) {
-        if (checkConflicts && existing.normalizedHref !== normalizedHref) {
+      let existing = target?.get(normalizedKey) ?? previous?.get(normalizedKey)
+      if (existing && !additions?.has(existing)) {
+        if (pending && existing.normalizedHref !== normalizedHref) {
           let scopeDescription = scope ? ` in scope "${scope}"` : ''
           let kind = integrity ? 'integrity ' : ''
           throw new ImportMapConflictError(
@@ -3008,38 +2998,31 @@ function installImportMap(
           )
         }
       } else {
-        delta[key] = href
+        if (pending) (delta ??= Object.create(null))[key] = href
         if (!existing) {
           let entry = { href, normalizedHref }
+          if (!target) {
+            target = new Map()
+            groups.set(namespace, target)
+          }
           target.set(normalizedKey, entry)
-          additions.add(entry)
+          additions?.add(entry)
         }
       }
     }
-    return hasEntries(delta) ? delta : undefined
+    return delta
   }
 
   let delta: ImportMap = {}
-  let imports = installEntries(installed.imports, importMap.imports, false)
+  let imports = installEntries(importMap.imports, false)
   if (imports) delta.imports = imports
   for (let [scope, scopeImports] of Object.entries(importMap.scopes ?? {})) {
-    let normalizedScope = normalizeImportMapUrl(scope, baseUrl)
-    if (normalizedScope === null) continue
-    let target = installed.scopes.get(normalizedScope)
-    if (!target) {
-      target = new Map()
-      installed.scopes.set(normalizedScope, target)
-    }
-    let entries = installEntries(target, scopeImports, false, scope)
-    if (entries) (delta.scopes ??= {})[scope] = entries
+    let entries = installEntries(scopeImports, false, scope)
+    if (entries) (delta.scopes ??= Object.create(null))[scope] = entries
   }
-  let integrity = installEntries(installed.integrity, importMap.integrity, true)
+  let integrity = installEntries(importMap.integrity, true)
   if (integrity) delta.integrity = integrity
-  return hasEntries(delta) ? delta : undefined
-}
-
-function hasEntries(record: object): boolean {
-  return Object.keys(record).length > 0
+  return Object.keys(delta).length ? delta : undefined
 }
 
 function appendImportMapScript(
@@ -3115,7 +3098,6 @@ const SERVER_MODULE_PRELOAD_SELECTOR = 'link[data-rmx-module-preload][rel~="modu
 interface ModulePreloader {
   adoptInitialPreloadLinks(source: ParentNode): void
   consumePreloadLinks(source: ParentNode, process?: ProcessClientEntryPreloads): Promise<void>
-  hasActivePreloads(): boolean
   isActivePreload(node: Node): boolean
 }
 
@@ -3136,7 +3118,6 @@ function createModulePreloader(doc: Document): ModulePreloader {
   let nonce = getNonceManager().moduleNonce
   let requestedUrls = new Set<string>()
   let activeLinks = new WeakSet<Node>()
-  let activeLinkCount = 0
 
   function preload(href: string, initialLink?: HTMLLinkElement): void {
     let link = doc.createElement('link')
@@ -3150,19 +3131,13 @@ function createModulePreloader(doc: Document): ModulePreloader {
     if (linkNonce) link.nonce = linkNonce
 
     activeLinks.add(link)
-    activeLinkCount++
-    if (initialLink) {
-      activeLinks.add(initialLink)
-      activeLinkCount++
-    }
+    if (initialLink) activeLinks.add(initialLink)
 
     function settle(event: Event): void {
       if (!activeLinks.delete(link)) return
-      activeLinkCount--
       link.remove()
       if (initialLink) {
         activeLinks.delete(initialLink)
-        activeLinkCount--
         initialLink.remove()
       }
       if (event.type === 'error') requestedUrls.delete(url)
@@ -3189,9 +3164,6 @@ function createModulePreloader(doc: Document): ModulePreloader {
       }
       let processedHrefs = process ? await process(hrefs) : hrefs
       for (let href of processedHrefs) preload(href)
-    },
-    hasActivePreloads() {
-      return activeLinkCount > 0
     },
     isActivePreload(node) {
       return activeLinks.has(node)
