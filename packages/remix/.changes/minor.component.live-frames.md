@@ -1,0 +1,1 @@
+Keep a `<Frame>` from `remix/component` up to date over one connection by pointing its `src` at a route that answers with `Content-Type: text/event-stream`. Each event's `data` is a snapshot of the frame's HTML, reconciled the way reload HTML is, and the frame resolves as soon as the first event renders while the connection stays open for later ones.

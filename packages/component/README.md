@@ -1397,6 +1397,7 @@ Every request sends `X-Remix-Frame: true`. Named frames also send `X-Remix-Targe
 - GET form values are already encoded in `src`. POST submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for `text/plain`, or `FormData` for `multipart/form-data`. Fetch generates multipart boundaries.
 - The resolver accepts `2xx` responses and HTML `3xx` or `4xx` responses, matching `text/html` case-insensitively. It rejects other `3xx` or `4xx` responses and all `5xx` responses with their status and status text.
 - The default fetch uses `same-origin` mode, which rejects cross-origin sources and redirects even when the destination allows CORS.
+- A `text/event-stream` body renders as a live frame, described in [Live Frames](#live-frames). Any resolver can return such a response, including a custom one.
 
 To use another body encoding or response policy, provide `resolveFrame` without delegating. It can return frame content directly or a `Response` with any status to stream its body. When Fetch follows a redirect, frames other than the top frame render the final content without changing the frame source or browser URL.
 
@@ -1470,6 +1471,39 @@ let viewTransition = document.startViewTransition(async () => {
 Add the application-defined `data-view-transition-image` attribute only to images needed for the snapshot, such as the destination's main product image. `Promise.allSettled()` handles decode failures. Preloading can reduce the wait but does not guarantee decoding has finished.
 
 Response bodies remain streamed. A slow body or image decode can delay the snapshot or cause the browser to skip the animation. Avoid awaiting `requestAnimationFrame` inside the update callback: rendering is paused and may prevent it from running.
+
+### Live Frames
+
+A frame renders a `text/event-stream` response as live content. Each event's `data` is a snapshot of the frame's HTML, so a route can push UI updates over one connection instead of waiting for the next reload:
+
+```tsx
+<Frame name="order" src="/orders/42/live" fallback={<p>Connecting…</p>} />
+```
+
+```tsx
+// The route behind `src` keeps the response open and writes one event per update
+function liveOrder(): Response {
+  let stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let encoder = new TextEncoder()
+      for await (let order of watchOrder(42)) {
+        let html = await renderToString(<OrderStatus order={order} />)
+        controller.enqueue(encoder.encode(`data: ${html}\n\n`))
+      }
+      controller.close()
+    },
+  })
+
+  return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } })
+}
+```
+
+- The frame resolves as soon as the first event renders. That replaces the `fallback`, settles `frame.reload()`, and unblocks a navigation, while the connection stays open for later events.
+- Each event's HTML is reconciled against the frame's current content, the same way reload HTML is, so send a full snapshot of the frame rather than a delta. Matching elements keep their DOM, including focus, scroll position, and client-owned state.
+- Event names are ignored, so any name works. Comment lines such as `: ping` are dropped, which makes them the keepalive for an idle connection, and multi-line `data:` fields are joined with newlines.
+- The connection closes when the frame reloads, renders other content, or is removed. Remix doesn't reconnect when the server closes the stream; call `frame.reload()` from client code when the frame should reconnect.
+- Event data is trusted frame HTML and isn't sanitized, like every other frame resolution. It can select client entries and contribute import maps, styles, and nested frames.
+- The default resolver sends `Accept: text/html, text/event-stream`, so one route can serve a document, a fragment, or a live stream depending on the request.
 
 ### Preserving Client-Owned DOM
 
