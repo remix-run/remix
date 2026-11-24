@@ -191,6 +191,32 @@ describe('frames connected to an event stream', () => {
     }
   })
 
+  it('switches between appending and replacing as the stream asks', async () => {
+    let events = createEventStream()
+    let root = renderLiveFrame(events)
+
+    try {
+      events.write('event: append\ndata: <p class="line">One</p>\n\n')
+      events.write('event: append\ndata: <p class="line">Two</p>\n\n')
+      await waitFor(() => (container!.querySelectorAll('.line').length === 2 ? true : null))
+
+      // A snapshot resets the frame, appended lines included.
+      events.send('<p class="line">Fresh</p>')
+      await waitFor(() => (container!.querySelectorAll('.line').length === 1 ? true : null))
+
+      // Appending carries on from the snapshot.
+      events.write('event: append\ndata: <p class="line">Next</p>\n\n')
+      await waitFor(() => (container!.querySelectorAll('.line').length === 2 ? true : null))
+
+      expect([...container!.querySelectorAll('.line')].map((line) => line.textContent)).toEqual([
+        'Fresh',
+        'Next',
+      ])
+    } finally {
+      root.dispose()
+    }
+  })
+
   it('dispatches a bubbling rmx:update event for every event it renders', async () => {
     let events = createEventStream()
     let root = renderLiveFrame(events)
