@@ -1638,6 +1638,7 @@ function createPendingMockRequest(): http.IncomingMessage {
     {
       url: '/',
       method: 'POST',
+      httpVersionMajor: 1,
       rawHeaders: [] as string[],
       socket: {},
       headers: {},
@@ -1675,6 +1676,7 @@ function createMockRequest({
     {
       url,
       method,
+      httpVersionMajor: 1,
       rawHeaders,
       socket,
       headers: Object.fromEntries(
@@ -1691,6 +1693,8 @@ function createMockResponse({
 }): http.ServerResponse {
   return Object.assign(new stream.Writable(), {
     req,
+    headersSent: false,
+    setHeader() {},
     writeHead() {},
     write() {},
     end() {},

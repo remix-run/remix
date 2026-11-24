@@ -1,3 +1,6 @@
+import type * as http from 'node:http'
+import { PassThrough } from 'node:stream'
+
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
@@ -105,5 +108,28 @@ describe('parseMultipartRequest (node)', () => {
         // ...
       }
     }, MaxTotalSizeExceededError)
+  })
+
+  it('destroys an unfinished request with the error when a limit is exceeded', async () => {
+    // Never ends, like a client that is still sending
+    let request = new PassThrough() as PassThrough & http.IncomingMessage
+    request.headers = { 'content-type': `multipart/form-data; boundary=${boundary}` }
+    request.write(
+      `--${boundary}\r\nContent-Disposition: form-data; name="a"\r\n\r\n${'x'.repeat(100)}`,
+    )
+    let errors: unknown[] = []
+    request.on('error', (error) => errors.push(error))
+    let closed = new Promise((resolve) => request.once('close', resolve))
+
+    await assert.rejects(async () => {
+      for await (let _ of parseMultipartRequest(request, { maxTotalSize: 10 })) {
+        // ...
+      }
+    }, MaxTotalSizeExceededError)
+    await closed
+
+    assert.equal(request.destroyed, true)
+    assert.equal(errors.length, 1)
+    assert.ok(errors[0] instanceof MaxTotalSizeExceededError)
   })
 })
