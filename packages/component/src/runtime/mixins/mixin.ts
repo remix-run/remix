@@ -2,7 +2,13 @@ import type { Context, FrameHandle } from '../component.ts'
 import type { ElementProps, RemixElement } from '../core/vnode.ts'
 import type { Key } from '../key.ts'
 import type { Scheduler, SchedulerPhaseEvent } from '../vdom.ts'
-import { isRemixElement, jsx } from '../core/vnode.ts'
+import {
+  isMixinDescriptor,
+  isRemixElement,
+  jsx,
+  MIXIN_RUNTIME,
+  setDefaultMixinRuntime,
+} from '../core/vnode.ts'
 import { TypedEventTarget } from '../component.ts'
 import { invariant } from '../invariant.ts'
 
@@ -318,9 +324,10 @@ export function createMixin<
   args extends unknown[] = [],
   props extends ElementProps = ElementProps,
 >(type: MixinType<node, args, props>, options: MixinOptions = {}): MixinFactory<node, args, props> {
+  setDefaultMixinRuntime(MixinRuntime)
   // Keep browser-only metadata local to this factory when setup is shared.
   let mixinType =
-    options.ssr === false || '__rmxMixinSsr' in type
+    options.ssr === false || '__rmxMixinSsr' in type || !Object.isExtensible(type)
       ? Object.assign(
           function mixinSetup(handle: MixinHandle<node, props>, hostType: string) {
             return type(handle, hostType)
@@ -328,6 +335,9 @@ export function createMixin<
           { __rmxMixinSsr: options.ssr !== false },
         )
       : type
+  if (!(MIXIN_RUNTIME in mixinType)) {
+    Object.defineProperty(mixinType, MIXIN_RUNTIME, { value: MixinRuntime })
+  }
 
   return <boundNode extends node = node>(
     ...args: RebindTuple<args, node, boundNode>
@@ -708,14 +718,7 @@ function withoutMixinContentProps(props: ElementProps, returned = false): Elemen
   return output
 }
 
-export function isMixinDescriptor(value: unknown): value is MixDescriptor {
-  if (!value || typeof value !== 'object' || isRemixElement(value)) {
-    return false
-  }
-
-  let descriptor = value as { type?: unknown; args?: unknown }
-  return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
-}
+export { isMixinDescriptor }
 
 function isMixinElementFunction(
   value: unknown,

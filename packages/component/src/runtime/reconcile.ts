@@ -1,5 +1,5 @@
 import type { PortalNodeRenderer, PortalRanges } from './portal.ts'
-import { getNonceManager, type ResourceNonces } from './nonce.ts'
+import type { NonceManager, ResourceNonces } from './nonce.ts'
 import type { Component, ComponentHandle, FrameHandle, FrameProps } from './component.ts'
 import {
   createComponent,
@@ -9,38 +9,29 @@ import {
   PORTAL_NODE,
   type PortalProps,
 } from './component.ts'
-import {
-  disposeClientEntryBoundary,
-  getClientEntryBoundaryOwner,
-  getFrameRuntime,
-  type FrameMountState,
-} from './frame-runtime.ts'
+import type { ClientEntryBoundaryRuntime, FrameMountState } from './frame-runtime.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps, setSelectDefaultValue, setSelectValue } from './core/props.ts'
 import {
+  defaultMixinRuntime,
+  DIRECT_EVENT,
   isEmptyChild,
+  isMixinDescriptor,
   isPrimitiveChild,
   isRemixElement,
   isRemixNode,
   jsx,
+  MIXIN_RUNTIME,
   normalizeChildren,
 } from './core/vnode.ts'
 import type { RemixNode } from './core/vnode.ts'
 import { normalizeUnsafeHTMLProps } from './unsafe-html.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
-import { isEntry, logHydrationMismatch } from './client-entries.ts'
 import type { Scheduler } from './vdom.ts'
-import {
-  MixinRuntime,
-  isMixinDescriptor,
-  type MixinRuntimeBinding,
-  type MixinRuntimeValue,
-} from './mixins/mixin.ts'
-import { OnBinding, isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
+import type { MixinRuntime, MixinRuntimeBinding, MixinRuntimeValue } from './mixins/mixin.ts'
+import type { OnBinding, OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
-import { isCommentNode, isFrameStart, isHydrationStart } from './stream-protocol.ts'
-import { createStyleManager } from '../style/stylesheet.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 
 export const ROOT_VNODE = Symbol('ROOT_VNODE')
@@ -214,7 +205,7 @@ export type RootVNode = {
 export interface ReconcileContext {
   frame: FrameHandle
   scheduler: Scheduler
-  styles: StyleManager
+  styles?: StyleManager
   rootTarget: EventTarget
   // New Portals need cleanup if their source render fails before recording them.
   _pendingPortals?: Set<CommittedPortalNode> | null
@@ -382,12 +373,6 @@ function isElementFunction(value: unknown): value is ElementFunction {
   return typeof value === 'function'
 }
 
-let defaultStyleManager: StyleManager | undefined
-
-export function getDefaultStyleManager(): StyleManager {
-  return (defaultStyleManager ??= createStyleManager())
-}
-
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
 let idCounter = 0
@@ -526,6 +511,42 @@ export function restoreAncestorSelect(parent: ParentNode): void {
   if (value !== undefined) setSelectValue(select, value)
 }
 
+type MixinRuntimeCtor = typeof MixinRuntime
+type OnBindingCtor = typeof OnBinding
+
+type OptionalFrameRuntime = {
+  topFrame?: FrameHandle
+  registry?: { get(name: string): FrameHandle | undefined }
+  nonceManager?: NonceManager
+  clientEntries?: ClientEntryBoundaryRuntime
+}
+
+function getOptionalFrameRuntime(frame: FrameHandle): OptionalFrameRuntime | undefined {
+  return frame.$runtime as OptionalFrameRuntime | undefined
+}
+
+function isDirectEventDescriptor(descriptor: unknown): descriptor is OnMixinDescriptor {
+  return (
+    isMixinDescriptor(descriptor) &&
+    DIRECT_EVENT in (descriptor.type as unknown as Record<PropertyKey, unknown>)
+  )
+}
+
+function findMixinRuntimeCtor(mix: RuntimeHostProps['mix']): MixinRuntimeCtor | undefined {
+  if (!mix) return undefined
+  if (!Array.isArray(mix)) {
+    return (
+      ((mix as { type: unknown }).type as { [MIXIN_RUNTIME]?: MixinRuntimeCtor })[MIXIN_RUNTIME] ??
+      (defaultMixinRuntime as MixinRuntimeCtor | undefined)
+    )
+  }
+  for (let descriptor of mix) {
+    let ctor = (descriptor.type as unknown as { [MIXIN_RUNTIME]?: MixinRuntimeCtor })[MIXIN_RUNTIME]
+    if (ctor) return ctor
+  }
+  return defaultMixinRuntime as MixinRuntimeCtor | undefined
+}
+
 function resolveNodeMixProps(
   node: HostNode | CommittedHostNode,
   parent: VNodeParent,
@@ -540,23 +561,30 @@ function resolveNodeMixProps(
     state?.teardown()
     state = undefined
   } else {
-    state ??= new MixinRuntime(node.type, frame, scheduler, (type: Component | string | symbol) =>
-      typeof type === 'function' ? findContextFromAncestry(parent, type) : undefined,
-    )
+    if (!state) {
+      let Ctor = findMixinRuntimeCtor(mix)
+      invariant(Ctor, 'Invalid mix prop')
+      state = new Ctor(node.type, frame, scheduler, (type: Component | string | symbol) =>
+        typeof type === 'function' ? findContextFromAncestry(parent, type) : undefined,
+      )
+    }
     props = state.resolve(node.type, props)
   }
   node._mixState = state
   node._directEventDescriptors = directEventDescriptors ?? undefined
-  return (node._mixedProps = getNonceManager().resolveResourceNonce(node.type, props, parent))
+  let nonceManager = getOptionalFrameRuntime(frame)?.nonceManager
+  return (node._mixedProps = nonceManager
+    ? nonceManager.resolveResourceNonce(node.type, props, parent)
+    : props)
 }
 
 function resolveDirectEventDescriptors(mix: RuntimeHostProps['mix']): OnMixinDescriptor[] | null {
   if (!mix) return EMPTY_DIRECT_EVENT_DESCRIPTORS
   if (!Array.isArray(mix)) {
-    return isOnMixinDescriptor(mix) ? [mix] : null
+    return isDirectEventDescriptor(mix) ? [mix] : null
   }
 
-  return allDescriptors(mix, isOnMixinDescriptor) ? mix : null
+  return allDescriptors(mix, isDirectEventDescriptor) ? mix : null
 }
 
 function enqueueMixinBindingUpdate(
@@ -768,7 +796,8 @@ function syncDirectEventListeners(
       let binding = bindings[index]
       if (binding) binding.update(node._dom, descriptor.args, true)
       else {
-        binding = bindings[index] = new OnBinding(descriptor.args)
+        let Ctor = (descriptor.type as unknown as { [DIRECT_EVENT]: OnBindingCtor })[DIRECT_EVENT]
+        binding = bindings[index] = new Ctor(descriptor.args)
         binding.attach(node._dom)
       }
     }
@@ -886,7 +915,7 @@ export function reconcileVNodes(
 ): CommittedVNode {
   let anchor = fragmentEnd ?? undefined
   if (curr) {
-    if (curr.kind === 'client-entry' && node.kind === 'component' && isEntry(node.type)) {
+    if (curr.kind === 'client-entry' && node.kind === 'component' && isEntryType(node.type)) {
       return renderClientEntryBoundary(
         node,
         vParent,
@@ -926,15 +955,19 @@ export function reconcileVNodes(
     if (
       vParent.kind !== 'root' &&
       node.kind === 'component' &&
-      isEntry(node.type) &&
-      isCommentNode(hydrationNode)
+      isEntryType(node.type) &&
+      hydrationNode?.nodeType === 8
     ) {
-      let runtime = getFrameRuntime(frame)
-      let pending = runtime?.registry.entries.get(hydrationNode)
-      let owner = getClientEntryBoundaryOwner(hydrationNode)
-      let end = pending?.[0] ?? owner?.end
+      let end = getOptionalFrameRuntime(frame)?.clientEntries?.getEnd(hydrationNode as Comment)
       if (end) {
-        let committed = renderClientEntryBoundary(node, vParent, svg, hydrationNode, end, context)
+        let committed = renderClientEntryBoundary(
+          node,
+          vParent,
+          svg,
+          hydrationNode as Comment,
+          end,
+          context,
+        )
         cursor.current = end.nextSibling
         return committed
       }
@@ -1089,7 +1122,7 @@ function insertHost(
       return committed
     }
     // Retry failed - log mismatch and create new element (don't remove mismatched nodes)
-    logHydrationMismatch('tag', cursorTag, node.type)
+    console.error('Hydration mismatch:', 'tag', cursorTag, node.type)
     if (cursor) cursor.current = undefined // stop hydration for this tree
   }
   let dom = svg ? document.createElementNS(SVG_NS, node.type) : document.createElement(node.type)
@@ -1133,7 +1166,7 @@ function reconcileText(
             sibling = dom.nextSibling
           }
         } else {
-          logHydrationMismatch('text mismatch', dom.data, text)
+          console.error('Hydration mismatch:', 'text mismatch', dom.data, text)
         }
         dom.data = text
       }
@@ -1171,20 +1204,33 @@ function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
   }
 }
 
+function isEntryType(type: unknown): boolean {
+  return typeof type === 'function' && (type as { $entry?: boolean }).$entry === true
+}
+
 function nextHydrationNode(
   cursor: Node | null,
   preserveClientEntry: boolean,
   anchor?: Node,
 ): Node | null {
-  while (cursor && cursor !== anchor && cursor.nodeType === Node.COMMENT_NODE) {
-    let portalEnd = portalRanges?.ends.get(cursor)
-    if (portalEnd) {
-      cursor = portalEnd.nextSibling
+  while (cursor && cursor !== anchor) {
+    if (cursor.nodeType === 8) {
+      let portalEnd = portalRanges?.ends.get(cursor)
+      if (portalEnd) {
+        cursor = portalEnd.nextSibling
+        continue
+      }
+      let data = (cursor as Comment).data.trim()
+      if (data.startsWith('rmx:f:')) return cursor
+      if (preserveClientEntry && data.startsWith('rmx:h:')) return cursor
+      cursor = cursor.nextSibling
       continue
     }
-    if (isFrameStart(cursor)) return cursor
-    if (preserveClientEntry && isHydrationStart(cursor)) return cursor
-    cursor = cursor.nextSibling
+    if (cursor.nodeType === 1 && (cursor as Element).hasAttribute('data-rmx-style')) {
+      cursor = cursor.nextSibling
+      continue
+    }
+    break
   }
   return cursor === anchor ? null : cursor
 }
@@ -1240,10 +1286,10 @@ function diffComponent(
       getContext: (type: ElementFunction) => findContextFromAncestry(vParent, type),
       frames: {
         get top() {
-          return getFrameRuntime(frame)?.topFrame ?? frame
+          return getOptionalFrameRuntime(frame)?.topFrame ?? frame
         },
         get(name) {
-          return getFrameRuntime(frame)?.registry.get(name)
+          return getOptionalFrameRuntime(frame)?.registry?.get(name)
         },
       },
     })
@@ -1272,18 +1318,12 @@ function renderClientEntryBoundary(
     _rangeStart: start,
     _rangeEnd: end,
   }
-  let element = jsx(node.type, node.props, node.key)
-  let owner = getClientEntryBoundaryOwner(start)
-  if (owner) {
-    getNonceManager().inheritRootResourceNonces(owner.root, parent)
-    owner.root.render(element)
-    return committed
-  }
-
-  let runtime = getFrameRuntime(context.frame)
-  let pending = runtime?.registry.entries.get(start)
-  invariant(runtime && pending?.[0] === end, 'Expected pending client entry boundary')
-  runtime.registry.entries.set(start, [end, element, getNonceManager().getResourceNonces(parent)])
+  getOptionalFrameRuntime(context.frame)?.clientEntries?.render(
+    start,
+    end,
+    jsx(node.type, node.props, node.key),
+    parent,
+  )
   return committed
 }
 
@@ -1291,8 +1331,7 @@ function disposeCommittedClientEntryBoundary(
   node: CommittedClientEntryNode,
   context: ReconcileContext,
 ): boolean {
-  getFrameRuntime(context.frame)?.registry.entries.delete(node._rangeStart)
-  return disposeClientEntryBoundary(node._rangeStart)
+  return getOptionalFrameRuntime(context.frame)?.clientEntries?.dispose(node._rangeStart) ?? false
 }
 
 // A null domParent cleans up without DOM removal - used for descendants when an

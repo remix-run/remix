@@ -112,6 +112,21 @@ export { jsx as jsxDEV, jsx as jsxs }
 
 // Shared across module instances, and enumerable so element spreads retain their identity.
 const REMIX_ELEMENT = Symbol.for('remix.element')
+export const MIXIN_RUNTIME = Symbol('MixinRuntime')
+export const DIRECT_EVENT = Symbol('DirectEvent')
+export let defaultMixinRuntime: (new (...args: any[]) => any) | undefined
+
+export function setDefaultMixinRuntime(ctor: new (...args: any[]) => any): void {
+  defaultMixinRuntime = ctor
+}
+
+export function isMixinDescriptor(
+  value: unknown,
+): value is { type: (...args: any[]) => unknown; args: readonly unknown[] } {
+  if (!value || typeof value !== 'object' || isRemixElement(value)) return false
+  let descriptor = value as { type?: unknown; args?: unknown }
+  return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
+}
 
 export function isRemixElement(node: unknown): node is RemixElement {
   if (typeof node !== 'object' || node === null) return false

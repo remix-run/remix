@@ -1,6 +1,5 @@
-import { createMixin, type MixinType } from './mixin.ts'
-import type { ElementProps } from '../core/vnode.ts'
-import type { MixinDescriptor } from './mixin.ts'
+import type { MixinDescriptor, MixinType } from './mixin.ts'
+import { DIRECT_EVENT, type ElementProps } from '../core/vnode.ts'
 import type { EnsureEvent, EventMap } from '../event-types.ts'
 
 type SignaledListener<event extends Event> = (
@@ -83,15 +82,11 @@ const onMixinSetup: MixinType<Element, OnArguments, ElementProps> = (handle) => 
   }
 }
 
-const onMixin = createMixin(onMixinSetup, { ssr: false })
-// Keep the browser's direct event path tied to the factory's setup identity.
-const onMixinType = onMixin('', () => {}).type
-
-export function isOnMixinDescriptor(descriptor: unknown): descriptor is OnMixinDescriptor {
-  if (!descriptor || typeof descriptor !== 'object') return false
-  let candidate = descriptor as { type?: unknown; args?: unknown }
-  return candidate.type === onMixinType && Array.isArray(candidate.args)
-}
+// Keep the browser's direct event path tied to the setup identity without pulling in MixinRuntime.
+const onMixinType = Object.assign(onMixinSetup, {
+  __rmxMixinSsr: false,
+  [DIRECT_EVENT]: OnBinding,
+})
 
 /**
  * Attaches a typed DOM event handler through the mixin system.
@@ -111,9 +106,8 @@ export function on<
 ): MixinDescriptor<target, [type, ListenerFor<target, type>, boolean?], ElementProps> {
   // Keep this typed wrapper so JSX host context can infer event/currentTarget
   // from `type`, rather than exposing the raw `string` + `Event` runtime signature.
-  return onMixin(
-    type as string,
-    handler as unknown as SignaledListener<Event>,
-    captureBoolean,
-  ) as unknown as MixinDescriptor<target, [type, ListenerFor<target, type>, boolean?], ElementProps>
+  return {
+    type: onMixinType,
+    args: [type as string, handler as unknown as SignaledListener<Event>, captureBoolean],
+  } as unknown as MixinDescriptor<target, [type, ListenerFor<target, type>, boolean?], ElementProps>
 }

@@ -182,6 +182,12 @@ export function createStyleManager(): StyleManager {
   }
 }
 
+let defaultStyleManager: StyleManager | undefined
+
+export function getDefaultStyleManager(): StyleManager {
+  return (defaultStyleManager ??= createStyleManager())
+}
+
 export type DOMStyleProperties = {
   [key in keyof Omit<
     CSSStyleDeclaration,

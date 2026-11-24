@@ -3,8 +3,14 @@ import type { MixinFactory, MixinType } from '../runtime/mixins/mixin.ts'
 import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
 import type { ElementProps } from '../runtime/core/vnode.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { camelToKebab, isStyleObject, normalizeCssValue } from './stylesheet.ts'
-import type { DOMStyleProperties } from './stylesheet.ts'
+import {
+  camelToKebab,
+  getDefaultStyleManager,
+  isStyleObject,
+  normalizeCssValue,
+  type DOMStyleProperties,
+  type ServerStyleSource,
+} from './stylesheet.ts'
 
 export interface CSSProps extends DOMStyleProperties {
   [key: string]: CSSProps | string | number | null | undefined
@@ -17,6 +23,7 @@ type StyleManagerLike = {
   insert(className: string, rule: string): void
   remove(className: string): void
   getGeneration?(): number
+  adoptServerStyles?(source: ServerStyleSource): Set<string>
 }
 
 /**
@@ -67,8 +74,16 @@ export const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> 
     let current = handle.frame.$runtime as {
       styleCache?: StyleCache
       styleManager?: StyleManagerLike
+      styleRoot?: ServerStyleSource
     }
     invariant(current, 'css mixin requires frame runtime')
+    if (!current.styleManager && !current.styleCache) {
+      current.styleManager = getDefaultStyleManager()
+    }
+    if (current.styleRoot && current.styleManager) {
+      current.styleManager.adoptServerStyles?.(current.styleRoot)
+      current.styleRoot = undefined
+    }
     return current
   }
 }

@@ -4,7 +4,9 @@ import type { ElementFunction } from './element-function.ts'
 import type { FrameInstance } from './frame.ts'
 import type { ProcessClientEntryPreloads } from './frame.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
-import type { ResourceNonces } from './nonce.ts'
+import { getNonceManager, type NonceManager, type ResourceNonces } from './nonce.ts'
+import { invariant } from './invariant.ts'
+import type { VNodeParent } from './reconcile.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 
 // Unlike `from`, this marker must not propagate to nested frame loads.
@@ -159,10 +161,18 @@ export type SharedFrameRuntime = {
   processClientEntryPreloads?: ProcessClientEntryPreloads
 }
 
+export type ClientEntryBoundaryRuntime = {
+  getEnd(marker: Comment): Comment | undefined
+  render(marker: Comment, end: Comment, element: RemixElement, parent: VNodeParent): void
+  dispose(marker: Comment): boolean
+}
+
 export type FrameRuntime = SharedFrameRuntime & {
   [FRAME_RUNTIME]: true
   getContext?: (type: ElementFunction) => unknown
   topFrame?: FrameHandle
+  readonly nonceManager: NonceManager
+  clientEntries: ClientEntryBoundaryRuntime
   serverFrameReload:
     | {
         signal: AbortSignal
@@ -210,6 +220,33 @@ export function createFrameRuntime(
     topFrame: init.topFrame,
     getContext: init.getContext,
     ...getSharedFrameRuntime(init),
+    get nonceManager() {
+      return getNonceManager()
+    },
+    clientEntries: {
+      getEnd(marker: Comment) {
+        return init.registry.entries.get(marker)?.[0] ?? getClientEntryBoundaryOwner(marker)?.end
+      },
+      render(marker: Comment, end: Comment, element: RemixElement, parent: VNodeParent) {
+        let owner = getClientEntryBoundaryOwner(marker)
+        if (owner) {
+          getNonceManager().inheritRootResourceNonces(owner.root, parent)
+          owner.root.render(element)
+          return
+        }
+        let pending = init.registry.entries.get(marker)
+        invariant(pending?.[0] === end, 'Expected pending client entry boundary')
+        init.registry.entries.set(marker, [
+          end,
+          element,
+          getNonceManager().getResourceNonces(parent),
+        ])
+      },
+      dispose(marker: Comment) {
+        init.registry.entries.delete(marker)
+        return disposeClientEntryBoundary(marker)
+      },
+    },
     serverFrameReload: undefined,
     reloadForNavigation: init.reloadForNavigation,
   }

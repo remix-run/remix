@@ -1,4 +1,3 @@
-import { getNonceManager } from './nonce.ts'
 import type { ComponentErrorEvent, FrameHandle } from './component.ts'
 import {
   createComponentErrorEvent,
@@ -8,9 +7,9 @@ import {
 } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './core/vnode.ts'
-import { createFrameRuntime, FrameRegistry, type ResolveFrame } from './frame-runtime.ts'
+import type { ResolveFrame } from './frame-runtime.ts'
+import type { NonceManager } from './nonce.ts'
 import {
-  getDefaultStyleManager,
   diffVNodes,
   isCommittedComponentNode,
   renderComponent,
@@ -26,7 +25,6 @@ import {
   type VNodeParent,
 } from './reconcile.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
-import { getHydrationId, isHydrationStart } from './stream-protocol.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 import type { ElementFunction } from './element-function.ts'
 
@@ -98,7 +96,9 @@ export function createRangeRoot(
   let container = end.parentNode
   invariant(container, 'Expected parent node')
   invariant(start.parentNode === container, 'Boundaries must share parent')
-  return createVirtualRoot(container, start.nextSibling, options, start, end)
+  let markerData = start.nodeType === 8 ? (start as Comment).data.trim() : ''
+  let hydrationId = markerData.startsWith('rmx:h:') ? markerData.slice(6) : undefined
+  return createVirtualRoot(container, start.nextSibling, options, start, end, hydrationId)
 }
 
 /**
@@ -110,13 +110,18 @@ export function createRangeRoot(
  */
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
   let start: ChildNode | null = null
+  let styleRoot: HTMLElement | undefined
   if (hasServerContent(container)) {
-    let styles = options.styleManager ?? getDefaultStyleManager()
-    styles.adoptServerStyles(container)
-    // Adoption can remove or replace the first node.
-    if (hasServerContent(container)) start = container.firstChild
+    if (options.styleManager) {
+      options.styleManager.adoptServerStyles(container)
+      // Adoption can remove or replace the first node.
+      if (hasServerContent(container)) start = container.firstChild
+    } else {
+      start = container.firstChild
+      styleRoot = container
+    }
   }
-  return createVirtualRoot(container, start, options)
+  return createVirtualRoot(container, start, options, undefined, undefined, undefined, styleRoot)
 }
 
 function hasServerContent(container: HTMLElement): boolean {
@@ -132,17 +137,19 @@ function createVirtualRoot(
   options: VirtualRootOptions,
   rangeStart?: Node,
   rangeEnd?: Node,
+  pendingHydrationId?: string,
+  styleRoot?: HTMLElement,
 ): VirtualRoot {
-  let nonceManager = getNonceManager()
   let vroot: CommittedVNode | null = null
   let currentElement: RemixNode | undefined
-  let styles = options.styleManager ?? getDefaultStyleManager()
+  let styles = options.styleManager
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
   let scheduler =
     options.scheduler ?? createScheduler(parent.ownerDocument ?? document, eventTarget)
   let frameStub =
-    options.frame ?? createRootFrameHandle(options.frameInit, eventTarget, scheduler, styles)
+    options.frame ??
+    createRootFrameHandle(options.frameInit, eventTarget, scheduler, styles, styleRoot)
   let context: ReconcileContext = {
     frame: frameStub,
     scheduler,
@@ -160,19 +167,19 @@ function createVirtualRoot(
       if (currentElement === undefined) parent.addEventListener('error', forwardDomError)
       currentElement = element
 
+      let nonceManager = (frameStub.$runtime as { nonceManager?: NonceManager } | undefined)
+        ?.nonceManager
       let vnode = toVNode(element)
       let vParent: RootVNode = {
         kind: 'root',
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
-        _resourceNonces: nonceManager.getRootResourceNonces(root),
+        _resourceNonces: nonceManager?.getRootResourceNonces(root),
         _getContext: options.getContext,
         _rangeStart: rangeStart,
         _rangeEnd: rangeEnd,
-        _pendingHydrationComponentId: isHydrationStart(rangeStart)
-          ? getHydrationId(rangeStart)
-          : undefined,
+        _pendingHydrationComponentId: pendingHydrationId,
       }
       scheduler.enqueueWork([
         () => {
@@ -230,24 +237,18 @@ function createRootFrameHandle(
   init: VirtualRootOptions['frameInit'],
   errorTarget: EventTarget,
   scheduler: Scheduler,
-  styleManager: StyleManager,
+  styleManager: StyleManager | undefined,
+  styleRoot: HTMLElement | undefined,
 ): FrameHandle {
   let frame = createFrameHandle({ src: init?.src ?? '/' })
-  frame.$runtime = init?.resolveFrame
-    ? createFrameRuntime({
-        loadModule:
-          init.loadModule ??
-          (() => {
-            throw new Error('loadModule is required to hydrate client entries inside <Frame />')
-          }),
-        resolveFrame: init.resolveFrame,
-        errorTarget,
-        scheduler,
-        styleManager,
-        registry: new FrameRegistry(),
-        topFrame: frame,
-      })
-    : { styleManager, resolveFrame: missingFrameRuntime }
+  frame.$runtime = {
+    styleManager,
+    styleRoot,
+    frameInit: init,
+    errorTarget,
+    scheduler,
+    resolveFrame: missingFrameRuntime,
+  }
   return frame
 }
 
