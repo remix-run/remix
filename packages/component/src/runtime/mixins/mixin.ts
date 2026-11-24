@@ -1,4 +1,4 @@
-import type { Context, FrameHandle } from '../component.ts'
+import type { Component, Context, FrameHandle } from '../component.ts'
 import type { ElementProps, RemixElement } from '../core/vnode.ts'
 import type { Key } from '../key.ts'
 import type { Scheduler, SchedulerPhaseEvent } from '../vdom.ts'
@@ -7,10 +7,22 @@ import {
   isRemixElement,
   jsx,
   MIXIN_RUNTIME,
-  setDefaultMixinRuntime,
+  setDefaultMixinDriver,
 } from '../core/vnode.ts'
+import { patchHostProps } from '../core/props.ts'
 import { TypedEventTarget } from '../component.ts'
 import { invariant } from '../invariant.ts'
+import {
+  findContextFromAncestry,
+  portalRanges,
+  restoreAncestorSelect,
+  syncHostControls,
+  type CommittedHostNode,
+  type HostNode,
+  type ReconcileContext,
+  type RuntimeHostProps,
+  type VNodeParent,
+} from '../reconcile.ts'
 
 type RebindNode<value, baseNode, boundNode> = value extends (
   ...args: infer fnArgs
@@ -312,6 +324,173 @@ export interface MixinOptions {
   ssr?: boolean
 }
 
+export interface MixinRuntime {
+  readonly hasSlots: boolean
+  readonly removed: boolean
+  readonly lifetime: AbortSignal
+  resolve(hostType: string, props: ElementProps): ElementProps
+  bind(binding?: MixinRuntimeBinding, reclaimed?: boolean): void
+  prepareRemoval(): Promise<void> | undefined
+  cancelRemoval(): void
+  teardown(): void
+  dispatchUpdate(type: SchedulerPhaseType): void
+}
+
+export interface MixinDriver {
+  persistedNodes: Set<CommittedHostNode>
+  setActiveUpdateParents(parents: ParentNode[] | undefined): void
+  reclaim(
+    type: string,
+    key: Key | undefined,
+    domParent: ParentNode,
+    vParent: VNodeParent,
+  ): CommittedHostNode | null
+  resolve(
+    node: HostNode | CommittedHostNode,
+    parent: VNodeParent,
+    frame: FrameHandle,
+    scheduler: Scheduler,
+    prevState?: MixinRuntime,
+  ): RuntimeHostProps
+  shouldDispatchInline(node: Node): boolean
+  bind(
+    node: CommittedHostNode,
+    context: ReconcileContext,
+    reclaimed?: boolean,
+    parent?: ParentNode,
+  ): void
+  deferRemoval(
+    node: CommittedHostNode,
+    domParent: ParentNode,
+    context: ReconcileContext,
+    performRemoval: (
+      node: CommittedHostNode,
+      domParent: ParentNode | null,
+      context: ReconcileContext,
+    ) => void,
+  ): boolean
+}
+
+let persistedRemovalToken = 0
+let activeUpdateParents: ParentNode[] | undefined
+const persistedMixinNodes = new Set<CommittedHostNode>()
+
+function enqueueMixinBindingUpdate(
+  this: MixinRuntimeBinding<CommittedHostNode>,
+  done: (signal: AbortSignal) => void,
+): void {
+  let node = this.target
+  let state = node._mixState
+  this.scheduler.enqueueWork([
+    () => {
+      if (state?.removed) {
+        done(state.lifetime)
+        return
+      }
+      state?.dispatchUpdate('beforeUpdate')
+      let prev = node._mixedProps
+      let next = mixinDriver.resolve(node, node._parent, this.frame, this.scheduler, state)
+      let nonceManager = (
+        this.frame.$runtime as
+          | {
+              nonceManager?: {
+                resolveResourceNonce(
+                  type: string,
+                  props: RuntimeHostProps,
+                  parent: VNodeParent,
+                ): RuntimeHostProps
+              }
+            }
+          | undefined
+      )?.nonceManager
+      next = node._mixedProps = nonceManager
+        ? nonceManager.resolveResourceNonce(node.type, next, node._parent)
+        : next
+      patchHostProps(prev, next, this.node)
+      syncHostControls(node, this.scheduler)
+      if (this.node.parentNode) restoreAncestorSelect(this.node.parentNode)
+      state?.dispatchUpdate('commit')
+      done(state ? state.lifetime : AbortSignal.abort())
+    },
+  ])
+}
+
+const mixinDriver: MixinDriver = {
+  persistedNodes: persistedMixinNodes,
+  setActiveUpdateParents(parents) {
+    activeUpdateParents = parents
+  },
+  reclaim(type, key, domParent, vParent) {
+    if (key == null) return null
+    for (let persisted of persistedMixinNodes) {
+      if (
+        persisted._persistence?.parent === domParent &&
+        persisted.type === type &&
+        persisted.key === key &&
+        portalRanges?.ownerOf(persisted._parent) === portalRanges?.ownerOf(vParent)
+      ) {
+        persisted._mixState?.cancelRemoval()
+        persisted._persistence = undefined
+        persistedMixinNodes.delete(persisted)
+        return persisted
+      }
+    }
+    return null
+  },
+  resolve(node, parent, frame, scheduler, state) {
+    state ??= createMixinRuntime(node.type, frame, scheduler, (type: Component | string | symbol) =>
+      typeof type === 'function' ? findContextFromAncestry(parent, type) : undefined,
+    )
+    node._mixState = state
+    node._mixDriver = mixinDriver
+    return state.resolve(node.type, node.props)
+  },
+  shouldDispatchInline(node) {
+    if (!activeUpdateParents?.length) return true
+    for (let parent of activeUpdateParents) {
+      if (parent instanceof Node && parent.contains(node)) return false
+    }
+    return true
+  },
+  bind(node, context, reclaimed = false, parent) {
+    let state = node._mixState
+    if (!state) return
+    let domParent = parent ?? node._dom.parentNode
+    invariant(domParent, 'Expected mounted host node to have a DOM parent')
+    state.bind(
+      {
+        node: node._dom,
+        parent: domParent,
+        key: node.key,
+        target: node,
+        frame: context.frame,
+        scheduler: context.scheduler,
+        enqueueUpdate: enqueueMixinBindingUpdate,
+      },
+      reclaimed,
+    )
+  },
+  deferRemoval(node, domParent, context, performRemoval) {
+    if (node._persistence) return true
+    let persisted = node._mixState?.prepareRemoval()
+    if (!persisted) return false
+    let token = ++persistedRemovalToken
+    node._persistence = { parent: domParent, token }
+    persistedMixinNodes.add(node)
+    node._mixState?.bind()
+    void persisted
+      .catch(() => {})
+      .finally(() => {
+        if (node._persistence?.token !== token) return
+        node._persistence = undefined
+        persistedMixinNodes.delete(node)
+        performRemoval(node, domParent, context)
+        portalRanges?.finishRemovals(domParent)
+      })
+    return true
+  },
+}
+
 /**
  * Creates a typed mixin factory that can be passed through the `mix` prop.
  *
@@ -324,7 +503,7 @@ export function createMixin<
   args extends unknown[] = [],
   props extends ElementProps = ElementProps,
 >(type: MixinType<node, args, props>, options: MixinOptions = {}): MixinFactory<node, args, props> {
-  setDefaultMixinRuntime(MixinRuntime)
+  setDefaultMixinDriver(mixinDriver)
   // Keep browser-only metadata local to this factory when setup is shared.
   let mixinType =
     options.ssr === false || '__rmxMixinSsr' in type || !Object.isExtensible(type)
@@ -336,7 +515,7 @@ export function createMixin<
         )
       : type
   if (!(MIXIN_RUNTIME in mixinType)) {
-    Object.defineProperty(mixinType, MIXIN_RUNTIME, { value: MixinRuntime })
+    Object.defineProperty(mixinType, MIXIN_RUNTIME, { value: mixinDriver })
   }
 
   return <boundNode extends node = node>(
@@ -353,229 +532,211 @@ export function createMixin<
 
 type SchedulerPhaseType = 'beforeUpdate' | 'commit'
 
-export class MixinRuntime
-  extends TypedEventTarget<MixinHandleEventMap<Element>>
-  implements AnyMixinHandle
-{
-  id = `m${++mixinHandleId}`
-  context: MixinContext
-  frame: FrameHandle
-  element: MixinElement<Element, ElementProps>
+function createMixinRuntime(
+  hostType: string,
+  frame: FrameHandle,
+  scheduler: Scheduler,
+  getContext: MixinContext['get'],
+): MixinRuntime {
+  let runners: MixinSlot[] = []
+  let slots = new Set<MixinSlot>()
+  let active: MixinSlot | undefined
+  let binding: MixinRuntimeBinding | undefined
+  let controller: AbortController | undefined
+  let removal: 'active' | 'removing' | 'removed' | PersistedMixinRemoval = 'active'
+  let phases: Set<SchedulerPhaseType> | undefined
 
-  #scheduler: Scheduler
-  #runners: MixinSlot[] = []
-  // Replaced slots can still receive events until their queued removal has run.
-  #slots = new Set<MixinSlot>()
-  #active?: MixinSlot
-  #binding?: MixinRuntimeBinding
-  #controller?: AbortController
-  // An object keeps the host alive until pending exit callbacks settle or the node is reclaimed.
-  #removal: 'active' | 'removing' | 'removed' | PersistedMixinRemoval = 'active'
-  #phases?: Set<SchedulerPhaseType>
+  let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) =>
+    jsx(hostType, props, null)) as unknown as MixinElement<Element, ElementProps>
+  element.__rmxMixinElementType = hostType
 
-  constructor(
-    hostType: string,
-    frame: FrameHandle,
-    scheduler: Scheduler,
-    getContext: MixinContext['get'],
-  ) {
-    super()
-    this.context = { get: getContext }
-    this.frame = frame
-    this.#scheduler = scheduler
-    let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) =>
-      jsx(hostType, props, null)) as unknown as MixinElement<Element, ElementProps>
-    element.__rmxMixinElementType = hostType
-    this.element = element
-  }
-
-  resolve(hostType: string, props: ElementProps): ElementProps {
-    let count = 0
-    let mixed = composeMixedProps(hostType, props, (descriptor, index, mixinProps) => {
-      count = index + 1
-      let slot = this.#runners[index]
-      if (slot?.type !== descriptor.type) {
-        let previous = slot
-        if (previous) this.#scheduler.enqueueCommitPhase([() => this.#removeSlot(previous)])
-        slot = { type: descriptor.type as AnyMixinType, runner: () => this.element }
-        this.#active = slot
-        this.#slots.add(slot)
-        let setup = descriptor.type(this, hostType) as AnyMixinSetupResult
-        slot.runner = normalizeMixinRunner(setup, this)
-        this.#runners[index] = slot
-        if (this.#binding) this.#queueBind(slot, 'insert', this.#binding)
-      }
-      this.#active = slot
-      let result = slot.runner(...descriptor.args, mixinProps)
-      this.#active = undefined
-      return result
-    })
-    for (let i = count; i < this.#runners.length; i++) this.#removeSlot(this.#runners[i])
-    this.#runners.length = count
-    return mixed
-  }
-
-  bind(binding?: MixinRuntimeBinding, reclaimed = false): void {
-    let previousNode = this.#binding?.node
-    this.#binding = binding
-    if (binding && binding.node !== previousNode) {
-      for (let slot of this.#runners)
-        this.#queueBind(slot, reclaimed ? 'reclaimed' : 'insert', binding)
-    }
-  }
-
-  #queueBind(slot: MixinSlot, type: 'insert' | 'reclaimed', binding: MixinRuntimeBinding) {
-    let { node, parent, key } = binding
-    this.#scheduler.enqueueCommitPhase([() => this.#dispatch(slot, type, { node, parent, key })])
-  }
-
-  #dispatch(slot: MixinSlot, type: keyof MixinHandleEventMap<Element>, props?: object) {
-    if (!this.#slots.has(slot)) return
-    let previous = this.#active
-    this.#active = slot
+  function dispatch(slot: MixinSlot, type: keyof MixinHandleEventMap<Element>, props?: object) {
+    if (!slots.has(slot)) return
+    let prev = active
+    active = slot
     slot.target?.dispatchEvent(Object.assign(new Event(type), props))
-    this.#active = previous
+    active = prev
   }
 
-  #release(slot: MixinSlot) {
-    slot.controller?.abort()
-    this.#slots.delete(slot)
-    if (slot === this.#active) this.#active = undefined
-    if (!this.#slots.size && this.#phases) {
-      for (let type of this.#phases) {
-        let phase = getPhaseListeners(this.#scheduler)[type]
-        phase.delete(this.#onPhase)
-        if (!phase.size) this.#scheduler.removeEventListener(type, phase)
-      }
-      this.#phases = undefined
-    }
-  }
-
-  #removeSlot(slot: MixinSlot) {
-    this.#dispatch(slot, 'remove')
-    this.#release(slot)
-  }
-
-  prepareRemoval(): Promise<void> | undefined {
-    if (typeof this.#removal === 'object') return this.#removal.done
-    if (this.#removal !== 'active') return
-    this.#removal = 'removing'
-    let teardowns: Array<(signal: AbortSignal) => void | Promise<void>> = []
-    let persistNode = (teardown: (signal: AbortSignal) => void | Promise<void>) => {
-      teardowns.push(teardown)
-    }
-    for (let slot of this.#runners) this.#dispatch(slot, 'beforeRemove', { persistNode })
-    if (!teardowns.length) return
-    let controller = new AbortController()
-    let done = Promise.allSettled(
-      teardowns.map((fn) => Promise.resolve().then(() => fn(controller.signal))),
-    ).then(() => {})
-    this.#removal = { controller, done }
-    return done
-  }
-
-  cancelRemoval() {
-    if (typeof this.#removal !== 'object') return
-    this.#removal.controller.abort(new DOMException('', 'AbortError'))
-    this.#removal = 'active'
-  }
-
-  teardown() {
-    this.#binding = undefined
-    this.prepareRemoval()
-    if (typeof this.#removal === 'object') {
-      this.#removal.controller.abort(new DOMException('', 'AbortError'))
-      this.#removal = 'removing'
-    }
-    this.#scheduler.enqueueCommitPhase([
-      () => {
-        for (let slot of this.#runners) this.#dispatch(slot, 'remove')
-        for (let slot of this.#runners) this.#release(slot)
-        this.#runners.length = 0
-        this.#removal = 'removed'
-        this.#controller?.abort()
-      },
-    ])
-  }
-
-  get hasSlots() {
-    return this.#runners.length !== 0
-  }
-
-  get removed() {
-    return this.#removal === 'removed'
-  }
-
-  get lifetime() {
-    this.#controller ??= new AbortController()
-    if (this.removed) this.#controller.abort()
-    return this.#controller.signal
-  }
-
-  get signal() {
-    let slot = this.#active
-    invariant(
-      slot,
-      'handle.signal is only available during mixin setup, render, or lifecycle callbacks',
-    )
-    slot.controller ??= new AbortController()
-    return slot.controller.signal
-  }
-
-  update(): Promise<AbortSignal> {
-    if (!this.#binding || this.removed) return Promise.resolve(this.lifetime)
-    let binding = this.#binding
-    return new Promise((resolve) => binding.enqueueUpdate(resolve))
-  }
-
-  queueTask(task: (node: Element, signal: AbortSignal) => void): void {
-    this.#scheduler.enqueueTasks([
-      () => {
-        invariant(this.#binding)
-        task(this.#binding.node, this.lifetime)
-      },
-    ])
-  }
-
-  addEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject | null,
-    options?: AddEventListenerOptions | boolean,
-  ): void {
-    invariant(this.#active)
-    let target = (this.#active.target ??= new TypedEventTarget())
-    target.addEventListener(type, listener, options)
-    if (!listener || (type !== 'beforeUpdate' && type !== 'commit') || this.#phases?.has(type))
-      return
-    this.#phases ??= new Set()
-    this.#phases.add(type)
-    let phase = getPhaseListeners(this.#scheduler)[type]
-    phase.add(this.#onPhase)
-    if (phase.size === 1) this.#scheduler.addEventListener(type, phase)
-  }
-
-  removeEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject | null,
-    options?: EventListenerOptions | boolean,
-  ): void {
-    invariant(this.#active)
-    this.#active.target?.removeEventListener(type, listener, options)
-  }
-
-  #onPhase = (event: Event) => {
-    let node = this.#binding?.node
+  function onPhase(event: Event) {
+    let node = binding?.node
     if (node && (event as SchedulerPhaseEvent).parents.some((parent) => parent.contains(node))) {
-      for (let slot of this.#slots) this.#dispatch(slot, event.type as SchedulerPhaseType, { node })
+      for (let slot of slots) dispatch(slot, event.type as SchedulerPhaseType, { node })
     }
   }
 
-  dispatchUpdate(type: SchedulerPhaseType) {
-    let node = this.#binding?.node
-    if (node && this.#phases?.has(type)) {
-      for (let slot of this.#runners) this.#dispatch(slot, type, { node })
+  function release(slot: MixinSlot) {
+    slot.controller?.abort()
+    slots.delete(slot)
+    if (slot === active) active = undefined
+    if (!slots.size && phases) {
+      for (let type of phases) {
+        let phase = getPhaseListeners(scheduler)[type]
+        phase.delete(onPhase)
+        if (!phase.size) scheduler.removeEventListener(type, phase)
+      }
+      phases = undefined
     }
   }
+
+  function removeSlot(slot: MixinSlot) {
+    dispatch(slot, 'remove')
+    release(slot)
+  }
+
+  function queueBind(slot: MixinSlot, type: 'insert' | 'reclaimed', b: MixinRuntimeBinding) {
+    let { node, parent, key } = b
+    scheduler.enqueueCommitPhase([() => dispatch(slot, type, { node, parent, key })])
+  }
+
+  function getLifetime() {
+    controller ??= new AbortController()
+    if (removal === 'removed') controller.abort()
+    return controller.signal
+  }
+
+  let handle = {
+    id: `m${++mixinHandleId}`,
+    context: { get: getContext },
+    frame,
+    element,
+    get signal() {
+      invariant(
+        active,
+        'handle.signal is only available during mixin setup, render, or lifecycle callbacks',
+      )
+      return (active.controller ??= new AbortController()).signal
+    },
+    update() {
+      if (!binding || removal === 'removed') return Promise.resolve(getLifetime())
+      let current = binding
+      return new Promise<AbortSignal>((resolve) => current.enqueueUpdate(resolve))
+    },
+    queueTask(task: (node: Element, signal: AbortSignal) => void) {
+      scheduler.enqueueTasks([
+        () => {
+          invariant(binding)
+          task(binding.node, getLifetime())
+        },
+      ])
+    },
+    addEventListener(
+      type: string,
+      listener: EventListenerOrEventListenerObject | null,
+      options?: AddEventListenerOptions | boolean,
+    ) {
+      invariant(active)
+      ;(active.target ??= new TypedEventTarget()).addEventListener(type, listener, options)
+      if (!listener || (type !== 'beforeUpdate' && type !== 'commit') || phases?.has(type)) return
+      ;(phases ??= new Set()).add(type)
+      let phase = getPhaseListeners(scheduler)[type]
+      phase.add(onPhase)
+      if (phase.size === 1) scheduler.addEventListener(type, phase)
+    },
+    removeEventListener(
+      type: string,
+      listener: EventListenerOrEventListenerObject | null,
+      options?: EventListenerOptions | boolean,
+    ) {
+      invariant(active)
+      active.target?.removeEventListener(type, listener, options)
+    },
+    dispatchEvent(event: Event) {
+      invariant(active)
+      return active.target?.dispatchEvent(event) ?? false
+    },
+  } as unknown as AnyMixinHandle
+
+  let runtime: MixinRuntime = {
+    get hasSlots() {
+      return runners.length !== 0
+    },
+    get removed() {
+      return removal === 'removed'
+    },
+    get lifetime() {
+      return getLifetime()
+    },
+    resolve(type, props) {
+      let count = 0
+      let mixed = composeMixedProps(type, props, (descriptor, index, mixinProps) => {
+        count = index + 1
+        let slot = runners[index]
+        if (slot?.type !== descriptor.type) {
+          let prev = slot
+          if (prev) scheduler.enqueueCommitPhase([() => removeSlot(prev)])
+          slot = { type: descriptor.type as AnyMixinType, runner: () => element }
+          active = slot
+          slots.add(slot)
+          let setup = descriptor.type(handle, type) as AnyMixinSetupResult
+          slot.runner = normalizeMixinRunner(setup, handle)
+          runners[index] = slot
+          if (binding) queueBind(slot, 'insert', binding)
+        }
+        active = slot
+        let result = slot.runner(...descriptor.args, mixinProps)
+        active = undefined
+        return result
+      })
+      for (let i = count; i < runners.length; i++) removeSlot(runners[i])
+      runners.length = count
+      return mixed
+    },
+    bind(next, reclaimed = false) {
+      let prevNode = binding?.node
+      binding = next
+      if (next && next.node !== prevNode) {
+        for (let slot of runners) queueBind(slot, reclaimed ? 'reclaimed' : 'insert', next)
+      }
+    },
+    prepareRemoval() {
+      if (typeof removal === 'object') return removal.done
+      if (removal !== 'active') return
+      removal = 'removing'
+      let teardowns: Array<(signal: AbortSignal) => void | Promise<void>> = []
+      let persistNode = (teardown: (signal: AbortSignal) => void | Promise<void>) => {
+        teardowns.push(teardown)
+      }
+      for (let slot of runners) dispatch(slot, 'beforeRemove', { persistNode })
+      if (!teardowns.length) return
+      let abortController = new AbortController()
+      let done = Promise.allSettled(
+        teardowns.map((fn) => Promise.resolve().then(() => fn(abortController.signal))),
+      ).then(() => {})
+      removal = { controller: abortController, done }
+      return done
+    },
+    cancelRemoval() {
+      if (typeof removal !== 'object') return
+      removal.controller.abort(new DOMException('', 'AbortError'))
+      removal = 'active'
+    },
+    teardown() {
+      binding = undefined
+      runtime.prepareRemoval()
+      if (typeof removal === 'object') {
+        removal.controller.abort(new DOMException('', 'AbortError'))
+        removal = 'removing'
+      }
+      scheduler.enqueueCommitPhase([
+        () => {
+          for (let slot of runners) dispatch(slot, 'remove')
+          for (let slot of runners) release(slot)
+          runners.length = 0
+          removal = 'removed'
+          controller?.abort()
+        },
+      ])
+    },
+    dispatchUpdate(type) {
+      let node = binding?.node
+      if (node && phases?.has(type)) {
+        for (let slot of runners) dispatch(slot, type, { node })
+      }
+    },
+  }
+
+  return runtime
 }
 
 // EventTarget scans its listeners on add/remove. Share one listener per scheduler phase.

@@ -1,6 +1,6 @@
 import type { PortalNodeRenderer, PortalRanges } from './portal.ts'
 import type { NonceManager, ResourceNonces } from './nonce.ts'
-import type { Component, ComponentHandle, FrameHandle, FrameProps } from './component.ts'
+import type { ComponentHandle, FrameHandle, FrameProps } from './component.ts'
 import {
   createComponent,
   Fragment,
@@ -13,7 +13,7 @@ import type { ClientEntryBoundaryRuntime, FrameMountState } from './frame-runtim
 import { invariant } from './invariant.ts'
 import { patchHostProps, setSelectDefaultValue, setSelectValue } from './core/props.ts'
 import {
-  defaultMixinRuntime,
+  defaultMixinDriver,
   DIRECT_EVENT,
   isEmptyChild,
   isMixinDescriptor,
@@ -29,8 +29,8 @@ import { normalizeUnsafeHTMLProps } from './unsafe-html.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
 import type { Scheduler } from './vdom.ts'
-import type { MixinRuntime, MixinRuntimeBinding, MixinRuntimeValue } from './mixins/mixin.ts'
-import type { OnBinding, OnMixinDescriptor } from './mixins/on-mixin.ts'
+import type { MixinDriver, MixinRuntime, MixinRuntimeValue } from './mixins/mixin.ts'
+import type { DirectEventSync, OnBinding, OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 
@@ -73,6 +73,8 @@ export type FragmentNode = InputNodeBase<'fragment', typeof Fragment> & { _child
 type HostMixState = {
   _mixedProps: RuntimeHostProps
   _mixState?: MixinRuntime
+  _mixDriver?: MixinDriver
+  _directEventSync?: DirectEventSync
   _directEventDescriptors?: OnMixinDescriptor[]
 }
 
@@ -245,9 +247,6 @@ const EMPTY_CHILDREN: CommittedVNode[] = []
 const controlledSelectValues = new WeakMap<HTMLSelectElement, unknown>()
 
 let idCounter = 0
-let persistedRemovalToken = 0
-export const persistedMixinNodes = new Set<CommittedHostNode>()
-let activeSchedulerUpdateParents: ParentNode[] | undefined
 export let portalRanges: PortalRanges | undefined
 
 export function setPortalRanges(ranges: PortalRanges): PortalRanges {
@@ -256,10 +255,6 @@ export function setPortalRanges(ranges: PortalRanges): PortalRanges {
 
 export function excludePortalRanges(nodes: Node[], parent?: Node): Node[] {
   return portalRanges?.exclude(nodes, parent) ?? nodes
-}
-
-export function setActiveSchedulerUpdateParents(parents: ParentNode[] | undefined) {
-  activeSchedulerUpdateParents = parents
 }
 
 export function insertDomNode(dom: Node, domParent: ParentNode, anchor?: Node): void {
@@ -403,12 +398,23 @@ export function restoreAncestorSelect(parent: ParentNode): void {
   }
 }
 
+function findMixinDriver(mix: RuntimeHostProps['mix']): MixinDriver | undefined {
+  if (mix) {
+    let list = Array.isArray(mix) ? mix : [mix]
+    for (let d of list) {
+      let driver = (d.type as Record<PropertyKey, MixinDriver | undefined>)[MIXIN_RUNTIME]
+      if (driver) return driver
+    }
+  }
+  return defaultMixinDriver as MixinDriver | undefined
+}
+
 function resolveNodeMixProps(
   node: HostNode | CommittedHostNode,
   parent: VNodeParent,
   frame: FrameHandle,
   scheduler: Scheduler,
-  state?: MixinRuntime,
+  prevState?: MixinRuntime,
 ): RuntimeHostProps {
   let mix = node.props.mix
   let direct: OnMixinDescriptor[] | null = !mix
@@ -423,109 +429,36 @@ function resolveNodeMixProps(
 
   let props = node.props
   if (direct) {
-    state?.teardown()
-    state = undefined
-  } else {
-    if (!state) {
-      let list = Array.isArray(mix) ? mix : [mix]
-      let Ctor: typeof MixinRuntime | undefined
-      for (let d of list) {
-        Ctor = (d.type as Record<PropertyKey, typeof MixinRuntime | undefined>)[MIXIN_RUNTIME]
-        if (Ctor) break
-      }
-      Ctor ??= defaultMixinRuntime as typeof MixinRuntime | undefined
-      invariant(Ctor, 'Invalid mix prop')
-      state = new Ctor(node.type, frame, scheduler, (type: Component | string | symbol) =>
-        typeof type === 'function' ? findContextFromAncestry(parent, type) : undefined,
-      )
+    prevState?.teardown()
+    node._mixState = undefined
+    node._mixDriver = undefined
+    if (direct.length) {
+      node._directEventSync = (
+        direct[0].type as unknown as Record<PropertyKey, DirectEventSync>
+      )[DIRECT_EVENT]
     }
-    props = state.resolve(node.type, props)
+    node._directEventDescriptors = direct
+  } else {
+    let driver = findMixinDriver(mix)
+    invariant(driver, 'Invalid mix prop')
+    props = driver.resolve(node, parent, frame, scheduler, prevState)
+    node._directEventDescriptors = undefined
   }
-  node._mixState = state
-  node._directEventDescriptors = direct ?? undefined
   let nonceManager = (frame.$runtime as OptionalFrameRuntime | undefined)?.nonceManager
   return (node._mixedProps = nonceManager
     ? nonceManager.resolveResourceNonce(node.type, props, parent)
     : props)
 }
 
-function enqueueMixinBindingUpdate(
-  this: MixinRuntimeBinding<CommittedHostNode>,
-  done: (signal: AbortSignal) => void,
-): void {
-  let node = this.target
-  let state = node._mixState
-  this.scheduler.enqueueWork([
-    () => {
-      if (state?.removed) {
-        done(state.lifetime)
-        return
-      }
-      state?.dispatchUpdate('beforeUpdate')
-      let prev = node._mixedProps
-      let next = resolveNodeMixProps(node, node._parent, this.frame, this.scheduler, state)
-      patchHostProps(prev, next, this.node)
-      syncHostControls(node, this.scheduler)
-      if (this.node.parentNode) restoreAncestorSelect(this.node.parentNode)
-      state?.dispatchUpdate('commit')
-      done(state ? state.lifetime : AbortSignal.abort())
-    },
-  ])
-}
-
-function bindNodeMixRuntime(
-  node: CommittedHostNode,
-  context: ReconcileContext,
-  reclaimed = false,
-  parent?: ParentNode,
-) {
-  let state = node._mixState
-  if (!state) return
-  let domParent = parent ?? node._dom.parentNode
-  invariant(domParent, 'Expected mounted host node to have a DOM parent')
-  state.bind(
-    {
-      node: node._dom,
-      parent: domParent,
-      key: node.key,
-      target: node,
-      frame: context.frame,
-      scheduler: context.scheduler,
-      enqueueUpdate: enqueueMixinBindingUpdate,
-    },
-    reclaimed,
-  )
-}
-
-function syncDirectEventListeners(
-  node: CommittedHostNode,
-  descriptors?: OnMixinDescriptor[],
-  detach = true,
-): void {
-  let count = descriptors?.length ?? 0
-  if (!count && !node._directEventState) return
-  let bindings = (node._directEventState ??= [])
-  if (descriptors) {
-    for (let i = 0; i < count; i++) {
-      let descriptor = descriptors[i]
-      let binding = bindings[i]
-      if (binding) binding.update(node._dom, descriptor.args, true)
-      else {
-        let Ctor = (descriptor.type as unknown as Record<PropertyKey, typeof OnBinding>)[DIRECT_EVENT]
-        ;(bindings[i] = new Ctor(descriptor.args)).attach(node._dom)
-      }
-    }
+export function syncHostControls(node: CommittedHostNode, scheduler: Scheduler): void {
+  if (node._directEventSync) {
+    node._directEventState = node._directEventSync(
+      node._dom,
+      node._directEventState,
+      node._directEventDescriptors,
+      true,
+    )
   }
-  for (let i = count; i < bindings.length; i++) {
-    if (detach) bindings[i].detach(node._dom)
-    bindings[i].abort()
-  }
-  if (count) bindings.length = count
-  else node._directEventState = undefined
-}
-
-function syncHostControls(node: CommittedHostNode, scheduler: Scheduler): void {
-  syncDirectEventListeners(node, node._directEventDescriptors)
   let props = node._mixedProps
   if (node._controlledState || props.value !== undefined || props.checked !== undefined) {
     ;(node._controlledState ??= createControlledState(node, scheduler)).update(node.type, props)
@@ -666,9 +599,17 @@ export function reconcileVNodes(
     case 'text':
       return reconcileText(curr?.kind === 'text' ? curr : null, node, domParent, anchor, cursor)
     case 'host':
-      return reconcileHost(curr?.kind === 'host' ? curr : null, node, domParent, vParent, context, svg, anchor, cursor)
+      return reconcileHost(
+        curr?.kind === 'host' ? curr : null,
+        node,
+        domParent,
+        vParent,
+        context,
+        svg,
+        anchor,
+        cursor,
+      )
     case 'fragment': {
-      let childInputs = node._children
       let childAnchor = anchor
       if (curr) {
         let last = findEdgeDomNode(curr, true)
@@ -678,6 +619,7 @@ export function reconcileVNodes(
             : (findNextSiblingDomAnchor(curr, fragmentEnd) ?? undefined)
       }
       let committed = node as unknown as CommittedFragmentNode
+      let childInputs = node._children
       committed._children = EMPTY_CHILDREN
       committed._children = diffChildren(
         curr?.kind === 'fragment' ? curr._children : null,
@@ -747,14 +689,6 @@ function isHeadTag(type: string): boolean {
   return type.length === 4 && type.toLowerCase() === 'head'
 }
 
-function getDocumentHead(domParent: ParentNode): HTMLHeadElement | null {
-  return domParent instanceof Document
-    ? domParent.head
-    : domParent instanceof Node
-      ? (domParent.ownerDocument?.head ?? null)
-      : null
-}
-
 function reconcileHost(
   curr: CommittedHostNode | null,
   node: HostNode,
@@ -766,162 +700,153 @@ function reconcileHost(
   cursor: HydrationCursor | undefined,
 ): CommittedHostNode {
   let { frame, scheduler } = context
+  let targetHead = isHeadTag(node.type)
+    ? domParent instanceof Document
+      ? domParent.head
+      : domParent instanceof Node
+        ? (domParent.ownerDocument?.head ?? null)
+        : null
+    : null
   let reclaimed = false
 
-  if (!curr && node.key != null) {
-    let targetHead = isHeadTag(node.type) ? getDocumentHead(domParent) : null
-    if (!targetHead) {
-      for (let persisted of persistedMixinNodes) {
-        if (
-          persisted._persistence?.parent === domParent &&
-          persisted.type === node.type &&
-          persisted.key === node.key &&
-          portalRanges?.ownerOf(persisted._parent) === portalRanges?.ownerOf(vParent)
-        ) {
-          persisted._mixState?.cancelRemoval()
-          persisted._persistence = undefined
-          persistedMixinNodes.delete(persisted)
-          curr = persisted
-          reclaimed = true
-          break
-        }
-      }
+  if (!curr && !targetHead && node.key != null) {
+    let reclaimedNode = (defaultMixinDriver as MixinDriver | undefined)?.reclaim(
+      node.type,
+      node.key,
+      domParent,
+      vParent,
+    )
+    if (reclaimedNode) {
+      curr = reclaimedNode
+      reclaimed = true
     }
   }
 
   let resolved = resolveNodeMixProps(node, vParent, frame, scheduler, curr?._mixState)
   let childInputs = node._children
+  let dom: Element | undefined
+  let childCursor: HydrationCursor | undefined
+  let shouldInsertDom = false
+  let bindParent: ParentNode | undefined
+  let editedBeforeHydration: 'value' | 'checked' | undefined
+  let prevProps: RuntimeHostProps = curr ? curr._mixedProps : {}
+  let patchTargetProps = resolved
+  let dispatchInline = false
 
   if (curr) {
-    let dom = curr._dom
-    let prevProps = curr._mixedProps
-    let mixins = node._mixState
-    let dispatchInline = (reclaimed || mixins?.hasSlots) && shouldDispatchInlineMixinLifecycle(dom)
-    if (dispatchInline) mixins?.dispatchUpdate('beforeUpdate')
-
-    let committed = node as unknown as CommittedHostNode
-    committed._dom = dom
-    committed._children = EMPTY_CHILDREN
-    committed._directEventState = curr._directEventState
-    committed._controlledState = curr._controlledState
-    if (reclaimed) {
-      patchHostProps(prevProps, resolved, dom)
-      syncHostControls(committed, scheduler)
+    dom = curr._dom
+    dispatchInline = !!(
+      (reclaimed || node._mixState?.hasSlots) &&
+      node._mixDriver?.shouldDispatchInline(dom)
+    )
+    if (dispatchInline) node._mixState?.dispatchUpdate('beforeUpdate')
+  } else if (targetHead) {
+    dom = targetHead
+    let hydrationNode = cursor?.current
+    childCursor = cursor ? { current: hydrationNode } : undefined
+    if (hydrationNode instanceof Element && hydrationNode.tagName.toLowerCase() === 'head') {
+      if (childCursor) childCursor.current = hydrationNode.firstChild
+      let nextCursor = hydrationNode.nextSibling
+      if (hydrationNode !== targetHead) {
+        while (hydrationNode.firstChild) targetHead.appendChild(hydrationNode.firstChild)
+        hydrationNode.remove()
+      }
+      if (cursor) cursor.current = nextCursor
     }
+  } else {
+    let hydrationNode = cursor?.current
+    if (hydrationNode instanceof Element) {
+      let tagOf = (el: Element) => (svg ? el.tagName : el.tagName.toLowerCase())
+      let cursorTag = tagOf(hydrationNode)
+      let match: Element | null = cursorTag === node.type ? hydrationNode : null
+      if (!match) {
+        let nextSibling = nextHydrationNode(hydrationNode.nextSibling, false, anchor)
+        if (nextSibling instanceof Element && tagOf(nextSibling) === node.type) match = nextSibling
+      }
+      if (match) {
+        dom = match
+        childCursor = { current: match.firstChild }
+        if (cursor) cursor.current = match.nextSibling
+      } else {
+        console.error('Hydration mismatch:', 'tag', cursorTag, node.type)
+        if (cursor) cursor.current = undefined
+      }
+    }
+    if (!dom) {
+      dom = svg ? document.createElementNS(SVG_NS, node.type) : document.createElement(node.type)
+      shouldInsertDom = true
+      bindParent = domParent
+    }
+    if (childCursor) {
+      if (dom instanceof HTMLOptionElement) patchTargetProps = { ...resolved, selected: undefined }
+      if (dom instanceof HTMLInputElement && (dom.type === 'checkbox' || dom.type === 'radio')) {
+        if (dom.checked !== dom.defaultChecked) editedBeforeHydration = 'checked'
+      } else if (
+        (dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement) &&
+        dom.value !== dom.defaultValue
+      ) {
+        let pristine = dom.cloneNode() as HTMLInputElement | HTMLTextAreaElement
+        pristine.value = dom.defaultValue
+        if (pristine.value !== dom.value) editedBeforeHydration = 'value'
+      }
+      if (editedBeforeHydration) {
+        patchTargetProps = { ...patchTargetProps, [editedBeforeHydration]: undefined }
+      }
+    }
+  }
+
+  let committed = node as unknown as CommittedHostNode
+  committed._dom = dom
+  committed._children = EMPTY_CHILDREN
+  if (curr) {
+    committed._directEventState = curr._directEventState
+    committed._directEventSync ??= curr._directEventSync
+    committed._controlledState = curr._controlledState
+  }
+
+  // On fresh mounts and reclaimed nodes, patch props before reconciling children.
+  // On retained updates (and <head> adoption), patch after reconciling children so select values see updated options.
+  let patchBeforeChildren = (!curr && !targetHead) || reclaimed
+  if (patchBeforeChildren) {
+    patchHostProps(prevProps, patchTargetProps, dom)
+    if (reclaimed) syncHostControls(committed, scheduler)
+  }
+
+  if (curr) {
     if (prevProps.innerHTML != resolved.innerHTML) {
       let html = resolved.innerHTML ?? ''
       if (portalRanges?.has(dom)) portalRanges.setInnerHTML(dom, html)
       else dom.innerHTML = html
     }
     committed._children = diffChildren(curr._children, childInputs, dom, committed, context)
-    if (!reclaimed) {
-      patchHostProps(prevProps, resolved, dom)
-      syncHostControls(committed, scheduler)
-    }
-    bindNodeMixRuntime(committed, context, reclaimed)
-    if (reclaimed ? shouldDispatchInlineMixinLifecycle(dom) : dispatchInline) {
-      scheduler.enqueueCommitPhase([
-        () => (reclaimed ? committed._mixState : mixins)?.dispatchUpdate('commit'),
-      ])
-    }
-    return committed
-  }
-
-  let hydrationNode = cursor?.current
-  let dom: Element | undefined
-  let childCursor: HydrationCursor | undefined
-  let shouldInsertDom = false
-  let bindParent: ParentNode | undefined
-
-  if (isHeadTag(node.type)) {
-    let targetHead = getDocumentHead(domParent)
-    if (targetHead) {
-      childCursor = cursor ? { current: hydrationNode } : undefined
-      if (hydrationNode instanceof Element && hydrationNode.tagName.toLowerCase() === 'head') {
-        if (childCursor) childCursor.current = hydrationNode.firstChild
-        let nextCursor = hydrationNode.nextSibling
-        if (hydrationNode !== targetHead) {
-          while (hydrationNode.firstChild) targetHead.appendChild(hydrationNode.firstChild)
-          hydrationNode.remove()
-        }
-        if (cursor) cursor.current = nextCursor
-      }
-      let committed = node as unknown as CommittedHostNode
-      committed._dom = targetHead
-      committed._children = diffChildren(null, childInputs, targetHead, committed, context, childCursor)
-      patchHostProps({}, resolved, targetHead)
-      syncHostControls(committed, scheduler)
-      bindNodeMixRuntime(committed, context)
-      return committed
-    }
-  }
-
-  if (hydrationNode instanceof Element) {
-    let tagOf = (el: Element) => (svg ? el.tagName : el.tagName.toLowerCase())
-    let cursorTag = tagOf(hydrationNode)
-    let match: Element | null = cursorTag === node.type ? hydrationNode : null
-    if (!match) {
-      let nextSibling = nextHydrationNode(hydrationNode.nextSibling, false, anchor)
-      if (nextSibling instanceof Element && tagOf(nextSibling) === node.type) match = nextSibling
-    }
-    if (match) {
-      dom = match
-      childCursor = { current: match.firstChild }
-      if (cursor) cursor.current = match.nextSibling
-    } else {
-      console.error('Hydration mismatch:', 'tag', cursorTag, node.type)
-      if (cursor) cursor.current = undefined
-    }
-  }
-
-  if (!dom) {
-    dom = svg ? document.createElementNS(SVG_NS, node.type) : document.createElement(node.type)
-    shouldInsertDom = true
-    bindParent = domParent
-  }
-
-  let hydratedProps = resolved
-  let editedBeforeHydration: 'value' | 'checked' | undefined
-  if (childCursor) {
-    if (dom instanceof HTMLOptionElement) hydratedProps = { ...resolved, selected: undefined }
-    if (dom instanceof HTMLInputElement && (dom.type === 'checkbox' || dom.type === 'radio')) {
-      if (dom.checked !== dom.defaultChecked) editedBeforeHydration = 'checked'
-    } else if (
-      (dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement) &&
-      dom.value !== dom.defaultValue
-    ) {
-      let pristine = dom.cloneNode() as HTMLInputElement | HTMLTextAreaElement
-      pristine.value = dom.defaultValue
-      if (pristine.value !== dom.value) editedBeforeHydration = 'value'
-    }
-    if (editedBeforeHydration) {
-      hydratedProps = { ...hydratedProps, [editedBeforeHydration]: undefined }
-    }
-  }
-
-  patchHostProps({}, hydratedProps, dom)
-  let committed = node as unknown as CommittedHostNode
-  committed._dom = dom
-  committed._children = EMPTY_CHILDREN
-  if (resolved.innerHTML != null) {
+  } else if (resolved.innerHTML != null) {
     dom.innerHTML = resolved.innerHTML
   } else {
     committed._children = diffChildren(null, childInputs, dom, committed, context, childCursor)
   }
 
-  if (!childCursor) {
+  if (!curr && !targetHead && !childCursor) {
     if (dom instanceof HTMLSelectElement) {
       let value = resolved.value ?? resolved.defaultValue
       if (value != null) {
-        setSelectDefaultValue(dom, value, !dom.multiple || (resolved.value != null && !Array.isArray(value)))
+        setSelectDefaultValue(
+          dom,
+          value,
+          !dom.multiple || (resolved.value != null && !Array.isArray(value)),
+        )
       }
     } else if (dom instanceof HTMLOptionElement) {
       dom.defaultSelected = resolved.selected === '' || Boolean(resolved.selected)
     }
   }
 
-  syncHostControls(committed, scheduler)
-  bindNodeMixRuntime(committed, context, false, bindParent)
+  if (!patchBeforeChildren) patchHostProps(prevProps, patchTargetProps, dom)
+  if (!reclaimed) syncHostControls(committed, scheduler)
+  committed._mixDriver?.bind(committed, context, reclaimed, bindParent)
+
+  if (curr && (reclaimed ? committed._mixDriver?.shouldDispatchInline(dom) : dispatchInline)) {
+    scheduler.enqueueCommitPhase([() => committed._mixState?.dispatchUpdate('commit')])
+  }
 
   if (editedBeforeHydration) {
     let el = dom
@@ -1045,7 +970,15 @@ export function renderComponent(
   }
   let [element, tasks] = handle.render(next.props)
   let committed = next as CommittedComponentNode
-  committed._content = diffVNodes(currContent, toVNode(element), domParent, next, context, anchor, cursor)
+  committed._content = diffVNodes(
+    currContent,
+    toVNode(element),
+    domParent,
+    next,
+    context,
+    anchor,
+    cursor,
+  )
   handle.setScheduleUpdate(scheduler, committed, domParent)
   restoreAncestorSelect(domParent)
   scheduler.enqueueTasks(tasks)
@@ -1088,30 +1021,12 @@ export function remove(
     case 'text':
       if (domParent) node._dom.remove()
       return
-    case 'host': {
-      if (domParent) {
-        if (node._persistence) return
-        let persisted = node._mixState?.prepareRemoval()
-        if (persisted) {
-          let token = ++persistedRemovalToken
-          node._persistence = { parent: domParent, token }
-          persistedMixinNodes.add(node)
-          node._mixState?.bind()
-          void persisted
-            .catch(() => {})
-            .finally(() => {
-              if (node._persistence?.token !== token) return
-              node._persistence = undefined
-              persistedMixinNodes.delete(node)
-              performHostNodeRemoval(node, domParent, context)
-              portalRanges?.finishRemovals(domParent)
-            })
-          return
-        }
+    case 'host':
+      if (domParent && node._mixDriver?.deferRemoval(node, domParent, context, performHostNodeRemoval)) {
+        return
       }
       performHostNodeRemoval(node, domParent, context)
       return
-    }
     case 'fragment':
       for (let child of node._children) remove(child, domParent, context)
       return
@@ -1151,7 +1066,9 @@ function performHostNodeRemoval(
   let isHead = domParent !== null && isHeadTag(node.type)
   for (let child of node._children) remove(child, isHead ? node._dom : null, context)
   node._mixState?.teardown()
-  syncDirectEventListeners(node, undefined, isHead)
+  if (node._directEventSync) {
+    node._directEventState = node._directEventSync(node._dom, node._directEventState, undefined, isHead)
+  }
   node._controlledState?.dispose(isHead)
   if (domParent && !isHead) node._dom.remove()
 }
@@ -1410,15 +1327,6 @@ function findEdgeDomNode(node: CommittedVNode | null | undefined, last: boolean)
     }
   }
   return null
-}
-
-function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
-  let parents = activeSchedulerUpdateParents
-  if (!parents?.length) return true
-  for (let parent of parents) {
-    if (parent instanceof Node && parent.contains(node)) return false
-  }
-  return true
 }
 
 function findNextSiblingDomAnchor(

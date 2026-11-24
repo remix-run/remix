@@ -12,12 +12,20 @@ type EventType<target extends Element> = string & keyof EventMap<target>
 type ListenerFor<target extends Element, type extends EventType<target>> = SignaledListener<
   EnsureEvent<EventMap<target>[type], target>
 >
+
 export type OnMixinDescriptor = {
   type: typeof onMixinType
   args: [type: string, handler: SignaledListener<Event>, captureBoolean?: boolean]
 }
 
 type OnArguments = OnMixinDescriptor['args']
+
+export type DirectEventSync = (
+  dom: Element,
+  bindings: OnBinding[] | undefined,
+  descriptors: OnMixinDescriptor[] | undefined,
+  detach: boolean,
+) => OnBinding[] | undefined
 
 // EventTarget retains the object identity across renders and calls handleEvent on dispatch.
 export class OnBinding {
@@ -64,6 +72,37 @@ export class OnBinding {
   }
 }
 
+function syncDirectEvents(
+  dom: Element,
+  bindings: OnBinding[] | undefined,
+  descriptors: OnMixinDescriptor[] | undefined,
+  detach: boolean,
+): OnBinding[] | undefined {
+  let count = descriptors?.length ?? 0
+  if (!count && !bindings) return undefined
+  bindings ??= []
+  if (descriptors) {
+    for (let i = 0; i < count; i++) {
+      let args = descriptors[i].args
+      let binding = bindings[i]
+      if (binding) binding.update(dom, args, true)
+      else {
+        binding = bindings[i] = new OnBinding(args)
+        binding.attach(dom)
+      }
+    }
+  }
+  for (let i = count; i < bindings.length; i++) {
+    if (detach) bindings[i].detach(dom)
+    bindings[i].abort()
+  }
+  if (count) {
+    bindings.length = count
+    return bindings
+  }
+  return undefined
+}
+
 const onMixinSetup: MixinType<Element, OnArguments, ElementProps> = (handle) => {
   let node: Element | undefined
   let binding = new OnBinding(['', () => {}])
@@ -85,7 +124,7 @@ const onMixinSetup: MixinType<Element, OnArguments, ElementProps> = (handle) => 
 // Keep the browser's direct event path tied to the setup identity without pulling in MixinRuntime.
 const onMixinType = Object.assign(onMixinSetup, {
   __rmxMixinSsr: false,
-  [DIRECT_EVENT]: OnBinding,
+  [DIRECT_EVENT]: syncDirectEvents,
 })
 
 /**

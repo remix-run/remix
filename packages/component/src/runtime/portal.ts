@@ -1,12 +1,11 @@
 import { PORTAL_NODE, Portal as portalComponent, type PortalProps } from './component.ts'
-import type { ElementProps } from './core/vnode.ts'
-import { isRemixNode } from './core/vnode.ts'
+import { defaultMixinDriver, isRemixNode, type ElementProps } from './core/vnode.ts'
+import type { MixinDriver } from './mixins/mixin.ts'
 import { invariant } from './invariant.ts'
 import {
   childrenToVNodes,
   diffChildren,
   parseHostProps,
-  persistedMixinNodes,
   portalRanges,
   reconcileVNodes,
   remove,
@@ -53,11 +52,14 @@ const portalNodeRenderer = {
       node._rangeStart.nextSibling !== node._rangeEnd
     ) {
       let retained: Set<Node> | undefined
-      for (let child of persistedMixinNodes) {
-        if (child._persistence?.parent !== node._container) continue
-        if (portalRanges?.ownerOf(child._parent) !== node) continue
-        retained ??= new Set()
-        retained.add(child._dom)
+      let persisted = (defaultMixinDriver as MixinDriver | undefined)?.persistedNodes
+      if (persisted) {
+        for (let child of persisted) {
+          if (child._persistence?.parent !== node._container) continue
+          if (portalRanges?.ownerOf(child._parent) !== node) continue
+          retained ??= new Set()
+          retained.add(child._dom)
+        }
       }
       let current = node._rangeStart.nextSibling
       while (current && current !== node._rangeEnd) {

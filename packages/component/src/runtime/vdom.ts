@@ -6,7 +6,8 @@ import {
   TypedEventTarget,
 } from './component.ts'
 import { invariant } from './invariant.ts'
-import type { RemixNode } from './core/vnode.ts'
+import { defaultMixinDriver, type RemixNode } from './core/vnode.ts'
+import type { MixinDriver } from './mixins/mixin.ts'
 import type { ResolveFrame } from './frame-runtime.ts'
 import type { NonceManager } from './nonce.ts'
 import {
@@ -15,7 +16,6 @@ import {
   restoreAncestorSelect,
   remove as removeVNode,
   ROOT_VNODE,
-  setActiveSchedulerUpdateParents,
   toVNode,
   type CommittedComponentNode,
   type CommittedVNode,
@@ -378,7 +378,7 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
         let end = input?.selectionEnd
 
         let updateParents = batch.size ? Array.from(new Set(batch.values())) : []
-        setActiveSchedulerUpdateParents(updateParents)
+        ;(defaultMixinDriver as MixinDriver | undefined)?.setActiveUpdateParents(updateParents)
         dispatchPhase('beforeUpdate', updateParents)
 
         for (let [vnode, domParent] of batch) {
@@ -399,7 +399,7 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
         }
 
         flushQueue(workTasks)
-        setActiveSchedulerUpdateParents(undefined)
+        ;(defaultMixinDriver as MixinDriver | undefined)?.setActiveUpdateParents(undefined)
 
         if (focused && focused !== (doc.activeElement || doc.body) && doc.contains(focused)) {
           restoreFocus(focused, input, start, end)
@@ -410,7 +410,7 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
         flushQueue(postCommitTasks)
       }
     } finally {
-      setActiveSchedulerUpdateParents(undefined)
+      ;(defaultMixinDriver as MixinDriver | undefined)?.setActiveUpdateParents(undefined)
       flushState = 0
     }
   }

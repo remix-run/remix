@@ -114,10 +114,10 @@ export { jsx as jsxDEV, jsx as jsxs }
 const REMIX_ELEMENT = Symbol.for('remix.element')
 export const MIXIN_RUNTIME = Symbol('MixinRuntime')
 export const DIRECT_EVENT = Symbol('DirectEvent')
-export let defaultMixinRuntime: (new (...args: any[]) => any) | undefined
+export let defaultMixinDriver: unknown
 
-export function setDefaultMixinRuntime(ctor: new (...args: any[]) => any): void {
-  defaultMixinRuntime = ctor
+export function setDefaultMixinDriver(driver: unknown): void {
+  defaultMixinDriver = driver
 }
 
 export function isMixinDescriptor(
