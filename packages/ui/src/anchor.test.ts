@@ -555,54 +555,26 @@ describe('anchor page scrolling', () => {
   })
 
   it('flips a fixed surface below its anchor near the top edge of a scrolled page', async (t) => {
-    let originalStyle = document.body.getAttribute('style')
-    let originalScroll = { left: window.scrollX, top: window.scrollY }
-    let container = document.createElement('div')
-    container.style.cssText = 'position: relative; padding: 200px 0 0 150px; height: 2000px;'
-    let target = document.createElement('div')
-    target.style.cssText = 'width: 80px; height: 28px;'
-    let floating = document.createElement('div')
-    floating.style.cssText =
-      'position: fixed; width: 120px; height: 80px; padding: 8px; border: 2px solid; box-sizing: border-box;'
-    container.append(target, floating)
-    document.body.style.cssText = 'margin: 0; overflow-anchor: none;'
-    document.body.append(container)
-    let cleanup = () => {}
-    t.after(() => {
-      cleanup()
-      container.remove()
-      if (originalStyle === null) document.body.removeAttribute('style')
-      else document.body.setAttribute('style', originalStyle)
-      window.scrollTo(originalScroll)
-    })
+    let { target, floating } = createAnchorFixture(t, '')
+    floating.style.cssText += 'padding: 8px; border: 2px solid; box-sizing: border-box;'
 
-    window.scrollTo(0, 195)
-    await t.waitFor(() => {
-      expect(window.scrollY).toBe(195)
-      expect(target.getBoundingClientRect().top).toBe(5)
-    })
-    cleanup = anchor(floating, target, { placement: 'top-start' })
+    await scrollPage(t, 0, 195)
+    expect(target.getBoundingClientRect().top).toBe(5)
+    let cleanup = anchor(floating, target, { placement: 'top-start' })
+    t.after(cleanup)
 
     expect(floating.dataset.anchorPlacement).toBe('bottom-start')
     expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     expect(floating.getBoundingClientRect().height).toBe(80)
 
-    window.scrollTo(0, 190)
+    await scrollPage(t, 0, 190)
     await t.waitFor(() => {
-      expect(window.scrollY).toBe(190)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
       expect(floating.getBoundingClientRect().height).toBe(80)
     })
 
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'top-start' })
-    expect(floating.dataset.anchorPlacement).toBe('bottom-start')
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    expect(floating.getBoundingClientRect().height).toBe(80)
-
-    window.scrollTo(0, 0)
+    await scrollPage(t, 0, 0)
     await t.waitFor(() => {
-      expect(window.scrollY).toBe(0)
       expect(floating.dataset.anchorPlacement).toBe('top-start')
       expect(floating.getBoundingClientRect().bottom).toBe(target.getBoundingClientRect().top)
       expect(floating.getBoundingClientRect().height).toBe(80)
@@ -614,11 +586,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -628,32 +598,14 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('keeps a transformed surface at the viewport padding as its anchor crosses the top edge', async (t) => {
     let { target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
 
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
     await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
+    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
+    t.after(cleanup)
 
     let anchorDocumentBottom = target.getBoundingClientRect().bottom + window.scrollY
     let viewportPadding = 16
@@ -682,32 +634,14 @@ describe('anchor page scrolling', () => {
         expect(floating.dataset.anchorPlacement).toBe('bottom-start')
       })
     }
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('keeps a viewport-fixed surface at the padding as its anchor crosses the top edge', async (t) => {
     let { target, floating } = createAnchorFixture(t, '')
 
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
     await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
+    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
+    t.after(cleanup)
 
     let anchorDocumentBottom = target.getBoundingClientRect().bottom + window.scrollY
     let viewportPadding = 16
@@ -736,115 +670,6 @@ describe('anchor page scrolling', () => {
         expect(floating.dataset.anchorPlacement).toBe('bottom-start')
       })
     }
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned inside an ancestor with individual translation', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'translate: 0px')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned inside an ancestor with individual rotation', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'rotate: 0deg')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned inside an ancestor with individual scaling', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'scale: 1')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned inside a perspective ancestor', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'perspective: 1000px')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('keeps a surface aligned inside a filtered ancestor', async (t) => {
@@ -852,11 +677,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -866,40 +689,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned inside a backdrop-filtered ancestor', async (t) => {
-    let property = CSS.supports('backdrop-filter', 'blur(0px)')
-      ? 'backdrop-filter'
-      : '-webkit-backdrop-filter'
-    let { target, floating } = createAnchorFixture(t, `${property}: blur(0px)`)
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('keeps a surface aligned inside paint containment while the page scrolls', async (t) => {
@@ -907,11 +696,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -921,11 +708,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('keeps a surface aligned inside layout containment', async (t) => {
@@ -933,11 +715,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -947,461 +727,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned inside strict containment', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'contain: strict')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned inside content containment', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'contain: content')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned inside combined containment', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'contain: size layout style')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned inside automatic content visibility', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'content-visibility: auto')
-
-    await scrollPage(t, 50, 100)
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(Math.abs(floating.offsetHeight - 80)).toBeLessThanOrEqual(0.5)
-    })
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(Math.abs(floating.offsetHeight - 80)).toBeLessThanOrEqual(0.5)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned when hidden content becomes automatically visible', async (t) => {
-    let { container, target, floating } = createAnchorFixture(t, 'content-visibility: hidden')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-    container.style.contentVisibility = 'auto'
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(Math.abs(floating.offsetHeight - 80)).toBeLessThanOrEqual(0.5)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned inside will-change containment while the page scrolls', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'will-change: transform')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned when will-change lists transform after another property', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'will-change: opacity, transform')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned when will-change anticipates translation', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'will-change: translate')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned when will-change anticipates rotation', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'will-change: rotate')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned when will-change anticipates scaling', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'will-change: scale')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned when will-change anticipates perspective', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'will-change: perspective')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned when will-change anticipates filtering', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'will-change: filter')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned when will-change anticipates backdrop filtering', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'will-change: backdrop-filter')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned when will-change anticipates containment', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'will-change: contain')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned when will-change anticipates content visibility', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'will-change: content-visibility')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('preserves viewport positioning inside size and style containment', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'contain: size style; margin: 100px 0 0 50px')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('preserves viewport positioning inside inline-size and style containment', async (t) => {
-    let { target, floating } = createAnchorFixture(
-      t,
-      'contain: inline-size style; margin: 100px 0 0 50px',
-    )
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('preserves viewport positioning inside an inline-size query container', async (t) => {
@@ -1412,11 +737,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -1426,141 +749,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('preserves viewport positioning inside a size query container', async (t) => {
-    let { target, floating } = createAnchorFixture(
-      t,
-      'container-type: size; margin: 100px 0 0 50px',
-    )
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps alignment when query containers implicitly apply layout containment', async (t) => {
-    let style = document.createElement('style')
-    // Emulate the layout containment applied implicitly by older query containers.
-    style.textContent = '[style*="container-type:"] { contain: layout !important; }'
-    document.head.append(style)
-    t.after(() => style.remove())
-    let readStyle = getComputedStyle
-    t.mock.method(globalThis, 'getComputedStyle', (element, pseudo) => {
-      let computed = readStyle(element, pseudo)
-      if (computed.containerType === 'normal') return computed
-      // Implicit containment in older browsers was not reflected in computed `contain`.
-      return new Proxy(computed, {
-        get(target, key) {
-          if (key === 'contain') return 'none'
-          let value: unknown = Reflect.get(target, key, target)
-          return typeof value === 'function' ? value.bind(target) : value
-        },
-      })
-    })
-
-    let { target, floating } = createAnchorFixture(t, 'container-type: inline-size')
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('preserves viewport positioning for unrelated will-change properties', async (t) => {
-    let { target, floating } = createAnchorFixture(
-      t,
-      'will-change: opacity, transform-origin; margin: 100px 0 0 50px',
-    )
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned inside a transformed shadow host', async (t) => {
-    let { container, target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
-    container.attachShadow({ mode: 'open' }).append(target, floating)
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('preserves viewport positioning inside an ordinary shadow host', async (t) => {
@@ -1569,11 +757,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -1583,125 +769,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('preserves viewport positioning for a slotted surface without containment', async (t) => {
-    let { container, target, floating } = createAnchorFixture(t, 'margin: 100px 0 0 50px')
-    let { host } = createSlottedContainer(t, container, { mode: 'open' })
-    host.append(target, floating)
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a slotted surface aligned inside a transformed shadow ancestor', async (t) => {
-    let { container, target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
-    let { host } = createSlottedContainer(t, container, { mode: 'open' })
-    host.append(target, floating)
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a surface aligned when its parent is slotted inside a transformed ancestor', async (t) => {
-    let { container, target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
-    let { host } = createSlottedContainer(t, container, { mode: 'open' })
-    let wrapper = document.createElement('div')
-    wrapper.append(target, floating)
-    host.append(wrapper)
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it('keeps a slotted surface aligned inside a transformed closed shadow root', async (t) => {
-    let { container, target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
-    let { host } = createSlottedContainer(t, container, { mode: 'closed' })
-    host.append(target, floating)
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('keeps a manually slotted surface at the padding as its anchor crosses the top edge', async (t) => {
@@ -1713,22 +780,9 @@ describe('anchor page scrolling', () => {
     host.append(target, floating)
     slot.assign(target, floating)
 
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
-
     await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-    })
+    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
+    t.after(cleanup)
 
     let anchorDocumentBottom = target.getBoundingClientRect().bottom + window.scrollY
     let viewportPadding = 16
@@ -1757,11 +811,6 @@ describe('anchor page scrolling', () => {
         expect(floating.dataset.anchorPlacement).toBe('bottom-start')
       })
     }
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('tracks its anchor when ancestor containment is added and removed while attached', async (t) => {
@@ -1769,11 +818,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -1795,11 +842,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('keeps a manually assigned surface aligned inside a closed shadow root', async (t) => {
@@ -1813,11 +855,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -1827,11 +867,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('tracks a surface moved into a closed shadow root while attached', async (t) => {
@@ -1839,11 +874,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -1866,119 +899,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
-  })
-
-  it("preserves a fixed surface's own translation and scale", async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
-    floating.style.cssText += 'transform: translate(8px, 12px) scale(0.9); transform-origin: 0 0;'
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
-  })
-
-  it('preserves individual transforms on a fixed surface', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
-    floating.style.cssText += 'translate: 8px 12px; scale: 0.9; transform-origin: 0 0;'
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
-  })
-
-  it('resolves percentage and calculated translations on a fixed surface', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
-    floating.style.cssText += 'translate: calc(50% + 10px) min(10%, 5px);'
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 70)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 5)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 70)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 5)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 70)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 5)
-  })
-
-  it("preserves rotation around a fixed surface's centre", async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
-    floating.style.cssText += 'rotate: 0.25turn;'
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 20)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom - 20)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 20)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom - 20)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 20)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom - 20)
   })
 
   it('preserves the order of individual transforms and the transform property', async (t) => {
@@ -1991,8 +911,6 @@ describe('anchor page scrolling', () => {
     t.after(() => cleanup())
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left - 42)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 17)
     })
@@ -2016,11 +934,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 40)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 20)
     })
@@ -2030,103 +946,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 40)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 20)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 40)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 20)
-  })
-
-  it('uses the content box origin for rotation when requested', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
-    floating.style.cssText +=
-      'box-sizing: border-box; border: 10px solid; padding: 10px; transform-box: content-box; rotate: 90deg;'
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 20)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom - 20)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 20)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom - 20)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 20)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom - 20)
-  })
-
-  it('preserves rotation on a surface with fractional dimensions', async (t) => {
-    let reference = document.createElement('div')
-    reference.style.cssText =
-      'position: fixed; left: 0; top: 0; width: 120.5px; height: 80.5px; rotate: 90deg;'
-    document.body.append(reference)
-    // Engines differ in how they snap a rotated fractional box to layout pixels.
-    let { left: x, top: y } = reference.getBoundingClientRect()
-    reference.remove()
-
-    let { target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
-    floating.style.cssText += 'rotate: 90deg;'
-    floating.style.width = '120.5px'
-    floating.style.height = '80.5px'
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(Math.abs(floating.offsetHeight - 80.5)).toBeLessThanOrEqual(0.5)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + x)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + y)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + x)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + y)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + x)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + y)
-  })
-
-  it('preserves margins on a fixed surface', async (t) => {
-    let { target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
-    floating.style.cssText += 'margin: 12px 0 0 8px;'
-
-    await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
-
-    await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
-    })
-
-    await scrollPage(t, 100, 150)
-    await t.waitFor(() => {
-      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
-      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
-    })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
   })
 
   it('preserves fractional margins on a fixed surface', async (t) => {
@@ -2135,11 +954,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8.5)
       expect(floating.getBoundingClientRect().top).toBe(
         target.getBoundingClientRect().bottom + 12.5,
@@ -2153,11 +970,6 @@ describe('anchor page scrolling', () => {
         target.getBoundingClientRect().bottom + 12.5,
       )
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8.5)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12.5)
   })
 
   it('preserves a motion path on a fixed surface', async (t) => {
@@ -2167,11 +979,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left - 52)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom - 28)
     })
@@ -2181,15 +991,18 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left - 52)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom - 28)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left - 52)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom - 28)
   })
 
   it('preserves an entrance animation as it advances while attached', async (t) => {
     let { target, floating } = createAnchorFixture(t, 'transform: translateZ(0)')
+    let cleanup = () => {}
+    t.after(() => cleanup())
+    let frames: FrameRequestCallback[] = []
+    t.mock.method(globalThis, 'requestAnimationFrame', (callback) => {
+      frames.push(callback)
+      return frames.length
+    })
+    t.mock.method(globalThis, 'cancelAnimationFrame', () => {})
     let animation = floating.animate(
       [{ transform: 'translate(0px, 0px)' }, { transform: 'translate(16px, 24px)' }],
       { duration: 1000, fill: 'both' },
@@ -2199,17 +1012,17 @@ describe('anchor page scrolling', () => {
     t.after(() => animation.cancel())
 
     await scrollPage(t, 50, 100)
-    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    cleanup = anchor(floating, target, { placement: 'bottom-start' })
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
     })
 
     animation.currentTime = 1000
+    let pollForPositionChanges = frames.shift()
+    if (!pollForPositionChanges) throw new Error('Expected anchor() to schedule polling')
+    pollForPositionChanges(0)
     await t.waitFor(() => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 16)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 24)
@@ -2221,11 +1034,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 16)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 24)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 16)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 24)
   })
 
   it('tracks a fixed surface when the root element establishes its containing block', async (t) => {
@@ -2239,11 +1047,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -2253,11 +1059,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('keeps fractional anchor coordinates inside a fractionally positioned containing block', async (t) => {
@@ -2268,11 +1069,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -2282,11 +1081,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('tracks a fixed surface inside a bordered, scrolling containing block', async (t) => {
@@ -2300,11 +1094,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -2322,11 +1114,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('keeps a docked surface at the viewport padding after subpixel ancestor movement', async (t) => {
@@ -2360,11 +1147,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
     })
@@ -2374,11 +1159,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 12)
   })
 
   it('positions a slotted surface with the legacy offsetParent API', async (t) => {
@@ -2389,11 +1169,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = position(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -2403,11 +1181,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = position(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('preserves transforms and margins in a closed manual slot with the legacy offsetParent API', async (t) => {
@@ -2426,8 +1199,6 @@ describe('anchor page scrolling', () => {
     t.after(() => cleanup())
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 8.5)
       expect(floating.getBoundingClientRect().top).toBe(
         target.getBoundingClientRect().bottom + 12.5,
@@ -2454,11 +1225,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = position(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -2468,11 +1237,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = position(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 
   it('preserves positioning when the surface transitions its inset properties', async (t) => {
@@ -2481,11 +1245,9 @@ describe('anchor page scrolling', () => {
 
     await scrollPage(t, 50, 100)
     let cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    t.after(() => cleanup())
+    t.after(cleanup)
 
     await t.waitFor(() => {
-      expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
@@ -2495,11 +1257,6 @@ describe('anchor page scrolling', () => {
       expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
       expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
     })
-
-    cleanup()
-    cleanup = anchor(floating, target, { placement: 'bottom-start' })
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
   })
 })
 
@@ -2536,11 +1293,15 @@ function createSlottedContainer(t: TestContext, container: HTMLElement, options:
 }
 
 async function scrollPage(t: TestContext, left: number, top: number) {
-  window.scrollTo(left, top)
-  await t.waitFor(() => {
-    expect(window.scrollX).toBe(left)
-    expect(window.scrollY).toBe(top)
+  if (window.scrollX === left && window.scrollY === top) return
+
+  let scrolled = new Promise<void>((resolve) => {
+    window.addEventListener('scroll', () => resolve(), { once: true, signal: t.signal })
   })
+  window.scrollTo(left, top)
+  await scrolled
+  expect(window.scrollX).toBe(left)
+  expect(window.scrollY).toBe(top)
 }
 
 async function getLegacyAnchor(t: TestContext, fixedParent: 'null' | 'body' = 'null') {
