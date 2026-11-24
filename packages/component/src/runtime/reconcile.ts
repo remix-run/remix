@@ -405,40 +405,42 @@ function resolveNodeMixProps(
   prevEv?: DirectEventSlot,
 ): RuntimeHostProps {
   let mix = node.props.mix
-  let direct: OnMixinDescriptor[] | null = !mix
-    ? EMPTY_DIRECT_EVENTS
-    : Array.isArray(mix)
-      ? mix.every((d) => DIRECT_EVENT in d.type)
-        ? (mix as unknown as OnMixinDescriptor[])
-        : null
-      : DIRECT_EVENT in (mix as { type: object }).type
-        ? [mix as unknown as OnMixinDescriptor]
-        : null
-
   let props = node.props
-  if (direct) {
-    prevState?.teardown()
-    node._mix = undefined
-    if (direct.length || prevEv) {
-      node._ev = {
-        sync: direct.length
-          ? (direct[0].type as unknown as Record<PropertyKey, DirectEventSync>)[DIRECT_EVENT]
-          : prevEv?.sync,
-        state: prevEv?.state,
-        list: direct,
+  if (mix || prevState || prevEv) {
+    let direct: OnMixinDescriptor[] | null = !mix
+      ? EMPTY_DIRECT_EVENTS
+      : Array.isArray(mix)
+        ? mix.every((d) => DIRECT_EVENT in d.type)
+          ? (mix as unknown as OnMixinDescriptor[])
+          : null
+        : DIRECT_EVENT in (mix as { type: object }).type
+          ? [mix as unknown as OnMixinDescriptor]
+          : null
+
+    if (direct) {
+      prevState?.teardown()
+      node._mix = undefined
+      if (direct.length || prevEv) {
+        node._ev = {
+          sync: direct.length
+            ? (direct[0].type as unknown as Record<PropertyKey, DirectEventSync>)[DIRECT_EVENT]
+            : prevEv?.sync,
+          state: prevEv?.state,
+          list: direct,
+        }
       }
+    } else {
+      let list = Array.isArray(mix) ? mix : [mix]
+      let driver: MixinDriver | undefined
+      for (let d of list) {
+        driver = (d.type as Record<PropertyKey, MixinDriver | undefined>)[MIXIN_RUNTIME]
+        if (driver) break
+      }
+      driver ??= defaultMixinDriver as MixinDriver | undefined
+      invariant(driver, 'Invalid mix prop')
+      props = driver.resolve(node, parent, frame, scheduler, prevState)
+      if (prevEv) node._ev = { sync: prevEv.sync, state: prevEv.state }
     }
-  } else {
-    let list = Array.isArray(mix) ? mix : [mix]
-    let driver: MixinDriver | undefined
-    for (let d of list) {
-      driver = (d.type as Record<PropertyKey, MixinDriver | undefined>)[MIXIN_RUNTIME]
-      if (driver) break
-    }
-    driver ??= defaultMixinDriver as MixinDriver | undefined
-    invariant(driver, 'Invalid mix prop')
-    props = driver.resolve(node, parent, frame, scheduler, prevState)
-    if (prevEv) node._ev = { sync: prevEv.sync, state: prevEv.state }
   }
   let nm = (frame.$runtime as OptionalFrameRuntime | undefined)?.nonceManager
   return (node._mp = nm ? nm.resolveResourceNonce(node.type, props, parent) : props)
@@ -825,7 +827,7 @@ function reconcileHost(
 
   if (!patchBeforeChildren) patchHostProps(prevProps, patchTargetProps, dom)
   if (!reclaimed) syncHostControls(committed, scheduler)
-  committed._mix?.driver.bind(committed, context, reclaimed, bindParent)
+  committed._mix?.bind(committed, context, reclaimed, bindParent)
 
   if (curr && (reclaimed ? committed._mix?.driver.shouldDispatchInline(dom) : dispatchInline)) {
     scheduler.enqueueCommitPhase([() => committed._mix?.dispatchUpdate('commit')])
@@ -1004,10 +1006,7 @@ export function remove(
       if (domParent) node._dom.remove()
       return
     case 'host':
-      if (
-        domParent &&
-        node._mix?.driver.deferRemoval(node, domParent, context, performHostNodeRemoval)
-      ) {
+      if (domParent && node._mix?.deferRemoval(node, domParent, context, performHostNodeRemoval)) {
         return
       }
       performHostNodeRemoval(node, domParent, context)
