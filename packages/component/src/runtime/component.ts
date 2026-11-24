@@ -665,6 +665,7 @@ function syncProps(target: ElementProps, next: ElementProps): void {
 // holds the client frame node renderer, so the reconciler and server renderer can recognize and
 // render frames without importing the frame runtime.
 export const FRAME_NODE = Symbol('FrameNode')
+export const PORTAL_NODE = Symbol('PortalNode')
 
 /**
  * Built-in component used to group children without adding a host element.
@@ -690,16 +691,7 @@ export interface PortalProps {
   container?: HTMLElement
 }
 
-/**
- * Renders children into another DOM container without adding a wrapper element.
- * Renders nothing on the server. Inside a client entry, portal children render in the browser during
- * hydration and subsequent updates. Without a client entry, the portal stays absent. DOM events,
- * inherited styles, form ownership, and keyboard navigation follow the destination's DOM ancestry
- * and order.
- *
- * @param handle Component handle containing the portal props.
- * @returns An empty server render function.
- */
+// The server and the client entry decoder share this identity before the portal renderer loads.
 export function Portal(handle: Handle<PortalProps>): RenderFn {
   void handle
   return () => null

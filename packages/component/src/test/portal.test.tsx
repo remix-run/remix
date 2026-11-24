@@ -22,7 +22,7 @@ import { renderToStream, renderToString } from '../server/stream.ts'
 import type { RunInit } from '../runtime/run.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { jsx } from '../jsx-runtime.ts'
-import { drain } from './utils.ts'
+import { drain, renderNonceDocument } from './utils.ts'
 
 describe('Portal', () => {
   it('renders nothing on the server without evaluating portal children', async () => {
@@ -103,6 +103,74 @@ describe('Portal', () => {
     expect(document.body.querySelector('#serialized-portal')?.parentElement).toBe(document.body)
     app.dispose()
     expect(document.body.querySelector('#serialized-portal')).toBeNull()
+  })
+
+  it('loads the renderer when a frame response adds a portal to a hydrated entry', async (t) => {
+    let Slot = clientEntry(
+      '/slot.js#Slot',
+      function Slot(
+        handle: Handle<{
+          children: RemixNode
+          data: { $rmxPortal: boolean }
+        }>,
+      ) {
+        return () => handle.props.children
+      },
+    )
+    let data = { $rmxPortal: true }
+    let current = await renderToString(
+      <Slot data={data}>
+        <p>Initial</p>
+      </Slot>,
+    )
+    let next = await renderToString(
+      <Slot data={data}>
+        <Portal>
+          <b id="result">From the server</b>
+        </Portal>
+      </Slot>,
+    )
+
+    // run() starts in a fresh document whose client entry never imports Portal.
+    let runUrl = new URL('../runtime/run.ts', import.meta.url).href
+    let portalUrl = new URL('../runtime/portal.ts', import.meta.url).href
+    let completion = crypto.randomUUID()
+    // An escaped key in JSON denotes the same portal as its literal spelling.
+    next = next.replaceAll('$rmxPortal', '\\u0024rmxPortal')
+    let response = `<!doctype html><html><head></head><body><main>${next}</main></body></html><!-- rmx:flush document -->`
+    let doc = await renderNonceDocument(
+      t,
+      `
+      <main>${current}</main>
+      <script type="module">
+        import { run } from ${JSON.stringify(runUrl)}
+        let setups = 0
+        let app = run({
+          loadModule: () => handle => {
+            setups++
+            return () => handle.props.children
+          },
+          resolveFrame: () => ${JSON.stringify(response).replace(/</g, '\\u003c')},
+        })
+        try {
+          await app.ready()
+          let isLoaded = () => performance.getEntriesByName(${JSON.stringify(portalUrl)}).length > 0
+          let initially = isLoaded()
+          await app.frames.top.reload()
+          document.documentElement.dataset.loads = JSON.stringify([initially, isLoaded()])
+          document.documentElement.dataset.setups = String(setups)
+        } catch (error) {
+          document.documentElement.dataset.error = String(error)
+        } finally {
+          parent.postMessage(${JSON.stringify(completion)}, ${JSON.stringify(location.origin)})
+        }
+      </script>`,
+      completion,
+    )
+    expect(doc.documentElement.dataset.error).toBeUndefined()
+    expect(JSON.parse(doc.documentElement.dataset.loads ?? 'null')).toEqual([false, true])
+    expect(doc.documentElement.dataset.setups).toBe('1')
+    expect(doc.querySelector('#result')?.parentElement).toBe(doc.body)
   })
 
   it('rejects element destinations in serialised portal props', async () => {
