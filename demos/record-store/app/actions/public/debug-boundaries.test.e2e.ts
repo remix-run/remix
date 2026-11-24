@@ -54,7 +54,7 @@ describe('frame debug bookmarklet', () => {
 
   it('reuses the record store inspector and preserves Cmd-D', async (t) => {
     let page = await t.serve(await createTestServer((await createTestRouter()).fetch))
-    await page.goto('/albums/bbq')
+    await page.goto('/albums/overpass-stereo')
     await page.evaluate(async () => {
       let script = document.querySelector<HTMLScriptElement>('script[type="module"][src]')
       if (!script) throw new Error('Missing app entry')

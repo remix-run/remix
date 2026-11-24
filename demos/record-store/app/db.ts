@@ -6,7 +6,7 @@ export const db = createSqliteDatabase({
   filename:
     process.env.NODE_ENV === 'test'
       ? ':memory:'
-      : path.join(import.meta.dirname, '../db/record-store.sqlite'),
+      : path.join(import.meta.dirname, '../db/records.sqlite'),
   foreignKeys: true,
 })
 

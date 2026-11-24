@@ -18,9 +18,9 @@ describe('cart submissions', () => {
         await release.promise
       },
       [],
-      '/albums/bbq',
+      '/albums/overpass-stereo',
     )
-    let details = page.getByRole('heading', { level: 1, name: 'Ash & Smoke' }).locator('..')
+    let details = page.getByRole('heading', { level: 1, name: 'Overpass Stereo' }).locator('..')
     await details
       .getByRole('link', { name: 'Back to Records', exact: true })
       .evaluate((anchor: HTMLAnchorElement) => anchor.click())
@@ -36,8 +36,8 @@ describe('cart submissions', () => {
     release.resolve()
     await page.getByRole('heading', { name: 'Browse Records', exact: true }).waitFor()
     await page.evaluate(async () => window.navigation.transition?.finished)
-    await page.getByRole('link', { name: 'Ash & Smoke', exact: true }).scrollIntoViewIfNeeded()
-    let card = page.locator('[data-test-slug="bbq"]')
+    await page.getByRole('link', { name: 'Overpass Stereo', exact: true }).scrollIntoViewIfNeeded()
+    let card = page.locator('[data-test-slug="overpass-stereo"]')
     await card.getByRole('button', { name: 'Add to Cart', exact: true }).click()
     await card.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
   })
@@ -64,9 +64,11 @@ describe('cart submissions', () => {
         }
       },
       [],
-      '/albums/bbq',
+      '/albums/overpass-stereo',
     )
-    let albumDetails = page.getByRole('heading', { level: 1, name: 'Ash & Smoke' }).locator('..')
+    let albumDetails = page
+      .getByRole('heading', { level: 1, name: 'Overpass Stereo' })
+      .locator('..')
     requests.length = 0
     let initial = await frameState(page)
     await albumDetails.getByRole('button', { name: 'Add to Cart', exact: true }).press('Enter')
@@ -125,22 +127,22 @@ describe('cart submissions', () => {
       javaScriptEnabled: false,
     })
     let page = await context.newPage()
-    await page.goto('/albums/bbq?from=catalog')
+    await page.goto('/albums/overpass-stereo?from=catalog')
     await page.getByRole('button', { name: 'Add to Cart', exact: true }).click()
     await page.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
     assert.equal(
       new URL(page.url()).pathname + new URL(page.url()).search,
-      '/albums/bbq?from=catalog',
+      '/albums/overpass-stereo?from=catalog',
     )
     await page.getByRole('button', { name: 'Remove from Cart', exact: true }).click()
     await page.getByRole('button', { name: 'Add to Cart', exact: true }).waitFor()
     assert.equal(
       new URL(page.url()).pathname + new URL(page.url()).search,
-      '/albums/bbq?from=catalog',
+      '/albums/overpass-stereo?from=catalog',
     )
 
     await page.goto('/albums?from=native')
-    let card = page.locator('[data-test-slug="three-ways"]')
+    let card = page.locator('[data-test-slug="last-bell-first-kiss"]')
     await card.locator('input[name="intent"]').evaluate((input: HTMLInputElement) => {
       input.value = 'invalid'
     })
@@ -162,7 +164,7 @@ describe('cart submissions', () => {
 
     await card.getByRole('button', { name: 'Add to Cart', exact: true }).click()
     await card.getByRole('button', { name: 'Remove from Cart', exact: true }).waitFor()
-    await page.goto('/albums/genre/self-help?from=native')
+    await page.goto('/albums/genre/boy-band?from=native')
     await card.locator('input[name="intent"]').evaluate((input: HTMLInputElement) => {
       input.value = 'invalid'
     })
@@ -170,7 +172,7 @@ describe('cart submissions', () => {
     await card.getByRole('alert').getByText('Invalid cart action.').waitFor()
     assert.equal(
       new URL(page.url()).pathname + new URL(page.url()).search,
-      '/albums/genre/self-help?from=native',
+      '/albums/genre/boy-band?from=native',
     )
     assert.equal(await page.getByRole('alert').count(), 1)
     await page.reload()
@@ -190,9 +192,9 @@ describe('cart submissions', () => {
       received.resolve()
       await release.promise
     })
-    let quantity = page.getByRole('status', { name: 'Quantity of Ash & Smoke' })
-    let increase = page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' })
-    let decrease = page.getByRole('button', { name: 'Decrease quantity of Ash & Smoke' })
+    let quantity = page.getByRole('status', { name: 'Quantity of Overpass Stereo' })
+    let increase = page.getByRole('button', { name: 'Increase quantity of Overpass Stereo' })
+    let decrease = page.getByRole('button', { name: 'Decrease quantity of Overpass Stereo' })
     let initial = await frameState(page)
     assert.equal(await quantity.textContent(), '1')
     assert.equal(await decrease.isDisabled(), true)
@@ -202,10 +204,10 @@ describe('cart submissions', () => {
     await page.waitForFunction(() => document.querySelector('output')?.textContent === '2')
     assert.equal(await increase.getAttribute('aria-disabled'), 'true')
     assert.equal(await increase.evaluate((button) => button === document.activeElement), true)
-    await page.locator('[aria-busy="true"]').filter({ hasText: 'Total: $16.99' }).waitFor()
-    let row = page.getByRole('row').filter({ hasText: 'Ash & Smoke' })
+    await page.locator('[aria-busy="true"]').filter({ hasText: 'Total: $15.99' }).waitFor()
+    let row = page.getByRole('row').filter({ hasText: 'Overpass Stereo' })
     let subtotal = row.getByRole('cell').nth(3)
-    assert.equal(await subtotal.textContent(), '$16.99')
+    assert.equal(await subtotal.textContent(), '$15.99')
     await subtotal.locator('[aria-busy="true"]').waitFor()
     let appearance = await subtotal.evaluate((cell) => {
       let amount = cell.querySelector('[aria-busy] > span')
@@ -226,16 +228,16 @@ describe('cart submissions', () => {
     // A second submission while saving must not start another session write.
     await increase.evaluate((button: HTMLButtonElement) => button.form?.requestSubmit(button))
     release.resolve()
-    await page.getByText('Total: $33.98', { exact: true }).waitFor()
+    await page.getByText('Total: $31.98', { exact: true }).waitFor()
     assert.equal(await quantity.textContent(), '2')
     assert.equal(await increase.getAttribute('aria-disabled'), null)
-    assert.equal(await row.getByRole('cell').nth(3).textContent(), '$33.98')
+    assert.equal(await row.getByRole('cell').nth(3).textContent(), '$31.98')
     assert.equal(await page.locator('[aria-busy="true"]').count(), 0)
     assert.deepEqual(requests, ['PATCH 2'])
     assert.deepEqual(await frameState(page), initial)
     assert.equal(await increase.evaluate((button) => button === document.activeElement), true)
     await decrease.click()
-    await page.getByText('Total: $16.99', { exact: true }).waitFor()
+    await page.getByText('Total: $15.99', { exact: true }).waitFor()
     assert.equal(await quantity.textContent(), '1')
     assert.equal(await decrease.isDisabled(), true)
     assert.deepEqual(requests, ['PATCH 2', 'PATCH 1'])
@@ -250,9 +252,9 @@ describe('cart submissions', () => {
       },
       ['1', '2'],
     )
-    let first = page.getByRole('status', { name: 'Quantity of Ash & Smoke' })
-    let second = page.getByRole('status', { name: 'Quantity of Heavy Metal Guitar Riffs' })
-    let increase = page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' })
+    let first = page.getByRole('status', { name: 'Quantity of Overpass Stereo' })
+    let second = page.getByRole('status', { name: 'Quantity of Shred Till Dawn' })
+    let increase = page.getByRole('button', { name: 'Increase quantity of Overpass Stereo' })
     // The UI only offers integer steps; the server still rejects a tampered submission.
     await increase.evaluate((button: HTMLButtonElement) => {
       button.value = '1.5'
@@ -260,7 +262,7 @@ describe('cart submissions', () => {
     let rejected = page.waitForResponse((response) => response.request().method() === 'POST')
     await increase.click()
     assert.equal((await rejected).status(), 400)
-    let row = page.getByRole('row').filter({ hasText: 'Ash & Smoke' })
+    let row = page.getByRole('row').filter({ hasText: 'Overpass Stereo' })
     let error = row.getByRole('alert')
     await error.waitFor()
     assert.equal(await error.textContent(), 'Invalid quantity')
@@ -268,16 +270,14 @@ describe('cart submissions', () => {
     assert.equal(await first.getAttribute('aria-describedby'), await error.getAttribute('id'))
     assert.equal(await second.textContent(), '1')
     assert.equal(await second.getAttribute('aria-describedby'), null)
-    await page
-      .getByRole('button', { name: 'Increase quantity of Heavy Metal Guitar Riffs' })
-      .click()
-    await page.getByText('Total: $70.99', { exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Increase quantity of Shred Till Dawn' }).click()
+    await page.getByText('Total: $45.97', { exact: true }).waitFor()
     assert.equal(await second.textContent(), '2')
     await increase.evaluate((button: HTMLButtonElement) => {
       button.value = '2'
     })
     await increase.click()
-    await page.getByText('Total: $87.98', { exact: true }).waitFor()
+    await page.getByText('Total: $61.96', { exact: true }).waitFor()
     assert.equal(await first.textContent(), '2')
     assert.equal(await first.getAttribute('aria-describedby'), null)
     await error.waitFor({ state: 'detached' })
@@ -298,9 +298,9 @@ describe('cart submissions', () => {
       if (reject) return new Response('Unavailable', { status: 503 })
     })
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    let quantity = page.getByRole('status', { name: 'Quantity of Ash & Smoke' })
-    let increase = page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' })
-    let row = page.getByRole('row').filter({ hasText: 'Ash & Smoke' })
+    let quantity = page.getByRole('status', { name: 'Quantity of Overpass Stereo' })
+    let increase = page.getByRole('button', { name: 'Increase quantity of Overpass Stereo' })
+    let row = page.getByRole('row').filter({ hasText: 'Overpass Stereo' })
     let initialRow = await row.boundingBox()
     await increase.press('Enter')
     await received.promise
@@ -313,10 +313,10 @@ describe('cart submissions', () => {
     assert.equal(await increase.getAttribute('aria-disabled'), null)
     assert.equal(await increase.evaluate((button) => button === document.activeElement), true)
     assert.deepEqual(await row.boundingBox(), initialRow)
-    await page.getByText('Total: $16.99', { exact: true }).waitFor()
+    await page.getByText('Total: $15.99', { exact: true }).waitFor()
     reject = false
     await increase.press('Enter')
-    await page.getByText('Total: $33.98', { exact: true }).waitFor()
+    await page.getByText('Total: $31.98', { exact: true }).waitFor()
     assert.equal(await quantity.textContent(), '2')
     await error.waitFor({ state: 'detached' })
     assert.equal(mutations, 2)
@@ -335,19 +335,19 @@ describe('cart submissions', () => {
       }
     })
     methods.length = 0
-    let quantity = page.getByRole('status', { name: 'Quantity of Ash & Smoke' })
-    await page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' }).click()
+    let quantity = page.getByRole('status', { name: 'Quantity of Overpass Stereo' })
+    await page.getByRole('button', { name: 'Increase quantity of Overpass Stereo' }).click()
     await page
       .getByRole('alert')
       .filter({ hasText: 'Couldn’t update quantity. Try again.' })
       .waitFor()
     assert.equal(await quantity.textContent(), '1')
-    await page.getByText('Total: $16.99', { exact: true }).waitFor()
+    await page.getByText('Total: $15.99', { exact: true }).waitFor()
     assert.deepEqual(methods, ['POST'])
     await page.reload()
     assert.equal(await page.getByRole('alert').count(), 0)
     assert.equal(await quantity.textContent(), '2')
-    await page.getByText('Total: $33.98', { exact: true }).waitFor()
+    await page.getByText('Total: $31.98', { exact: true }).waitFor()
     assert.equal(mutations, 1)
   })
 
@@ -376,10 +376,10 @@ describe('cart submissions', () => {
     )
     let initial = await frameState(page)
     requests.length = 0
-    let row = page.locator('tbody tr').filter({ hasText: 'Ash & Smoke' })
+    let row = page.locator('tbody tr').filter({ hasText: 'Overpass Stereo' })
     let initialRow = await row.boundingBox()
     assert.ok(initialRow)
-    let nextRow = page.locator('tbody tr').filter({ hasText: 'Heavy Metal Guitar Riffs' })
+    let nextRow = page.locator('tbody tr').filter({ hasText: 'Shred Till Dawn' })
     let initialNextRow = await nextRow.boundingBox()
     assert.ok(initialNextRow)
     await row.getByRole('button', { name: 'Remove', exact: true }).press('Enter')
@@ -397,18 +397,18 @@ describe('cart submissions', () => {
     })
     let compact = await row.boundingBox()
     assert.ok(compact && compact.height > 0 && compact.height < initialRow.height)
-    assert.equal(await row.getByRole('status', { name: 'Quantity of Ash & Smoke' }).count(), 0)
+    assert.equal(await row.getByRole('status', { name: 'Quantity of Overpass Stereo' }).count(), 0)
     let movedRow = await nextRow.boundingBox()
     assert.ok(movedRow && movedRow.y < initialNextRow.y)
-    await page.locator('[aria-busy="true"]').filter({ hasText: 'Total: $43.99' }).waitFor()
+    await page.locator('[aria-busy="true"]').filter({ hasText: 'Total: $30.98' }).waitFor()
     assert.equal(await row.getAttribute('inert'), null)
     assert.equal(await undo.evaluate((button) => button === document.activeElement), true)
     assert.deepEqual(await frameState(page), initial)
     await nextRow
-      .getByRole('button', { name: 'Increase quantity of Heavy Metal Guitar Riffs' })
+      .getByRole('button', { name: 'Increase quantity of Shred Till Dawn' })
       .evaluate((button: HTMLButtonElement) => button.form?.requestSubmit(button))
     release.resolve()
-    await page.getByText('Total: $27.00', { exact: true }).waitFor()
+    await page.getByText('Total: $14.99', { exact: true }).waitFor()
     await page.getByRole('region', { name: 'Shopping cart', exact: true }).focus()
     await page.clock.fastForward(1999)
     assert.equal(await undo.count(), 1)
@@ -439,7 +439,7 @@ describe('cart submissions', () => {
     )
     await page.reload()
     assert.equal(await row.count(), 0)
-    await page.getByText('Total: $27.00', { exact: true }).waitFor()
+    await page.getByText('Total: $14.99', { exact: true }).waitFor()
   })
 
   it('shows Undo time remaining and resets and pauses the countdown while hovered', async (t) => {
@@ -548,7 +548,7 @@ describe('cart submissions', () => {
       '/cart',
       true,
     )
-    let row = page.locator('tbody tr').filter({ hasText: 'Ash & Smoke' })
+    let row = page.locator('tbody tr').filter({ hasText: 'Overpass Stereo' })
     let initial = await row.evaluate((row: HTMLTableRowElement) => {
       let range = document.createRange()
       range.selectNodeContents(row.cells[1])
@@ -630,7 +630,7 @@ describe('cart submissions', () => {
       }
     })
     release.resolve()
-    await page.getByText('Total: $27.00', { exact: true }).waitFor()
+    await page.getByText('Total: $14.99', { exact: true }).waitFor()
   })
 
   it('keeps cart columns and controls in place when a long title changes to removed text', async (t) => {
@@ -664,13 +664,13 @@ describe('cart submissions', () => {
     await received.promise
     let undo = row.getByRole('button', { name: 'Undo', exact: true })
     await undo.waitFor()
-    let removedTitle = row.getByText('Three Ways to Change Your Life removed', { exact: true })
+    let removedTitle = row.getByText('Last Bell, First Kiss removed', { exact: true })
     await removedTitle.waitFor()
     assert.equal(
       await row
-        .getByRole('link', { name: 'Three Ways to Change Your Life', exact: true })
+        .getByRole('link', { name: 'Last Bell, First Kiss', exact: true })
         .getAttribute('href'),
-      '/albums/three-ways',
+      '/albums/last-bell-first-kiss',
     )
     assert.equal(
       await row.getByText('removed', { exact: true }).evaluate((text) => text.closest('a')),
@@ -697,7 +697,7 @@ describe('cart submissions', () => {
     await undo.press('Enter')
     release.resolve()
     await remove.waitFor()
-    await page.getByText('Total: $28.99', { exact: true }).waitFor()
+    await page.getByText('Total: $16.99', { exact: true }).waitFor()
     assert.deepEqual(
       await row.evaluate((row: HTMLTableRowElement) =>
         [...row.cells].map((cell) => {
@@ -720,9 +720,7 @@ describe('cart submissions', () => {
       }),
       true,
     )
-    let quantityControl = row.locator(
-      'form[aria-label="Update quantity of Three Ways to Change Your Life"]',
-    )
+    let quantityControl = row.locator('form[aria-label="Update quantity of Last Bell, First Kiss"]')
     assert.equal(
       await quantityControl.evaluate((form) => {
         let cell = form.closest('td')
@@ -760,7 +758,7 @@ describe('cart submissions', () => {
     await page.clock.fastForward(2000)
     await collapsedRow(row)
     assert.equal(await page.getByText('Your cart is empty.', { exact: true }).count(), 0)
-    await page.locator('[aria-busy="true"]').filter({ hasText: 'Total: $16.99' }).waitFor()
+    await page.locator('[aria-busy="true"]').filter({ hasText: 'Total: $15.99' }).waitFor()
     assert.equal(
       await page.evaluate(() => document.activeElement?.getAttribute('aria-label')),
       'Shopping cart',
@@ -797,7 +795,7 @@ describe('cart submissions', () => {
       '/cart',
       true,
     )
-    let row = page.locator('tbody tr').filter({ hasText: 'Ash & Smoke' })
+    let row = page.locator('tbody tr').filter({ hasText: 'Overpass Stereo' })
     let initialRow = await row.boundingBox()
     let remove = row.getByRole('button', { name: 'Remove', exact: true })
     await remove.press('Enter')
@@ -819,7 +817,7 @@ describe('cart submissions', () => {
       )
     })
     assert.deepEqual(await row.boundingBox(), initialRow)
-    await page.getByText('Total: $16.99', { exact: true }).waitFor()
+    await page.getByText('Total: $15.99', { exact: true }).waitFor()
     assert.notEqual(
       await failed.evaluate((button) => getComputedStyle(button).animationName),
       'none',
@@ -872,59 +870,59 @@ describe('cart submissions', () => {
       true,
     )
     let initial = await frameState(page)
-    let row = page.locator('tbody tr').filter({ hasText: 'Ash & Smoke' })
+    let row = page.locator('tbody tr').filter({ hasText: 'Overpass Stereo' })
     await row.getByRole('button', { name: 'Remove', exact: true }).press('Enter')
     await removeReceived.promise
     let undo = row.getByRole('button', { name: 'Undo', exact: true })
     await undo.press('Enter')
     await row.getByRole('button', { name: 'Restoring...', exact: true }).waitFor()
     assert.equal(
-      await row.getByRole('status', { name: 'Quantity of Ash & Smoke' }).textContent(),
+      await row.getByRole('status', { name: 'Quantity of Overpass Stereo' }).textContent(),
       '3',
     )
     assert.deepEqual(requests, ['DELETE 1 '])
     releaseRemove.resolve()
     await restoreReceived.promise
-    await page.locator('[aria-busy="true"]').filter({ hasText: 'Total: $27.00' }).waitFor()
+    await page.locator('[aria-busy="true"]').filter({ hasText: 'Total: $14.99' }).waitFor()
     assert.deepEqual(requests, ['DELETE 1 ', 'POST 1 3'])
     releaseRestore.resolve()
-    await page.getByText('Total: $77.97', { exact: true }).waitFor()
+    await page.getByText('Total: $62.96', { exact: true }).waitFor()
     let remove = row.getByRole('button', { name: 'Remove', exact: true })
     await remove.waitFor()
     assert.equal(await remove.evaluate((button) => button === document.activeElement), true)
     assert.deepEqual(await page.locator('tbody tr td:first-child a').allTextContents(), [
-      'Ash & Smoke',
-      'Heavy Metal Guitar Riffs',
+      'Overpass Stereo',
+      'Shred Till Dawn',
     ])
     await page.clock.fastForward(2000)
     assert.equal(await row.count(), 1)
     assert.deepEqual(await frameState(page), initial)
     await page.reload()
-    await page.getByText('Total: $77.97', { exact: true }).waitFor()
+    await page.getByText('Total: $62.96', { exact: true }).waitFor()
     assert.equal(
-      await row.getByRole('status', { name: 'Quantity of Ash & Smoke' }).textContent(),
+      await row.getByRole('status', { name: 'Quantity of Overpass Stereo' }).textContent(),
       '3',
     )
   })
 
   it('keeps multiple Undo windows and restores rows in page order even when undone in reverse order', async (t) => {
     let page = await serveCart(t, () => {}, ['1', '2', '3'], '/cart', true)
-    let first = page.locator('tbody tr').filter({ hasText: 'Ash & Smoke' })
-    let second = page.locator('tbody tr').filter({ hasText: 'Heavy Metal Guitar Riffs' })
+    let first = page.locator('tbody tr').filter({ hasText: 'Overpass Stereo' })
+    let second = page.locator('tbody tr').filter({ hasText: 'Shred Till Dawn' })
     await first.getByRole('button', { name: 'Remove', exact: true }).click()
-    await page.getByText('Total: $55.99', { exact: true }).waitFor()
+    await page.getByText('Total: $31.98', { exact: true }).waitFor()
     await second.getByRole('button', { name: 'Remove', exact: true }).click()
-    await page.getByText('Total: $28.99', { exact: true }).waitFor()
+    await page.getByText('Total: $16.99', { exact: true }).waitFor()
     assert.equal(await page.getByRole('button', { name: 'Undo', exact: true }).count(), 2)
     await second.getByRole('button', { name: 'Undo', exact: true }).click()
-    await page.getByText('Total: $55.99', { exact: true }).waitFor()
+    await page.getByText('Total: $31.98', { exact: true }).waitFor()
     await first.getByRole('button', { name: 'Undo', exact: true }).click()
-    await page.getByText('Total: $72.98', { exact: true }).waitFor()
+    await page.getByText('Total: $47.97', { exact: true }).waitFor()
     await page.clock.fastForward(2000)
     assert.deepEqual(await page.locator('tbody tr td:first-child a').allTextContents(), [
-      'Ash & Smoke',
-      'Heavy Metal Guitar Riffs',
-      'Three Ways to Change Your Life',
+      'Overpass Stereo',
+      'Shred Till Dawn',
+      'Last Bell, First Kiss',
     ])
     assert.equal(await page.getByRole('button', { name: 'Undo', exact: true }).count(), 0)
   })
@@ -948,22 +946,22 @@ describe('cart submissions', () => {
       true,
     )
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    let row = page.locator('tbody tr').filter({ hasText: 'Ash & Smoke' })
+    let row = page.locator('tbody tr').filter({ hasText: 'Overpass Stereo' })
     await row.getByRole('button', { name: 'Remove', exact: true }).press('Enter')
     await page.getByText('Total: $0.00', { exact: true }).waitFor()
     await row.getByRole('button', { name: 'Undo', exact: true }).press('Enter')
     let failed = row.getByRole('button', { name: 'Failed!', exact: true })
     await failed.waitFor()
-    assert.equal(await row.getByRole('status', { name: 'Quantity of Ash & Smoke' }).count(), 0)
+    assert.equal(await row.getByRole('status', { name: 'Quantity of Overpass Stereo' }).count(), 0)
     await page.clock.fastForward(2000)
     await row.getByRole('button', { name: 'Undo', exact: true }).press('Enter')
     await failed.waitFor()
     assert.equal(restores, 2)
     await failed.press('Enter')
     await row.getByRole('button', { name: 'Remove', exact: true }).waitFor()
-    await page.getByText('Total: $33.98', { exact: true }).waitFor()
+    await page.getByText('Total: $31.98', { exact: true }).waitFor()
     assert.equal(
-      await row.getByRole('status', { name: 'Quantity of Ash & Smoke' }).textContent(),
+      await row.getByRole('status', { name: 'Quantity of Overpass Stereo' }).textContent(),
       '2',
     )
     assert.equal(restores, 3)
@@ -1033,8 +1031,8 @@ describe('cart submissions', () => {
     await page.request.post('/cart/api/add', { form: { albumId: '1' } })
     mutations.length = 0
     await page.goto('/cart')
-    let quantity = page.getByRole('status', { name: 'Quantity of Ash & Smoke' })
-    let increase = page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' })
+    let quantity = page.getByRole('status', { name: 'Quantity of Overpass Stereo' })
+    let increase = page.getByRole('button', { name: 'Increase quantity of Overpass Stereo' })
     await increase.evaluate((button: HTMLButtonElement) => {
       button.value = '1.5'
     })
@@ -1045,7 +1043,7 @@ describe('cart submissions', () => {
     assert.equal(new URL(page.url()).pathname, '/cart')
     assert.equal(await quantity.textContent(), '1')
     assert.equal(await quantity.getAttribute('aria-describedby'), await error.getAttribute('id'))
-    await page.getByText('Total: $16.99', { exact: true }).waitFor()
+    await page.getByText('Total: $15.99', { exact: true }).waitFor()
 
     await page.reload()
     assert.equal(new URL(page.url()).pathname, '/cart')
@@ -1055,8 +1053,8 @@ describe('cart submissions', () => {
     assert.deepEqual(mutations, ['PATCH /cart/items 303'])
 
     mutations.length = 0
-    await page.getByRole('button', { name: 'Increase quantity of Ash & Smoke' }).click()
-    await page.getByText('Total: $33.98', { exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Increase quantity of Overpass Stereo' }).click()
+    await page.getByText('Total: $31.98', { exact: true }).waitFor()
     assert.deepEqual(mutations, ['PATCH /cart/items 303'])
     assert.equal(new URL(page.url()).pathname, '/cart')
     await page.getByRole('button', { name: 'Remove', exact: true }).click()
@@ -1066,11 +1064,9 @@ describe('cart submissions', () => {
 
     await page.request.post('/cart/api/add', { form: { albumId: '3' } })
     await page.goto('/cart')
-    let row = page.getByRole('row').filter({ hasText: 'Three Ways to Change Your Life' })
-    await row
-      .getByRole('button', { name: 'Increase quantity of Three Ways to Change Your Life' })
-      .click()
-    await page.getByText('Total: $57.98', { exact: true }).waitFor()
+    let row = page.getByRole('row').filter({ hasText: 'Last Bell, First Kiss' })
+    await row.getByRole('button', { name: 'Increase quantity of Last Bell, First Kiss' }).click()
+    await page.getByText('Total: $33.98', { exact: true }).waitFor()
     assert.equal(await page.getByRole('alert').count(), 0)
     assert.equal(new URL(page.url()).pathname, '/cart')
     await row.getByRole('button', { name: 'Remove', exact: true }).click()

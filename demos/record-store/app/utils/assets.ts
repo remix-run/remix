@@ -43,7 +43,7 @@ export const assets = createAssetServer({
         async transform(bytes) {
           return {
             content: await sharp(bytes)
-              .resize({ width: 96, height: 128, fit: 'cover', withoutEnlargement: true })
+              .resize({ width: 96, height: 96, fit: 'cover', withoutEnlargement: true })
               .webp({ quality: 75 })
               .toBuffer(),
             extension: '.webp',

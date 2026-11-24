@@ -63,7 +63,7 @@ export function AlbumCard(handle: Handle<AlbumCardProps>) {
               css({
                 display: 'block',
                 width: '100%',
-                height: '300px',
+                aspectRatio: '1 / 1',
                 objectFit: 'cover',
                 background: '#ecf0f1',
               }),

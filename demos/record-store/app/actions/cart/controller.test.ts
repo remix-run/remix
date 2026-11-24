@@ -18,7 +18,7 @@ describe('cart handlers', () => {
       method: 'POST',
       body: new URLSearchParams({
         albumId: '1',
-        slug: 'bbq',
+        slug: 'overpass-stereo',
       }),
       redirect: 'manual',
     })
@@ -33,7 +33,7 @@ describe('cart handlers', () => {
       method: 'POST',
       body: new URLSearchParams({
         albumId: '2',
-        slug: 'heavy-metal',
+        slug: 'shred-till-dawn',
       }),
       redirect: 'manual',
     })
@@ -48,7 +48,7 @@ describe('cart handlers', () => {
     assert.equal(response.status, 200)
     let html = await response.text()
     assertContains(html, 'Shopping Cart')
-    assertContains(html, 'Heavy Metal Guitar Riffs')
+    assertContains(html, 'Shred Till Dawn')
   })
 
   it('cart persists state across requests with same session', async () => {
@@ -57,7 +57,7 @@ describe('cart handlers', () => {
       method: 'POST',
       body: new URLSearchParams({
         albumId: '1',
-        slug: 'bbq',
+        slug: 'overpass-stereo',
       }),
       redirect: 'manual',
     })
@@ -70,7 +70,7 @@ describe('cart handlers', () => {
       method: 'POST',
       body: new URLSearchParams({
         albumId: '3',
-        slug: 'three-ways',
+        slug: 'last-bell-first-kiss',
       }),
     })
     await router.fetch(addRequest2)
@@ -80,8 +80,8 @@ describe('cart handlers', () => {
     let cartResponse = await router.fetch(cartRequest)
 
     let html = await cartResponse.text()
-    assertContains(html, 'Ash & Smoke')
-    assertContains(html, 'Three Ways to Change Your Life')
+    assertContains(html, 'Overpass Stereo')
+    assertContains(html, 'Last Bell, First Kiss')
   })
 
   it('GET /cart/items renders the table, total, and actions', async () => {
@@ -93,18 +93,18 @@ describe('cart handlers', () => {
     assert.equal(response.status, 200)
     assert.match(html, /<table\b/)
     assertContains(html, '<th>Record</th>')
-    assertContains(html, 'Heavy Metal Guitar Riffs')
-    assertContains(html, 'Decrease quantity of Heavy Metal Guitar Riffs')
-    assertContains(html, 'Increase quantity of Heavy Metal Guitar Riffs')
+    assertContains(html, 'Shred Till Dawn')
+    assertContains(html, 'Decrease quantity of Shred Till Dawn')
+    assertContains(html, 'Increase quantity of Shred Till Dawn')
     assertContains(html, 'Remove')
     assertContains(html, 'Total:')
-    assertContains(html, '$27.00')
+    assertContains(html, '$14.99')
     assertContains(html, 'Continue Shopping')
     assertContains(html, 'Login to Checkout')
 
     let thumbnail = html.match(/src="([^" ]+\?transform=album-thumbnail)"/)
     assert.ok(thumbnail)
-    assertContains(html, 'width="48" height="64"')
+    assertContains(html, 'width="48" height="48"')
     let image = await router.fetch(new URL(thumbnail[1], 'https://remix.run'))
     assert.equal(image.status, 200)
     assert.equal(image.headers.get('Content-Type'), 'image/webp')
@@ -112,9 +112,9 @@ describe('cart handlers', () => {
     let bytes = new Uint8Array(await image.arrayBuffer())
     let metadata = await sharp(bytes).metadata()
     assert.equal(metadata.width, 96)
-    assert.equal(metadata.height, 128)
+    assert.equal(metadata.height, 96)
     let catalogImage = await router.fetch(
-      new URL(await getAlbumImageHref('/images/heavy-metal-1.png'), 'https://remix.run'),
+      new URL(await getAlbumImageHref('/images/shred-till-dawn-1.png'), 'https://remix.run'),
     )
     assert.equal(catalogImage.status, 200)
     assert.ok(bytes.byteLength < (await catalogImage.arrayBuffer()).byteLength)
@@ -142,7 +142,7 @@ describe('cart handlers', () => {
     assert.equal(response.headers.get('Location'), null)
     assert.equal(response.headers.get('Cache-Control'), 'no-store')
     let html = await response.text()
-    assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$1699\.00/)
+    assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$1599\.00/)
     assertContains(html, 'action="/cart/items"')
     assert.ok(!html.includes('<html'))
   })
@@ -170,7 +170,7 @@ describe('cart handlers', () => {
     assert.equal(missing.status, 404)
     assertContains(await missing.text(), 'That record is no longer in your cart.')
     let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
-    assert.match(await cart.text(), /Total:\s*(?:<[^>]+>\s*)*\$16\.99/)
+    assert.match(await cart.text(), /Total:\s*(?:<[^>]+>\s*)*\$15\.99/)
   })
 
   it('DELETE /cart/items removes only the requested item and is safe to retry', async () => {
@@ -193,9 +193,9 @@ describe('cart handlers', () => {
       assert.equal(response.headers.get('Location'), null)
       assert.equal(response.headers.get('Cache-Control'), 'no-store')
       let html = await response.text()
-      assert.ok(!html.includes('Ash &amp; Smoke'))
-      assertContains(html, 'Heavy Metal Guitar Riffs')
-      assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$27\.00/)
+      assert.ok(!html.includes('Overpass Stereo'))
+      assertContains(html, 'Shred Till Dawn')
+      assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$14\.99/)
     }
   })
 
@@ -217,7 +217,7 @@ describe('cart handlers', () => {
     )
     assert.equal(restored.status, 200)
     assert.equal(restored.headers.get('Location'), null)
-    assert.match(await restored.text(), /Total:\s*(?:<[^>]+>\s*)*\$50\.97/)
+    assert.match(await restored.text(), /Total:\s*(?:<[^>]+>\s*)*\$47\.97/)
 
     let retry = await router.fetch(
       requestWithSession('https://remix.run/cart/items', session, {
@@ -229,8 +229,8 @@ describe('cart handlers', () => {
     assert.equal(retry.headers.get('Location'), '/cart')
     let cart = await router.fetch(requestWithSession('https://remix.run/cart/items', session))
     let html = await cart.text()
-    assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$50\.97/)
-    assertContains(html, 'Ash &amp; Smoke')
+    assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$47\.97/)
+    assertContains(html, 'Overpass Stereo')
     assert.ok(!html.includes('Untrusted'))
   })
 
@@ -258,7 +258,7 @@ describe('cart handlers', () => {
       assert.equal(missing.status, 404)
     }
     let cart = await router.fetch(requestWithSession('https://remix.run/cart', session))
-    assert.match(await cart.text(), /Total:\s*(?:<[^>]+>\s*)*\$16\.99/)
+    assert.match(await cart.text(), /Total:\s*(?:<[^>]+>\s*)*\$15\.99/)
   })
 })
 

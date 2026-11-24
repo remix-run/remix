@@ -112,7 +112,7 @@ export async function login(router: any, email: string, password: string): Promi
  * Login as admin and return the session cookie
  */
 export function loginAsAdmin(router: any): Promise<string> {
-  return login(router, 'admin@bookstore.com', 'admin123')
+  return login(router, 'admin@recordstore.com', 'admin123')
 }
 
 /**

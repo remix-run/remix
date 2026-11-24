@@ -31,11 +31,11 @@ describe('router', () => {
     let response = await router.fetch('https://remix.run/albums')
     let html = await response.text()
     let cover = html.match(
-      /src="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=album-image-640)"/,
+      /src="(\/assets\/app\/images\/overpass-stereo-1\.@[\w-]+\.png\?transform=album-image-640)"/,
     )
     assert.ok(cover)
 
-    let original = await readFile(new URL('./images/bbq-1.png', import.meta.url))
+    let original = await readFile(new URL('./images/overpass-stereo-1.png', import.meta.url))
     let srcSet = html.match(/<img[^>]+srcset="([^"]+)"/)
     assert.ok(srcSet)
     let candidates = srcSet[1].split(', ')
@@ -57,16 +57,16 @@ describe('router', () => {
     }
 
     let sourceHref = await assets.getHref(
-      fileURLToPath(new URL('./images/bbq-1.png', import.meta.url)),
+      fileURLToPath(new URL('./images/overpass-stereo-1.png', import.meta.url)),
     )
     let source = await router.fetch(new URL(sourceHref, 'https://remix.run'))
     assert.equal(source.headers.get('Content-Type'), 'image/png')
     assert.deepEqual(new Uint8Array(await source.arrayBuffer()), new Uint8Array(original))
 
-    let product = await router.fetch('https://remix.run/albums/bbq')
+    let product = await router.fetch('https://remix.run/albums/overpass-stereo')
     let productHtml = await product.text()
     let preload = productHtml.match(
-      /<link rel="preload" as="image"[^>]* href="(\/assets\/app\/images\/bbq-1\.@[\w-]+\.png\?transform=album-image-640)"/,
+      /<link rel="preload" as="image"[^>]* href="(\/assets\/app\/images\/overpass-stereo-1\.@[\w-]+\.png\?transform=album-image-640)"/,
     )
     assert.ok(preload)
     let productHead = productHtml.match(/<head>([\s\S]*?)<\/head>/)?.[1]
@@ -81,18 +81,42 @@ describe('router', () => {
       productHtml.match(/<img[^>]+sizes="([^"]+)"/)?.[1],
     )
 
-    let staticImage = await router.fetch('https://remix.run/images/bbq-1.png')
+    let staticImage = await router.fetch('https://remix.run/images/overpass-stereo-1.png')
     assert.equal(staticImage.status, 404)
     await staticImage.text()
+  })
+
+  it('uses the opening scene for category cards and both page preloads', async () => {
+    let category = await router.fetch('https://remix.run/albums/genre/r-and-b')
+    let catalogHtml = await category.text()
+    let cardStart = catalogHtml.indexOf('data-test-slug="midnight-fax"')
+    assert.ok(cardStart >= 0)
+    let cover = catalogHtml.slice(cardStart).match(/<img[^>]+src="([^"]+)"/)?.[1]
+    assert.ok(cover?.includes('/midnight-fax-1.'))
+    let categoryPreload = catalogHtml.match(
+      /<link rel="preload" as="image"[^>]*href="([^"]+)"/,
+    )?.[1]
+    assert.equal(categoryPreload, cover)
+
+    let product = await router.fetch('https://remix.run/albums/midnight-fax')
+    let productHtml = await product.text()
+    let preload = productHtml.match(/<link rel="preload" as="image"[^>]*href="([^"]+)"/)?.[1]
+    assert.ok(preload)
+    assert.equal(preload, cover)
+    assert.ok(productHtml.includes(`src="${preload}"`))
+
+    let scene = await router.fetch(new URL(preload, 'https://remix.run'))
+    assert.equal(scene.status, 200)
+    assert.equal(scene.headers.get('Content-Type'), 'image/webp')
   })
 
   it('caches browsing frames privately for 30 seconds while keeping documents uncached', async () => {
     for (let path of [
       '/',
       '/albums',
-      '/albums/genre/cookbook',
-      '/albums/bbq',
-      '/search?q=smoke',
+      '/albums/genre/rock',
+      '/albums/overpass-stereo',
+      '/search?q=overpass',
       '/about',
       '/contact',
       '/register',

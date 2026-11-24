@@ -8,15 +8,15 @@ import { albums } from '../../data/schema.ts'
 const router = await createTestRouter()
 
 describe('albums handlers', () => {
-  it('GET /albums lists records from the existing catalog', async () => {
+  it('GET /albums lists records from the vinyl catalog', async () => {
     let response = await router.fetch('https://remix.run/albums')
 
     assert.equal(response.status, 200)
     let html = await response.text()
     assertContains(html, 'Browse Records')
-    assertContains(html, 'Ash &amp; Smoke')
-    assertContains(html, 'Heavy Metal Guitar Riffs')
-    assertContains(html, 'Three Ways to Change Your Life')
+    assertContains(html, 'Overpass Stereo')
+    assertContains(html, 'Shred Till Dawn')
+    assertContains(html, 'Last Bell, First Kiss')
     assertFirstCoverPreload(html)
     assert.deepEqual(
       [...html.matchAll(/<img[^>]+loading="(eager|lazy)"/g)].map((match) => match[1]),
@@ -25,14 +25,14 @@ describe('albums handlers', () => {
   })
 
   it('GET /albums/:slug returns album details', async () => {
-    let response = await router.fetch('https://remix.run/albums/bbq')
+    let response = await router.fetch('https://remix.run/albums/overpass-stereo')
 
     assert.equal(response.status, 200)
     let html = await response.text()
-    assertContains(html, 'Ash &amp; Smoke')
-    assertContains(html, 'Rusty Char-Broil')
-    assertContains(html, '<strong>Catalog Number:</strong> 978-0525559474')
-    assertContains(html, '<strong>Release Year:</strong> 2020')
+    assertContains(html, 'Overpass Stereo')
+    assertContains(html, 'Mile Marker Club')
+    assertContains(html, '<strong>Catalog Number:</strong> RSD-49005-1')
+    assertContains(html, '<strong>Release Year:</strong> 1994')
     assertContains(html, 'Add to Cart')
     assert.deepEqual(
       [...html.matchAll(/<img[^>]+loading="(eager|lazy)"/g)].map((match) => match[1]),
@@ -48,8 +48,8 @@ describe('albums handlers', () => {
     assertContains(html, 'Record Not Found')
   })
 
-  it('returns three other albums from the same genre', async () => {
-    let response = await router.fetch('https://remix.run/albums/bbq/related', {
+  it('returns at most three other albums from the same genre', async () => {
+    let response = await router.fetch('https://remix.run/albums/overpass-stereo/related', {
       headers: { 'X-Remix-Frame': 'true' },
     })
 
@@ -58,50 +58,57 @@ describe('albums handlers', () => {
     let html = await response.text()
     assert.deepEqual(
       [...html.matchAll(/data-test-slug="([^"]+)"/g)].map((match) => match[1]),
-      ['bread-before-dawn', 'sunday-noodle-shop', 'citrus-and-salt'],
+      ['shred-till-dawn', 'dial-up-heartbreak', 'magnetic-northline'],
     )
   })
 
-  it('browses and relates albums across the consolidated arts categories', async () => {
-    let category = await router.fetch('https://remix.run/albums/genre/art')
-    assert.equal(category.status, 200)
-    let categoryHtml = await category.text()
-    assertContains(categoryHtml, 'Arts, Music &amp; Crafts')
-    assert.equal([...categoryHtml.matchAll(/data-test-slug="([^"]+)"/g)].length, 9)
-    assertContains(categoryHtml, 'Heavy Metal Guitar Riffs')
-    assertContains(categoryHtml, 'Clay in Your Hands')
-    assertContains(categoryHtml, 'Light Through the Lens')
-    assertFirstCoverPreload(categoryHtml)
-    assert.deepEqual(
-      [...categoryHtml.matchAll(/<img[^>]+loading="(eager|lazy)"/g)].map((match) => match[1]),
-      ['eager', 'eager', 'eager', 'eager', 'lazy', 'lazy', 'lazy', 'lazy', 'lazy'],
-    )
+  it('browses the rock category with an early cover preload', async () => {
+    let response = await router.fetch('https://remix.run/albums/genre/rock')
 
-    let related = await router.fetch('https://remix.run/albums/light-through-lens/related')
-    assert.deepEqual(
-      [...(await related.text()).matchAll(/data-test-slug="([^"]+)"/g)].map((match) => match[1]),
-      ['heavy-metal', 'clay-in-your-hands', 'vinyl-after-hours'],
-    )
-  })
-
-  it('shows available matches without filling sparse categories with unrelated albums', async () => {
-    let response = await router.fetch('https://remix.run/albums/pip-paper-moon/related')
+    assert.equal(response.status, 200)
     let html = await response.text()
+    assertContains(html, 'Rock')
     assert.deepEqual(
       [...html.matchAll(/data-test-slug="([^"]+)"/g)].map((match) => match[1]),
-      ['fox-found-tuesday'],
+      [
+        'overpass-stereo',
+        'shred-till-dawn',
+        'dial-up-heartbreak',
+        'magnetic-northline',
+        'no-sleep-at-channel-nine',
+        'corrosion-bloom',
+      ],
     )
+    assertFirstCoverPreload(html)
+  })
 
-    let other = await db.find(albums, 46)
-    assert.ok(other)
-    await db.delete(albums, other.id)
+  it('shows an empty related section for a record alone in its genre', async () => {
+    let album = await db.find(albums, 7)
+    assert.ok(album)
+    let { id, ...fields } = album
+    let slug = 'only-record-in-genre'
+    await db.create(albums, { ...fields, slug, genre: 'solo-genre' })
+
     try {
-      let empty = await router.fetch('https://remix.run/albums/pip-paper-moon/related')
-      assert.equal(empty.status, 200)
-      assertContains(await empty.text(), 'No other records in this category yet.')
+      let response = await router.fetch(`https://remix.run/albums/${slug}/related`)
+
+      assert.equal(response.status, 200)
+      let html = await response.text()
+      assertContains(html, 'No other records in this category yet.')
+      assert.ok(!html.includes('data-test-slug'))
     } finally {
-      await db.create(albums, other)
+      await db.deleteMany(albums, { where: { slug } })
     }
+  })
+
+  it('shows the sold-out record without a purchase button', async () => {
+    let response = await router.fetch('https://remix.run/albums/pick-it-up-again')
+
+    assert.equal(response.status, 200)
+    let html = await response.text()
+    assertContains(html, 'Pick It Up (Again)')
+    assertContains(html, 'This record is currently out of stock.')
+    assert.ok(!html.includes('Add to Cart'))
   })
 
   it('returns an uncached 404 when the related-albums source does not exist', async () => {

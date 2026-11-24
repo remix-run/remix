@@ -10,7 +10,7 @@ describe('auth handlers', () => {
     let response = await router.fetch('https://remix.run/login', {
       method: 'POST',
       body: new URLSearchParams({
-        email: 'admin@bookstore.com',
+        email: 'admin@recordstore.com',
         password: 'admin123',
       }),
       redirect: 'manual',
@@ -27,7 +27,7 @@ describe('auth handlers', () => {
     let response = await router.fetch('https://remix.run/login', {
       method: 'POST',
       body: new URLSearchParams({
-        email: '%@bookstore.com',
+        email: '%@recordstore.com',
         password: 'admin123',
       }),
       redirect: 'manual',
@@ -37,7 +37,7 @@ describe('auth handlers', () => {
 
     let html = await response.text()
     assertContains(html, 'Invalid email or password')
-    assertContains(html, 'value="%@bookstore.com"')
+    assertContains(html, 'value="%@recordstore.com"')
   })
 
   it('POST /login with an invalid shape returns field errors and native constraints', async () => {

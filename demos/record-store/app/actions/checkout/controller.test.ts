@@ -27,7 +27,7 @@ describe('checkout handlers', () => {
       method: 'POST',
       body: new URLSearchParams({
         albumId: '1',
-        slug: 'bbq',
+        slug: 'overpass-stereo',
       }),
     })
     let addResponse = await router.fetch(addRequest)
@@ -64,7 +64,7 @@ describe('checkout handlers', () => {
 
     assert.equal(orderDetailsResponse.status, 200)
     let orderDetailsHtml = await orderDetailsResponse.text()
-    assertContains(orderDetailsHtml, 'Ash &amp; Smoke')
+    assertContains(orderDetailsHtml, 'Overpass Stereo')
   })
 
   it('POST /checkout returns shipping errors without clearing the cart', async () => {
@@ -72,7 +72,7 @@ describe('checkout handlers', () => {
     let addResponse = await router.fetch(
       requestWithSession('https://remix.run/cart/api/add', sessionCookie, {
         method: 'POST',
-        body: new URLSearchParams({ albumId: '1', slug: 'bbq' }),
+        body: new URLSearchParams({ albumId: '1', slug: 'overpass-stereo' }),
       }),
     )
     sessionCookie = getSessionCookie(addResponse) ?? sessionCookie
@@ -88,6 +88,6 @@ describe('checkout handlers', () => {
     let html = await response.text()
     assertContains(html, 'value="123 Test St"')
     assertContains(html, 'aria-invalid="true"')
-    assertContains(html, 'Ash &amp; Smoke')
+    assertContains(html, 'Overpass Stereo')
   })
 })

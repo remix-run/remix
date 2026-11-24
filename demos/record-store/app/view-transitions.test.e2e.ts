@@ -44,7 +44,7 @@ describe('record store view transitions', () => {
       let { app } = await import(script.src)
       await app.ready()
     })
-    let card = page.locator('[data-test-slug="bbq"]')
+    let card = page.locator('[data-test-slug="overpass-stereo"]')
     assert.ok((await card.locator('img').getAttribute('class'))?.split(' ').includes(coverClass))
     assert.equal(
       (await card.locator('h3').getAttribute('class'))?.split(' ').includes(coverClass) ?? false,
@@ -63,7 +63,7 @@ describe('record store view transitions', () => {
     assert.equal(
       (
         await page
-          .getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true })
+          .getByRole('heading', { level: 1, name: 'Overpass Stereo', exact: true })
           .getAttribute('class')
       )
         ?.split(' ')

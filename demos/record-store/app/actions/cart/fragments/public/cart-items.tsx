@@ -417,11 +417,11 @@ export const CartItems = clientEntry(
                               src={item.thumbnailUrl}
                               alt=""
                               width="48"
-                              height="64"
+                              height="48"
                               loading="lazy"
                               mix={css({
                                 width: '48px',
-                                height: '64px',
+                                height: '48px',
                                 objectFit: 'cover',
                                 borderRadius: '4px',
                                 flexShrink: 0,
@@ -724,7 +724,7 @@ function CartItemCell(
                 display: 'flex',
                 alignItems: 'center',
                 // Keep content anchored to the thumbnail while space below it collapses.
-                minHeight: 'calc(64px + 0.75rem)',
+                minHeight: 'calc(48px + 0.75rem)',
                 paddingTop: '0.75rem',
               })}
             >

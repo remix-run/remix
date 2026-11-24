@@ -40,7 +40,7 @@ export function AboutPage() {
         <p mix={css({ margin: '1rem 0' })}>
           Explore the site to see all these features in action. You can browse records, create an
           account, add items to your cart, and even access the admin panel (login as
-          admin@bookstore.com / admin123).
+          admin@recordstore.com / admin123).
         </p>
 
         <p mix={css({ marginTop: '2rem' })}>

@@ -18,12 +18,12 @@ describe('album image selection', () => {
     let page = await t.serve(
       await createTestServer((request) => {
         let url = new URL(request.url)
-        if (url.pathname === '/albums/bbq') requests.push(url)
+        if (url.pathname === '/albums/overpass-stereo') requests.push(url)
         return router.fetch(request)
       }),
     )
     page.on('pageerror', (error) => pageErrors.push(error.message))
-    await page.goto('/albums/bbq?campaign=spring#details')
+    await page.goto('/albums/overpass-stereo?campaign=spring#details')
     let entry = await page.locator('script[type="module"][src]').getAttribute('src')
     assert.ok(entry)
     await page.evaluate(async (href) => {
@@ -35,23 +35,23 @@ describe('album image selection', () => {
     let previous = page.getByRole('button', { name: 'Previous image' })
 
     await next.click()
-    await page.waitForURL('**/albums/bbq?campaign=spring&image=2#details')
+    await page.waitForURL('**/albums/overpass-stereo?campaign=spring&image=2#details')
     await expectSelectedImage(page, 2)
     await next.click()
-    await page.waitForURL('**/albums/bbq?campaign=spring&image=3#details')
+    await page.waitForURL('**/albums/overpass-stereo?campaign=spring&image=3#details')
     await expectSelectedImage(page, 3)
     assert.equal(await next.isDisabled(), true)
     await previous.click()
-    await page.waitForURL('**/albums/bbq?campaign=spring&image=2#details')
+    await page.waitForURL('**/albums/overpass-stereo?campaign=spring&image=2#details')
     await previous.click()
-    await page.waitForURL('**/albums/bbq?campaign=spring#details')
+    await page.waitForURL('**/albums/overpass-stereo?campaign=spring#details')
     await expectSelectedImage(page, 1)
     assert.equal(await previous.isDisabled(), true)
     assert.equal(requests.length, 1)
     assert.equal(await page.evaluate(() => window.navigation.currentEntry?.index), historyIndex)
 
     await next.click()
-    await page.waitForURL('**/albums/bbq?campaign=spring&image=2#details')
+    await page.waitForURL('**/albums/overpass-stereo?campaign=spring&image=2#details')
     await page.evaluate(async (href) => {
       let { app } = await import(href)
       await app.frames.top.reload()
@@ -63,7 +63,7 @@ describe('album image selection', () => {
     await page.getByRole('link', { name: 'Back to Records' }).click()
     await page.getByRole('heading', { name: 'Browse Records', exact: true }).waitFor()
     await page.goBack()
-    await page.waitForURL('**/albums/bbq?campaign=spring&image=2#details')
+    await page.waitForURL('**/albums/overpass-stereo?campaign=spring&image=2#details')
     await expectSelectedImage(page, 2)
     assert.deepEqual(pageErrors, [])
   })

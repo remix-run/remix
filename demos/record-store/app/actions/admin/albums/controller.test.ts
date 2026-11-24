@@ -23,11 +23,11 @@ describe('admin albums handlers', () => {
       body: new URLSearchParams({
         slug: 'test-album',
         title: 'Test Album',
-        artist: 'Test Author',
+        artist: 'Test Artist',
         description: 'Test description',
         price: '29.99',
-        genre: 'fiction',
-        catalogNumber: '978-0000000000',
+        genre: 'rock',
+        catalogNumber: 'RSD-49998-1',
         releaseYear: '2024',
         inStock: 'true',
       }),
@@ -44,14 +44,14 @@ describe('admin albums handlers', () => {
       requestWithSession('https://remix.run/admin/albums/1', sessionId, {
         method: 'PUT',
         body: new URLSearchParams({
-          slug: 'bbq',
+          slug: 'overpass-stereo',
           title: 'Revised Title',
-          artist: 'Rusty Char-Broil',
+          artist: 'Mile Marker Club',
           description: 'Revised description',
           price: 'invalid',
-          genre: 'cookbook',
-          catalogNumber: '978-0525559474',
-          releaseYear: '2020',
+          genre: 'rock',
+          catalogNumber: 'RSD-49005-1',
+          releaseYear: '1994',
           inStock: 'false',
         }),
       }),
@@ -62,23 +62,23 @@ describe('admin albums handlers', () => {
     assertContains(html, 'value="Revised Title"')
     assertContains(html, 'Revised description')
     assertContains(html, 'value="false" selected')
-    assertContains(html, 'value="cookbook" selected')
+    assertContains(html, 'value="rock" selected')
   })
 
-  it('rejects categories outside the supported ten without updating the album', async () => {
+  it('rejects unsupported categories without updating the album', async () => {
     let sessionId = await loginAsAdmin(router)
     let response = await router.fetch(
       requestWithSession('https://remix.run/admin/albums/1', sessionId, {
         method: 'PUT',
         body: new URLSearchParams({
-          slug: 'bbq',
-          title: 'Ash & Smoke',
-          artist: 'Rusty Char-Broil',
-          description: 'The perfect gift for the BBQ enthusiast in your life!',
-          price: '16.99',
+          slug: 'overpass-stereo',
+          title: 'Overpass Stereo',
+          artist: 'Mile Marker Club',
+          description: 'A 1994 rock LP.',
+          price: '15.99',
           genre: 'music',
-          catalogNumber: '978-0525559474',
-          releaseYear: '2020',
+          catalogNumber: 'RSD-49005-1',
+          releaseYear: '1994',
           inStock: 'true',
         }),
       }),
@@ -86,7 +86,7 @@ describe('admin albums handlers', () => {
 
     assert.equal(response.status, 400)
     assertContains(await response.text(), 'Expected one of:')
-    let album = await router.fetch('https://remix.run/albums/bbq')
-    assertContains(await album.text(), 'Food &amp; Cooking')
+    let album = await router.fetch('https://remix.run/albums/overpass-stereo')
+    assertContains(await album.text(), 'Rock')
   })
 })

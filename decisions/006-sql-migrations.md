@@ -47,10 +47,7 @@ To guarantee that migrations are stable, we need a file format that precludes im
 │   └── schema.ts
 └── db/
     └── migrations/
-        ├── 20260228090000_create_record_store_schema/
-        │   ├── up.sql
-        │   └── down.sql
-        └── 20261119090000_consolidate_album_genres/
+        └── 20260228090000_create_record_store_schema/
             ├── up.sql
             └── down.sql
 ```

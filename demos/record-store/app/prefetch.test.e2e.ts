@@ -9,7 +9,7 @@ import { createTestRouter } from '../test/helpers.ts'
 import { assets } from './utils/assets.ts'
 
 // Preserve all category labels for viewport geometry without encoding the full catalog.
-const router = await createTestRouter({ albumIds: [1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 33, 34, 45] })
+const router = await createTestRouter({ albumIds: [1, 2, 3, 4, 5, 6, 7, 10] })
 
 describe('record store prefetching', () => {
   it('returns to login on Back after logout', async (t) => {
@@ -115,16 +115,16 @@ describe('record store prefetching', () => {
     let page = await t.serve(
       await createTestServer((request) => {
         let { pathname, search } = new URL(request.url)
-        if (pathname === '/albums/bbq') requests.push(request)
+        if (pathname === '/albums/overpass-stereo') requests.push(request)
         if (pathname.startsWith('/assets/app/images/')) imageRequests.push(pathname + search)
         return router.fetch(request)
       }),
     )
     let prefetched = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/albums/bbq',
+      (response) => new URL(response.url()).pathname === '/albums/overpass-stereo',
     )
     // Keep the image working set small as the seed catalog grows.
-    let documentResponse = await page.goto('/albums/genre/cookbook')
+    let documentResponse = await page.goto('/albums/genre/rock')
     assert.equal(documentResponse?.headers()['cache-control'], 'no-store')
     await waitForNavigationRuntime(page)
     let stylesheet = await page.locator('head link[rel="stylesheet"]').elementHandle()
@@ -138,9 +138,9 @@ describe('record store prefetching', () => {
       }
       if (pathname.startsWith('/assets/app/actions/public/entry.')) entryRequests.push(pathname)
     })
-    let cover = page.getByRole('img', { name: 'Ash & Smoke', exact: true })
+    let cover = page.getByRole('img', { name: 'Overpass Stereo', exact: true })
     await page.waitForFunction(() => {
-      let image = document.querySelector('img[alt="Ash & Smoke"]')
+      let image = document.querySelector('img[alt="Overpass Stereo"]')
       return image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0
     })
     let chosenCoverHref = await cover.evaluate((image: HTMLImageElement) => {
@@ -148,7 +148,9 @@ describe('record store prefetching', () => {
       return url.pathname + url.search
     })
 
-    let link = page.locator('a[data-rmx-prefetch="viewport"][href="/albums/bbq"]').first()
+    let link = page
+      .locator('a[data-rmx-prefetch="viewport"][href="/albums/overpass-stereo"]')
+      .first()
     await link.scrollIntoViewIfNeeded()
     let response = await prefetched
     assert.equal(response.headers()['cache-control'], 'private, max-age=30')
@@ -156,9 +158,9 @@ describe('record store prefetching', () => {
     await page.waitForFunction(
       () => !document.querySelector('head link[rel="prefetch"], [data-responsive-prefetch]'),
     )
-    assert.equal(imageRequests.filter((path) => path.includes('/bbq-')).length, 1)
+    assert.equal(imageRequests.filter((path) => path.includes('/overpass-stereo-')).length, 1)
     await link.click()
-    await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
+    await page.getByRole('heading', { level: 1, name: 'Overpass Stereo', exact: true }).waitFor()
     assert.equal(requests.length, reusesCachedHtml(page) ? 1 : 2)
     assert.equal(requests[0].headers.get('X-Remix-Frame'), 'true')
     await page.waitForFunction(() => {
@@ -182,7 +184,7 @@ describe('record store prefetching', () => {
     assert.equal(stylesheetRequests.length, 0)
     assert.deepEqual(entryRequests, [])
 
-    let freshDocument = await page.goto('/albums/bbq')
+    let freshDocument = await page.goto('/albums/overpass-stereo')
     assert.equal(freshDocument?.headers()['cache-control'], 'no-store')
     assert.equal(requests.length, reusesCachedHtml(page) ? 2 : 3)
     assert.equal(requests.at(-1)?.headers.get('X-Remix-Frame'), null)
@@ -207,7 +209,7 @@ describe('record store prefetching', () => {
             headers: { 'Content-Type': 'text/css', 'Cache-Control': 'public, max-age=3600' },
           })
         }
-        if (pathname === '/albums/bbq') {
+        if (pathname === '/albums/overpass-stereo') {
           requests.push(request)
           let headers = new Headers(request.headers)
           headers.delete('Accept-Encoding')
@@ -223,15 +225,21 @@ describe('record store prefetching', () => {
       }),
     )
     let [prefetched] = await Promise.all([
-      page.waitForResponse((response) => new URL(response.url()).pathname === '/albums/bbq'),
+      page.waitForResponse(
+        (response) => new URL(response.url()).pathname === '/albums/overpass-stereo',
+      ),
       (async () => {
-        await page.goto('/albums/genre/cookbook', { waitUntil: 'domcontentloaded' })
+        await page.goto('/albums/genre/rock', { waitUntil: 'domcontentloaded' })
         await waitForNavigationRuntime(page)
-        let link = page.locator('a[data-rmx-prefetch="viewport"][href="/albums/bbq"]').first()
+        let link = page
+          .locator('a[data-rmx-prefetch="viewport"][href="/albums/overpass-stereo"]')
+          .first()
         await link.scrollIntoViewIfNeeded()
       })(),
     ])
-    let link = page.locator('a[data-rmx-prefetch="viewport"][href="/albums/bbq"]').first()
+    let link = page
+      .locator('a[data-rmx-prefetch="viewport"][href="/albums/overpass-stereo"]')
+      .first()
     assert.equal(prefetched.headers()['cache-control'], 'no-store')
     if (await prefetchesAssets(page)) {
       await page.locator(`head link[rel="prefetch"][href$="${scriptHref}"]`).waitFor({
@@ -254,13 +262,13 @@ describe('record store prefetching', () => {
       release.resolve()
     }
     await link.click()
-    await page.getByRole('heading', { name: 'Ash & Smoke', exact: true }).waitFor()
+    await page.getByRole('heading', { name: 'Overpass Stereo', exact: true }).waitFor()
     await page.evaluate(async () => window.navigation.transition?.finished)
     await page.getByRole('button', { name: 'Next image' }).click()
-    await page.waitForURL('**/albums/bbq?image=2')
+    await page.waitForURL('**/albums/overpass-stereo?image=2')
     assert.equal(
       await page
-        .getByRole('heading', { name: 'Ash & Smoke', exact: true })
+        .getByRole('heading', { name: 'Overpass Stereo', exact: true })
         .evaluate((heading) => getComputedStyle(heading).borderLeftColor),
       'rgb(15, 118, 110)',
     )
@@ -334,11 +342,13 @@ describe('record store prefetching', () => {
       }),
     )
     let prefetched = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/albums/bbq',
+      (response) => new URL(response.url()).pathname === '/albums/overpass-stereo',
     )
-    await page.goto('/albums/genre/cookbook')
+    await page.goto('/albums/genre/rock')
     await waitForNavigationRuntime(page)
-    let link = page.locator('a[data-rmx-prefetch="viewport"][href="/albums/bbq"]').first()
+    let link = page
+      .locator('a[data-rmx-prefetch="viewport"][href="/albums/overpass-stereo"]')
+      .first()
     let prefetchesScript = await prefetchesAssets(page)
     await link.scrollIntoViewIfNeeded()
     if (prefetchesScript) {
@@ -351,7 +361,7 @@ describe('record store prefetching', () => {
       // Retain a caller after navigation removes the declarative trigger's anchor.
       await page.evaluate(async (href) => {
         let { prefetch }: Pick<typeof Component, 'prefetch'> = await import(href)
-        prefetch('/albums/bbq')
+        prefetch('/albums/overpass-stereo')
       }, prefetchHref)
     } else {
       await (await prefetched).finished()
@@ -366,7 +376,7 @@ describe('record store prefetching', () => {
       ? await page.locator(`head link[rel="prefetch"][href$="${scriptHref}"]`).elementHandle()
       : null
     await link.click()
-    await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
+    await page.getByRole('heading', { level: 1, name: 'Overpass Stereo', exact: true }).waitFor()
     assert.equal(await anchor.evaluate((node) => node.isConnected), false)
     if (prefetchesScript) {
       assert.ok(hint)
@@ -379,7 +389,7 @@ describe('record store prefetching', () => {
     release.resolve()
     await page.evaluate(async () => window.navigation.transition?.finished)
     await page.getByRole('button', { name: 'Next image' }).click()
-    await page.waitForURL('**/albums/bbq?image=2')
+    await page.waitForURL('**/albums/overpass-stereo?image=2')
     assert.equal(requests, 1)
     assert.deepEqual(failedAssets, [])
   })
@@ -399,9 +409,9 @@ describe('record store prefetching', () => {
     page.on('pageerror', (error) => errors.push(error.message))
     await page.setViewportSize({ width: 412, height: 823 })
     let mainPage = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/albums/bbq',
+      (response) => new URL(response.url()).pathname === '/albums/overpass-stereo',
     )
-    await page.goto('/search?q=Ash%20%26%20Smoke')
+    await page.goto('/search?q=Overpass%20Stereo')
     await waitForNavigationRuntime(page)
     await (await mainPage).finished()
     await page.waitForFunction(
@@ -409,35 +419,35 @@ describe('record store prefetching', () => {
     )
     assert.deepEqual(
       requests.map((request) => new URL(request.url).pathname),
-      ['/albums/bbq'],
+      ['/albums/overpass-stereo'],
     )
     let supportsAssetPrefetch = await prefetchesAssets(page)
     if (supportsAssetPrefetch) {
       assert.deepEqual(
         images
-          .filter((href) => href.includes('/bbq-1.'))
+          .filter((href) => href.includes('/overpass-stereo-1.'))
           .map((href) => new URL(href, page.url()).search)
           .sort(),
         ['?transform=album-image-320', '?transform=album-image-480'],
       )
     }
     assert.equal(
-      images.some((href) => /\/bbq-[23]\./.test(href)),
+      images.some((href) => /\/overpass-stereo-[23]\./.test(href)),
       false,
     )
 
     let related = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/albums/bbq/related',
+      (response) => new URL(response.url()).pathname === '/albums/overpass-stereo/related',
     )
     let coverResponses = supportsAssetPrefetch
-      ? ['bread-before-dawn', 'sunday-noodle-shop', 'citrus-and-salt'].map((slug) =>
+      ? ['shred-till-dawn', 'dial-up-heartbreak', 'dial-up-heartbreak'].map((slug) =>
           page.waitForResponse((response) =>
             new URL(response.url()).pathname.includes(`/${slug}-1.`),
           ),
         )
       : []
-    let card = page.locator('[data-test-slug="bbq"]')
-    await card.getByText('by Rusty Char-Broil', { exact: true }).hover()
+    let card = page.locator('[data-test-slug="overpass-stereo"]')
+    await card.getByText('by Mile Marker Club', { exact: true }).hover()
     await (await related).finished()
     await Promise.all(coverResponses.map(async (response) => (await response).finished()))
     await page.waitForFunction(
@@ -448,25 +458,25 @@ describe('record store prefetching', () => {
     assert.equal(await page.locator('[data-test-slug]').count(), 1)
     assert.deepEqual(
       requests.map((request) => new URL(request.url).pathname),
-      ['/albums/bbq', '/albums/bbq/related'],
+      ['/albums/overpass-stereo', '/albums/overpass-stereo/related'],
     )
     if (supportsAssetPrefetch) {
-      assert.equal(images.filter((href) => !href.includes('/bbq-')).length, 3)
+      assert.equal(images.filter((href) => !href.includes('/overpass-stereo-')).length, 2)
       assert.ok(
         images.every((href) => /\?transform=album-image-(?:320|480|640|768|960)$/.test(href)),
       )
     }
 
-    await card.getByRole('heading', { name: 'Ash & Smoke', exact: true }).hover()
+    await card.getByRole('heading', { name: 'Overpass Stereo', exact: true }).hover()
     await page.mouse.move(0, 0)
     let details = card.getByRole('link', { name: 'View Details', exact: true })
     await details.focus()
     await card.hover()
     await details.click()
-    await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
+    await page.getByRole('heading', { level: 1, name: 'Overpass Stereo', exact: true }).waitFor()
     let section = page.getByRole('region', { name: 'Related Records', exact: true })
     await section.scrollIntoViewIfNeeded()
-    await section.getByRole('heading', { name: 'Citrus & Salt', exact: true }).waitFor()
+    await section.getByRole('heading', { name: 'Dial-Up Heartbreak', exact: true }).waitFor()
     let covers = section.locator('img')
     for (let cover of await covers.all()) {
       await cover.scrollIntoViewIfNeeded()
@@ -491,7 +501,9 @@ describe('record store prefetching', () => {
     )
     assert.ok(chosen.every((href) => href.endsWith('?transform=album-image-480')))
     assert.equal(
-      requests.filter((request) => new URL(request.url).pathname === '/albums/bbq/related').length,
+      requests.filter(
+        (request) => new URL(request.url).pathname === '/albums/overpass-stereo/related',
+      ).length,
       reusesCachedHtml(page) ? 1 : 2,
     )
     if (supportsAssetPrefetch) {
@@ -510,7 +522,7 @@ describe('record store prefetching', () => {
       let relatedRequests: Request[] = []
       let page = await t.serve(
         await createTestServer(async (request) => {
-          if (new URL(request.url).pathname === '/albums/bbq/related') {
+          if (new URL(request.url).pathname === '/albums/overpass-stereo/related') {
             relatedRequests.push(request)
             let headers = new Headers(request.headers)
             headers.delete('Accept-Encoding')
@@ -537,23 +549,25 @@ describe('record store prefetching', () => {
       page.on('pageerror', (error) => errors.push(error.message))
       await page.setViewportSize({ width: 1280, height: 250 })
       let detailsPrefetched = page.waitForResponse(
-        (response) => new URL(response.url()).pathname === '/albums/bbq',
+        (response) => new URL(response.url()).pathname === '/albums/overpass-stereo',
       )
-      await page.goto('/search?q=Ash%20%26%20Smoke')
+      await page.goto('/search?q=Overpass%20Stereo')
       await waitForNavigationRuntime(page)
-      await page.getByRole('link', { name: 'Ash & Smoke', exact: true }).scrollIntoViewIfNeeded()
+      await page
+        .getByRole('link', { name: 'Overpass Stereo', exact: true })
+        .scrollIntoViewIfNeeded()
       await (await detailsPrefetched).finished()
-      let card = page.locator('[data-test-slug="bbq"]')
+      let card = page.locator('[data-test-slug="overpass-stereo"]')
       await card.getByRole('link', { name: 'View Details', exact: true }).focus()
       await requested.promise
       await card
         .getByRole('link', { name: 'View Details', exact: true })
         .evaluate((anchor: HTMLAnchorElement) => anchor.click())
-      await page.getByRole('heading', { level: 1, name: 'Ash & Smoke', exact: true }).waitFor()
+      await page.getByRole('heading', { level: 1, name: 'Overpass Stereo', exact: true }).waitFor()
       await page.evaluate(async () => window.navigation.transition?.finished)
       let related = page.getByRole('region', { name: 'Related Records', exact: true })
       await related.scrollIntoViewIfNeeded()
-      await related.getByRole('heading', { name: 'Citrus & Salt', exact: true }).waitFor()
+      await related.getByRole('heading', { name: 'Dial-Up Heartbreak', exact: true }).waitFor()
       release.resolve()
       assert.equal(relatedRequests.length, 1)
       assert.equal(relatedRequests[0].headers.get('X-Remix-Prefetch'), 'true')
@@ -566,11 +580,11 @@ describe('record store prefetching', () => {
     let requests = 0
     let page = await t.serve(
       await createTestServer((request) => {
-        if (new URL(request.url).pathname === '/albums/bbq/related') requests++
+        if (new URL(request.url).pathname === '/albums/overpass-stereo/related') requests++
         return router.fetch(request)
       }),
     )
-    await page.goto('/search?q=Ash%20%26%20Smoke')
+    await page.goto('/search?q=Overpass%20Stereo')
     await waitForNavigationRuntime(page)
     await page.evaluate(() => {
       Object.defineProperty(navigator, 'connection', {
@@ -578,8 +592,8 @@ describe('record store prefetching', () => {
         value: { saveData: true },
       })
     })
-    let card = page.locator('[data-test-slug="bbq"]')
-    await card.getByText('by Rusty Char-Broil', { exact: true }).hover()
+    let card = page.locator('[data-test-slug="overpass-stereo"]')
+    await card.getByText('by Mile Marker Club', { exact: true }).hover()
     assert.equal(requests, 0)
     await page.evaluate(() => {
       Object.defineProperty(navigator, 'connection', {
@@ -588,7 +602,7 @@ describe('record store prefetching', () => {
       })
     })
     let related = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/albums/bbq/related',
+      (response) => new URL(response.url()).pathname === '/albums/overpass-stereo/related',
     )
     await card.getByRole('link', { name: 'View Details', exact: true }).focus()
     await (await related).finished()
@@ -603,30 +617,30 @@ describe('record store prefetching', () => {
     let page = await t.serve(
       await createTestServer(async (request) => {
         let pathname = new URL(request.url).pathname
-        if (pathname === '/albums/bbq') {
+        if (pathname === '/albums/overpass-stereo') {
           requests.push(request)
           requested.resolve()
           await release.promise
         }
-        if (pathname === '/albums/bbq/related') requests.push(request)
+        if (pathname === '/albums/overpass-stereo/related') requests.push(request)
         return router.fetch(request)
       }),
     )
-    await page.goto('/search?q=Ash%20%26%20Smoke')
+    await page.goto('/search?q=Overpass%20Stereo')
     await waitForNavigationRuntime(page)
     await requested.promise
-    let card = page.locator('[data-test-slug="bbq"]')
-    await card.getByText('by Rusty Char-Broil', { exact: true }).hover()
+    let card = page.locator('[data-test-slug="overpass-stereo"]')
+    await card.getByText('by Mile Marker Club', { exact: true }).hover()
     await card.getByRole('link', { name: 'View Details', exact: true }).focus()
     assert.equal(requests.length, 1)
     let related = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/albums/bbq/related',
+      (response) => new URL(response.url()).pathname === '/albums/overpass-stereo/related',
     )
     release.resolve()
     await (await related).finished()
     assert.deepEqual(
       requests.map((request) => new URL(request.url).pathname),
-      ['/albums/bbq', '/albums/bbq/related'],
+      ['/albums/overpass-stereo', '/albums/overpass-stereo/related'],
     )
     assert.equal(requests[1].headers.get('X-Remix-Target'), 'related-albums-1')
   })
@@ -639,21 +653,21 @@ describe('record store prefetching', () => {
     let page = await t.serve(
       await createTestServer(async (request) => {
         let pathname = new URL(request.url).pathname
-        if (pathname === '/albums/bbq') {
+        if (pathname === '/albums/overpass-stereo') {
           requested.resolve()
           await release.promise
         }
-        if (pathname === '/albums/bbq/related') relatedRequests++
+        if (pathname === '/albums/overpass-stereo/related') relatedRequests++
         return router.fetch(request)
       }),
     )
-    await page.goto('/search?q=Ash%20%26%20Smoke')
+    await page.goto('/search?q=Overpass%20Stereo')
     await waitForNavigationRuntime(page)
     await requested.promise
-    let card = page.locator('[data-test-slug="bbq"]')
-    await card.getByText('by Rusty Char-Broil', { exact: true }).hover()
+    let card = page.locator('[data-test-slug="overpass-stereo"]')
+    await card.getByText('by Mile Marker Club', { exact: true }).hover()
     let canceled = page.waitForEvent('requestfailed', {
-      predicate: (request) => new URL(request.url()).pathname === '/albums/bbq',
+      predicate: (request) => new URL(request.url()).pathname === '/albums/overpass-stereo',
     })
     await card.evaluate((card) => card.remove())
     await canceled
@@ -683,43 +697,43 @@ describe('record store prefetching', () => {
     await page.getByRole('banner').getByRole('link', { name: 'Records', exact: true }).click()
     await page.getByRole('heading', { name: 'Browse Records', exact: true }).waitFor()
 
-    let link = page.getByRole('link', { name: 'Ash & Smoke', exact: true })
+    let link = page.getByRole('link', { name: 'Overpass Stereo', exact: true })
     assert.equal(await isInViewport(link), false)
-    assert.equal(requests.includes('/albums/bbq'), false)
+    assert.equal(requests.includes('/albums/overpass-stereo'), false)
 
     let prefetched = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/albums/bbq',
+      (response) => new URL(response.url()).pathname === '/albums/overpass-stereo',
     )
     await link.evaluate((anchor) => anchor.scrollIntoView({ block: 'start' }))
-    assert.equal(await isInViewport(page.locator('a.btn[href="/albums/bbq"]')), false)
+    assert.equal(await isInViewport(page.locator('a.btn[href="/albums/overpass-stereo"]')), false)
     await (await prefetched).finished()
     await page.waitForFunction(() => !document.querySelector('head link[rel="prefetch"]'))
     await page.getByRole('banner').scrollIntoViewIfNeeded()
     assert.equal(await isInViewport(link), false)
     await link.scrollIntoViewIfNeeded()
     assert.equal(await isInViewport(link), true)
-    assert.equal(requests.filter((path) => path === '/albums/bbq').length, 1)
-    assert.equal(discoveries.filter((path) => path === '/albums/bbq').length, 1)
+    assert.equal(requests.filter((path) => path === '/albums/overpass-stereo').length, 1)
+    assert.equal(discoveries.filter((path) => path === '/albums/overpass-stereo').length, 1)
 
     let changed = page.waitForResponse(
       (response) => new URL(response.url()).search === '?from=changed-link',
     )
     await link.evaluate((anchor) =>
-      anchor.setAttribute('href', '/albums/three-ways?from=changed-link'),
+      anchor.setAttribute('href', '/albums/last-bell-first-kiss?from=changed-link'),
     )
     await (await changed).finished()
     assert.equal(
-      requests.filter((path) => path === '/albums/three-ways?from=changed-link').length,
+      requests.filter((path) => path === '/albums/last-bell-first-kiss?from=changed-link').length,
       1,
     )
     let related = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/albums/three-ways/related',
+      (response) => new URL(response.url()).pathname === '/albums/last-bell-first-kiss/related',
     )
     await link.hover()
     let relatedResponse = await related
     await relatedResponse.finished()
     assert.equal(relatedResponse.request().headers()['x-remix-target'], 'related-albums-3')
-    assert.equal(requests.includes('/albums/bbq/related'), false)
+    assert.equal(requests.includes('/albums/overpass-stereo/related'), false)
   })
 })
 

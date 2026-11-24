@@ -12,7 +12,7 @@ beforeEach(async () => {
 })
 
 describe('record store database seed', () => {
-  it('distributes all 50 albums across the ten supported categories', async () => {
+  it('seeds 50 records across the supported categories', async () => {
     let catalog = await db.findMany(albums)
     assert.equal(catalog.length, 50)
     assert.deepEqual(
@@ -21,57 +21,18 @@ describe('record store database seed', () => {
     )
   })
 
-  it('consolidates existing genres without changing albums or orders and rolls back original genres', async () => {
-    let migrations = await loadAppMigrations()
-    let consolidated = await db.findMany(albums, { orderBy: ['id', 'asc'] })
-    await db.migrate(migrations, { direction: 'down', step: 1 })
-    await db.exec(sql`
-      update albums set genre = case id
-        when 2 then 'music'
-        when 8 then 'science-fiction'
-        when 9 then 'romance'
-        when 12 then 'science'
-        when 13 then 'poetry'
-        when 14 then 'crafts'
-        when 16 then 'music'
-        when 18 then 'nature'
-        when 22 then 'science-fiction'
-        when 24 then 'thriller'
-        when 25 then 'romance'
-        when 27 then 'historical-fiction'
-        when 28 then 'biography'
-        when 29 then 'history'
-        when 30 then 'science'
-        when 31 then 'nature'
-        when 36 then 'photography'
-        when 37 then 'crafts'
-        when 38 then 'crafts'
-        when 39 then 'music'
-        when 42 then 'poetry'
-        when 44 then 'philosophy'
-        when 47 then 'adventure'
-        when 48 then 'horror'
-        when 49 then 'sports'
-        when 50 then 'technology'
-        else genre
-      end
+  it('ties seeded order snapshots to the catalog and matches the order totals', async () => {
+    let mismatches = await db.exec(sql`
+      select orders.id from orders
+      join order_items on order_items.order_id = orders.id
+      join albums on albums.id = order_items.album_id
+      group by orders.id
+      having round(sum(order_items.quantity * order_items.unit_price), 2) != orders.total
+        or sum(order_items.title != albums.title or order_items.unit_price != albums.price) > 0
     `)
-    let original = await db.findMany(albums, { orderBy: ['id', 'asc'] })
-    assert.equal(new Set(original.map((album) => album.genre)).size, 26)
-    let orderItems = await db.exec(sql`select * from order_items order by order_id, album_id`)
 
-    await db.migrate(migrations)
-    await db.migrate(migrations)
-
-    assert.deepEqual(await db.findMany(albums, { orderBy: ['id', 'asc'] }), consolidated)
-    assert.deepEqual(
-      (await db.exec(sql`select * from order_items order by order_id, album_id`)).rows,
-      orderItems.rows,
-    )
+    assert.deepEqual(mismatches.rows, [])
     assert.deepEqual((await db.exec(sql`pragma foreign_key_check`)).rows, [])
-
-    await db.migrate(migrations, { direction: 'down', step: 1 })
-    assert.deepEqual(await db.findMany(albums, { orderBy: ['id', 'asc'] }), original)
   })
 
   it('stores verifiable password hashes for seeded users', async () => {
@@ -80,7 +41,7 @@ describe('record store database seed', () => {
 
     assert.ok(admin)
     assert.ok(customer)
-    assert.equal(admin.email, 'admin@bookstore.com')
+    assert.equal(admin.email, 'admin@recordstore.com')
     assert.equal(customer.email, 'customer@example.com')
     assert.notEqual(admin.password_hash, 'admin123')
     assert.notEqual(customer.password_hash, 'password123')
@@ -97,8 +58,10 @@ describe('record store database seed', () => {
 
     let journalAfter = await db.exec(sql`select count(*) as count from data_table_migrations`)
     let seededUsers = await db.exec(sql`select count(*) as count from users`)
+    let seededAlbums = await db.count(albums)
 
     assert.deepEqual(journalAfter.rows, journalBefore.rows)
     assert.equal(Number(seededUsers.rows?.[0]?.count), 2)
+    assert.equal(seededAlbums, 50)
   })
 })
