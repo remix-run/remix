@@ -122,12 +122,6 @@ export function setupComponentForHmr(
     return false
   }
 
-  if (Object.keys(state).length === 0) {
-    setup(state)
-    setupHashes.set(key, setupHash)
-    return false
-  }
-
   clearComponentHmrState(handle)
   setupHashes.delete(key)
   staleComponentKeys.add(key)
