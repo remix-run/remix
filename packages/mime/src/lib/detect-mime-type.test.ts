@@ -62,6 +62,11 @@ describe('detectMimeType()', () => {
     assert.equal(detectMimeType('file.notarealextension'), undefined)
   })
 
+  it('returns undefined for extensions that match inherited property names', () => {
+    assert.equal(detectMimeType('file.constructor'), undefined)
+    assert.equal(detectMimeType('file.__proto__'), undefined)
+  })
+
   it('returns undefined for empty string', () => {
     assert.equal(detectMimeType(''), undefined)
     assert.equal(detectMimeType('   '), undefined)

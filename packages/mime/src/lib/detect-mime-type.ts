@@ -29,7 +29,7 @@ export function detectMimeType(extension: string): string | undefined {
   // Otherwise, skip past the dot (++idx) and extract the extension.
   // Credit to mrmime for this technique.
   ext = !~idx ? ext : ext.substring(++idx)
-  return mimeTypes[ext]
+  return Object.hasOwn(mimeTypes, ext) ? mimeTypes[ext] : undefined
 }
 
 function detectCustomMimeType(extension: string): string | undefined {
