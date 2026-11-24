@@ -1232,6 +1232,54 @@ describe('frames', () => {
     expect(later.querySelector('p')?.textContent).toBe('Hydrated')
   })
 
+  it('releases hydration data when a frame is aborted during preload processing', async (t) => {
+    let root = document.createElement('section')
+    root.innerHTML = '<!-- rmx:h:h1 --><p>Server</p><!-- /rmx:h -->' + rmxDataScript('Hydrated')
+    document.body.append(root)
+
+    let data = {}
+    let controller = new AbortController()
+    let preloads = Promise.withResolvers<string[]>()
+    let frame = createTestFrame(root, {
+      data,
+      signal: controller.signal,
+      processClientEntryPreloads: () => preloads.promise,
+      resolveFrame: () => '',
+    })
+    t.after(() => frame.dispose())
+
+    expect(data).not.toEqual({})
+    controller.abort()
+    preloads.resolve([])
+    await frame.ready()
+
+    expect(data).toEqual({})
+    expect(root.querySelector('p')?.textContent).toBe('Server')
+  })
+
+  it('shares late document data across sibling frames during startup', async (t) => {
+    document.body.innerHTML = [
+      '<!-- rmx:f:first --><!-- /rmx:f -->',
+      '<!-- rmx:f:later --><!-- rmx:h:h1 --><p>Server</p><!-- /rmx:h --><!-- /rmx:f -->',
+    ].join('')
+    let frame = createTestFrame(document, {
+      data: {
+        f: {
+          first: { src: '/first', status: 'resolved' },
+          later: { src: '/later', status: 'resolved' },
+        },
+      },
+      resolveFrame: () => '',
+      loadModule: () => (handle: Handle<{ label: string }>) => () =>
+        jsx('p', { children: handle.props.label }),
+    })
+    t.after(() => frame.dispose())
+
+    document.body.insertAdjacentHTML('beforeend', rmxDataScript('Hydrated'))
+    await frame.ready()
+    expect(document.querySelector('p')?.textContent).toBe('Hydrated')
+  })
+
   it('releases pending hydration metadata when its frame is disposed', async () => {
     document.body.innerHTML = [
       '<!-- rmx:h:h1 -->',

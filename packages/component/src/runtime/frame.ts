@@ -450,7 +450,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     getContext: (type) => runtime.getContext?.(type),
     ...getSharedFrameRuntime(runtime),
     frame,
-    data: init.data,
+    // Child frames share newly discovered document data, then release their own references.
+    data: init.marker ? { ...init.data } : init.data,
     lifecycleSignal: lifecycleController.signal,
     regionTailRef: container.regionTailRef,
     regionParent: container.regionParent,
@@ -609,17 +610,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   async function hydrateInitial(): Promise<void> {
-    let reconciliationTracker = createReconciliationTracker()
-
-    if ((await initialClientEntryResources) === false) return
-    if (isRenderAborted(init.signal)) return
-    adoptFrameServerStyles(container, context.styleManager)
-    let initial = { nonce: init.nonce, navigationType: init.navigationType, from: init.from }
-    let options = { ...initial, reconciliationTracker, signal: init.signal }
-    let subFramesReady = hydrateContainer(container, { ...context, ...initial }, options)
-
     try {
-      await subFramesReady
+      if ((await initialClientEntryResources) === false || isRenderAborted(init.signal)) return
+      adoptFrameServerStyles(container, context.styleManager)
+      let reconciliationTracker = createReconciliationTracker()
+      let initial = { nonce: init.nonce, navigationType: init.navigationType, from: init.from }
+      let options = { ...initial, reconciliationTracker, signal: init.signal }
+      await hydrateContainer(container, { ...context, ...initial }, options)
 
       if (isRenderAborted(init.signal)) return
 
@@ -1787,8 +1784,7 @@ function hydrateContainer(
       topFrame: context.topFrame,
       getContext: context.getContext,
       ...getSharedFrameRuntime(context),
-      // Each frame releases its own references when hydration finishes.
-      data: { ...context.data },
+      data: context.data,
       marker: frameMarker,
     })
     context.registry.instances.set(node, subFrame)
