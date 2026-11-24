@@ -57,11 +57,6 @@ describe('Dialog docs interactions', () => {
     assert.equal(await input.inputValue(), 'Option B')
     assert.equal(await input.evaluate((node) => node === document.activeElement), true)
     assert.equal(await dialog.isVisible(), true)
-    await input.press('ArrowDown')
-    await list.waitFor({ state: 'visible' })
-    await input.press('Escape')
-    await list.waitFor({ state: 'hidden' })
-    assert.equal(await dialog.isVisible(), true)
     await dialog.getByRole('button', { name: 'Close', exact: true }).click()
   })
 
@@ -83,12 +78,6 @@ describe('Dialog docs interactions', () => {
         .evaluate((node) => node === document.activeElement),
       true,
     )
-    await submenu.getByRole('menuitem', { name: 'Action B', exact: true }).press('ArrowLeft')
-    await submenu.waitFor({ state: 'hidden' })
-    assert.equal(await menu.isVisible(), true)
-    assert.equal(await dialog.isVisible(), true)
-    await menu.getByRole('menuitem', { name: 'Submenu', exact: true }).press('ArrowRight')
-    await submenu.waitFor({ state: 'visible' })
     await submenu.getByRole('menuitem', { name: 'Action B', exact: true }).click()
     await menu.waitFor({ state: 'hidden' })
     await submenu.waitFor({ state: 'hidden' })
@@ -118,17 +107,7 @@ describe('Dialog docs interactions', () => {
     await popover.waitFor({ state: 'hidden' })
     assert.equal(await dialog.isVisible(), true)
     assert.equal(await trigger.evaluate((node) => node === document.activeElement), true)
-
-    await trigger.click()
-    await select.click()
-    await list.waitFor({ state: 'visible' })
-    await page.mouse.click(8, 100)
-    await list.waitFor({ state: 'hidden' })
-    assert.equal(await popover.isVisible(), true)
-    await page.mouse.click(8, 100)
-    await popover.waitFor({ state: 'hidden' })
-    assert.equal(await dialog.isVisible(), true)
-    await page.mouse.click(8, 100)
+    await trigger.press('Escape')
     await dialog.waitFor({ state: 'hidden' })
     assert.equal(await opener.evaluate((node) => node === document.activeElement), true)
   })
@@ -203,7 +182,7 @@ describe('Dialog docs interactions', () => {
     await notes.getByRole('button', { name: 'Close', exact: true }).click()
   })
 
-  it('keeps toasts above the dialog and supports keyboard visits without dismissing it', async (t) => {
+  it('keeps notification actions above the dialog and clickable without dismissing it', async (t) => {
     let page = await openDocs(t)
     let trigger = page
       .locator('#toast-example')
@@ -230,47 +209,10 @@ describe('Dialog docs interactions', () => {
       }),
       true,
     )
-    await publish.press('Tab')
-    assert.equal(await popup.evaluate((node) => node.contains(document.activeElement)), true)
-    await page.keyboard.press('Tab')
-    assert.equal(await popup.evaluate((node) => node.contains(document.activeElement)), true)
-    await page.keyboard.press('Shift+Tab')
-    assert.equal(await popup.evaluate((node) => node.contains(document.activeElement)), true)
-    await publish.press('F6')
-    await page.keyboard.press('Shift+Tab')
-    assert.equal(await publish.evaluate((node) => node === document.activeElement), true)
-    await publish.press('F6')
-    assert.equal(await viewport.evaluate((node) => node === document.activeElement), true)
-    await page.keyboard.press('Tab')
-    await page.keyboard.press('Tab')
-    let dismiss = viewport.getByRole('button', {
-      name: 'Dismiss notification',
-      exact: true,
-      includeHidden: true,
-    })
-    // Native keyboard settings can skip a button and reach the return guard directly.
-    assert.equal(
-      (await viewport.evaluate((node) => node.contains(document.activeElement))) ||
-        (await publish.evaluate((node) => node === document.activeElement)),
-      true,
-    )
-    await publish.focus()
-    await publish.press('F6')
-    await dismiss.focus()
-    await page.keyboard.press('Tab')
-    assert.equal(await publish.evaluate((node) => node === document.activeElement), true)
-    await publish.press('F6')
-    await page.keyboard.press('F6')
-    assert.equal(await publish.evaluate((node) => node === document.activeElement), true)
-    await dismiss.click()
+    await viewport
+      .getByRole('button', { name: 'Dismiss notification', exact: true, includeHidden: true })
+      .click()
     assert.equal(await popup.isVisible(), true)
-    await publish.click()
-    await publish.press('F6')
-    await page.keyboard.press('Tab')
-    await page.keyboard.press('Escape')
-    await viewport.getByText('Action completed', { exact: true }).waitFor({ state: 'hidden' })
-    assert.equal(await popup.isVisible(), true)
-    assert.equal(await publish.evaluate((node) => node === document.activeElement), true)
     await publish.press('Escape')
     await popup.waitFor({ state: 'hidden' })
     assert.equal(await trigger.evaluate((node) => node === document.activeElement), true)

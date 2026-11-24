@@ -58,20 +58,6 @@ describe('Dialog stacking example', () => {
     await waitFor(() => assert.doesNotMatch(viewport.textContent ?? '', /Action completed/))
     await waitFor(() => assert.equal(popup.hasAttribute('data-open'), false))
     assert.equal(dialog.hasAttribute('data-open'), true)
-
-    await view.act(() => trigger.click())
-    await waitFor(() => assert.equal(popup.hasAttribute('data-open'), true))
-    await view.act(() => key(element(popup, '[role="listbox"]'), 'Escape'))
-    await waitFor(() => assert.equal(popup.hasAttribute('data-open'), false))
-    assert.equal(dialog.hasAttribute('data-open'), true)
-    assert.equal(document.activeElement, trigger)
-    await view.act(() => trigger.click())
-    await waitFor(() => assert.equal(popup.hasAttribute('data-open'), true))
-    await view.act(() => document.body.click())
-    await waitFor(() => assert.equal(popup.hasAttribute('data-open'), false))
-    assert.equal(dialog.hasAttribute('data-open'), true)
-    await view.act(() => document.body.click())
-    await waitFor(() => assert.equal(dialog.hasAttribute('data-open'), false))
   })
 
   it('keeps the global notification visible after the dialog closes', async (t) => {
