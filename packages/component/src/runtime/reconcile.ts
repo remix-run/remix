@@ -1950,7 +1950,29 @@ export function moveNodeBefore(parent: ParentNode, node: Node, before: Node | nu
   else parent.insertBefore(node, before)
 }
 
+export function moveNodesBefore(parent: ParentNode, nodes: Node[], before: Node | null): void {
+  let placed: Node[] = []
+  for (let node of nodes) {
+    // Keep the retained snapshot in order without reclaiming nodes moved elsewhere by callbacks.
+    if (node.parentNode !== parent) continue
+    let previous = placed.at(-1)
+    while (previous && previous.parentNode !== parent) {
+      placed.pop()
+      previous = placed.at(-1)
+    }
+    let ref = previous ? previous.nextSibling : before?.parentNode === parent ? before : null
+    if (node !== ref && node.nextSibling !== ref) moveNodeBefore(parent, node, ref)
+    placed.push(node)
+  }
+}
+
 function moveDomRange(domParent: ParentNode, first: Node, last: Node, before: Node | null): void {
+  if (first === last) {
+    moveNodeBefore(domParent, first, before)
+    return
+  }
+
+  let nodes: Node[] = []
   let portals = portalContainers.get(domParent)
   let current: Node | null = first
   while (current) {
@@ -1961,10 +1983,11 @@ function moveDomRange(domParent: ParentNode, first: Node, last: Node, before: No
       continue
     }
     let next: Node | null = current === last ? null : current.nextSibling
-    moveNodeBefore(domParent, current, before)
+    nodes.push(current)
     if (current === last) break
     current = next
   }
+  moveNodesBefore(domParent, nodes, before)
 }
 
 export function setActiveSchedulerUpdateParents(parents: ParentNode[] | undefined) {

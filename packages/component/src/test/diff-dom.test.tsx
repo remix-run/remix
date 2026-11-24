@@ -78,6 +78,120 @@ function diffDom(
 
 describe('diffNodes', () => {
   describe('state-preserving moves', () => {
+    it(
+      'keeps pending content inside its range when the only insertion anchor is removed',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      (t) => {
+        let container = document.createElement('div')
+        document.body.append(container)
+        t.after(() => container.remove())
+        let anchor: Element | undefined
+        customElements.define(
+          'rmx-moving-range-only-anchor',
+          class extends HTMLElement {
+            connectedMoveCallback() {
+              anchor?.remove()
+            }
+          },
+        )
+        let moving =
+          '<!-- rmx:h:a --><rmx-moving-range-only-anchor></rmx-moving-range-only-anchor>' +
+          '<span>Kept</span><!-- /rmx:h -->'
+        let rest = '<p data-rmx-key="b">B</p>'
+        container.innerHTML = rest + moving
+        let start = container.childNodes[1]
+        invariant(start instanceof Comment)
+        attachClientEntryOwner(start)
+        anchor = container.querySelector('p') ?? undefined
+        invariant(anchor)
+        let range = Array.from(container.childNodes).slice(1)
+
+        diffDom(container, moving + rest, {
+          h: { a: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} } },
+        })
+
+        expect(anchor.parentNode).toBe(null)
+        expect(Array.from(container.childNodes)).toEqual(range)
+      },
+    )
+
+    it(
+      'keeps a range together when its anchor moves elsewhere in the same parent',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      (t) => {
+        let container = document.createElement('div')
+        document.body.append(container)
+        t.after(() => container.remove())
+        let anchor: Element | undefined
+        customElements.define(
+          'rmx-moving-range-shift-anchor',
+          class extends HTMLElement {
+            connectedMoveCallback() {
+              if (anchor) container.prepend(anchor)
+            }
+          },
+        )
+        let moving =
+          '<!-- rmx:h:a --><rmx-moving-range-shift-anchor></rmx-moving-range-shift-anchor>' +
+          '<span>Kept</span><!-- /rmx:h -->'
+        let rest = '<p data-rmx-key="b">B</p>'
+        container.innerHTML = rest + moving
+        let start = container.childNodes[1]
+        invariant(start instanceof Comment)
+        attachClientEntryOwner(start)
+        anchor = container.querySelector('p') ?? undefined
+        invariant(anchor)
+        let range = Array.from(container.childNodes).slice(1)
+
+        diffDom(container, moving + rest, {
+          h: { a: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} } },
+        })
+
+        expect(Array.from(container.childNodes)).toEqual([anchor, ...range])
+      },
+    )
+
+    it(
+      'uses a surviving range prefix when a move callback removes itself and the anchor',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      (t) => {
+        let container = document.createElement('div')
+        document.body.append(container)
+        t.after(() => container.remove())
+        let anchor: Element | undefined
+        customElements.define(
+          'rmx-moving-range-remove-self',
+          class extends HTMLElement {
+            connectedMoveCallback() {
+              this.remove()
+              anchor?.remove()
+            }
+          },
+        )
+        let moving =
+          '<!-- rmx:h:a --><rmx-moving-range-remove-self></rmx-moving-range-remove-self>' +
+          '<span>Kept</span><!-- /rmx:h -->'
+        let rest = '<p data-rmx-key="b">B</p><p data-rmx-key="c">C</p>'
+        container.innerHTML = rest + moving
+        let start = container.childNodes[2]
+        invariant(start instanceof Comment)
+        attachClientEntryOwner(start)
+        anchor = container.querySelector('p') ?? undefined
+        invariant(anchor)
+        let range = Array.from(container.childNodes)
+          .slice(2)
+          .filter((node) => node.nodeName !== 'RMX-MOVING-RANGE-REMOVE-SELF')
+        let last = container.childNodes[1]
+
+        diffDom(container, moving + rest, {
+          h: { a: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} } },
+        })
+
+        expect(anchor.parentNode).toBe(null)
+        expect(Array.from(container.childNodes)).toEqual([...range, last])
+      },
+    )
+
     it('does not restore nodes removed by a connection callback during a range move', (t) => {
       let container = document.createElement('div')
       document.body.append(container)

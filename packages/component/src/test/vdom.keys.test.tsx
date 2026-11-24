@@ -795,6 +795,79 @@ describe('vnode rendering (keys)', () => {
 
   describe('focus and selection across keyed moves', () => {
     it(
+      'keeps a keyed fragment together when a move callback removes its anchor',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      (t) => {
+        let { render, container } = createConnectedRoot(t)
+        let anchor: Element | undefined
+        customElements.define(
+          'rmx-keyed-move-remove-anchor',
+          class extends HTMLElement {
+            connectedMoveCallback() {
+              anchor?.remove()
+            }
+          },
+        )
+        let moving = (
+          <Fragment key="a">
+            start{createElement('rmx-keyed-move-remove-anchor', {})}
+            <span>Kept</span>end
+          </Fragment>
+        )
+        let b = <p key="b">B</p>
+        let c = <p key="c">C</p>
+        render([b, c, moving])
+        anchor = container.querySelector('p') ?? undefined
+        invariant(anchor)
+        let range = Array.from(container.childNodes).slice(2)
+        let last = container.childNodes[1]
+
+        render([moving, b, c])
+
+        expect(anchor.parentNode).toBe(null)
+        expect(Array.from(container.childNodes)).toEqual([...range, last])
+      },
+    )
+
+    it(
+      'retains the rest of a keyed fragment when a move callback removes its next node',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      (t) => {
+        let { render, container } = createConnectedRoot(t)
+        let removed: Element | undefined
+        customElements.define(
+          'rmx-keyed-move-remove-next',
+          class extends HTMLElement {
+            connectedMoveCallback() {
+              removed?.remove()
+            }
+          },
+        )
+        let moving = (
+          <Fragment key="a">
+            start{createElement('rmx-keyed-move-remove-next', {})}
+            <span id="removed">Removed</span>
+            <span>Kept</span>end
+          </Fragment>
+        )
+        let b = <p key="b">B</p>
+        let c = <p key="c">C</p>
+        render([moving, b, c])
+        removed = container.querySelector('#removed') ?? undefined
+        invariant(removed)
+        let range = Array.from(container.childNodes)
+          .slice(0, -2)
+          .filter((node) => node !== removed)
+        let rest = Array.from(container.childNodes).slice(-2)
+
+        render([b, c, moving])
+
+        expect(removed.parentNode).toBe(null)
+        expect(Array.from(container.childNodes)).toEqual([...rest, ...range])
+      },
+    )
+
+    it(
       'uses connectedMoveCallback only for custom elements that define it',
       { skip: typeof Element.prototype.moveBefore !== 'function' },
       (t) => {
