@@ -45,3 +45,9 @@ patchedDependencies:
   playwright-core@1.63.0: patches/playwright-core@1.63.0.patch
 
 shellEmulator: true
+
+# TS-ESTree declarations use the JavaScript compiler API, which TypeScript 7 omits.
+packageExtensions:
+  '@typescript-eslint/types@8.72.2':
+    dependencies:
+      typescript: ^6.0.0

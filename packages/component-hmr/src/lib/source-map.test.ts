@@ -137,23 +137,20 @@ console.log('AFTER_COMPONENTS')`
     assertMapped(result, source, browserOptions.moduleUrl, 'BINDING_RENDER')
   })
 
-  it('maps declaration names after canonicalising escapes and removing type annotations', () => {
+  it('maps retained escaped declaration names', () => {
     let source = String.raw`export function Counter() {
   let \u0056ALUE:
     string = 'CANONICAL_INITIALIZER'
   return () => VALUE + 'CANONICAL_RENDER'
 }`
     let result = transformComponentsForBrowser(source, browserOptions)
-    assertPosition(result, 'VALUE =', {
-      source: browserOptions.moduleUrl,
-      ...getPosition(source, String.raw`\u0056ALUE:`, 1),
-    })
+    assertMapped(result, source, browserOptions.moduleUrl, String.raw`\u0056ALUE:`)
     assertMapped(result, source, browserOptions.moduleUrl, 'CANONICAL_INITIALIZER')
     assertMapped(result, source, browserOptions.moduleUrl, 'VALUE +')
     assertMapped(result, source, browserOptions.moduleUrl, 'CANONICAL_RENDER')
   })
 
-  it('maps moved setup declarations without mapping generated state assignments', () => {
+  it('maps moved setup declarations without mapping generated binding accessors', () => {
     let source = `export function Counter() {
   function label() {
     return 'DECLARATION_BODY'
@@ -163,7 +160,7 @@ console.log('AFTER_COMPONENTS')`
     let result = transformComponentsForBrowser(source, browserOptions)
     assertMapped(result, source, browserOptions.moduleUrl, 'function label')
     assertMapped(result, source, browserOptions.moduleUrl, 'DECLARATION_BODY')
-    assertPosition(result, ' = label;', { source: null, line: null, column: null })
+    assertPosition(result, 'retainComponentHmrBinding', { source: null, line: null, column: null })
   })
 
   it('maps the first and later lines of moved browser render code', () => {
@@ -186,7 +183,6 @@ console.log('AFTER_COMPONENTS')`
 }`
     let result = transformComponentsForBrowser(source, browserOptions)
     assertPosition(result, 'getComponentHandleForHmr', { source: null, line: null, column: null })
-    assertPosition(result, ', Counter);', { source: null, line: null, column: null })
     assertPosition(result, 'getCurrentComponentForHmr', { source: null, line: null, column: null })
     assertPosition(result, 'registerComponentForHmr', { source: null, line: null, column: null })
   })
@@ -201,7 +197,7 @@ console.log('AFTER_COMPONENTS')`
     assertPosition(result, 'registerComponentForHmr', { source: null, line: null, column: null })
   })
 
-  it('maps browser parameter defaults in both copied signatures', () => {
+  it('maps browser parameter defaults in the setup signature', () => {
     let source = `export function Counter(
   handle = 'BROWSER_PARAMETER'
 ) {
@@ -209,7 +205,6 @@ console.log('AFTER_COMPONENTS')`
 }`
     let result = transformComponentsForBrowser(source, browserOptions)
     assertMapped(result, source, browserOptions.moduleUrl, 'BROWSER_PARAMETER')
-    assertMapped(result, source, browserOptions.moduleUrl, 'BROWSER_PARAMETER', 1, 2)
     assertMapped(result, source, browserOptions.moduleUrl, 'BROWSER_BODY')
   })
 
@@ -223,11 +218,138 @@ export const Counter = clientEntry(import.meta.url, function Counter(
 console.log('AFTER_ENTRY')`
     let result = transformComponentsForServer(source, serverOptions)
     assertMapped(result, source, serverOptions.moduleUrl, 'SERVER_PARAMETER')
-    assertMapped(result, source, serverOptions.moduleUrl, 'SERVER_PARAMETER', 1, 2)
     assertMapped(result, source, serverOptions.moduleUrl, 'ENTRY_BODY')
     assertMapped(result, source, serverOptions.moduleUrl, 'AFTER_ENTRY')
     assertPosition(result, 'getCurrentComponentForHmr', { source: null, line: null, column: null })
     assertPosition(result, 'registerComponentForHmr', { source: null, line: null, column: null })
+  })
+
+  it('maps hoisted function bodies without mapping synthetic var declarations', () => {
+    let source = `export function Counter() {
+  return () => label() + value
+  function label() { return 'HOISTED_BODY' }
+  var value = 'UNREACHABLE_INITIALIZER'
+}`
+    let result = transformComponentsForBrowser(source, browserOptions)
+    assertMapped(result, source, browserOptions.moduleUrl, 'function label')
+    assertMapped(result, source, browserOptions.moduleUrl, 'HOISTED_BODY')
+    assertPosition(result, 'var value;', { source: null, line: null, column: null })
+  })
+
+  it('maps bare calls, optional calls and template tags through receiver rewrites', () => {
+    let source = `export function Counter() {
+  function label(value) { return value }
+  return () => [label('BARE_CALL'), label?.('OPTIONAL_CALL'), label\`TAGGED_CALL\`]
+}`
+    let result = transformComponentsForBrowser(source, browserOptions)
+    assertPosition(result, "label)('BARE_CALL')", {
+      source: browserOptions.moduleUrl,
+      ...getPosition(source, "label('BARE_CALL')", 1),
+    })
+    assertMapped(result, source, browserOptions.moduleUrl, 'BARE_CALL')
+    assertPosition(result, "label)?.('OPTIONAL_CALL')", {
+      source: browserOptions.moduleUrl,
+      ...getPosition(source, "label?.('OPTIONAL_CALL')", 1),
+    })
+    assertMapped(result, source, browserOptions.moduleUrl, 'OPTIONAL_CALL')
+    assertPosition(result, 'label)`TAGGED_CALL`', {
+      source: browserOptions.moduleUrl,
+      ...getPosition(source, 'label`TAGGED_CALL`', 1),
+    })
+    assertMapped(result, source, browserOptions.moduleUrl, 'TAGGED_CALL')
+  })
+
+  it('maps assignment initializers through inferred-name wrappers', () => {
+    let source = `export function Counter() {
+  let value
+  return () => {
+    value = () => 'ARROW_BODY'
+    value ||= class { static label = 'CLASS_BODY' }
+    return value + 'AFTER_ASSIGNMENTS'
+  }
+}`
+    let result = transformComponentsForBrowser(source, browserOptions)
+    assertPosition(result, 'value = ({', {
+      source: browserOptions.moduleUrl,
+      ...getPosition(source, 'value =', 1),
+    })
+    assertMapped(result, source, browserOptions.moduleUrl, 'ARROW_BODY')
+    assertMapped(result, source, browserOptions.moduleUrl, 'value ||=')
+    assertMapped(result, source, browserOptions.moduleUrl, 'CLASS_BODY')
+    assertMapped(result, source, browserOptions.moduleUrl, 'AFTER_ASSIGNMENTS')
+  })
+
+  it('maps nested initializers through inferred-name wrappers', () => {
+    let source = `export function Counter() {
+  let outer, inner
+  return () => {
+    outer = () => inner = () => 'NESTED_BODY'
+    return outer()() + 'AFTER_NESTED'
+  }
+}`
+    let result = transformComponentsForBrowser(source, browserOptions)
+    assertPosition(result, 'inner = ({', {
+      source: browserOptions.moduleUrl,
+      ...getPosition(source, 'inner =', 1),
+    })
+    assertMapped(result, source, browserOptions.moduleUrl, 'NESTED_BODY')
+    assertMapped(result, source, browserOptions.moduleUrl, 'AFTER_NESTED')
+  })
+
+  it('maps shorthand assignment defaults through key and inferred-name rewrites', () => {
+    let source = `export function Counter() {
+  let value
+  return () => {
+    ({ value = () => 'SHORTHAND_DEFAULT' } = {})
+    return { value, after: 'AFTER_SHORTHAND' }
+  }
+}`
+    let result = transformComponentsForBrowser(source, browserOptions)
+    assertPosition(result, 'value = ({', {
+      source: browserOptions.moduleUrl,
+      ...getPosition(source, 'value =', 1),
+    })
+    assertMapped(result, source, browserOptions.moduleUrl, 'SHORTHAND_DEFAULT')
+    assertMapped(result, source, browserOptions.moduleUrl, 'value, after:')
+    assertMapped(result, source, browserOptions.moduleUrl, 'AFTER_SHORTHAND')
+  })
+
+  it('maps browser client-entry self-bindings through helper capture and setup extraction', () => {
+    let source = `import { clientEntry } from '@remix-run/component'
+export const Counter = clientEntry(import.meta.url, wrap(function Self(
+  handle, read = () => Self.calls + 'SELF_DEFAULT'
+) {
+  let value = Self.calls + 'SELF_SETUP'
+  return () => Self.calls + value + read() + 'SELF_RENDER'
+}))
+console.log('AFTER_CAPTURE')`
+    let result = transformComponentsForBrowser(source, browserOptions)
+    assertMapped(result, source, browserOptions.moduleUrl, 'Self.calls')
+    assertMapped(result, source, browserOptions.moduleUrl, 'SELF_DEFAULT')
+    assertMapped(result, source, browserOptions.moduleUrl, 'Self.calls', 2)
+    assertMapped(result, source, browserOptions.moduleUrl, 'SELF_SETUP')
+    assertMapped(result, source, browserOptions.moduleUrl, 'Self.calls', 3)
+    assertMapped(result, source, browserOptions.moduleUrl, 'SELF_RENDER')
+    assertMapped(result, source, browserOptions.moduleUrl, 'AFTER_CAPTURE')
+  })
+
+  it('maps server client-entry self-bindings through helper capture and body extraction', () => {
+    let source = `import { clientEntry } from '@remix-run/component'
+export const Counter = clientEntry(import.meta.url, wrap(function Self(
+  handle, read = () => Self.calls + 'SELF_DEFAULT'
+) {
+  let value = Self.calls + 'SELF_SETUP'
+  return () => Self.calls + value + read() + 'SELF_RENDER'
+}))
+console.log('AFTER_CAPTURE')`
+    let result = transformComponentsForServer(source, serverOptions)
+    assertMapped(result, source, serverOptions.moduleUrl, 'Self.calls')
+    assertMapped(result, source, serverOptions.moduleUrl, 'SELF_DEFAULT')
+    assertMapped(result, source, serverOptions.moduleUrl, 'Self.calls', 2)
+    assertMapped(result, source, serverOptions.moduleUrl, 'SELF_SETUP')
+    assertMapped(result, source, serverOptions.moduleUrl, 'Self.calls', 3)
+    assertMapped(result, source, serverOptions.moduleUrl, 'SELF_RENDER')
+    assertMapped(result, source, serverOptions.moduleUrl, 'AFTER_CAPTURE')
   })
 
   it('preserves browser mappings when authored text contains generated code', () => {
@@ -321,36 +443,48 @@ console.log('AFTER_ADJACENT_ENTRIES')`
     assertPosition(result, 'function ', { source: null, line: null, column: null })
   })
 
-  it('maps browser output after a statement is overwritten more than once', () => {
-    let source = `export const First = function() {
-  return () => 'FIRST_BROWSER_BODY'
-}, Second = function() {
-  return () => 'SECOND_BROWSER_BODY'
-}
-console.log('AFTER_BROWSER_DECLARATION')`
+  it('maps retained browser source between shared function-expression components', () => {
+    let source = `export const before = 'BEFORE_FUNCTIONS', First = function Self(
+  handle, read = () => Self.calls + 'FIRST_DEFAULT'
+) {
+  return () => read() + 'FIRST_RENDER'
+}, middle = 'BETWEEN_FUNCTIONS', Second = function() {
+  return () => 'SECOND_RENDER'
+}, after = 'AFTER_FUNCTIONS'`
     let result = transformComponentsForBrowser(source, browserOptions)
     assert.equal(
       result.code,
       transformComponentsForBrowser(source, { ...browserOptions, sourceMap: false }).code,
     )
-    assertMapped(result, source, browserOptions.moduleUrl, 'SECOND_BROWSER_BODY')
-    assertMapped(result, source, browserOptions.moduleUrl, 'AFTER_BROWSER_DECLARATION')
+    assertMapped(result, source, browserOptions.moduleUrl, 'BEFORE_FUNCTIONS')
+    assertMapped(result, source, browserOptions.moduleUrl, 'Self.calls')
+    assertMapped(result, source, browserOptions.moduleUrl, 'FIRST_DEFAULT')
+    assertMapped(result, source, browserOptions.moduleUrl, 'FIRST_RENDER')
+    assertMapped(result, source, browserOptions.moduleUrl, 'BETWEEN_FUNCTIONS')
+    assertMapped(result, source, browserOptions.moduleUrl, 'SECOND_RENDER')
+    assertMapped(result, source, browserOptions.moduleUrl, 'AFTER_FUNCTIONS')
   })
 
-  it('maps server output after a statement is overwritten more than once', () => {
-    let source = `export const First = function() {
-  return () => 'FIRST_SERVER_BODY'
-}, Second = function() {
-  return () => 'SECOND_SERVER_BODY'
-}
-console.log('AFTER_SERVER_DECLARATION')`
+  it('maps retained server source between shared function-expression components', () => {
+    let source = `export const before = 'BEFORE_FUNCTIONS', First = function Self(
+  handle, read = () => Self.calls + 'FIRST_DEFAULT'
+) {
+  return () => read() + 'FIRST_RENDER'
+}, middle = 'BETWEEN_FUNCTIONS', Second = function() {
+  return () => 'SECOND_RENDER'
+}, after = 'AFTER_FUNCTIONS'`
     let result = transformComponentsForServer(source, serverOptions)
     assert.equal(
       result.code,
       transformComponentsForServer(source, { ...serverOptions, sourceMap: false }).code,
     )
-    assertMapped(result, source, serverOptions.moduleUrl, 'SECOND_SERVER_BODY')
-    assertMapped(result, source, serverOptions.moduleUrl, 'AFTER_SERVER_DECLARATION')
+    assertMapped(result, source, serverOptions.moduleUrl, 'BEFORE_FUNCTIONS')
+    assertMapped(result, source, serverOptions.moduleUrl, 'Self.calls')
+    assertMapped(result, source, serverOptions.moduleUrl, 'FIRST_DEFAULT')
+    assertMapped(result, source, serverOptions.moduleUrl, 'FIRST_RENDER')
+    assertMapped(result, source, serverOptions.moduleUrl, 'BETWEEN_FUNCTIONS')
+    assertMapped(result, source, serverOptions.moduleUrl, 'SECOND_RENDER')
+    assertMapped(result, source, serverOptions.moduleUrl, 'AFTER_FUNCTIONS')
   })
 
   it('maps browser setup and render code with mixed carriage-return line endings', () => {
@@ -374,12 +508,11 @@ console.log('AFTER_SERVER_DECLARATION')`
     ].join('')
     let result = transformComponentsForServer(source, serverOptions)
     assertMapped(result, source, serverOptions.moduleUrl, 'LS_PARAMETER')
-    assertMapped(result, source, serverOptions.moduleUrl, 'LS_PARAMETER', 1, 2)
     assertMapped(result, source, serverOptions.moduleUrl, 'LS_INITIALIZER')
     assertMapped(result, source, serverOptions.moduleUrl, 'LS_RENDER')
   })
 
-  it('maps multiline browser template fragments across copies and binding rewrites', () => {
+  it('maps multiline browser template fragments through binding rewrites', () => {
     let source = [
       'export function Counter(handle = `TEMPLATE_PARAMETER_FIRST\u2028TEMPLATE_PARAMETER_LAST`) {\n',
       '  let value = `TEMPLATE_SETUP_FIRST\u2029TEMPLATE_SETUP_LAST`\n',
@@ -389,8 +522,6 @@ console.log('AFTER_SERVER_DECLARATION')`
     let result = transformComponentsForBrowser(source, browserOptions)
     assertMapped(result, source, browserOptions.moduleUrl, 'TEMPLATE_PARAMETER_FIRST')
     assertMapped(result, source, browserOptions.moduleUrl, 'TEMPLATE_PARAMETER_LAST')
-    assertMapped(result, source, browserOptions.moduleUrl, 'TEMPLATE_PARAMETER_FIRST', 1, 2)
-    assertMapped(result, source, browserOptions.moduleUrl, 'TEMPLATE_PARAMETER_LAST', 1, 2)
     assertMapped(result, source, browserOptions.moduleUrl, 'TEMPLATE_SETUP_FIRST')
     assertMapped(result, source, browserOptions.moduleUrl, 'TEMPLATE_SETUP_LAST')
     assertMapped(result, source, browserOptions.moduleUrl, 'TEMPLATE_RENDER_FIRST')

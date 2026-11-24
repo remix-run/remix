@@ -84,6 +84,15 @@ export function getComponentHmrState(handle: ComponentHmrHandle): ComponentHmrSt
   return state
 }
 
+export function retainComponentHmrBinding(
+  state: ComponentHmrState,
+  name: string,
+  get: () => unknown,
+  set?: (value: unknown) => void,
+): void {
+  Object.defineProperty(state, name, { enumerable: true, configurable: true, get, set })
+}
+
 export function setupComponentForHmr(
   handle: ComponentHmrHandle,
   state: ComponentHmrState,
