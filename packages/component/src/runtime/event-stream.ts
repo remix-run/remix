@@ -102,6 +102,19 @@ export function createEventParser(): (text: string) => ServerSentEvent[] {
 }
 
 /**
+ * Serializes frame HTML as one server-sent event block.
+ *
+ * @param data Event payload, which may span several lines.
+ * @returns The block's wire text, including its terminating blank line.
+ */
+export function serializeEvent(data: string): string {
+  return `${data
+    .split('\n')
+    .map((line) => `data: ${line}`)
+    .join('\n')}\n\n`
+}
+
+/**
  * Converts a server-sent event body into a stream of frame HTML batches.
  *
  * Every event's data is trusted frame HTML: a full snapshot of the frame's content that is diffed
