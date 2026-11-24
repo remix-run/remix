@@ -293,7 +293,12 @@ export function toVNode(node: unknown, hostChild = false): VNodeInput {
     if (type === Fragment || typeof type === 'string') {
       let hostProps = parseHostProps(props)
       if (type === Fragment) {
-        return { kind: 'fragment', type: Fragment, key, _children: childrenToVNodes(hostProps.children) }
+        return {
+          kind: 'fragment',
+          type: Fragment,
+          key,
+          _children: childrenToVNodes(hostProps.children),
+        }
       }
       let children: VNodeInput[]
       if (hostProps.innerHTML != null) {
@@ -311,8 +316,16 @@ export function toVNode(node: unknown, hostChild = false): VNodeInput {
       return { kind: 'portal', type: p, key, props: p[PORTAL_NODE].parseProps(props) }
     }
     if (Object.hasOwn(fn, FRAME_NODE)) {
-      invariant(typeof props.src === 'string' && props.src.length > 0, '<Frame /> requires a src prop')
-      return { kind: 'frame', type: fn as FrameComponent, key, props: props as RuntimeElementProps & FrameProps }
+      invariant(
+        typeof props.src === 'string' && props.src.length > 0,
+        '<Frame /> requires a src prop',
+      )
+      return {
+        kind: 'frame',
+        type: fn as FrameComponent,
+        key,
+        props: props as RuntimeElementProps & FrameProps,
+      }
     }
     return { kind: 'component', type: fn, key, props }
   }
@@ -837,7 +850,10 @@ function reconcileHost(
     let el = dom
     scheduler.enqueueTasks([
       () => {
-        if (!el.isConnected || (el instanceof HTMLInputElement && el.type === 'radio' && !el.checked))
+        if (
+          !el.isConnected ||
+          (el instanceof HTMLInputElement && el.type === 'radio' && !el.checked)
+        )
           return
         el.dispatchEvent(new Event('input', { bubbles: true }))
         if (
@@ -1088,7 +1104,8 @@ export function diffChildren(
           inOrder = false
         }
       }
-      if (!inOrder) return patchKeyedChildren(curr, next, domParent, vParent, context, cursor, anchor)
+      if (!inOrder)
+        return patchKeyedChildren(curr, next, domParent, vParent, context, cursor, anchor)
     } else if (vParent.kind !== 'fragment') {
       warnDuplicateKeys(next)
     }

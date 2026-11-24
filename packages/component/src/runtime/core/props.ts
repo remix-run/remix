@@ -70,8 +70,7 @@ function patchHostProp(
   select: HTMLSelectElement | null,
 ): void {
   let { attr, ns } = normalizeAttributeName(name, isSvg)
-  let useProp =
-    !isSvg && name in dom && !ATTR_FALLBACK.test(name) && !BOOLEANISH_ATTR.test(attr)
+  let useProp = !isSvg && name in dom && !ATTR_FALLBACK.test(name) && !BOOLEANISH_ATTR.test(attr)
   let el = dom as Element & Record<string, unknown>
   let del = () =>
     ns ? dom.removeAttributeNS(ns, attr.slice(attr.indexOf(':') + 1)) : dom.removeAttribute(attr)
@@ -248,12 +247,12 @@ export function normalizeAttributeName(name: string, isSvg: boolean): AttributeN
     let prefix = m[1]
     let local = m[2] ?? m[3].toLowerCase()
     if (
-      (prefix === 'xmlns'
+      prefix === 'xmlns'
         ? local === 'xlink'
         : (prefix === 'xlink'
             ? /^(?:href|actuate|arcrole|role|show|title|type)$/
             : /^(?:base|lang|space)$/
-          ).test(local))
+          ).test(local)
     ) {
       let attr = `${prefix}:${local}`
       return prefix === 'xmlns'

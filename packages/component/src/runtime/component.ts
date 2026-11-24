@@ -553,7 +553,8 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
     if (signal === undefined && tasks.some((task) => task.length >= 1)) {
       renderController ??= new AbortController()
     }
-    let resolved = signal ?? renderController?.signal ?? (sharedAbortedSignal ??= AbortSignal.abort())
+    let resolved =
+      signal ?? renderController?.signal ?? (sharedAbortedSignal ??= AbortSignal.abort())
     return tasks.splice(0).map((task) => () => task(resolved))
   }
 

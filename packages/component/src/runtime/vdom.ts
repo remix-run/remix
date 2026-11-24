@@ -301,7 +301,11 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
   let postCommitTasks: EmptyFn[] = []
   let flushState = 0 // 0=idle, 1=scheduled, 2=flushing
   let cascading:
-    | { total: number; byNode: WeakMap<CommittedComponentNode, number>; byName: Map<string, number> }
+    | {
+        total: number
+        byNode: WeakMap<CommittedComponentNode, number>
+        byName: Map<string, number>
+      }
     | undefined
   let phaseEvents: EventTarget | undefined
 
