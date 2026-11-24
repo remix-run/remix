@@ -16,7 +16,7 @@ const ENTRIES = [
 
 let lines: LogLine[] = []
 let nextId = 1
-let listeners = new Set<(line: LogLine) => void>()
+const listeners = new Set<(line: LogLine) => void>()
 let ticker: ReturnType<typeof setInterval> | undefined
 
 /** Lines written so far, which a joining frame receives as one snapshot. */

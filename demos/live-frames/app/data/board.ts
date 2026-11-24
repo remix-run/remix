@@ -24,7 +24,7 @@ let departures: Departure[] = DESTINATIONS.map(([service, destination], index) =
   departsIn: 90 + index * 45,
 }))
 
-let listeners = new Set<() => void>()
+const listeners = new Set<() => void>()
 let ticker: ReturnType<typeof setInterval> | undefined
 
 /** Departures as they stand right now, soonest first. */

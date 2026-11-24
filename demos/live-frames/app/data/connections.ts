@@ -1,5 +1,5 @@
 let connections = 0
-let drops = new Set<() => void>()
+const drops = new Set<() => void>()
 
 /** Counts a stream request, so a board can show which connection is feeding it. */
 export function countConnection(): number {
