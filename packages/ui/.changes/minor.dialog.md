@@ -1,6 +1,4 @@
-Build custom dialogs with `@remix-run/ui/dialog`. Compose a `Context` with trigger, surface, backdrop, title, description, close, and focus mixins. Wrap the surface in `dialog.SurfaceContext`, inside `dialog.Portal` when portaled, for declarative focus guards that preserve browser Tab navigation and wrap focus when it reaches a boundary. Dialogs support controlled or uncontrolled state, cancelable changes, modal and non-modal behavior, focus trapping and restoration, nested dismissal, and exit transitions with nesting support.
-
-Global `toast.root()` regions remain interactive while a modal dialog is open. Toast actions keep the modal open while dismissing transient popups, and Escape handled by a notification does not dismiss underlying layers. By default, closing a dialog preserves notification focus and updates the remembered return target, including when a notification action closes both its originating popup and dialog. Explicit dialog focus return targets take precedence when closing completes.
+Build custom dialogs with `@remix-run/ui/dialog`. Compose a `Context` with trigger, surface, backdrop, title, description, close, and focus mixins. Wrap the surface in `dialog.SurfaceContext`, inside `dialog.Portal` when portaled, for declarative focus guards that preserve browser tab navigation and wrap focus when it reaches a boundary. Dialogs support controlled or uncontrolled state, cancelable changes, modal and non-modal behavior, focus trapping and restoration, nested dismissal, and exit transitions with nesting support.
 
 ```tsx
 <dialog.Context>
@@ -15,6 +13,4 @@ Global `toast.root()` regions remain interactive while a modal dialog is open. T
 </dialog.Context>
 ```
 
-Use `dialog.Portal` to render outside clipping ancestors and coordinate non-modal keyboard and accessibility navigation with its declaration position. It uses the `Portal` component from `remix/component`. Its `container` prop selects a destination in the same document's light DOM. Changing the container remounts the content and resets its local state. `dialog.Portal` must be declared outside a shadow root and use a container outside shadow roots. Keep `dialog.SurfaceContext` inside it, or omit the Portal for inline rendering.
-
-Style background dialogs with `--dialog-open-descendant-depth`, which is 0 on the front dialog, 1 on its parent, and 2 on the next parent. `data-child-dialog-open` identifies surfaces with an open nested dialog, and `data-nested` identifies nested surfaces and backdrops.
+Use `dialog.Portal` to render outside clipping ancestors. Keep `dialog.SurfaceContext` inside it, or omit the Portal for inline rendering.
