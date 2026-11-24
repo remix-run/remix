@@ -1,11 +1,5 @@
 import { invariant } from './invariant.ts'
-import {
-  canMoveBefore,
-  excludePortalRanges,
-  getStableIndexes,
-  moveNodesBefore,
-  SiblingPlacement,
-} from './reconcile.ts'
+import { excludePortalRanges, getStableIndexes, placeNodeBefore } from './reconcile.ts'
 import {
   getFrameId,
   getHydrationId,
@@ -171,9 +165,6 @@ export function diffNodes(
   regionTailRef = context.regionTailRef ?? currentNodes.at(-1)?.nextSibling ?? null,
 ): void {
   invariant(parent, 'Parent node not found')
-  let regionHeadRef = currentNodes.length
-    ? currentNodes[0].previousSibling
-    : (regionTailRef?.previousSibling ?? null)
   let currentUnits = parseSiblingUnits(excludePortalRanges(currentNodes, parent), context, false)
   let nextUnits = parseSiblingUnits(nextNodes, context, true)
   matchSiblingUnits(currentUnits, nextUnits, isDocumentHead(parent))
@@ -242,12 +233,12 @@ export function diffNodes(
   }
 
   let stable = getStableCommittedIndexes(nextUnits, parent)
-  let placement = new SiblingPlacement(parent, regionTailRef, regionHeadRef)
+  let anchor: Node | null = regionTailRef
   for (let i = nextUnits.length - 1; i >= 0; i--) {
     let unit = nextUnits[i]
-    if (unit.match && unit.start.parentNode !== parent) continue
-    if (stable.has(i)) placement.retain(unit.start, unit.end ?? unit.start)
-    else placeSiblingUnitBefore(unit, placement)
+    if (!stable.has(i))
+      placeSiblingUnitBefore(unit, parent, anchor?.parentNode === parent ? anchor : null)
+    if (unit.start.parentNode === parent) anchor = unit.start
   }
 }
 
@@ -433,34 +424,17 @@ function getBoundaryKey(
   }
 }
 
-function placeSiblingUnitBefore(unit: SiblingUnit, placement: SiblingPlacement): void {
-  if (unit.match && !placement.contains(unit.start)) return
+function placeSiblingUnitBefore(unit: SiblingUnit, parent: ParentNode, ref: Node | null): void {
+  if (unit.start.parentNode === parent && (unit.end ?? unit.start).nextSibling === ref) return
   if (!unit.kind) {
-    placement.move(unit.start)
-    return
-  }
-  let parent = placement.parent
-  let ref = placement.anchor
-  if (ref === undefined) return
-  if (unit.match && !placement.contains(unit.end)) return
-  if (unit.start.parentNode === parent && unit.end.nextSibling === ref) {
-    placement.retain(unit.start, unit.end)
-    return
-  }
-  let nodes = collectNodeRange(unit.start, unit.end, true)
-  if (nodes.at(-1) !== unit.end) return
-  // Do not stage live ranges in a fragment: that would disconnect their contents
-  // before moveBefore() can preserve their browser-managed state.
-  if (nodes.every((node) => canMoveBefore(parent, node))) {
-    moveNodesBefore(placement, nodes)
+    placeNodeBefore(parent, unit.start, ref)
     return
   }
 
-  let fragment = createFragment(unit.start.ownerDocument, nodes)
-  ref = placement.anchor
-  if (ref === undefined) return
-  parent.insertBefore(fragment, ref)
-  for (let i = nodes.length - 1; i >= 0; i--) placement.retain(nodes[i])
+  parent.insertBefore(
+    createFragment(unit.start.ownerDocument, collectNodeRange(unit.start, unit.end, true)),
+    ref,
+  )
 }
 
 function createFragment(doc: Document, nodes: Node[]): DocumentFragment {

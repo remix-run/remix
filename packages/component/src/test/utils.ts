@@ -4,12 +4,6 @@ import { expect } from '@remix-run/assert'
 import { invariant } from '../runtime/invariant.ts'
 import { stripFlushMarkers } from '../runtime/stream-protocol.ts'
 
-export function expectNodeOrder(actual: Iterable<Node>, expected: readonly Node[]): void {
-  let nodes = Array.from(actual)
-  expect(nodes.length).toBe(expected.length)
-  for (let [index, node] of expected.entries()) expect(nodes[index]).toBe(node)
-}
-
 // Capture native browser state so a reorder cannot pass by restoring focus or
 // reusing element objects after their browsing contexts and animations reset.
 export async function prepareMoveState(t: TestContext, container: HTMLElement) {

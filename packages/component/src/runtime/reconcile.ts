@@ -31,13 +31,7 @@ import {
 } from './mixins/mixin.ts'
 import { OnBinding, isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
-import {
-  isCommentNode,
-  isFrameEnd,
-  isFrameStart,
-  isHydrationEnd,
-  isHydrationStart,
-} from './stream-protocol.ts'
+import { isCommentNode, isFrameStart, isHydrationStart } from './stream-protocol.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 
@@ -1750,10 +1744,7 @@ function patchKeyedChildren(
   }
 
   stableCursor = stableIndexes.length - 1
-  let owner = vParent
-  while (owner.kind === 'fragment' || owner.kind === 'component') owner = owner._parent
-  let start = owner.kind === 'root' || owner.kind === 'portal' ? (owner._rangeStart ?? null) : null
-  let placement = new SiblingPlacement(domParent, anchor ?? null, start)
+  let placementAnchor: Node | null = anchor ?? null
 
   for (let index = next.length - 1; index >= 0; index--) {
     let nextNode = committedChildren[index]
@@ -1761,10 +1752,11 @@ function patchKeyedChildren(
 
     if (isStable) {
       stableCursor--
-      placement.retain(findFirstDomAnchor(nextNode), findLastDomAnchor(nextNode))
     } else {
-      placeVNode(nextNode, placement)
+      placeVNode(nextNode, domParent, placementAnchor)
     }
+
+    placementAnchor = findFirstDomAnchor(nextNode) ?? placementAnchor
   }
   return committedChildren
 }
@@ -1884,31 +1876,18 @@ export function getStableIndexes(
   return tails
 }
 
-function placeVNode(node: CommittedVNode, placement: SiblingPlacement): void {
-  let domParent = placement.parent
-  let anchor = placement.anchor
-  if (anchor === undefined) return
+function placeVNode(node: CommittedVNode, domParent: ParentNode, anchor: Node | null): void {
   let firstDom = findFirstDomAnchor(node)
-  if (!firstDom || !placement.contains(firstDom)) return
+  if (!firstDom || firstDom.parentNode !== domParent) return
 
   let lastDom = findLastDomAnchor(node)
-  if (!lastDom || !placement.contains(lastDom)) return
-  if (anchor && domRangeContainsNode(firstDom, lastDom, anchor)) {
-    placement.retain(firstDom, lastDom)
-    return
-  }
-  // Re-inserting a node that is already in place still disconnects and
-  // reconnects it, which runs custom element callbacks and resets state
-  if (lastDom.nextSibling === anchor) {
-    placement.retain(firstDom, lastDom)
-    return
-  }
+  if (!lastDom) return
+  if (anchor && domRangeContainsNode(firstDom, lastDom, anchor)) return
+  // Even a move to the same position can run custom element callbacks.
+  if (lastDom.nextSibling === anchor) return
 
-  if (firstDom === lastDom) {
-    placement.move(firstDom)
-  } else {
-    moveNodesBefore(placement, collectDomRange(domParent, firstDom, lastDom))
-  }
+  if (firstDom === lastDom) placeNodeBefore(domParent, firstDom, anchor)
+  else moveDomRange(domParent, firstDom, lastDom, anchor)
 }
 
 function findFirstDomAnchor(node: CommittedVNode | null | undefined): Node | null {
@@ -1947,125 +1926,20 @@ function domRangeContainsNode(first: Node, last: Node, node: Node): boolean {
   return false
 }
 
-export function canMoveBefore(parent: ParentNode, node: Node): boolean {
-  return (
-    typeof parent.moveBefore === 'function' &&
-    node.parentNode !== null &&
-    // Native moves require the same shadow-including root, even for detached DOM.
-    parent.getRootNode({ composed: true }) === node.getRootNode({ composed: true }) &&
-    (node.nodeType === Node.ELEMENT_NODE ||
-      node.nodeType === Node.TEXT_NODE ||
-      node.nodeType === Node.CDATA_SECTION_NODE ||
-      node.nodeType === Node.PROCESSING_INSTRUCTION_NODE ||
-      node.nodeType === Node.COMMENT_NODE) &&
-    // Document element/text placement has stricter rules than insertBefore().
-    (parent.nodeType !== Node.DOCUMENT_NODE ||
-      (node.nodeType !== Node.ELEMENT_NODE &&
-        node.nodeType !== Node.TEXT_NODE &&
-        node.nodeType !== Node.CDATA_SECTION_NODE))
-  )
-}
-
-export function moveNodeBefore(parent: ParentNode, node: Node, before: Node | null): void {
-  if (canMoveBefore(parent, node)) parent.moveBefore(node, before)
-  else parent.insertBefore(node, before)
-}
-
-// Callbacks can remove or reparent nodes during placement. Track the retained right-hand
-// suffix and resolve an attached anchor immediately before each move.
-export class SiblingPlacement {
-  readonly parent: ParentNode
-  #end: Node | null
-  #start: Node | null
-  #anchors: Node[] = []
-
-  constructor(parent: ParentNode, end: Node | null, start: Node | null = null) {
-    this.parent = parent
-    this.#end = end
-    this.#start = start
-  }
-
-  get anchor(): Node | null | undefined {
-    // Losing the owning region's boundary must not turn a move into a parent-wide append.
-    if (this.#end && this.#end.parentNode !== this.parent) return undefined
-    if (this.#start && this.#start.parentNode !== this.parent) return undefined
-    if (
-      this.#start &&
-      this.#end &&
-      !(this.#start.compareDocumentPosition(this.#end) & Node.DOCUMENT_POSITION_FOLLOWING)
-    )
-      return undefined
-    while (this.#anchors.length) {
-      let node = this.#anchors.at(-1)
-      if (node && this.contains(node)) return node
-      this.#anchors.pop()
-    }
-    return this.#end
-  }
-
-  contains(node: Node): boolean {
-    return (
-      node.parentNode === this.parent &&
-      (!this.#start ||
-        (this.#start.parentNode === this.parent &&
-          !!(this.#start.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING))) &&
-      (!this.#end ||
-        (this.#end.parentNode === this.parent &&
-          !!(node.compareDocumentPosition(this.#end) & Node.DOCUMENT_POSITION_FOLLOWING)))
-    )
-  }
-
-  retain(first: Node | null, last = first): void {
-    // Retention does not move DOM. Validate candidate positions only when an anchor is used.
-    if (first?.parentNode !== this.parent) return
-    if (!last || first === last || last.parentNode !== this.parent) {
-      this.#anchors.push(first)
-      return
-    }
-    let nodes = collectDomRange(this.parent, first, last)
-    for (let i = nodes.length - 1; i >= 0; i--) this.#anchors.push(nodes[i])
-  }
-
-  move(node: Node): void {
-    let before = this.anchor
-    if (before === undefined) return
-    if (node !== before && !(node.parentNode === this.parent && node.nextSibling === before)) {
-      moveNodeBefore(this.parent, node, before)
-    }
-    this.retain(node)
+export function placeNodeBefore(parent: ParentNode, node: Node, before: Node | null): void {
+  if (
+    node.parentNode === parent &&
+    node.nodeType === Node.ELEMENT_NODE &&
+    parent.nodeType !== Node.DOCUMENT_NODE &&
+    typeof parent.moveBefore === 'function'
+  ) {
+    parent.moveBefore(node, before)
+  } else {
+    parent.insertBefore(node, before)
   }
 }
 
-export function moveNodesBefore(placement: SiblingPlacement, nodes: Node[]): void {
-  let parent = placement.parent
-  let before = placement.anchor
-  if (before === undefined) return
-  let end = nodes.at(-1)
-  if (!end) return
-  let temporary = !(end.parentNode === parent && (isFrameEnd(end) || isHydrationEnd(end)))
-  let doc = end.ownerDocument
-  invariant(doc, 'Expected document for DOM range')
-  let marker = temporary ? doc.createComment('') : end
-  if (temporary) parent.insertBefore(marker, before)
-  else moveNodeBefore(parent, marker, before)
-
-  // Keep a fixed destination through callbacks, including callbacks that relocate themselves.
-  try {
-    for (let node of nodes) {
-      if (node === marker || !placement.contains(marker)) break
-      if (placement.contains(node) && node.nextSibling !== marker) {
-        moveNodeBefore(parent, node, marker)
-      }
-    }
-  } finally {
-    if (temporary) marker.parentNode?.removeChild(marker)
-  }
-  for (let i = nodes.length - 1; i >= 0; i--) placement.retain(nodes[i])
-}
-
-function collectDomRange(domParent: ParentNode, first: Node, last: Node): Node[] {
-  if (first.parentNode !== domParent || last.parentNode !== domParent) return []
-  let nodes: Node[] = []
+function moveDomRange(domParent: ParentNode, first: Node, last: Node, before: Node | null): void {
   let portals = portalContainers.get(domParent)
   let current: Node | null = first
   while (current) {
@@ -2076,11 +1950,10 @@ function collectDomRange(domParent: ParentNode, first: Node, last: Node): Node[]
       continue
     }
     let next: Node | null = current === last ? null : current.nextSibling
-    nodes.push(current)
+    domParent.insertBefore(current, before)
     if (current === last) break
     current = next
   }
-  return nodes.at(-1) === last ? nodes : []
 }
 
 export function setActiveSchedulerUpdateParents(parents: ParentNode[] | undefined) {

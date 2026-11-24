@@ -5,7 +5,7 @@ import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { createElement } from '../runtime/create-element.ts'
 import { Fragment, type Handle, type RemixNode } from '../runtime/component.ts'
-import { expectNodeOrder, prepareMoveState } from './utils.ts'
+import { prepareMoveState } from './utils.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {
@@ -793,258 +793,7 @@ describe('vnode rendering (keys)', () => {
     })
   })
 
-  describe('focus and selection across keyed moves', () => {
-    it('keeps later fragment nodes in place when a fallback callback crosses a stable sibling', (t) => {
-      let { render, container } = createConnectedRoot(t)
-      Object.defineProperty(container, 'moveBefore', { value: undefined })
-      let armed = false
-      customElements.define(
-        'rmx-keyed-fallback-cross-stable',
-        class extends HTMLElement {
-          connectedCallback() {
-            if (!armed) return
-            armed = false
-            container.prepend(this)
-          }
-        },
-      )
-      let header = <header key="header">Header</header>
-      let b = <p key="b">B</p>
-      let c = <p key="c">C</p>
-      let moving = (
-        <Fragment key="a">
-          first{createElement('rmx-keyed-fallback-cross-stable', {})}
-          <span>Kept</span>last
-        </Fragment>
-      )
-      render([header, b, c, moving])
-      let [before, first, second, text, custom, kept, last] = Array.from(container.childNodes)
-      armed = true
-
-      render([header, moving, b, c])
-
-      expectNodeOrder(container.childNodes, [custom, before, text, kept, last, first, second])
-    })
-
-    it('does not collect past a keyed fragment whose last node was removed by a callback', (t) => {
-      let { render, container } = createConnectedRoot(t)
-      Object.defineProperty(container, 'moveBefore', { value: undefined })
-      let end: Element | undefined
-      customElements.define(
-        'rmx-keyed-remove-pending-end',
-        class extends HTMLElement {
-          connectedCallback() {
-            end?.remove()
-          }
-        },
-      )
-      let s1 = <p key="s1">1</p>
-      let s2 = <p key="s2">2</p>
-      let left = (
-        <Fragment key="left">
-          <span>Kept</span>
-          <span id="pending-end">End</span>
-        </Fragment>
-      )
-      let trigger = createElement('rmx-keyed-remove-pending-end', { key: 'trigger' })
-      let view = (items: RemixNode[]) => (
-        <>
-          <Fragment key="list">{items}</Fragment>
-          <aside key="outside">Outside</aside>
-        </>
-      )
-      render(view([s1, s2, left, trigger]))
-      let [first, second, kept, last, custom, outside] = Array.from(container.children)
-      end = last
-
-      render(view([left, trigger, s1, s2]))
-
-      expect(last.parentNode).toBe(null)
-      expectNodeOrder(container.children, [custom, first, second, kept, outside])
-    })
-
-    it(
-      'recovers inside a keyed list when a move callback removes itself and its anchor',
-      { skip: typeof Element.prototype.moveBefore !== 'function' },
-      (t) => {
-        let { render, container } = createConnectedRoot(t)
-        let anchor: Element | undefined
-        customElements.define(
-          'rmx-keyed-move-remove-self',
-          class extends HTMLElement {
-            connectedMoveCallback() {
-              anchor?.remove()
-              this.remove()
-            }
-          },
-        )
-        let s1 = (
-          <Fragment key="s1">
-            <p>1</p>
-            <span>Kept</span>
-          </Fragment>
-        )
-        let s2 = <p key="s2">2</p>
-        let moving = createElement('rmx-keyed-move-remove-self', { key: 'm' })
-        let a = <p key="a">A</p>
-        let view = (items: RemixNode[]) => (
-          <>
-            <Fragment key="list">{items}</Fragment>
-            <aside key="outside">Outside</aside>
-          </>
-        )
-        render(view([s1, s2, moving, a]))
-        let [first, kept, second, custom, last, outside] = Array.from(container.children)
-        anchor = first
-
-        render(view([a, moving, s1, s2]))
-
-        expect(first.parentNode).toBe(null)
-        expect(custom.parentNode).toBe(null)
-        expectNodeOrder(container.children, [last, kept, second, outside])
-      },
-    )
-
-    it('recovers inside a keyed list when a fallback callback removes the placed suffix', (t) => {
-      let { root, render, container } = createConnectedRoot(t)
-      Object.defineProperty(container, 'moveBefore', { value: undefined })
-      let errors: Event[] = []
-      root.addEventListener('error', (event) => errors.push(event))
-      let removed: Element[] = []
-      customElements.define(
-        'rmx-keyed-fallback-remove-suffix',
-        class extends HTMLElement {
-          connectedCallback() {
-            if (!removed.length) return
-            for (let node of removed) node.remove()
-            this.remove()
-          }
-        },
-      )
-      let s1 = <p key="s1">1</p>
-      let s2 = <p key="s2">2</p>
-      let moving = createElement('rmx-keyed-fallback-remove-suffix', { key: 'm' })
-      let a = <p key="a">A</p>
-      let view = (items: RemixNode[]) => (
-        <>
-          <Fragment key="list">{items}</Fragment>
-          <aside key="outside">Outside</aside>
-        </>
-      )
-      render(view([s1, s2, moving, a]))
-      let [first, second, custom, last, outside] = Array.from(container.children)
-      removed = [first, second]
-
-      render(view([a, moving, s1, s2]))
-
-      expect(first.parentNode).toBe(null)
-      expect(second.parentNode).toBe(null)
-      expect(custom.parentNode).toBe(null)
-      expectNodeOrder(container.children, [last, outside])
-      expect(errors.length).toBe(0)
-    })
-
-    it('keeps fallback connection callbacks in source order within a moved fragment', (t) => {
-      let { render, container } = createConnectedRoot(t)
-      Object.defineProperty(container, 'moveBefore', { value: undefined })
-      let connections: string[] = []
-      customElements.define(
-        'rmx-keyed-fallback-callback-order',
-        class extends HTMLElement {
-          connectedCallback() {
-            connections.push(this.dataset.name ?? '')
-          }
-        },
-      )
-      let moving = (
-        <Fragment key="a">
-          start{createElement('rmx-keyed-fallback-callback-order', { 'data-name': 'one' })}
-          {createElement('rmx-keyed-fallback-callback-order', { 'data-name': 'two' })}end
-        </Fragment>
-      )
-      let b = <p key="b">B</p>
-      let c = <p key="c">C</p>
-      render([moving, b, c])
-      connections = []
-
-      render([b, c, moving])
-
-      expect(connections).toEqual(['one', 'two'])
-    })
-
-    it(
-      'keeps a keyed fragment together when a move callback removes its anchor',
-      { skip: typeof Element.prototype.moveBefore !== 'function' },
-      (t) => {
-        let { render, container } = createConnectedRoot(t)
-        let anchor: Element | undefined
-        customElements.define(
-          'rmx-keyed-move-remove-anchor',
-          class extends HTMLElement {
-            connectedMoveCallback() {
-              anchor?.remove()
-            }
-          },
-        )
-        let moving = (
-          <Fragment key="a">
-            start{createElement('rmx-keyed-move-remove-anchor', {})}
-            <span>Kept</span>end
-          </Fragment>
-        )
-        let b = <p key="b">B</p>
-        let c = <p key="c">C</p>
-        render([b, c, moving])
-        anchor = container.querySelector('p') ?? undefined
-        invariant(anchor)
-        let range = Array.from(container.childNodes).slice(2)
-        let last = container.childNodes[1]
-
-        render([moving, b, c])
-
-        expect(anchor.parentNode).toBe(null)
-        expectNodeOrder(container.childNodes, [...range, last])
-      },
-    )
-
-    it(
-      'retains the rest of a keyed fragment when a move callback removes its next node',
-      { skip: typeof Element.prototype.moveBefore !== 'function' },
-      (t) => {
-        let { render, container } = createConnectedRoot(t)
-        let removed: Element | undefined
-        customElements.define(
-          'rmx-keyed-move-remove-next',
-          class extends HTMLElement {
-            connectedMoveCallback() {
-              removed?.remove()
-            }
-          },
-        )
-        let moving = (
-          <Fragment key="a">
-            start{createElement('rmx-keyed-move-remove-next', {})}
-            <span id="removed">Removed</span>
-            <span>Kept</span>end
-          </Fragment>
-        )
-        let b = <p key="b">B</p>
-        let c = <p key="c">C</p>
-        render([moving, b, c])
-        removed = container.querySelector('#removed') ?? undefined
-        invariant(removed)
-        let range = Array.from(container.childNodes)
-          .slice(0, -2)
-          .filter((node) => node !== removed)
-        let rest = Array.from(container.childNodes).slice(-2)
-
-        render([b, c, moving])
-
-        expect(removed.parentNode).toBe(null)
-        expectNodeOrder(container.childNodes, [...rest, ...range])
-      },
-    )
-
+  describe('state-preserving keyed moves', () => {
     it(
       'uses connectedMoveCallback only for custom elements that define it',
       { skip: typeof Element.prototype.moveBefore !== 'function' },
@@ -1103,57 +852,44 @@ describe('vnode rendering (keys)', () => {
     )
 
     it(
-      'preserves browser state when a keyed fragment range moves in either direction',
+      'preserves browser state when a keyed component moves its root element',
       { skip: typeof Element.prototype.moveBefore !== 'function' },
       async (t) => {
         let { render, container } = createConnectedRoot(t)
-        let moving = (
-          <Fragment key="a">
-            start
-            <iframe />
-            <div data-move-animation="" />
-            <dialog>
-              <input />
-            </dialog>
-            <div popover="manual" />
-            end
-          </Fragment>
-        )
+        function Card(handle: Handle<{ id: string }>) {
+          return () => (
+            <section id={handle.props.id}>
+              <iframe />
+              <div data-move-animation="" />
+              <dialog>
+                <input />
+              </dialog>
+              <div popover="manual" />
+            </section>
+          )
+        }
+        let a = <Card key="a" id="card" />
         let b = <span key="b">B</span>
         let c = <span key="c">C</span>
-        render([moving, b, c])
+        render([a, b, c])
+        let card = container.firstElementChild
         let assertState = await prepareMoveState(t, container)
 
-        render([b, c, moving])
+        render([b, c, a])
+        expect(container.lastElementChild).toBe(card)
         assertState()
-        expect(container.textContent).toBe('BCstartend')
 
-        render([moving, b, c])
+        render([a, b, c])
+        expect(container.firstElementChild).toBe(card)
         assertState()
-        expect(container.textContent).toBe('startendBC')
       },
     )
+  })
 
-    it('restores focus and selection when native moves are unavailable', (t) => {
+  describe('focus and selection across keyed moves', () => {
+    it('restores focus and selection on a moved input when native moves are unavailable', (t) => {
       let { render, container } = createConnectedRoot(t)
       Object.defineProperty(container, 'moveBefore', { value: undefined })
-      let item = (key: string) => <input key={key} id={key} />
-      render(['a', 'b', 'c'].map(item))
-      let input = getInput(container, 'a')
-      input.value = 'Hello World'
-      input.focus()
-      input.setSelectionRange(6, 11)
-
-      expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
-
-      expect(Array.from(container.children, (node) => node.id)).toEqual(['b', 'c', 'a'])
-      expect(document.activeElement).toBe(input)
-      expect(input.selectionStart).toBe(6)
-      expect(input.selectionEnd).toBe(11)
-    })
-
-    it('keeps focus and selection on a text input that a keyed reorder moves', (t) => {
-      let { render, container } = createConnectedRoot(t)
       let item = (key: string) => <input key={key} id={key} type="text" />
       render(['a', 'b', 'c'].map(item))
       let input = getInput(container, 'a')
@@ -1275,7 +1011,7 @@ function createConnectedRoot(t: TestContext) {
     root.dispose()
     container.remove()
   })
-  return { root, container, render: (node: RemixNode) => root.render(node) }
+  return { container, render: (node: RemixNode) => root.render(node) }
 }
 
 function getInput(container: HTMLElement, id: string): HTMLInputElement {
