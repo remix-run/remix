@@ -163,11 +163,10 @@ describe('anchor', () => {
 
   it('preserves an inline fixed surface and tracks its anchor in viewport coordinates', (t) => {
     let floating = document.createElement('div')
-    floating.style.position = 'fixed'
+    floating.style.cssText = 'position: fixed; width: 120px; height: 80px;'
     let anchorElement = document.createElement('button')
     document.body.append(floating, anchorElement)
 
-    mockLayout(floating, { top: 0, left: 0, width: 120, height: 80 })
     let layout = mockLayout(anchorElement, { top: 200, left: 200, width: 80, height: 28 })
     let scrollX = 100
     let scrollY = 200
@@ -555,8 +554,71 @@ describe('anchor page scrolling', () => {
     expect(getComputedStyle(floating).position).toBe('fixed')
   })
 
+  it('flips a fixed surface below its anchor near the top edge of a scrolled page', async (t) => {
+    let originalStyle = document.body.getAttribute('style')
+    let originalScroll = { left: window.scrollX, top: window.scrollY }
+    let container = document.createElement('div')
+    container.style.cssText = 'position: relative; padding: 200px 0 0 150px; height: 2000px;'
+    let target = document.createElement('div')
+    target.style.cssText = 'width: 80px; height: 28px;'
+    let floating = document.createElement('div')
+    floating.style.cssText =
+      'position: fixed; width: 120px; height: 80px; padding: 8px; border: 2px solid; box-sizing: border-box;'
+    container.append(target, floating)
+    document.body.style.cssText = 'margin: 0; overflow-anchor: none;'
+    document.body.append(container)
+    let cleanup = () => {}
+    t.after(() => {
+      cleanup()
+      container.remove()
+      if (originalStyle === null) document.body.removeAttribute('style')
+      else document.body.setAttribute('style', originalStyle)
+      window.scrollTo(originalScroll)
+    })
+
+    window.scrollTo(0, 195)
+    await t.waitFor(() => {
+      expect(window.scrollY).toBe(195)
+      expect(target.getBoundingClientRect().top).toBe(5)
+    })
+    cleanup = anchor(floating, target, { placement: 'top-start' })
+
+    expect(floating.dataset.anchorPlacement).toBe('bottom-start')
+    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+    expect(floating.getBoundingClientRect().height).toBe(80)
+
+    window.scrollTo(0, 190)
+    await t.waitFor(() => {
+      expect(window.scrollY).toBe(190)
+      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+      expect(floating.getBoundingClientRect().height).toBe(80)
+    })
+
+    cleanup()
+    cleanup = anchor(floating, target, { placement: 'top-start' })
+    expect(floating.dataset.anchorPlacement).toBe('bottom-start')
+    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+    expect(floating.getBoundingClientRect().height).toBe(80)
+
+    window.scrollTo(0, 0)
+    await t.waitFor(() => {
+      expect(window.scrollY).toBe(0)
+      expect(floating.dataset.anchorPlacement).toBe('top-start')
+      expect(floating.getBoundingClientRect().bottom).toBe(target.getBoundingClientRect().top)
+      expect(floating.getBoundingClientRect().height).toBe(80)
+    })
+  })
+
   it('keeps a surface aligned inside a transformed ancestor while the page scrolls', async (t) => {
     await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)')
+  })
+
+  it('keeps a transformed surface at the viewport padding as its anchor crosses the top edge', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', { topEdge: true })
+  })
+
+  it('keeps a viewport-fixed surface at the padding as its anchor crosses the top edge', async (t) => {
+    await expectSurfaceToTrackAnchor(t, '', { topEdge: true })
   })
 
   it('keeps a surface aligned inside an ancestor with individual translation', async (t) => {
@@ -672,7 +734,7 @@ describe('anchor page scrolling', () => {
 
   it('keeps alignment when query containers implicitly apply layout containment', async (t) => {
     let style = document.createElement('style')
-    // Emulate older query-container rules without sharing the normal capability cache.
+    // Emulate the layout containment applied implicitly by older query containers.
     style.textContent = '[style*="container-type:"] { contain: layout !important; }'
     document.head.append(style)
     t.after(() => style.remove())
@@ -689,11 +751,8 @@ describe('anchor page scrolling', () => {
         },
       })
     })
-    let { anchor: position }: { anchor: typeof anchor } = await import(
-      new URL('./anchor.ts?legacy-query-containment', import.meta.url).href
-    )
 
-    await expectSurfaceToTrackAnchor(t, 'container-type: inline-size', { position })
+    await expectSurfaceToTrackAnchor(t, 'container-type: inline-size')
   })
 
   it('preserves viewport positioning for unrelated will-change properties', async (t) => {
@@ -704,19 +763,252 @@ describe('anchor page scrolling', () => {
   })
 
   it('keeps a surface aligned inside a transformed shadow host', async (t) => {
-    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', { shadow: true })
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', { shadow: 'host' })
   })
 
   it('preserves viewport positioning inside an ordinary shadow host', async (t) => {
-    await expectSurfaceToTrackAnchor(t, 'margin: 100px 0 0 50px', { shadow: true })
+    await expectSurfaceToTrackAnchor(t, 'margin: 100px 0 0 50px', { shadow: 'host' })
+  })
+
+  it('preserves viewport positioning for a slotted surface without containment', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'margin: 100px 0 0 50px', { shadow: 'slot' })
+  })
+
+  it('keeps a slotted surface aligned inside a transformed shadow ancestor', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', { shadow: 'slot' })
+  })
+
+  it('keeps a surface aligned when its parent is slotted inside a transformed ancestor', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', { shadow: 'slotted-parent' })
+  })
+
+  it('keeps a slotted surface aligned inside a transformed closed shadow root', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', { shadow: 'closed-slot' })
+  })
+
+  it('keeps a manually slotted surface at the padding as its anchor crosses the top edge', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      shadow: 'closed-manual-slot',
+      topEdge: true,
+    })
+  })
+
+  it('tracks its anchor when ancestor containment is added and removed while attached', async (t) => {
+    await expectSurfaceToTrackAnchor(t, '', { toggleContainment: true })
+  })
+
+  it('keeps a manually assigned surface aligned inside a closed shadow root', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      shadow: 'closed-manual-slot',
+    })
+  })
+
+  it('tracks a surface moved into a closed shadow root while attached', async (t) => {
+    await expectSurfaceToTrackAnchor(t, '', { reparent: true })
+  })
+
+  it("preserves a fixed surface's own translation and scale", async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceStyle: 'transform: translate(8px, 12px) scale(0.9); transform-origin: 0 0;',
+      visualOffset: { x: 8, y: 12 },
+    })
+  })
+
+  it('preserves individual transforms on a fixed surface', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceStyle: 'translate: 8px 12px; scale: 0.9; transform-origin: 0 0;',
+      visualOffset: { x: 8, y: 12 },
+    })
+  })
+
+  it('resolves percentage and calculated translations on a fixed surface', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceStyle: 'translate: calc(50% + 10px) min(10%, 5px);',
+      visualOffset: { x: 70, y: 5 },
+    })
+  })
+
+  it("preserves rotation around a fixed surface's centre", async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceStyle: 'rotate: 0.25turn;',
+      visualOffset: { x: 20, y: -20 },
+    })
+  })
+
+  it('preserves the order of individual transforms and the transform property', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceStyle:
+        'translate: 8px 12px; rotate: 90deg; scale: 0.5; transform: translate(10px, 20px); transform-origin: 0 0;',
+      visualOffset: { x: -42, y: 17 },
+    })
+  })
+
+  it('uses the content box for individual translations when requested', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceStyle:
+        'box-sizing: border-box; border: 10px solid; padding: 10px; transform-box: content-box; translate: 50% 50%;',
+      visualOffset: { x: 40, y: 20 },
+    })
+  })
+
+  it('uses the content box origin for rotation when requested', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceStyle:
+        'box-sizing: border-box; border: 10px solid; padding: 10px; transform-box: content-box; rotate: 90deg;',
+      visualOffset: { x: 20, y: -20 },
+    })
+  })
+
+  it('preserves rotation on a surface with fractional dimensions', async (t) => {
+    let reference = document.createElement('div')
+    reference.style.cssText =
+      'position: fixed; left: 0; top: 0; width: 120.5px; height: 80.5px; rotate: 90deg;'
+    document.body.append(reference)
+    // Engines differ in how they snap a rotated fractional box to layout pixels.
+    let { left: x, top: y } = reference.getBoundingClientRect()
+    reference.remove()
+
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceSize: { width: 120.5, height: 80.5 },
+      surfaceStyle: 'rotate: 90deg;',
+      visualOffset: { x, y },
+    })
+  })
+
+  it('preserves margins on a fixed surface', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceStyle: 'margin: 12px 0 0 8px;',
+      visualOffset: { x: 8, y: 12 },
+    })
+  })
+
+  it('preserves fractional margins on a fixed surface', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceStyle: 'margin: 12.5px 0 0 8.5px;',
+      visualOffset: { x: 8.5, y: 12.5 },
+    })
+  })
+
+  it('preserves a motion path on a fixed surface', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceStyle:
+        'offset-path: path("M 0 0 L 16 24"); offset-distance: 50%; offset-rotate: 0deg;',
+      visualOffset: { x: -52, y: -28 },
+    })
+  })
+
+  it('preserves an entrance animation as it advances while attached', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      animate: true,
+      visualOffset: { x: 8, y: 12 },
+    })
+  })
+
+  it('tracks a fixed surface when the root element establishes its containing block', async (t) => {
+    let originalStyle = document.documentElement.getAttribute('style')
+    document.documentElement.style.transform = 'translateZ(0)'
+    t.after(() => {
+      if (originalStyle === null) document.documentElement.removeAttribute('style')
+      else document.documentElement.setAttribute('style', originalStyle)
+    })
+    await expectSurfaceToTrackAnchor(t, '')
+  })
+
+  it('keeps fractional anchor coordinates inside a fractionally positioned containing block', async (t) => {
+    await expectSurfaceToTrackAnchor(
+      t,
+      'transform: translateZ(0); margin: 100.25px 0 0 50.25px; padding-left: 200.25px !important;',
+    )
+  })
+
+  it('tracks a fixed surface inside a bordered, scrolling containing block', async (t) => {
+    await expectSurfaceToTrackAnchor(
+      t,
+      'transform: translateZ(0); border: 3px solid; overflow: auto;',
+      {
+        scrollContainer: true,
+      },
+    )
+  })
+
+  it('keeps a docked surface at the viewport padding after subpixel ancestor movement', async (t) => {
+    let container = document.createElement('div')
+    container.style.cssText =
+      'position: relative; transform: translateZ(0); width: 200px; height: 200px;'
+    let target = document.createElement('div')
+    target.style.cssText = 'position: absolute; top: -100px; width: 80px; height: 28px;'
+    let floating = document.createElement('div')
+    floating.style.cssText = 'position: fixed; width: 120px; height: 80px;'
+    container.append(target, floating)
+    document.body.append(container)
+    let cleanup = anchor(floating, target, { placement: 'bottom-start' })
+    t.after(() => {
+      cleanup()
+      container.remove()
+    })
+    expect(floating.getBoundingClientRect().top).toBe(16)
+
+    container.style.transform = 'translateY(0.5px)'
+    await t.waitFor(() => expect(floating.getBoundingClientRect().top).toBe(16))
+    container.style.transform = 'translateY(0.25px)'
+    await t.waitFor(() => expect(floating.getBoundingClientRect().top).toBe(16))
+    container.style.transform = 'translateZ(0)'
+    await t.waitFor(() => expect(floating.getBoundingClientRect().top).toBe(16))
+  })
+
+  it('replaces authored right and bottom insets without changing surface effects', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceStyle: 'right: 12px; bottom: 12px; translate: 8px 12px;',
+      visualOffset: { x: 8, y: 12 },
+    })
+  })
+
+  it('positions a slotted surface with the legacy offsetParent API', async (t) => {
+    let position = await getLegacyAnchor(t)
+    await expectSurfaceToTrackAnchor(t, 'margin: 100px 0 0 50px', { position, shadow: 'slot' })
+  })
+
+  it('preserves transforms and margins in a closed manual slot with the legacy offsetParent API', async (t) => {
+    let position = await getLegacyAnchor(t)
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      position,
+      shadow: 'closed-manual-slot',
+      surfaceStyle: 'transform: translate(8px, 12px); margin: 0.5px;',
+      visualOffset: { x: 8.5, y: 12.5 },
+    })
+  })
+
+  it('positions a surface when the legacy offsetParent API returns body for fixed surfaces', async (t) => {
+    let position = await getLegacyAnchor(t, 'body')
+    await expectSurfaceToTrackAnchor(t, 'margin: 100px 0 0 50px', { position })
+  })
+
+  it('preserves positioning when the surface transitions its inset properties', async (t) => {
+    await expectSurfaceToTrackAnchor(t, 'transform: translateZ(0)', {
+      surfaceStyle: 'transition: left 1000ms linear, top 1000ms linear;',
+    })
   })
 })
 
 async function expectSurfaceToTrackAnchor(
   t: TestContext,
   containingStyle: string,
-  options: { shadow?: boolean; revealContent?: boolean; position?: typeof anchor } = {},
+  options: {
+    shadow?: 'host' | 'slot' | 'slotted-parent' | 'closed-slot' | 'closed-manual-slot'
+    revealContent?: boolean
+    animate?: boolean
+    scrollContainer?: boolean
+    topEdge?: boolean
+    toggleContainment?: boolean
+    reparent?: boolean
+    surfaceStyle?: string
+    surfaceSize?: { width: number; height: number }
+    visualOffset?: { x: number; y: number }
+    position?: typeof anchor
+  } = {},
 ) {
+  let surfaceSize = options.surfaceSize ?? { width: 120, height: 80 }
+  let visualOffset = options.visualOffset ?? { x: 0, y: 0 }
   let originalStyle = document.body.getAttribute('style')
   let originalScroll = { left: window.scrollX, top: window.scrollY }
   let container = document.createElement('div')
@@ -724,15 +1016,60 @@ async function expectSurfaceToTrackAnchor(
   let target = document.createElement('div')
   target.style.cssText = 'width: 80px; height: 28px;'
   let floating = document.createElement('div')
-  floating.style.cssText = 'position: fixed; width: 120px; height: 80px;'
-  let root = options.shadow ? container.attachShadow({ mode: 'open' }) : container
-  root.append(target, floating)
+  floating.style.cssText = `position: fixed; width: ${surfaceSize.width}px; height: ${surfaceSize.height}px; ${options.surfaceStyle ?? ''}`
+  let fixture = container
+  if (
+    options.shadow === 'slot' ||
+    options.shadow === 'slotted-parent' ||
+    options.shadow === 'closed-slot' ||
+    options.shadow === 'closed-manual-slot'
+  ) {
+    let host = document.createElement('div')
+    host
+      .attachShadow({
+        mode:
+          options.shadow === 'closed-slot' || options.shadow === 'closed-manual-slot'
+            ? 'closed'
+            : 'open',
+        slotAssignment: options.shadow === 'closed-manual-slot' ? 'manual' : 'named',
+      })
+      .append(container)
+    let slot = document.createElement('slot')
+    container.append(slot)
+    if (options.shadow === 'slotted-parent') {
+      let wrapper = document.createElement('div')
+      wrapper.append(target, floating)
+      host.append(wrapper)
+    } else {
+      host.append(target, floating)
+      if (options.shadow === 'closed-manual-slot') slot.assign(target, floating)
+    }
+    fixture = host
+  } else {
+    let root = options.shadow === 'host' ? container.attachShadow({ mode: 'open' }) : container
+    root.append(target, floating)
+  }
+  if (options.scrollContainer) {
+    let content = document.createElement('div')
+    content.style.cssText = 'width: 4000px; height: 4000px;'
+    container.append(content)
+  }
   document.body.style.cssText = 'margin: 0; overflow-anchor: none;'
-  document.body.append(container)
+  document.body.append(fixture)
   let cleanup = () => {}
+  let animation: Animation | undefined
+  if (options.animate) {
+    animation = floating.animate(
+      [{ transform: 'translate(0px, 0px)' }, { transform: 'translate(16px, 24px)' }],
+      { duration: 1000, fill: 'both' },
+    )
+    animation.pause()
+    animation.currentTime = 500
+  }
   t.after(() => {
     cleanup()
-    container.remove()
+    animation?.cancel()
+    fixture.remove()
     if (originalStyle === null) document.body.removeAttribute('style')
     else document.body.setAttribute('style', originalStyle)
     window.scrollTo(originalScroll)
@@ -746,7 +1083,7 @@ async function expectSurfaceToTrackAnchor(
   if (!options.revealContent) {
     await t.waitFor(() => {
       expect(target.getBoundingClientRect().width).toBe(80)
-      expect(floating.offsetHeight).toBe(80)
+      expect(Math.abs(floating.offsetHeight - surfaceSize.height)).toBeLessThanOrEqual(0.5)
     })
   }
   cleanup = (options.position ?? anchor)(floating, target, { placement: 'bottom-start' })
@@ -754,21 +1091,142 @@ async function expectSurfaceToTrackAnchor(
 
   await t.waitFor(() => {
     expect(target.getBoundingClientRect().width).toBe(80)
-    expect(floating.offsetHeight).toBe(80)
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+    expect(Math.abs(floating.offsetHeight - surfaceSize.height)).toBeLessThanOrEqual(0.5)
+    expect(floating.getBoundingClientRect().left).toBe(
+      target.getBoundingClientRect().left + visualOffset.x,
+    )
+    expect(floating.getBoundingClientRect().top).toBe(
+      target.getBoundingClientRect().bottom + visualOffset.y,
+    )
   })
+
+  if (options.scrollContainer) {
+    container.scrollTo(25, 25)
+    await t.waitFor(() => {
+      expect(container.scrollLeft).toBe(25)
+      expect(container.scrollTop).toBe(25)
+      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
+      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+    })
+  }
+
+  if (animation) {
+    animation.currentTime = 1000
+    visualOffset.x = 16
+    visualOffset.y = 24
+    await t.waitFor(() => {
+      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left + 16)
+      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom + 24)
+    })
+    expect(animation.currentTime).toBe(1000)
+  }
+
+  if (options.reparent) {
+    let host = document.createElement('div')
+    let wrapper = document.createElement('div')
+    wrapper.style.cssText = 'position: relative; transform: translateZ(0);'
+    wrapper.append(document.createElement('slot'))
+    host.attachShadow({ mode: 'closed' }).append(wrapper)
+    fixture.before(host)
+    host.append(fixture)
+    fixture = host
+    await t.waitFor(() => {
+      expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
+      expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+    })
+  }
+
+  if (options.toggleContainment) {
+    container.style.transform = 'translateZ(0)'
+    await t.waitFor(() => {
+      expect(floating.getBoundingClientRect().left).toBe(
+        target.getBoundingClientRect().left + visualOffset.x,
+      )
+      expect(floating.getBoundingClientRect().top).toBe(
+        target.getBoundingClientRect().bottom + visualOffset.y,
+      )
+    })
+  }
 
   window.scrollTo(100, 150)
   await t.waitFor(() => {
     expect(window.scrollX).toBe(100)
     expect(window.scrollY).toBe(150)
-    expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-    expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+    expect(floating.getBoundingClientRect().left).toBe(
+      target.getBoundingClientRect().left + visualOffset.x,
+    )
+    expect(floating.getBoundingClientRect().top).toBe(
+      target.getBoundingClientRect().bottom + visualOffset.y,
+    )
   })
+
+  if (options.toggleContainment) {
+    container.style.transform = ''
+    await t.waitFor(() => {
+      expect(floating.getBoundingClientRect().left).toBe(
+        target.getBoundingClientRect().left + visualOffset.x,
+      )
+      expect(floating.getBoundingClientRect().top).toBe(
+        target.getBoundingClientRect().bottom + visualOffset.y,
+      )
+    })
+  }
+
+  if (options.topEdge) {
+    let anchorDocumentBottom = target.getBoundingClientRect().bottom + window.scrollY
+    let viewportPadding = 16
+    let anchorBottomsWhileScrollingUp = [
+      28,
+      // Cross the panel's docking threshold.
+      viewportPadding + 1,
+      viewportPadding,
+      viewportPadding - 1,
+      // Cross the viewport's top edge, then continue offscreen.
+      1,
+      0,
+      -1,
+      -12,
+    ]
+    let anchorBottomsWhileScrollingDown = anchorBottomsWhileScrollingUp.toReversed()
+    for (let anchorBottom of [
+      ...anchorBottomsWhileScrollingUp,
+      ...anchorBottomsWhileScrollingDown,
+    ]) {
+      let scrollTop = anchorDocumentBottom - anchorBottom
+      window.scrollTo(100, scrollTop)
+      await t.waitFor(() => {
+        expect(window.scrollY).toBe(scrollTop)
+        expect(target.getBoundingClientRect().bottom).toBe(anchorBottom)
+        expect(floating.getBoundingClientRect().top).toBe(Math.max(viewportPadding, anchorBottom))
+        expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
+        expect(floating.offsetHeight).toBe(80)
+        expect(floating.dataset.anchorPlacement).toBe('bottom-start')
+      })
+    }
+  }
 
   cleanup()
   cleanup = (options.position ?? anchor)(floating, target, { placement: 'bottom-start' })
-  expect(floating.getBoundingClientRect().left).toBe(target.getBoundingClientRect().left)
-  expect(floating.getBoundingClientRect().top).toBe(target.getBoundingClientRect().bottom)
+  expect(floating.getBoundingClientRect().left).toBe(
+    target.getBoundingClientRect().left + visualOffset.x,
+  )
+  expect(floating.getBoundingClientRect().top).toBe(
+    target.getBoundingClientRect().bottom + visualOffset.y,
+  )
+}
+
+async function getLegacyAnchor(t: TestContext, fixedParent: 'null' | 'body' = 'null') {
+  let offsetParent = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetParent')?.get
+  if (!offsetParent) throw new Error('Missing native offsetParent getter')
+  t.mock.getter(HTMLElement.prototype, 'offsetParent', function (this: HTMLElement) {
+    return getComputedStyle(this).position === 'fixed'
+      ? fixedParent === 'body'
+        ? document.body
+        : null
+      : offsetParent.call(this)
+  })
+  let { anchor: position }: { anchor: typeof anchor } = await import(
+    new URL(`./anchor.ts?legacy-fixed-offset-parent=${fixedParent}`, import.meta.url).href
+  )
+  return position
 }
