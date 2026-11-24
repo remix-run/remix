@@ -30,7 +30,7 @@ To add Remix to an existing project, install the package.
 npm i remix
 ```
 
-Follow the [Getting Started tutorial](https://docs.remix.run/start-here/) to build a page with an editable form. Explore the [bookstore demo](https://github.com/remix-run/remix/tree/main/demos/record-store) to see how sign-in, a shopping cart, and checkout fit together.
+Follow the [Getting Started tutorial](https://docs.remix.run/start-here/) to build a page with an editable form. Explore the [record store demo](https://github.com/remix-run/remix/tree/main/demos/record-store) to see how sign-in, a shopping cart, and checkout fit together.
 
 ### Install from `main`
 

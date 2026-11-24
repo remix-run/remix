@@ -1,14 +1,14 @@
 import type { Database } from 'remix/data-table'
 import type { Session } from 'remix/session'
 
-import { books } from '../../data/schema.ts'
+import { albums } from '../../data/schema.ts'
 import { addToCart, removeFromCart, updateCartItem } from '../../utils/cart.ts'
 import { getCurrentCart } from '../../utils/context.ts'
 
 interface CartItemOptions {
   db: Database
   session: Session
-  bookId: number
+  albumId: number
 }
 
 type CartError = { message: string; status: number }
@@ -16,17 +16,17 @@ type CartError = { message: string; status: number }
 export async function toggleCart({
   db,
   session,
-  bookId,
+  albumId,
   intent,
 }: CartItemOptions & { intent: 'add' | 'remove' }): Promise<CartError | undefined> {
-  let book = await db.find(books, bookId)
-  if (!book) return { status: 404, message: 'Book not found.' }
+  let album = await db.find(albums, albumId)
+  if (!album) return { status: 404, message: 'Record not found.' }
 
   let cart = getCurrentCart(session)
   if (intent === 'remove') {
-    cart = removeFromCart(cart, book.id)
-  } else if (!cart.items.some((item) => item.bookId === book.id)) {
-    cart = addToCart(cart, book.id, book.slug, book.title, book.price, 1)
+    cart = removeFromCart(cart, album.id)
+  } else if (!cart.items.some((item) => item.albumId === album.id)) {
+    cart = addToCart(cart, album.id, album.slug, album.title, album.price, 1)
   }
 
   session.set('cart', cart)
@@ -35,15 +35,15 @@ export async function toggleCart({
 export async function updateCart({
   db,
   session,
-  bookId,
+  albumId,
   quantity,
 }: CartItemOptions & { quantity: number }): Promise<CartError | undefined> {
-  let book = await db.find(books, bookId)
-  if (!book) return { status: 404, message: 'Book not found.' }
+  let album = await db.find(albums, albumId)
+  if (!album) return { status: 404, message: 'Record not found.' }
 
-  let next = updateCartItem(getCurrentCart(session), bookId, quantity)
+  let next = updateCartItem(getCurrentCart(session), albumId, quantity)
   if (!next) {
-    return { status: 404, message: 'That book is no longer in your cart.' }
+    return { status: 404, message: 'That record is no longer in your cart.' }
   }
 
   session.set('cart', next)
@@ -52,27 +52,27 @@ export async function updateCart({
 export async function removeCartItem({
   db,
   session,
-  bookId,
+  albumId,
 }: CartItemOptions): Promise<CartError | undefined> {
-  let book = await db.find(books, bookId)
-  if (!book) return { status: 404, message: 'Book not found.' }
+  let album = await db.find(albums, albumId)
+  if (!album) return { status: 404, message: 'Record not found.' }
 
-  session.set('cart', removeFromCart(getCurrentCart(session), bookId))
+  session.set('cart', removeFromCart(getCurrentCart(session), albumId))
 }
 
 export async function restoreCartItem({
   db,
   session,
-  bookId,
+  albumId,
   quantity,
 }: CartItemOptions & { quantity: number }): Promise<CartError | undefined> {
-  let book = await db.find(books, bookId)
-  if (!book) return { status: 404, message: 'Book not found.' }
+  let album = await db.find(albums, albumId)
+  if (!album) return { status: 404, message: 'Record not found.' }
 
   let cart = getCurrentCart(session)
   // Set the saved quantity so retrying a lost response cannot add extra copies.
-  if (!updateCartItem(cart, book.id, quantity)) {
-    cart = addToCart(cart, book.id, book.slug, book.title, book.price, quantity)
+  if (!updateCartItem(cart, album.id, quantity)) {
+    cart = addToCart(cart, album.id, album.slug, album.title, album.price, quantity)
   }
   session.set('cart', cart)
 }

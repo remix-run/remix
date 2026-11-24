@@ -134,12 +134,12 @@
   }
 
   ::view-transition-group(root),
-  ::view-transition-group(bookstore-page) {
+  ::view-transition-group(record-store-page) {
     /* Page snapshots can differ greatly in height and scroll position. */
     animation: none;
   }
 
-  ::view-transition-group(.book-cover) {
+  ::view-transition-group(.album-cover) {
     z-index: 1;
     animation-duration: 200ms;
     animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
@@ -147,21 +147,21 @@
     overflow: clip;
   }
 
-  ::view-transition-old(.book-cover),
-  ::view-transition-new(.book-cover) {
+  ::view-transition-old(.album-cover),
+  ::view-transition-new(.album-cover) {
     height: 100%;
     object-fit: cover;
   }
 
-  ::view-transition-old(bookstore-page) {
-    animation: bookstore-page-out 200ms ease-in both;
+  ::view-transition-old(record-store-page) {
+    animation: record-store-page-out 200ms ease-in both;
   }
 
-  ::view-transition-new(bookstore-page) {
-    animation: bookstore-page-in 200ms ease-out both;
+  ::view-transition-new(record-store-page) {
+    animation: record-store-page-in 200ms ease-out both;
   }
 
-  @keyframes bookstore-page-out {
+  @keyframes record-store-page-out {
     from {
       opacity: 1;
     }
@@ -170,7 +170,7 @@
     }
   }
 
-  @keyframes bookstore-page-in {
+  @keyframes record-store-page-in {
     from {
       opacity: 0;
     }

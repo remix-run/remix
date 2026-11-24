@@ -3,33 +3,33 @@ import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { redirect } from 'remix/response/redirect'
 
-import { books } from '../../../data/schema.ts'
+import { albums } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
 import { addToCart } from '../../../utils/cart.ts'
 import { getCurrentCart } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
 
-const bookIdField = f.field(s.optional(s.string()))
+const albumIdField = f.field(s.optional(s.string()))
 const redirectField = f.field(s.optional(s.string()))
 const cartActionSchema = f.object({
-  bookId: bookIdField,
+  albumId: albumIdField,
   redirect: redirectField,
 })
 
 export default createController(routes.cart.api, {
   actions: {
     async add({ db, formData, session }) {
-      let { bookId, redirect: redirectTo } = s.parse(cartActionSchema, formData)
+      let { albumId, redirect: redirectTo } = s.parse(cartActionSchema, formData)
 
-      let parsedBookId = parseId(bookId)
-      let book = parsedBookId === undefined ? undefined : await db.find(books, parsedBookId)
-      if (!book) {
-        return new Response('Book not found', { status: 404 })
+      let parsedAlbumId = parseId(albumId)
+      let album = parsedAlbumId === undefined ? undefined : await db.find(albums, parsedAlbumId)
+      if (!album) {
+        return new Response('Record not found', { status: 404 })
       }
 
       session.set(
         'cart',
-        addToCart(getCurrentCart(session), book.id, book.slug, book.title, book.price, 1),
+        addToCart(getCurrentCart(session), album.id, album.slug, album.title, album.price, 1),
       )
 
       if (redirectTo === 'none') {

@@ -49,7 +49,7 @@ export function Layout(handle: Handle<LayoutProps>) {
                 href={routes.home.href()}
                 mix={css({ color: 'white', textDecoration: 'none' })}
               >
-                📚 Bookstore
+                🎵 Record Store
               </a>
             </h1>
             <nav
@@ -74,8 +74,8 @@ export function Layout(handle: Handle<LayoutProps>) {
               <a data-rmx-prefetch="intent" href={routes.home.href()}>
                 Home
               </a>
-              <a data-rmx-prefetch="intent" href={routes.books.index.href()}>
-                Books
+              <a data-rmx-prefetch="intent" href={routes.albums.index.href()}>
+                Records
               </a>
               <a data-rmx-prefetch="intent" href={routes.about.href()}>
                 About
@@ -125,7 +125,7 @@ export function Layout(handle: Handle<LayoutProps>) {
           mix={css({
             padding: '2rem 0',
             minHeight: 'calc(100vh - 200px)',
-            viewTransitionName: 'bookstore-page',
+            viewTransitionName: 'record-store-page',
           })}
         >
           <div mix={containerStyle}>{children}</div>
@@ -139,7 +139,7 @@ export function Layout(handle: Handle<LayoutProps>) {
           })}
         >
           <div mix={containerStyle}>
-            <p>&copy; {new Date().getFullYear()} Bookstore Demo. Built with Remix.</p>
+            <p>&copy; {new Date().getFullYear()} Record Store Demo. Built with Remix.</p>
           </div>
         </footer>
       </Document>

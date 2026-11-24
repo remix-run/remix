@@ -5,15 +5,15 @@ import { createTestServer } from 'remix/node-fetch-server/test'
 import { describe, it } from 'remix/test'
 
 import { createTestRouter } from '../test/helpers.ts'
-import { bookCoverTransition } from './ui/book-transitions.ts'
+import { albumCoverTransition } from './ui/album-transitions.ts'
 
-describe('bookstore view transitions', () => {
+describe('record store view transitions', () => {
   it('wires catalog and faceout cover classes to the page transition', async (t) => {
-    let markup = await renderToString(createElement('img', { mix: bookCoverTransition(1) }))
+    let markup = await renderToString(createElement('img', { mix: albumCoverTransition(1) }))
     let coverClass = /class="([^"]+)"/.exec(markup)?.[1]
     assert.ok(coverClass)
     let page = await t.serve(
-      await createTestServer((await createTestRouter({ bookIds: [1, 2, 3] })).fetch),
+      await createTestServer((await createTestRouter({ albumIds: [1, 2, 3] })).fetch),
     )
     await page.addInitScript(() => {
       let calls = 0
@@ -37,7 +37,7 @@ describe('bookstore view transitions', () => {
         },
       })
     })
-    await page.goto('/books')
+    await page.goto('/albums')
     await page.evaluate(async () => {
       let script = document.querySelector<HTMLScriptElement>('script[type="module"][src]')
       if (!script) throw new Error('Missing app entry')
@@ -52,11 +52,11 @@ describe('bookstore view transitions', () => {
     )
     await card.getByRole('link', { name: 'View Details', exact: true }).click()
     await page.waitForFunction(
-      () => document.documentElement.dataset.testTransitionTypes === 'book-cover-1',
+      () => document.documentElement.dataset.testTransitionTypes === 'album-cover-1',
     )
     assert.equal(await page.locator('html').getAttribute('data-test-transition-calls'), '1')
     assert.ok(
-      (await page.locator('[data-book-faceout="1"]').getAttribute('class'))
+      (await page.locator('[data-album-faceout="1"]').getAttribute('class'))
         ?.split(' ')
         .includes(coverClass),
     )

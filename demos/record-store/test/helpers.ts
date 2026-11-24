@@ -6,13 +6,13 @@ import { createMemorySessionStorage } from 'remix/session-storage/memory'
 import type { Page } from 'playwright'
 
 import { db, loadAppMigrations, loadAppSeed } from '../app/db.ts'
-import { books } from '../app/data/schema.ts'
-import { createBookstoreRouter } from '../app/router.ts'
+import { albums } from '../app/data/schema.ts'
+import { createRecordStoreRouter } from '../app/router.ts'
 
-export async function createTestRouter(options: { bookIds?: number[] } = {}) {
+export async function createTestRouter(options: { albumIds?: number[] } = {}) {
   await db.reset({ migrations: await loadAppMigrations(), seed: await loadAppSeed() })
-  if (options.bookIds) {
-    await db.deleteMany(books, { where: notInList('id', options.bookIds) })
+  if (options.albumIds) {
+    await db.deleteMany(albums, { where: notInList('id', options.albumIds) })
   }
 
   let sessionCookie = createCookie('session', {
@@ -24,7 +24,7 @@ export async function createTestRouter(options: { bookIds?: number[] } = {}) {
   })
   let sessionStorage = createMemorySessionStorage()
 
-  return createBookstoreRouter({
+  return createRecordStoreRouter({
     sessionCookie,
     sessionStorage,
   })

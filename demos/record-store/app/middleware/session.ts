@@ -10,7 +10,7 @@ const sessionDirectoryPath = path.join(demoRootPath, 'tmp', 'sessions')
 
 fs.mkdirSync(sessionDirectoryPath, { recursive: true })
 
-export const sessionCookie = createCookie('session', {
+export const sessionCookie = createCookie('record-store-session', {
   secrets: ['s3cr3t-k3y-for-d3mo'],
   httpOnly: true,
   sameSite: 'Lax',

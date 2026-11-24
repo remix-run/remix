@@ -10,13 +10,13 @@
     },
     "allowFiles": [
       "demos/record-store/app/routes.ts",
-      "demos/record-store/app/data/book-genres.ts",
+      "demos/record-store/app/data/album-genres.ts",
       "demos/record-store/app/**/public/**",
       "demos/record-store/app/actions/auth/login/login-form.ts",
       "demos/record-store/app/actions/auth/login/login-schema.ts",
       "demos/record-store/app/actions/auth/schemas.ts",
       "demos/record-store/app/ui/restful-form.tsx",
-      "demos/record-store/app/ui/book-transitions.ts",
+      "demos/record-store/app/ui/album-transitions.ts",
       "demos/record-store/app/images/*.png"
     ],
     "allowPackages": ["remix", "@remix-run/ui"],
@@ -26,7 +26,7 @@
   "db": {
     "adapter": {
       "type": "sqlite",
-      "filename": "./db/bookstore.sqlite",
+      "filename": "./db/record-store.sqlite",
       "foreignKeys": true
     },
     "migrations": {

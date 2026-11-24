@@ -8,19 +8,19 @@ import {
   requestWithSession,
 } from '../../test/helpers.ts'
 import { db } from '../db.ts'
-import { books } from '../data/schema.ts'
+import { albums } from '../data/schema.ts'
 import { uploadsStorage as uploads } from '../utils/uploads.ts'
 
 const router = await createTestRouter()
 
 describe('root controller', () => {
-  it('GET / returns the first four books in catalog order', async () => {
+  it('GET / returns the first four albums in catalog order', async () => {
     let response = await router.fetch('https://remix.run/')
 
     assert.equal(response.status, 200)
     let html = await response.text()
-    assertContains(html, 'Welcome to the Bookstore')
-    assertContains(html, 'Browse Books')
+    assertContains(html, 'Welcome to the Record Store')
+    assertContains(html, 'Browse Records')
     assert.deepEqual(
       [...html.matchAll(/data-test-slug="([^"]+)"/g)].map((match) => match[1]),
       ['bbq', 'heavy-metal', 'three-ways', 'midnight-platform'],
@@ -42,7 +42,7 @@ describe('root controller', () => {
   it('GET /uploads/*key serves uploaded files from storage', async () => {
     let sessionId = await loginAsAdmin(router)
 
-    let initialBookCount = await db.count(books)
+    let initialAlbumCount = await db.count(albums)
 
     let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
     let fileContent = 'fake image data'
@@ -52,7 +52,7 @@ describe('root controller', () => {
       '',
       'Book with Cover',
       `------${boundary}`,
-      'Content-Disposition: form-data; name="author"',
+      'Content-Disposition: form-data; name="artist"',
       '',
       'Test Author',
       `------${boundary}`,
@@ -72,11 +72,11 @@ describe('root controller', () => {
       '',
       'fiction',
       `------${boundary}`,
-      'Content-Disposition: form-data; name="isbn"',
+      'Content-Disposition: form-data; name="catalogNumber"',
       '',
       '978-1234567890',
       `------${boundary}`,
-      'Content-Disposition: form-data; name="publishedYear"',
+      'Content-Disposition: form-data; name="releaseYear"',
       '',
       '2024',
       `------${boundary}`,
@@ -91,7 +91,7 @@ describe('root controller', () => {
       `------${boundary}--`,
     ].join('\r\n')
 
-    let createRequest = requestWithSession('https://remix.run/admin/books', sessionId, {
+    let createRequest = requestWithSession('https://remix.run/admin/albums', sessionId, {
       method: 'POST',
       headers: {
         'Content-Type': `multipart/form-data; boundary=----${boundary}`,
@@ -101,17 +101,20 @@ describe('root controller', () => {
 
     let createResponse = await router.fetch(createRequest)
     assert.equal(createResponse.status, 302)
-    assert.ok(createResponse.headers.get('Location')?.includes('/admin/books'))
+    assert.ok(createResponse.headers.get('Location')?.includes('/admin/albums'))
 
-    let currentBookCount = await db.count(books)
-    assert.equal(currentBookCount, initialBookCount + 1)
+    let currentAlbumCount = await db.count(albums)
+    assert.equal(currentAlbumCount, initialAlbumCount + 1)
 
-    let newBook = await db.findOne(books, { where: { slug: 'book-with-cover' } })
-    assert.ok(newBook)
-    assert.equal(newBook.slug, 'book-with-cover')
-    assert.ok(newBook.cover_url.startsWith('/uploads/'))
+    let newAlbum = await db.findOne(albums, { where: { slug: 'book-with-cover' } })
+    assert.ok(newAlbum)
+    assert.equal(newAlbum.slug, 'book-with-cover')
+    assert.equal(newAlbum.artist, 'Test Author')
+    assert.equal(newAlbum.catalog_number, '978-1234567890')
+    assert.equal(newAlbum.release_year, 2024)
+    assert.ok(newAlbum.cover_url.startsWith('/uploads/'))
 
-    let fileResponse = await router.fetch(`https://remix.run${newBook.cover_url}`)
+    let fileResponse = await router.fetch(`https://remix.run${newAlbum.cover_url}`)
 
     assert.equal(fileResponse.status, 200)
     assert.equal(fileResponse.headers.get('Content-Type'), 'image/jpeg')

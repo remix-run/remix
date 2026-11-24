@@ -1,19 +1,19 @@
 import type { Handle } from 'remix/component'
 import { css } from 'remix/component'
 
-import type { Book } from '../data/schema.ts'
+import type { Album } from '../data/schema.ts'
 import { routes } from '../routes.ts'
-import { BookCard } from '../ui/book-card.tsx'
+import { AlbumCard } from '../ui/album-card.tsx'
 import { Layout } from '../ui/layout.tsx'
 
 interface SearchPageProps {
   query: string
-  matchingBooks: Book[]
+  matchingAlbums: Album[]
 }
 
 export function SearchPage(handle: Handle<SearchPageProps>) {
   return () => {
-    let { matchingBooks, query } = handle.props
+    let { matchingAlbums, query } = handle.props
 
     return (
       <Layout>
@@ -28,7 +28,7 @@ export function SearchPage(handle: Handle<SearchPageProps>) {
             <input
               type="search"
               name="q"
-              placeholder="Search books..."
+              placeholder="Search records..."
               value={query}
               mix={css({ flex: 1, padding: '0.5rem' })}
             />
@@ -40,15 +40,15 @@ export function SearchPage(handle: Handle<SearchPageProps>) {
 
         {query ? (
           <p mix={css({ marginBottom: '1rem' })}>
-            Found {matchingBooks.length} result(s) for "{query}"
+            Found {matchingAlbums.length} result(s) for "{query}"
           </p>
         ) : null}
 
         <div class="grid">
-          {matchingBooks.length > 0 ? (
-            matchingBooks.map((book) => <BookCard book={book} />)
+          {matchingAlbums.length > 0 ? (
+            matchingAlbums.map((album) => <AlbumCard album={album} />)
           ) : (
-            <p>No books found matching your search.</p>
+            <p>No records found matching your search.</p>
           )}
         </div>
       </Layout>

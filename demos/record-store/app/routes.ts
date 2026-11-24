@@ -6,8 +6,8 @@ export const routes = route({
   assets: `${assetsBase}/*path`,
   uploads: '/uploads/*key',
   fragments: route('fragments', {
-    cartButton: get('/cart-button/:bookId'),
-    cartToggle: post('/cart-button/:bookId'),
+    cartButton: get('/cart-button/:albumId'),
+    cartToggle: post('/cart-button/:albumId'),
   }),
 
   // Simple static routes
@@ -16,12 +16,12 @@ export const routes = route({
   contact: form('contact'),
   search: '/search',
 
-  // Public book routes
-  books: {
-    index: '/books',
-    genre: '/books/genre/:genre',
-    show: '/books/:slug',
-    related: '/books/:slug/related',
+  // Public album routes
+  albums: {
+    index: '/albums',
+    genre: '/albums/genre/:genre',
+    show: '/albums/:slug',
+    related: '/albums/:slug/related',
   },
 
   // Auth routes
@@ -78,8 +78,8 @@ export const routes = route({
   admin: route('admin', {
     index: get('/'),
 
-    // Full CRUD on books
-    books: resources('books', { param: 'bookId' }),
+    // Full CRUD on albums
+    albums: resources('albums', { param: 'albumId' }),
 
     // Partial CRUD on users (no create, users self-register)
     users: resources('users', {

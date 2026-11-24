@@ -47,11 +47,11 @@ export function AccountPage(handle: Handle<{ user: User }>) {
             </a>
             <a
               data-rmx-prefetch="intent"
-              href={routes.books.index.href()}
+              href={routes.albums.index.href()}
               class="btn btn-secondary"
               mix={css({ marginLeft: '0.5rem' })}
             >
-              Browse Books
+              Browse Records
             </a>
           </p>
         </div>

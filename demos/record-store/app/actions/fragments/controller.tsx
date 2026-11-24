@@ -4,7 +4,7 @@ import * as fd from 'remix/data-schema/experimental/form'
 import { redirect } from 'remix/response/redirect'
 
 import { CartButton } from './public/cart-button.tsx'
-import { books } from '../../data/schema.ts'
+import { albums } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { getCurrentCart } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
@@ -15,35 +15,35 @@ const cartButtonErrorSchema = s.object({ status: s.number(), message: s.string()
 export default createController(routes.fragments, {
   actions: {
     cartButton(context) {
-      let bookId = parseId(context.params.bookId)
+      let albumId = parseId(context.params.albumId)
       let error = s.parseSafe(
         cartButtonErrorSchema,
-        context.flashUntilRead.get(`cartButtonError:${bookId}`),
+        context.flashUntilRead.get(`cartButtonError:${albumId}`),
       )
-      return renderCartButton(context, bookId, error.success ? error.value : undefined)
+      return renderCartButton(context, albumId, error.success ? error.value : undefined)
     },
 
     async cartToggle(context) {
       let { db, formData, params, request, session } = context
-      let bookId = parseId(params.bookId)
+      let albumId = parseId(params.albumId)
       let submission = fd.parseSafe(
         fd.object({ intent: fd.text(s.union([s.literal('add'), s.literal('remove')])) }),
         formData,
       )
       let error =
-        bookId === undefined
-          ? { status: 404, message: 'Book not found.' }
+        albumId === undefined
+          ? { status: 404, message: 'Record not found.' }
           : !submission.success
             ? { status: 400, message: 'Invalid cart action.' }
-            : await toggleCart({ db, session, bookId, intent: submission.value.intent })
+            : await toggleCart({ db, session, albumId, intent: submission.value.intent })
 
       if (request.headers.get('X-Remix-Frame') === 'true') {
-        return renderCartButton(context, bookId, error)
+        return renderCartButton(context, albumId, error)
       }
       if (error) {
         // Sibling button frames can race to save the session and expire normal flashes
-        // before this book's frame reads its error. Keep it until that frame reads it.
-        context.flashUntilRead.set(`cartButtonError:${bookId}`, error)
+        // before this album's frame reads its error. Keep it until that frame reads it.
+        context.flashUntilRead.set(`cartButtonError:${albumId}`, error)
       }
       let referrer = URL.parse(request.headers.get('Referer') ?? '')
       let location =
@@ -57,22 +57,22 @@ export default createController(routes.fragments, {
 
 async function renderCartButton(
   { db, render, request, session }: RouterTypes['context'],
-  bookId: number | undefined,
+  albumId: number | undefined,
   error?: { status: number; message: string },
 ): Promise<Response> {
-  let book = bookId === undefined ? undefined : await db.find(books, bookId)
+  let album = albumId === undefined ? undefined : await db.find(albums, albumId)
 
-  if (!book) {
-    return render(<p>Book not found</p>, fragmentResponseInit({ status: 404 }))
+  if (!album) {
+    return render(<p>Record not found</p>, fragmentResponseInit({ status: 404 }))
   }
 
   let cart = getCurrentCart(session)
-  let inCart = cart.items.some((item) => item.bookId === book.id)
+  let inCart = cart.items.some((item) => item.albumId === album.id)
 
   return render(
     <CartButton
       inCart={inCart}
-      id={book.id}
+      id={album.id}
       error={error?.message}
       showErrorMessage={request.method === 'GET'}
     />,

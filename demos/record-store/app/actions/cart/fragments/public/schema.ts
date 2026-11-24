@@ -3,17 +3,17 @@ import * as coerce from 'remix/data-schema/coerce'
 import { max, min } from 'remix/data-schema/checks'
 import * as fd from 'remix/data-schema/experimental/form'
 
-const bookId = fd.text(
+const albumId = fd.text(
   coerce.number().refine((value) => Number.isSafeInteger(value) && value > 0),
-  { errorMap: () => 'Invalid book.' },
+  { errorMap: () => 'Invalid record.' },
 )
 
 export const CartItemUpdateForm = fd.object({
-  bookId,
+  albumId,
   quantity: fd.number(
     s.number().pipe(min(1), max(Number.MAX_SAFE_INTEGER)).refine(Number.isSafeInteger),
     { errorMap: () => 'Invalid quantity' },
   ),
 })
 
-export const CartItemRemoveForm = fd.object({ bookId })
+export const CartItemRemoveForm = fd.object({ albumId })

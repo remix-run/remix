@@ -2,10 +2,10 @@ import { createController } from 'remix/router'
 import { ilike, or } from 'remix/data-table'
 import { createFileResponse as sendFile } from 'remix/response/file'
 
-import { books } from '../data/schema.ts'
+import { albums } from '../data/schema.ts'
 import { routes } from '../routes.ts'
 import { assets } from '../utils/assets.ts'
-import { resolveBookCover } from '../utils/book-images.ts'
+import { resolveAlbumCover } from '../utils/album-images.ts'
 import { uploadsStorage } from '../utils/uploads.ts'
 import { browsingResponseInit } from './browsing-response.ts'
 import { AboutPage } from './about.tsx'
@@ -30,30 +30,30 @@ export default createController(routes, {
       })
     },
     async home({ db, render, request }) {
-      let bookRows = await db.findMany(books, { orderBy: ['id', 'asc'], limit: 4 })
-      let featuredBooks = await Promise.all(bookRows.map(resolveBookCover))
+      let albumRows = await db.findMany(albums, { orderBy: ['id', 'asc'], limit: 4 })
+      let featuredAlbums = await Promise.all(albumRows.map(resolveAlbumCover))
 
-      return render(<HomePage featuredBooks={featuredBooks} />, browsingResponseInit(request))
+      return render(<HomePage featuredAlbums={featuredAlbums} />, browsingResponseInit(request))
     },
     about({ render, request }) {
       return render(<AboutPage />, browsingResponseInit(request))
     },
     async search({ db, render, request, url }) {
       let query = url.searchParams.get('q') ?? ''
-      let matchingBooks = query
-        ? await db.findMany(books, {
+      let matchingAlbums = query
+        ? await db.findMany(albums, {
             where: or(
               ilike('title', `%${query.toLowerCase()}%`),
-              ilike('author', `%${query.toLowerCase()}%`),
+              ilike('artist', `%${query.toLowerCase()}%`),
               ilike('description', `%${query.toLowerCase()}%`),
             ),
             orderBy: ['id', 'asc'],
           })
         : []
-      matchingBooks = await Promise.all(matchingBooks.map(resolveBookCover))
+      matchingAlbums = await Promise.all(matchingAlbums.map(resolveAlbumCover))
 
       return render(
-        <SearchPage query={query} matchingBooks={matchingBooks} />,
+        <SearchPage query={query} matchingAlbums={matchingAlbums} />,
         browsingResponseInit(request),
       )
     },

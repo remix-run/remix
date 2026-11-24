@@ -2,7 +2,7 @@ import * as fd from 'remix/data-schema/experimental/form'
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
-import { itemsByOrder, orders, orderItemsWithBook } from '../../data/schema.ts'
+import { itemsByOrder, orders, orderItemsWithAlbum } from '../../data/schema.ts'
 import { requireAuth } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
 import { clearCart, getCartTotal } from '../../utils/cart.ts'
@@ -59,7 +59,7 @@ export default createController(routes.checkout, {
           itemsByOrder.targetTable,
           cart.items.map((item) => ({
             order_id: createdOrder.id,
-            book_id: item.bookId,
+            album_id: item.albumId,
             title: item.title,
             unit_price: item.price,
             quantity: item.quantity,
@@ -67,7 +67,7 @@ export default createController(routes.checkout, {
         )
 
         let created = await tx.find(orders, createdOrder.id, {
-          with: { items: orderItemsWithBook },
+          with: { items: orderItemsWithAlbum },
         })
 
         if (!created) {
@@ -89,7 +89,7 @@ export default createController(routes.checkout, {
         orderId === undefined
           ? undefined
           : await db.find(orders, orderId, {
-              with: { items: orderItemsWithBook },
+              with: { items: orderItemsWithAlbum },
             })
 
       if (!order || order.user_id !== user.id) {
