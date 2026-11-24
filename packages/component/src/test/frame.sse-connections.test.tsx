@@ -41,7 +41,7 @@ function createEventStream(): EventStream {
   return {
     response: new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }),
     write,
-    send: (html) => write(`data: ${html}\n\n`),
+    send: (html) => write(`event: rmx-replace\ndata: ${html}\n\n`),
     close: () => source?.close(),
     cancelled: () => cancelled,
   }
@@ -172,6 +172,30 @@ describe('live frame connections', () => {
     expect(requests).toBe(1)
   })
 
+  it('appends events that carry ids and server-rendered styles', async (t) => {
+    let events = createEventStream()
+    t.mock.method(globalThis, 'fetch', async () => events.response)
+
+    let { show } = await mountFrames(t, ['/live'])
+    show()
+
+    // The wire format a server-rendered stream actually produces: a named event, an id, and HTML
+    // whose styles arrive with it.
+    events.write('retry: 1000\n\n')
+    events.write(
+      'event: rmx-replace\nid: 1\ndata: <head><style data-rmx-style="rmxc-a">.rmxc-a { color: red }</style></head><p class="head">connected</p>\n\n',
+    )
+    await waitFor(() => document.querySelector('.head'))
+
+    events.write(
+      'event: rmx-append\nid: 2\ndata: <head><style data-rmx-style="rmxc-b">.rmxc-b { color: blue }</style></head><p data-line>One</p>\n\n',
+    )
+    events.write('event: rmx-append\nid: 3\ndata: <p data-line>Two</p>\n\n')
+
+    await waitFor(() => (document.querySelectorAll('[data-line]').length === 2 ? true : null))
+    expect(document.querySelector('.head')).not.toBeNull()
+  })
+
   it('closes the connection when the last frame goes away', async (t) => {
     let events = createEventStream()
     t.mock.method(globalThis, 'fetch', async () => events.response)
@@ -198,7 +222,7 @@ describe('live frame connections', () => {
     let { show } = await mountFrames(t, ['/live'])
     show()
     streams[0]!.write('retry: 10\n\n')
-    streams[0]!.write('id: 7\ndata: <p class="status">Queued</p>\n\n')
+    streams[0]!.write('event: rmx-replace\nid: 7\ndata: <p class="status">Queued</p>\n\n')
     await waitFor(() => (document.querySelector('.status')?.textContent === 'Queued' ? true : null))
 
     streams[0]!.close()

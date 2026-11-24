@@ -5,14 +5,15 @@ const LIVE_FRAME_STREAM = Symbol('LiveFrameStream')
 /** Event name that adds its HTML to a frame. */
 export const APPEND_EVENT = 'rmx-append'
 
-/** Event name that replaces a frame's content, which an unnamed event also does. */
+/** Event name that replaces a frame's content. */
 export const REPLACE_EVENT = 'rmx-replace'
 
 /**
  * What a frame does with an event, or nothing when the event isn't addressed to it.
  *
- * Names are namespaced and the vocabulary is closed, so one connection can carry events meant for
- * other listeners, such as an app's own `notification` events, without a frame rendering them.
+ * Only the two namespaced names are frame content. Everything else, an unnamed `message` event
+ * included, belongs to whatever else reads the stream, so one connection can carry an app's own
+ * events without a frame rendering them.
  *
  * @param event Event to classify.
  * @returns How the event joins the frame, or undefined when the frame should ignore it.
@@ -20,8 +21,7 @@ export const REPLACE_EVENT = 'rmx-replace'
 export function frameEventKind(event: ServerSentEvent): 'append' | 'replace' | undefined {
   if (event.data === '') return undefined
   if (event.name === APPEND_EVENT) return 'append'
-  // An unnamed event is `message`, which keeps the simplest possible stream working.
-  if (event.name === REPLACE_EVENT || event.name === 'message') return 'replace'
+  if (event.name === REPLACE_EVENT) return 'replace'
   return undefined
 }
 
@@ -146,16 +146,16 @@ export function serializeEvent(kind: 'append' | 'replace', data: string): string
     .split('\n')
     .map((line) => `data: ${line}`)
     .join('\n')
-  return kind === 'append' ? `event: ${APPEND_EVENT}\n${lines}\n\n` : `${lines}\n\n`
+  return `event: ${kind === 'append' ? APPEND_EVENT : REPLACE_EVENT}\n${lines}\n\n`
 }
 
 /**
  * Converts a server-sent event body into a stream of frame HTML batches.
  *
  * Every rendered event's data is trusted frame HTML. An `rmx-append` event adds its HTML after
- * what the frame already shows, while `rmx-replace` and unnamed events are snapshots of the
- * frame's content, diffed into the live DOM the same way a flushed HTML batch is. Events with any
- * other name belong to something else and are skipped.
+ * what the frame already shows, and an `rmx-replace` event is a snapshot of the frame's content,
+ * diffed into the live DOM the same way a flushed HTML batch is. Events with any other name
+ * belong to something else and are skipped.
  *
  * @param body Response body carrying the event stream.
  * @returns A stream of HTML batches tagged as live frame content.

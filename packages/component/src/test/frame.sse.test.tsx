@@ -32,7 +32,7 @@ function createEventStream(): EventStream {
   return {
     response: new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }),
     write,
-    send: (html) => write(`data: ${html}\n\n`),
+    send: (html) => write(`event: rmx-replace\ndata: ${html}\n\n`),
     close: () => source?.close(),
     cancelled: () => cancelled,
   }
@@ -125,7 +125,7 @@ describe('frames connected to an event stream', () => {
 
     try {
       events.write(': ping\r\n\r\n')
-      events.write('data: <p id="split">Half')
+      events.write('event: rmx-replace\r\ndata: <p id="split">Half')
       events.write(' written</p>\r\n')
       events.write('\r\n')
 
@@ -141,7 +141,7 @@ describe('frames connected to an event stream', () => {
     let root = renderLiveFrame(events)
 
     try {
-      events.write('data: <p id="multi">\ndata: Line one\ndata: </p>\n\n')
+      events.write('event: rmx-replace\ndata: <p id="multi">\ndata: Line one\ndata: </p>\n\n')
 
       let multi = await waitFor(() => container!.querySelector('#multi'))
       expect(multi.textContent).toBe('\nLine one\n')
@@ -217,19 +217,39 @@ describe('frames connected to an event stream', () => {
     }
   })
 
-  it('replaces on an rmx-replace event as well as an unnamed one', async () => {
+  it('appends HTML that carries server-rendered styles', async () => {
     let events = createEventStream()
     let root = renderLiveFrame(events)
 
     try {
+      events.write(
+        'event: rmx-replace\ndata: <head><style data-rmx-style="rmxc-a">.rmxc-a { color: red }</style></head><p class="head">Connected</p>\n\n',
+      )
+      await waitFor(() => container!.querySelector('.head'))
+
+      events.write(
+        'event: rmx-append\ndata: <head><style data-rmx-style="rmxc-b">.rmxc-b { color: blue }</style></head><p class="line">One</p>\n\n',
+      )
+      await waitFor(() => container!.querySelector('.line'))
+
+      expect(container!.querySelector('.head')).not.toBeNull()
+      expect(container!.querySelectorAll('.line').length).toBe(1)
+    } finally {
+      root.dispose()
+    }
+  })
+
+  it('ignores unnamed events, which belong to whatever else reads the stream', async () => {
+    let events = createEventStream()
+    let root = renderLiveFrame(events)
+
+    try {
+      events.write('data: <p id="unnamed">Unnamed</p>\n\n')
       events.write('event: rmx-replace\ndata: <p id="status">Named</p>\n\n')
+
       let status = await waitFor(() => container!.querySelector('#status'))
       expect(status.textContent).toBe('Named')
-
-      events.send('<p id="status">Unnamed</p>')
-      await waitFor(() =>
-        container!.querySelector('#status')?.textContent === 'Unnamed' ? true : null,
-      )
+      expect(container!.querySelector('#unnamed')).toBeNull()
     } finally {
       root.dispose()
     }
@@ -245,6 +265,7 @@ describe('frames connected to an event stream', () => {
 
       // A connection shared with the app's own events must not render them as frame content.
       events.write('event: notification\ndata: {"unread":3}\n\n')
+      events.write('data: {"unread":4}\n\n')
       events.write('event: append\ndata: <p class="line">Unnamespaced</p>\n\n')
       events.write('event: rmx-append\ndata: <p class="line">Appended</p>\n\n')
 
