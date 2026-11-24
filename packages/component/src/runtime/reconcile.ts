@@ -1695,11 +1695,11 @@ function placeVNode(node: CommittedVNode, domParent: ParentNode, anchor: Node | 
   let lastDom = findLastDomAnchor(node)
   if (!lastDom) return
   if (anchor && domRangeContainsNode(firstDom, lastDom, anchor)) return
-  // Re-inserting a node that is already in place still disconnects and
-  // reconnects it, which runs custom element callbacks and resets state
+  // Even a move to the same position can run custom element callbacks.
   if (lastDom.nextSibling === anchor) return
 
-  moveDomRange(domParent, firstDom, lastDom, anchor)
+  if (firstDom === lastDom) placeNodeBefore(domParent, firstDom, anchor)
+  else moveDomRange(domParent, firstDom, lastDom, anchor)
 }
 
 function findFirstDomAnchor(node: CommittedVNode | null | undefined): Node | null {
@@ -1736,6 +1736,19 @@ function domRangeContainsNode(first: Node, last: Node, node: Node): boolean {
     current = current.nextSibling
   }
   return false
+}
+
+export function placeNodeBefore(parent: ParentNode, node: Node, before: Node | null): void {
+  if (
+    node.parentNode === parent &&
+    node.nodeType === Node.ELEMENT_NODE &&
+    parent.nodeType !== Node.DOCUMENT_NODE &&
+    typeof parent.moveBefore === 'function'
+  ) {
+    parent.moveBefore(node, before)
+  } else {
+    parent.insertBefore(node, before)
+  }
 }
 
 function moveDomRange(domParent: ParentNode, first: Node, last: Node, before: Node | null): void {

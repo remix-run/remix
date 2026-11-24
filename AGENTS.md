@@ -34,6 +34,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 
 - **Locality**: write for the next reader, who may be an agent. Keep code that changes together in one place so understanding or editing a piece of UI does not require jumping between a use and its definition.
 - **Indirection**: do not introduce a name, constant, helper, type, or file solely to hold a single use. Each extraction adds a lookup for readers and context for agents. Extract when there is actual reuse or a separate responsibility. Exported types and public API shapes are not single uses.
+- **Module granularity**: do not create standalone files for small utilities, even when shared. Each browser ESM module can add a network request. Keep helpers in an existing owning module that needs them and is already loaded by their callers; keep dependencies acyclic. Extract a standalone module only when enough related functionality has accumulated to justify its own responsibility and the additional request.
 - **Imports**: use `import type { X }` and `export type { X }`; include `.ts` extensions
 - **Variables**: use `let` for locals, `const` for module scope, never `var`
 - **Functions**: use regular functions by default; use arrow functions for callbacks; use concise arrow bodies when they only return an expression
