@@ -985,7 +985,7 @@ function renderAttributes(
 
     let value = props[key]
     if (value === undefined || value === null) continue
-    let attrName = transformAttributeName(key, isSvg)
+    let attrName = normalizeAttributeName(key, isSvg).attr
     if (typeof value === 'boolean') {
       if (shouldStringifyBooleanAttribute(attrName)) {
         attrs += ` ${attrName}="${value}"`
@@ -1159,11 +1159,11 @@ function buildComponentSegment(
       }
       return undefined
     },
-    getFrameByName() {
-      return undefined
-    },
-    getTopFrame() {
-      return frameState.topFrame
+    frames: {
+      get top() {
+        return frameState.topFrame
+      },
+      get: () => undefined,
     },
   })
 
@@ -1251,11 +1251,11 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
           }
           return undefined
         },
-        getFrameByName() {
-          return undefined
-        },
-        getTopFrame() {
-          return frameState.topFrame
+        frames: {
+          get top() {
+            return frameState.topFrame
+          },
+          get: () => undefined,
         },
       })
 
@@ -1499,10 +1499,6 @@ function escapeScriptTextContent(value: string): string {
     (_match, prefix: string, firstLetter: string, suffix: string) =>
       `${prefix}${firstLetter === 's' ? '\\u0073' : '\\u0053'}${suffix}`,
   )
-}
-
-function transformAttributeName(name: string, isSvg: boolean): string {
-  return normalizeAttributeName(name, isSvg).attr
 }
 
 function finalizeHtml(root: Segment[], context: RenderContext): string {

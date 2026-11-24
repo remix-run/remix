@@ -12,7 +12,6 @@ import { createFrameRuntime, FrameRegistry, type ResolveFrame } from './frame-ru
 import {
   getDefaultStyleManager,
   diffVNodes,
-  findNextSiblingDomAnchor,
   isCommittedComponentNode,
   renderComponent,
   restoreAncestorSelect,
@@ -110,15 +109,21 @@ export function createRangeRoot(
  * @returns A virtual root controller.
  */
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
-  let styles = options.styleManager ?? getDefaultStyleManager()
-  if (container.innerHTML.trim() !== '') {
-    // Adopt additively: multiple roots hydrating separate islands may share
-    // the default style manager, and adopting a later island must not release
-    // the server styles an earlier island still depends on.
+  let start: ChildNode | null = null
+  if (hasServerContent(container)) {
+    let styles = options.styleManager ?? getDefaultStyleManager()
     styles.adoptServerStyles(container)
+    // Adoption can remove or replace the first node.
+    if (hasServerContent(container)) start = container.firstChild
   }
-  let hydrationStart = container.innerHTML.trim() !== '' ? container.firstChild : null
-  return createVirtualRoot(container, hydrationStart, options)
+  return createVirtualRoot(container, start, options)
+}
+
+function hasServerContent(container: HTMLElement): boolean {
+  // Templates serialize their content fragment. For ordinary elements, a child tag
+  // proves there is markup without serializing the entire subtree.
+  if (container.localName !== 'template' && container.firstElementChild) return true
+  return container.innerHTML.trim() !== ''
 }
 
 function createVirtualRoot(
@@ -132,7 +137,6 @@ function createVirtualRoot(
   let vroot: CommittedVNode | null = null
   let currentElement: RemixNode | undefined
   let styles = options.styleManager ?? getDefaultStyleManager()
-  let hydrationCursor = hydrationStart
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
   let scheduler =
@@ -146,25 +150,14 @@ function createVirtualRoot(
     rootTarget: eventTarget,
   }
 
-  let isErrorForwardingAttached = false
   function forwardDomError(event: Event) {
     eventTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
   }
-  function attachDomErrorForwarding() {
-    if (isErrorForwardingAttached) return
-    parent.addEventListener('error', forwardDomError)
-    isErrorForwardingAttached = true
-  }
-  function detachDomErrorForwarding() {
-    if (!isErrorForwardingAttached) return
-    parent.removeEventListener('error', forwardDomError)
-    isErrorForwardingAttached = false
-  }
-  attachDomErrorForwarding()
+  parent.addEventListener('error', forwardDomError)
 
   let root = Object.assign(eventTarget, {
     render(element: RemixNode) {
-      attachDomErrorForwarding()
+      if (currentElement === undefined) parent.addEventListener('error', forwardDomError)
       currentElement = element
 
       let vnode = toVNode(element)
@@ -183,11 +176,19 @@ function createVirtualRoot(
       }
       scheduler.enqueueWork([
         () => {
-          let cursor = hydrationCursor === null ? undefined : { current: hydrationCursor }
-          let committed = diffVNodes(vroot, vnode, parent, vParent, context, rangeEnd, cursor)
+          let cursor = hydrationStart === null ? undefined : { current: hydrationStart }
+          let committed = diffVNodes(
+            vroot,
+            vnode,
+            parent,
+            vParent,
+            context,
+            rangeEnd ?? null,
+            cursor,
+          )
           vParent._children = [committed]
           vroot = committed
-          hydrationCursor = null
+          hydrationStart = null
           restoreAncestorSelect(parent)
         },
       ])
@@ -200,7 +201,7 @@ function createVirtualRoot(
     },
 
     dispose() {
-      detachDomErrorForwarding()
+      parent.removeEventListener('error', forwardDomError)
       unregisterRoot(root)
       currentElement = undefined
 
@@ -304,7 +305,6 @@ function formatComponentCounts(counts: Map<string, number>): string {
  * @returns A scheduler instance.
  */
 export function createScheduler(doc: Document, rootTarget: EventTarget): Scheduler {
-  let documentState = createDocumentState(doc)
   let scheduled = new Map<CommittedComponentNode, ParentNode>()
   let workTasks: EmptyFn[] = []
   let commitPhaseTasks: EmptyFn[] = []
@@ -373,7 +373,13 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
         let batch = scheduled
         scheduled = new Map()
 
-        documentState.capture()
+        let focused = doc.activeElement || doc.body
+        let input =
+          focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement
+            ? focused
+            : null
+        let start = input?.selectionStart
+        let end = input?.selectionEnd
 
         let updateParents = batch.size > 0 ? Array.from(new Set(batch.values())) : []
         setActiveSchedulerUpdateParents(updateParents)
@@ -386,13 +392,8 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
             if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
             if (!trackCascadingUpdate(vnode)) return
             let curr = vnode._content
-            // Calculate anchor at render time from current vdom position (never stale).
-            // Needed for fragment self-updates that add children - without this, new children
-            // would be appended after siblings. The keyed diff has placement logic, but unkeyed
-            // diff relies on anchor for correct positioning.
-            let anchor = findNextSiblingDomAnchor(vnode) || undefined
             try {
-              renderComponent(curr, vnode, domParent, vnode._context, anchor)
+              renderComponent(curr, vnode, domParent, vnode._context)
             } catch (error) {
               dispatchError(error)
             }
@@ -404,7 +405,9 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
 
         // Restore selection before commit-phase lifecycle work so mixins see
         // the final DOM state but still run before commit listeners and user tasks.
-        documentState.restore()
+        if (focused && focused !== (doc.activeElement || doc.body) && doc.contains(focused)) {
+          restoreFocus(focused, input, start, end)
+        }
 
         flushTaskQueue(commitPhaseTasks)
         dispatchPhaseEvent('commit', updateParents)
@@ -504,47 +507,28 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
  * Adapted from https://github.com/facebook/react/blob/main/packages/react-dom-bindings/src/client/ReactInputSelection.js
  * Copyright (c) Meta Platforms, Inc. and affiliates. MIT License.
  */
-function createDocumentState(doc: Document) {
-  let focused: Element | null
-  let input: HTMLInputElement | HTMLTextAreaElement | null
-  let start: number | null
-  let end: number | null
+function restoreFocus(
+  element: Element,
+  control: HTMLInputElement | HTMLTextAreaElement | null,
+  start: number | null | undefined,
+  end: number | null | undefined,
+) {
+  let positions: [Element, number, number][] = []
+  for (let parent: Element | null = element; parent; parent = parent.parentElement) {
+    positions.push([parent, parent.scrollLeft, parent.scrollTop])
+  }
 
-  return {
-    capture() {
-      focused = doc.activeElement || doc.body
-      input =
-        focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement
-          ? focused
-          : null
-      start = input?.selectionStart ?? null
-      end = input?.selectionEnd ?? null
-    },
-    restore() {
-      let element = focused
-      focused = null
-      let control = input
-      input = null
-      if (!element || element === (doc.activeElement || doc.body) || !doc.contains(element)) return
-
-      let positions: [Element, number, number][] = []
-      for (let parent: Element | null = element; parent; parent = parent.parentElement) {
-        positions.push([parent, parent.scrollLeft, parent.scrollTop])
-      }
-
-      if (control && start != null && end != null) {
-        try {
-          control.selectionStart = start
-          control.selectionEnd = end
-        } catch {
-          // The input type can change during this render.
-        }
-      }
-      if (element instanceof HTMLElement && typeof element.focus === 'function') element.focus()
-      for (let [ancestor, left, top] of positions) {
-        ancestor.scrollLeft = left
-        ancestor.scrollTop = top
-      }
-    },
+  if (control && start != null && end != null) {
+    try {
+      control.selectionStart = start
+      control.selectionEnd = end
+    } catch {
+      // The input type can change during this render.
+    }
+  }
+  if (element instanceof HTMLElement && typeof element.focus === 'function') element.focus()
+  for (let [ancestor, left, top] of positions) {
+    ancestor.scrollLeft = left
+    ancestor.scrollTop = top
   }
 }
