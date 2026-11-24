@@ -5311,6 +5311,119 @@ describe('asset-server', () => {
     }
   })
 
+  it('accounts for injected HMR setup code in external source maps', async (t) => {
+    let source = 'console.log("ASSETS_ONLY");\nif (import.meta.hot) import.meta.hot.accept();\n'
+    await write(dir, 'app/entry.js', source)
+    let assetServer = createWatchedTestServer(dir, {
+      hmr: createTestBrowserHmrChannel,
+      sourceMaps: 'external',
+    })
+    t.after(() => assetServer.close())
+
+    let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(assetServer, 'app/entry.js')
+    let consumer = new SourceMapConsumer(sourceMap)
+    let generated = getLineAndColumn(compiledCode, 'console.log')
+
+    assert.equal(generated.line, 3)
+    assert.deepEqual(consumer.originalPositionFor(generated), {
+      source: '/assets/app/entry.js',
+      line: 1,
+      column: 0,
+      name: null,
+    })
+    assert.deepEqual(sourceMap.sourcesContent, [source])
+    assert.equal(consumer.originalPositionFor({ line: 1, column: 0 }).source, null)
+    assert.equal(consumer.originalPositionFor({ line: 2, column: 0 }).source, null)
+  })
+
+  it('accounts for injected HMR setup code in inline source maps', async (t) => {
+    let source = 'console.log("ASSETS_ONLY");\nif (import.meta.hot) import.meta.hot.accept();\n'
+    await write(dir, 'app/entry.js', source)
+    let assetServer = createWatchedTestServer(dir, {
+      hmr: createTestBrowserHmrChannel,
+      sourceMaps: 'inline',
+    })
+    t.after(() => assetServer.close())
+
+    let response = await get(assetServer, '/assets/app/entry.js')
+    assert.ok(response)
+    let compiledCode = await response.text()
+    let sourceMap = decodeInlineSourceMap(compiledCode) as RawSourceMap
+    let consumer = new SourceMapConsumer(sourceMap)
+    let generated = getLineAndColumn(compiledCode, 'console.log')
+
+    assert.equal(generated.line, 3)
+    assert.deepEqual(consumer.originalPositionFor(generated), {
+      source: '/assets/app/entry.js',
+      line: 1,
+      column: 0,
+      name: null,
+    })
+    assert.deepEqual(sourceMap.sourcesContent, [source])
+    assert.equal(consumer.originalPositionFor({ line: 1, column: 0 }).source, null)
+    assert.equal(consumer.originalPositionFor({ line: 2, column: 0 }).source, null)
+  })
+
+  it('accounts for injected HMR setup code in source maps with loaders and minification', async (t) => {
+    let source = [
+      'import { value } from "./dep.ts"',
+      'console.log(value)',
+      'if (import.meta.hot) import.meta.hot.accept()',
+      '',
+    ].join('\n')
+    await write(dir, 'app/entry.ts', source)
+    await write(dir, 'app/dep.ts', 'export let value: number = 1')
+    let assetServer = createWatchedTestServer(dir, {
+      hmr: createTestBrowserHmrChannel,
+      minify: true,
+      scripts: {
+        loaders: [createPrependModuleLoader('console.debug("loader")\n')],
+      },
+      sourceMaps: 'external',
+    })
+    t.after(() => assetServer.close())
+
+    let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(assetServer, 'app/entry.ts')
+    let consumer = new SourceMapConsumer(sourceMap)
+    let original = consumer.originalPositionFor(getLineAndColumn(compiledCode, 'console.log'))
+    let expected = getLineAndColumn(source, 'console.log')
+
+    assert.equal(original.source, '/assets/app/entry.ts')
+    assert.equal(original.line, expected.line)
+    assert.equal(original.column, expected.column)
+    assert.equal(
+      consumer.originalPositionFor(getLineAndColumn(compiledCode, 'console.debug')).source,
+      null,
+    )
+    assert.deepEqual(sourceMap.sourcesContent, [source])
+  })
+
+  it('accounts for injected HMR setup code in source maps after rewriting dependency accepts', async (t) => {
+    let source = [
+      'import { value } from "./dep.ts"',
+      'console.log(value)',
+      'if (import.meta.hot) import.meta.hot.accept("./dep.ts", () => {})',
+      '',
+    ].join('\n')
+    await write(dir, 'app/entry.ts', source)
+    await write(dir, 'app/dep.ts', 'export let value = 1')
+    let assetServer = createWatchedTestServer(dir, {
+      hmr: createTestBrowserHmrChannel,
+      sourceMaps: 'external',
+    })
+    t.after(() => assetServer.close())
+
+    let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(assetServer, 'app/entry.ts')
+    let consumer = new SourceMapConsumer(sourceMap)
+    let original = consumer.originalPositionFor(getLineAndColumn(compiledCode, 'console.log'))
+    let expected = getLineAndColumn(source, 'console.log')
+
+    assert.match(compiledCode, /accept\("\/assets\/app\/dep\.ts"/)
+    assert.equal(original.source, '/assets/app/entry.ts')
+    assert.equal(original.line, expected.line)
+    assert.equal(original.column, expected.column)
+  })
+
   it('supports inline source maps with absolute source paths', async () => {
     let entryPath = await write(dir, 'app/entry.ts', 'export const entry: number = 1')
     let assetServer = createTestServer(dir, {
