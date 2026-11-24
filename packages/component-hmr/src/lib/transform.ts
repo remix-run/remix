@@ -1,10 +1,6 @@
 import MagicString from 'magic-string'
 import { parseSync } from 'oxc-parser'
-import {
-  SourceMapConsumer,
-  SourceMapGenerator,
-  type RawSourceMap,
-} from 'source-map-js/source-map.js'
+import { SourceMapGenerator } from 'source-map-js/source-map.js'
 
 /**
  * Result of analyzing and optionally rewriting a Remix component module for HMR.
@@ -66,7 +62,7 @@ type ComponentMatch = {
   fullEnd: number
   fullStart: number
   name: string
-  params: string
+  params: MagicString
   renderArgument: AstNode
   setupHash: string
   setupStatements: AstNode[]
@@ -79,7 +75,7 @@ type ClientEntryMatch = {
   functionName: string
   functionStart: number
   name: string
-  params: string
+  params: MagicString
   renderArgument: AstNode
   setupHash: string
   setupStatements: AstNode[]
@@ -92,10 +88,13 @@ type TrackedExport = {
   localName: string
 }
 
-type SourceMapHint = {
-  generatedSnippet: string
-  originalSnippet: string
-  originalStart: number
+type SourceFragment = string | MagicString
+
+type SourceEdit = {
+  kind: 'overwrite' | 'prepend' | 'append'
+  start: number
+  end: number
+  fragments: SourceFragment[]
 }
 
 /**
@@ -124,117 +123,126 @@ export function transformComponentsForBrowser(
   let { componentMatches, clientEntryMatches, trackedExports } = matchResult
 
   let importSpecifiers = getComponentHmrImportSpecifiers(options.importSource)
-  let rewritten = new MagicString(source)
+  let edits: SourceEdit[] = []
   let componentNames: string[] = []
-  let sourceMapHints: SourceMapHint[] = []
 
   for (let match of componentMatches) {
     componentNames.push(match.name)
 
-    let implementation = createHmrImplementationBody(match, source, options.moduleUrl)
     let implementationName = `__remixComponentHmrImpl_${match.name}__`
+    let implementation = createHmrImplementationBody(
+      match,
+      source,
+      options.moduleUrl,
+      implementationName,
+    )
     let exportPrefix = match.directExport ? 'export ' : ''
-    let replacement = [
-      `function ${implementationName}(${match.params}) ${implementation.body}`,
-      `${exportPrefix}function ${match.name}(${match.params}) {`,
-      `  return __remixComponentHmr__.getCurrentComponentForHmr(${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
-      `}`,
-      `__remixComponentHmr__.registerComponentForHmr(__remixComponentRefresh__, ${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}, ${implementationName}, ${JSON.stringify(
-        match.setupHash,
-      )}, ${match.name});`,
-    ].join('\n')
-
-    sourceMapHints.push(...implementation.sourceMapHints)
-    rewritten.overwrite(match.fullStart, match.fullEnd, replacement)
+    let wrapperPrefix = `${exportPrefix}function ${match.name}(`
+    edits.push({
+      kind: 'overwrite',
+      start: match.fullStart,
+      end: match.fullEnd,
+      fragments: [
+        ...implementation,
+        '\n',
+        ...createHmrWrapper(wrapperPrefix, match, options.moduleUrl),
+        `\n__remixComponentHmr__.registerComponentForHmr(__remixComponentRefresh__, ${JSON.stringify(
+          options.moduleUrl,
+        )}, ${JSON.stringify(match.name)}, ${implementationName}, ${JSON.stringify(
+          match.setupHash,
+        )}, ${match.name});`,
+      ],
+    })
   }
 
   for (let match of clientEntryMatches) {
     componentNames.push(match.name)
 
-    let implementation = createHmrImplementationBody(match, source, options.moduleUrl)
     let implementationName = `__remixComponentHmrImpl_${match.name}__`
-    let wrapperSource = [
-      `function ${match.functionName}(${match.params}) {`,
-      `  return __remixComponentHmr__.getCurrentComponentForHmr(${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
-      `}`,
-    ].join('\n')
-
-    rewritten.prependLeft(
-      match.statementStart,
-      `function ${implementationName}(${match.params}) ${implementation.body}\n`,
+    let implementation = createHmrImplementationBody(
+      match,
+      source,
+      options.moduleUrl,
+      implementationName,
     )
-    sourceMapHints.push(...implementation.sourceMapHints)
-    rewritten.overwrite(match.functionStart, match.functionEnd, wrapperSource)
-    rewritten.appendLeft(
-      match.statementEnd,
-      `\n__remixComponentHmr__.registerComponentForHmr(__remixComponentRefresh__, ${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}, ${implementationName}, ${JSON.stringify(
-        match.setupHash,
-      )}, ${match.name});`,
+    let wrapperPrefix = `function ${match.functionName}(`
+    edits.push(
+      {
+        kind: 'prepend',
+        start: match.statementStart,
+        end: match.statementStart,
+        fragments: [...implementation, '\n'],
+      },
+      {
+        kind: 'overwrite',
+        start: match.functionStart,
+        end: match.functionEnd,
+        fragments: createHmrWrapper(wrapperPrefix, match, options.moduleUrl),
+      },
+      {
+        kind: 'append',
+        start: match.statementEnd,
+        end: match.statementEnd,
+        fragments: [
+          `\n__remixComponentHmr__.registerComponentForHmr(__remixComponentRefresh__, ${JSON.stringify(
+            options.moduleUrl,
+          )}, ${JSON.stringify(match.name)}, ${implementationName}, ${JSON.stringify(
+            match.setupHash,
+          )}, ${match.name});`,
+        ],
+      },
     )
   }
 
-  rewritten.prepend(
-    [
-      `import { __componentHmrBrowserRuntime__ as __remixComponentHmr__ } from ${JSON.stringify(
-        importSpecifiers.browserRuntimeSpecifier,
-      )};`,
-      `import * as __remixComponentRefresh__ from ${JSON.stringify(importSpecifiers.refreshSpecifier)};`,
-      ``,
-    ].join('\n'),
-  )
-  rewritten.append(
-    [
-      ``,
-      `if (import.meta.hot) {`,
-      `  let __remixComponentHmrComponentNames__ = ${JSON.stringify(componentNames)};`,
-      `  let __remixComponentHmrAcceptComponentModule__ = ${createComponentNamesCheckSource(
-        options.moduleUrl,
-        '__remixComponentHmrComponentNames__',
-        {
-          spaces: 0,
-          clientEntryNames: clientEntryMatches.map((match) => match.name),
-        },
-      )};`,
-      `  let __remixComponentHmrPreviousExports__ = ${createPreviousExportsSource(trackedExports)};`,
-      `  import.meta.hot.accept((module) => {`,
-      `    if (!__remixComponentHmrAcceptComponentModule__) return;`,
-      `    if (module && typeof module === 'object') {`,
-      `      let __remixComponentHmrInvalidationMessage__ = ${createUpdatedExportsCheckSource(
-        'module',
-        '__remixComponentHmrPreviousExports__',
-        '__remixComponentHmrComponentNames__',
-      )};`,
-      `      if (__remixComponentHmrInvalidationMessage__) {`,
-      `        import.meta.hot.invalidate(__remixComponentHmrInvalidationMessage__);`,
-      `        return;`,
-      `      }`,
-      `      __remixComponentHmr__.updateComponentModuleForHmr(__remixComponentRefresh__, ${JSON.stringify(
-        options.moduleUrl,
-      )}, module);`,
-      `    } else {`,
-      `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
-      `    }`,
-      `  });`,
-      `}`,
-    ].join('\n'),
-  )
+  let imports = [
+    `import { __componentHmrBrowserRuntime__ as __remixComponentHmr__ } from ${JSON.stringify(
+      importSpecifiers.browserRuntimeSpecifier,
+    )};`,
+    `import * as __remixComponentRefresh__ from ${JSON.stringify(importSpecifiers.refreshSpecifier)};`,
+    ``,
+  ].join('\n')
+  let footer = [
+    ``,
+    `if (import.meta.hot) {`,
+    `  let __remixComponentHmrComponentNames__ = ${JSON.stringify(componentNames)};`,
+    `  let __remixComponentHmrAcceptComponentModule__ = ${createComponentNamesCheckSource(
+      options.moduleUrl,
+      '__remixComponentHmrComponentNames__',
+      {
+        spaces: 0,
+        clientEntryNames: clientEntryMatches.map((match) => match.name),
+      },
+    )};`,
+    `  let __remixComponentHmrPreviousExports__ = ${createPreviousExportsSource(trackedExports)};`,
+    `  import.meta.hot.accept((module) => {`,
+    `    if (!__remixComponentHmrAcceptComponentModule__) return;`,
+    `    if (module && typeof module === 'object') {`,
+    `      let __remixComponentHmrInvalidationMessage__ = ${createUpdatedExportsCheckSource(
+      'module',
+      '__remixComponentHmrPreviousExports__',
+      '__remixComponentHmrComponentNames__',
+    )};`,
+    `      if (__remixComponentHmrInvalidationMessage__) {`,
+    `        import.meta.hot.invalidate(__remixComponentHmrInvalidationMessage__);`,
+    `        return;`,
+    `      }`,
+    `      __remixComponentHmr__.updateComponentModuleForHmr(__remixComponentRefresh__, ${JSON.stringify(
+      options.moduleUrl,
+    )}, module);`,
+    `    } else {`,
+    `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
+    `    }`,
+    `  });`,
+    `}`,
+  ].join('\n')
 
-  let code = rewritten.toString()
+  let fragments = assembleModule(source, edits, imports, footer)
+  let code = fragments.join('')
 
   return {
     code,
     componentNames,
-    map: options.sourceMap
-      ? generateSourceMap(rewritten, code, source, options.moduleUrl, sourceMapHints)
-      : null,
+    map: options.sourceMap ? generateSourceMap(fragments, code, source, options.moduleUrl) : null,
     transformed: true,
   }
 }
@@ -265,116 +273,112 @@ export function transformComponentsForServer(
   let { componentMatches, clientEntryMatches, trackedExports } = matchResult
 
   let importSpecifiers = getComponentHmrImportSpecifiers(options.importSource)
-  let rewritten = new MagicString(source)
+  let edits: SourceEdit[] = []
   let componentNames: string[] = []
-  let sourceMapHints: SourceMapHint[] = []
 
   for (let match of componentMatches) {
     componentNames.push(match.name)
 
     let implementationName = `__remixComponentHmrImpl_${match.name}__`
     let exportPrefix = match.directExport ? 'export ' : ''
-    let bodySource = source.slice(match.bodyStart, match.bodyEnd)
-    let replacement = [
-      `function ${implementationName}(${match.params}) ${bodySource}`,
-      `${exportPrefix}function ${match.name}(${match.params}) {`,
-      `  return __remixComponentHmr__.getCurrentComponentForHmr(${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
-      `}`,
-      `__remixComponentHmr__.registerComponentForHmr(${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}, ${implementationName});`,
-    ].join('\n')
-
-    sourceMapHints.push({
-      generatedSnippet: bodySource,
-      originalSnippet: bodySource,
-      originalStart: match.bodyStart,
+    let implementationPrefix = `function ${implementationName}(`
+    let bodySource = new MagicString(source).snip(match.bodyStart, match.bodyEnd)
+    let wrapperPrefix = `${exportPrefix}function ${match.name}(`
+    edits.push({
+      kind: 'overwrite',
+      start: match.fullStart,
+      end: match.fullEnd,
+      fragments: [
+        implementationPrefix,
+        match.params,
+        ') ',
+        bodySource,
+        '\n',
+        ...createHmrWrapper(wrapperPrefix, match, options.moduleUrl),
+        `\n__remixComponentHmr__.registerComponentForHmr(${JSON.stringify(
+          options.moduleUrl,
+        )}, ${JSON.stringify(match.name)}, ${implementationName});`,
+      ],
     })
-    rewritten.overwrite(match.fullStart, match.fullEnd, replacement)
   }
 
   for (let match of clientEntryMatches) {
     componentNames.push(match.name)
 
     let implementationName = `__remixComponentHmrImpl_${match.name}__`
-    let bodySource = source.slice(match.bodyStart, match.bodyEnd)
-    let wrapperSource = [
-      `function ${match.functionName}(${match.params}) {`,
-      `  return __remixComponentHmr__.getCurrentComponentForHmr(${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
-      `}`,
-    ].join('\n')
-
-    rewritten.prependLeft(
-      match.statementStart,
-      `function ${implementationName}(${match.params}) ${bodySource}\n`,
-    )
-    sourceMapHints.push({
-      generatedSnippet: bodySource,
-      originalSnippet: bodySource,
-      originalStart: match.bodyStart,
-    })
-    rewritten.overwrite(match.functionStart, match.functionEnd, wrapperSource)
-    rewritten.appendLeft(
-      match.statementEnd,
-      `\n__remixComponentHmr__.registerComponentForHmr(${JSON.stringify(
-        options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}, ${implementationName});`,
+    let implementationPrefix = `function ${implementationName}(`
+    let bodySource = new MagicString(source).snip(match.bodyStart, match.bodyEnd)
+    let wrapperPrefix = `function ${match.functionName}(`
+    edits.push(
+      {
+        kind: 'prepend',
+        start: match.statementStart,
+        end: match.statementStart,
+        fragments: [implementationPrefix, match.params, ') ', bodySource, '\n'],
+      },
+      {
+        kind: 'overwrite',
+        start: match.functionStart,
+        end: match.functionEnd,
+        fragments: createHmrWrapper(wrapperPrefix, match, options.moduleUrl),
+      },
+      {
+        kind: 'append',
+        start: match.statementEnd,
+        end: match.statementEnd,
+        fragments: [
+          `\n__remixComponentHmr__.registerComponentForHmr(${JSON.stringify(
+            options.moduleUrl,
+          )}, ${JSON.stringify(match.name)}, ${implementationName});`,
+        ],
+      },
     )
   }
 
-  rewritten.prepend(
-    [
-      `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from ${JSON.stringify(
-        importSpecifiers.serverRuntimeSpecifier,
-      )};`,
-      ``,
-    ].join('\n'),
-  )
-  rewritten.append(
-    [
-      ``,
-      `if (import.meta.hot) {`,
-      `  let __remixComponentHmrComponentNames__ = ${JSON.stringify(componentNames)};`,
-      `  let __remixComponentHmrAcceptComponentModule__ = ${createComponentNamesCheckSource(
-        options.moduleUrl,
-        '__remixComponentHmrComponentNames__',
-        {
-          spaces: 0,
-          clientEntryNames: clientEntryMatches.map((match) => match.name),
-        },
-      )};`,
-      `  let __remixComponentHmrPreviousExports__ = ${createPreviousExportsSource(trackedExports)};`,
-      `  import.meta.hot.accept((module) => {`,
-      `    if (!__remixComponentHmrAcceptComponentModule__) return;`,
-      `    if (!module || typeof module !== 'object') {`,
-      `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
-      `      return;`,
-      `    }`,
-      `    let __remixComponentHmrInvalidationMessage__ = ${createUpdatedExportsCheckSource(
-        'module',
-        '__remixComponentHmrPreviousExports__',
-        '__remixComponentHmrComponentNames__',
-      )};`,
-      `    if (__remixComponentHmrInvalidationMessage__) {`,
-      `      import.meta.hot.invalidate(__remixComponentHmrInvalidationMessage__);`,
-      `    }`,
-      `  });`,
-      `}`,
-    ].join('\n'),
-  )
+  let imports = [
+    `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from ${JSON.stringify(
+      importSpecifiers.serverRuntimeSpecifier,
+    )};`,
+    ``,
+  ].join('\n')
+  let footer = [
+    ``,
+    `if (import.meta.hot) {`,
+    `  let __remixComponentHmrComponentNames__ = ${JSON.stringify(componentNames)};`,
+    `  let __remixComponentHmrAcceptComponentModule__ = ${createComponentNamesCheckSource(
+      options.moduleUrl,
+      '__remixComponentHmrComponentNames__',
+      {
+        spaces: 0,
+        clientEntryNames: clientEntryMatches.map((match) => match.name),
+      },
+    )};`,
+    `  let __remixComponentHmrPreviousExports__ = ${createPreviousExportsSource(trackedExports)};`,
+    `  import.meta.hot.accept((module) => {`,
+    `    if (!__remixComponentHmrAcceptComponentModule__) return;`,
+    `    if (!module || typeof module !== 'object') {`,
+    `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
+    `      return;`,
+    `    }`,
+    `    let __remixComponentHmrInvalidationMessage__ = ${createUpdatedExportsCheckSource(
+      'module',
+      '__remixComponentHmrPreviousExports__',
+      '__remixComponentHmrComponentNames__',
+    )};`,
+    `    if (__remixComponentHmrInvalidationMessage__) {`,
+    `      import.meta.hot.invalidate(__remixComponentHmrInvalidationMessage__);`,
+    `    }`,
+    `  });`,
+    `}`,
+  ].join('\n')
 
-  let code = rewritten.toString()
+  let fragments = assembleModule(source, edits, imports, footer)
+  let code = fragments.join('')
 
   return {
     code,
     componentNames,
-    map: options.sourceMap
-      ? generateSourceMap(rewritten, code, source, options.moduleUrl, sourceMapHints)
-      : null,
+    map: options.sourceMap ? generateSourceMap(fragments, code, source, options.moduleUrl) : null,
     transformed: true,
   }
 }
@@ -391,85 +395,136 @@ function getComponentHmrImportSpecifiers(importSource: string): {
   }
 }
 
+function createHmrWrapper(
+  prefix: string,
+  match: Pick<ComponentMatch, 'name' | 'params'>,
+  moduleUrl: string,
+): SourceFragment[] {
+  return [
+    prefix,
+    match.params,
+    [
+      `) {`,
+      `  return __remixComponentHmr__.getCurrentComponentForHmr(${JSON.stringify(
+        moduleUrl,
+      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
+      `}`,
+    ].join('\n'),
+  ]
+}
+
+function assembleModule(
+  source: string,
+  edits: readonly SourceEdit[],
+  imports: string,
+  footer: string,
+): SourceFragment[] {
+  // Match the existing transform: the final overwrite of a shared statement survives.
+  let overwrites = new Map<string, SourceEdit>()
+  for (let edit of edits) {
+    if (edit.kind === 'overwrite') overwrites.set(`${edit.start}:${edit.end}`, edit)
+  }
+  let placements = { prepend: 0, append: 1, overwrite: 2 }
+  let ordered = edits
+    .filter(
+      (edit) => edit.kind !== 'overwrite' || overwrites.get(`${edit.start}:${edit.end}`) === edit,
+    )
+    .map((edit, index) => ({ edit, index }))
+    .sort(
+      (left, right) =>
+        left.edit.start - right.edit.start ||
+        placements[left.edit.kind] - placements[right.edit.kind] ||
+        (left.edit.kind === 'prepend' ? right.index - left.index : left.index - right.index),
+    )
+  let fragments: SourceFragment[] = [imports]
+  let original = new MagicString(source)
+  let offset = 0
+  for (let { edit } of ordered) {
+    if (edit.start < offset) throw new Error('Overlapping component HMR edits')
+    if (edit.start > offset) fragments.push(original.snip(offset, edit.start))
+    fragments.push(...edit.fragments)
+    offset = edit.end
+  }
+  if (offset < source.length) fragments.push(original.snip(offset, source.length))
+  fragments.push(footer)
+  return fragments
+}
+
 function generateSourceMap(
-  rewritten: MagicString,
+  fragments: readonly SourceFragment[],
   code: string,
   source: string,
   sourceName: string,
-  hints: readonly SourceMapHint[],
 ): string {
-  let sourceMap = rewritten.generateMap({
-    hires: true,
-    includeContent: true,
-    source: sourceName,
-  })
-
-  if (hints.length === 0) return sourceMap.toString()
-
-  let consumer = new SourceMapConsumer(JSON.parse(sourceMap.toString()) as RawSourceMap)
-  let generator = SourceMapGenerator.fromSourceMap(consumer)
-
-  let generatedSearchStart = 0
-  for (let hint of hints) {
-    let generatedStart = code.indexOf(hint.generatedSnippet, generatedSearchStart)
-    if (generatedStart === -1) {
-      generatedStart = code.indexOf(hint.generatedSnippet)
+  let generator = new SourceMapGenerator()
+  let codePositions = createSourceMapPositions(code)
+  let sourcePositions = createSourceMapPositions(source)
+  let offset = 0
+  for (let fragment of fragments) {
+    let content = fragment.toString()
+    if (content.length === 0) continue
+    // Each fragment starts unmapped until an authored mapping supplies its location.
+    generator.addMapping({ generated: codePositions.getPosition(offset) })
+    if (typeof fragment !== 'string') {
+      let fragmentPositions = createSourceMapPositions(content)
+      let map = fragment.generateDecodedMap({ hires: true })
+      for (let [line, segments] of map.mappings.entries()) {
+        for (let segment of segments) {
+          let generated = codePositions.getPosition(
+            offset + fragmentPositions.getIndexFromLfPosition(line + 1, segment[0]),
+          )
+          generator.addMapping(
+            segment.length === 1
+              ? { generated }
+              : {
+                  generated,
+                  original: sourcePositions.getPosition(
+                    sourcePositions.getIndexFromLfPosition(segment[2] + 1, segment[3]),
+                  ),
+                  source: sourceName,
+                },
+          )
+        }
+      }
     }
-    if (generatedStart === -1) continue
-
-    addSourceMapHint(generator, code, source, sourceName, hint, generatedStart)
-    generatedSearchStart = generatedStart + hint.generatedSnippet.length
+    offset += content.length
   }
-
-  return JSON.stringify(generator.toJSON())
+  generator.setSourceContent(sourceName, source)
+  return generator.toString()
 }
 
-function addSourceMapHint(
-  generator: SourceMapGenerator,
-  generatedSource: string,
-  originalSource: string,
-  sourceName: string,
-  hint: SourceMapHint,
-  generatedStart: number,
-): void {
-  let generatedLines = hint.generatedSnippet.split('\n')
-  let originalLines = hint.originalSnippet.split('\n')
-  let generatedOffset = 0
-  let originalOffset = 0
-
-  for (let index = 0; index < Math.min(generatedLines.length, originalLines.length); index++) {
-    let generatedLine = generatedLines[index] ?? ''
-    let originalLine = originalLines[index] ?? ''
-    let columns = Math.min(generatedLine.length, originalLine.length)
-
-    for (let column = 0; column < columns; column++) {
-      if (generatedLine[column] !== originalLine[column]) continue
-
-      generator.addMapping({
-        generated: getLineAndColumnAtIndex(
-          generatedSource,
-          generatedStart + generatedOffset + column,
-        ),
-        original: getLineAndColumnAtIndex(
-          originalSource,
-          hint.originalStart + originalOffset + column,
-        ),
-        source: sourceName,
-      })
+function createSourceMapPositions(source: string) {
+  // MagicString counts LF only; translate through offsets into JavaScript line positions.
+  let lfLineStarts = [0]
+  let lineStarts = [0]
+  for (let index = 0; index < source.length; index++) {
+    let char = source[index]
+    if (char === '\n') lfLineStarts.push(index + 1)
+    if (
+      char === '\n' ||
+      (char === '\r' && source[index + 1] !== '\n') ||
+      char === '\u2028' ||
+      char === '\u2029'
+    ) {
+      lineStarts.push(index + 1)
     }
-
-    generatedOffset += generatedLine.length + 1
-    originalOffset += originalLine.length + 1
   }
-
-  generator.setSourceContent(sourceName, originalSource)
-}
-
-function getLineAndColumnAtIndex(source: string, index: number): { column: number; line: number } {
-  let lines = source.slice(0, index).split('\n')
   return {
-    column: lines.at(-1)?.length ?? 0,
-    line: lines.length,
+    getIndexFromLfPosition(line: number, column: number): number {
+      let start = lfLineStarts[line - 1]
+      if (start === undefined) throw new Error('Unexpected component HMR source map position')
+      return start + column
+    },
+    getPosition(index: number): { line: number; column: number } {
+      let low = 0
+      let high = lineStarts.length
+      while (low + 1 < high) {
+        let middle = Math.floor((low + high) / 2)
+        if (lineStarts[middle] <= index) low = middle
+        else high = middle
+      }
+      return { line: low + 1, column: index - lineStarts[low] }
+    },
   }
 }
 
@@ -765,7 +820,7 @@ function createComponentMatch(options: {
   fullEnd: number
   fullStart: number
   name: string
-  params: string
+  params: MagicString
   source: string
 }): ComponentMatch | null {
   if (!options.body) return null
@@ -787,10 +842,14 @@ function createComponentMatch(options: {
 }
 
 function createHmrImplementationBody(
-  match: Pick<ComponentMatch, 'name' | 'renderArgument' | 'setupHash' | 'setupStatements'>,
+  match: Pick<
+    ComponentMatch,
+    'name' | 'params' | 'renderArgument' | 'setupHash' | 'setupStatements'
+  >,
   source: string,
   moduleUrl: string,
-): { body: string; sourceMapHints: SourceMapHint[] } {
+  implementationName: string,
+): SourceFragment[] {
   let setupStateNames = getSetupStateNames(match.setupStatements)
   let renderReferencedDeclarationNames = getRenderReferencedSetupDeclarationNames(
     match.renderArgument,
@@ -798,44 +857,45 @@ function createHmrImplementationBody(
   )
   let renderStateNames = new Set(setupStateNames)
   for (let name of renderReferencedDeclarationNames) renderStateNames.add(name)
-  let setupSource = createSetupSource(
-    match.setupStatements,
-    setupStateNames,
-    renderReferencedDeclarationNames,
-    source,
-  )
-  let renderSource = rewriteReferences(match.renderArgument, renderStateNames, source)
-
-  return {
-    body: [
-      `{`,
+  let body: SourceFragment[] = [`function ${implementationName}(`, match.params]
+  body.push(
+    [
+      `) {`,
       `  let __remixComponentHmrHandle__ = __remixComponentHmr__.getComponentHandleForHmr(arguments[0], ${JSON.stringify(
         moduleUrl,
       )}, ${JSON.stringify(match.name)});`,
       `  let __s__ = __remixComponentHmr__.getComponentHmrState(__remixComponentHmrHandle__);`,
-      `  if (__remixComponentHmr__.setupComponentForHmr(__remixComponentHmrHandle__, __s__, ${JSON.stringify(
-        moduleUrl,
-      )}, ${JSON.stringify(match.name)}, ${JSON.stringify(match.setupHash)}, (__s__) => {`,
-      indent(setupSource, 4),
+      `  if (__remixComponentHmr__.setupComponentForHmr(__remixComponentHmrHandle__, __s__, ${JSON.stringify(moduleUrl)}, ${JSON.stringify(match.name)}, ${JSON.stringify(match.setupHash)}, (__s__) => {`,
+      ``,
+    ].join('\n'),
+  )
+  createSetupSource(
+    match.setupStatements,
+    setupStateNames,
+    renderReferencedDeclarationNames,
+    source,
+    body,
+  )
+  body.push(
+    [
       `  }, ${match.name})) {`,
       `    return () => null;`,
       `  }`,
-      `  __remixComponentHmr__.registerComponentRenderForHmr(__remixComponentRefresh__, ${JSON.stringify(
-        moduleUrl,
-      )}, ${JSON.stringify(match.name)}, __remixComponentHmrHandle__, ${renderSource}, ${match.name});`,
+      `  __remixComponentHmr__.registerComponentRenderForHmr(__remixComponentRefresh__, ${JSON.stringify(moduleUrl)}, ${JSON.stringify(match.name)}, __remixComponentHmrHandle__, `,
+    ].join('\n'),
+  )
+  let render = rewriteReferences(match.renderArgument, renderStateNames, source)
+  body.push(render)
+  body.push(
+    [
+      `, ${match.name});`,
       `  return function () {`,
       `    return __remixComponentHmr__.callComponentRenderForHmr(__remixComponentHmrHandle__, ...arguments);`,
       `  };`,
       `}`,
     ].join('\n'),
-    sourceMapHints: [
-      {
-        generatedSnippet: renderSource,
-        originalSnippet: source.slice(match.renderArgument.start, match.renderArgument.end),
-        originalStart: match.renderArgument.start,
-      },
-    ],
-  }
+  )
+  return body
 }
 
 function createSetupSource(
@@ -843,8 +903,19 @@ function createSetupSource(
   setupStateNames: ReadonlySet<string>,
   renderReferencedDeclarationNames: ReadonlySet<string>,
   source: string,
-): string {
-  let lines: string[] = []
+  body: SourceFragment[],
+): void {
+  function appendLine(...parts: SourceFragment[]): void {
+    body.push('    ')
+    for (let part of parts) {
+      if (typeof part !== 'string') {
+        // Preserve setup's existing blank-line removal while retaining original locations.
+        part.replaceAll(/\n(?=\n)/g, '').indent('    ', { indentStart: false })
+      }
+      body.push(part)
+    }
+    body.push('\n')
+  }
   let initializedStateNames = new Set<string>()
   let hoistedFunctionStateNames = new Set<string>()
 
@@ -857,15 +928,15 @@ function createSetupSource(
     }
   }
   for (let name of hoistedFunctionStateNames) {
-    lines.push(`__s__.${name} = ${name};`)
+    appendLine(`__s__.${name} = ${name};`)
   }
 
   for (let statement of statements) {
     if (isSetupRuntimeDeclaration(statement)) {
       let name = getIdentifierName(getNode(statement, 'id'))
       if (name && renderReferencedDeclarationNames.has(name)) {
-        lines.push(rewriteReferences(statement, setupStateNames, source))
-        if (!hoistedFunctionStateNames.has(name)) lines.push(`__s__.${name} = ${name};`)
+        appendLine(rewriteReferences(statement, setupStateNames, source))
+        if (!hoistedFunctionStateNames.has(name)) appendLine(`__s__.${name} = ${name};`)
         continue
       }
     }
@@ -887,40 +958,47 @@ function createSetupSource(
             initializedStateNames.add(name)
             continue
           }
-          lines.push(
+          appendLine(
+            '__s__.',
+            new MagicString(source)
+              .snip(pattern.start, pattern.end)
+              .overwrite(pattern.start, pattern.end, name),
+            ' = ',
             init
-              ? `__s__.${name} = ${rewriteReferences(init, initializedStateNames, source, setupStateNames)};`
-              : `__s__.${name} = undefined;`,
+              ? rewriteReferences(init, initializedStateNames, source, setupStateNames)
+              : 'undefined',
+            ';',
           )
           initializedStateNames.add(name)
           continue
         }
 
-        lines.push(`{`)
+        appendLine(`{`)
         let patternSource = rewriteBindingPatternReferences(
           pattern,
           initializedStateNames,
           setupStateNames,
           source,
         )
-        lines.push(
-          init
-            ? `  let ${patternSource} = ${rewriteReferences(init, initializedStateNames, source, setupStateNames)};`
-            : `  let ${patternSource};`,
+        appendLine(
+          '  let ',
+          patternSource,
+          ...(init
+            ? [' = ', rewriteReferences(init, initializedStateNames, source, setupStateNames)]
+            : []),
+          ';',
         )
         for (let name of names) {
-          lines.push(`  __s__.${name} = ${name};`)
+          appendLine(`  __s__.${name} = ${name};`)
           initializedStateNames.add(name)
         }
-        lines.push(`}`)
+        appendLine(`}`)
       }
       continue
     }
 
-    lines.push(rewriteReferences(statement, initializedStateNames, source, setupStateNames))
+    appendLine(rewriteReferences(statement, initializedStateNames, source, setupStateNames))
   }
-
-  return lines.join('\n')
 }
 
 function rewriteReferences(
@@ -928,11 +1006,9 @@ function rewriteReferences(
   stateNames: ReadonlySet<string>,
   source: string,
   deferredStateNames: ReadonlySet<string> = stateNames,
-): string {
-  let snippet = source.slice(root.start, root.end)
-  if (stateNames.size === 0 && deferredStateNames.size === 0) return snippet
-
-  let rewritten = new MagicString(snippet)
+  rewritten = new MagicString(source).snip(root.start, root.end),
+): MagicString {
+  if (stateNames.size === 0 && deferredStateNames.size === 0) return rewritten
   let rewrittenRanges = new Set<string>()
   let functions: AstNode[] = []
 
@@ -957,19 +1033,15 @@ function rewriteReferences(
     if (parent && isShorthandProperty(parent, node)) {
       let key = `${parent.start}:${parent.end}`
       if (rewrittenRanges.has(key)) return
-      rewritten.overwrite(
-        parent.start - root.start,
-        parent.end - root.start,
-        `${name}: __s__.${name}`,
-      )
+      rewritten.overwrite(parent.start, parent.end, `${name}: __s__.${name}`)
       rewrittenRanges.add(key)
       return
     }
 
-    rewritten.overwrite(node.start - root.start, node.end - root.start, `__s__.${name}`)
+    rewritten.overwrite(node.start, node.end, `__s__.${name}`)
   })
 
-  return rewritten.toString()
+  return rewritten
 }
 
 function rewriteBindingPatternReferences(
@@ -977,18 +1049,15 @@ function rewriteBindingPatternReferences(
   stateNames: ReadonlySet<string>,
   deferredStateNames: ReadonlySet<string>,
   source: string,
-): string {
-  let snippet = source.slice(pattern.start, pattern.end)
-  if (stateNames.size === 0 && deferredStateNames.size === 0) return snippet
-
-  let rewritten = new MagicString(snippet)
+): MagicString {
+  let rewritten = new MagicString(source).snip(pattern.start, pattern.end)
+  if (stateNames.size === 0 && deferredStateNames.size === 0) return rewritten
 
   visitBindingPattern(pattern, (node) => {
-    let replacement = rewriteReferences(node, stateNames, source, deferredStateNames)
-    rewritten.overwrite(node.start - pattern.start, node.end - pattern.start, replacement)
+    rewriteReferences(node, stateNames, source, deferredStateNames, rewritten)
   })
 
-  return rewritten.toString()
+  return rewritten
 }
 
 function visitBindingPattern(pattern: AstNode, onExpression: (node: AstNode) => void): void {
@@ -1268,15 +1337,6 @@ function getRenderArgument(body: AstNode): AstNode | null {
   return returnStatement ? getNode(returnStatement, 'argument') : null
 }
 
-function indent(source: string, spaces: number): string {
-  let prefix = ' '.repeat(spaces)
-  return source
-    .split('\n')
-    .filter((line) => line.length > 0)
-    .map((line) => `${prefix}${line}`)
-    .join('\n')
-}
-
 function getExportDeclaration(node: AstNode): AstNode | null {
   if (node.type !== 'ExportNamedDeclaration') return null
   return getNode(node, 'declaration')
@@ -1387,10 +1447,10 @@ function isComponentExport(
   return options.directExport || options.exportedNames.has(name)
 }
 
-function getParamsSource(node: AstNode, source: string): string {
+function getParamsSource(node: AstNode, source: string): MagicString {
   let params = getNodeArray(node, 'params')
-  if (params.length === 0) return ''
-  return source.slice(params[0].start, params[params.length - 1].end)
+  if (params.length === 0) return new MagicString('')
+  return new MagicString(source).snip(params[0].start, params[params.length - 1].end)
 }
 
 function getSetupHash(body: AstNode, source: string): string {

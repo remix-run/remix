@@ -12,6 +12,20 @@ describe('vnode rendering', () => {
       expect(container.innerHTML).toBe('<div>Hello, world!</div>')
     })
 
+    it('keeps later unkeyed children in place when a sparse slot is filled', () => {
+      let container = document.createElement('div')
+      let { render } = createRoot(container)
+      let children: JSX.Element[] = []
+      children[1] = <input aria-label="Name" />
+      render(<div>{children}</div>)
+      let input = container.querySelector('input')
+      invariant(input)
+      children[0] = <span>Name</span>
+      render(<div>{children}</div>)
+      expect(container.querySelector('input')).toBe(input)
+      expect(input.previousElementSibling?.textContent).toBe('Name')
+    })
+
     it('renders nested elements', () => {
       let container = document.createElement('div')
       let { render } = createRoot(container)

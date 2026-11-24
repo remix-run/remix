@@ -18,47 +18,67 @@ export type OnMixinDescriptor = {
   args: [type: string, handler: SignaledListener<Event>, captureBoolean?: boolean]
 }
 
-const onMixinSetup: MixinType<
-  Element,
-  [type: string, handler: SignaledListener<Event>, captureBoolean?: boolean],
-  ElementProps
-> = (handle) => {
-  let currentHandler: SignaledListener<Event> = () => {}
-  let currentType = ''
-  let currentCapture = false
-  let currentNode: Element | null = null
-  let reentry: AbortController | null = null
+type OnArguments = OnMixinDescriptor['args']
 
-  let stableHandler = (event: Event) => {
-    reentry?.abort(new DOMException('', 'EventReentry'))
-    reentry = new AbortController()
-    void currentHandler(event, reentry.signal)
+// EventTarget retains the object identity across renders and calls handleEvent on dispatch.
+export class OnBinding {
+  type: string
+  capture: boolean
+  handler: OnArguments[1]
+  controller?: AbortController
+
+  constructor(args: OnArguments) {
+    this.type = args[0]
+    this.handler = args[1]
+    this.capture = !!args[2]
   }
 
-  handle.addEventListener('insert', (event) => {
-    currentNode = event.node
-    currentNode.addEventListener(currentType, stableHandler, currentCapture)
-  })
+  handleEvent(event: Event) {
+    this.controller?.abort(new DOMException('', 'EventReentry'))
+    this.controller = new AbortController()
+    let handler = this.handler
+    void handler(event, this.controller.signal)
+  }
 
-  handle.addEventListener('remove', () => {
-    currentNode?.removeEventListener(currentType, stableHandler, currentCapture)
-    currentNode = null
-    reentry?.abort(new DOMException('', 'AbortError'))
-  })
+  attach(node: Element) {
+    node.addEventListener(this.type, this, this.capture)
+  }
 
-  return (type, handler, captureBoolean = false) => {
-    let previousType = currentType
-    let previousCapture = currentCapture
-    let needsRebind = currentType !== type || currentCapture !== captureBoolean
-    currentType = type
-    currentHandler = handler
-    currentCapture = captureBoolean
+  detach(node?: Element) {
+    node?.removeEventListener(this.type, this, this.capture)
+  }
 
-    if (needsRebind && currentNode) {
-      currentNode.removeEventListener(previousType, stableHandler, previousCapture)
-      currentNode.addEventListener(type, stableHandler, captureBoolean)
+  abort() {
+    this.controller?.abort(new DOMException('', 'AbortError'))
+    this.controller = undefined
+  }
+
+  update(node: Element | undefined, args: OnArguments, abortOnRebind = false) {
+    this.handler = args[1]
+    if (this.type !== args[0] || this.capture !== !!args[2]) {
+      this.detach(node)
+      if (abortOnRebind) this.abort()
+      this.type = args[0]
+      this.capture = !!args[2]
+      if (node) this.attach(node)
     }
+  }
+}
 
+const onMixinSetup: MixinType<Element, OnArguments, ElementProps> = (handle) => {
+  let node: Element | undefined
+  let binding = new OnBinding(['', () => {}])
+  handle.addEventListener('insert', (event) => {
+    node = event.node
+    binding.attach(node)
+  })
+  handle.addEventListener('remove', () => {
+    binding.detach(node)
+    binding.abort()
+    node = undefined
+  })
+  return (type, handler, capture = false) => {
+    binding.update(node, [type, handler, capture])
     return handle.element
   }
 }

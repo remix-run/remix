@@ -35,14 +35,12 @@ export function unsafeHTML(value: string): UnsafeHTML {
   return result
 }
 
-/**
- * Reads the string from a value created by {@link unsafeHTML}.
- *
- * @param value The value to inspect.
- * @returns The raw HTML string, or `undefined` when the value is not an `UnsafeHTML` instance.
- */
-function readUnsafeHTML(value: unknown): string | undefined {
-  return value instanceof UnsafeHTMLValue ? UnsafeHTMLValue.read(value) : undefined
+function readHTMLProp(props: Record<string, unknown>, name: string): string | undefined {
+  let value = props[name]
+  if (value === undefined) return
+  let html = value instanceof UnsafeHTMLValue ? UnsafeHTMLValue.read(value) : undefined
+  invariant(html !== undefined, `Invalid ${name} prop: expected a value created with unsafeHTML()`)
+  return html
 }
 
 interface NormalizedUnsafeHTMLProps extends Record<string, unknown> {
@@ -61,23 +59,9 @@ interface NormalizedUnsafeHTMLProps extends Record<string, unknown> {
 export function normalizeUnsafeHTMLProps(
   props: Record<string, unknown>,
 ): NormalizedUnsafeHTMLProps {
-  let innerHTML = readUnsafeHTML(props.innerHTML)
-  invariant(
-    props.innerHTML === undefined || innerHTML !== undefined,
-    'Invalid innerHTML prop: expected a value created with unsafeHTML()',
-  )
-
-  let srcDoc = readUnsafeHTML(props.srcDoc)
-  invariant(
-    props.srcDoc === undefined || srcDoc !== undefined,
-    'Invalid srcDoc prop: expected a value created with unsafeHTML()',
-  )
-
-  let srcdoc = readUnsafeHTML(props.srcdoc)
-  invariant(
-    props.srcdoc === undefined || srcdoc !== undefined,
-    'Invalid srcdoc prop: expected a value created with unsafeHTML()',
-  )
+  let innerHTML = readHTMLProp(props, 'innerHTML')
+  let srcDoc = readHTMLProp(props, 'srcDoc')
+  let srcdoc = readHTMLProp(props, 'srcdoc')
 
   invariant(
     props.outerHTML === undefined,
