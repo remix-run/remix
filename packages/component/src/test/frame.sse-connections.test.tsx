@@ -157,4 +157,53 @@ describe('live frame connections', () => {
     app.dispose()
     await waitFor(() => (events.cancelled() ? true : null))
   })
+
+  it('reconnects when the stream ends and reports the last event id', async (t) => {
+    let streams = [createEventStream(), createEventStream()]
+    let lastEventIds: Array<string | null> = []
+    t.mock.method(globalThis, 'fetch', async (_input: RequestInfo | URL, init?: RequestInit) => {
+      lastEventIds.push(new Headers(init?.headers).get('Last-Event-Id'))
+      let stream = streams[lastEventIds.length - 1]
+      invariant(stream, 'Expected a stream for every request')
+      return stream.response
+    })
+
+    let { show } = await mountFrames(t, ['/live'])
+    show()
+    streams[0]!.write('retry: 10\n\n')
+    streams[0]!.write('id: 7\ndata: <p class="status">Queued</p>\n\n')
+    await waitFor(() => (document.querySelector('.status')?.textContent === 'Queued' ? true : null))
+
+    streams[0]!.close()
+
+    streams[1]!.send('<p class="status">Shipped</p>')
+    await waitFor(() =>
+      document.querySelector('.status')?.textContent === 'Shipped' ? true : null,
+    )
+    expect(lastEventIds).toEqual([null, '7'])
+  })
+
+  it('keeps the rendered content when a reconnection is refused', async (t) => {
+    let events = createEventStream()
+    let requests = 0
+    t.mock.method(globalThis, 'fetch', async () => {
+      requests += 1
+      if (requests === 1) return events.response
+      return new Response('<p>Gone</p>', { status: 404, headers: { 'Content-Type': 'text/html' } })
+    })
+
+    let { show } = await mountFrames(t, ['/live'])
+    show()
+    events.write('retry: 10\n\n')
+    events.send('<p class="status">Queued</p>')
+    await waitFor(() => document.querySelector('.status'))
+
+    events.close()
+    await waitFor(() => (requests === 2 ? true : null))
+
+    // The refused reconnection ends the connection without disturbing what the frame shows.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(document.querySelector('.status')?.textContent).toBe('Queued')
+    expect(requests).toBe(2)
+  })
 })

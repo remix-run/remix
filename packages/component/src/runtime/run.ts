@@ -184,13 +184,17 @@ function requestFrame(
   request: RequestInit,
   overrides?: DefaultResolveFrameOverrides,
 ): Promise<Response> {
-  let send: RequestLiveFrame = ({ signal } = {}) =>
-    fetchFrame(
-      src,
-      options?.target,
-      signal === undefined ? request : { ...request, signal },
-      overrides?.fetch,
-    )
+  let send: RequestLiveFrame = ({ lastEventId, signal } = {}) => {
+    let init = signal === undefined ? request : { ...request, signal }
+    if (lastEventId !== undefined) {
+      // Resuming a dropped connection tells the server where the frame got to.
+      let headers = new Headers(init.headers)
+      headers.set('Last-Event-Id', lastEventId)
+      init = { ...init, headers }
+    }
+
+    return fetchFrame(src, options?.target, init, overrides?.fetch)
+  }
 
   let method = (options?.method ?? 'get').toLowerCase()
   if (request.body != null || (method !== 'get' && method !== 'head')) return send({})
