@@ -1,23 +1,15 @@
 import { invariant } from './invariant.ts'
 
-class UnsafeHTMLValue {
-  #value: string
-
-  constructor(value: string) {
-    this.#value = value
-  }
-
-  static read(value: UnsafeHTMLValue): string {
-    return value.#value
-  }
-}
+const UNSAFE_HTML = Symbol('UnsafeHTML')
 
 /**
  * An opaque value that Remix may insert into an element without HTML escaping.
  *
  * Create values with {@link unsafeHTML}. Remix does not sanitize or otherwise modify the HTML.
  */
-export type UnsafeHTML = UnsafeHTMLValue
+export interface UnsafeHTML {
+  readonly [UNSAFE_HTML]: string
+}
 
 /**
  * Explicitly allows a string to be inserted into an element as raw HTML.
@@ -30,18 +22,10 @@ export type UnsafeHTML = UnsafeHTMLValue
  * `srcDoc`/`srcdoc`.
  */
 export function unsafeHTML(value: string): UnsafeHTML {
-  let result = new UnsafeHTMLValue(value)
-  Object.freeze(result)
-  return result
+  return Object.freeze({ [UNSAFE_HTML]: value })
 }
 
-function readHTMLProp(props: Record<string, unknown>, name: string): string | undefined {
-  let value = props[name]
-  if (value === undefined) return
-  let html = value instanceof UnsafeHTMLValue ? UnsafeHTMLValue.read(value) : undefined
-  invariant(html !== undefined, `Invalid ${name} prop: expected a value created with unsafeHTML()`)
-  return html
-}
+const RAW_HTML_PROPS = ['innerHTML', 'srcDoc', 'srcdoc'] as const
 
 interface NormalizedUnsafeHTMLProps extends Record<string, unknown> {
   innerHTML?: string
@@ -59,20 +43,26 @@ interface NormalizedUnsafeHTMLProps extends Record<string, unknown> {
 export function normalizeUnsafeHTMLProps(
   props: Record<string, unknown>,
 ): NormalizedUnsafeHTMLProps {
-  let innerHTML = readHTMLProp(props, 'innerHTML')
-  let srcDoc = readHTMLProp(props, 'srcDoc')
-  let srcdoc = readHTMLProp(props, 'srcdoc')
-
   invariant(
     props.outerHTML === undefined,
     'Invalid outerHTML prop: outerHTML is not supported on host elements',
   )
 
-  if (innerHTML === undefined && srcDoc === undefined && srcdoc === undefined) return props
-  return {
-    ...props,
-    ...(innerHTML === undefined ? {} : { innerHTML }),
-    ...(srcDoc === undefined ? {} : { srcDoc }),
-    ...(srcdoc === undefined ? {} : { srcdoc }),
+  let normalized: NormalizedUnsafeHTMLProps | undefined
+  for (let name of RAW_HTML_PROPS) {
+    let value = props[name]
+    if (value === undefined) continue
+    let html =
+      typeof value === 'object' && value !== null
+        ? (value as Partial<UnsafeHTML>)[UNSAFE_HTML]
+        : undefined
+    invariant(
+      html !== undefined,
+      `Invalid ${name} prop: expected a value created with unsafeHTML()`,
+    )
+    normalized ??= { ...props }
+    normalized[name] = html
   }
+
+  return normalized ?? props
 }

@@ -489,12 +489,6 @@ export interface ComponentHandle<C = NoContext> {
   isRemoved(): boolean
 }
 
-/**
- * Creates the internal runtime wrapper for a component instance.
- *
- * @param config Component runtime configuration.
- * @returns Component runtime helpers used by the reconciler.
- */
 export function createComponent<C = NoContext>(config: ComponentConfig): ComponentHandle<C> {
   let connectedController: AbortController | undefined
   let contextValue: C | undefined
@@ -508,41 +502,31 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
   let updateDomParent: ParentNode | undefined
   let tasks: Task[] = []
 
-  let context: Context<C> = {
-    set(value) {
-      contextValue = value
-    },
-    get: (type: ElementType | symbol) =>
-      isElementFunction(type) ? config.getContext(type) : undefined,
-  }
-
   let handle: Handle<ElementProps, C> = {
     id: config.id,
     props,
     update() {
       if (removed) return Promise.resolve(AbortSignal.abort())
-
+      let name = config.type.name || 'Anonymous'
       if (phase === 'setup') {
         console.warn(
-          `Ignored handle.update() while ${getComponentName(config)} is running its setup function. The initial render includes setup changes.`,
+          `Ignored handle.update() while ${name} is running its setup function. The initial render includes setup changes.`,
         )
         return new Promise((resolve) => tasks.push(resolve))
       }
       if (phase !== 'idle') {
         throw new Error(
-          `Cannot call handle.update() while ${getComponentName(config)} is running its ${phase} function. Call it from an event handler or handle.queueTask() instead.`,
+          `Cannot call handle.update() while ${name} is running its ${phase} function. Call it from an event handler or handle.queueTask() instead.`,
+        )
+      }
+      if (!updateQueue || !updateVNode || !updateDomParent) {
+        throw new Error(
+          `Cannot call handle.update() before ${name}'s initial render commits. Call it from an event handler or handle.queueTask() instead.`,
         )
       }
       let queue = updateQueue
       let vnode = updateVNode
       let domParent = updateDomParent
-      // setScheduleUpdate() sets all three together when the initial render commits.
-      if (!queue || !vnode || !domParent) {
-        throw new Error(
-          `Cannot call handle.update() before ${getComponentName(config)}'s initial render commits. Call it from an event handler or handle.queueTask() instead.`,
-        )
-      }
-
       return new Promise((resolve) => {
         tasks.push(resolve)
         queue.enqueue(vnode, domParent)
@@ -553,22 +537,25 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
     },
     frame: config.frame,
     frames: config.frames,
-    context,
+    context: {
+      set(value) {
+        contextValue = value
+      },
+      get: (type: ElementType | symbol) =>
+        typeof type === 'function' ? config.getContext(type as ElementFunction) : undefined,
+    },
     get signal() {
       return config.signal ?? (connectedController ??= new AbortController()).signal
     },
   }
 
   function dequeueTasks(signal?: AbortSignal): Array<() => void> {
-    if (tasks.length === 0) return EMPTY_TASKS
-
+    if (!tasks.length) return EMPTY_TASKS
     if (signal === undefined && tasks.some((task) => task.length >= 1)) {
       renderController ??= new AbortController()
     }
-
-    signal ??= renderController?.signal
-    signal ??= sharedAbortedSignal ??= AbortSignal.abort()
-    return tasks.splice(0, tasks.length).map((task) => () => task(signal))
+    let resolved = signal ?? renderController?.signal ?? (sharedAbortedSignal ??= AbortSignal.abort())
+    return tasks.splice(0).map((task) => () => task(resolved))
   }
 
   return {
@@ -576,32 +563,29 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
     render(nextProps) {
       if (removed) {
         console.warn('render called after component was removed, potential application memory leak')
-        return [null, []]
+        return [null, EMPTY_TASKS]
       }
-
       renderController?.abort()
       renderController = undefined
       syncProps(props, nextProps)
 
       let element: RemixNode
       try {
-        if (renderFn === undefined) {
+        if (!renderFn) {
           phase = 'setup'
-          let initialize = config.type as unknown as (handle: Handle<ElementProps, C>) => unknown
-          let result = initialize(handle)
-          if (!isRenderFn(result)) {
+          let result = (config.type as unknown as (h: Handle<ElementProps, C>) => unknown)(handle)
+          if (typeof result !== 'function') {
             throw new Error(
-              `${getComponentName(config)} must return a render function, received ${typeof result}`,
+              `${config.type.name || 'Anonymous'} must return a render function, received ${typeof result}`,
             )
           }
-          renderFn = result
+          renderFn = result as RenderFn
         }
         phase = 'render'
         element = renderFn()
       } finally {
         phase = 'idle'
       }
-
       return [element, dequeueTasks()]
     },
     remove() {
@@ -610,7 +594,6 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
       connectedController?.abort()
       renderController?.abort()
       renderController = undefined
-      if (tasks.length === 0) return EMPTY_TASKS
       return dequeueTasks((sharedAbortedSignal ??= AbortSignal.abort()))
     },
     setScheduleUpdate(queue, vnode, domParent) {
@@ -621,18 +604,6 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
     getContextValue: () => contextValue,
     isRemoved: () => removed,
   }
-}
-
-function isRenderFn(value: unknown): value is RenderFn {
-  return typeof value === 'function'
-}
-
-function getComponentName(config: ComponentConfig): string {
-  return config.type.name || 'Anonymous'
-}
-
-function isElementFunction(value: unknown): value is ElementFunction {
-  return typeof value === 'function'
 }
 
 // Shared empty result and aborted signal so the common no-task removal path
