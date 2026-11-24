@@ -2,8 +2,28 @@ import { appendFlushMarker, inferFlushKind } from './stream-protocol.ts'
 
 const LIVE_FRAME_STREAM = Symbol('LiveFrameStream')
 
-/** Event name that adds its HTML to a frame instead of replacing the frame's content. */
-export const APPEND_EVENT = 'append'
+/** Event name that adds its HTML to a frame. */
+export const APPEND_EVENT = 'rmx-append'
+
+/** Event name that replaces a frame's content, which an unnamed event also does. */
+export const REPLACE_EVENT = 'rmx-replace'
+
+/**
+ * What a frame does with an event, or nothing when the event isn't addressed to it.
+ *
+ * Names are namespaced and the vocabulary is closed, so one connection can carry events meant for
+ * other listeners, such as an app's own `notification` events, without a frame rendering them.
+ *
+ * @param event Event to classify.
+ * @returns How the event joins the frame, or undefined when the frame should ignore it.
+ */
+export function frameEventKind(event: ServerSentEvent): 'append' | 'replace' | undefined {
+  if (event.data === '') return undefined
+  if (event.name === APPEND_EVENT) return 'append'
+  // An unnamed event is `message`, which keeps the simplest possible stream working.
+  if (event.name === REPLACE_EVENT || event.name === 'message') return 'replace'
+  return undefined
+}
 
 type TaggedStream = ReadableStream<Uint8Array> & { [LIVE_FRAME_STREAM]?: true }
 
@@ -117,23 +137,25 @@ export function createEventParser(): (text: string) => ServerSentEvent[] {
 /**
  * Serializes frame HTML as one server-sent event block.
  *
- * @param event Event name and payload, which may span several lines.
+ * @param kind How the event joins the frame.
+ * @param data Event payload, which may span several lines.
  * @returns The block's wire text, including its terminating blank line.
  */
-export function serializeEvent(event: { name: string; data: string }): string {
-  let data = event.data
+export function serializeEvent(kind: 'append' | 'replace', data: string): string {
+  let lines = data
     .split('\n')
     .map((line) => `data: ${line}`)
     .join('\n')
-  return event.name === 'message' ? `${data}\n\n` : `event: ${event.name}\n${data}\n\n`
+  return kind === 'append' ? `event: ${APPEND_EVENT}\n${lines}\n\n` : `${lines}\n\n`
 }
 
 /**
  * Converts a server-sent event body into a stream of frame HTML batches.
  *
- * Every event's data is trusted frame HTML. An `append` event adds its HTML after what the frame
- * already shows; every other event is a snapshot of the frame's content, diffed into the live DOM
- * the same way a flushed HTML batch is.
+ * Every rendered event's data is trusted frame HTML. An `rmx-append` event adds its HTML after
+ * what the frame already shows, while `rmx-replace` and unnamed events are snapshots of the
+ * frame's content, diffed into the live DOM the same way a flushed HTML batch is. Events with any
+ * other name belong to something else and are skipped.
  *
  * @param body Response body carrying the event stream.
  * @returns A stream of HTML batches tagged as live frame content.
@@ -159,10 +181,15 @@ export function createLiveFrameStream(
 
           let enqueued = false
           for (let event of parse(decoder.decode(value, { stream: true }))) {
-            if (event.data === '') continue
+            let kind = frameEventKind(event)
+            if (!kind) continue
+
             let html = event.data
-            let kind = event.name === APPEND_EVENT ? 'append' : inferFlushKind(html)
-            controller.enqueue(encoder.encode(appendFlushMarker(html, kind)))
+            controller.enqueue(
+              encoder.encode(
+                appendFlushMarker(html, kind === 'append' ? 'append' : inferFlushKind(html)),
+              ),
+            )
             enqueued = true
           }
 

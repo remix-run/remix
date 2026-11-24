@@ -1,6 +1,6 @@
 import {
-  APPEND_EVENT,
   createEventParser,
+  frameEventKind,
   isEventStreamResponse,
   serializeEvent,
 } from './event-stream.ts'
@@ -208,11 +208,14 @@ async function read(connection: LiveConnection, body: ReadableStream<Uint8Array>
       for (let event of parse(decoder.decode(value, { stream: true }))) {
         if (event.retry !== undefined) connection.retry = event.retry
         if (event.id !== undefined) connection.lastEventId = event.id
-        if (event.data === '') continue
+
+        // Events addressed to something else travel no further than this connection.
+        let kind = frameEventKind(event)
+        if (!kind) continue
 
         received += 1
-        let bytes = encoder.encode(serializeEvent(event))
-        if (event.name === APPEND_EVENT) {
+        let bytes = encoder.encode(serializeEvent(kind, event.data))
+        if (kind === 'append') {
           connection.appends.push(bytes)
           if (connection.appends.length > MAX_REPLAYED_APPENDS) connection.appends.shift()
         } else {

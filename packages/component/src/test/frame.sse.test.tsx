@@ -158,8 +158,8 @@ describe('frames connected to an event stream', () => {
       events.send('<ul id="log"><li>Started</li></ul>')
       let log = await waitFor(() => container!.querySelector('#log'))
 
-      events.write('event: append\ndata: <li>Second</li>\n\n')
-      events.write('event: append\ndata: <li>Third</li>\n\n')
+      events.write('event: rmx-append\ndata: <li>Second</li>\n\n')
+      events.write('event: rmx-append\ndata: <li>Third</li>\n\n')
 
       let appended = await waitFor(() =>
         container!.querySelectorAll('li').length === 3 ? container!.querySelectorAll('li') : null,
@@ -178,8 +178,8 @@ describe('frames connected to an event stream', () => {
     let root = renderLiveFrame(events)
 
     try {
-      events.write('event: append\ndata: <p class="line">One</p>\n\n')
-      events.write('event: append\ndata: <p class="line">Two</p>\n\n')
+      events.write('event: rmx-append\ndata: <p class="line">One</p>\n\n')
+      events.write('event: rmx-append\ndata: <p class="line">Two</p>\n\n')
       await waitFor(() => (container!.querySelectorAll('.line').length === 2 ? true : null))
 
       events.send('<p class="line">Only</p>')
@@ -196,8 +196,8 @@ describe('frames connected to an event stream', () => {
     let root = renderLiveFrame(events)
 
     try {
-      events.write('event: append\ndata: <p class="line">One</p>\n\n')
-      events.write('event: append\ndata: <p class="line">Two</p>\n\n')
+      events.write('event: rmx-append\ndata: <p class="line">One</p>\n\n')
+      events.write('event: rmx-append\ndata: <p class="line">Two</p>\n\n')
       await waitFor(() => (container!.querySelectorAll('.line').length === 2 ? true : null))
 
       // A snapshot resets the frame, appended lines included.
@@ -205,13 +205,54 @@ describe('frames connected to an event stream', () => {
       await waitFor(() => (container!.querySelectorAll('.line').length === 1 ? true : null))
 
       // Appending carries on from the snapshot.
-      events.write('event: append\ndata: <p class="line">Next</p>\n\n')
+      events.write('event: rmx-append\ndata: <p class="line">Next</p>\n\n')
       await waitFor(() => (container!.querySelectorAll('.line').length === 2 ? true : null))
 
       expect([...container!.querySelectorAll('.line')].map((line) => line.textContent)).toEqual([
         'Fresh',
         'Next',
       ])
+    } finally {
+      root.dispose()
+    }
+  })
+
+  it('replaces on an rmx-replace event as well as an unnamed one', async () => {
+    let events = createEventStream()
+    let root = renderLiveFrame(events)
+
+    try {
+      events.write('event: rmx-replace\ndata: <p id="status">Named</p>\n\n')
+      let status = await waitFor(() => container!.querySelector('#status'))
+      expect(status.textContent).toBe('Named')
+
+      events.send('<p id="status">Unnamed</p>')
+      await waitFor(() =>
+        container!.querySelector('#status')?.textContent === 'Unnamed' ? true : null,
+      )
+    } finally {
+      root.dispose()
+    }
+  })
+
+  it('ignores events addressed to something other than the frame', async () => {
+    let events = createEventStream()
+    let root = renderLiveFrame(events)
+
+    try {
+      events.send('<p id="status">Queued</p>')
+      await waitFor(() => container!.querySelector('#status'))
+
+      // A connection shared with the app's own events must not render them as frame content.
+      events.write('event: notification\ndata: {"unread":3}\n\n')
+      events.write('event: append\ndata: <p class="line">Unnamespaced</p>\n\n')
+      events.write('event: rmx-append\ndata: <p class="line">Appended</p>\n\n')
+
+      await waitFor(() => container!.querySelector('.line'))
+      expect([...container!.querySelectorAll('.line')].map((line) => line.textContent)).toEqual([
+        'Appended',
+      ])
+      expect(container!.textContent).not.toContain('unread')
     } finally {
       root.dispose()
     }
@@ -226,7 +267,7 @@ describe('frames connected to an event stream', () => {
     try {
       events.send('<p id="status">Queued</p>')
       await waitFor(() => container!.querySelector('#status'))
-      events.write('event: append\ndata: <p class="line">One</p>\n\n')
+      events.write('event: rmx-append\ndata: <p class="line">One</p>\n\n')
       await waitFor(() => container!.querySelector('.line'))
 
       expect(pushes).toEqual(['replace', 'append'])

@@ -156,8 +156,8 @@ describe('live frame connections', () => {
     let { show } = await mountFrames(t, ['/live'])
     show()
     events.send('<ul class="log"><li>Started</li></ul>')
-    events.write('event: append\ndata: <p class="line">One</p>\n\n')
-    events.write('event: append\ndata: <p class="line">Two</p>\n\n')
+    events.write('event: rmx-append\ndata: <p class="line">One</p>\n\n')
+    events.write('event: rmx-append\ndata: <p class="line">Two</p>\n\n')
     await waitFor(() => (document.querySelectorAll('.line').length === 2 ? true : null))
 
     let joined = await mountFrames(t, ['/live'])
