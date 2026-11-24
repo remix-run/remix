@@ -26,7 +26,7 @@
   "db": {
     "adapter": {
       "type": "sqlite",
-      "filename": "./db/record-store.sqlite",
+      "filename": "./db/records.sqlite",
       "foreignKeys": true
     },
     "migrations": {

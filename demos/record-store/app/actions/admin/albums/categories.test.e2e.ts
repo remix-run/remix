@@ -11,7 +11,7 @@ describe('admin album categories', () => {
     let errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     await page.request.post('/login', {
-      form: { email: 'admin@bookstore.com', password: 'admin123' },
+      form: { email: 'admin@recordstore.com', password: 'admin123' },
     })
     await page.goto('/admin/albums/2/edit')
     await page.evaluate(async () => {
@@ -22,14 +22,14 @@ describe('admin album categories', () => {
     })
 
     let category = page.getByRole('combobox', { name: 'Category', exact: true })
-    assert.equal(await category.inputValue(), 'art')
-    assert.equal(await category.locator('option:not([disabled])').count(), 10)
-    assert.equal(await category.locator('option:checked').textContent(), 'Arts, Music & Crafts')
-    await category.selectOption('nonfiction')
+    assert.equal(await category.inputValue(), 'rock')
+    assert.equal(await category.locator('option:not([disabled])').count(), 8)
+    assert.equal(await category.locator('option:checked').textContent(), 'Rock')
+    await category.selectOption('pop')
     await page.getByRole('button', { name: 'Update Record', exact: true }).click()
     await page.getByRole('heading', { name: 'Manage Records', exact: true }).waitFor()
-    let row = page.getByRole('row').filter({ hasText: 'Heavy Metal Guitar Riffs' })
-    assert.equal(await row.getByRole('cell', { name: 'Nonfiction', exact: true }).count(), 1)
+    let row = page.getByRole('row').filter({ hasText: 'Shred Till Dawn' })
+    assert.equal(await row.getByRole('cell', { name: 'Pop', exact: true }).count(), 1)
     assert.deepEqual(errors, [])
   })
 })

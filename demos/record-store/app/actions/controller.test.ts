@@ -23,12 +23,12 @@ describe('root controller', () => {
     assertContains(html, 'Browse Records')
     assert.deepEqual(
       [...html.matchAll(/data-test-slug="([^"]+)"/g)].map((match) => match[1]),
-      ['bbq', 'heavy-metal', 'three-ways', 'midnight-platform'],
+      ['overpass-stereo', 'shred-till-dawn', 'last-bell-first-kiss', 'flannel-overdrive'],
     )
     let head = html.match(/<head>([\s\S]*?)<\/head>/)?.[1]
     assert.ok(head)
     let preload = head.match(/<link rel="preload" as="image"[^>]*>/)?.[0]
-    let cover = html.match(/<img[^>]*alt="Ash &amp; Smoke"[^>]*>/)?.[0]
+    let cover = html.match(/<img[^>]*alt="Overpass Stereo"[^>]*>/)?.[0]
     assert.ok(preload)
     assert.ok(cover)
     assert.equal(preload.match(/href="([^"]+)"/)?.[1], cover.match(/src="([^"]+)"/)?.[1])
@@ -50,19 +50,19 @@ describe('root controller', () => {
       `------${boundary}`,
       'Content-Disposition: form-data; name="title"',
       '',
-      'Book with Cover',
+      'Album with Cover',
       `------${boundary}`,
       'Content-Disposition: form-data; name="artist"',
       '',
-      'Test Author',
+      'Test Artist',
       `------${boundary}`,
       'Content-Disposition: form-data; name="slug"',
       '',
-      'book-with-cover',
+      'album-with-cover',
       `------${boundary}`,
       'Content-Disposition: form-data; name="description"',
       '',
-      'A book with a cover image',
+      'An album with a cover image',
       `------${boundary}`,
       'Content-Disposition: form-data; name="price"',
       '',
@@ -70,11 +70,11 @@ describe('root controller', () => {
       `------${boundary}`,
       'Content-Disposition: form-data; name="genre"',
       '',
-      'fiction',
+      'rock',
       `------${boundary}`,
       'Content-Disposition: form-data; name="catalogNumber"',
       '',
-      '978-1234567890',
+      'RSD-49999-1',
       `------${boundary}`,
       'Content-Disposition: form-data; name="releaseYear"',
       '',
@@ -106,11 +106,11 @@ describe('root controller', () => {
     let currentAlbumCount = await db.count(albums)
     assert.equal(currentAlbumCount, initialAlbumCount + 1)
 
-    let newAlbum = await db.findOne(albums, { where: { slug: 'book-with-cover' } })
+    let newAlbum = await db.findOne(albums, { where: { slug: 'album-with-cover' } })
     assert.ok(newAlbum)
-    assert.equal(newAlbum.slug, 'book-with-cover')
-    assert.equal(newAlbum.artist, 'Test Author')
-    assert.equal(newAlbum.catalog_number, '978-1234567890')
+    assert.equal(newAlbum.slug, 'album-with-cover')
+    assert.equal(newAlbum.artist, 'Test Artist')
+    assert.equal(newAlbum.catalog_number, 'RSD-49999-1')
     assert.equal(newAlbum.release_year, 2024)
     assert.ok(newAlbum.cover_url.startsWith('/uploads/'))
 

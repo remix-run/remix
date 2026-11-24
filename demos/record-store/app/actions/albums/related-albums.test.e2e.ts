@@ -14,7 +14,7 @@ describe('related albums', () => {
     let errors: string[] = []
     let page = await t.serve(
       await createTestServer(async (request) => {
-        if (new URL(request.url).pathname === '/albums/bbq/related') {
+        if (new URL(request.url).pathname === '/albums/overpass-stereo/related') {
           requests.push(request)
           requested.resolve()
           await release.promise
@@ -24,7 +24,7 @@ describe('related albums', () => {
     )
     page.on('pageerror', (error) => errors.push(error.message))
     await page.setViewportSize({ width: 1280, height: 250 })
-    await page.goto('/albums/bbq?image=3')
+    await page.goto('/albums/overpass-stereo?image=3')
     let entry = await page.locator('script[type="module"][src]').getAttribute('src')
     assert.ok(entry)
     await page.evaluate(async (href) => {
@@ -37,7 +37,7 @@ describe('related albums', () => {
     assert.equal(await section.locator('[data-test-slug]').count(), 0)
     assert.equal(
       await section.getByRole('link', { name: 'Browse this category' }).getAttribute('href'),
-      '/albums/genre/cookbook',
+      '/albums/genre/rock',
     )
 
     await section.scrollIntoViewIfNeeded()
@@ -50,12 +50,12 @@ describe('related albums', () => {
     assert.equal(requests[0].headers.get('X-Remix-Frame'), 'true')
     assert.equal(requests[0].headers.get('X-Remix-Target'), 'related-albums-1')
     release.resolve()
-    await section.getByRole('heading', { name: 'Citrus & Salt', exact: true }).waitFor()
+    await section.getByRole('heading', { name: 'Dial-Up Heartbreak', exact: true }).waitFor()
     assert.deepEqual(
       await section
         .locator('[data-test-slug]')
         .evaluateAll((cards) => cards.map((card) => card.getAttribute('data-test-slug'))),
-      ['bread-before-dawn', 'sunday-noodle-shop', 'citrus-and-salt'],
+      ['shred-till-dawn', 'dial-up-heartbreak', 'magnetic-northline'],
     )
     assert.equal(requests.length, 1)
     assert.equal(new URL(page.url()).search, '?image=3')
@@ -64,7 +64,7 @@ describe('related albums', () => {
       'eager',
     )
 
-    let card = section.locator('[data-test-slug="bread-before-dawn"]')
+    let card = section.locator('[data-test-slug="shred-till-dawn"]')
     // Exercise wider font metrics than the default macOS system font.
     await card.evaluate((card) => {
       card.style.fontFamily = 'Verdana, sans-serif'
@@ -92,8 +92,8 @@ describe('related albums', () => {
     assert.equal(new URL(page.url()).search, '?image=3')
 
     await card.getByRole('link', { name: 'View Details', exact: true }).click()
-    await page.getByRole('heading', { level: 1, name: 'Bread Before Dawn', exact: true }).waitFor()
-    assert.equal(new URL(page.url()).pathname, '/albums/bread-before-dawn')
+    await page.getByRole('heading', { level: 1, name: 'Shred Till Dawn', exact: true }).waitFor()
+    assert.equal(new URL(page.url()).pathname, '/albums/shred-till-dawn')
     assert.deepEqual(errors, [])
   })
 })

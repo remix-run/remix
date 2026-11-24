@@ -7,13 +7,14 @@ This demo is a complete online record store built with Remix. Browse records, ma
 ```sh
 cd demos/record-store
 pnpm install
-pnpm db:reset
+pnpm db:migrate
+pnpm db:seed
 pnpm start
 ```
 
 Visit [http://localhost:44100](http://localhost:44100) and sign in with one of the demo accounts:
 
-- Admin: `admin@bookstore.com` / `admin123`
+- Admin: `admin@recordstore.com` / `admin123`
 - Customer: `customer@example.com` / `password123`
 
 ## Server
@@ -26,13 +27,13 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 
 - SQLite stores the catalog, customers, and orders using typed table definitions.
 - Migrations manage the database schema, and seeds provide sample albums and demo accounts.
-- The seed uses the 50 existing bookstore products, including their cover art. The homepage features the first four albums ordered by ID; `/albums` shows the full catalog. Run `pnpm db:seed` to add new seed entries to an existing database without resetting it.
-- Ten broader categories group the catalog, with an average of five albums per category. Filters, related albums, and the admin category selector share this grouping. Run `pnpm db:migrate` to consolidate categories in an existing database while preserving albums, images, and orders.
+- The seed contains 50 fictional vinyl records from the 1990s. The homepage features the first four by ID, and `/albums` shows the full catalog. Each record has a front cover, back cover, and vinyl photo. The [artwork manifest](https://github.com/remix-run/remix/blob/main/demos/record-store/art/record-images.json) tracks their prompts and references.
+- Genre filters, related records, and the admin genre selector use the same categories. The rock category includes hard rock and alternative records.
 - Checkout creates an order and its items together in a database transaction.
 
 ## Auth and Sessions
 
-- The `record-store-session` cookie keeps login and cart state separate from the bookstore demo.
+- The `records-session` cookie keeps login and cart state local to this catalog.
 - Customers can register, sign in, reset passwords, update their account, and view order history.
 - Admin permissions protect album, user, and order management, including cover uploads.
 
@@ -40,8 +41,8 @@ Visit [http://localhost:44100](http://localhost:44100) and sign in with one of t
 
 - Catalog images and browser assets use content hashes in their production URLs. Catalog images are cached as immutable assets for a year.
 - The asset server's `album-image-320`, `album-image-480`, `album-image-640`, `album-image-768`, and `album-image-960` transforms serve responsive WebP album images, preserving their aspect ratio without enlarging smaller originals. Transformed outputs use the asset server's disk cache.
-- Cart items display 48×64-pixel covers using a separate `album-thumbnail` transform that serves 96×128 WebP images for sharper rendering on high-density displays.
-- Catalog and product pages share image URLs so the browser can reuse downloaded images. Catalog images live in `app/images` and are served through the asset server at `/assets/app/images/…`. Stored catalog paths are resolved when rendering, so an existing database does not need to be reseeded. Uploaded covers continue to use `/uploads/…`.
+- Cart items display 48×48-pixel covers using a separate `album-thumbnail` transform that serves 96×96 WebP images for sharper rendering on high-density displays.
+- Seeded catalog cards and the first slide of the product gallery share the same cover image and responsive URLs. Most product pages show the front, back, and vinyl in a shared setting. The artwork manifest lists the scene reference first and pins the original studio shot to its source commit for each supporting edit. Catalog images live in `app/images` and are served through the asset server at `/assets/app/images/…`. Stored catalog paths are resolved to responsive WebP URLs when rendering. Uploaded covers continue to use `/uploads/…`.
 - The homepage, albums list, and category pages preload their first cover early in the document head. Product pages preload the selected carousel image; remaining carousel images load lazily. Each preload matches the displayed image's responsive candidates and sizes.
 - The album carousel preserves its selection with `?image=N`, using one-based image numbers and omitting the parameter for the first image. Arrow buttons call `updateUrl()` to replace the current URL without fetching the page. Reloads and shared links render and preload the selected image on the server; invalid or out-of-range values fall back to the first image.
 
@@ -100,7 +101,7 @@ Navigation and prefetching use frames too:
 
 ### Database Commands
 
-The setup command above creates `db/record-store.sqlite`, applies the migrations, and loads the sample catalog and accounts. You can manage it with:
+The setup command above creates `db/records.sqlite`, applies the migrations, and loads the sample catalog and accounts. For an existing `db/records.sqlite` with the initial catalog, run `pnpm db:seed` to add the new records and keep local records and orders. You can manage the current database with:
 
 ```sh
 pnpm db:status

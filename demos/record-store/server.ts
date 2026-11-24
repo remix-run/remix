@@ -18,7 +18,7 @@ server.listen(port, () => {
   console.log(`Record Store is running on http://localhost:${hmrProxyPort ?? port}`)
   console.log('')
   console.log('Demo accounts:')
-  console.log('  Admin:    admin@bookstore.com / admin123')
+  console.log('  Admin:    admin@recordstore.com / admin123')
   console.log('  Customer: customer@example.com / password123')
   console.log('')
 })

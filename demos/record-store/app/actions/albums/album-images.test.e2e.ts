@@ -13,7 +13,7 @@ describe('album images', () => {
     let context = await browser.newContext({ baseURL: server.baseUrl, javaScriptEnabled: false })
     try {
       let page = await context.newPage()
-      await page.goto('/albums/bbq?image=3')
+      await page.goto('/albums/overpass-stereo?image=3')
       await expectSelectedImage(page, 3)
       assert.equal(await page.getByRole('button', { name: 'Next image' }).isDisabled(), true)
       assert.equal(await page.getByRole('button', { name: 'Previous image' }).isDisabled(), false)
@@ -34,10 +34,10 @@ describe('album images', () => {
         'lazy',
       )
 
-      await page.goto('/albums/bbq?image=99')
+      await page.goto('/albums/overpass-stereo?image=99')
       await expectSelectedImage(page, 1)
       assert.equal(await page.getByRole('button', { name: 'Previous image' }).isDisabled(), true)
-      await page.goto('/albums/bbq?image=2.5')
+      await page.goto('/albums/overpass-stereo?image=2.5')
       await expectSelectedImage(page, 1)
     } finally {
       await context.close()
@@ -78,11 +78,11 @@ describe('album images', () => {
         return url.pathname + url.search
       })
       assert.deepEqual(
-        requests.filter((url) => url.includes('/bbq-1.')),
+        requests.filter((url) => url.includes('/overpass-stereo-1.')),
         [coverSrc],
       )
       requests = []
-      await page.goto('/albums/bbq?image=3')
+      await page.goto('/albums/overpass-stereo?image=3')
       let selected = page.getByRole('img', { name: 'Image 3 of 3' })
       await expectSelectedImage(page, 3)
       let currentSrc = await selected.evaluate((image: HTMLImageElement) => {
@@ -91,10 +91,13 @@ describe('album images', () => {
       })
       assert.equal(new URL(currentSrc, server.baseUrl).search, '?transform=album-image-640')
       assert.deepEqual(
-        requests.filter((url) => url.includes('/bbq-3.')),
+        requests.filter((url) => url.includes('/overpass-stereo-3.')),
         [currentSrc],
       )
-      assert.equal(await selected.evaluate((image) => image.getBoundingClientRect().width), 300)
+      let faceout = await selected.boundingBox()
+      assert.ok(faceout)
+      assert.equal(faceout.width, 300)
+      assert.equal(faceout.height, 300)
     } finally {
       await context.close()
     }

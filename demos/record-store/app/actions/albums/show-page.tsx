@@ -47,7 +47,7 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
             mix={css({
               gridColumn: 2,
               position: 'relative',
-              minHeight: '400px',
+              minHeight: '300px',
               '@media (max-width: 768px)': { gridColumn: 1 },
             })}
           >
@@ -76,7 +76,7 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
                   top: 0,
                   left: 'calc(-300px - 2rem)',
                   width: '300px',
-                  height: '400px',
+                  aspectRatio: '1 / 1',
                   borderRadius: '8px',
                   boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
                   overflow: 'hidden',
@@ -85,8 +85,6 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
                     left: 'auto',
                     width: '100%',
                     maxWidth: '300px',
-                    height: 'auto',
-                    aspectRatio: '3 / 4',
                     margin: '1rem 0',
                   },
                 }),
