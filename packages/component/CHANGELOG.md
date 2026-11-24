@@ -12,7 +12,7 @@ This is the changelog for [`component`](https://github.com/remix-run/remix/tree/
   - `fetch` allows you to override just the `fetch` call for the frame (set custom fetch options/headers, implement an in-memory cache, etc.)
   - `commit` allows you to control the DOM update (trigger a view transition, etc.)
   - `resolveFrame` now receives `options.navigationType` and `options.from` describing the original navigation for navigation-driven frame reloads, allowing you to differentiate navigation versus imperative `frame.reload()` calls
-  - See [Resolving Frames](https://github.com/remix-run/remix/tree/main/packages/component#resolving-frames) for more information and the [bookstore demo](https://github.com/remix-run/remix/tree/main/demos/bookstore#frames) for example usages
+  - See [Resolving Frames](https://github.com/remix-run/remix/tree/main/packages/component#resolving-frames) for more information and the [record store demo](https://github.com/remix-run/remix/tree/main/demos/record-store#frames) for examples
 
 - Follow navigations with the typed `rmx:navigation` event to show pending or optimistic UI. See [following a navigation](https://github.com/remix-run/remix/tree/main/packages/component#following-a-navigation) for details. ([#12183](https://github.com/remix-run/remix/pull/12183))
 

@@ -7,11 +7,13 @@ import {
   loginAsAdmin,
   requestWithSession,
 } from '../../../../test/helpers.ts'
+import { albums } from '../../../data/schema.ts'
+import { db } from '../../../db.ts'
 
 const router = await createTestRouter()
 
 describe('admin albums handlers', () => {
-  it('POST /admin/albums creates new album when admin', async () => {
+  it('POST /admin/albums creates an album with a placeholder when no cover is uploaded', async () => {
     let sessionId = await loginAsAdmin(router)
 
     // Create new album
@@ -36,6 +38,13 @@ describe('admin albums handlers', () => {
 
     assert.equal(response.status, 302)
     assert.ok(response.headers.get('Location')?.includes('/admin/albums'))
+
+    let album = await db.findOne(albums, { where: { slug: 'test-album' } })
+    assert.ok(album)
+    let cover = await router.fetch(new URL(album.cover_url, 'https://remix.run'))
+    assert.equal(cover.status, 200)
+    assert.equal(cover.headers.get('Content-Type'), 'image/jpeg')
+    await cover.arrayBuffer()
   })
 
   it('PUT /admin/albums/:albumId prefers submitted values over the saved album after failure', async () => {
