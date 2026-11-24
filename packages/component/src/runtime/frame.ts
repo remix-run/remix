@@ -4,6 +4,7 @@ import {
   Fragment,
   Portal,
   FRAME_NODE,
+  PORTAL_NODE,
   createComponentErrorEvent,
   createFrameHandle,
   createFrameReloadStartEvent,
@@ -92,6 +93,7 @@ type HydrationData = {
   moduleUrl: string
   exportName: string
   props: Record<string, unknown>
+  [PORTAL_NODE]?: true
 }
 
 type RmxData = {
@@ -1662,11 +1664,27 @@ function adoptFrameServerStyles(container: FrameContainer, styleManager: StyleMa
 
 function parseRmxDataScript(script: HTMLScriptElement): RmxData {
   try {
-    return JSON.parse(script.textContent || '{}')
+    let source = script.textContent || '{}'
+    let data: RmxData = JSON.parse(source)
+    // A JSON escape can spell part of the tag. Inspect the decoded props in either case.
+    if (data.h && !Object.hasOwn(Portal, PORTAL_NODE) && /\$rmxPortal|\\u/.test(source)) {
+      for (let entry of Object.values(data.h)) {
+        if (entry && hasSerializedPortal(entry.props)) entry[PORTAL_NODE] = true
+      }
+    }
+    return data
   } catch {
     console.error('[createFrame] Failed to parse rmx-data script')
     return {}
   }
+}
+
+function hasSerializedPortal(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(hasSerializedPortal)
+  if (!isRecord(value)) return false
+  let escaped = value[ESCAPED_OBJECT]
+  if (isRecord(escaped)) return Object.values(escaped).some(hasSerializedPortal)
+  return value.$rmxPortal === true || Object.values(value).some(hasSerializedPortal)
 }
 
 function copyOwnRmxEntries<T>(target: Record<string, T>, source: Record<string, T>): void {
@@ -1836,19 +1854,22 @@ function scheduleHydrationMarker(
   let parentHydration = marker.parent && pendingClientEntryHydrations.get(marker.parent)
   let component =
     context.registry.modules.get(key) ?? loadClientEntry(key, identity, marker.id, context)
-  if (typeof component === 'function' && !parentHydration) {
+  let portal =
+    entry[PORTAL_NODE] && !Object.hasOwn(Portal, PORTAL_NODE) ? import('./portal.ts') : undefined
+  if (typeof component === 'function' && !parentHydration && !portal) {
     hydrateWithComponent(component)
     complete()
     return
   }
 
   // Imports can finish in any order, but setup must wait for the owning entry's context.
-  Promise.all([component, parentHydration])
-    .then(([component]) => {
-      if (component) {
-        hydrateWithComponent(component)
-      }
-    })
+  Promise.all([component, parentHydration, portal])
+    .then(
+      ([component]) => {
+        if (component) hydrateWithComponent(component)
+      },
+      (error) => console.error(`[createFrame] Failed to load Portal for ${marker.id}:`, error),
+    )
     .finally(complete)
 }
 
