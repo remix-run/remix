@@ -56,8 +56,9 @@ type Optionalize<record extends Record<string, string | undefined>> =
 /**
  * Generate an href from a route pattern and the supplied params.
  *
- * Pathname wildcards reject `.` and `..` segments. Generated pathnames have one leading
- * slash; internal and trailing slashes are preserved.
+ * Pathname variables cannot produce standalone `.` or `..` segments. Pathname wildcard values
+ * cannot contain these segments. Generated pathnames have one leading slash and preserve internal
+ * and trailing slashes.
  *
  * @param pattern The parsed route pattern.
  * @param args Path params and href options.
@@ -161,35 +162,37 @@ function hrefPart(
   let separator = part.type === 'hostname' ? '.' : '/'
   let missingParams: Array<string> = []
 
-  let stack: Array<{ begin?: number; href: string }> = [{ href: '' }]
+  let href = ''
+  let dotParams: Array<{ offset: number; name: string; value: string }> = []
+  let stack: Array<{ begin: number; offset: number; dotParamCount: number }> = []
   let i = 0
   while (i < part.tokens.length) {
     let token = part.tokens[i]
     if (token.type === 'text') {
-      stack[stack.length - 1].href += token.text
+      href += token.text
       i += 1
       continue
     }
     if (token.type === 'separator') {
-      stack[stack.length - 1].href += separator
+      href += separator
       i += 1
       continue
     }
     if (token.type === '(') {
-      stack.push({ begin: i, href: '' })
+      stack.push({ begin: i, offset: href.length, dotParamCount: dotParams.length })
       i += 1
       continue
     }
     if (token.type === ')') {
-      let frame = stack.pop()!
-      stack[stack.length - 1].href += frame.href
+      stack.pop()
       i += 1
       continue
     }
     if (token.type === ':' || token.type === '*') {
       let value = params[token.name]
       if (value == null) {
-        if (stack.length <= 1) {
+        let frame = stack.pop()
+        if (frame === undefined) {
           if (token.name === '*') {
             throw new CreateHrefError({ type: 'nameless-wildcard', pattern })
           }
@@ -197,23 +200,31 @@ function hrefPart(
           i += 1
           continue
         }
-        let frame = stack.pop()!
-        i = part.optionals.get(frame.begin!)! + 1
+        href = href.slice(0, frame.offset)
+        dotParams.length = frame.dotParamCount
+        i = part.optionals.get(frame.begin)! + 1
         if (
-          stack[stack.length - 1].href.endsWith(separator) &&
+          href.length > (stack.at(-1)?.offset ?? 0) &&
+          href.endsWith(separator) &&
           part.tokens[i]?.type === 'separator'
         ) {
           i += 1
         }
         continue
       }
-      // oxfmt-ignore
-      stack[stack.length - 1].href +=
-        part.type === 'pathname' && token.type === ':' ? encodePathnameVariableParam(pattern, token.name, value) :
-        part.type === 'pathname' && token.type === '*' ? encodePathnameWildcard(value) :
-        part.type === 'hostname' && token.type === ':' ? validateHostnameVariable(value) :
-        part.type === 'hostname' && token.type === '*' ? validateHostnameWildcard(value) :
-        unreachable()
+      if (part.type === 'pathname' && token.type === ':') {
+        let serialized = String(value)
+        if (serialized === '.' || serialized === '..') {
+          dotParams.push({ offset: href.length, name: token.name, value: serialized })
+        }
+        href += encodePathnameVariableParam(pattern, token.name, serialized)
+      } else if (part.type === 'pathname') {
+        href += encodePathnameWildcard(value)
+      } else if (token.type === ':') {
+        href += validateHostnameVariable(value)
+      } else {
+        href += validateHostnameWildcard(value)
+      }
       i += 1
       continue
     }
@@ -227,8 +238,29 @@ function hrefPart(
       params,
     })
   }
-  if (stack.length !== 1) unreachable()
-  return stack[0].href
+  if (stack.length !== 0) unreachable()
+
+  if (dotParams.length > 0) {
+    // Optional groups and literal suffixes can change whether an encoded dot is a whole segment.
+    let pathname = href.split(/[?#]/, 1)[0]
+    let paramIndex = 0
+    for (let match of pathname.matchAll(/(?:^|[/\\])(?:\.|%2e){1,2}(?=$|[/\\])/gi)) {
+      while (paramIndex < dotParams.length && dotParams[paramIndex].offset < match.index) {
+        paramIndex += 1
+      }
+      let param = dotParams[paramIndex]
+      if (param === undefined) break
+      if (param.offset < match.index + match[0].length) {
+        throw new CreateHrefError({
+          type: 'invalid-pathname-variable',
+          pattern,
+          paramName: param.name,
+          value: param.value,
+        })
+      }
+    }
+  }
+  return href
 }
 
 function hrefSearch(
@@ -333,7 +365,8 @@ export class CreateHrefError extends Error {
     }
 
     if (details.type === 'invalid-pathname-variable') {
-      return `invalid pathname variable param: '${details.paramName}' cannot be empty\n\nPattern: ${details.pattern}\nValue: ${JSON.stringify(details.value)}`
+      let reason = details.value === '' ? 'cannot be empty' : 'cannot produce a dot segment'
+      return `invalid pathname variable param: '${details.paramName}' ${reason}\n\nPattern: ${details.pattern}\nValue: ${JSON.stringify(details.value)}`
     }
 
     if (details.type === 'invalid-pathname-wildcard') {
@@ -344,17 +377,16 @@ export class CreateHrefError extends Error {
   }
 }
 
-function encodePathnameVariableParam(pattern: RoutePattern, paramName: string, value: unknown) {
-  let serialized = String(value)
-  if (serialized.length === 0) {
+function encodePathnameVariableParam(pattern: RoutePattern, paramName: string, value: string) {
+  if (value.length === 0) {
     throw new CreateHrefError({
       type: 'invalid-pathname-variable',
       pattern,
       paramName,
-      value: serialized,
+      value,
     })
   }
-  return encodePathnameVariableSegment(serialized)
+  return encodePathnameVariableSegment(value)
 }
 
 export function encodePathnameVariable(value: unknown) {

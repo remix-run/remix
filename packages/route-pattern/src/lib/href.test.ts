@@ -192,6 +192,25 @@ describe('createHref', () => {
         )
       })
 
+      it('rejects standalone dot segments', () => {
+        let pattern = RoutePattern.parse('/posts/:id')
+        assert.throws(() => createHref(pattern, { id: '.' }), {
+          details: { type: 'invalid-pathname-variable', pattern, paramName: 'id', value: '.' },
+        })
+        assert.throws(
+          () => createHref(pattern, { id: '..' }),
+          hrefError('invalid-pathname-variable'),
+        )
+      })
+
+      it('checks the complete segment when a pathname variable has a literal suffix', () => {
+        assert.throws(
+          () => createHref('/posts/:id.', { id: '.' }),
+          hrefError('invalid-pathname-variable'),
+        )
+        assert.equal(createHref('/posts/:id.json', { id: '..' }), '/posts/%2E%2E.json')
+      })
+
       it('ignores extra params', () => {
         assert.equal(createHref('/posts/:id', { id: '123', page: '2', sort: 'desc' }), '/posts/123')
       })
@@ -374,6 +393,16 @@ describe('createHref', () => {
   })
 
   describe('pattern with optionals', () => {
+    it('validates dot segments only in optional groups that are included', () => {
+      let pattern = 'https://example.com/posts(/:id/:view)'
+      let options = { baseURL: 'https://example.com/' }
+      assert.equal(createHref(pattern, { id: '..' }, options), 'posts')
+      assert.throws(
+        () => createHref(pattern, { id: '..', view: 'preview' }, options),
+        hrefError('invalid-pathname-variable'),
+      )
+    })
+
     it('includes optional with static content', () => {
       assert.equal(createHref('/posts(/edit)'), '/posts/edit')
       assert.equal(createHref('products(.md)'), '/products.md')
