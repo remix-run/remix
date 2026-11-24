@@ -440,7 +440,16 @@ function placeSiblingUnitBefore(unit: SiblingUnit, parent: ParentNode, ref: Node
   // Do not stage live ranges in a fragment: that would disconnect their contents
   // before moveBefore() can preserve their browser-managed state.
   if (nodes.every((node) => canMoveBefore(parent, node))) {
-    for (let node of nodes) parent.moveBefore(node, ref)
+    let previous: Node | undefined
+    for (let node of nodes) {
+      // Custom-element callbacks can remove/reparent pending nodes and the anchor.
+      if (node.parentNode !== parent) continue
+      if (ref && ref.parentNode !== parent) {
+        ref = previous?.parentNode === parent ? previous.nextSibling : null
+      }
+      moveNodeBefore(parent, node, ref)
+      if (node.parentNode === parent) previous = node
+    }
     return
   }
 
