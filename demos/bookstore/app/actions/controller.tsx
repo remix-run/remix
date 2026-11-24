@@ -1,12 +1,11 @@
 import { createController } from 'remix/router'
-import { ilike, inList, or } from 'remix/data-table'
+import { ilike, or } from 'remix/data-table'
 import { createFileResponse as sendFile } from 'remix/response/file'
 
 import { books } from '../data/schema.ts'
 import { routes } from '../routes.ts'
 import { assets } from '../utils/assets.ts'
 import { resolveBookCover } from '../utils/book-images.ts'
-import { getCurrentCart } from '../utils/context.ts'
 import { uploadsStorage } from '../utils/uploads.ts'
 import { browsingResponseInit } from './browsing-response.ts'
 import { AboutPage } from './about.tsx'
@@ -30,29 +29,16 @@ export default createController(routes, {
         cacheControl: 'public, max-age=31536000',
       })
     },
-    async home({ db, render, request, session }) {
-      let cart = getCurrentCart(session)
-      let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
-      let featuredBookRows = await db.findMany(books, {
-        where: inList('slug', featuredSlugs),
-      })
-      let featuredBooksBySlug = new Map(featuredBookRows.map((book) => [book.slug, book]))
-      let featuredBooks = await Promise.all(
-        featuredSlugs.flatMap((slug) => {
-          let book = featuredBooksBySlug.get(slug)
-          return book ? [resolveBookCover(book)] : []
-        }),
-      )
+    async home({ db, render, request }) {
+      let bookRows = await db.findMany(books, { orderBy: ['id', 'asc'], limit: 4 })
+      let featuredBooks = await Promise.all(bookRows.map(resolveBookCover))
 
-      return render(
-        <HomePage featuredBooks={featuredBooks} cart={cart} />,
-        browsingResponseInit(request),
-      )
+      return render(<HomePage featuredBooks={featuredBooks} />, browsingResponseInit(request))
     },
     about({ render, request }) {
       return render(<AboutPage />, browsingResponseInit(request))
     },
-    async search({ db, render, request, session, url }) {
+    async search({ db, render, request, url }) {
       let query = url.searchParams.get('q') ?? ''
       let matchingBooks = query
         ? await db.findMany(books, {
@@ -65,10 +51,9 @@ export default createController(routes, {
           })
         : []
       matchingBooks = await Promise.all(matchingBooks.map(resolveBookCover))
-      let cart = getCurrentCart(session)
 
       return render(
-        <SearchPage query={query} matchingBooks={matchingBooks} cart={cart} />,
+        <SearchPage query={query} matchingBooks={matchingBooks} />,
         browsingResponseInit(request),
       )
     },

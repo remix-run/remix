@@ -14,6 +14,15 @@ export const CartButton = clientEntry(
     handle.frame.addEventListener(
       'reloadStart',
       async (event) => {
+        // Ancestor navigation also reloads this frame; only its own cart mutation is a save.
+        if (
+          event.method !== 'post' ||
+          new URL(event.src, document.baseURI).href !==
+            new URL(routes.fragments.cartToggle.href({ bookId: handle.props.id }), document.baseURI)
+              .href
+        ) {
+          return
+        }
         activeReload = event
         failed = false
         handle.update()

@@ -16,18 +16,10 @@ const cartActionSchema = f.object({
   redirect: redirectField,
 })
 
-// Simulated server latency so pending UI is visible in the demo. Tests replace `wait`.
-export const latency = {
-  wait(ms: number) {
-    return new Promise<void>((resolve) => setTimeout(resolve, ms))
-  },
-}
-
 export default createController(routes.cart.api, {
   actions: {
     async add({ db, formData, session }) {
       let { bookId, redirect: redirectTo } = s.parse(cartActionSchema, formData)
-      await latency.wait(1000)
 
       let parsedBookId = parseId(bookId)
       let book = parsedBookId === undefined ? undefined : await db.find(books, parsedBookId)

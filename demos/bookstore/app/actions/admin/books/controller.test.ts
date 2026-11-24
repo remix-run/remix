@@ -26,7 +26,7 @@ describe('admin books handlers', () => {
         author: 'Test Author',
         description: 'Test description',
         price: '29.99',
-        genre: 'test',
+        genre: 'fiction',
         isbn: '978-0000000000',
         publishedYear: '2024',
         inStock: 'true',
@@ -62,5 +62,31 @@ describe('admin books handlers', () => {
     assertContains(html, 'value="Revised Title"')
     assertContains(html, 'Revised description')
     assertContains(html, 'value="false" selected')
+    assertContains(html, 'value="cookbook" selected')
+  })
+
+  it('rejects categories outside the supported ten without updating the book', async () => {
+    let sessionId = await loginAsAdmin(router)
+    let response = await router.fetch(
+      requestWithSession('https://remix.run/admin/books/1', sessionId, {
+        method: 'PUT',
+        body: new URLSearchParams({
+          slug: 'bbq',
+          title: 'Ash & Smoke',
+          author: 'Rusty Char-Broil',
+          description: 'The perfect gift for the BBQ enthusiast in your life!',
+          price: '16.99',
+          genre: 'music',
+          isbn: '978-0525559474',
+          publishedYear: '2020',
+          inStock: 'true',
+        }),
+      }),
+    )
+
+    assert.equal(response.status, 400)
+    assertContains(await response.text(), 'Expected one of:')
+    let book = await router.fetch('https://remix.run/books/bbq')
+    assertContains(await book.text(), 'Food &amp; Cooking')
   })
 })

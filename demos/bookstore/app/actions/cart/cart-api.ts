@@ -19,15 +19,8 @@ export async function toggleCart({
   bookId,
   intent,
 }: CartItemOptions & { intent: 'add' | 'remove' }): Promise<CartError | undefined> {
-  if (process.env.NODE_ENV !== 'test') {
-    await new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 701)))
-  }
-
   let book = await db.find(books, bookId)
   if (!book) return { status: 404, message: 'Book not found.' }
-  if (book.slug === 'three-ways' && Math.random() < 0.5) {
-    return { status: 500, message: 'Couldn’t update this book. Try again.' }
-  }
 
   let cart = getCurrentCart(session)
   if (intent === 'remove') {
@@ -45,15 +38,8 @@ export async function updateCart({
   bookId,
   quantity,
 }: CartItemOptions & { quantity: number }): Promise<CartError | undefined> {
-  if (process.env.NODE_ENV !== 'test') {
-    await new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 701)))
-  }
-
   let book = await db.find(books, bookId)
   if (!book) return { status: 404, message: 'Book not found.' }
-  if (book.slug === 'three-ways') {
-    return { status: 500, message: 'Couldn’t update this book. Try again.' }
-  }
 
   let next = updateCartItem(getCurrentCart(session), bookId, quantity)
   if (!next) {
@@ -68,15 +54,25 @@ export async function removeCartItem({
   session,
   bookId,
 }: CartItemOptions): Promise<CartError | undefined> {
-  if (process.env.NODE_ENV !== 'test') {
-    await new Promise((resolve) => setTimeout(resolve, 300 + Math.floor(Math.random() * 701)))
-  }
-
   let book = await db.find(books, bookId)
   if (!book) return { status: 404, message: 'Book not found.' }
-  if (book.slug === 'three-ways') {
-    return { status: 500, message: 'Couldn’t remove this book. Try again.' }
-  }
 
   session.set('cart', removeFromCart(getCurrentCart(session), bookId))
+}
+
+export async function restoreCartItem({
+  db,
+  session,
+  bookId,
+  quantity,
+}: CartItemOptions & { quantity: number }): Promise<CartError | undefined> {
+  let book = await db.find(books, bookId)
+  if (!book) return { status: 404, message: 'Book not found.' }
+
+  let cart = getCurrentCart(session)
+  // Set the saved quantity so retrying a lost response cannot add extra copies.
+  if (!updateCartItem(cart, book.id, quantity)) {
+    cart = addToCart(cart, book.id, book.slug, book.title, book.price, quantity)
+  }
+  session.set('cart', cart)
 }

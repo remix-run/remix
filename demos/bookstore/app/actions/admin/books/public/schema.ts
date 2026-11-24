@@ -1,13 +1,15 @@
 import * as s from 'remix/data-schema'
 import * as fd from 'remix/data-schema/experimental/form'
 
+import { bookGenres } from '../../../../data/book-genres.ts'
+
 export const AdminBookForm = fd.object({
   slug: fd.text(s.string()),
   title: fd.text(s.string()),
   author: fd.text(s.string()),
   description: fd.text(s.string()),
   price: fd.number(s.number()),
-  genre: fd.text(s.string()),
+  genre: fd.text(s.enum_(bookGenres)),
   cover: fd.text(s.optional(s.string())),
   isbn: fd.text(s.string()),
   publishedYear: fd.number(s.number()),
