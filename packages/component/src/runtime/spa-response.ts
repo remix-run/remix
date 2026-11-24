@@ -1,5 +1,5 @@
 import type { RemixNode } from './core/vnode.ts'
-import { spaResponses } from './frame.ts'
+import { spaResponses } from './frame-runtime.ts'
 
 /**
  * Creates and finalizes responses carrying renderable Remix nodes for the SPA runtime.

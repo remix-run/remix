@@ -1,0 +1,1 @@
+Reduce the JavaScript loaded by standalone calls to `navigate()`, `updateUrl()`, `defaultPrefetch()`, and `spaResponse`, and by components that use the `link()` mixin. Frame prefetching also skips unrelated elements when it looks for assets in an HTML response.

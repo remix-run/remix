@@ -27,6 +27,8 @@ import {
   getClientEntryBoundaryOwner,
   getFrameRuntime,
   getSharedFrameRuntime,
+  pendingPrefetchLinks,
+  spaResponses,
   isFrameRuntime,
   navigationRequest,
   setClientEntryBoundaryOwner,
@@ -105,31 +107,6 @@ type FrameMarkerData = FrameData & {
   id: string
 }
 
-// Frames of the most recently started run() runtime, for module-level helpers that have no
-// runtime reference: targeted prefetching and updateUrl().
-let appFrames: Handle['frames'] | undefined
-
-export function setAppFrames(frames: Handle['frames']): () => void {
-  appFrames = frames
-  return () => {
-    if (appFrames === frames) appFrames = undefined
-  }
-}
-
-export function setTopFrameSource(src: string): void {
-  if (appFrames) appFrames.top.src = src
-}
-
-/**
- * Returns a named frame handle.
- *
- * @param name Name of the frame to look up.
- * @returns The matching frame handle, or `undefined` when not found.
- */
-export function getNamedFrame(name: string): FrameHandle | undefined {
-  return appFrames?.get(name)
-}
-
 type InternalFrameContent = FrameContent | DocumentFragment
 
 type ReloadFailure = { error: unknown; aborted?: false } | { aborted: true }
@@ -149,8 +126,6 @@ let frameLoadPool:
       dispose: () => void
     }
   | undefined
-
-export const pendingPrefetchLinks = new WeakSet<Node>()
 
 function observeFrameLoad(targets: Element[], load: () => void): () => void {
   let pool = frameLoadPool
@@ -3266,13 +3241,6 @@ function createModulePreloader(doc: Document): ModulePreloader {
     },
   }
 }
-
-type SPAResponseData = {
-  node: RemixNode
-  redirectedTo?: string
-}
-
-export const spaResponses = new WeakMap<Response, SPAResponseData>()
 
 export async function unwrapFrameResolution(
   resolution: FrameResolution,

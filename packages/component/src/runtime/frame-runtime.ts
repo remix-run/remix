@@ -271,3 +271,12 @@ export function disposeClientEntryBoundary(marker: Comment): boolean {
   owner.root.dispose()
   return true
 }
+
+export const pendingPrefetchLinks = new WeakSet<Node>()
+
+type SPAResponseData = {
+  node: RemixNode
+  redirectedTo?: string
+}
+
+export const spaResponses = new WeakMap<Response, SPAResponseData>()

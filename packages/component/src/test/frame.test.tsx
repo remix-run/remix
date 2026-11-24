@@ -4,7 +4,7 @@ import type { FrameHandle, FrameReloadStartEvent, Handle, RemixNode } from '../r
 import type { NavigationEvent } from '../runtime/navigation.ts'
 import { Fragment } from '../runtime/component.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
-import { Frame, getNamedFrame, reloadFrameForNavigation } from '../runtime/frame.ts'
+import { Frame, reloadFrameForNavigation } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import type { ResolveFrame } from '../runtime/frame-runtime.ts'
@@ -4359,14 +4359,14 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
-  it('returns undefined when an internal named frame lookup misses', async () => {
+  it('returns undefined when a named frame is missing', async () => {
     document.body.innerHTML = await drain(renderToStream(<main />))
 
     let app = run({ loadModule: mock.fn() })
 
     try {
       await app.ready()
-      expect(getNamedFrame('missing-frame')).toBeUndefined()
+      expect(app.frames.get('missing-frame')).toBeUndefined()
     } finally {
       app.dispose()
     }
