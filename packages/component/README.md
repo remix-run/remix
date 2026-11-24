@@ -1503,7 +1503,7 @@ function liveOrder(): Response {
 - A frame renders only those two names. Every other event, an unnamed `message` event included, belongs to whatever else reads the stream, so one connection can carry an app's own events without a frame rendering them.
 - Comment lines such as `: ping` are dropped, which makes them the keepalive for an idle connection, and multi-line `data:` fields are joined with newlines.
 - Event data is trusted frame HTML and isn't sanitized, like every other frame resolution. It can select client entries and contribute import maps, styles, and nested frames.
-- A frame rendered on the server is already resolved, so it never opens a connection. Live frames are created in the browser, or reach a stream through `frame.reload()` or a navigation.
+- A frame rendered on the server is already resolved, so it never opens a connection. A connection belongs to a frame the browser resolves: one created in the browser, a lazy frame reaching the viewport, a `frame.reload()`, or a navigation.
 - The default resolver sends `Accept: text/html, text/event-stream`, so one route can serve a document, a fragment, or a live stream depending on the request.
 
 #### Appending Instead of Replacing
