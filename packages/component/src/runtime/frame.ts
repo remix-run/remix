@@ -226,6 +226,29 @@ function createLinkedAbortController(signal?: AbortSignal): {
 }
 
 /**
+ * What a live frame did with the event it just rendered.
+ */
+export type FrameUpdateDetail = {
+  /** `append` added the event's HTML to the frame; `replace` reconciled the frame against it. */
+  kind: 'append' | 'replace'
+}
+
+/**
+ * Event dispatched from a frame after it renders an event from its live connection.
+ *
+ * It bubbles, so listening on any element around the frame reports every update to it, which is
+ * how surrounding UI learns that the frame's content changed.
+ */
+export type FrameUpdateEvent = CustomEvent<FrameUpdateDetail>
+
+declare global {
+  // Declared on every element, so listening for it is typed wherever a frame can be wrapped.
+  interface ElementEventMap {
+    'rmx:update': FrameUpdateEvent
+  }
+}
+
+/**
  * Reloads a frame and returns response metadata used by the navigation runtime.
  *
  * @param frame Frame handle to reload.
@@ -761,6 +784,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
           } finally {
             clearRmxData(batch.data)
           }
+
+          if (isRenderAborted(signal)) return
+          dispatchUpdate(kind)
           return
         }
 
@@ -770,6 +796,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         } finally {
           firstBatch.resolve()
         }
+
+        if (isRenderAborted(signal)) return
+        dispatchUpdate(kind)
       },
       options.nonce,
       signal,
@@ -788,6 +817,21 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       })
 
     await firstBatch.promise
+  }
+
+  // Dispatched from the frame's start marker, which bubbles into the surrounding document, so
+  // UI around the frame can react to content it did not render itself.
+  function dispatchUpdate(flushKind: FlushKind): void {
+    let target: EventTarget =
+      container.regionStart ??
+      (container.root instanceof Document ? container.doc.body : (container.root as Element))
+
+    target.dispatchEvent(
+      new CustomEvent<FrameUpdateDetail>('rmx:update', {
+        bubbles: true,
+        detail: { kind: flushKind === 'append' ? 'append' : 'replace' },
+      }),
+    )
   }
 
   function startRendering(): void {

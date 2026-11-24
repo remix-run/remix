@@ -191,6 +191,24 @@ describe('frames connected to an event stream', () => {
     }
   })
 
+  it('dispatches a bubbling rmx:update event for every event it renders', async () => {
+    let events = createEventStream()
+    let root = renderLiveFrame(events)
+    let pushes: string[] = []
+    container!.addEventListener('rmx:update', (event) => pushes.push(event.detail.kind))
+
+    try {
+      events.send('<p id="status">Queued</p>')
+      await waitFor(() => container!.querySelector('#status'))
+      events.write('event: append\ndata: <p class="line">One</p>\n\n')
+      await waitFor(() => container!.querySelector('.line'))
+
+      expect(pushes).toEqual(['replace', 'append'])
+    } finally {
+      root.dispose()
+    }
+  })
+
   it('closes the connection when the frame is disposed', async () => {
     let events = createEventStream()
     let root = renderLiveFrame(events)
