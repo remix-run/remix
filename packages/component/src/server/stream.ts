@@ -17,6 +17,7 @@ import {
 } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
+  getMergedClassName,
   getSelectValues,
   isAllowedHostPropName,
   normalizeAttributeName,
@@ -1614,11 +1615,7 @@ function processStyleProps(props: ElementProps): ElementProps {
     return props
   }
 
-  let classAttr = typeof props.class === 'string' ? props.class : ''
-  let className = typeof props.className === 'string' ? props.className : ''
-  let mergedClassName = classAttr
-  if (className) mergedClassName = classAttr ? `${classAttr} ${className}` : className
-
+  let mergedClassName = getMergedClassName(props)
   let processedProps: ElementProps
   if (mergedClassName) {
     // Copy without `delete`, which would leave the props object in slow dictionary mode.

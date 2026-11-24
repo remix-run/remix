@@ -1,5 +1,5 @@
 import type { ElementProps } from './vnode.ts'
-import { camelToKebab, normalizeCssValue } from '../../style/style.ts'
+import { camelToKebab, isStyleObject, normalizeCssValue } from '../../style/stylesheet.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -61,8 +61,11 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
   for (let name in curr) {
     if (skipHostProp(name)) continue
     if (name === 'defaultValue' && dom instanceof HTMLSelectElement) continue
-    if (name === 'value' && dom instanceof HTMLSelectElement && curr.value === undefined) continue
     if (name in next && next[name] != null) continue
+    if ((name === 'value' || name === 'checked') && curr[name] === undefined) {
+      if (next[name] === undefined || (name === 'value' && dom instanceof HTMLSelectElement))
+        continue
+    }
 
     let { ns, attr } = normalizeAttributeName(name, isSvg)
     if (canUseProperty(dom, name, isSvg, attr)) {
@@ -133,7 +136,7 @@ function patchHostProp(
       } catch {}
     }
     try {
-      dom[name] = value == null ? '' : value
+      dom[name] = value
       return
     } catch {}
   }
@@ -143,17 +146,13 @@ function patchHostProp(
   // Match server rendering: booleans render as "true"/"false" only for attributes that read them as
   // strings; otherwise `true` renders an empty attribute and `false` omits it.
   let stringify = typeof value !== 'boolean' || shouldStringifyBooleanAttribute(attr)
-  if (value != null && (stringify || value)) {
+  if (stringify || value) {
     let attrValue = stringify ? String(value) : ''
     if (ns) dom.setAttributeNS(ns, attr, attrValue)
     else dom.setAttribute(attr, attrValue)
   } else {
     removeAttribute(dom, attr, ns)
   }
-}
-
-function isStyleObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function patchStyleObject(
@@ -167,26 +166,20 @@ function patchStyleObject(
   }
 
   let style = dom.style
-  if (curr) {
-    for (let name in curr) {
-      let nextCssValue = styleValueToCss(name, next[name])
-      if (nextCssValue !== undefined) continue
-
-      let prevCssValue = styleValueToCss(name, curr[name])
-      if (prevCssValue === undefined) continue
-
+  for (let name in curr) {
+    if (
+      styleValueToCss(name, next[name]) === undefined &&
+      styleValueToCss(name, curr[name]) !== undefined
+    ) {
       style.removeProperty(camelToKebab(name))
     }
   }
 
   for (let name in next) {
-    let nextCssValue = styleValueToCss(name, next[name])
-    if (nextCssValue === undefined) continue
-
-    let prevCssValue = curr ? styleValueToCss(name, curr[name]) : undefined
-    if (prevCssValue === nextCssValue) continue
-
-    style.setProperty(camelToKebab(name), nextCssValue)
+    let value = styleValueToCss(name, next[name])
+    if (value !== undefined && value !== styleValueToCss(name, curr?.[name])) {
+      style.setProperty(camelToKebab(name), value)
+    }
   }
 }
 
@@ -365,8 +358,7 @@ export function styleValueToCss(name: string, value: unknown): string | undefine
 export function getMergedClassName(props: ElementProps): string | undefined {
   let classAttr = typeof props.class === 'string' ? props.class : ''
   let className = typeof props.className === 'string' ? props.className : ''
-  let merged = classAttr && className ? `${classAttr} ${className}` : classAttr || className
-  return merged || undefined
+  return classAttr && className ? `${classAttr} ${className}` : classAttr || className || undefined
 }
 
 const XLINK_NS = 'http://www.w3.org/1999/xlink'

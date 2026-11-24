@@ -62,7 +62,7 @@ import {
 import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
 import { css } from '../style/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
-import type { CSSProps } from '../style/style.ts'
+import type { CSSProps } from '../style/css-mixin.ts'
 import {
   createFrameStartMarker,
   findFlushMarker,
