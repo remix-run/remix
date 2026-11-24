@@ -719,6 +719,13 @@ describe('createHref', () => {
       )
     })
 
+    it('keeps the current-directory reference for a variable route', () => {
+      assert.equal(
+        createHref('/users/:id/', { id: '2' }, { baseURL: 'https://example.com/users/2/edit' }),
+        './',
+      )
+    })
+
     it('relativizes explicit same-origin patterns and keeps cross-origin targets absolute', () => {
       assert.equal(
         createHref(

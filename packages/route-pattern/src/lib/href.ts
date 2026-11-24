@@ -155,8 +155,8 @@ function relativeHref(pathname: string, baseURL: URL): { pathname: string; prefi
   if (targetFile !== undefined) relativeSegments.push(targetFile)
 
   let result = relativeSegments.join('/')
-  if (targetIsDirectory) result = result === '' ? './' : `${result}/`
-  if (result === '') result = './'
+  if (result === '') return { pathname: './', prefixLength: 2 }
+  if (targetIsDirectory) result += '/'
   let prefixLength = (baseSegments.length - common) * '../'.length
   if (/^[\\/]/.test(result) || /^[^/]*:/.test(result)) {
     result = `./${result}`
