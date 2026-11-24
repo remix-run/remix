@@ -421,8 +421,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     initialClientEntryResources = consumeClientEntryResources(container.root)
   }
 
-  // Merge any rmx-data found in the current document once at startup.
-  mergeRmxDataFrom(init.data, container.doc)
+  if (container.doc.getElementById('rmx-data')) mergeRmxDataFrom(init.data, container.doc)
 
   let runtime = createFrameRuntime({
     ...init,
@@ -451,7 +450,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     getContext: (type) => runtime.getContext?.(type),
     ...getSharedFrameRuntime(runtime),
     frame,
-    data: init.data,
+    // Child frames share newly discovered document data, then release their own references.
+    data: init.marker ? { ...init.data } : init.data,
     lifecycleSignal: lifecycleController.signal,
     regionTailRef: container.regionTailRef,
     regionParent: container.regionParent,
@@ -610,17 +610,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   }
 
   async function hydrateInitial(): Promise<void> {
-    let reconciliationTracker = createReconciliationTracker()
-
-    if ((await initialClientEntryResources) === false) return
-    if (isRenderAborted(init.signal)) return
-    adoptFrameServerStyles(container, context.styleManager)
-    let initial = { nonce: init.nonce, navigationType: init.navigationType, from: init.from }
-    let options = { ...initial, reconciliationTracker, signal: init.signal }
-    let subFramesReady = hydrateContainer(container, { ...context, ...initial }, options)
-
     try {
-      await subFramesReady
+      if ((await initialClientEntryResources) === false || isRenderAborted(init.signal)) return
+      adoptFrameServerStyles(container, context.styleManager)
+      let reconciliationTracker = createReconciliationTracker()
+      let initial = { nonce: init.nonce, navigationType: init.navigationType, from: init.from }
+      let options = { ...initial, reconciliationTracker, signal: init.signal }
+      await hydrateContainer(container, { ...context, ...initial }, options)
 
       if (isRenderAborted(init.signal)) return
 
@@ -630,8 +626,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         deferLoad(loadLazyFrame)
       }
 
-      reconciliationTracker.finalize()
-      await reconciliationTracker.ready()
+      await reconciliationTracker.finish()
     } finally {
       clearRmxData(context.data)
     }
@@ -1206,14 +1201,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
             onCommit() {
               if (commitStarted) return
               commitStarted = true
-              blockingFrameTracker.finalize()
-              if (committed) {
-                void blockingFrameTracker.ready().then(committed.resolve, committed.reject)
-              }
+              let ready = blockingFrameTracker.finish()
+              if (committed) void ready.then(committed.resolve, committed.reject)
             },
           })
-          reconciliationTracker.finalize()
-          await reconciliationTracker.ready()
+          await reconciliationTracker.finish()
         },
       )
     } catch (error) {
@@ -1588,55 +1580,28 @@ function randomFrameId(): string {
 }
 
 function createReconciliationTracker(): ReconciliationTracker {
-  let pending = 0
-  let finalized = false
-  let failed = false
-  let failure: unknown
+  let ready = Promise.withResolvers<void>()
+  // finish() releases the first count once the initial work has been scheduled.
+  let pending = 1
+  let failure: { error: unknown } | undefined
 
-  let resolveReady: (() => void) | undefined
-  let rejectReady: ((error: unknown) => void) | undefined
-  let readyPromise = new Promise<void>((resolve, reject) => {
-    resolveReady = resolve
-    rejectReady = reject
-  })
-
-  function maybeSettle() {
-    if (!finalized || pending !== 0) return
-    if (failed) rejectReady?.(failure)
-    else resolveReady?.()
-    resolveReady = undefined
-    rejectReady = undefined
-  }
-
-  function track(): () => void {
-    pending++
-    let completed = false
-    return () => {
-      if (completed) return
-      completed = true
-      pending--
-      maybeSettle()
-    }
+  function complete() {
+    if (--pending !== 0) return
+    if (failure) ready.reject(failure.error)
+    else ready.resolve()
   }
 
   return {
-    track,
     waitFor(task) {
-      let complete = track()
+      pending++
       void task.then(complete, (error) => {
-        if (!failed) {
-          failed = true
-          failure = error
-        }
+        failure ??= { error }
         complete()
       })
     },
-    finalize() {
-      finalized = true
-      maybeSettle()
-    },
-    ready() {
-      return readyPromise
+    finish() {
+      complete()
+      return ready.promise
     },
   }
 }
@@ -1715,7 +1680,7 @@ function hydrateContainer(
   container: FrameContainer,
   context: FrameContext,
   options?: RenderOptions,
-): Promise<void> {
+): Promise<void> | undefined {
   let hydrationData = context.data.h
   let markers: HydrationMarker[] = []
   let parent = container.regionStart && frameClientEntryParents.get(container.regionStart)
@@ -1735,6 +1700,7 @@ function hydrateContainer(
     }
     let { promise, resolve } = Promise.withResolvers<void>()
     pendingClientEntryHydrations.set(marker.start, promise)
+    options?.reconciliationTracker?.waitFor(promise)
     hydrations.push({
       marker,
       entry,
@@ -1750,18 +1716,11 @@ function hydrateContainer(
   // A cached entry can synchronously adopt a frame. Register all owners before rendering it.
   for (let start of frames) start()
   for (let { marker, entry, complete } of hydrations) {
-    scheduleHydrationMarker(
-      marker,
-      entry,
-      context,
-      complete,
-      options?.reconciliationTracker,
-      options?.signal,
-    )
+    scheduleHydrationMarker(marker, entry, context, complete, options?.signal)
   }
   return subFramesReady
 
-  function visit(nodes: Node[], parent?: Comment): Promise<void> {
+  function visit(nodes: Node[], parent?: Comment): Promise<void> | undefined {
     let tasks: Promise<void>[] = []
     nodes = excludePortalRanges(nodes)
     let boundaries: typeof markers = []
@@ -1794,12 +1753,13 @@ function hydrateContainer(
           parent = boundary.parent
         }
       }
-      if (node.childNodes.length > 0) {
-        tasks.push(visit(Array.from(node.childNodes), parent))
+      if (node.firstChild) {
+        let nested = visit(Array.from(node.childNodes), parent)
+        if (nested) tasks.push(nested)
       }
     }
     if (boundaries.length) throw new Error('End marker not found')
-    return Promise.all(tasks).then(() => {})
+    if (tasks.length) return Promise.all(tasks).then(() => {})
   }
 
   async function startFrame(node: Comment, end: Comment): Promise<void> {
@@ -1837,7 +1797,6 @@ function scheduleHydrationMarker(
   entry: HydrationData,
   context: FrameContext,
   onComplete: () => void,
-  reconciliationTracker?: ReconciliationTracker,
   signal?: AbortSignal,
 ): void {
   if (signal?.aborted || context.lifecycleSignal.aborted) {
@@ -1845,7 +1804,6 @@ function scheduleHydrationMarker(
     return
   }
 
-  let done = reconciliationTracker?.track()
   let identity: ClientEntryIdentity = {
     moduleUrl: entry.moduleUrl,
     exportName: entry.exportName,
@@ -1860,7 +1818,6 @@ function scheduleHydrationMarker(
     signal?.removeEventListener('abort', complete)
     context.lifecycleSignal.removeEventListener('abort', complete)
     onComplete()
-    done?.()
   }
 
   signal?.addEventListener('abort', complete, { once: true })
