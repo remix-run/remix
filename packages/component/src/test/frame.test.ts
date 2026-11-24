@@ -2336,6 +2336,128 @@ describe('frames', () => {
     }
   })
 
+  it('checks scoped mappings against earlier scripts in the same frame response', async (t) => {
+    let frame = createClientEntryResourceTestFrame()
+    let navigate = mockDocumentNavigation(t)
+    t.mock.method(console, 'warn', () => {})
+    try {
+      await frame.ready()
+      let absoluteScope = new URL('/widgets/', document.baseURI).href
+      await frame.render(
+        remixImportMapHead({ scopes: { '/widgets/': { shared: '/first.js' } } }) +
+          remixImportMapHead({ scopes: { [absoluteScope]: { shared: '/second.js' } } }) +
+          '<main>New content</main>',
+      )
+      expect(navigate).toHaveBeenCalledTimes(1)
+      expect(getImportMapScripts()).toHaveLength(0)
+      expect(document.querySelector('main')).toBeNull()
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('records imports, scopes, and integrity separately when they share a URL', async () => {
+    let frame = createClientEntryResourceTestFrame()
+    let maps = {
+      imports: { '/widget.js': '/global.js', ['__proto__']: '/other.js' },
+      scopes: {
+        '/light/': { '/widget.js': '/light.js' },
+        '/dark/': { '/widget.js': '/dark.js' },
+        ['__proto__']: { shared: '/other.js' },
+      },
+      integrity: { '/widget.js': 'sha256-test' },
+    }
+    try {
+      await frame.ready()
+      await frame.render(remixImportMapHead(maps) + remixImportMapHead(maps))
+      await frame.render(remixImportMapHead(maps))
+      let scripts = getImportMapScripts()
+      expect(scripts).toHaveLength(1)
+      expect(parseImportMapScript(scripts[0]!)).toEqual(maps)
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('discards staged mappings when appending the import map fails', async (t) => {
+    let frame = createClientEntryResourceTestFrame()
+    let navigate = mockDocumentNavigation(t)
+    try {
+      await frame.ready()
+      let failure = new Error('Could not append the import map')
+      let append = t.mock.method(document.head, 'appendChild', () => {
+        throw failure
+      })
+      await expect(
+        frame.render(remixImportMapHead({ imports: { shared: '/failed.js' } })),
+      ).rejects.toBe(failure)
+      expect(getImportMapScripts()).toHaveLength(0)
+      append.mock.restore()
+
+      let retry = { imports: { shared: '/retry.js' } }
+      await frame.render(remixImportMapHead(retry) + '<main>Ready</main>')
+      expect(navigate).not.toHaveBeenCalled()
+      expect(parseImportMapScript(getImportMapScripts()[0]!)).toEqual(retry)
+      expect(document.querySelector('main')?.textContent).toBe('Ready')
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('keeps a successfully appended map when the next append fails', async (t) => {
+    let frame = createClientEntryResourceTestFrame()
+    let first = { imports: { first: '/first.js' } }
+    let retry = { imports: { second: '/retry.js' } }
+    try {
+      await frame.ready()
+      let failure = new Error('Second append failed')
+      let append = t.mock.method(document.head, 'appendChild')
+      append.mock.mockImplementationOnce(() => {
+        throw failure
+      }, 1)
+      await expect(
+        frame.render(
+          remixImportMapHead(first) + remixImportMapHead({ imports: { second: '/failed.js' } }),
+        ),
+      ).rejects.toBe(failure)
+      expect(getImportMapScripts()).toHaveLength(1)
+      append.mock.restore()
+
+      await frame.render(remixImportMapHead(first) + remixImportMapHead(retry))
+      expect(getImportMapScripts().map(parseImportMapScript)).toEqual([first, retry])
+    } finally {
+      frame.dispose()
+    }
+  })
+
+  it('records the managed map that was installed before an observer edits its script', async (t) => {
+    let original = { imports: { shared: '/original.js' } }
+    let edited = { imports: { shared: '/edited.js' } }
+    let observer = new MutationObserver((records) => {
+      for (let record of records) {
+        for (let script of record.addedNodes) {
+          if (script instanceof HTMLScriptElement && script.type === 'importmap') {
+            script.textContent = JSON.stringify(edited)
+          }
+        }
+      }
+    })
+    observer.observe(document.head, { childList: true })
+    let frame = createClientEntryResourceTestFrame()
+    let navigate = mockDocumentNavigation(t)
+    t.mock.method(console, 'warn', () => {})
+    try {
+      await frame.ready()
+      await frame.render(remixImportMapHead(original))
+      expect(parseImportMapScript(getImportMapScripts()[0]!)).toEqual(edited)
+      await frame.render(remixImportMapHead(edited))
+      expect(navigate).toHaveBeenCalledTimes(1)
+    } finally {
+      observer.disconnect()
+      frame.dispose()
+    }
+  })
+
   it('loads the redirected document after an import map conflict without preloading or hydrating', async (t) => {
     document.head.innerHTML = importMapScript({ imports: { shared: '/shared.old.js' } })
     document.body.innerHTML = '<main>Old content</main>'
