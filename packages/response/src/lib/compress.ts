@@ -353,11 +353,14 @@ export function compressStream(
     start(controller) {
       reader = input.getReader()
 
-      function fail(error: unknown): void {
+      function fail(error: unknown, destroyCompressor = false): void {
         if (errored) return
         errored = true
         wakeWaiters()
         releaseReader()
+        if (destroyCompressor) {
+          compressor.destroy(error as Error)
+        }
         if (!cancelled) {
           controller.error(error)
         }
@@ -400,7 +403,11 @@ export function compressStream(
               if (cancelled || errored) break
             }
 
-            if ((compressor as { readableLength?: number }).readableLength! > 0) {
+            if (compressor.readableLength > 0) {
+              if (compressorPaused) {
+                compressorPaused = false
+                compressor.resume?.()
+              }
               await waitForCompressorData()
               if (cancelled || errored) break
               continue
@@ -422,20 +429,11 @@ export function compressStream(
             if (!value) continue
 
             await writeToCompressor(value, (error) => {
-              compressor.destroy(error)
-              fail(error)
+              fail(error, true)
             })
           }
         } catch (error) {
-          if (!errored) {
-            errored = true
-            wakeWaiters()
-            releaseReader()
-            compressor.destroy(error as Error)
-            if (!cancelled) {
-              controller.error(error)
-            }
-          }
+          fail(error, true)
         }
       })()
     },
