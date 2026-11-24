@@ -23,12 +23,12 @@ import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
 import { isEntry, skipComments, logHydrationMismatch } from './client-entries.ts'
 import type { Scheduler } from './vdom.ts'
+import { isMixinDescriptor } from './mixins/mixin.ts'
 import {
   MixinRuntime,
-  isMixinDescriptor,
   type MixinRuntimeBinding,
   type MixinRuntimeValue,
-} from './mixins/mixin.ts'
+} from './mixins/mixin-runtime.ts'
 import { OnBinding, isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
 import { isCommentNode, isFrameStart, isHydrationStart } from './stream-protocol.ts'

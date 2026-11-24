@@ -35,7 +35,8 @@ import {
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
-import { composeMixedProps, isMixinDescriptor } from '../runtime/mixins/mixin.ts'
+import { isMixinDescriptor } from '../runtime/mixins/mixin.ts'
+import { composeMixedProps } from '../runtime/mixins/mixin-runtime.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/stylesheet.ts'
 import { isCSSMixinDescriptor } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
