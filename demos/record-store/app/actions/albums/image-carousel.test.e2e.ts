@@ -170,7 +170,7 @@ describe('album image selection', () => {
     assert.equal(requests.at(-1)?.searchParams.get('image'), '2')
     await page.reload()
     await expectSelectedImage(page, 2)
-    await page.getByRole('link', { name: 'Back to Records' }).click()
+    await page.getByRole('banner').getByRole('link', { name: 'Records', exact: true }).click()
     await page.getByRole('heading', { name: 'Browse Records', exact: true }).waitFor()
     await page.goBack()
     await page.waitForURL('**/albums/overpass-stereo?campaign=spring&image=2#details')

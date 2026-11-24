@@ -17,6 +17,7 @@ describe('albums handlers', () => {
     assertContains(html, 'Overpass Stereo')
     assertContains(html, 'Shred Till Dawn')
     assertContains(html, 'Last Bell, First Kiss')
+    assert.ok(!html.includes('id="tracks-heading"'))
     assertFirstCoverPreload(html)
     assert.deepEqual(
       [...html.matchAll(/<img[^>]+loading="(eager|lazy)"/g)].map((match) => match[1]),
@@ -46,6 +47,30 @@ describe('albums handlers', () => {
     assert.equal(response.status, 404)
     let html = await response.text()
     assertContains(html, 'Record Not Found')
+  })
+
+  it('GET /albums/:slug lists tracks in side and playback order', async () => {
+    let response = await router.fetch('https://remix.run/albums/overpass-stereo')
+    assert.equal(response.status, 200)
+    let html = await response.text()
+    let tracklist = html.match(
+      /<section[^>]+aria-labelledby="tracks-heading"[^>]*>([\s\S]*?)<\/section>/,
+    )?.[1]
+    assert.ok(tracklist)
+    assertContains(tracklist, '>Tracks</h2>')
+    assert.deepEqual(
+      [...tracklist.matchAll(/<(?:h3|li)\b[^>]*>([^<]+)</g)].map((match) => match[1]),
+      [
+        'Side A',
+        'White Lines',
+        'Driveway Radio',
+        'Open Late',
+        'Side B',
+        'First Light',
+        'County Signal',
+        'Coming Home',
+      ],
+    )
   })
 
   it('returns at most three other albums from the same genre', async () => {
@@ -82,7 +107,7 @@ describe('albums handlers', () => {
     assertFirstCoverPreload(html)
   })
 
-  it('shows an empty related section for a record alone in its genre', async () => {
+  it('shows a custom record without tracks or related records', async () => {
     let album = await db.find(albums, 7)
     assert.ok(album)
     let { id, ...fields } = album
@@ -90,6 +115,10 @@ describe('albums handlers', () => {
     await db.create(albums, { ...fields, slug, genre: 'solo-genre' })
 
     try {
+      let detail = await router.fetch(`https://remix.run/albums/${slug}`)
+      assert.equal(detail.status, 200)
+      assert.ok(!(await detail.text()).includes('id="tracks-heading"'))
+
       let response = await router.fetch(`https://remix.run/albums/${slug}/related`)
 
       assert.equal(response.status, 200)
@@ -109,6 +138,7 @@ describe('albums handlers', () => {
     assertContains(html, 'Pick It Up (Again)')
     assertContains(html, 'This record is currently out of stock.')
     assert.ok(!html.includes('Add to Cart'))
+    assertContains(html, 'id="tracks-heading"')
   })
 
   it('returns an uncached 404 when the related-albums source does not exist', async () => {

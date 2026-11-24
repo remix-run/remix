@@ -3,7 +3,7 @@ import { beforeEach, describe, it } from 'remix/test'
 import { sql } from 'remix/data-table'
 
 import { db, loadAppMigrations, loadAppSeed } from './db.ts'
-import { albums, users } from './data/schema.ts'
+import { albums, albumTracks, users } from './data/schema.ts'
 import { albumGenres } from './data/album-genres.ts'
 import { verifyPassword } from './utils/password-hash.ts'
 
@@ -35,6 +35,35 @@ describe('record store database seed', () => {
     assert.deepEqual((await db.exec(sql`pragma foreign_key_check`)).rows, [])
   })
 
+  it('seeds two sides of three to six ordered tracks for every album', async () => {
+    let catalog = await db.findMany(albums)
+    let tracks = await db.findMany(albumTracks, {
+      orderBy: [
+        ['side', 'asc'],
+        ['position', 'asc'],
+      ],
+    })
+    let tracklists = Map.groupBy(tracks, (track) => track.album_id)
+    let sideLengths = new Set<number>()
+
+    for (let album of catalog) {
+      let tracklist = tracklists.get(album.id)
+      assert.ok(tracklist, `Missing tracklist for ${album.slug}`)
+      let sides = Map.groupBy(tracklist, (track) => track.side)
+      assert.deepEqual([...sides.keys()], ['A', 'B'])
+      for (let side of sides.values()) {
+        assert.ok(side.length >= 3 && side.length <= 6)
+        assert.deepEqual(
+          side.map((track) => track.position),
+          side.map((_, index) => index + 1),
+        )
+        sideLengths.add(side.length)
+      }
+    }
+
+    assert.deepEqual([...sideLengths].sort(), [3, 4, 5, 6])
+  })
+
   it('stores verifiable password hashes for seeded users', async () => {
     let admin = await db.find(users, 1)
     let customer = await db.find(users, 2)
@@ -51,6 +80,7 @@ describe('record store database seed', () => {
 
   it('does not duplicate journal entries or seed data when migrated again', async () => {
     let journalBefore = await db.exec(sql`select count(*) as count from data_table_migrations`)
+    let tracksBefore = await db.count(albumTracks)
 
     await db.migrate(await loadAppMigrations())
     let seed = await loadAppSeed()
@@ -63,5 +93,6 @@ describe('record store database seed', () => {
     assert.deepEqual(journalAfter.rows, journalBefore.rows)
     assert.equal(Number(seededUsers.rows?.[0]?.count), 2)
     assert.equal(seededAlbums, 50)
+    assert.equal(await db.count(albumTracks), tracksBefore)
   })
 })

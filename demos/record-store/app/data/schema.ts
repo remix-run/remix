@@ -101,6 +101,17 @@ export const albums = table({
   },
 })
 
+export const albumTracks = table({
+  name: 'album_tracks',
+  primaryKey: ['album_id', 'side', 'position'],
+  columns: {
+    album_id: c.integer(),
+    side: c.text(),
+    position: c.integer(),
+    title: c.text(),
+  },
+})
+
 export const users = table({
   name: 'users',
   columns: {
@@ -295,6 +306,7 @@ export const passwordResetTokens = table({
 })
 
 export type Album = TableRow<typeof albums>
+export type AlbumTrack = TableRow<typeof albumTracks>
 export type User = TableRow<typeof users>
 export type Order = TableRowWith<typeof orders, { items: OrderItem[] }>
 export type OrderItem = TableRowWith<

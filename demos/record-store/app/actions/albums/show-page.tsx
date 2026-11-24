@@ -1,7 +1,7 @@
 import type { Handle } from 'remix/component'
 import { Frame, attrs, css } from 'remix/component'
 
-import type { Album } from '../../data/schema.ts'
+import type { Album, AlbumTrack } from '../../data/schema.ts'
 import type { AlbumImage } from '../../utils/album-images.ts'
 import { getAlbumGenreLabel } from '../../data/album-genres.ts'
 import { routes } from '../../routes.ts'
@@ -10,13 +10,14 @@ import { Layout } from '../../ui/layout.tsx'
 
 export interface ShowPageProps {
   album: Album
+  tracks: AlbumTrack[]
   imageUrls: AlbumImage[]
   startIndex: number
 }
 
 export function ShowPage(handle: Handle<ShowPageProps>) {
   return () => {
-    let { album, imageUrls, startIndex } = handle.props
+    let { album, tracks, imageUrls, startIndex } = handle.props
     let mainImage = imageUrls[startIndex]
 
     return (
@@ -104,6 +105,30 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
               <p>
                 <strong>Release Year:</strong> {album.release_year}
               </p>
+              {tracks.length > 0 ? (
+                <section aria-labelledby="tracks-heading" mix={css({ marginTop: '1lh' })}>
+                  <h2 id="tracks-heading" mix={css({ fontSize: 'inherit' })}>
+                    Tracks
+                  </h2>
+                  {Array.from(
+                    Map.groupBy(tracks, (track) => track.side),
+                    ([side, sideTracks]) => (
+                      <div key={side}>
+                        <h3 mix={css({ font: 'inherit', textDecoration: 'underline' })}>
+                          Side {side}
+                        </h3>
+                        <ol mix={css({ listStylePosition: 'inside' })}>
+                          {sideTracks.map((track) => (
+                            <li key={track.position} value={track.position}>
+                              {track.title}
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    ),
+                  )}
+                </section>
+              ) : null}
             </div>
 
             {album.in_stock ? (
@@ -118,16 +143,6 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
                 This record is currently out of stock.
               </p>
             )}
-
-            <p mix={css({ marginTop: '1.5rem' })}>
-              <a
-                data-rmx-prefetch="intent"
-                href={routes.albums.index.href()}
-                class="btn btn-secondary"
-              >
-                Back to Records
-              </a>
-            </p>
           </div>
           <section
             class="card"
