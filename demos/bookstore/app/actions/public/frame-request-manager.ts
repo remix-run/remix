@@ -14,6 +14,7 @@ interface Consumer {
 
 interface PendingRequest {
   subscribe(signal: AbortSignal | null | undefined): Promise<Response>
+  clientUrl: string | undefined
   controller: AbortController
   consumers: Set<Consumer>
   response: Response | undefined
@@ -24,13 +25,20 @@ interface PendingRequest {
 export function createFrameRequestManager(
   signal: AbortSignal,
   fetchRequest: (url: string, init: RequestInit) => Promise<Response> = globalThis.fetch,
+  location: Pick<Location, 'href'> | undefined = globalThis.location,
 ): FrameRequestManager {
   let pending = new Map<string, PendingRequest>()
 
   return {
     get(src, init) {
-      if ((init.method ?? 'GET').toUpperCase() !== 'GET') return
-      return pending.get(getRequestKey(src, init))?.subscribe(init.signal)
+      if (pending.size === 0 || (init.method ?? 'GET').toUpperCase() !== 'GET') return
+      let request = pending.get(getRequestKey(src, init))
+      if (!request && init.referrer) {
+        // Navigation names the page being left. Its prefetch used that page as the default referrer.
+        let implicit = pending.get(getRequestKey(src, { ...init, referrer: undefined }))
+        if (implicit?.clientUrl === init.referrer) request = implicit
+      }
+      return request?.subscribe(init.signal)
     },
     invalidate() {
       pending.clear()
@@ -53,6 +61,7 @@ export function createFrameRequestManager(
       if (!entry) {
         entry = {
           subscribe,
+          clientUrl: location?.href,
           controller: new AbortController(),
           consumers: new Set(),
           response: undefined,
@@ -178,7 +187,7 @@ function getRequestKey(src: string, init: RequestInit): string {
     init.mode ?? 'same-origin',
     init.cache ?? 'default',
     init.redirect ?? 'follow',
-    init.referrer,
+    init.referrer === 'about:client' ? undefined : init.referrer,
     init.referrerPolicy,
     init.integrity,
   ])

@@ -46,12 +46,23 @@ describe('frame request manager', () => {
     let source = await fetch('data:text/html,shared')
     let headers = Promise.withResolvers<Response>()
     let requests = 0
-    let manager = createFrameRequestManager(new AbortController().signal, () => {
-      requests++
-      return requests === 1 ? headers.promise : Promise.resolve(new Response('fresh'))
-    })
-    let first = manager.fetch('https://bookstore.test/books/bbq', {})
-    let second = manager.get('https://bookstore.test/books/bbq', {})
+    let page = new URL('https://bookstore.test/books')
+    let manager = createFrameRequestManager(
+      new AbortController().signal,
+      (_url, init) => {
+        assert.equal(init.referrer, undefined)
+        requests++
+        return requests === 1 ? headers.promise : Promise.resolve(new Response('fresh'))
+      },
+      page,
+    )
+    let url = 'https://bookstore.test/books/bbq'
+    let from = page.href
+    let first = manager.fetch(url, {})
+    page.href = url
+    assert.equal(manager.get(url, { referrer: page.href }), undefined)
+    assert.equal(manager.get(url, { referrer: '' }), undefined)
+    let second = manager.get(url, { referrer: from })
     assert.ok(second)
     assert.equal(requests, 1)
     headers.resolve(source)
@@ -67,11 +78,8 @@ describe('frame request manager', () => {
       'shared',
       'shared',
     ])
-    assert.equal(manager.get('https://bookstore.test/books/bbq', {}), undefined)
-    assert.equal(
-      await (await manager.fetch('https://bookstore.test/books/bbq', {})).text(),
-      'fresh',
-    )
+    assert.equal(manager.get(url, { referrer: from }), undefined)
+    assert.equal(await (await manager.fetch(url, {})).text(), 'fresh')
     assert.equal(requests, 2)
   })
 
