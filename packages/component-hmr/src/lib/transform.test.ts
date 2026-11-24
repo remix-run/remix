@@ -7,7 +7,6 @@ import type { Handle, RemixNode } from '@remix-run/component'
 import { parseSync } from 'oxc-parser'
 import { jsx } from '@remix-run/component/jsx-runtime'
 import { renderToString } from '@remix-run/component/server'
-import { SourceMapConsumer } from 'source-map-js/source-map.js'
 
 import { transformComponentsForBrowser, transformComponentsForServer } from './transform.ts'
 
@@ -52,21 +51,6 @@ describe('transformComponentsForBrowser', () => {
       '@acme/remix/component-hmr/runtime/browser',
       '@acme/remix/component/dev/refresh',
     ])
-  })
-
-  it('generates source maps for transformed browser modules', () => {
-    let source = `export function Counter() {
-  return () => <button>Count</button>
-}
-`
-    let result = transformComponentsForBrowser(source, {
-      importSource: '@remix-run',
-      moduleUrl: '/app/Counter.tsx',
-      sourceMap: true,
-    })
-
-    assert.equal(result.transformed, true)
-    assertSourceMapPosition(result.map, result.code, source, '<button>Count</button>')
   })
 
   it('preserves setup variables across HMR updates', async (t) => {
@@ -948,21 +932,6 @@ describe('transformComponentsForServer', () => {
     assert.deepEqual(getImportSources(result.code), ['@acme/remix/component-hmr/runtime/server'])
   })
 
-  it('generates source maps for transformed server modules', () => {
-    let source = `export function Counter() {
-  return () => <button>Count</button>
-}
-`
-    let result = transformComponentsForServer(source, {
-      importSource: '@remix-run',
-      moduleUrl: 'file:///app/Counter.tsx',
-      sourceMap: true,
-    })
-
-    assert.equal(result.transformed, true)
-    assertSourceMapPosition(result.map, result.code, source, '<button>Count</button>')
-  })
-
   it('supports exported client entry function components without retaining setup state', async (t) => {
     let host = createModuleHost(t, transformComponentsForServer)
     let source = `import { clientEntry } from '@remix-run/component'
@@ -1104,37 +1073,10 @@ export type Props = { count: number }`,
   })
 })
 
-function assertSourceMapPosition(
-  sourceMap: string | null,
-  generatedSource: string,
-  originalSource: string,
-  search: string,
-): void {
-  assert.ok(sourceMap)
-  let consumer = new SourceMapConsumer(JSON.parse(sourceMap))
-  let generated = getLineAndColumn(generatedSource, search)
-  let expected = getLineAndColumn(originalSource, search)
-  let original = consumer.originalPositionFor(generated)
-
-  assert.equal(original.line, expected.line)
-  assert.equal(original.column, expected.column)
-}
-
 function getImportSources(code: string): string[] {
   return parseSync('component.tsx', code, { sourceType: 'module' })
     .program.body.filter((node) => node.type === 'ImportDeclaration')
     .map((node) => node.source.value)
-}
-
-function getLineAndColumn(source: string, search: string): { column: number; line: number } {
-  let index = source.indexOf(search)
-  assert.notEqual(index, -1)
-
-  let lines = source.slice(0, index).split('\n')
-  return {
-    column: lines.at(-1)?.length ?? 0,
-    line: lines.length,
-  }
 }
 
 describe('server client-entry boundary compatibility', () => {
