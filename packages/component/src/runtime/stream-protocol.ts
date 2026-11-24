@@ -1,5 +1,7 @@
 import { invariant } from './invariant.ts'
 
+export const ESCAPED_OBJECT = '$rmxObject'
+
 export type FlushKind = 'document' | 'fragment'
 
 // Comment markers the server writes around frames and client entries, and the client creates and

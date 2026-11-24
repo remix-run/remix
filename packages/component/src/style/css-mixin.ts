@@ -1,4 +1,4 @@
-import { createMixin, isMixinDescriptor, renderMixinElement } from '../runtime/mixins/mixin.ts'
+import { createMixin, renderMixinElement } from '../runtime/mixins/mixin.ts'
 import type { MixinFactory, MixinType } from '../runtime/mixins/mixin.ts'
 import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
 import type { ElementProps } from '../runtime/core/vnode.ts'
@@ -21,7 +21,7 @@ export type CSSMixinDescriptor = MixinDescriptor<Element, [styles: CSSProps], El
 
 const clientStyleCache: StyleCache = new Map()
 
-const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (handle) => {
+export const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (handle) => {
   let activeSelector = ''
   let activeGeneration = -1
 
@@ -76,7 +76,3 @@ export const css: MixinFactory<Element, [styles: CSSProps], ElementProps> = crea
   [styles: CSSProps],
   ElementProps
 >(cssMixinType)
-
-export function isCSSMixinDescriptor(value: unknown): value is CSSMixinDescriptor {
-  return isMixinDescriptor(value) && value.type === cssMixinType
-}

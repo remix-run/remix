@@ -8,7 +8,7 @@ import {
 } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './core/vnode.ts'
-import { createFrameRuntime, NamedFrameRegistry, type ResolveFrame } from './frame-runtime.ts'
+import { createFrameRuntime, FrameRegistry, type ResolveFrame } from './frame-runtime.ts'
 import {
   getDefaultStyleManager,
   diffVNodes,
@@ -231,34 +231,29 @@ function createRootFrameHandle(
   scheduler: Scheduler,
   styleManager: StyleManager,
 ): FrameHandle {
-  let resolveFrame =
-    init?.resolveFrame ??
-    (() => {
-      throw new Error(
-        'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
-      )
-    })
-
-  let runtime = createFrameRuntime({
-    loadModule:
-      init?.loadModule ??
-      (() => {
-        throw new Error('loadModule is required to hydrate client entries inside <Frame />')
-      }),
-    resolveFrame,
-    errorTarget,
-    pendingClientEntries: new Map(),
-    scheduler,
-    styleManager,
-    moduleCache: new Map(),
-    moduleLoads: new Map(),
-    frameInstances: new WeakMap(),
-    namedFrames: new NamedFrameRegistry(),
-  })
-  runtime.canResolveFrames = !!init?.resolveFrame
-  let frame = createFrameHandle({ src: init?.src ?? '/', $runtime: runtime })
-  runtime.topFrame = frame
+  let frame = createFrameHandle({ src: init?.src ?? '/' })
+  frame.$runtime = init?.resolveFrame
+    ? createFrameRuntime({
+        loadModule:
+          init.loadModule ??
+          (() => {
+            throw new Error('loadModule is required to hydrate client entries inside <Frame />')
+          }),
+        resolveFrame: init.resolveFrame,
+        errorTarget,
+        scheduler,
+        styleManager,
+        registry: new FrameRegistry(),
+        topFrame: frame,
+      })
+    : { styleManager, resolveFrame: missingFrameRuntime }
   return frame
+}
+
+export function missingFrameRuntime(): never {
+  throw new Error(
+    'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
+  )
 }
 
 type EmptyFn = () => void

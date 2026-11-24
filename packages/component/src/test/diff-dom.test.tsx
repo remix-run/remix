@@ -15,8 +15,7 @@ function attachClientEntryOwner(
 
 function diffDomNodes(current: Node[], next: Node[], data: FrameContext['data'] = {}) {
   diffNodes(current, next, {
-    frameInstances: new WeakMap(),
-    pendingClientEntries: new Map(),
+    registry: { instances: new WeakMap() },
     data,
   } as any)
 }
@@ -34,8 +33,7 @@ function diffHead(
   shouldPreserveHeadNode?: (node: Node) => boolean,
 ) {
   diffNodes([current.head], [parseHead(nextHead).head], {
-    frameInstances: new WeakMap(),
-    pendingClientEntries: new Map(),
+    registry: { instances: new WeakMap() },
     data: {},
     shouldPreserveHeadNode,
   } as any)
@@ -72,8 +70,7 @@ function diffDom(
   let template = document.createElement('template')
   template.innerHTML = next
   diffNodes(Array.from(container.childNodes), Array.from(template.content.childNodes), {
-    frameInstances,
-    pendingClientEntries: new Map(),
+    registry: { instances: frameInstances },
     data: data ?? {},
   } as any)
 }
