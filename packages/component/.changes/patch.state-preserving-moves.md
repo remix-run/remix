@@ -1,1 +1,1 @@
-Preserve focus, iframe documents, CSS animations, and open dialogs and popovers when keyed rendering or a frame reload reorders a single reused element in browsers with `moveBefore()`. Custom elements can define `connectedMoveCallback()` to handle these moves.
+Keep focus and iframe documents intact when keyed rendering or a frame reload reorders a single element in browsers that support `moveBefore()`.

@@ -5,7 +5,6 @@ import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { createElement } from '../runtime/create-element.ts'
 import { Fragment, type Handle, type RemixNode } from '../runtime/component.ts'
-import { prepareMoveState } from './utils.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {
@@ -795,93 +794,52 @@ describe('vnode rendering (keys)', () => {
 
   describe('state-preserving keyed moves', () => {
     it(
-      'uses connectedMoveCallback only for custom elements that define it',
+      'preserves focus and custom element lifecycles when a keyed component moves',
       { skip: typeof Element.prototype.moveBefore !== 'function' },
       (t) => {
-        let connections = 0
-        let disconnections = 0
-        let moves = 0
-        let legacyConnections = 0
-        let legacyDisconnections = 0
-        let tag = 'rmx-keyed-native-move'
-        let legacyTag = 'rmx-keyed-legacy-move'
-        customElements.define(
-          tag,
-          class extends HTMLElement {
-            connectedCallback() {
-              connections++
-            }
-            disconnectedCallback() {
-              disconnections++
-            }
-            connectedMoveCallback() {
-              moves++
-            }
-          },
-        )
-        customElements.define(
-          legacyTag,
-          class extends HTMLElement {
-            connectedCallback() {
-              legacyConnections++
-            }
-            disconnectedCallback() {
-              legacyDisconnections++
-            }
-          },
-        )
-        let { render } = createConnectedRoot(t)
-        let moving = (
-          <div key="a">
-            {createElement(tag, {})}
-            {createElement(legacyTag, {})}
-          </div>
-        )
-        let b = <span key="b">B</span>
-        let c = <span key="c">C</span>
-        render([moving, b, c])
-
-        render([b, c, moving])
-
-        expect(connections).toBe(1)
-        expect(disconnections).toBe(0)
-        expect(moves).toBe(1)
-        expect(legacyConnections).toBe(2)
-        expect(legacyDisconnections).toBe(1)
-      },
-    )
-
-    it(
-      'preserves browser state when a keyed component moves its root element',
-      { skip: typeof Element.prototype.moveBefore !== 'function' },
-      async (t) => {
         let { render, container } = createConnectedRoot(t)
-        function Card(handle: Handle<{ id: string }>) {
-          return () => (
-            <section id={handle.props.id}>
-              <iframe />
-              <div data-move-animation="" />
-              <dialog>
-                <input />
-              </dialog>
-              <div popover="manual" />
-            </section>
-          )
+        class Widget extends HTMLElement {
+          events: string[] = []
+          connectedCallback() {
+            this.events.push('connected')
+          }
+          disconnectedCallback() {
+            this.events.push('disconnected')
+          }
         }
-        let a = <Card key="a" id="card" />
+        customElements.define('rmx-keyed-legacy-move', Widget)
+        customElements.define(
+          'rmx-keyed-native-move',
+          class extends Widget {
+            connectedMoveCallback() {
+              this.events.push('moved')
+            }
+          },
+        )
+        function Card(handle: Handle<{ children: RemixNode }>) {
+          return () => <section>{handle.props.children}</section>
+        }
+        let card = (
+          <Card key="a">
+            {createElement('rmx-keyed-native-move', { tabIndex: 0 })}
+            {createElement('rmx-keyed-legacy-move', {})}
+          </Card>
+        )
         let b = <span key="b">B</span>
         let c = <span key="c">C</span>
-        render([a, b, c])
-        let card = container.firstElementChild
-        let assertState = await prepareMoveState(t, container)
+        render([b, c, card])
+        let native = container.querySelector('rmx-keyed-native-move')
+        let legacy = container.querySelector('rmx-keyed-legacy-move')
+        invariant(native instanceof Widget && legacy instanceof Widget)
+        native.focus()
+        native.addEventListener('blur', () => native.events.push('blurred'), { signal: t.signal })
 
-        render([b, c, a])
-        expect(container.lastElementChild).toBe(card)
-        assertState()
+        render([card, b, c])
 
-        render([a, b, c])
-        expect(container.firstElementChild).toBe(card)
-        assertState()
+        expect(container.firstElementChild).toBe(native.parentNode)
+        expect(document.activeElement).toBe(native)
+        expect(native.events).toEqual(['connected', 'moved'])
+        expect(legacy.events).toEqual(['connected', 'disconnected', 'connected'])
       },
     )
   })

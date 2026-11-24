@@ -4,7 +4,6 @@ import { invariant } from '../runtime/invariant.ts'
 import { diffNodes } from '../runtime/diff-dom.ts'
 import type { FrameContext } from '../runtime/frame.ts'
 import { setClientEntryBoundaryOwner, type ClientEntryIdentity } from '../runtime/frame-runtime.ts'
-import { prepareMoveState } from './utils.ts'
 
 function attachClientEntryOwner(
   marker: Comment,
@@ -928,24 +927,56 @@ describe('diffNodes', () => {
 
   describe('live browser state', () => {
     it(
-      'preserves browser state when a keyed element moves',
+      'keeps the iframe document, animation, and top-layer state of a moved element',
       { skip: typeof Element.prototype.moveBefore !== 'function' },
       async (t) => {
         let container = document.createElement('div')
+        let style = '<style>@keyframes rmx-move { to { opacity: 0.5 } }</style>'
+        let moving =
+          '<section data-rmx-key="a" style="animation: rmx-move 10s infinite">' +
+          '<iframe srcdoc=""></iframe><dialog><input></dialog><div popover="manual"></div></section>'
+        let rest = '<p data-rmx-key="b">B</p><p data-rmx-key="c">C</p>'
+        container.innerHTML = style + moving + rest
+        let section = container.querySelector('section')
+        let iframe = container.querySelector('iframe')
+        let dialog = container.querySelector('dialog')
+        let input = container.querySelector('input')
+        let popover = container.querySelector('[popover]')
+        invariant(section && iframe && dialog && input && popover instanceof HTMLElement)
+        let loaded = new Promise<void>((resolve) => {
+          iframe.addEventListener('load', () => resolve(), { once: true, signal: t.signal })
+        })
         document.body.append(container)
         t.after(() => container.remove())
-        let moving =
-          '<section data-rmx-key="a"><iframe srcdoc=""></iframe><div data-move-animation></div>' +
-          '<dialog><input></dialog><div popover="manual"></div></section>'
-        let rest = '<p data-rmx-key="b">B</p><p data-rmx-key="c">C</p>'
-        container.innerHTML = moving + rest
-        let section = container.firstChild
-        let assertState = await prepareMoveState(t, container)
+        await loaded
+        let iframeDocument = iframe.contentDocument
+        invariant(iframeDocument)
+        let animation = section.getAnimations()[0]
+        invariant(animation)
+        animation.pause()
+        await animation.ready
+        animation.currentTime = 500
+        dialog.showModal()
+        popover.showPopover()
+        input.focus()
+        input.value = 'frame draft'
+        input.setSelectionRange(0, 5)
+        let mutations = recordMutations(container)
 
-        diffDom(container, rest + moving)
+        diffDom(container, style + rest + moving)
 
         expect(container.lastChild).toBe(section)
-        assertState()
+        expect(mutations().removed).toContain(section)
+        expect(iframe.contentDocument).toBe(iframeDocument)
+        expect(section.getAnimations()[0]).toBe(animation)
+        expect(animation.currentTime).toBe(500)
+        expect(animation.playState).toBe('paused')
+        expect(dialog.matches(':modal')).toBe(true)
+        expect(popover.matches(':popover-open')).toBe(true)
+        expect(document.activeElement).toBe(input)
+        expect(input.value).toBe('frame draft')
+        expect(input.selectionStart).toBe(0)
+        expect(input.selectionEnd).toBe(5)
       },
     )
 
