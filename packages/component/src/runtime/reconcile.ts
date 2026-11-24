@@ -70,12 +70,16 @@ export type NonRenderNode = InputNodeBase<'empty', false>
 export type TextNode = InputNodeBase<'text', null> & { _text: string }
 export type FragmentNode = InputNodeBase<'fragment', typeof Fragment> & { _children: VNodeInput[] }
 
+type DirectEventSlot = {
+  sync?: DirectEventSync
+  state?: OnBinding[]
+  list?: OnMixinDescriptor[]
+}
+
 type HostMixState = {
-  _mixedProps: RuntimeHostProps
-  _mixState?: MixinRuntime
-  _mixDriver?: MixinDriver
-  _directEventSync?: DirectEventSync
-  _directEventDescriptors?: OnMixinDescriptor[]
+  _mp: RuntimeHostProps
+  _mix?: MixinRuntime
+  _ev?: DirectEventSlot
 }
 
 export type HostNode = InputNodeBase<'host', string> &
@@ -126,9 +130,8 @@ export type CommittedHostNode = CommittedNodeBase<'host', string> &
     props: RuntimeHostProps
     _children: CommittedVNode[]
     _dom: Element
-    _directEventState?: OnBinding[]
-    _controlledState?: ControlledState
-    _persistence?: HostPersistenceState
+    _ctrl?: ControlledState
+    _persisted?: HostPersistenceState
   }
 
 export type CommittedFragmentNode = CommittedNodeBase<'fragment', typeof Fragment> & {
@@ -183,8 +186,8 @@ export type RootVNode = {
   _getContext?: (type: ElementFunction) => unknown
   _rangeStart?: Node
   _rangeEnd?: Node
-  _pendingHydrationComponentId?: string
-  _resourceNonces?: ResourceNonces
+  _hid?: string
+  _nonces?: ResourceNonces
 }
 
 export interface ReconcileContext {
@@ -192,7 +195,7 @@ export interface ReconcileContext {
   scheduler: Scheduler
   styles?: StyleManager
   rootTarget: EventTarget
-  _pendingPortals?: Set<CommittedPortalNode> | null
+  _portals?: Set<CommittedPortalNode> | null
 }
 
 export type VNodeParent =
@@ -262,14 +265,12 @@ export function insertDomNode(dom: Node, domParent: ParentNode, anchor?: Node): 
 }
 
 export function findContextFromAncestry(node: VNodeParent, type: ElementFunction): unknown {
-  let current = node
-  while (current.kind !== 'root') {
-    if (current.kind === 'component' && current.type === type) {
-      return current._handle.getContextValue()
-    }
-    current = current._parent
+  let cur = node
+  while (cur.kind !== 'root') {
+    if (cur.kind === 'component' && cur.type === type) return cur._handle.getContextValue()
+    cur = cur._parent
   }
-  return current._getContext?.(type)
+  return cur._getContext?.(type)
 }
 
 export function childrenToVNodes(children: RemixNode, hostChild = true): VNodeInput[] {
@@ -289,12 +290,11 @@ export function toVNode(node: unknown, hostChild = false): VNodeInput {
   }
   if (isRemixElement(node)) {
     let { type, props, key } = node
-    if (type === Fragment) {
+    if (type === Fragment || typeof type === 'string') {
       let hostProps = parseHostProps(props)
-      return { kind: 'fragment', type: Fragment, key, _children: childrenToVNodes(hostProps.children) }
-    }
-    if (typeof type === 'string') {
-      let hostProps = parseHostProps(props)
+      if (type === Fragment) {
+        return { kind: 'fragment', type: Fragment, key, _children: childrenToVNodes(hostProps.children) }
+      }
       let children: VNodeInput[]
       if (hostProps.innerHTML != null) {
         invariant(isRemixNode(hostProps.children), 'Invalid host children')
@@ -302,13 +302,13 @@ export function toVNode(node: unknown, hostChild = false): VNodeInput {
       } else {
         children = childrenToVNodes(hostProps.children)
       }
-      return { kind: 'host', type, key, props: hostProps, _children: children }
+      return { kind: 'host', type: type as string, key, props: hostProps, _children: children }
     }
     invariant(typeof type === 'function', 'Expected component element type')
     let fn = type as ElementFunction
     if (fn === Portal && Object.hasOwn(fn, PORTAL_NODE)) {
-      let portalType = fn as PortalComponent
-      return { kind: 'portal', type: portalType, key, props: portalType[PORTAL_NODE].parseProps(props) }
+      let p = fn as PortalComponent
+      return { kind: 'portal', type: p, key, props: p[PORTAL_NODE].parseProps(props) }
     }
     if (Object.hasOwn(fn, FRAME_NODE)) {
       invariant(typeof props.src === 'string' && props.src.length > 0, '<Frame /> requires a src prop')
@@ -332,26 +332,24 @@ export function parseHostProps(props: RuntimeElementProps): RuntimeHostProps {
 
 function createControlledState(node: CommittedHostNode, scheduler: Scheduler): ControlledState {
   let element = node._dom
-  let isSelect = node.type === 'select'
+  let select = element instanceof HTMLSelectElement ? element : null
   let version: number | null = 0
   let value: unknown
   let checked: unknown
 
   let listener = {
     handleEvent(event: Event) {
-      if (version === null) return
-      if (event.type === 'input' && (checked !== undefined || isSelect)) return
+      if (version === null || (event.type === 'input' && (checked !== undefined || select))) return
       let v = ++version
       queueMicrotask(() => {
         if (v !== version) return
         let el = element as Element & Record<string, unknown>
         if (value !== undefined && 'value' in el && el.value !== value) {
-          if (element instanceof HTMLSelectElement) setSelectValue(element, value)
+          if (select) setSelectValue(select, value)
           else el.value = value ?? ''
         }
         if (checked !== undefined && 'checked' in el && el.checked !== checked) {
-          if (checked === '') patchHostProps({}, { checked: '' }, element)
-          else el.checked = checked ?? ''
+          el.checked = checked === '' ? true : (checked ?? '')
         }
       })
     },
@@ -371,11 +369,11 @@ function createControlledState(node: CommittedHostNode, scheduler: Scheduler): C
       value = type !== 'progress' && 'value' in element ? props.value : undefined
       checked = 'checked' in element ? props.checked : undefined
       version++
-      if (element instanceof HTMLSelectElement) {
-        if (value === undefined) controlledSelectValues.delete(element)
+      if (select) {
+        if (value === undefined) controlledSelectValues.delete(select)
         else {
-          controlledSelectValues.set(element, value)
-          setSelectValue(element, value)
+          controlledSelectValues.set(select, value)
+          setSelectValue(select, value)
         }
       }
     },
@@ -385,7 +383,7 @@ function createControlledState(node: CommittedHostNode, scheduler: Scheduler): C
         element.removeEventListener('change', listener)
       }
       version = null
-      if (element instanceof HTMLSelectElement) controlledSelectValues.delete(element)
+      if (select) controlledSelectValues.delete(select)
     },
   }
 }
@@ -398,23 +396,13 @@ export function restoreAncestorSelect(parent: ParentNode): void {
   }
 }
 
-function findMixinDriver(mix: RuntimeHostProps['mix']): MixinDriver | undefined {
-  if (mix) {
-    let list = Array.isArray(mix) ? mix : [mix]
-    for (let d of list) {
-      let driver = (d.type as Record<PropertyKey, MixinDriver | undefined>)[MIXIN_RUNTIME]
-      if (driver) return driver
-    }
-  }
-  return defaultMixinDriver as MixinDriver | undefined
-}
-
 function resolveNodeMixProps(
   node: HostNode | CommittedHostNode,
   parent: VNodeParent,
   frame: FrameHandle,
   scheduler: Scheduler,
   prevState?: MixinRuntime,
+  prevEv?: DirectEventSlot,
 ): RuntimeHostProps {
   let mix = node.props.mix
   let direct: OnMixinDescriptor[] | null = !mix
@@ -430,38 +418,41 @@ function resolveNodeMixProps(
   let props = node.props
   if (direct) {
     prevState?.teardown()
-    node._mixState = undefined
-    node._mixDriver = undefined
-    if (direct.length) {
-      node._directEventSync = (
-        direct[0].type as unknown as Record<PropertyKey, DirectEventSync>
-      )[DIRECT_EVENT]
+    node._mix = undefined
+    if (direct.length || prevEv) {
+      node._ev = {
+        sync: direct.length
+          ? (direct[0].type as unknown as Record<PropertyKey, DirectEventSync>)[DIRECT_EVENT]
+          : prevEv?.sync,
+        state: prevEv?.state,
+        list: direct,
+      }
     }
-    node._directEventDescriptors = direct
   } else {
-    let driver = findMixinDriver(mix)
+    let list = Array.isArray(mix) ? mix : [mix]
+    let driver: MixinDriver | undefined
+    for (let d of list) {
+      driver = (d.type as Record<PropertyKey, MixinDriver | undefined>)[MIXIN_RUNTIME]
+      if (driver) break
+    }
+    driver ??= defaultMixinDriver as MixinDriver | undefined
     invariant(driver, 'Invalid mix prop')
     props = driver.resolve(node, parent, frame, scheduler, prevState)
-    node._directEventDescriptors = undefined
+    if (prevEv) node._ev = { sync: prevEv.sync, state: prevEv.state }
   }
-  let nonceManager = (frame.$runtime as OptionalFrameRuntime | undefined)?.nonceManager
-  return (node._mixedProps = nonceManager
-    ? nonceManager.resolveResourceNonce(node.type, props, parent)
-    : props)
+  let nm = (frame.$runtime as OptionalFrameRuntime | undefined)?.nonceManager
+  return (node._mp = nm ? nm.resolveResourceNonce(node.type, props, parent) : props)
 }
 
 export function syncHostControls(node: CommittedHostNode, scheduler: Scheduler): void {
-  if (node._directEventSync) {
-    node._directEventState = node._directEventSync(
-      node._dom,
-      node._directEventState,
-      node._directEventDescriptors,
-      true,
-    )
+  let ev = node._ev
+  if (ev?.sync) {
+    ev.state = ev.sync(node._dom, ev.state, ev.list, true)
+    if (!ev.state) node._ev = undefined
   }
-  let props = node._mixedProps
-  if (node._controlledState || props.value !== undefined || props.checked !== undefined) {
-    ;(node._controlledState ??= createControlledState(node, scheduler)).update(node.type, props)
+  let props = node._mp
+  if (node._ctrl || props.value !== undefined || props.checked !== undefined) {
+    ;(node._ctrl ??= createControlledState(node, scheduler)).update(node.type, props)
   }
 }
 
@@ -474,17 +465,17 @@ export function diffVNodes(
   anchor?: Node | null,
   cursor?: HydrationCursor,
 ): CommittedVNode {
-  if (context._pendingPortals !== undefined) {
+  if (context._portals !== undefined) {
     return reconcileVNodes(curr, next, domParent, vParent, context, anchor, cursor)
   }
-  context._pendingPortals = null
+  context._portals = null
   try {
     return reconcileVNodes(curr, next, domParent, vParent, context, anchor, cursor)
   } catch (error) {
-    for (let portal of context._pendingPortals ?? []) remove(portal, null, context)
+    for (let portal of context._portals ?? []) remove(portal, null, context)
     throw error
   } finally {
-    context._pendingPortals = undefined
+    context._portals = undefined
   }
 }
 
@@ -499,8 +490,7 @@ export function replace(
   let first = findEdgeDomNode(curr, false)
   let marker: Comment | undefined
   if (first?.parentNode === domParent) {
-    marker = document.createComment('rmx:replace')
-    domParent.insertBefore(marker, first)
+    domParent.insertBefore((marker = document.createComment('rmx:replace')), first)
     anchor = marker
   } else {
     anchor = findNextSiblingDomAnchor(curr, anchor)
@@ -513,6 +503,10 @@ export function replace(
   }
 }
 
+function isEntryType(type: unknown): boolean {
+  return typeof type === 'function' && (type as { $entry?: boolean }).$entry === true
+}
+
 export function reconcileVNodes(
   curr: CommittedVNode | null,
   node: VNodeInput,
@@ -523,11 +517,8 @@ export function reconcileVNodes(
   cursor?: HydrationCursor,
 ): CommittedVNode {
   let anchor = fragmentEnd ?? undefined
-  let isEntry = (type: unknown) =>
-    typeof type === 'function' && (type as { $entry?: boolean }).$entry === true
-
   if (curr) {
-    if (curr.kind === 'client-entry' && node.kind === 'component' && isEntry(node.type)) {
+    if (curr.kind === 'client-entry' && node.kind === 'component' && isEntryType(node.type)) {
       return renderClientEntryBoundary(
         node,
         vParent,
@@ -572,7 +563,7 @@ export function reconcileVNodes(
     if (
       vParent.kind !== 'root' &&
       node.kind === 'component' &&
-      isEntry(node.type) &&
+      isEntryType(node.type) &&
       hydrationNode?.nodeType === 8
     ) {
       let end = (frame.$runtime as OptionalFrameRuntime | undefined)?.clientEntries?.getEnd(
@@ -635,11 +626,11 @@ export function reconcileVNodes(
     case 'component': {
       let handle: ComponentHandle
       if (!curr) {
-        let componentId = vParent.kind === 'root' ? vParent._pendingHydrationComponentId : undefined
-        if (componentId && vParent.kind === 'root') vParent._pendingHydrationComponentId = undefined
-        else componentId = `c${++idCounter}`
+        let id = vParent.kind === 'root' ? vParent._hid : undefined
+        if (id && vParent.kind === 'root') vParent._hid = undefined
+        else id = `c${++idCounter}`
         handle = createComponent({
-          id: componentId,
+          id,
           frame,
           type: node.type,
           getContext: (type: ElementFunction) => findContextFromAncestry(vParent, type),
@@ -710,58 +701,56 @@ function reconcileHost(
   let reclaimed = false
 
   if (!curr && !targetHead && node.key != null) {
-    let reclaimedNode = (defaultMixinDriver as MixinDriver | undefined)?.reclaim(
-      node.type,
-      node.key,
-      domParent,
-      vParent,
-    )
-    if (reclaimedNode) {
-      curr = reclaimedNode
-      reclaimed = true
-    }
+    curr =
+      (defaultMixinDriver as MixinDriver | undefined)?.reclaim(
+        node.type,
+        node.key,
+        domParent,
+        vParent,
+      ) ?? null
+    reclaimed = !!curr
   }
 
-  let resolved = resolveNodeMixProps(node, vParent, frame, scheduler, curr?._mixState)
+  let resolved = resolveNodeMixProps(node, vParent, frame, scheduler, curr?._mix, curr?._ev)
   let childInputs = node._children
   let dom: Element | undefined
   let childCursor: HydrationCursor | undefined
   let shouldInsertDom = false
   let bindParent: ParentNode | undefined
   let editedBeforeHydration: 'value' | 'checked' | undefined
-  let prevProps: RuntimeHostProps = curr ? curr._mixedProps : {}
+  let prevProps: RuntimeHostProps = curr ? curr._mp : {}
   let patchTargetProps = resolved
   let dispatchInline = false
 
   if (curr) {
     dom = curr._dom
     dispatchInline = !!(
-      (reclaimed || node._mixState?.hasSlots) &&
-      node._mixDriver?.shouldDispatchInline(dom)
+      (reclaimed || node._mix?.hasSlots) &&
+      node._mix?.driver.shouldDispatchInline(dom)
     )
-    if (dispatchInline) node._mixState?.dispatchUpdate('beforeUpdate')
+    if (dispatchInline) node._mix?.dispatchUpdate('beforeUpdate')
   } else if (targetHead) {
     dom = targetHead
-    let hydrationNode = cursor?.current
-    childCursor = cursor ? { current: hydrationNode } : undefined
-    if (hydrationNode instanceof Element && hydrationNode.tagName.toLowerCase() === 'head') {
-      if (childCursor) childCursor.current = hydrationNode.firstChild
-      let nextCursor = hydrationNode.nextSibling
-      if (hydrationNode !== targetHead) {
-        while (hydrationNode.firstChild) targetHead.appendChild(hydrationNode.firstChild)
-        hydrationNode.remove()
+    let h = cursor?.current
+    childCursor = cursor ? { current: h } : undefined
+    if (h instanceof Element && h.tagName.toLowerCase() === 'head') {
+      if (childCursor) childCursor.current = h.firstChild
+      let next = h.nextSibling
+      if (h !== targetHead) {
+        while (h.firstChild) targetHead.appendChild(h.firstChild)
+        h.remove()
       }
-      if (cursor) cursor.current = nextCursor
+      if (cursor) cursor.current = next
     }
   } else {
-    let hydrationNode = cursor?.current
-    if (hydrationNode instanceof Element) {
+    let h = cursor?.current
+    if (h instanceof Element) {
       let tagOf = (el: Element) => (svg ? el.tagName : el.tagName.toLowerCase())
-      let cursorTag = tagOf(hydrationNode)
-      let match: Element | null = cursorTag === node.type ? hydrationNode : null
+      let cursorTag = tagOf(h)
+      let match: Element | null = cursorTag === node.type ? h : null
       if (!match) {
-        let nextSibling = nextHydrationNode(hydrationNode.nextSibling, false, anchor)
-        if (nextSibling instanceof Element && tagOf(nextSibling) === node.type) match = nextSibling
+        let sib = nextHydrationNode(h.nextSibling, false, anchor)
+        if (sib instanceof Element && tagOf(sib) === node.type) match = sib
       }
       if (match) {
         dom = match
@@ -798,14 +787,8 @@ function reconcileHost(
   let committed = node as unknown as CommittedHostNode
   committed._dom = dom
   committed._children = EMPTY_CHILDREN
-  if (curr) {
-    committed._directEventState = curr._directEventState
-    committed._directEventSync ??= curr._directEventSync
-    committed._controlledState = curr._controlledState
-  }
+  if (curr) committed._ctrl = curr._ctrl
 
-  // On fresh mounts and reclaimed nodes, patch props before reconciling children.
-  // On retained updates (and <head> adoption), patch after reconciling children so select values see updated options.
   let patchBeforeChildren = (!curr && !targetHead) || reclaimed
   if (patchBeforeChildren) {
     patchHostProps(prevProps, patchTargetProps, dom)
@@ -842,18 +825,18 @@ function reconcileHost(
 
   if (!patchBeforeChildren) patchHostProps(prevProps, patchTargetProps, dom)
   if (!reclaimed) syncHostControls(committed, scheduler)
-  committed._mixDriver?.bind(committed, context, reclaimed, bindParent)
+  committed._mix?.driver.bind(committed, context, reclaimed, bindParent)
 
-  if (curr && (reclaimed ? committed._mixDriver?.shouldDispatchInline(dom) : dispatchInline)) {
-    scheduler.enqueueCommitPhase([() => committed._mixState?.dispatchUpdate('commit')])
+  if (curr && (reclaimed ? committed._mix?.driver.shouldDispatchInline(dom) : dispatchInline)) {
+    scheduler.enqueueCommitPhase([() => committed._mix?.dispatchUpdate('commit')])
   }
 
   if (editedBeforeHydration) {
     let el = dom
     scheduler.enqueueTasks([
       () => {
-        if (!el.isConnected) return
-        if (el instanceof HTMLInputElement && el.type === 'radio' && !el.checked) return
+        if (!el.isConnected || (el instanceof HTMLInputElement && el.type === 'radio' && !el.checked))
+          return
         el.dispatchEvent(new Event('input', { bubbles: true }))
         if (
           el.ownerDocument.activeElement !== el ||
@@ -876,29 +859,29 @@ function reconcileText(
   anchor: Node | undefined,
   cursor: HydrationCursor | undefined,
 ): CommittedTextNode {
-  let hydrationNode = cursor?.current
+  let h = cursor?.current
   let text = node._text
   let dom: Text
   if (curr) {
     dom = curr._dom
     if (curr._text !== text) dom.data = text
-  } else if (hydrationNode instanceof Text) {
-    dom = hydrationNode
+  } else if (h instanceof Text) {
+    dom = h
     if (dom.data !== text) {
       if (dom.data.startsWith(text)) {
         dom.splitText(text.length)
       } else {
         if (text.startsWith(dom.data)) {
-          let remainder = text.slice(dom.length)
-          let sibling = dom.nextSibling
-          while (remainder && sibling !== anchor && sibling instanceof Text) {
-            if (!remainder.startsWith(sibling.data)) {
-              if (sibling.data.startsWith(remainder)) sibling.deleteData(0, remainder.length)
+          let rem = text.slice(dom.length)
+          let sib = dom.nextSibling
+          while (rem && sib !== anchor && sib instanceof Text) {
+            if (!rem.startsWith(sib.data)) {
+              if (sib.data.startsWith(rem)) sib.deleteData(0, rem.length)
               break
             }
-            remainder = remainder.slice(sibling.length)
-            sibling.remove()
-            sibling = dom.nextSibling
+            rem = rem.slice(sib.length)
+            sib.remove()
+            sib = dom.nextSibling
           }
         } else {
           console.error('Hydration mismatch:', 'text mismatch', dom.data, text)
@@ -909,7 +892,7 @@ function reconcileText(
     if (cursor) cursor.current = dom.nextSibling
   } else {
     dom = document.createTextNode(text)
-    insertDomNode(dom, domParent, hydrationNode?.parentNode === domParent ? hydrationNode : anchor)
+    insertDomNode(dom, domParent, h?.parentNode === domParent ? h : anchor)
   }
   let committed = node as unknown as CommittedTextNode
   committed._dom = dom
@@ -917,12 +900,11 @@ function reconcileText(
 }
 
 function removeDomRange(start: Node, end: Node, domParent: ParentNode): void {
-  let cursor: Node | null = start
-  while (cursor) {
-    let next: Node | null = cursor.nextSibling
-    if (cursor.parentNode === domParent) domParent.removeChild(cursor)
-    if (cursor === end) break
-    cursor = next
+  for (let cur: Node | null = start; cur; ) {
+    let next: Node | null = cur.nextSibling
+    if (cur.parentNode === domParent) domParent.removeChild(cur)
+    if (cur === end) break
+    cur = next
   }
 }
 
@@ -1022,7 +1004,10 @@ export function remove(
       if (domParent) node._dom.remove()
       return
     case 'host':
-      if (domParent && node._mixDriver?.deferRemoval(node, domParent, context, performHostNodeRemoval)) {
+      if (
+        domParent &&
+        node._mix?.driver.deferRemoval(node, domParent, context, performHostNodeRemoval)
+      ) {
         return
       }
       performHostNodeRemoval(node, domParent, context)
@@ -1065,11 +1050,11 @@ function performHostNodeRemoval(
 ): void {
   let isHead = domParent !== null && isHeadTag(node.type)
   for (let child of node._children) remove(child, isHead ? node._dom : null, context)
-  node._mixState?.teardown()
-  if (node._directEventSync) {
-    node._directEventState = node._directEventSync(node._dom, node._directEventState, undefined, isHead)
+  node._mix?.teardown()
+  if (node._ev?.sync) {
+    node._ev.state = node._ev.sync(node._dom, node._ev.state, undefined, isHead)
   }
-  node._controlledState?.dispose(isHead)
+  node._ctrl?.dispose(isHead)
   if (domParent && !isHead) node._dom.remove()
 }
 
@@ -1088,7 +1073,7 @@ export function diffChildren(
     anchor === undefined &&
     vParent.kind !== 'fragment' &&
     !portalRanges?.has(domParent) &&
-    !(vParent.kind === 'host' && vParent._mixedProps.innerHTML != null) &&
+    !(vParent.kind === 'host' && vParent._mp.innerHTML != null) &&
     curr.every(canBulkClearNode)
   ) {
     for (let child of curr) remove(child, null, context)
@@ -1096,8 +1081,7 @@ export function diffChildren(
     return EMPTY_CHILDREN
   }
 
-  let hasKeys = next.some((child) => child.key != null)
-  if (hasKeys) {
+  if (next.some((child) => child.key != null)) {
     if (curr) {
       let inOrder = curr.length === next.length
       for (let i = 0; inOrder && i < next.length; i++) {
@@ -1131,7 +1115,7 @@ export function diffChildren(
 function canBulkClearNode(node: CommittedVNode): boolean {
   if (node.kind === 'component') return canBulkClearNode(node._content)
   if (node.kind === 'host' || node.kind === 'fragment') {
-    return (node.kind !== 'host' || !node._mixState) && node._children.every(canBulkClearNode)
+    return (node.kind !== 'host' || !node._mix) && node._children.every(canBulkClearNode)
   }
   return node.kind === 'text'
 }
@@ -1196,9 +1180,8 @@ function patchKeyedChildren(
       }
     }
     matches[i] = oldIndex
-    if (oldIndex < 0) {
-      inserted++
-    } else {
+    if (oldIndex < 0) inserted++
+    else {
       usedOld[oldIndex] = 1
       if (inserted > 0 || oldIndex < lastOldIndex) needsPlacement = true
       lastOldIndex = oldIndex

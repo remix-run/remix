@@ -514,14 +514,13 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
         )
         return new Promise((resolve) => tasks.push(resolve))
       }
-      if (phase !== 'idle') {
+      if (phase !== 'idle' || !updateQueue || !updateVNode || !updateDomParent) {
+        let when =
+          phase !== 'idle'
+            ? `while ${name} is running its ${phase} function`
+            : `before ${name}'s initial render commits`
         throw new Error(
-          `Cannot call handle.update() while ${name} is running its ${phase} function. Call it from an event handler or handle.queueTask() instead.`,
-        )
-      }
-      if (!updateQueue || !updateVNode || !updateDomParent) {
-        throw new Error(
-          `Cannot call handle.update() before ${name}'s initial render commits. Call it from an event handler or handle.queueTask() instead.`,
+          `Cannot call handle.update() ${when}. Call it from an event handler or handle.queueTask() instead.`,
         )
       }
       let queue = updateQueue

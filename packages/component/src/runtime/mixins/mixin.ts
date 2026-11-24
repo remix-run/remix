@@ -325,6 +325,7 @@ export interface MixinOptions {
 }
 
 export interface MixinRuntime {
+  readonly driver: MixinDriver
   readonly hasSlots: boolean
   readonly removed: boolean
   readonly lifetime: AbortSignal
@@ -380,7 +381,7 @@ function enqueueMixinBindingUpdate(
   done: (signal: AbortSignal) => void,
 ): void {
   let node = this.target
-  let state = node._mixState
+  let state = node._mix
   this.scheduler.enqueueWork([
     () => {
       if (state?.removed) {
@@ -388,9 +389,9 @@ function enqueueMixinBindingUpdate(
         return
       }
       state?.dispatchUpdate('beforeUpdate')
-      let prev = node._mixedProps
+      let prev = node._mp
       let next = mixinDriver.resolve(node, node._parent, this.frame, this.scheduler, state)
-      let nonceManager = (
+      let nm = (
         this.frame.$runtime as
           | {
               nonceManager?: {
@@ -403,9 +404,7 @@ function enqueueMixinBindingUpdate(
             }
           | undefined
       )?.nonceManager
-      next = node._mixedProps = nonceManager
-        ? nonceManager.resolveResourceNonce(node.type, next, node._parent)
-        : next
+      next = node._mp = nm ? nm.resolveResourceNonce(node.type, next, node._parent) : next
       patchHostProps(prev, next, this.node)
       syncHostControls(node, this.scheduler)
       if (this.node.parentNode) restoreAncestorSelect(this.node.parentNode)
@@ -424,13 +423,13 @@ const mixinDriver: MixinDriver = {
     if (key == null) return null
     for (let persisted of persistedMixinNodes) {
       if (
-        persisted._persistence?.parent === domParent &&
+        persisted._persisted?.parent === domParent &&
         persisted.type === type &&
         persisted.key === key &&
         portalRanges?.ownerOf(persisted._parent) === portalRanges?.ownerOf(vParent)
       ) {
-        persisted._mixState?.cancelRemoval()
-        persisted._persistence = undefined
+        persisted._mix?.cancelRemoval()
+        persisted._persisted = undefined
         persistedMixinNodes.delete(persisted)
         return persisted
       }
@@ -441,8 +440,7 @@ const mixinDriver: MixinDriver = {
     state ??= createMixinRuntime(node.type, frame, scheduler, (type: Component | string | symbol) =>
       typeof type === 'function' ? findContextFromAncestry(parent, type) : undefined,
     )
-    node._mixState = state
-    node._mixDriver = mixinDriver
+    node._mix = state
     return state.resolve(node.type, node.props)
   },
   shouldDispatchInline(node) {
@@ -453,7 +451,7 @@ const mixinDriver: MixinDriver = {
     return true
   },
   bind(node, context, reclaimed = false, parent) {
-    let state = node._mixState
+    let state = node._mix
     if (!state) return
     let domParent = parent ?? node._dom.parentNode
     invariant(domParent, 'Expected mounted host node to have a DOM parent')
@@ -471,18 +469,18 @@ const mixinDriver: MixinDriver = {
     )
   },
   deferRemoval(node, domParent, context, performRemoval) {
-    if (node._persistence) return true
-    let persisted = node._mixState?.prepareRemoval()
+    if (node._persisted) return true
+    let persisted = node._mix?.prepareRemoval()
     if (!persisted) return false
     let token = ++persistedRemovalToken
-    node._persistence = { parent: domParent, token }
+    node._persisted = { parent: domParent, token }
     persistedMixinNodes.add(node)
-    node._mixState?.bind()
+    node._mix?.bind()
     void persisted
       .catch(() => {})
       .finally(() => {
-        if (node._persistence?.token !== token) return
-        node._persistence = undefined
+        if (node._persisted?.token !== token) return
+        node._persisted = undefined
         persistedMixinNodes.delete(node)
         performRemoval(node, domParent, context)
         portalRanges?.finishRemovals(domParent)
@@ -648,6 +646,7 @@ function createMixinRuntime(
   } as unknown as AnyMixinHandle
 
   let runtime: MixinRuntime = {
+    driver: mixinDriver,
     get hasSlots() {
       return runners.length !== 0
     },

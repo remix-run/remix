@@ -173,11 +173,11 @@ function createVirtualRoot(
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
-        _resourceNonces: nonceManager?.getRootResourceNonces(root),
+        _nonces: nonceManager?.getRootResourceNonces(root),
         _getContext: options.getContext,
         _rangeStart: rangeStart,
         _rangeEnd: rangeEnd,
-        _pendingHydrationComponentId: pendingHydrationId,
+        _hid: pendingHydrationId,
       }
       scheduler.enqueueWork([
         () => {
