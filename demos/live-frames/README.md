@@ -17,17 +17,20 @@ Visit [http://localhost:44100](http://localhost:44100). Watch the countdowns tic
 A frame diffs each event into its current content, so the departure board resends the whole board every second and only the cells that changed are touched. That keeps the typed scratch note, the focus ring, and the scroll position where they were.
 
 ```
+event: rmx-replace
 id: 12
 data: <div><table>…the whole board…</table></div>
 ```
 
-An event named `append` adds its HTML after what the frame already shows, which suits anything that only ever grows. The log sends one snapshot when a frame connects, so a visitor who arrives late still sees the history, then one line per event.
+An `rmx-append` event adds its HTML after what the frame already shows, which suits anything that only ever grows. The log sends one `rmx-replace` snapshot when a frame connects, so a visitor who arrives late still sees the history, then one line per event.
 
 ```
-event: append
+event: rmx-append
 id: 13
 data: <p>01:12:04 Signal box handover complete</p>
 ```
+
+Frames read those two names and nothing else, so a connection can carry an app's own events alongside frame HTML without them landing in the page.
 
 Appended HTML joins the frame's content, not an element inside it, so the page wraps each frame in the surface that should contain everything a stream sends. [`app/ui/public/live-frame.tsx`](app/ui/public/live-frame.tsx) owns that wrapper; the streamed HTML owns only its own rows.
 

@@ -6,10 +6,10 @@ import { onDrop } from '../data/connections.ts'
 /**
  * Sends one event.
  *
- * @param name `append` adds the HTML to the frame; `message` replaces what the frame shows.
+ * @param kind `append` adds the HTML to the frame; `replace` replaces what the frame shows.
  * @param render Renders the event's HTML, given the id this event will carry.
  */
-export type Publish = (name: 'message' | 'append', render: (event: number) => RemixNode) => void
+export type Publish = (kind: 'replace' | 'append', render: (event: number) => RemixNode) => void
 
 /**
  * Answers a frame with an event stream it stays connected to.
@@ -44,13 +44,13 @@ export function eventStream(request: Request, open: (publish: Publish) => () => 
         }
       }
 
-      let publish: Publish = (name, render) => {
+      let publish: Publish = (kind, render) => {
         queue = queue.then(async () => {
           if (closed) return
           let html = await renderToString(render(event + 1))
           if (closed) return
           event += 1
-          controller.enqueue(encoder.encode(serializeEvent(event, html, name)))
+          controller.enqueue(encoder.encode(serializeEvent(event, html, kind)))
         })
       }
 
@@ -74,11 +74,12 @@ export function eventStream(request: Request, open: (publish: Publish) => () => 
   })
 }
 
-function serializeEvent(id: number, html: string, name: 'message' | 'append'): string {
+// Frames read `rmx-append` and `rmx-replace`; an unnamed event replaces too, and any other name
+// is left for other listeners on the connection.
+function serializeEvent(id: number, html: string, kind: 'replace' | 'append'): string {
   let data = html
     .split('\n')
     .map((line) => `data: ${line}`)
     .join('\n')
-  let event = name === 'append' ? 'event: append\n' : ''
-  return `${event}id: ${id}\n${data}\n\n`
+  return `event: rmx-${kind}\nid: ${id}\n${data}\n\n`
 }

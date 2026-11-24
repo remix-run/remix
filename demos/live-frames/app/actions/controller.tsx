@@ -30,7 +30,7 @@ export default createController(routes, {
 
       return eventStream(request, (publish) => {
         let send = () =>
-          publish('message', (event) => (
+          publish('replace', (event) => (
             <Board view={view} connection={connection} event={event} resumedFrom={resumedFrom} />
           ))
 
@@ -45,7 +45,7 @@ export default createController(routes, {
       let resumedFrom = request.headers.get('Last-Event-Id')
 
       return eventStream(request, (publish) => {
-        publish('message', () => <LogHistory lines={getLog()} resumedFrom={resumedFrom} />)
+        publish('replace', () => <LogHistory lines={getLog()} resumedFrom={resumedFrom} />)
         return watchLog((line) => publish('append', () => <LogRow line={line} />))
       })
     },

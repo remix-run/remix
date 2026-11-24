@@ -90,7 +90,7 @@ describe('router', () => {
       let text = ''
 
       try {
-        while (!text.includes('event: append')) {
+        while (!text.includes('event: rmx-append')) {
           let { done, value } = await reader.read()
           if (done) break
           text += decoder.decode(value, { stream: true })
@@ -99,9 +99,9 @@ describe('router', () => {
         await reader.cancel()
       }
 
-      let [snapshot, ...rest] = text.split('event: append')
+      let [snapshot, ...rest] = text.split('event: rmx-append')
       assert.ok(snapshot?.includes('connected'))
-      assert.ok(!snapshot?.includes('event: '))
+      assert.ok(snapshot?.includes('event: rmx-replace'))
       assert.ok(rest[0]?.includes('data: '))
       controller.abort()
     })

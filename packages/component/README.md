@@ -1474,7 +1474,7 @@ Response bodies remain streamed. A slow body or image decode can delay the snaps
 
 ### Live Frames
 
-A frame renders a `text/event-stream` response as live content. Each event carries frame HTML, so a route can push UI updates over one connection instead of waiting for the next reload:
+A frame renders a `text/event-stream` response as live content. Events named `rmx-replace` and `rmx-append` carry frame HTML, so a route can push UI updates over one connection instead of waiting for the next reload:
 
 ```tsx
 <Frame name="order" src="/orders/42/live" fallback={<p>Connecting…</p>} />
@@ -1488,7 +1488,7 @@ function liveOrder(): Response {
       let encoder = new TextEncoder()
       for await (let order of watchOrder(42)) {
         let html = await renderToString(<OrderStatus order={order} />)
-        controller.enqueue(encoder.encode(`data: ${html}\n\n`))
+        controller.enqueue(encoder.encode(`event: rmx-replace\ndata: ${html}\n\n`))
       }
       controller.close()
     },
@@ -1499,7 +1499,8 @@ function liveOrder(): Response {
 ```
 
 - The frame resolves as soon as the first event renders. That replaces the `fallback`, settles `frame.reload()`, and unblocks a navigation, while the connection stays open for later events.
-- An event's HTML is reconciled against the frame's current content, the same way reload HTML is, so send a snapshot of the whole frame. Matching elements keep their DOM, including focus, scroll position, and client-owned state.
+- An `rmx-replace` event's HTML is reconciled against the frame's current content, the same way reload HTML is, so send a snapshot of the whole frame. Matching elements keep their DOM, including focus, scroll position, and client-owned state.
+- A frame renders only those two names. Every other event, an unnamed `message` event included, belongs to whatever else reads the stream, so one connection can carry an app's own events without a frame rendering them.
 - Comment lines such as `: ping` are dropped, which makes them the keepalive for an idle connection, and multi-line `data:` fields are joined with newlines.
 - Event data is trusted frame HTML and isn't sanitized, like every other frame resolution. It can select client entries and contribute import maps, styles, and nested frames.
 - A frame rendered on the server is already resolved, so it never opens a connection. Live frames are created in the browser, or reach a stream through `frame.reload()` or a navigation.
@@ -1507,17 +1508,17 @@ function liveOrder(): Response {
 
 #### Appending Instead of Replacing
 
-An event named `append` adds its HTML after what the frame already shows, for streams that only ever grow, such as a log, a feed, or a transcript:
+An `rmx-append` event adds its HTML after what the frame already shows, for streams that only ever grow, such as a log, a feed, or a transcript:
 
 ```
-event: append
+event: rmx-append
 id: 184
 data: <p>01:12:04 Signal box handover complete</p>
 ```
 
 - Appended HTML joins the frame's content, not an element inside it. Put the list, the border, or the scroll container around the `<Frame>` rather than in the streamed HTML.
 - Existing nodes are untouched, so their client entries, nested frames, and state survive each append.
-- Any other event name is a snapshot, which replaces everything the frame shows, appended content included. A stream can mix the two: send a snapshot to catch a frame up, then append.
+- An `rmx-replace` event replaces everything the frame shows, appended content included, so a stream can mix the two: catch a frame up with a snapshot, then append to it.
 
 #### Reacting to Live Content
 
