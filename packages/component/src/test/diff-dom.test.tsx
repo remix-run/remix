@@ -86,10 +86,12 @@ describe('diffNodes', () => {
         document.body.append(container)
         t.after(() => container.remove())
         let created = document.createElement('em')
+        let preceding = document.createElement('strong')
         customElements.define(
           'rmx-moving-range-insert-sibling',
           class extends HTMLElement {
             connectedMoveCallback() {
+              this.before(preceding)
               this.after(created)
             }
           },
@@ -112,6 +114,7 @@ describe('diffNodes', () => {
 
         expectNodeOrder(container.childNodes, [
           range[0],
+          preceding,
           range[1],
           created,
           ...range.slice(2),
@@ -121,7 +124,46 @@ describe('diffNodes', () => {
         diffDom(container, rest)
 
         expect(created.parentNode).toBe(null)
+        expect(preceding.parentNode).toBe(null)
         expect(container.innerHTML).toBe(rest)
+      },
+    )
+
+    it(
+      'recovers inside a frame region when a move callback removes itself and its anchor',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      (t) => {
+        let container = document.createElement('div')
+        document.body.append(container)
+        t.after(() => container.remove())
+        let anchor: Element | undefined
+        customElements.define(
+          'rmx-frame-move-remove-anchor-and-self',
+          class extends HTMLElement {
+            connectedMoveCallback() {
+              anchor?.remove()
+              this.remove()
+            }
+          },
+        )
+        let stable = '<p data-rmx-key="s1">1</p><p data-rmx-key="s2">2</p>'
+        let moving =
+          '<rmx-frame-move-remove-anchor-and-self data-rmx-key="m"></rmx-frame-move-remove-anchor-and-self>'
+        let sibling = '<p data-rmx-key="a">A</p>'
+        container.innerHTML = stable + moving + sibling + '<aside>Outside</aside>'
+        let [first, second, custom, last, outside] = Array.from(container.children)
+        anchor = first
+        let template = document.createElement('template')
+        template.innerHTML = sibling + moving + stable
+
+        diffDomNodes(
+          Array.from(container.childNodes).slice(0, -1),
+          Array.from(template.content.childNodes),
+        )
+
+        expect(first.parentNode).toBe(null)
+        expect(custom.parentNode).toBe(null)
+        expectNodeOrder(container.children, [last, second, outside])
       },
     )
 
@@ -153,6 +195,44 @@ describe('diffNodes', () => {
 
         expect(removed.parentNode).toBe(null)
         expectNodeOrder(container.children, [custom, s1, s2])
+      },
+    )
+
+    it(
+      'stops placement when a callback removes the owning region boundary',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      (t) => {
+        let container = document.createElement('div')
+        document.body.append(container)
+        t.after(() => container.remove())
+        let boundary: Node | undefined
+        customElements.define(
+          'rmx-frame-move-remove-region-boundary',
+          class extends HTMLElement {
+            connectedMoveCallback() {
+              boundary?.parentNode?.removeChild(boundary)
+              this.remove()
+            }
+          },
+        )
+        let stable = '<p data-rmx-key="s1">1</p><p data-rmx-key="s2">2</p>'
+        let moving =
+          '<rmx-frame-move-remove-region-boundary data-rmx-key="m"></rmx-frame-move-remove-region-boundary>'
+        let sibling = '<p data-rmx-key="a">A</p>'
+        container.innerHTML = stable + moving + sibling + '<!-- /rmx:f --><aside>Outside</aside>'
+        let [first, second, custom, last, end, outside] = Array.from(container.childNodes)
+        boundary = end
+        let template = document.createElement('template')
+        template.innerHTML = sibling + moving + stable
+
+        diffDomNodes(
+          Array.from(container.childNodes).slice(0, -2),
+          Array.from(template.content.childNodes),
+        )
+
+        expect(end.parentNode).toBe(null)
+        expect(custom.parentNode).toBe(null)
+        expectNodeOrder(container.childNodes, [first, second, last, outside])
       },
     )
 
@@ -230,7 +310,7 @@ describe('diffNodes', () => {
     )
 
     it(
-      'uses a surviving range prefix when a move callback removes itself and the anchor',
+      'retains range content when a move callback removes itself and the anchor',
       { skip: typeof Element.prototype.moveBefore !== 'function' },
       (t) => {
         let container = document.createElement('div')
@@ -437,24 +517,39 @@ describe('diffNodes', () => {
       },
     )
 
-    it('retains range ordering with insertBefore when native moves are unavailable', (t) => {
+    it('recovers a fallback range anchor after disconnection callbacks run', (t) => {
       let container = document.createElement('div')
       document.body.append(container)
       t.after(() => container.remove())
       Object.defineProperty(container, 'moveBefore', { value: undefined })
-      let moving = '<!-- rmx:h:a -->start<input>end<!-- /rmx:h -->'
+      let anchor: Element | undefined
+      customElements.define(
+        'rmx-fallback-range-remove-anchor',
+        class extends HTMLElement {
+          disconnectedCallback() {
+            anchor?.remove()
+          }
+        },
+      )
+      let moving =
+        '<!-- rmx:h:a -->start<rmx-fallback-range-remove-anchor></rmx-fallback-range-remove-anchor>' +
+        '<input>end<!-- /rmx:h -->'
       let rest = '<p data-rmx-key="b">B</p><p data-rmx-key="c">C</p>'
-      container.innerHTML = moving + rest
-      let start = container.firstChild
+      container.innerHTML = rest + moving
+      let start = container.childNodes[2]
       invariant(start instanceof Comment)
       attachClientEntryOwner(start)
-      let range = Array.from(container.childNodes).slice(0, -2)
+      anchor = container.querySelector('p') ?? undefined
+      invariant(anchor)
+      let range = Array.from(container.childNodes).slice(2)
+      let last = container.childNodes[1]
 
-      diffDom(container, rest + moving, {
+      diffDom(container, moving + rest, {
         h: { a: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} } },
       })
 
-      expectNodeOrder(Array.from(container.childNodes).slice(2), range)
+      expect(anchor.parentNode).toBe(null)
+      expectNodeOrder(container.childNodes, [...range, last])
     })
   })
 

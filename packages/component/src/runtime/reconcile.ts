@@ -1750,7 +1750,7 @@ function patchKeyedChildren(
   }
 
   stableCursor = stableIndexes.length - 1
-  let placementAnchor: Node | null = anchor ?? null
+  let placement = new SiblingPlacement(domParent, anchor ?? null)
 
   for (let index = next.length - 1; index >= 0; index--) {
     let nextNode = committedChildren[index]
@@ -1758,12 +1758,10 @@ function patchKeyedChildren(
 
     if (isStable) {
       stableCursor--
+      placement.retain(findFirstDomAnchor(nextNode), findLastDomAnchor(nextNode))
     } else {
-      placeVNode(nextNode, domParent, placementAnchor)
+      placeVNode(nextNode, placement)
     }
-
-    let first = findFirstDomAnchor(nextNode)
-    if (first?.parentNode === domParent) placementAnchor = first
   }
   return committedChildren
 }
@@ -1883,18 +1881,31 @@ export function getStableIndexes(
   return tails
 }
 
-function placeVNode(node: CommittedVNode, domParent: ParentNode, anchor: Node | null): void {
+function placeVNode(node: CommittedVNode, placement: SiblingPlacement): void {
+  let domParent = placement.parent
+  let anchor = placement.anchor
+  if (anchor === undefined) return
   let firstDom = findFirstDomAnchor(node)
   if (!firstDom || firstDom.parentNode !== domParent) return
 
   let lastDom = findLastDomAnchor(node)
   if (!lastDom) return
-  if (anchor && domRangeContainsNode(firstDom, lastDom, anchor)) return
+  if (anchor && domRangeContainsNode(firstDom, lastDom, anchor)) {
+    placement.retain(firstDom, lastDom)
+    return
+  }
   // Re-inserting a node that is already in place still disconnects and
   // reconnects it, which runs custom element callbacks and resets state
-  if (lastDom.nextSibling === anchor) return
+  if (lastDom.nextSibling === anchor) {
+    placement.retain(firstDom, lastDom)
+    return
+  }
 
-  moveDomRange(domParent, firstDom, lastDom, anchor)
+  if (firstDom === lastDom) {
+    placement.move(firstDom)
+  } else {
+    moveNodesBefore(placement, collectDomRange(domParent, firstDom, lastDom))
+  }
 }
 
 function findFirstDomAnchor(node: CommittedVNode | null | undefined): Node | null {
@@ -1957,7 +1968,56 @@ export function moveNodeBefore(parent: ParentNode, node: Node, before: Node | nu
   else parent.insertBefore(node, before)
 }
 
-export function moveNodesBefore(parent: ParentNode, nodes: Node[], before: Node | null): void {
+// Callbacks can remove or reparent nodes during placement. Track the retained right-hand
+// suffix and resolve an attached anchor immediately before each move.
+export class SiblingPlacement {
+  readonly parent: ParentNode
+  #end: Node | null
+  #anchors: Node[] = []
+
+  constructor(parent: ParentNode, end: Node | null) {
+    this.parent = parent
+    this.#end = end
+  }
+
+  get anchor(): Node | null | undefined {
+    // Losing the owning region's boundary must not turn a move into a parent-wide append.
+    if (this.#end && this.#end.parentNode !== this.parent) return undefined
+    return getRetainedNode(this.parent, this.#anchors) ?? this.#end
+  }
+
+  retain(first: Node | null, last = first): void {
+    if (first?.parentNode !== this.parent) return
+    if (!last || first === last || last.parentNode !== this.parent) {
+      this.#anchors.push(first)
+      return
+    }
+    let nodes = collectDomRange(this.parent, first, last)
+    for (let i = nodes.length - 1; i >= 0; i--) this.#anchors.push(nodes[i])
+  }
+
+  move(node: Node): void {
+    let before = this.anchor
+    if (before === undefined) return
+    if (node !== before && !(node.parentNode === this.parent && node.nextSibling === before)) {
+      moveNodeBefore(this.parent, node, before)
+    }
+    this.retain(node)
+  }
+}
+
+function getRetainedNode(parent: ParentNode, nodes: Node[]): Node | undefined {
+  while (nodes.length) {
+    let node = nodes.at(-1)
+    if (node?.parentNode === parent) return node
+    nodes.pop()
+  }
+}
+
+export function moveNodesBefore(placement: SiblingPlacement, nodes: Node[]): void {
+  let parent = placement.parent
+  let before = placement.anchor
+  if (before === undefined) return
   let end = nodes.at(-1)
   if (end?.parentNode === parent && (isFrameEnd(end) || isHydrationEnd(end))) {
     // Place the inert ownership marker first so callback-created siblings remain inside it.
@@ -1966,30 +2026,25 @@ export function moveNodesBefore(parent: ParentNode, nodes: Node[], before: Node 
       if (node === end || end.parentNode !== parent) break
       if (node.parentNode === parent && node.nextSibling !== end) moveNodeBefore(parent, node, end)
     }
+    for (let i = nodes.length - 1; i >= 0; i--) placement.retain(nodes[i])
     return
   }
 
+  // Keep source-order callbacks for unmarked ranges, anchoring after the retained prefix.
   let placed: Node[] = []
   for (let node of nodes) {
-    // Keep the retained snapshot in order without reclaiming nodes moved elsewhere by callbacks.
     if (node.parentNode !== parent) continue
-    let previous = placed.at(-1)
-    while (previous && previous.parentNode !== parent) {
-      placed.pop()
-      previous = placed.at(-1)
-    }
-    let ref = previous ? previous.nextSibling : before?.parentNode === parent ? before : null
+    let fallback = placement.anchor
+    if (fallback === undefined) break
+    let previous = getRetainedNode(parent, placed)
+    let ref = previous ? previous.nextSibling : fallback
     if (node !== ref && node.nextSibling !== ref) moveNodeBefore(parent, node, ref)
     placed.push(node)
   }
+  for (let i = nodes.length - 1; i >= 0; i--) placement.retain(nodes[i])
 }
 
-function moveDomRange(domParent: ParentNode, first: Node, last: Node, before: Node | null): void {
-  if (first === last) {
-    moveNodeBefore(domParent, first, before)
-    return
-  }
-
+function collectDomRange(domParent: ParentNode, first: Node, last: Node): Node[] {
   let nodes: Node[] = []
   let portals = portalContainers.get(domParent)
   let current: Node | null = first
@@ -2005,7 +2060,7 @@ function moveDomRange(domParent: ParentNode, first: Node, last: Node, before: No
     if (current === last) break
     current = next
   }
-  moveNodesBefore(domParent, nodes, before)
+  return nodes
 }
 
 export function setActiveSchedulerUpdateParents(parents: ParentNode[] | undefined) {

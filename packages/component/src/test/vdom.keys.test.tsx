@@ -795,31 +795,113 @@ describe('vnode rendering (keys)', () => {
 
   describe('focus and selection across keyed moves', () => {
     it(
-      'does not use a custom element removed during placement as the next insertion anchor',
+      'recovers inside a keyed list when a move callback removes itself and its anchor',
       { skip: typeof Element.prototype.moveBefore !== 'function' },
       (t) => {
         let { render, container } = createConnectedRoot(t)
+        let anchor: Element | undefined
         customElements.define(
           'rmx-keyed-move-remove-self',
           class extends HTMLElement {
             connectedMoveCallback() {
+              anchor?.remove()
               this.remove()
             }
           },
         )
-        let s1 = <p key="s1">1</p>
+        let s1 = (
+          <Fragment key="s1">
+            <p>1</p>
+            <span>Kept</span>
+          </Fragment>
+        )
         let s2 = <p key="s2">2</p>
         let moving = createElement('rmx-keyed-move-remove-self', { key: 'm' })
         let a = <p key="a">A</p>
-        render([s1, s2, moving, a])
-        let [first, second, custom, last] = Array.from(container.children)
+        let view = (items: RemixNode[]) => (
+          <>
+            <Fragment key="list">{items}</Fragment>
+            <aside key="outside">Outside</aside>
+          </>
+        )
+        render(view([s1, s2, moving, a]))
+        let [first, kept, second, custom, last, outside] = Array.from(container.children)
+        anchor = first
 
-        render([a, moving, s1, s2])
+        render(view([a, moving, s1, s2]))
 
+        expect(first.parentNode).toBe(null)
         expect(custom.parentNode).toBe(null)
-        expectNodeOrder(container.children, [last, first, second])
+        expectNodeOrder(container.children, [last, kept, second, outside])
       },
     )
+
+    it('recovers inside a keyed list when a fallback callback removes the placed suffix', (t) => {
+      let { root, render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let errors: Event[] = []
+      root.addEventListener('error', (event) => errors.push(event))
+      let removed: Element[] = []
+      customElements.define(
+        'rmx-keyed-fallback-remove-suffix',
+        class extends HTMLElement {
+          connectedCallback() {
+            if (!removed.length) return
+            for (let node of removed) node.remove()
+            this.remove()
+          }
+        },
+      )
+      let s1 = <p key="s1">1</p>
+      let s2 = <p key="s2">2</p>
+      let moving = createElement('rmx-keyed-fallback-remove-suffix', { key: 'm' })
+      let a = <p key="a">A</p>
+      let view = (items: RemixNode[]) => (
+        <>
+          <Fragment key="list">{items}</Fragment>
+          <aside key="outside">Outside</aside>
+        </>
+      )
+      render(view([s1, s2, moving, a]))
+      let [first, second, custom, last, outside] = Array.from(container.children)
+      removed = [first, second]
+
+      render(view([a, moving, s1, s2]))
+
+      expect(first.parentNode).toBe(null)
+      expect(second.parentNode).toBe(null)
+      expect(custom.parentNode).toBe(null)
+      expectNodeOrder(container.children, [last, outside])
+      expect(errors.length).toBe(0)
+    })
+
+    it('keeps fallback connection callbacks in source order within a moved fragment', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let connections: string[] = []
+      customElements.define(
+        'rmx-keyed-fallback-callback-order',
+        class extends HTMLElement {
+          connectedCallback() {
+            connections.push(this.dataset.name ?? '')
+          }
+        },
+      )
+      let moving = (
+        <Fragment key="a">
+          start{createElement('rmx-keyed-fallback-callback-order', { 'data-name': 'one' })}
+          {createElement('rmx-keyed-fallback-callback-order', { 'data-name': 'two' })}end
+        </Fragment>
+      )
+      let b = <p key="b">B</p>
+      let c = <p key="c">C</p>
+      render([moving, b, c])
+      connections = []
+
+      render([b, c, moving])
+
+      expect(connections).toEqual(['one', 'two'])
+    })
 
     it(
       'keeps a keyed fragment together when a move callback removes its anchor',
@@ -1124,7 +1206,7 @@ function createConnectedRoot(t: TestContext) {
     root.dispose()
     container.remove()
   })
-  return { container, render: (node: RemixNode) => root.render(node) }
+  return { root, container, render: (node: RemixNode) => root.render(node) }
 }
 
 function getInput(container: HTMLElement, id: string): HTMLInputElement {

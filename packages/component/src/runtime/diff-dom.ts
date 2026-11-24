@@ -3,8 +3,8 @@ import {
   canMoveBefore,
   excludePortalRanges,
   getStableIndexes,
-  moveNodeBefore,
   moveNodesBefore,
+  SiblingPlacement,
 } from './reconcile.ts'
 import {
   getFrameId,
@@ -239,13 +239,12 @@ export function diffNodes(
   }
 
   let stable = getStableCommittedIndexes(nextUnits, parent)
-  let anchor: Node | null = regionTailRef
+  let placement = new SiblingPlacement(parent, regionTailRef)
   for (let i = nextUnits.length - 1; i >= 0; i--) {
     let unit = nextUnits[i]
     if (unit.match && unit.start.parentNode !== parent) continue
-    if (!stable.has(i))
-      placeSiblingUnitBefore(unit, parent, anchor?.parentNode === parent ? anchor : null)
-    if (unit.start.parentNode === parent) anchor = unit.start
+    if (stable.has(i)) placement.retain(unit.start, unit.end ?? unit.start)
+    else placeSiblingUnitBefore(unit, placement)
   }
 }
 
@@ -431,22 +430,31 @@ function getBoundaryKey(
   }
 }
 
-function placeSiblingUnitBefore(unit: SiblingUnit, parent: ParentNode, ref: Node | null): void {
-  if (unit.start.parentNode === parent && (unit.end ?? unit.start).nextSibling === ref) return
+function placeSiblingUnitBefore(unit: SiblingUnit, placement: SiblingPlacement): void {
   if (!unit.kind) {
-    moveNodeBefore(parent, unit.start, ref)
+    placement.move(unit.start)
     return
   }
-
+  let parent = placement.parent
+  let ref = placement.anchor
+  if (ref === undefined) return
+  if (unit.start.parentNode === parent && unit.end.nextSibling === ref) {
+    placement.retain(unit.start, unit.end)
+    return
+  }
   let nodes = collectNodeRange(unit.start, unit.end, true)
   // Do not stage live ranges in a fragment: that would disconnect their contents
   // before moveBefore() can preserve their browser-managed state.
   if (nodes.every((node) => canMoveBefore(parent, node))) {
-    moveNodesBefore(parent, nodes, ref)
+    moveNodesBefore(placement, nodes)
     return
   }
 
-  parent.insertBefore(createFragment(unit.start.ownerDocument, nodes), ref)
+  let fragment = createFragment(unit.start.ownerDocument, nodes)
+  ref = placement.anchor
+  if (ref === undefined) return
+  parent.insertBefore(fragment, ref)
+  for (let i = nodes.length - 1; i >= 0; i--) placement.retain(nodes[i])
 }
 
 function createFragment(doc: Document, nodes: Node[]): DocumentFragment {
