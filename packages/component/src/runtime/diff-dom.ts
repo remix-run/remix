@@ -242,6 +242,7 @@ export function diffNodes(
   let anchor: Node | null = regionTailRef
   for (let i = nextUnits.length - 1; i >= 0; i--) {
     let unit = nextUnits[i]
+    if (unit.match && unit.start.parentNode !== parent) continue
     if (!stable.has(i))
       placeSiblingUnitBefore(unit, parent, anchor?.parentNode === parent ? anchor : null)
     if (unit.start.parentNode === parent) anchor = unit.start

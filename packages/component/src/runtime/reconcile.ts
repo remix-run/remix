@@ -31,7 +31,13 @@ import {
 } from './mixins/mixin.ts'
 import { OnBinding, isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
-import { isCommentNode, isFrameStart, isHydrationStart } from './stream-protocol.ts'
+import {
+  isCommentNode,
+  isFrameEnd,
+  isFrameStart,
+  isHydrationEnd,
+  isHydrationStart,
+} from './stream-protocol.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 
@@ -1756,7 +1762,8 @@ function patchKeyedChildren(
       placeVNode(nextNode, domParent, placementAnchor)
     }
 
-    placementAnchor = findFirstDomAnchor(nextNode) ?? placementAnchor
+    let first = findFirstDomAnchor(nextNode)
+    if (first?.parentNode === domParent) placementAnchor = first
   }
   return committedChildren
 }
@@ -1951,6 +1958,17 @@ export function moveNodeBefore(parent: ParentNode, node: Node, before: Node | nu
 }
 
 export function moveNodesBefore(parent: ParentNode, nodes: Node[], before: Node | null): void {
+  let end = nodes.at(-1)
+  if (end?.parentNode === parent && (isFrameEnd(end) || isHydrationEnd(end))) {
+    // Place the inert ownership marker first so callback-created siblings remain inside it.
+    moveNodeBefore(parent, end, before)
+    for (let node of nodes) {
+      if (node === end || end.parentNode !== parent) break
+      if (node.parentNode === parent && node.nextSibling !== end) moveNodeBefore(parent, node, end)
+    }
+    return
+  }
+
   let placed: Node[] = []
   for (let node of nodes) {
     // Keep the retained snapshot in order without reclaiming nodes moved elsewhere by callbacks.

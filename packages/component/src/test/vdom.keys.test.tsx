@@ -5,7 +5,7 @@ import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { createElement } from '../runtime/create-element.ts'
 import { Fragment, type Handle, type RemixNode } from '../runtime/component.ts'
-import { prepareMoveState } from './utils.ts'
+import { expectNodeOrder, prepareMoveState } from './utils.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {
@@ -795,6 +795,33 @@ describe('vnode rendering (keys)', () => {
 
   describe('focus and selection across keyed moves', () => {
     it(
+      'does not use a custom element removed during placement as the next insertion anchor',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      (t) => {
+        let { render, container } = createConnectedRoot(t)
+        customElements.define(
+          'rmx-keyed-move-remove-self',
+          class extends HTMLElement {
+            connectedMoveCallback() {
+              this.remove()
+            }
+          },
+        )
+        let s1 = <p key="s1">1</p>
+        let s2 = <p key="s2">2</p>
+        let moving = createElement('rmx-keyed-move-remove-self', { key: 'm' })
+        let a = <p key="a">A</p>
+        render([s1, s2, moving, a])
+        let [first, second, custom, last] = Array.from(container.children)
+
+        render([a, moving, s1, s2])
+
+        expect(custom.parentNode).toBe(null)
+        expectNodeOrder(container.children, [last, first, second])
+      },
+    )
+
+    it(
       'keeps a keyed fragment together when a move callback removes its anchor',
       { skip: typeof Element.prototype.moveBefore !== 'function' },
       (t) => {
@@ -825,7 +852,7 @@ describe('vnode rendering (keys)', () => {
         render([moving, b, c])
 
         expect(anchor.parentNode).toBe(null)
-        expect(Array.from(container.childNodes)).toEqual([...range, last])
+        expectNodeOrder(container.childNodes, [...range, last])
       },
     )
 
@@ -863,7 +890,7 @@ describe('vnode rendering (keys)', () => {
         render([b, c, moving])
 
         expect(removed.parentNode).toBe(null)
-        expect(Array.from(container.childNodes)).toEqual([...rest, ...range])
+        expectNodeOrder(container.childNodes, [...rest, ...range])
       },
     )
 
