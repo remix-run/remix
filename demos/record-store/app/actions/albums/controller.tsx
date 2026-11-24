@@ -1,8 +1,8 @@
 import { createController } from 'remix/router'
-import { and, ilike, ne } from 'remix/data-table'
+import { and, eq, ilike, ne } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 
-import { albums } from '../../data/schema.ts'
+import { albums, albumTracks } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { getAlbumImage, resolveAlbumCover } from '../../utils/album-images.ts'
 import { browsingResponseInit } from '../browsing-response.ts'
@@ -49,12 +49,30 @@ export default createController(routes.albums, {
     },
 
     async show({ db, params, render, request }) {
-      let album = await db.findOne(albums, { where: { slug: params.slug } })
+      let rows = await db
+        .query(albums)
+        .leftJoin(albumTracks, eq(albums.id, albumTracks.album_id))
+        .where(eq(albums.slug, params.slug))
+        .select({
+          ...albums,
+          trackSide: albumTracks.side,
+          trackPosition: albumTracks.position,
+          trackTitle: albumTracks.title,
+        })
+        .orderBy(albumTracks.side, 'asc')
+        .orderBy(albumTracks.position, 'asc')
+        .all()
+      let [album] = rows
 
       if (!album) {
         return render(<AlbumNotFoundPage />, { status: 404 })
       }
 
+      let tracks = rows.flatMap(({ trackSide, trackPosition, trackTitle }) =>
+        trackPosition === null
+          ? []
+          : [{ album_id: album.id, side: trackSide, position: trackPosition, title: trackTitle }],
+      )
       let imageUrls = await Promise.all(
         s
           .parse(s.array(s.string()), JSON.parse(album.image_urls))
@@ -67,7 +85,7 @@ export default createController(routes.albums, {
           : 0
 
       return render(
-        <ShowPage album={album} imageUrls={imageUrls} startIndex={startIndex} />,
+        <ShowPage album={album} tracks={tracks} imageUrls={imageUrls} startIndex={startIndex} />,
         browsingResponseInit(request),
       )
     },

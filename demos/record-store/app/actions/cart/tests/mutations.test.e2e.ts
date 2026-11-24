@@ -6,7 +6,7 @@ import type { Locator, Page } from 'playwright'
 import { createTestRouter } from '../../../../test/helpers.ts'
 
 describe('cart submissions', () => {
-  it('keeps cart buttons idle while Back to Records loads the catalog', async (t) => {
+  it('keeps cart buttons idle while the Records navigation loads the catalog', async (t) => {
     let requested = Promise.withResolvers<void>()
     let release = Promise.withResolvers<void>()
     t.after(() => release.resolve())
@@ -21,8 +21,9 @@ describe('cart submissions', () => {
       '/albums/overpass-stereo',
     )
     let details = page.getByRole('heading', { level: 1, name: 'Overpass Stereo' }).locator('..')
-    await details
-      .getByRole('link', { name: 'Back to Records', exact: true })
+    await page
+      .getByRole('banner')
+      .getByRole('link', { name: 'Records', exact: true })
       .evaluate((anchor: HTMLAnchorElement) => anchor.click())
     await requested.promise
     await page.evaluate(async () => {

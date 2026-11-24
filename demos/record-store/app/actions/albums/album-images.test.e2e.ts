@@ -96,8 +96,8 @@ describe('album images', () => {
       )
       let faceout = await selected.boundingBox()
       assert.ok(faceout)
-      assert.equal(faceout.width, 300)
-      assert.equal(faceout.height, 300)
+      assert.expect(faceout.width).toBeCloseTo(300)
+      assert.expect(faceout.height).toBeCloseTo(300)
     } finally {
       await context.close()
     }

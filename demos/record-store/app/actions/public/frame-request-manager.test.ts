@@ -13,17 +13,20 @@ describe('frame request manager', () => {
       requests.push(init)
       return stream.response
     })
-    let speculative = await manager.fetch('https://record-store.test/albums/bbq/related#ignored', {
-      headers: { 'X-Remix-Target': 'related-albums-1', 'X-Remix-Prefetch': 'true' },
-      signal: prefetch.signal,
-      priority: 'low',
-    })
+    let speculative = await manager.fetch(
+      'https://record-store.test/albums/overpass-stereo/related#ignored',
+      {
+        headers: { 'X-Remix-Target': 'related-albums-1', 'X-Remix-Prefetch': 'true' },
+        signal: prefetch.signal,
+        priority: 'low',
+      },
+    )
     let speculativeReader = speculative.body?.getReader()
     assert.ok(speculativeReader)
     stream.controller.enqueue(new TextEncoder().encode('first'))
     assert.equal(new TextDecoder().decode((await speculativeReader.read()).value), 'first')
 
-    let existing = manager.get('https://record-store.test/albums/bbq/related', {
+    let existing = manager.get('https://record-store.test/albums/overpass-stereo/related', {
       headers: { 'X-Remix-Target': 'related-albums-1' },
     })
     assert.ok(existing)
@@ -56,7 +59,7 @@ describe('frame request manager', () => {
       },
       page,
     )
-    let url = 'https://record-store.test/albums/bbq'
+    let url = 'https://record-store.test/albums/overpass-stereo'
     let from = page.href
     let first = manager.fetch(url, {})
     page.href = url
@@ -92,7 +95,7 @@ describe('frame request manager', () => {
       await release.promise
       return new Response('done')
     })
-    let url = 'https://record-store.test/albums/bbq/related'
+    let url = 'https://record-store.test/albums/overpass-stereo/related'
     let init = { headers: { 'X-Remix-Target': 'first' } }
     assert.equal(manager.get(url, init), undefined)
     assert.equal(requests.length, 0)
@@ -100,12 +103,15 @@ describe('frame request manager', () => {
     assert.equal(manager.get(url, { ...init, method: 'POST' }), undefined)
     assert.equal(manager.get(url, { ...init, cache: 'reload' }), undefined)
     assert.equal(manager.get(url, { headers: { 'X-Remix-Target': 'second' } }), undefined)
-    let second = manager.fetch('https://record-store.test/albums/bbq/related', {
+    let second = manager.fetch('https://record-store.test/albums/overpass-stereo/related', {
       headers: { 'X-Remix-Target': 'second' },
     })
-    let differentCookie = manager.fetch('https://record-store.test/albums/bbq/related', {
-      headers: { 'X-Remix-Target': 'first', Cookie: 'session=another' },
-    })
+    let differentCookie = manager.fetch(
+      'https://record-store.test/albums/overpass-stereo/related',
+      {
+        headers: { 'X-Remix-Target': 'first', Cookie: 'session=another' },
+      },
+    )
     manager.invalidate()
     assert.equal(manager.get(url, init), undefined)
     let beforeMutation = manager.fetch(url, init)
@@ -142,8 +148,12 @@ describe('frame request manager', () => {
     })
     let prefetch = new AbortController()
     let navigation = new AbortController()
-    let first = manager.fetch('https://record-store.test/albums/bbq', { signal: prefetch.signal })
-    let second = manager.get('https://record-store.test/albums/bbq', { signal: navigation.signal })
+    let first = manager.fetch('https://record-store.test/albums/overpass-stereo', {
+      signal: prefetch.signal,
+    })
+    let second = manager.get('https://record-store.test/albums/overpass-stereo', {
+      signal: navigation.signal,
+    })
     assert.ok(second)
     prefetch.abort()
     await assert.rejects(() => first, prefetch.signal.reason)
@@ -153,7 +163,9 @@ describe('frame request manager', () => {
     assert.equal(requests[0].signal?.aborted, true)
 
     let retry = new AbortController()
-    let third = manager.fetch('https://record-store.test/albums/bbq', { signal: retry.signal })
+    let third = manager.fetch('https://record-store.test/albums/overpass-stereo', {
+      signal: retry.signal,
+    })
     assert.equal(requests.length, 2)
     retry.abort()
     await assert.rejects(() => third, retry.signal.reason)
@@ -168,18 +180,18 @@ describe('frame request manager', () => {
       return Promise.resolve(requests === 2 ? stream.response : new Response('recovered'))
     })
     await assert.rejects(
-      () => manager.fetch('https://record-store.test/albums/bbq', {}),
+      () => manager.fetch('https://record-store.test/albums/overpass-stereo', {}),
       /fetch failed/,
     )
-    let first = await manager.fetch('https://record-store.test/albums/bbq', {})
-    let second = await manager.fetch('https://record-store.test/albums/bbq', {})
+    let first = await manager.fetch('https://record-store.test/albums/overpass-stereo', {})
+    let second = await manager.fetch('https://record-store.test/albums/overpass-stereo', {})
     let firstBody = first.text()
     let secondBody = second.text()
     stream.controller.error(new Error('body failed'))
     await assert.rejects(() => firstBody, /body failed/)
     await assert.rejects(() => secondBody, /body failed/)
     assert.equal(
-      await (await manager.fetch('https://record-store.test/albums/bbq', {})).text(),
+      await (await manager.fetch('https://record-store.test/albums/overpass-stereo', {})).text(),
       'recovered',
     )
     assert.equal(requests, 3)
@@ -209,13 +221,13 @@ describe('frame request manager', () => {
         }),
       )
     })
-    let response = await manager.fetch('https://record-store.test/albums/bbq', {})
+    let response = await manager.fetch('https://record-store.test/albums/overpass-stereo', {})
     scope.abort()
     await assert.rejects(() => response.text(), scope.signal.reason)
     await canceled.promise
     assert.equal(transportSignal?.aborted, true)
     await assert.rejects(
-      () => manager.fetch('https://record-store.test/albums/bbq', {}),
+      () => manager.fetch('https://record-store.test/albums/overpass-stereo', {}),
       scope.signal.reason,
     )
   })

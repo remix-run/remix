@@ -1,23 +1,23 @@
 import type { Handle } from 'remix/component'
 import { Frame, attrs, css } from 'remix/component'
 
-import type { Album } from '../../data/schema.ts'
+import type { Album, AlbumTrack } from '../../data/schema.ts'
 import type { AlbumImage } from '../../utils/album-images.ts'
 import { getAlbumGenreLabel } from '../../data/album-genres.ts'
 import { routes } from '../../routes.ts'
 import { ImageCarousel, faceoutImageSizes } from './public/image-carousel.tsx'
-import { albumCoverTransition } from '../../ui/album-transitions.ts'
 import { Layout } from '../../ui/layout.tsx'
 
 export interface ShowPageProps {
   album: Album
+  tracks: AlbumTrack[]
   imageUrls: AlbumImage[]
   startIndex: number
 }
 
 export function ShowPage(handle: Handle<ShowPageProps>) {
   return () => {
-    let { album, imageUrls, startIndex } = handle.props
+    let { album, tracks, imageUrls, startIndex } = handle.props
     let mainImage = imageUrls[startIndex]
 
     return (
@@ -67,30 +67,22 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
             </p>
 
             <div
-              data-album-faceout={album.id}
-              mix={[
-                albumCoverTransition(album.id),
-                css({
-                  // Keep one carousel mounted as it moves into the card on small screens.
-                  position: 'absolute',
-                  top: 0,
-                  left: 'calc(-300px - 2rem)',
-                  width: '300px',
-                  aspectRatio: '1 / 1',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                  overflow: 'hidden',
-                  '@media (max-width: 768px)': {
-                    position: 'relative',
-                    left: 'auto',
-                    width: '100%',
-                    maxWidth: '300px',
-                    margin: '1rem 0',
-                  },
-                }),
-              ]}
+              mix={css({
+                // Keep one carousel mounted as it moves into the card on small screens.
+                position: 'absolute',
+                top: 0,
+                left: 'calc(-300px - 2rem)',
+                width: '300px',
+                '@media (max-width: 768px)': {
+                  position: 'relative',
+                  left: 'auto',
+                  width: '100%',
+                  maxWidth: '300px',
+                  margin: '1rem 0',
+                },
+              })}
             >
-              <ImageCarousel images={imageUrls} startIndex={startIndex} />
+              <ImageCarousel albumId={album.id} images={imageUrls} startIndex={startIndex} />
             </div>
 
             <p class="price" mix={css({ fontSize: '2rem', margin: '1rem 0' })}>
@@ -113,6 +105,30 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
               <p>
                 <strong>Release Year:</strong> {album.release_year}
               </p>
+              {tracks.length > 0 ? (
+                <section aria-labelledby="tracks-heading" mix={css({ marginTop: '1lh' })}>
+                  <h2 id="tracks-heading" mix={css({ fontSize: 'inherit' })}>
+                    Tracks
+                  </h2>
+                  {Array.from(
+                    Map.groupBy(tracks, (track) => track.side),
+                    ([side, sideTracks]) => (
+                      <div key={side}>
+                        <h3 mix={css({ font: 'inherit', textDecoration: 'underline' })}>
+                          Side {side}
+                        </h3>
+                        <ol mix={css({ listStylePosition: 'inside' })}>
+                          {sideTracks.map((track) => (
+                            <li key={track.position} value={track.position}>
+                              {track.title}
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    ),
+                  )}
+                </section>
+              ) : null}
             </div>
 
             {album.in_stock ? (
@@ -127,16 +143,6 @@ export function ShowPage(handle: Handle<ShowPageProps>) {
                 This record is currently out of stock.
               </p>
             )}
-
-            <p mix={css({ marginTop: '1.5rem' })}>
-              <a
-                data-rmx-prefetch="intent"
-                href={routes.albums.index.href()}
-                class="btn btn-secondary"
-              >
-                Back to Records
-              </a>
-            </p>
           </div>
           <section
             class="card"

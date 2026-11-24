@@ -14,6 +14,20 @@ import { uploadsStorage as uploads } from '../utils/uploads.ts'
 const router = await createTestRouter()
 
 describe('root controller', () => {
+  it('GET /search defers later responsive album covers', async () => {
+    let response = await router.fetch('https://remix.run/search?q=a')
+    assert.equal(response.status, 200)
+    let html = await response.text()
+    let covers = [...html.matchAll(/<img\b[^>]*loading="(eager|lazy)"[^>]*>/g)]
+    assert.ok(covers.length > 4)
+    assert.deepEqual(
+      covers.slice(0, 4).map((cover) => cover[1]),
+      Array(4).fill('eager'),
+    )
+    assert.ok(covers.slice(4).every((cover) => cover[1] === 'lazy'))
+    assert.ok(covers.every((cover) => cover[0].includes('srcset=') && cover[0].includes('sizes=')))
+  })
+
   it('GET / returns the first four albums in catalog order', async () => {
     let response = await router.fetch('https://remix.run/')
 
