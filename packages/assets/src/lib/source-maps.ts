@@ -63,12 +63,11 @@ export function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: 
   let generator = new SourceMapGenerator()
 
   rewriteConsumer.eachMapping((mapping) => {
-    if (
-      mapping.originalLine == null ||
-      mapping.originalColumn == null ||
-      mapping.generatedLine == null ||
-      mapping.generatedColumn == null
-    ) {
+    let generated = { line: mapping.generatedLine, column: mapping.generatedColumn }
+
+    // Unmapped entries stop preceding authored mappings from extending into generated code.
+    if (mapping.originalLine == null || mapping.originalColumn == null) {
+      generator.addMapping({ generated })
       return
     }
 
@@ -76,13 +75,13 @@ export function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: 
       line: mapping.originalLine,
       column: mapping.originalColumn,
     })
-    if (original.line == null || original.column == null || original.source == null) return
+    if (original.line == null || original.column == null || original.source == null) {
+      generator.addMapping({ generated })
+      return
+    }
 
     generator.addMapping({
-      generated: {
-        line: mapping.generatedLine,
-        column: mapping.generatedColumn,
-      },
+      generated,
       original: {
         line: original.line,
         column: original.column,
