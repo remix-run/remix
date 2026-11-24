@@ -609,6 +609,16 @@ describe('vdom controlled props', () => {
     root.render(fields)
     expect(text.value).toBe('user typed')
     expect(check.checked).toBe(true)
+
+    let cleared: Record<string, unknown> = { value: null, checked: null }
+    root.render(
+      <>
+        <input id="text" {...cleared} />
+        <input id="check" type="checkbox" {...cleared} />
+      </>,
+    )
+    expect(text.value).toBe('')
+    expect(check.checked).toBe(false)
   })
 
   it('restores controlled value on native change for select when no update happens', async () => {
