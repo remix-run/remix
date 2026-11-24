@@ -171,6 +171,9 @@ export function diffNodes(
   regionTailRef = context.regionTailRef ?? currentNodes.at(-1)?.nextSibling ?? null,
 ): void {
   invariant(parent, 'Parent node not found')
+  let regionHeadRef = currentNodes.length
+    ? currentNodes[0].previousSibling
+    : (regionTailRef?.previousSibling ?? null)
   let currentUnits = parseSiblingUnits(excludePortalRanges(currentNodes, parent), context, false)
   let nextUnits = parseSiblingUnits(nextNodes, context, true)
   matchSiblingUnits(currentUnits, nextUnits, isDocumentHead(parent))
@@ -239,10 +242,10 @@ export function diffNodes(
   }
 
   let stable = getStableCommittedIndexes(nextUnits, parent)
-  let placement = new SiblingPlacement(parent, regionTailRef)
+  let placement = new SiblingPlacement(parent, regionTailRef, regionHeadRef)
   for (let i = nextUnits.length - 1; i >= 0; i--) {
     let unit = nextUnits[i]
-    if (unit.match && unit.start.parentNode !== parent) continue
+    if (unit.match && !placement.contains(unit.start)) continue
     if (stable.has(i)) placement.retain(unit.start, unit.end ?? unit.start)
     else placeSiblingUnitBefore(unit, placement)
   }
@@ -438,11 +441,13 @@ function placeSiblingUnitBefore(unit: SiblingUnit, placement: SiblingPlacement):
   let parent = placement.parent
   let ref = placement.anchor
   if (ref === undefined) return
+  if (unit.match && !placement.contains(unit.end)) return
   if (unit.start.parentNode === parent && unit.end.nextSibling === ref) {
     placement.retain(unit.start, unit.end)
     return
   }
   let nodes = collectNodeRange(unit.start, unit.end, true)
+  if (nodes.at(-1) !== unit.end) return
   // Do not stage live ranges in a fragment: that would disconnect their contents
   // before moveBefore() can preserve their browser-managed state.
   if (nodes.every((node) => canMoveBefore(parent, node))) {

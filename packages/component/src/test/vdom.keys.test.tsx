@@ -794,6 +794,43 @@ describe('vnode rendering (keys)', () => {
   })
 
   describe('focus and selection across keyed moves', () => {
+    it('does not collect past a keyed fragment whose last node was removed by a callback', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let end: Element | undefined
+      customElements.define(
+        'rmx-keyed-remove-pending-end',
+        class extends HTMLElement {
+          connectedCallback() {
+            end?.remove()
+          }
+        },
+      )
+      let s1 = <p key="s1">1</p>
+      let s2 = <p key="s2">2</p>
+      let left = (
+        <Fragment key="left">
+          <span>Kept</span>
+          <span id="pending-end">End</span>
+        </Fragment>
+      )
+      let trigger = createElement('rmx-keyed-remove-pending-end', { key: 'trigger' })
+      let view = (items: RemixNode[]) => (
+        <>
+          <Fragment key="list">{items}</Fragment>
+          <aside key="outside">Outside</aside>
+        </>
+      )
+      render(view([s1, s2, left, trigger]))
+      let [first, second, kept, last, custom, outside] = Array.from(container.children)
+      end = last
+
+      render(view([left, trigger, s1, s2]))
+
+      expect(last.parentNode).toBe(null)
+      expectNodeOrder(container.children, [custom, first, second, kept, outside])
+    })
+
     it(
       'recovers inside a keyed list when a move callback removes itself and its anchor',
       { skip: typeof Element.prototype.moveBefore !== 'function' },

@@ -79,6 +79,41 @@ function diffDom(
 describe('diffNodes', () => {
   describe('state-preserving moves', () => {
     it(
+      'does not collect past a live boundary whose end was removed by a move callback',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      (t) => {
+        let container = document.createElement('div')
+        document.body.append(container)
+        t.after(() => container.remove())
+        let end: ChildNode | undefined
+        customElements.define(
+          'rmx-frame-remove-pending-end',
+          class extends HTMLElement {
+            connectedMoveCallback() {
+              end?.remove()
+            }
+          },
+        )
+        let stable = '<p data-rmx-key="s1">1</p><p data-rmx-key="s2">2</p>'
+        let left = '<!-- rmx:h:left --><span>Kept</span><!-- /rmx:h -->'
+        let trigger =
+          '<rmx-frame-remove-pending-end data-rmx-key="m"></rmx-frame-remove-pending-end>'
+        container.innerHTML = stable + left + trigger + '<aside>Outside</aside>'
+        let [first, second, start, kept, last, custom, outside] = Array.from(container.childNodes)
+        invariant(start instanceof Comment)
+        attachClientEntryOwner(start)
+        end = last
+
+        diffDom(container, left + trigger + stable + '<aside>Outside</aside>', {
+          h: { left: { moduleUrl: '/entry.js', exportName: 'Entry', props: {} } },
+        })
+
+        expect(last.parentNode).toBe(null)
+        expectNodeOrder(container.childNodes, [custom, first, second, start, kept, outside])
+      },
+    )
+
+    it(
       'keeps callback-created siblings inside a moved boundary and disposes them with it',
       { skip: typeof Element.prototype.moveBefore !== 'function' },
       (t) => {

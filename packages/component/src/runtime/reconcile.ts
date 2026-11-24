@@ -1750,7 +1750,10 @@ function patchKeyedChildren(
   }
 
   stableCursor = stableIndexes.length - 1
-  let placement = new SiblingPlacement(domParent, anchor ?? null)
+  let owner = vParent
+  while (owner.kind === 'fragment' || owner.kind === 'component') owner = owner._parent
+  let start = owner.kind === 'root' || owner.kind === 'portal' ? (owner._rangeStart ?? null) : null
+  let placement = new SiblingPlacement(domParent, anchor ?? null, start)
 
   for (let index = next.length - 1; index >= 0; index--) {
     let nextNode = committedChildren[index]
@@ -1886,10 +1889,10 @@ function placeVNode(node: CommittedVNode, placement: SiblingPlacement): void {
   let anchor = placement.anchor
   if (anchor === undefined) return
   let firstDom = findFirstDomAnchor(node)
-  if (!firstDom || firstDom.parentNode !== domParent) return
+  if (!firstDom || !placement.contains(firstDom)) return
 
   let lastDom = findLastDomAnchor(node)
-  if (!lastDom) return
+  if (!lastDom || !placement.contains(lastDom)) return
   if (anchor && domRangeContainsNode(firstDom, lastDom, anchor)) {
     placement.retain(firstDom, lastDom)
     return
@@ -1973,21 +1976,50 @@ export function moveNodeBefore(parent: ParentNode, node: Node, before: Node | nu
 export class SiblingPlacement {
   readonly parent: ParentNode
   #end: Node | null
+  #start: Node | null
   #anchors: Node[] = []
 
-  constructor(parent: ParentNode, end: Node | null) {
+  constructor(parent: ParentNode, end: Node | null, start: Node | null = null) {
     this.parent = parent
     this.#end = end
+    this.#start = start
   }
 
   get anchor(): Node | null | undefined {
     // Losing the owning region's boundary must not turn a move into a parent-wide append.
     if (this.#end && this.#end.parentNode !== this.parent) return undefined
-    return getRetainedNode(this.parent, this.#anchors) ?? this.#end
+    if (this.#start && this.#start.parentNode !== this.parent) return undefined
+    if (
+      this.#start &&
+      this.#end &&
+      !(this.#start.compareDocumentPosition(this.#end) & Node.DOCUMENT_POSITION_FOLLOWING)
+    )
+      return undefined
+    return this.getRetainedNode(this.#anchors) ?? this.#end
+  }
+
+  contains(node: Node): boolean {
+    return (
+      node.parentNode === this.parent &&
+      (!this.#start ||
+        (this.#start.parentNode === this.parent &&
+          !!(this.#start.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING))) &&
+      (!this.#end ||
+        (this.#end.parentNode === this.parent &&
+          !!(node.compareDocumentPosition(this.#end) & Node.DOCUMENT_POSITION_FOLLOWING)))
+    )
+  }
+
+  getRetainedNode(nodes: Node[]): Node | undefined {
+    while (nodes.length) {
+      let node = nodes.at(-1)
+      if (node && this.contains(node)) return node
+      nodes.pop()
+    }
   }
 
   retain(first: Node | null, last = first): void {
-    if (first?.parentNode !== this.parent) return
+    if (!first || !this.contains(first)) return
     if (!last || first === last || last.parentNode !== this.parent) {
       this.#anchors.push(first)
       return
@@ -2006,14 +2038,6 @@ export class SiblingPlacement {
   }
 }
 
-function getRetainedNode(parent: ParentNode, nodes: Node[]): Node | undefined {
-  while (nodes.length) {
-    let node = nodes.at(-1)
-    if (node?.parentNode === parent) return node
-    nodes.pop()
-  }
-}
-
 export function moveNodesBefore(placement: SiblingPlacement, nodes: Node[]): void {
   let parent = placement.parent
   let before = placement.anchor
@@ -2024,7 +2048,7 @@ export function moveNodesBefore(placement: SiblingPlacement, nodes: Node[]): voi
     moveNodeBefore(parent, end, before)
     for (let node of nodes) {
       if (node === end || end.parentNode !== parent) break
-      if (node.parentNode === parent && node.nextSibling !== end) moveNodeBefore(parent, node, end)
+      if (placement.contains(node) && node.nextSibling !== end) moveNodeBefore(parent, node, end)
     }
     for (let i = nodes.length - 1; i >= 0; i--) placement.retain(nodes[i])
     return
@@ -2033,10 +2057,10 @@ export function moveNodesBefore(placement: SiblingPlacement, nodes: Node[]): voi
   // Keep source-order callbacks for unmarked ranges, anchoring after the retained prefix.
   let placed: Node[] = []
   for (let node of nodes) {
-    if (node.parentNode !== parent) continue
+    if (!placement.contains(node)) continue
     let fallback = placement.anchor
     if (fallback === undefined) break
-    let previous = getRetainedNode(parent, placed)
+    let previous = placement.getRetainedNode(placed)
     let ref = previous ? previous.nextSibling : fallback
     if (node !== ref && node.nextSibling !== ref) moveNodeBefore(parent, node, ref)
     placed.push(node)
@@ -2045,6 +2069,7 @@ export function moveNodesBefore(placement: SiblingPlacement, nodes: Node[]): voi
 }
 
 function collectDomRange(domParent: ParentNode, first: Node, last: Node): Node[] {
+  if (first.parentNode !== domParent || last.parentNode !== domParent) return []
   let nodes: Node[] = []
   let portals = portalContainers.get(domParent)
   let current: Node | null = first
@@ -2060,7 +2085,7 @@ function collectDomRange(domParent: ParentNode, first: Node, last: Node): Node[]
     if (current === last) break
     current = next
   }
-  return nodes
+  return nodes.at(-1) === last ? nodes : []
 }
 
 export function setActiveSchedulerUpdateParents(parents: ParentNode[] | undefined) {

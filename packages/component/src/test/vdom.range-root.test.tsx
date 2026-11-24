@@ -1,11 +1,116 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import type { Handle } from '../runtime/component.ts'
+import { Fragment, type Handle } from '../runtime/component.ts'
 import { createRangeRoot } from '../runtime/vdom.ts'
+import { createElement } from '../runtime/create-element.ts'
 import { invariant } from '../runtime/invariant.ts'
+import { expectNodeOrder } from './utils.ts'
 import { on } from '../index.ts'
 
 describe('createRangeRoot', () => {
+  it('keeps later fragment nodes inside the range after a fallback callback moves outside', (t) => {
+    let container = document.createElement('div')
+    document.body.append(container)
+    let start = document.createComment('start')
+    let end = document.createComment('end')
+    let outside = document.createElement('aside')
+    container.append(start, end, outside)
+    Object.defineProperty(container, 'moveBefore', { value: undefined })
+    let root = createRangeRoot([start, end])
+    t.after(() => {
+      root.dispose()
+      container.remove()
+    })
+    let armed = false
+    customElements.define(
+      'rmx-range-fallback-move-outside',
+      class extends HTMLElement {
+        connectedCallback() {
+          if (!armed) return
+          armed = false
+          container.append(this)
+        }
+      },
+    )
+    let moving = (
+      <Fragment key="a">
+        first{createElement('rmx-range-fallback-move-outside', {})}
+        <span>Kept</span>last
+      </Fragment>
+    )
+    let b = <p key="b">B</p>
+    let c = <p key="c">C</p>
+    root.render([b, c, moving])
+    let [, first, second, text, custom, kept, last] = Array.from(container.childNodes)
+    armed = true
+
+    root.render([moving, b, c])
+
+    expectNodeOrder(container.childNodes, [
+      start,
+      text,
+      kept,
+      last,
+      first,
+      second,
+      end,
+      outside,
+      custom,
+    ])
+  })
+
+  it(
+    'keeps later fragment nodes inside the range after a native callback moves before it',
+    { skip: typeof Element.prototype.moveBefore !== 'function' },
+    (t) => {
+      let container = document.createElement('div')
+      document.body.append(container)
+      let outsideBefore = document.createElement('header')
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      let outsideAfter = document.createElement('aside')
+      container.append(outsideBefore, start, end, outsideAfter)
+      let root = createRangeRoot([start, end])
+      t.after(() => {
+        root.dispose()
+        container.remove()
+      })
+      customElements.define(
+        'rmx-range-native-move-before',
+        class extends HTMLElement {
+          connectedMoveCallback() {
+            container.prepend(this)
+          }
+        },
+      )
+      let moving = (
+        <Fragment key="a">
+          first{createElement('rmx-range-native-move-before', {})}
+          <span>Kept</span>last
+        </Fragment>
+      )
+      let b = <p key="b">B</p>
+      let c = <p key="c">C</p>
+      root.render([b, c, moving])
+      let [, , first, second, text, custom, kept, last] = Array.from(container.childNodes)
+
+      root.render([moving, b, c])
+
+      expectNodeOrder(container.childNodes, [
+        custom,
+        outsideBefore,
+        start,
+        text,
+        kept,
+        last,
+        first,
+        second,
+        end,
+        outsideAfter,
+      ])
+    },
+  )
+
   describe('event forwarding', () => {
     it('forwards bubbling DOM error events to range root listeners', () => {
       let host = document.createElement('div')
