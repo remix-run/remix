@@ -1072,10 +1072,11 @@ describe('navigate', () => {
     button.setAttribute('data-rmx-reset-focus', 'after-transition')
     form.append(button)
     document.body.append(form)
-    submitFormWithoutNavigating(form, button)
     let intercept = mock.fn()
 
-    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+    dispatchNavigation(
+      createFormNavigateEvent(form, { intercept, destinationUrl: form.action, submitter: button }),
+    )
 
     expect(intercept.mock.calls[0]?.arguments[0]?.scroll).toBe('after-transition')
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
@@ -1121,10 +1122,11 @@ describe('navigate', () => {
     button.setAttribute('data-rmx-reset-focus', 'false')
     form.append(button)
     document.body.append(form)
-    submitFormWithoutNavigating(form, button)
     let intercept = mock.fn()
 
-    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+    dispatchNavigation(
+      createFormNavigateEvent(form, { intercept, destinationUrl: form.action, submitter: button }),
+    )
 
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('manual')
   })
@@ -1138,10 +1140,11 @@ describe('navigate', () => {
     button.setAttribute('data-rmx-reset-focus', 'true')
     form.append(button)
     document.body.append(form)
-    submitFormWithoutNavigating(form, button)
     let intercept = mock.fn()
 
-    dispatchNavigation(createFormNavigateEvent(form, { intercept, destinationUrl: form.action }))
+    dispatchNavigation(
+      createFormNavigateEvent(form, { intercept, destinationUrl: form.action, submitter: button }),
+    )
 
     expect(intercept).toHaveBeenCalledTimes(1)
     expect(intercept.mock.calls[0]?.arguments[0]?.focusReset).toBe('after-transition')
@@ -2682,8 +2685,12 @@ describe('frame navigation sources', () => {
     button.setAttribute('data-rmx-src', 'https://frames.example/partial')
     form.append(button)
     document.body.append(form)
-    submitFormWithoutNavigating(form, button)
-    let event = createFormNavigateEvent(form, { destinationUrl: form.action, intercept })
+    t.after(() => form.remove())
+    let event = createFormNavigateEvent(form, {
+      destinationUrl: form.action,
+      submitter: button,
+      intercept,
+    })
     Object.assign(event, { scroll() {} })
     let transition = dispatch(event)
     await transition.runHandler()
@@ -3301,26 +3308,20 @@ function waitForNavigationSuccess(): Promise<void> {
   })
 }
 
-function submitFormWithoutNavigating(form: HTMLFormElement, submitter: HTMLButtonElement): void {
-  // Firefox runs the default action of a synthetic submit event on a connected form.
-  form.addEventListener('submit', () => form.remove(), { once: true })
-  form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter }))
-  new FormData(form, submitter)
-}
-
 function createFormNavigateEvent(
   form: HTMLFormElement,
   options: {
     intercept: (options?: NavigationInterceptOptions) => void
     destinationUrl: string
     cancelable?: boolean
+    submitter?: HTMLButtonElement
   },
 ): Event {
   return Object.assign(new Event('navigate', { cancelable: options.cancelable }), {
     canIntercept: true,
     navigationType: 'push',
-    sourceElement: form,
-    formData: new FormData(form),
+    sourceElement: options.submitter ?? form,
+    formData: new FormData(form, options.submitter),
     signal: new AbortController().signal,
     destination: {
       url: options.destinationUrl,
