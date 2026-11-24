@@ -206,7 +206,6 @@ export interface StyleProps extends AllStyleProperties, DOMStyleProperties {
 // Custom properties are case-sensitive, so they're returned as written.
 // Property names repeat constantly across renders; cache conversions instead
 // of running a regex each time.
-const CAMEL_TO_KEBAB_CACHE_LIMIT = 256
 const camelToKebabCache = new Map<string, string>()
 
 export function camelToKebab(str: string): string {
@@ -216,10 +215,7 @@ export function camelToKebab(str: string): string {
     cached = str
       .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
       .replace(/^(webkit|moz|ms|o)-/, '-$1-')
-    if (camelToKebabCache.size >= CAMEL_TO_KEBAB_CACHE_LIMIT) {
-      let oldest = camelToKebabCache.keys().next()
-      if (!oldest.done) camelToKebabCache.delete(oldest.value)
-    }
+    if (camelToKebabCache.size > 255) camelToKebabCache.clear()
     camelToKebabCache.set(str, cached)
   }
   return cached
