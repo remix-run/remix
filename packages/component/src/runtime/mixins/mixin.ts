@@ -432,8 +432,11 @@ export class MixinRuntime
     this.#slots.delete(slot)
     if (slot === this.#active) this.#active = undefined
     if (!this.#slots.size && this.#phases) {
-      for (let type of this.#phases)
-        removeSchedulerPhaseListener(this.#scheduler, type, this.#onPhase)
+      for (let type of this.#phases) {
+        let phase = getPhaseListeners(this.#scheduler)[type]
+        phase.delete(this.#onPhase)
+        if (!phase.size) this.#scheduler.removeEventListener(type, phase)
+      }
       this.#phases = undefined
     }
   }
@@ -536,7 +539,9 @@ export class MixinRuntime
       return
     this.#phases ??= new Set()
     this.#phases.add(type)
-    addSchedulerPhaseListener(this.#scheduler, type, this.#onPhase)
+    let phase = getPhaseListeners(this.#scheduler)[type]
+    phase.add(this.#onPhase)
+    if (phase.size === 1) this.#scheduler.addEventListener(type, phase)
   }
 
   removeEventListener(
@@ -563,51 +568,29 @@ export class MixinRuntime
   }
 }
 
-type SchedulerPhaseListeners = Record<SchedulerPhaseType, Set<EventListener>> & {
-  dispatch: EventListener
-}
-
-// Browser EventTarget add/remove scan every registered listener, so handles share
-// one scheduler listener per phase instead of each registering their own.
-const schedulerPhaseListeners = new WeakMap<Scheduler, SchedulerPhaseListeners>()
-
-function addSchedulerPhaseListener(
-  scheduler: Scheduler,
-  type: SchedulerPhaseType,
-  listener: EventListener,
-) {
-  let record = schedulerPhaseListeners.get(scheduler)
-  if (!record) {
-    let created: SchedulerPhaseListeners = {
-      beforeUpdate: new Set(),
-      commit: new Set(),
-      dispatch(event) {
-        let listeners = created[event.type as SchedulerPhaseType]
-        for (let listener of Array.from(listeners)) {
-          if (!listeners.has(listener)) continue
-          try {
-            listener(event)
-          } catch (error) {
-            reportError(error)
-          }
-        }
-      },
+// EventTarget scans its listeners on add/remove. Share one listener per scheduler phase.
+class PhaseListeners extends Set<EventListener> {
+  handleEvent(event: Event) {
+    for (let listener of Array.from(this)) {
+      if (!this.has(listener)) continue
+      try {
+        listener(event)
+      } catch (error) {
+        reportError(error)
+      }
     }
-    record = created
-    schedulerPhaseListeners.set(scheduler, record)
   }
-  record[type].add(listener)
-  if (record[type].size === 1) scheduler.addEventListener(type, record.dispatch)
 }
 
-function removeSchedulerPhaseListener(
-  scheduler: Scheduler,
-  type: SchedulerPhaseType,
-  listener: EventListener,
-) {
-  let record = schedulerPhaseListeners.get(scheduler)
-  if (!record?.[type].delete(listener)) return
-  if (record[type].size === 0) scheduler.removeEventListener(type, record.dispatch)
+const schedulerPhases = new WeakMap<Scheduler, Record<SchedulerPhaseType, PhaseListeners>>()
+
+function getPhaseListeners(scheduler: Scheduler) {
+  let phases = schedulerPhases.get(scheduler)
+  if (!phases) {
+    phases = { beforeUpdate: new PhaseListeners(), commit: new PhaseListeners() }
+    schedulerPhases.set(scheduler, phases)
+  }
+  return phases
 }
 
 function normalizeMixinRunner(result: AnyMixinSetupResult, handle: AnyMixinHandle): AnyMixinRunner {
@@ -665,12 +648,9 @@ export function composeMixedProps(
       continue
     }
 
-    let resultType =
-      typeof result.type === 'string'
-        ? result.type
-        : isMixinElementFunction(result.type)
-          ? result.type.__rmxMixinElementType
-          : null
+    let resultType = isMixinElementFunction(result.type)
+      ? result.type.__rmxMixinElementType
+      : result.type
     if (resultType !== hostType) {
       console.error(new Error('mixins must return an element with the same host type'))
       continue
@@ -737,31 +717,21 @@ export function isMixinDescriptor(value: unknown): value is MixDescriptor {
   return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
 }
 
-export function isMixinElementFunction(
+function isMixinElementFunction(
   value: unknown,
 ): value is ((...args: unknown[]) => unknown) & { __rmxMixinElementType: string } {
-  if (typeof value !== 'function') return false
-  return '__rmxMixinElementType' in value
+  return typeof value === 'function' && '__rmxMixinElementType' in value
 }
 
 function appendMixDescriptors(value: unknown, output: MixDescriptor[]): boolean {
-  if (!value) {
-    return true
-  }
-
+  if (!value) return true
   if (Array.isArray(value)) {
     for (let item of value) {
-      if (!appendMixDescriptors(item, output)) {
-        return false
-      }
+      if (!appendMixDescriptors(item, output)) return false
     }
     return true
   }
-
-  if (!isMixinDescriptor(value)) {
-    return false
-  }
-
+  if (!isMixinDescriptor(value)) return false
   output.push(value)
   return true
 }

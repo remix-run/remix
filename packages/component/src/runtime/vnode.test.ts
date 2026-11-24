@@ -6,6 +6,7 @@ import { jsx } from './core/vnode.ts'
 import { Frame } from './frame.ts'
 import { Portal, type PortalProps } from './component.ts'
 import { toVNode } from './reconcile.ts'
+import { unsafeHTML } from './unsafe-html.ts'
 import type {
   CommittedComponentNode,
   CommittedFrameNode,
@@ -77,6 +78,22 @@ describe('VNode lifecycle types', () => {
       /Invalid innerHTML prop: expected a value created with unsafeHTML\(\)/,
     )
     assert.throws(() => toVNode(jsx('div', { mix: {} })), /Invalid mix prop/)
+  })
+
+  it('validates nested host children before a render starts', () => {
+    assert.throws(() => toVNode([{}]), /Unexpected RemixNode/)
+    assert.throws(
+      () => toVNode(jsx('div', { children: [jsx('p', {}), [{}]] })),
+      /Invalid host children/,
+    )
+  })
+
+  it('validates children even when raw HTML or a Portal defers their rendering', () => {
+    assert.throws(
+      () => toVNode(jsx('div', { innerHTML: unsafeHTML(''), children: {} })),
+      /Invalid host children/,
+    )
+    assert.throws(() => toVNode(jsx(Portal, { children: {} })), /Invalid host children/)
   })
 
   it('rejects a null Portal destination instead of using the body', () => {

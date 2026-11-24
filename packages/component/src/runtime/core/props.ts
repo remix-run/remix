@@ -2,39 +2,22 @@ import type { ElementProps } from './vnode.ts'
 import { camelToKebab, isStyleObject, normalizeCssValue } from '../../style/stylesheet.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
+const RESERVED_HOST_PROPS = new Set([
+  'children',
+  'mix',
+  'key',
+  'animate',
+  'innerHTML',
+  'class',
+  'className',
+])
 
-function skipHostProp(name: string): boolean {
+function skipHostProp(name: string, dom: Element): boolean {
   return (
-    name === 'children' ||
-    name === 'mix' ||
-    name === 'key' ||
-    name === 'animate' ||
-    name === 'innerHTML' ||
-    name === 'class' ||
-    name === 'className' ||
-    !isAllowedHostPropName(name)
+    RESERVED_HOST_PROPS.has(name) ||
+    !isAllowedHostPropName(name) ||
+    (name === 'defaultValue' && dom instanceof HTMLSelectElement)
   )
-}
-
-function removeAttribute(dom: Element, attr: string, ns?: string): void {
-  if (ns) dom.removeAttributeNS(ns, attr.slice(attr.indexOf(':') + 1))
-  else dom.removeAttribute(attr)
-}
-
-function clearRuntimePropertyOnRemoval(dom: Element & Record<string, unknown>, name: string): void {
-  try {
-    if (name === 'value' || name === 'defaultValue') {
-      dom[name] = ''
-      return
-    }
-    if (name === 'checked' || name === 'defaultChecked' || name === 'selected') {
-      dom[name] = false
-      return
-    }
-    if (name === 'selectedIndex') {
-      dom[name] = -1
-    }
-  } catch {}
 }
 
 /**
@@ -59,33 +42,16 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
   }
 
   for (let name in curr) {
-    if (skipHostProp(name)) continue
-    if (name === 'defaultValue' && dom instanceof HTMLSelectElement) continue
-    if (name in next && next[name] != null) continue
-    if ((name === 'value' || name === 'checked') && curr[name] === undefined) {
-      if (next[name] === undefined || (name === 'value' && dom instanceof HTMLSelectElement))
-        continue
-    }
-
-    let { ns, attr } = normalizeAttributeName(name, isSvg)
-    if (canUseProperty(dom, name, isSvg, attr)) {
-      clearRuntimePropertyOnRemoval(dom, name)
-    }
-
-    removeAttribute(dom, attr, ns)
+    if (skipHostProp(name, dom)) continue
+    let value = next[name]
+    if (value == null) patchHostProp(dom, name, value, curr[name], isSvg)
   }
-
   for (let name in next) {
-    if (skipHostProp(name)) continue
-    if (name === 'defaultValue' && dom instanceof HTMLSelectElement) continue
-
-    let nextValue = next[name]
-    if (nextValue == null) continue
-
-    let prevValue = curr[name]
-    if (prevValue === nextValue) continue
-
-    patchHostProp(dom, name, nextValue, prevValue, isSvg)
+    if (skipHostProp(name, dom)) continue
+    let value = next[name]
+    if (value == null) continue
+    let previous = curr[name]
+    if (value !== previous) patchHostProp(dom, name, value, previous, isSvg)
   }
 
   if (dom instanceof HTMLSelectElement && wasMultiple !== dom.multiple && next.value == null) {
@@ -100,7 +66,26 @@ function patchHostProp(
   previous: unknown,
   isSvg: boolean,
 ): void {
-  let { ns, attr } = normalizeAttributeName(name, isSvg)
+  let { attr, ns } = normalizeAttributeName(name, isSvg)
+  if (value == null) {
+    if (
+      (name === 'value' || name === 'checked') &&
+      previous === undefined &&
+      (value === undefined || (name === 'value' && dom instanceof HTMLSelectElement))
+    )
+      return
+    if (canUseProperty(dom, name, isSvg, attr)) {
+      try {
+        if (name === 'value' || name === 'defaultValue') dom[name] = ''
+        else if (name === 'checked' || name === 'defaultChecked' || name === 'selected')
+          dom[name] = false
+        else if (name === 'selectedIndex') dom[name] = -1
+      } catch {}
+    }
+    removeAttribute(dom, attr, ns)
+    return
+  }
+
   value = sanitizeUrlAttribute(dom.localName, attr, value)
 
   if (name === 'value' && dom instanceof HTMLSelectElement) {
@@ -153,6 +138,11 @@ function patchHostProp(
   } else {
     removeAttribute(dom, attr, ns)
   }
+}
+
+function removeAttribute(dom: Element, attr: string, ns?: string): void {
+  if (ns) dom.removeAttributeNS(ns, attr.slice(attr.indexOf(':') + 1))
+  else dom.removeAttribute(attr)
 }
 
 function patchStyleObject(
@@ -273,55 +263,41 @@ export function sanitizeUrlAttribute(tagName: string, attrName: string, value: u
   return JAVASCRIPT_PROTOCOL.test(String(value)) ? BLOCKED_JAVASCRIPT_URL : value
 }
 
-export function canUseProperty(
+function canUseProperty(
   element: Element,
   name: string,
   isSvg: boolean,
   attr: string,
 ): element is Element & Record<string, unknown> {
-  if (isSvg) return false
-  if (ATTRIBUTE_FALLBACK_NAMES.has(name)) return false
-  if (BOOLEANISH_STRING_ATTRIBUTES.has(attr)) return false
-  return name in element
+  return (
+    !isSvg &&
+    name in element &&
+    !ATTRIBUTE_FALLBACK_NAMES.has(name) &&
+    !BOOLEANISH_STRING_ATTRIBUTES.has(attr)
+  )
 }
 
-// Prop names repeat constantly across elements and renders; cache the
-// normalized results so the string work and object allocation happen once
-// per distinct name. Entries are shared — callers must not mutate them.
-const NORMALIZATION_CACHE_LIMIT = 256
-const htmlAttributeNameCache = new Map<string, { ns?: string; attr: string }>()
-const svgAttributeNameCache = new Map<string, { ns?: string; attr: string }>()
+type AttributeName = { attr: string; ns?: string }
 
-export function normalizeAttributeName(
-  name: string,
-  isSvg: boolean,
-): { ns?: string; attr: string } {
-  let cache = isSvg ? svgAttributeNameCache : htmlAttributeNameCache
-  let cached = cache.get(name)
-  if (cached === undefined) {
-    cached = computeAttributeName(name, isSvg)
-    if (cache.size >= NORMALIZATION_CACHE_LIMIT) {
-      let oldest = cache.keys().next()
-      if (!oldest.done) cache.delete(oldest.value)
-    }
-    cache.set(name, cached)
-  }
-  return cached
-}
+const htmlAttributeNames = new Map<string, AttributeName>()
+const svgAttributeNames = new Map<string, AttributeName>()
 
-function computeAttributeName(name: string, isSvg: boolean): { ns?: string; attr: string } {
-  if (name.startsWith('aria-') || name.startsWith('data-')) return { attr: name }
+export function normalizeAttributeName(name: string, isSvg: boolean): AttributeName {
+  if (name.startsWith('data-') || name.startsWith('aria-')) return { attr: name }
+  let cache = isSvg ? svgAttributeNames : htmlAttributeNames
+  let normalized = cache.get(name)
+  if (normalized) return normalized
 
-  if (name === 'className') return { attr: 'class' }
+  if (name === 'className') normalized = { attr: 'class' }
+  else if (isSvg) normalized = SVG_ATTR_ALIASES.get(name) ?? { attr: svgCamelToKebab(name) }
+  else if (name === 'htmlFor') normalized = { attr: 'for' }
+  else if (name === 'acceptCharset') normalized = { attr: 'accept-charset' }
+  else if (name === 'httpEquiv') normalized = { attr: 'http-equiv' }
+  else normalized = { attr: name.toLowerCase() }
 
-  if (!isSvg) {
-    if (name === 'htmlFor') return { attr: 'for' }
-    if (name === 'acceptCharset') return { attr: 'accept-charset' }
-    if (name === 'httpEquiv') return { attr: 'http-equiv' }
-    return { attr: name.toLowerCase() }
-  }
-
-  return normalizeSvgAttribute(name)
+  if (cache.size >= 256) cache.clear()
+  cache.set(name, normalized)
+  return normalized
 }
 
 // Remix reads these by presence, so `true` renders an empty attribute and `false` omits it.
@@ -349,7 +325,7 @@ export function serializeStyleObject(style: Record<string, unknown>): string {
   return parts.join(' ')
 }
 
-export function styleValueToCss(name: string, value: unknown): string | undefined {
+function styleValueToCss(name: string, value: unknown): string | undefined {
   if (typeof value === 'boolean') return undefined
   if (Array.isArray(value)) return value.join(', ')
   return normalizeCssValue(name, value)
@@ -361,10 +337,7 @@ export function getMergedClassName(props: ElementProps): string | undefined {
   return classAttr && className ? `${classAttr} ${className}` : classAttr || className || undefined
 }
 
-const XLINK_NS = 'http://www.w3.org/1999/xlink'
-const XML_NS = 'http://www.w3.org/XML/1998/namespace'
-
-const SVG_ATTR_ALIASES = new Map<string, string>()
+const SVG_ATTR_ALIASES = new Map<string, AttributeName>()
 for (let attr of [
   'accentHeight',
   'attributeName',
@@ -426,14 +399,6 @@ for (let attr of [
   'edgeMode',
   'diffuseConstant',
   'markerUnits',
-]) {
-  SVG_ATTR_ALIASES.set(attr, attr)
-  SVG_ATTR_ALIASES.set(svgCamelToKebab(attr), attr)
-}
-
-// Each namespaced attribute is accepted as `xlinkHref`, `xlink:href`, or `xlink-href`.
-const NAMESPACED_SVG_ATTR = /^(xlink|xmlns|xml)(?:[:-]([a-z]+)|([A-Z][a-z]+))$/
-const NAMESPACED_SVG_ATTRS = new Set([
   'xlink:href',
   'xlink:actuate',
   'xlink:arcrole',
@@ -445,23 +410,15 @@ const NAMESPACED_SVG_ATTRS = new Set([
   'xml:lang',
   'xml:space',
   'xmlns:xlink',
-])
-
-function normalizeSvgAttribute(name: string): {
-  ns?: string
-  attr: string
-} {
-  let match = NAMESPACED_SVG_ATTR.exec(name)
-  if (match) {
-    let [, prefix, separatedName, camelName] = match
-    let attr = `${prefix}:${separatedName ?? camelName.toLowerCase()}`
-    if (NAMESPACED_SVG_ATTRS.has(attr)) {
-      if (prefix === 'xmlns') return { attr }
-      return { ns: prefix === 'xlink' ? XLINK_NS : XML_NS, attr }
-    }
-  }
-
-  return { attr: SVG_ATTR_ALIASES.get(name) ?? svgCamelToKebab(name) }
+]) {
+  // xlink:href, xlinkHref, and xlink-href all refer to the same attribute.
+  let camel = attr.replace(/:([a-z])/, (_, initial: string) => initial.toUpperCase())
+  let normalized: AttributeName = { attr }
+  if (attr.startsWith('xlink:')) normalized.ns = 'http://www.w3.org/1999/xlink'
+  if (attr.startsWith('xml:')) normalized.ns = 'http://www.w3.org/XML/1998/namespace'
+  SVG_ATTR_ALIASES.set(camel, normalized)
+  SVG_ATTR_ALIASES.set(svgCamelToKebab(camel), normalized)
+  if (camel !== attr) SVG_ATTR_ALIASES.set(attr, normalized)
 }
 
 function svgCamelToKebab(input: string): string {

@@ -553,6 +553,43 @@ describe('createRangeRoot', () => {
   })
 
   describe('stateful components', () => {
+    it('inserts a previously empty component before the end of its range after a keyed reorder', async (t) => {
+      let container = document.createElement('div')
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      let outside = document.createElement('aside')
+      container.append(start, end, outside)
+      let root = createRangeRoot([start, end])
+      t.after(() => root.dispose())
+
+      let show: (() => Promise<AbortSignal>) | undefined
+      function Item(handle: Handle<{ label: string }>) {
+        let visible = false
+        show = () => {
+          visible = true
+          return handle.update()
+        }
+        return () =>
+          visible ? (
+            <>
+              <b>{handle.props.label}</b>
+              <b>two</b>
+            </>
+          ) : null
+      }
+      let row = <span key="row">row</span>
+      let item = <Item key="item" label="one" />
+      root.render([item, row])
+      root.render([row, item])
+      invariant(show)
+      await show()
+
+      expect(container.innerHTML).toBe(
+        '<!--start--><span>row</span><b>one</b><b>two</b><!--end--><aside></aside>',
+      )
+      expect(container.lastChild).toBe(outside)
+    })
+
     it('maintains component state across renders', () => {
       let container = document.createElement('div')
       let start = document.createComment('start')

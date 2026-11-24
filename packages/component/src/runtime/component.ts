@@ -465,8 +465,7 @@ type ComponentConfig = {
   type: ElementFunction
   frame: FrameHandle
   getContext: (type: ElementFunction) => unknown
-  getFrameByName: (name: string) => FrameHandle | undefined
-  getTopFrame?: () => FrameHandle | undefined
+  frames: Handle['frames']
   signal?: AbortSignal
 }
 
@@ -553,14 +552,7 @@ export function createComponent<C = NoContext>(config: ComponentConfig): Compone
       tasks.push(task)
     },
     frame: config.frame,
-    frames: {
-      get top() {
-        return config.getTopFrame?.() ?? config.frame
-      },
-      get(name: string) {
-        return config.getFrameByName(name)
-      },
-    },
+    frames: config.frames,
     context,
     get signal() {
       return config.signal ?? (connectedController ??= new AbortController()).signal

@@ -773,6 +773,7 @@ describe('vnode mixins', () => {
   })
 
   it('dispatches reclaimed on persisted reuse without rerunning insert or remove', async () => {
+    let setupCalls = 0
     let insertCalls = 0
     let reclaimedCalls = 0
     let removeCalls = 0
@@ -780,6 +781,7 @@ describe('vnode mixins', () => {
     let pending = Promise.withResolvers<void>()
 
     let withReclaimLifecycle = createMixin((handle) => {
+      setupCalls++
       handle.addEventListener('insert', () => {
         insertCalls++
       })
@@ -817,6 +819,7 @@ describe('vnode mixins', () => {
 
     expect(insertCalls).toBe(1)
     expect(reclaimedCalls).toBe(1)
+    expect(setupCalls).toBe(1)
     expect(removeCalls).toBe(0)
 
     pending.resolve()
