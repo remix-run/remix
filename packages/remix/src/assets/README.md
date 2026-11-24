@@ -350,7 +350,7 @@ let assetServer = createAssetServer({
 })
 ```
 
-When fingerprinting is enabled, assets use a `.@<fingerprint>` segment before the file extension and are served with `Cache-Control: public, max-age=31536000, immutable`.
+When fingerprinting is enabled, assets use a `.~<fingerprint>` segment before the file extension, such as `/assets/app/styles.~k3x9f2.css`, and are served with `Cache-Control: public, max-age=31536000, immutable`. Fingerprinted URLs don't change under per-segment `encodeURIComponent` canonicalization, so hosts such as Cloudflare Workers Static Assets serve them without redirecting. The asset server also accepts percent-encoded request paths and the `.@<fingerprint>` form used by earlier versions.
 
 Fingerprints are based on emitted asset contents. This allows unchanged assets to keep the same URL across deployments, but it assumes that files on disk won't change after a URL is generated, so fingerprinting requires `watch: false`.
 

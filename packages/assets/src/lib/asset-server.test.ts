@@ -2231,7 +2231,7 @@ describe('asset-server', () => {
     let css = await response.text()
 
     let rewrittenUrl = css.match(
-      /url\("(?<url>\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg\?transform=[^"]+#icon)"\)/,
+      /url\("(?<url>\/assets\/app\/images\/logo\.~[A-Za-z0-9_-]+\.svg\?transform=[^"]+#icon)"\)/,
     )?.groups?.url
     assert.ok(rewrittenUrl)
 
@@ -2315,7 +2315,7 @@ describe('asset-server', () => {
     let css = await response.text()
 
     let rewrittenUrl = css.match(
-      /url\("(?<url>\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg\?transform=[^"]+&v=1#icon)"\)/,
+      /url\("(?<url>\/assets\/app\/images\/logo\.~[A-Za-z0-9_-]+\.svg\?transform=[^"]+&v=1#icon)"\)/,
     )?.groups?.url
     assert.ok(rewrittenUrl)
 
@@ -2393,12 +2393,12 @@ describe('asset-server', () => {
     })
 
     let href = await assetServer.getHref('app/images/logo.svg')
-    assert.match(href, /^\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg$/)
+    assert.match(href, /^\/assets\/app\/images\/logo\.~[A-Za-z0-9_-]+\.svg$/)
 
     let fingerprintedResponse = await get(assetServer, href)
     assert.ok(fingerprintedResponse)
     let body = await fingerprintedResponse.bytes()
-    assert.equal(href.match(/\.@([A-Za-z0-9_-]+)\.svg/)?.[1], await hashContent(body))
+    assert.equal(href.match(/\.~([A-Za-z0-9_-]+)\.svg/)?.[1], await hashContent(body))
     assert.equal(
       fingerprintedResponse.headers.get('Cache-Control'),
       'public, max-age=31536000, immutable',
@@ -2418,7 +2418,7 @@ describe('asset-server', () => {
     })
 
     let href = await assetServer.getHref('app/images/logo.svg')
-    assert.match(href, /^\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg$/)
+    assert.match(href, /^\/assets\/app\/images\/logo\.~[A-Za-z0-9_-]+\.svg$/)
 
     let fingerprintedResponse = await get(assetServer, href)
     assert.ok(fingerprintedResponse)
@@ -2428,7 +2428,7 @@ describe('asset-server', () => {
     )
     assert.ok(fingerprintedResponse.headers.get('ETag'))
 
-    let mismatch = await get(assetServer, '/assets/app/images/logo.@wronghash.svg')
+    let mismatch = await get(assetServer, '/assets/app/images/logo.~wronghash.svg')
     assert.equal(mismatch, null)
   })
 
@@ -2493,7 +2493,7 @@ describe('asset-server', () => {
     })
     assert.match(
       href,
-      /^\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg\?transform=recolor%3A%238B5CF6$/,
+      /^\/assets\/app\/images\/logo\.~[A-Za-z0-9_-]+\.svg\?transform=recolor%3A%238B5CF6$/,
     )
 
     let fingerprintedResponse = await get(assetServer, href)
@@ -2537,7 +2537,7 @@ describe('asset-server', () => {
     })
     assert.match(
       href,
-      /^\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg\?transform=recolor%3A%238B5CF6$/,
+      /^\/assets\/app\/images\/logo\.~[A-Za-z0-9_-]+\.svg\?transform=recolor%3A%238B5CF6$/,
     )
 
     let fingerprintedResponse = await get(assetServer, href)
@@ -2550,7 +2550,7 @@ describe('asset-server', () => {
 
     let mismatch = await get(
       assetServer,
-      '/assets/app/images/logo.@wronghash.svg?transform=recolor:%238B5CF6',
+      '/assets/app/images/logo.~wronghash.svg?transform=recolor:%238B5CF6',
     )
     assert.equal(mismatch, null)
   })
@@ -2590,8 +2590,8 @@ describe('asset-server', () => {
     let purpleBody = await purpleResponse.bytes()
     let redBody = await redResponse.bytes()
 
-    let purpleFingerprint = purpleHref.match(/\.@([A-Za-z0-9_-]+)\.svg/)?.[1]
-    let redFingerprint = redHref.match(/\.@([A-Za-z0-9_-]+)\.svg/)?.[1]
+    let purpleFingerprint = purpleHref.match(/\.~([A-Za-z0-9_-]+)\.svg/)?.[1]
+    let redFingerprint = redHref.match(/\.~([A-Za-z0-9_-]+)\.svg/)?.[1]
     assert.equal(purpleFingerprint, await hashContent(purpleBody))
     assert.equal(redFingerprint, await hashContent(redBody))
     assert.notEqual(purpleFingerprint, redFingerprint)
@@ -2604,8 +2604,8 @@ describe('asset-server', () => {
 
     let appHref = await assetServer.getHref('app/styles/app.css')
     let resetHref = await assetServer.getHref('app/styles/reset.css')
-    assert.match(appHref, /^\/assets\/app\/styles\/app\.@[A-Za-z0-9_-]+\.css$/)
-    assert.match(resetHref, /^\/assets\/app\/styles\/reset\.@[A-Za-z0-9_-]+\.css$/)
+    assert.match(appHref, /^\/assets\/app\/styles\/app\.~[A-Za-z0-9_-]+\.css$/)
+    assert.match(resetHref, /^\/assets\/app\/styles\/reset\.~[A-Za-z0-9_-]+\.css$/)
 
     let response = await get(assetServer, appHref)
     assert.ok(response)
@@ -2667,7 +2667,7 @@ describe('asset-server', () => {
     let assetServer = createTestServer(dir, { fingerprint: true })
 
     let appHref = await assetServer.getHref('app/styles/app.css')
-    assert.match(appHref, /^\/assets\/app\/styles\/app\.@[A-Za-z0-9_-]+\.css$/)
+    assert.match(appHref, /^\/assets\/app\/styles\/app\.~[A-Za-z0-9_-]+\.css$/)
 
     let appResponse = await get(assetServer, appHref)
     assert.ok(appResponse)
@@ -2676,11 +2676,11 @@ describe('asset-server', () => {
 
     let appBody = await appResponse.text()
     let resetMatch = appBody.match(
-      /@import "\/assets\/app\/styles\/reset\.@([A-Za-z0-9_-]+)\.css";/,
+      /@import "\/assets\/app\/styles\/reset\.~([A-Za-z0-9_-]+)\.css";/,
     )
     assert.ok(resetMatch)
 
-    let resetResponse = await get(assetServer, `/assets/app/styles/reset.@${resetMatch[1]}.css`)
+    let resetResponse = await get(assetServer, `/assets/app/styles/reset.~${resetMatch[1]}.css`)
     assert.ok(resetResponse)
     assert.equal(resetResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
     assert.ok(resetResponse.headers.get('ETag'))
@@ -2688,7 +2688,7 @@ describe('asset-server', () => {
     let nonFingerprinted = await get(assetServer, '/assets/app/styles/reset.css')
     assert.equal(nonFingerprinted, null)
 
-    let mismatch = await get(assetServer, '/assets/app/styles/reset.@wronghash.css')
+    let mismatch = await get(assetServer, '/assets/app/styles/reset.~wronghash.css')
     assert.equal(mismatch, null)
   })
 
@@ -2700,15 +2700,15 @@ describe('asset-server', () => {
     let firstServer = createTestServer(dir, { fingerprint: true })
 
     let before = await firstServer.getPreloads('app/styles/app.css')
-    let beforeMid = before.find((url) => url.includes('/assets/app/styles/mid.@'))
-    let beforeLeaf = before.find((url) => url.includes('/assets/app/styles/leaf.@'))
+    let beforeMid = before.find((url) => url.includes('/assets/app/styles/mid.~'))
+    let beforeLeaf = before.find((url) => url.includes('/assets/app/styles/leaf.~'))
 
     await write(dir, 'app/styles/leaf.css', 'body { color: green; }\n')
 
     let secondServer = createTestServer(dir, { fingerprint: true })
     let after = await secondServer.getPreloads('app/styles/app.css')
-    let afterMid = after.find((url) => url.includes('/assets/app/styles/mid.@'))
-    let afterLeaf = after.find((url) => url.includes('/assets/app/styles/leaf.@'))
+    let afterMid = after.find((url) => url.includes('/assets/app/styles/mid.~'))
+    let afterLeaf = after.find((url) => url.includes('/assets/app/styles/leaf.~'))
 
     assert.notEqual(afterMid, beforeMid)
     assert.notEqual(afterLeaf, beforeLeaf)
@@ -2723,8 +2723,8 @@ describe('asset-server', () => {
 
     let bodyA = await (await getByFile(serverA, 'app/styles/app.css'))!.text()
     let bodyB = await (await getByFile(serverB, 'app/styles/app.css'))!.text()
-    let matchA = bodyA.match(/@import "\/assets\/app\/styles\/dep\.@([A-Za-z0-9_-]+)\.css";/)
-    let matchB = bodyB.match(/@import "\/assets\/app\/styles\/dep\.@([A-Za-z0-9_-]+)\.css";/)
+    let matchA = bodyA.match(/@import "\/assets\/app\/styles\/dep\.~([A-Za-z0-9_-]+)\.css";/)
+    let matchB = bodyB.match(/@import "\/assets\/app\/styles\/dep\.~([A-Za-z0-9_-]+)\.css";/)
 
     assert.ok(matchA && matchB)
     assert.equal(matchA[1], matchB[1])
@@ -2762,13 +2762,13 @@ describe('asset-server', () => {
     assert.ok(response)
     let body = await response.text()
     let href = await assetServer.getHref('app/styles/app.css')
-    assert.equal(href.match(/\.@([A-Za-z0-9_-]+)\.css/)?.[1], await hashContent(body))
-    let sourceMapMatch = body.match(/\/assets\/app\/styles\/app\.@([A-Za-z0-9_-]+)\.css\.map/)
+    assert.equal(href.match(/\.~([A-Za-z0-9_-]+)\.css/)?.[1], await hashContent(body))
+    let sourceMapMatch = body.match(/\/assets\/app\/styles\/app\.~([A-Za-z0-9_-]+)\.css\.map/)
     assert.ok(sourceMapMatch)
 
     let sourceMapResponse = await get(
       assetServer,
-      `/assets/app/styles/app.@${sourceMapMatch[1]}.css.map`,
+      `/assets/app/styles/app.~${sourceMapMatch[1]}.css.map`,
     )
     assert.ok(sourceMapResponse)
 
@@ -2790,22 +2790,22 @@ describe('asset-server', () => {
     let appResponse = await getByFile(assetServer, 'app/styles/app.css')
     assert.ok(appResponse)
     let appBody = await appResponse.text()
-    let appMapMatch = appBody.match(/\/assets\/app\/styles\/app\.@([A-Za-z0-9_-]+)\.css\.map/)
+    let appMapMatch = appBody.match(/\/assets\/app\/styles\/app\.~([A-Za-z0-9_-]+)\.css\.map/)
     assert.ok(appMapMatch)
 
     let resetMatch = appBody.match(
-      /@import "\/assets\/app\/styles\/reset\.@([A-Za-z0-9_-]+)\.css";/,
+      /@import "\/assets\/app\/styles\/reset\.~([A-Za-z0-9_-]+)\.css";/,
     )
     assert.ok(resetMatch)
 
-    let resetResponse = await get(assetServer, `/assets/app/styles/reset.@${resetMatch[1]}.css`)
+    let resetResponse = await get(assetServer, `/assets/app/styles/reset.~${resetMatch[1]}.css`)
     assert.ok(resetResponse)
     let resetBody = await resetResponse.text()
-    let resetMapMatch = resetBody.match(/\/assets\/app\/styles\/reset\.@([A-Za-z0-9_-]+)\.css\.map/)
+    let resetMapMatch = resetBody.match(/\/assets\/app\/styles\/reset\.~([A-Za-z0-9_-]+)\.css\.map/)
     assert.ok(resetMapMatch)
 
-    let appMap = await get(assetServer, `/assets/app/styles/app.@${appMapMatch[1]}.css.map`)
-    let resetMap = await get(assetServer, `/assets/app/styles/reset.@${resetMapMatch[1]}.css.map`)
+    let appMap = await get(assetServer, `/assets/app/styles/app.~${appMapMatch[1]}.css.map`)
+    let resetMap = await get(assetServer, `/assets/app/styles/reset.~${resetMapMatch[1]}.css.map`)
     assert.ok(appMap && resetMap)
     assert.equal(appMap.status, 200)
     assert.equal(resetMap.status, 200)
@@ -2882,7 +2882,7 @@ describe('asset-server', () => {
     )
     let consumer = new SourceMapConsumer(sourceMap)
 
-    let rewrittenImport = getLineAndColumn(compiledCode, '/assets/app/styles/reset.@')
+    let rewrittenImport = getLineAndColumn(compiledCode, '/assets/app/styles/reset.~')
     let originalImport = consumer.originalPositionFor(rewrittenImport)
     let expectedImport = getLineAndColumn(sourceText, '@import')
     assert.equal(originalImport.line, expectedImport.line)
@@ -2937,7 +2937,7 @@ describe('asset-server', () => {
     assert.equal(depResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
   })
 
-  it('fingerprints all modules with filename.@fingerprint.ext urls and returns null on mismatch', async () => {
+  it('fingerprints all modules with filename.~fingerprint.ext urls and returns null on mismatch', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     let assetServer = createTestServer(dir, { fingerprint: true })
@@ -2950,9 +2950,9 @@ describe('asset-server', () => {
     let depHref = importMap.imports['/assets/app/dep.ts']
     assert.ok(depHref)
     assert.match(body, /"\.\/dep\.ts"/)
-    assert.match(entryHref, /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/)
-    assert.equal(entryHref.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1], await hashContent(body))
-    assert.match(depHref, /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(entryHref, /\/assets\/app\/entry\.~[A-Za-z0-9_-]+\.ts/)
+    assert.equal(entryHref.match(/\.~([A-Za-z0-9_-]+)\.ts/)?.[1], await hashContent(body))
+    assert.match(depHref, /\/assets\/app\/dep\.~[A-Za-z0-9_-]+\.ts/)
 
     let depResponse = await get(assetServer, depHref)
     assert.ok(depResponse)
@@ -2962,8 +2962,147 @@ describe('asset-server', () => {
     let nonFingerprinted = await get(assetServer, '/assets/app/dep.ts')
     assert.equal(nonFingerprinted, null)
 
-    let mismatch = await get(assetServer, '/assets/app/dep.@wronghash.ts')
+    let mismatch = await get(assetServer, '/assets/app/dep.~wronghash.ts')
     assert.equal(mismatch, null)
+  })
+
+  it('emits fingerprinted URLs that are canonical under per-segment encodeURIComponent', async () => {
+    await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
+    await write(dir, 'app/dep.ts', 'export const dep = 1')
+    await write(dir, 'app/styles/app.css', '@import "./reset.css";\nbody { color: black; }\n')
+    await write(dir, 'app/styles/reset.css', 'body { color: red; }\n')
+    await write(dir, 'app/node_modules/@scope/pkg/index.ts', 'export const pkg = true')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let entry = await assetServer.getScriptEntry('app/entry.ts')
+    let importMap = await assetServer.getImportMap('app/entry.ts')
+    let styleHref = await assetServer.getHref('app/styles/app.css')
+    let packageHref = await assetServer.getHref('app/node_modules/@scope/pkg/index.ts')
+    let styleResponse = await get(assetServer, styleHref)
+    assert.ok(styleResponse)
+    let importedStyleHref = (await styleResponse.text()).match(/@import "([^"]+)";/)?.[1]
+    assert.ok(importedStyleHref)
+
+    let urls = [
+      entry.href,
+      ...entry.preloads,
+      ...Object.values(importMap.imports),
+      styleHref,
+      importedStyleHref,
+      packageHref,
+    ]
+    for (let url of urls) {
+      let canonical = url
+        .split('/')
+        .map((segment) => encodeURIComponent(decodeURIComponent(segment)))
+        .join('/')
+      assert.equal(canonical, url)
+      assert.match(url, /\.~[A-Za-z0-9_-]+\.(ts|css)$/)
+    }
+    assert.match(packageHref, /^\/assets\/app\/node_modules\/%40scope\/pkg\/index\.~/)
+  })
+
+  it('serves legacy .@ and percent-encoded fingerprinted script URLs', async () => {
+    await write(dir, 'app/entry.ts', 'export const entry = true')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let href = await assetServer.getHref('app/entry.ts')
+    let fingerprint = href.match(/\.~([A-Za-z0-9_-]+)\.ts$/)?.[1]
+    assert.ok(fingerprint)
+
+    let legacy = await get(assetServer, `/assets/app/entry.@${fingerprint}.ts`)
+    let encodedLegacy = await get(assetServer, `/assets/app/entry.%40${fingerprint}.ts`)
+    let encodedTilde = await get(assetServer, `/assets/app/entry.%7E${fingerprint}.ts`)
+    let encodedName = await get(assetServer, `/assets/app/%65ntry.~${fingerprint}.ts`)
+    for (let response of [legacy, encodedLegacy, encodedTilde, encodedName]) {
+      assert.ok(response)
+      assert.equal(response.status, 200)
+      assert.equal(response.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
+    }
+
+    let encodedMismatch = await get(assetServer, '/assets/app/entry.%40wronghash.ts')
+    assert.equal(encodedMismatch, null)
+  })
+
+  it('serves legacy .@ and percent-encoded fingerprinted style and file URLs', async () => {
+    await write(dir, 'app/styles/app.css', 'body { color: black; }\n')
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let assetServer = createTestServer(dir, {
+      files: { extensions: ['.svg'] },
+      fingerprint: true,
+    })
+
+    let styleHref = await assetServer.getHref('app/styles/app.css')
+    let styleFingerprint = styleHref.match(/\.~([A-Za-z0-9_-]+)\.css$/)?.[1]
+    let fileHref = await assetServer.getHref('app/images/logo.svg')
+    let fileFingerprint = fileHref.match(/\.~([A-Za-z0-9_-]+)\.svg$/)?.[1]
+    assert.ok(styleFingerprint)
+    assert.ok(fileFingerprint)
+
+    let legacyStyle = await get(assetServer, `/assets/app/styles/app.@${styleFingerprint}.css`)
+    let encodedStyle = await get(assetServer, `/assets/app/styles/app.%40${styleFingerprint}.css`)
+    let legacyFile = await get(assetServer, `/assets/app/images/logo.@${fileFingerprint}.svg`)
+    let encodedFile = await get(assetServer, `/assets/app/images/logo.%40${fileFingerprint}.svg`)
+    for (let response of [legacyStyle, encodedStyle, legacyFile, encodedFile]) {
+      assert.ok(response)
+      assert.equal(response.status, 200)
+      assert.equal(response.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
+    }
+  })
+
+  it('applies access control to percent-encoded fingerprinted requests', async () => {
+    let source = 'export const value = true'
+    await write(dir, 'app/allowed.ts', source)
+    await write(dir, 'app/blocked.ts', source)
+    let assetServer = createTestServer(dir, {
+      denyFiles: ['app/blocked.ts'],
+      fingerprint: true,
+    })
+
+    let href = await assetServer.getHref('app/allowed.ts')
+    let fingerprint = href.match(/\.~([A-Za-z0-9_-]+)\.ts$/)?.[1]
+    assert.ok(fingerprint)
+
+    let allowed = await get(assetServer, `/assets/app/allowed.%40${fingerprint}.ts`)
+    assert.ok(allowed)
+    assert.equal(allowed.status, 200)
+    assert.equal(await get(assetServer, `/assets/app/%62locked.%7E${fingerprint}.ts`), null)
+  })
+
+  it('decodes fingerprinted request paths once', async () => {
+    await write(dir, 'app/100%.ts', 'export const value = true')
+    let assetServer = createTestServer(dir, { fingerprint: true })
+
+    let href = await assetServer.getHref('app/100%.ts')
+    assert.match(href, /\/assets\/app\/100%25\.~[A-Za-z0-9_-]+\.ts$/)
+
+    let response = await get(assetServer, href)
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.equal(await get(assetServer, href.replace('100%25', '100%2525')), null)
+  })
+
+  it('serves files named like fingerprints when fingerprinting is disabled', async () => {
+    await write(dir, 'app/notes.~backup.ts', 'export const notes = true')
+    let assetServer = createTestServer(dir)
+
+    let href = await assetServer.getHref('app/notes.~backup.ts')
+    let response = await get(assetServer, href)
+
+    assert.equal(href, '/assets/app/notes.~backup.ts')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+  })
+
+  it('returns null for malformed percent-encoded request paths', async () => {
+    await write(dir, 'app/entry.ts', 'export const entry = true')
+    let assetServer = createTestServer(dir)
+    let fingerprintedServer = createTestServer(dir, { fingerprint: true })
+
+    assert.equal(await get(assetServer, '/assets/app/%zz.ts'), null)
+    assert.equal(await get(assetServer, '/assets/app/entry%00.ts'), null)
+    assert.equal(await get(fingerprintedServer, '/assets/app/%zz.~abc123.ts'), null)
+    assert.equal(await get(fingerprintedServer, '/assets/app/%E0%A4%A.%40abc123.ts'), null)
   })
 
   it('resolves content-fingerprinted script dependencies via import maps', async () => {
@@ -2977,10 +3116,10 @@ describe('asset-server', () => {
     let entryBody = await entryResponse.text()
     let importMap = await assetServer.getImportMap('app/entry.ts')
 
-    assert.match(entryHref, /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(entryHref, /\/assets\/app\/entry\.~[A-Za-z0-9_-]+\.ts/)
     assert.ok(entryBody.includes('"./dep.ts"'), entryBody)
     assert.equal(importMap.imports['/assets/app/entry.ts'], undefined)
-    assert.match(importMap.imports['/assets/app/dep.ts'] ?? '', /\/assets\/app\/dep\.@/)
+    assert.match(importMap.imports['/assets/app/dep.ts'] ?? '', /\/assets\/app\/dep\.~/)
 
     let depHref = importMap.imports['/assets/app/dep.ts']
     assert.ok(depHref)
@@ -2999,10 +3138,10 @@ describe('asset-server', () => {
     assert.equal(href, await assetServer.getHref('app/entry.ts'))
     assert.deepEqual(preloads, await assetServer.getPreloads('app/entry.ts'))
     assert.deepEqual(importMap, await assetServer.getImportMap('app/entry.ts'))
-    assert.match(href, /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(href, /\/assets\/app\/entry\.~[A-Za-z0-9_-]+\.ts/)
     assert.match(
       importMap.imports['/assets/app/dep.ts'] ?? '',
-      /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts/,
+      /\/assets\/app\/dep\.~[A-Za-z0-9_-]+\.ts/,
     )
   })
 
@@ -3049,7 +3188,7 @@ describe('asset-server', () => {
       await assert.rejects(assetServer.getScriptEntry('app/retried-entry.ts'), /Temporary failure/)
       fail = false
       let entry = await assetServer.getScriptEntry('app/retried-entry.ts')
-      assert.match(entry.href, /retried-entry\.@/)
+      assert.match(entry.href, /retried-entry\.~/)
     } finally {
       await assetServer.close()
     }
@@ -3174,7 +3313,7 @@ describe('asset-server', () => {
 
     assert.equal(importMap.imports['/assets/app/entry.ts'], undefined)
     assert.equal(importMap.imports['/assets/app/lazy.ts'], undefined)
-    assert.match(importMap.imports['/assets/app/shared.ts'] ?? '', /\/assets\/app\/shared\.@/)
+    assert.match(importMap.imports['/assets/app/shared.ts'] ?? '', /\/assets\/app\/shared\.~/)
   })
 
   it('maps a script root when it is imported by another module in its graph', async () => {
@@ -3188,8 +3327,8 @@ describe('asset-server', () => {
 
     let importMap = await assetServer.getImportMap('app/entry.ts')
 
-    assert.match(importMap.imports['/assets/app/entry.ts'] ?? '', /\/assets\/app\/entry\.@/)
-    assert.match(importMap.imports['/assets/app/dep.ts'] ?? '', /\/assets\/app\/dep\.@/)
+    assert.match(importMap.imports['/assets/app/entry.ts'] ?? '', /\/assets\/app\/entry\.~/)
+    assert.match(importMap.imports['/assets/app/dep.ts'] ?? '', /\/assets\/app\/dep\.~/)
   })
 
   it('maps an explicit script root when it is imported by another explicit root', async () => {
@@ -3200,7 +3339,7 @@ describe('asset-server', () => {
     let importMap = await assetServer.getImportMap(['app/entry.ts', 'app/lazy.ts'])
 
     assert.equal(importMap.imports['/assets/app/entry.ts'], undefined)
-    assert.match(importMap.imports['/assets/app/lazy.ts'] ?? '', /\/assets\/app\/lazy\.@/)
+    assert.match(importMap.imports['/assets/app/lazy.ts'] ?? '', /\/assets\/app\/lazy\.~/)
   })
 
   it('maps an explicit script root reached through an optimized barrel file import', async () => {
@@ -3219,7 +3358,7 @@ describe('asset-server', () => {
 
     assert.match(entryBody, /from "\/assets\/app\/value\.ts"/)
     let valueHref = importMap.imports['/assets/app/value.ts']
-    assert.match(valueHref ?? '', /\/assets\/app\/value\.@/)
+    assert.match(valueHref ?? '', /\/assets\/app\/value\.~/)
     assert.ok(valueHref)
     assert.equal((await get(assetServer, valueHref))?.status, 200)
   })
@@ -3258,11 +3397,11 @@ describe('asset-server', () => {
     assert.match(packageBody, /from "dep"/)
     assert.match(
       importMap.scopes?.['/assets/app/']?.['pkg'] ?? '',
-      /\/assets\/app\/node_modules\/pkg\/index\.@.*\.ts/,
+      /\/assets\/app\/node_modules\/pkg\/index\.~.*\.ts/,
     )
     assert.match(
       importMap.scopes?.['/assets/app/node_modules/pkg/']?.['dep'] ?? '',
-      /\/assets\/app\/node_modules\/pkg\/node_modules\/dep\/index\.@.*\.ts/,
+      /\/assets\/app\/node_modules\/pkg\/node_modules\/dep\/index\.~.*\.ts/,
     )
     assert.deepEqual(Object.keys(importMap.scopes ?? {}).sort(), [
       '/assets/app/',
@@ -3361,11 +3500,11 @@ describe('asset-server', () => {
 
     assert.match(
       importMap.scopes?.['/assets/app/multiple-scopes/']?.['scope-a'] ?? '',
-      /\/assets\/app\/multiple-scopes\/node_modules\/scope-a\/index\.@.*\.ts/,
+      /\/assets\/app\/multiple-scopes\/node_modules\/scope-a\/index\.~.*\.ts/,
     )
     assert.match(
       importMap.scopes?.['/assets/app/multiple-scopes/']?.['scope-b'] ?? '',
-      /\/assets\/app\/multiple-scopes\/node_modules\/scope-b\/index\.@.*\.ts/,
+      /\/assets\/app\/multiple-scopes\/node_modules\/scope-b\/index\.~.*\.ts/,
     )
   })
 
@@ -3394,7 +3533,7 @@ describe('asset-server', () => {
     assert.deepEqual(Object.keys(importMap.scopes ?? {}), ['/assets/app/'])
     assert.match(
       importMap.scopes?.['/assets/app/']?.['pkg'] ?? '',
-      /\/assets\/app\/node_modules\/pkg\/index\.@.*\.ts/,
+      /\/assets\/app\/node_modules\/pkg\/index\.~.*\.ts/,
     )
   })
 
@@ -3425,12 +3564,12 @@ describe('asset-server', () => {
     assert.deepEqual(Object.keys(initialImportMap.scopes ?? {}), ['/assets/app/'])
     assert.match(
       initialImportMap.scopes?.['/assets/app/']?.['pkg'] ?? '',
-      /\/assets\/app\/node_modules\/pkg\/index\.@.*\.ts/,
+      /\/assets\/app\/node_modules\/pkg\/index\.~.*\.ts/,
     )
     assert.deepEqual(Object.keys(lateImportMap.scopes ?? {}), ['/assets/app/features/'])
     assert.match(
       lateImportMap.scopes?.['/assets/app/features/']?.['pkg'] ?? '',
-      /\/assets\/app\/features\/node_modules\/pkg\/index\.@.*\.ts/,
+      /\/assets\/app\/features\/node_modules\/pkg\/index\.~.*\.ts/,
     )
   })
 
@@ -3567,7 +3706,7 @@ describe('asset-server', () => {
 
     assert.match(
       importMap.scopes?.['/assets/app/directory-uniform/']?.['alias'] ?? '',
-      /\/assets\/app\/directory-uniform\/target\.@.*\.ts/,
+      /\/assets\/app\/directory-uniform\/target\.~.*\.ts/,
     )
   })
 
@@ -3626,14 +3765,14 @@ describe('asset-server', () => {
     let assetServer = createTestServer(dir, { fingerprint: true })
 
     let before = await assetServer.getPreloads('app/entry.ts')
-    let beforeMid = before.find((url) => url.includes('/assets/app/mid.@'))
-    let beforeLeaf = before.find((url) => url.includes('/assets/app/leaf.@'))
+    let beforeMid = before.find((url) => url.includes('/assets/app/mid.~'))
+    let beforeLeaf = before.find((url) => url.includes('/assets/app/leaf.~'))
 
     await write(dir, 'app/leaf.ts', 'export const leaf = 2')
 
     let after = await assetServer.getPreloads('app/entry.ts')
-    let afterMid = after.find((url) => url.includes('/assets/app/mid.@'))
-    let afterLeaf = after.find((url) => url.includes('/assets/app/leaf.@'))
+    let afterMid = after.find((url) => url.includes('/assets/app/mid.~'))
+    let afterLeaf = after.find((url) => url.includes('/assets/app/leaf.~'))
 
     assert.equal(afterMid, beforeMid)
     assert.equal(afterLeaf, beforeLeaf)
@@ -3648,7 +3787,7 @@ describe('asset-server', () => {
     let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
 
     assert.match(body, /import "\.\/dep\.ts"/)
-    assert.doesNotMatch(body, /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts/)
+    assert.doesNotMatch(body, /\/assets\/app\/dep\.~[A-Za-z0-9_-]+\.ts/)
   })
 
   it('optimizes barrel file imports by rewriting named imports', async () => {
@@ -5084,23 +5223,23 @@ describe('asset-server', () => {
 
     assert.notEqual(firstEntry.href, preservedEntry.href)
     assert.equal(
-      preservedEntry.href.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1],
+      preservedEntry.href.match(/\.~([A-Za-z0-9_-]+)\.ts/)?.[1],
       await hashContent(preservedBody),
     )
     assert.equal(
-      firstEntry.href.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1],
+      firstEntry.href.match(/\.~([A-Za-z0-9_-]+)\.ts/)?.[1],
       await hashContent(firstBody),
     )
     assert.match(preservedBody, /from "\.\/barrel\.ts"/)
     assert.match(firstBody, /from "\/assets\/app\/value\.ts"/)
     assert.match(
       preservedEntry.importMap.imports['/assets/app/barrel.ts'] ?? '',
-      /\/assets\/app\/barrel\.@[A-Za-z0-9_-]+\.ts/,
+      /\/assets\/app\/barrel\.~[A-Za-z0-9_-]+\.ts/,
     )
     assert.equal(firstEntry.importMap.imports['/assets/app/barrel.ts'], undefined)
     assert.equal(preservedEntry.preloads.length, 3)
     assert.equal(firstEntry.preloads.length, 2)
-    assert.match(firstTargetHref ?? '', /\/assets\/app\/value\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(firstTargetHref ?? '', /\/assets\/app\/value\.~[A-Za-z0-9_-]+\.ts/)
 
     await write(dir, 'app/value.ts', 'export const value = 2')
     let secondServer = createTestServer(dir, { fingerprint: true })
@@ -5169,10 +5308,10 @@ describe('asset-server', () => {
     let generatedSecondImport = getLineAndColumn(secondBody, '/assets/app/second.ts')
     let originalSecondImport = consumer.originalPositionFor(generatedSecondImport)
     assert.equal(originalSecondImport.line, 1)
-    assert.match(firstEntry.preloads[1] ?? '', /\/assets\/app\/first\.@.*\.ts/)
-    assert.match(firstEntry.preloads[2] ?? '', /\/assets\/app\/second\.@.*\.ts/)
-    assert.match(secondEntry.preloads[1] ?? '', /\/assets\/app\/second\.@.*\.ts/)
-    assert.match(secondEntry.preloads[2] ?? '', /\/assets\/app\/first\.@.*\.ts/)
+    assert.match(firstEntry.preloads[1] ?? '', /\/assets\/app\/first\.~.*\.ts/)
+    assert.match(firstEntry.preloads[2] ?? '', /\/assets\/app\/second\.~.*\.ts/)
+    assert.match(secondEntry.preloads[1] ?? '', /\/assets\/app\/second\.~.*\.ts/)
+    assert.match(secondEntry.preloads[2] ?? '', /\/assets\/app\/first\.~.*\.ts/)
   })
 
   it('keeps cached source output stable until the server restarts', async () => {
@@ -5259,24 +5398,24 @@ describe('asset-server', () => {
     assert.ok(entryResponse)
     let entryBody = await entryResponse.text()
     let entryHref = await assetServer.getHref('app/entry.ts')
-    assert.equal(entryHref.match(/\.@([A-Za-z0-9_-]+)\.ts/)?.[1], await hashContent(entryBody))
-    let entryMapMatch = entryBody.match(/\/assets\/app\/entry\.@([A-Za-z0-9_-]+)\.ts\.map/)
+    assert.equal(entryHref.match(/\.~([A-Za-z0-9_-]+)\.ts/)?.[1], await hashContent(entryBody))
+    let entryMapMatch = entryBody.match(/\/assets\/app\/entry\.~([A-Za-z0-9_-]+)\.ts\.map/)
     assert.ok(entryMapMatch)
 
     let importMap = await assetServer.getImportMap('app/entry.ts')
     let depHref = importMap.imports['/assets/app/dep.ts']
     assert.ok(depHref)
-    let depMatch = depHref.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
+    let depMatch = depHref.match(/\/assets\/app\/dep\.~([A-Za-z0-9_-]+)\.ts/)
     assert.ok(depMatch)
 
     let depResponse = await get(assetServer, depHref)
     assert.ok(depResponse)
     let depBody = await depResponse.text()
-    let depMapMatch = depBody.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts\.map/)
+    let depMapMatch = depBody.match(/\/assets\/app\/dep\.~([A-Za-z0-9_-]+)\.ts\.map/)
     assert.ok(depMapMatch)
 
-    let entryMap = await get(assetServer, `/assets/app/entry.@${entryMapMatch[1]}.ts.map`)
-    let depMap = await get(assetServer, `/assets/app/dep.@${depMapMatch[1]}.ts.map`)
+    let entryMap = await get(assetServer, `/assets/app/entry.~${entryMapMatch[1]}.ts.map`)
+    let depMap = await get(assetServer, `/assets/app/dep.~${depMapMatch[1]}.ts.map`)
     assert.ok(entryMap && depMap)
     assert.equal(entryMap.status, 200)
     assert.equal(depMap.status, 200)
@@ -5587,11 +5726,11 @@ describe('asset-server', () => {
 
     assert.match(
       importMap.imports['/assets/app/features/lazy.ts'] ?? '',
-      /\/assets\/app\/features\/lazy\.@.*\.ts/,
+      /\/assets\/app\/features\/lazy\.~.*\.ts/,
     )
     assert.match(
       importMap.scopes?.['/assets/app/']?.['dynamic-pkg'] ?? '',
-      /\/assets\/app\/node_modules\/dynamic-pkg\/index\.@.*\.ts/,
+      /\/assets\/app\/node_modules\/dynamic-pkg\/index\.~.*\.ts/,
     )
   })
 
@@ -5613,9 +5752,9 @@ describe('asset-server', () => {
 
     let preloads = await assetServer.getPreloads('app/entry.ts')
 
-    assert.match(preloads[0] ?? '', /\/assets\/app\/entry\.@.*\.ts/)
-    assert.match(preloads[1] ?? '', /\/assets\/app\/static\.@.*\.ts/)
-    assert.match(preloads[2] ?? '', /\/assets\/app\/static-dep\.@.*\.ts/)
+    assert.match(preloads[0] ?? '', /\/assets\/app\/entry\.~.*\.ts/)
+    assert.match(preloads[1] ?? '', /\/assets\/app\/static\.~.*\.ts/)
+    assert.match(preloads[2] ?? '', /\/assets\/app\/static-dep\.~.*\.ts/)
     assert.equal(preloads.length, 3)
   })
 
@@ -5790,11 +5929,11 @@ describe('asset-server', () => {
     assert.ok(!body.includes('/assets/app/shared/value.ts'))
     assert.match(
       importMap.imports['/assets/app/shared/value.ts'] ?? '',
-      /\/assets\/app\/shared\/value\.@/,
+      /\/assets\/app\/shared\/value\.~/,
     )
     assert.match(
       importMap.imports['/assets/app/alias/value.ts'] ?? '',
-      /\/assets\/app\/shared\/value\.@/,
+      /\/assets\/app\/shared\/value\.~/,
     )
   })
 
@@ -5892,19 +6031,19 @@ describe('asset-server', () => {
 
     assert.match(
       await assetServer.getHref('app/entry.ts'),
-      /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/,
+      /\/assets\/app\/entry\.~[A-Za-z0-9_-]+\.ts/,
     )
     assert.match(
       await assetServer.getHref(path.join(dir, 'app/entry.ts')),
-      /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/,
+      /\/assets\/app\/entry\.~[A-Za-z0-9_-]+\.ts/,
     )
     assert.match(
       await assetServer.getHref(new URL(`file://${path.join(dir, 'app/entry.ts')}`).href),
-      /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/,
+      /\/assets\/app\/entry\.~[A-Za-z0-9_-]+\.ts/,
     )
     assert.match(
       await assetServer.getHref(entryUrl.href),
-      /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/,
+      /\/assets\/app\/entry\.~[A-Za-z0-9_-]+\.ts/,
     )
   })
 
@@ -5917,10 +6056,10 @@ describe('asset-server', () => {
     let assetServer = createTestServer(dir, { fingerprint: true })
 
     let urls = await assetServer.getPreloads('app/entry.ts')
-    assert.match(urls[0] ?? '', /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/)
-    assert.match(urls[1], /\/assets\/app\/a\.@[A-Za-z0-9_-]+\.ts/)
-    assert.match(urls[2], /\/assets\/app\/b\.@[A-Za-z0-9_-]+\.ts/)
-    assert.match(urls[3], /\/assets\/app\/c\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[0] ?? '', /\/assets\/app\/entry\.~[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[1], /\/assets\/app\/a\.~[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[2], /\/assets\/app\/b\.~[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[3], /\/assets\/app\/c\.~[A-Za-z0-9_-]+\.ts/)
   })
 
   it('getPreloads accepts arbitrary file roots', async () => {
@@ -5931,8 +6070,8 @@ describe('asset-server', () => {
     let assetServer = createTestServer(dir, { fingerprint: true })
 
     let urls = await assetServer.getPreloads('app/a.ts')
-    assert.match(urls[0] ?? '', /\/assets\/app\/a\.@[A-Za-z0-9_-]+\.ts/)
-    assert.match(urls[1], /\/assets\/app\/b\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[0] ?? '', /\/assets\/app\/a\.~[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[1], /\/assets\/app\/b\.~[A-Za-z0-9_-]+\.ts/)
   })
 
   it('getPreloads accepts multiple file paths and dedupes shared dependencies', async () => {
@@ -5943,13 +6082,13 @@ describe('asset-server', () => {
     let assetServer = createTestServer(dir, { fingerprint: true })
 
     let urls = await assetServer.getPreloads(['app/a.ts', 'app/b.ts'])
-    assert.match(urls[0] ?? '', /\/assets\/app\/a\.@[A-Za-z0-9_-]+\.ts/)
-    assert.match(urls[1] ?? '', /\/assets\/app\/b\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[0] ?? '', /\/assets\/app\/a\.~[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[1] ?? '', /\/assets\/app\/b\.~[A-Za-z0-9_-]+\.ts/)
     assert.equal(
-      urls.filter((url) => /\/assets\/app\/shared\.@[A-Za-z0-9_-]+\.ts/.test(url)).length,
+      urls.filter((url) => /\/assets\/app\/shared\.~[A-Za-z0-9_-]+\.ts/.test(url)).length,
       1,
     )
-    assert.match(urls[2] ?? '', /\/assets\/app\/shared\.@[A-Za-z0-9_-]+\.ts/)
+    assert.match(urls[2] ?? '', /\/assets\/app\/shared\.~[A-Za-z0-9_-]+\.ts/)
   })
 
   it('getPreloads stays shallowest-first across multiple roots', async () => {
@@ -5968,7 +6107,7 @@ describe('asset-server', () => {
     let urls = await assetServer.getPreloads(['app/a.ts', 'app/b.ts', 'app/c.ts'])
 
     assert.deepEqual(
-      urls.map((url) => url.replace(/\.@[A-Za-z0-9_-]+(?=\.)/, '')),
+      urls.map((url) => url.replace(/\.~[A-Za-z0-9_-]+(?=\.)/, '')),
       [
         '/assets/app/a.ts',
         '/assets/app/b.ts',
@@ -5995,7 +6134,7 @@ describe('asset-server', () => {
 
     let urls = await assetServer.getPreloads('app/images/logo.svg')
     assert.equal(urls.length, 1)
-    assert.match(urls[0] ?? '', /\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg/)
+    assert.match(urls[0] ?? '', /\/assets\/app\/images\/logo\.~[A-Za-z0-9_-]+\.svg/)
   })
 
   it('getPreloads stays shallowest-first across mixed asset roots', async () => {
@@ -6028,7 +6167,7 @@ describe('asset-server', () => {
     ])
 
     assert.deepEqual(
-      urls.map((url) => url.replace(/\.@[A-Za-z0-9_-]+(?=\.)/, '')),
+      urls.map((url) => url.replace(/\.~[A-Za-z0-9_-]+(?=\.)/, '')),
       [
         '/assets/app/a.ts',
         '/assets/app/b.ts',
@@ -6050,7 +6189,7 @@ describe('asset-server', () => {
     let assetServer = createTestServer(dir, { fingerprint: true })
 
     await assert.rejects(
-      () => assetServer.getPreloads('/assets/app/dep.@abc123.ts'),
+      () => assetServer.getPreloads('/assets/app/dep.~abc123.ts'),
       /File not found:/,
     )
   })
@@ -6062,7 +6201,7 @@ describe('asset-server', () => {
     let assetServer = createTestServer(dir, { fingerprint: true })
 
     await assert.rejects(
-      () => assetServer.getPreloads(['app/entry.ts', '/assets/app/dep.@abc123.ts']),
+      () => assetServer.getPreloads(['app/entry.ts', '/assets/app/dep.~abc123.ts']),
       /File not found:/,
     )
   })
@@ -6120,7 +6259,7 @@ describe('asset-server', () => {
       })
 
       let urls = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(urls.some((url) => url.includes('%40remix-run/component/jsx-runtime.@')))
+      assert.ok(urls.some((url) => url.includes('%40remix-run/component/jsx-runtime.~')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -6207,8 +6346,8 @@ describe('asset-server', () => {
       })
 
       let before = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(before.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.@')))
-      assert.ok(!before.some((url) => url.includes('%40remix-run/component-b/jsx-runtime.@')))
+      assert.ok(before.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.~')))
+      assert.ok(!before.some((url) => url.includes('%40remix-run/component-b/jsx-runtime.~')))
 
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
@@ -6218,8 +6357,8 @@ describe('asset-server', () => {
       })
 
       let after = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(after.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.@')))
-      assert.ok(!after.some((url) => url.includes('%40remix-run/component-b/jsx-runtime.@')))
+      assert.ok(after.some((url) => url.includes('%40remix-run/component-a/jsx-runtime.~')))
+      assert.ok(!after.some((url) => url.includes('%40remix-run/component-b/jsx-runtime.~')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -8615,7 +8754,7 @@ describe('asset-server', () => {
       assert.ok(before)
       assert.match(await before.text(), /"\.\/dep"/)
       let importMap = await assetServer.getImportMap('app/entry.ts')
-      assert.match(importMap.imports['/assets/app/dep'] ?? '', /\/assets\/app\/dep\/index\.@.*\.js/)
+      assert.match(importMap.imports['/assets/app/dep'] ?? '', /\/assets\/app\/dep\/index\.~.*\.js/)
 
       await fs.rm(path.join(caseDir, 'app/dep/index.js'))
       await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
@@ -8803,7 +8942,7 @@ describe('asset-server', () => {
       let importMap = await assetServer.getImportMap('app/entry.ts')
       assert.match(
         importMap.imports['/assets/app/styles.css'] ?? '',
-        /\/assets\/app\/styles\.css\.@.*\.js/,
+        /\/assets\/app\/styles\.css\.~.*\.js/,
       )
 
       await fs.rm(path.join(caseDir, 'app/styles.css.js'))
@@ -9054,7 +9193,7 @@ describe('asset-server', () => {
       assert.ok(before)
       assert.match(await before.text(), /"\.\/dep\.js"/)
       let importMap = await assetServer.getImportMap('app/entry.ts')
-      assert.match(importMap.imports['/assets/app/dep.js'] ?? '', /\/assets\/app\/dep\.@.*\.ts/)
+      assert.match(importMap.imports['/assets/app/dep.js'] ?? '', /\/assets\/app\/dep\.~.*\.ts/)
 
       await write(caseDir, 'app/dep.js', 'export const dep = "js"')
 
