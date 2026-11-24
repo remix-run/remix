@@ -21,7 +21,7 @@ const nested = await loadExample('dialog/nested')
 const preventingDismissal = await loadExample('dialog/preventing-dismissal')
 const imperative = await loadExample('dialog/imperative')
 const initialFocus = await loadExample('dialog/initial-focus')
-const toast = await loadExample('dialog/toast')
+const stacking = await loadExample('dialog/stacking')
 const anatomyCode = await highlightSource(`
   import * as dialog from '@remix-run/ui/dialog'
   import { css } from 'remix/component'
@@ -143,7 +143,7 @@ export default function DialogPage(handle: Handle<PageProps>) {
           <code>onOpenChange</code> or an <code>onDialogChange()</code> listener to keep the dialog
           open, for example when there are unsaved changes.
         </p>
-        <Example id="unsaved-changes-example" example={preventingDismissal} />
+        <Example id="preventing-dismissal-example" example={preventingDismissal} />
       </Section>
       <Section id="non-modal" title="Non-modal">
         <p>
@@ -191,7 +191,7 @@ export default function DialogPage(handle: Handle<PageProps>) {
           the <a href="/#stacking">stacking and overlays guidance</a> to configure its initial{' '}
           <code>z-index</code> and to place notifications and custom DOM content above dialogs.
         </p>
-        <Example id="toast-example" example={toast} />
+        <Example id="stacking-example" example={stacking} />
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>

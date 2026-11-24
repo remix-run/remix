@@ -10,7 +10,7 @@ import type { Handle } from 'remix/component'
 
 const toastManager = toast.createToastManager()
 
-export default function ExampleDialogToast(handle: Handle) {
+export default function ExampleStackingDialog(handle: Handle) {
   return () => (
     <div mix={styles.theme}>
       <dialog.Context>

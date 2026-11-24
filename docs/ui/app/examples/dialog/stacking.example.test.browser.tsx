@@ -1,6 +1,6 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
-import DialogToast from './toast.example.tsx'
+import StackingDialog from './stacking.example.tsx'
 import { button, element, finishAnimations, key, mount, waitFor } from '../test-helpers.ts'
 
 function pulseAnimation(surface: HTMLElement) {
@@ -15,7 +15,7 @@ function pulseAnimation(surface: HTMLElement) {
 
 describe('Dialog stacking example', () => {
   it('stacks the portaled Select above the dialog and restores focus after selecting', async (t) => {
-    let view = await mount(t, <DialogToast />)
+    let view = await mount(t, <StackingDialog />)
     let opener = button(view.container, 'Open dialog')
     await view.act(() => opener.click())
     let dialog = element(document.body, '[role="dialog"][data-open]')
@@ -44,7 +44,7 @@ describe('Dialog stacking example', () => {
   })
 
   it('keeps notification actions interactive and dismisses the Select before the dialog', async (t) => {
-    let view = await mount(t, <DialogToast />)
+    let view = await mount(t, <StackingDialog />)
     await view.act(() => button(view.container, 'Open dialog').click())
     let dialog = element(document.body, '[role="dialog"][data-open]')
     await view.act(() => button(dialog, 'Toast').click())
@@ -61,7 +61,7 @@ describe('Dialog stacking example', () => {
   })
 
   it('keeps the global notification visible after the dialog closes', async (t) => {
-    let view = await mount(t, <DialogToast />)
+    let view = await mount(t, <StackingDialog />)
     await view.act(() => button(view.container, 'Open dialog').click())
     let surface = element(document.body, '[role="dialog"][data-open]')
     await view.act(() => button(surface, 'Toast').click())
@@ -77,7 +77,7 @@ describe('Dialog stacking example', () => {
   })
 
   it('replays a pulse when the dialog action updates the same notification', async (t) => {
-    let view = await mount(t, <DialogToast />)
+    let view = await mount(t, <StackingDialog />)
     await view.act(() => button(view.container, 'Open dialog').click())
     let dialog = element(document.body, '[role="dialog"][data-open]')
     let publish = button(dialog, 'Toast')
@@ -110,7 +110,7 @@ describe('Dialog stacking example', () => {
 
   it('updates the same notification without pulsing when reduced motion is requested', async (t) => {
     t.mock.method(window, 'matchMedia', () => ({ matches: true }))
-    let view = await mount(t, <DialogToast />)
+    let view = await mount(t, <StackingDialog />)
     await view.act(() => button(view.container, 'Open dialog').click())
     let dialog = element(document.body, '[role="dialog"][data-open]')
     let publish = button(dialog, 'Toast')

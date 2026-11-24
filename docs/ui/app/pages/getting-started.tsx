@@ -124,7 +124,8 @@ export default function GettingStarted() {
             <a href="/patterns/dialog/">Dialog</a> and <a href="/patterns/toast/">Toast</a> mixins
             coordinate focus and dismissal automatically. Assigning a higher z-index to an unrelated
             widget only changes its visual position. See{' '}
-            <a href="/patterns/dialog/#toasts">Dialog with Toast</a> for a complete example.
+            <a href="/patterns/dialog/#toasts">Stacking with other patterns</a> for a complete
+            example.
           </p>
         </Section>
         <Section id="explore" title="Explore the library">

@@ -19,7 +19,7 @@ async function openDocs(t: TestContext) {
 describe('Dialog docs interactions', () => {
   it('dismisses the portaled Select before its dialog with keyboard and outside clicks', async (t) => {
     let page = await openDocs(t)
-    let opener = page.locator('#toast-example').getByRole('button', { name: 'Open dialog' })
+    let opener = page.locator('#stacking-example').getByRole('button', { name: 'Open dialog' })
     await opener.click()
     let dialog = page.getByRole('dialog', { name: 'Dialog with other patterns', exact: true })
     let trigger = dialog.getByRole('button', { name: 'Select', exact: true })
@@ -44,7 +44,7 @@ describe('Dialog docs interactions', () => {
 
   it('filters and selects Combobox options without dismissing the dialog', async (t) => {
     let page = await openDocs(t)
-    await page.locator('#toast-example').getByRole('button', { name: 'Open dialog' }).click()
+    await page.locator('#stacking-example').getByRole('button', { name: 'Open dialog' }).click()
     let dialog = page.getByRole('dialog', { name: 'Dialog with other patterns', exact: true })
     let input = dialog.getByRole('combobox', { name: 'Combobox', exact: true })
     await input.fill('Option B')
@@ -62,7 +62,7 @@ describe('Dialog docs interactions', () => {
 
   it('opens a submenu and dismisses the menus on selection while keeping the dialog open', async (t) => {
     let page = await openDocs(t)
-    await page.locator('#toast-example').getByRole('button', { name: 'Open dialog' }).click()
+    await page.locator('#stacking-example').getByRole('button', { name: 'Open dialog' }).click()
     let dialog = page.getByRole('dialog', { name: 'Dialog with other patterns', exact: true })
     let trigger = dialog.getByRole('button', { name: 'Menu', exact: true })
     await trigger.press('ArrowDown')
@@ -88,7 +88,7 @@ describe('Dialog docs interactions', () => {
 
   it('dismisses the nested Select, then its Popover, then the dialog', async (t) => {
     let page = await openDocs(t)
-    let opener = page.locator('#toast-example').getByRole('button', { name: 'Open dialog' })
+    let opener = page.locator('#stacking-example').getByRole('button', { name: 'Open dialog' })
     await opener.click()
     let dialog = page.getByRole('dialog', { name: 'Dialog with other patterns', exact: true })
     let trigger = dialog.getByRole('button', { name: 'Popover', exact: true })
@@ -114,7 +114,7 @@ describe('Dialog docs interactions', () => {
 
   it('keeps global notifications interactive above a nested dialog and returns focus to its parent', async (t) => {
     let page = await openDocs(t)
-    await page.locator('#toast-example').getByRole('button', { name: 'Open dialog' }).click()
+    await page.locator('#stacking-example').getByRole('button', { name: 'Open dialog' }).click()
     let dialog = page.getByRole('dialog', { name: 'Dialog with other patterns', exact: true })
     await dialog.getByRole('button', { name: 'Toast', exact: true }).click()
     let viewport = page.getByRole('region', { name: 'Notifications', exact: true })
@@ -142,7 +142,7 @@ describe('Dialog docs interactions', () => {
   it('prevents Escape and outside dismissal without blocking the close button', async (t) => {
     let page = await openDocs(t)
     let trigger = page
-      .locator('#unsaved-changes-example')
+      .locator('#preventing-dismissal-example')
       .getByRole('button', { name: 'Open dialog' })
     await trigger.click()
     let popup = page.getByRole('dialog', { name: 'Preventing dismissal', exact: true })
@@ -185,7 +185,7 @@ describe('Dialog docs interactions', () => {
   it('keeps notification actions above the dialog and clickable without dismissing it', async (t) => {
     let page = await openDocs(t)
     let trigger = page
-      .locator('#toast-example')
+      .locator('#stacking-example')
       .getByRole('button', { name: 'Open dialog', includeHidden: true })
     await trigger.click()
     let popup = page.getByRole('dialog', { name: 'Dialog with other patterns', exact: true })
@@ -220,7 +220,7 @@ describe('Dialog docs interactions', () => {
 
   it('keeps a notification available after closing and reopening its dialog', async (t) => {
     let page = await openDocs(t)
-    let trigger = page.locator('#toast-example').getByRole('button', { name: 'Open dialog' })
+    let trigger = page.locator('#stacking-example').getByRole('button', { name: 'Open dialog' })
     await trigger.click()
     let popup = page.getByRole('dialog', { name: 'Dialog with other patterns', exact: true })
     await popup.getByRole('button', { name: 'Toast' }).click()
