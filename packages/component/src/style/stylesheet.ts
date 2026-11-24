@@ -18,7 +18,7 @@
 //   them releases its ref. A refcounted rule upgrades to pinned if a server
 //   tag for the same selector is adopted later.
 
-type RuleEntry = { count: number; index: number; pinned: boolean }
+type RuleEntry = { count: number; index: number }
 export type ServerStyleSource = ParentNode | Iterable<Node>
 
 export interface StyleManager {
@@ -36,63 +36,23 @@ export const REMIX_UI_STYLE_LAYER = 'rmx'
 
 const SERVER_STYLE_SELECTOR = 'style[data-rmx-style]'
 
-function compareNodesInDocumentOrder(a: Node, b: Node): number {
-  if (a === b) return 0
-
-  let position = a.compareDocumentPosition(b)
-  if (position & Node.DOCUMENT_POSITION_FOLLOWING) return -1
-  if (position & Node.DOCUMENT_POSITION_PRECEDING) return 1
-  return 0
-}
-
-function isParentNode(value: ServerStyleSource): value is ParentNode {
-  return 'querySelectorAll' in value
-}
-
-function collectServerStyleTagsFromNode(node: Node, into: Set<HTMLStyleElement>): void {
-  if (isHtmlStyleElement(node) && node.matches(SERVER_STYLE_SELECTOR)) {
-    into.add(node)
-    return
-  }
-
-  if (
-    !(node instanceof Element) &&
-    !(node instanceof Document) &&
-    !(node instanceof DocumentFragment)
-  ) {
-    return
-  }
-
-  let nested = node.querySelectorAll?.(SERVER_STYLE_SELECTOR) ?? []
-  for (let i = 0; i < nested.length; i++) {
-    let el = nested[i]
-    if (isHtmlStyleElement(el)) {
-      into.add(el)
-    }
-  }
-}
-
 function collectServerStyleTags(source: ServerStyleSource): HTMLStyleElement[] {
   let styles = new Set<HTMLStyleElement>()
-
-  if (isParentNode(source)) {
-    collectServerStyleTagsFromNode(source as unknown as Node, styles)
-  } else {
-    for (let node of source) {
-      collectServerStyleTagsFromNode(node, styles)
+  let roots = 'querySelectorAll' in source ? [source] : source
+  for (let node of roots) {
+    if (node instanceof HTMLStyleElement && node.matches(SERVER_STYLE_SELECTOR)) {
+      styles.add(node)
+    } else if ('querySelectorAll' in node && typeof node.querySelectorAll === 'function') {
+      for (let element of node.querySelectorAll(SERVER_STYLE_SELECTOR)) {
+        if (element instanceof HTMLStyleElement) styles.add(element)
+      }
     }
   }
-
-  return Array.from(styles).sort(compareNodesInDocumentOrder)
-}
-
-function isHtmlStyleElement(node: unknown): node is HTMLStyleElement {
-  return typeof node === 'object' && node !== null && node instanceof HTMLStyleElement
-}
-
-function getStyleSelector(styleEl: HTMLStyleElement): string | null {
-  let selector = styleEl.getAttribute('data-rmx-style')?.trim()
-  return selector ? selector : null
+  return Array.from(styles).sort((a, b) => {
+    let position = a.compareDocumentPosition(b)
+    if (position & Node.DOCUMENT_POSITION_FOLLOWING) return -1
+    return position & Node.DOCUMENT_POSITION_PRECEDING ? 1 : 0
+  })
 }
 
 export function createStyleManager(): StyleManager {
@@ -117,15 +77,15 @@ export function createStyleManager(): StyleManager {
     stylesheet = null
   }
 
-  function clearStylesheet() {
-    if (!stylesheet) return
-    for (let i = stylesheet.cssRules.length - 1; i >= 0; i--) {
-      stylesheet.deleteRule(i)
-    }
+  function addRule(className: string, css: string, count: number) {
+    let sheet = getStylesheet()
+    let index = sheet.cssRules.length
+    sheet.insertRule(css, index)
+    ruleMap.set(className, { index, count })
   }
 
   function adoptServerStyleTag(styleEl: HTMLStyleElement): string | undefined {
-    let selector = getStyleSelector(styleEl)
+    let selector = styleEl.getAttribute('data-rmx-style')?.trim()
     if (!selector) return undefined
 
     // Only the active document can authorize these styles under its CSP.
@@ -136,35 +96,26 @@ export function createStyleManager(): StyleManager {
 
     let entry = ruleMap.get(selector)
     if (entry) {
-      // The rule already exists — either a previous adoption or a client-side
-      // css mixin inserted it first. Pin it so it outlives any mixin refs.
-      entry.pinned = true
-      styleEl.remove()
-      return selector
+      entry.count = Infinity
+    } else {
+      let css = styleEl.textContent.trim()
+      if (!css) {
+        styleEl.remove()
+        return undefined
+      }
+      try {
+        addRule(selector, css, Infinity)
+      } catch {
+        // Leave the server tag in place if the browser rejects its rule.
+        return undefined
+      }
     }
-
-    let cssText = styleEl.textContent?.trim() ?? ''
-    if (cssText.length === 0) {
-      styleEl.remove()
-      return undefined
-    }
-
-    try {
-      let sheet = getStylesheet()
-      let index = sheet.cssRules.length
-      sheet.insertRule(cssText, index)
-      ruleMap.set(selector, { count: 0, index, pinned: true })
-      styleEl.remove()
-      return selector
-    } catch {
-      // If adoption fails, keep the <style> tag in the DOM so styles still apply.
-      return undefined
-    }
+    styleEl.remove()
+    return selector
   }
 
   function has(className: string) {
-    let entry = ruleMap.get(className)
-    return entry !== undefined && (entry.pinned || entry.count > 0)
+    return ruleMap.has(className)
   }
 
   function getGeneration() {
@@ -173,58 +124,27 @@ export function createStyleManager(): StyleManager {
 
   function insert(className: string, rule: string) {
     let entry = ruleMap.get(className)
-
     if (entry) {
-      // Pinned rules are permanent; there is nothing to count.
-      if (!entry.pinned) entry.count++
-      return
+      entry.count++
+    } else {
+      addRule(className, `@layer ${REMIX_UI_STYLE_LAYER}.${className} { ${rule} }`, 1)
     }
-
-    // New rule - insert and track
-    let sheet = getStylesheet()
-    let index = sheet.cssRules.length
-    // This may throw for invalid CSS. If it does, we intentionally let it
-    // bubble so the rule is not tracked unless insertion actually succeeds.
-    sheet.insertRule(`@layer ${REMIX_UI_STYLE_LAYER}.${className} { ${rule} }`, index)
-    ruleMap.set(className, { count: 1, index, pinned: false })
   }
 
   function remove(className: string) {
     let entry = ruleMap.get(className)
-
-    if (!entry || entry.pinned) return
-
-    // Decrement count
-    entry.count--
-
-    if (entry.count > 0) {
-      // Still in use, keep the rule
-      return
-    }
-
-    // Count reached zero, remove the rule
-    let indexToDelete = entry.index
-
-    // Remove from tracking
+    // Server-adopted rules have an infinite reference count.
+    if (!entry || --entry.count > 0) return
     ruleMap.delete(className)
-
-    if (!stylesheet) return
-    stylesheet.deleteRule(indexToDelete)
-
-    // Update indices for all rules that came after the deleted one
-    // They all shift down by 1
-    for (let [, data] of ruleMap.entries()) {
-      if (data.index > indexToDelete) {
-        data.index--
-      }
+    stylesheet?.deleteRule(entry.index)
+    for (let data of ruleMap.values()) {
+      if (data.index > entry.index) data.index--
     }
   }
 
   function reset() {
-    clearStylesheet()
-    ruleMap.clear()
-    removeStylesheet()
-    generation++
+    stylesheet?.replaceSync('')
+    dispose()
   }
 
   function adoptServerStyles(source: ServerStyleSource): Set<string> {

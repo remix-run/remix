@@ -37,7 +37,7 @@ import {
   type MixinRuntimeState,
   type MixinRuntimeValue,
 } from './mixins/mixin.ts'
-import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
+import { OnBinding, isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 import { componentStalenessCheck } from './refresh.ts'
 import { isCommentNode, isFrameStart, isHydrationStart } from './stream-protocol.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
@@ -142,18 +142,6 @@ export type ControlledReflectionState = {
   onChange(): void
 }
 
-export type DirectEventBinding = {
-  type: string
-  handler: (event: Event, signal: AbortSignal) => void | Promise<void>
-  capture: boolean
-  stableHandler: (event: Event) => void
-  reentry: AbortController | null
-}
-
-export type DirectEventState = {
-  bindings: DirectEventBinding[]
-}
-
 export type HostPersistenceState = {
   parent: ParentNode
   token: number
@@ -166,7 +154,7 @@ export type CommittedHostNode = CommittedNodeBase<'host', string> & {
   _mixedProps: RuntimeHostProps
   _mixState?: MixinRuntimeState
   _directEventDescriptors?: OnMixinDescriptor[]
-  _directEventState?: DirectEventState
+  _directEventState?: OnBinding[]
   _controlledState?: ControlledReflectionState
   _persistence?: HostPersistenceState
 }
@@ -1064,100 +1052,30 @@ function syncDirectEventListeners(node: CommittedHostNode): void {
     disposeDirectEventListeners(node, true)
     return
   }
-
-  let state = node._directEventState
-  if (!state) {
-    state = { bindings: [] }
-    node._directEventState = state
-  }
-
-  let bindings = state.bindings
+  let bindings = (node._directEventState ??= [])
   for (let index = 0; index < descriptors.length; index++) {
-    // Indexed access instead of array destructuring: destructuring goes through
-    // the iterator protocol and allocates on every host-node update.
     let args = descriptors[index].args
-    let type = args[0]
-    let handler = args[1]
-    let captureBoolean = args[2] ?? false
     let binding = bindings[index]
-
-    if (!binding) {
-      binding = createDirectEventBinding(type, handler, captureBoolean)
-      bindings[index] = binding
-      attachDirectEventBinding(node._dom, binding)
-      continue
+    if (binding) binding.update(node._dom, args, true)
+    else {
+      binding = bindings[index] = new OnBinding(args)
+      binding.attach(node._dom)
     }
-
-    if (binding.type !== type || binding.capture !== captureBoolean) {
-      removeDirectEventBinding(node._dom, binding)
-      binding.type = type
-      binding.capture = captureBoolean
-      attachDirectEventBinding(node._dom, binding)
-    }
-
-    binding.handler = handler
   }
-
   for (let index = descriptors.length; index < bindings.length; index++) {
-    removeDirectEventBinding(node._dom, bindings[index])
+    bindings[index].detach(node._dom)
+    bindings[index].abort()
   }
   bindings.length = descriptors.length
 }
 
-function createDirectEventBinding(
-  type: string,
-  handler: DirectEventBinding['handler'],
-  capture: boolean,
-): DirectEventBinding {
-  let binding: DirectEventBinding = {
-    type,
-    handler,
-    capture,
-    reentry: null,
-    stableHandler: (event) => {
-      invokeDirectEventBinding(binding, event)
-    },
-  }
-
-  return binding
-}
-
-function attachDirectEventBinding(dom: Element, binding: DirectEventBinding): void {
-  dom.addEventListener(binding.type, binding.stableHandler, binding.capture)
-}
-
-function removeDirectEventBinding(
-  dom: Element,
-  binding: DirectEventBinding,
-  detach: boolean = true,
-): void {
-  if (detach) {
-    dom.removeEventListener(binding.type, binding.stableHandler, binding.capture)
-  }
-  binding.reentry?.abort(new DOMException('', 'AbortError'))
-  binding.reentry = null
-}
-
-// Without `detach`, this is teardown for a node whose DOM subtree is being
-// discarded wholesale: abort pending handler work but skip removeEventListener
-// — the listeners die with the detached node, and removing them one-by-one
-// dominates large teardowns.
 function disposeDirectEventListeners(node: CommittedHostNode, detach: boolean): void {
-  let state = node._directEventState
-  if (!state) return
-
-  for (let binding of state.bindings) {
-    removeDirectEventBinding(node._dom, binding, detach)
+  if (!node._directEventState) return
+  for (let binding of node._directEventState) {
+    if (detach) binding.detach(node._dom)
+    binding.abort()
   }
-
-  state.bindings.length = 0
   node._directEventState = undefined
-}
-
-function invokeDirectEventBinding(binding: DirectEventBinding, event: Event): void {
-  binding.reentry?.abort(new DOMException('', 'EventReentry'))
-  binding.reentry = new AbortController()
-  void binding.handler(event, binding.reentry.signal)
 }
 
 function diffText(
@@ -2103,10 +2021,7 @@ function patchKeyedChildren(
   cursor?: HydrationCursor,
   anchor?: Node,
 ): CommittedVNode[] {
-  let matches =
-    matchKeyedChildrenInOrder(curr, next) ??
-    matchKeyedChildrenAfterSingleRemoval(curr, next) ??
-    matchKeyedChildrenAfterPairSwap(curr, next)
+  let matches = matchCommonKeyedChanges(curr, next)
   if (!matches) {
     warnDuplicateKeys(next)
     matches = matchKeyedChildren(curr, next)
@@ -2135,7 +2050,10 @@ function patchKeyedChildren(
   // directly before the next stable sibling instead of at the end of the list
   // and moved by the placement pass. Hydration keeps the list end anchor
   // because it marks where adoption stops.
-  let stableIndexes = matchAnalysis.canSkipPlacement ? null : lisMatches(matches, curr)
+  // A matched child without a DOM anchor still needs placement if it starts rendering DOM.
+  let stableIndexes = matchAnalysis.canSkipPlacement
+    ? null
+    : getStableIndexes(matches, (oldIndex) => !!findFirstDomAnchor(curr[oldIndex]))
   let nextStableCursor = 0
   // The cached anchor stays valid for new children before `stableAnchorIndex`
   // because that stable child has not been diffed yet
@@ -2246,115 +2164,44 @@ function isSameKeyedNode(oldNode: CommittedVNode, nextNode: VNodeInput): boolean
   return oldNode.key === nextNode.key && oldNode.type === nextNode.type
 }
 
-function matchKeyedChildrenInOrder(curr: CommittedVNode[], next: VNodeInput[]): number[] | null {
-  let length = Math.min(curr.length, next.length)
+function matchCommonKeyedChanges(curr: CommittedVNode[], next: VNodeInput[]): number[] | null {
   let matches: number[] = []
-
-  for (let index = 0; index < length; index++) {
-    let nextNode = next[index]
-    if (nextNode.key == null) return null
-
-    let oldNode = curr[index]
-    if (!isSameKeyedNode(oldNode, nextNode)) {
-      return null
-    }
-
-    matches.push(index)
-  }
-
-  for (let index = length; index < next.length; index++) {
-    if (next[index].key == null) return null
-    matches.push(-1)
-  }
-
-  return matches
-}
-
-function matchKeyedChildrenAfterSingleRemoval(
-  curr: CommittedVNode[],
-  next: VNodeInput[],
-): number[] | null {
-  if (curr.length !== next.length + 1) return null
-
-  let matches: number[] = []
-  let oldIndex = 0
-  let skippedOldNode = false
-
-  for (let nextIndex = 0; nextIndex < next.length; nextIndex++) {
-    let nextNode = next[nextIndex]
-    if (nextNode.key == null) return null
-
-    let oldNode = curr[oldIndex]
-    if (isSameKeyedNode(oldNode, nextNode)) {
-      matches.push(oldIndex)
-      oldIndex++
-      continue
-    }
-
-    if (skippedOldNode) return null
-    skippedOldNode = true
-    oldIndex++
-
-    oldNode = curr[oldIndex]
-    if (!isSameKeyedNode(oldNode, nextNode)) {
-      return null
-    }
-
-    matches.push(oldIndex)
-    oldIndex++
-  }
-
-  return matches
-}
-
-function matchKeyedChildrenAfterPairSwap(
-  curr: CommittedVNode[],
-  next: VNodeInput[],
-): number[] | null {
-  if (curr.length !== next.length) return null
-
-  let matches: number[] = []
+  let skipped = 0
   let firstMismatch = -1
-  let secondMismatch = -1
+  let swapped = false
 
   for (let index = 0; index < next.length; index++) {
-    let nextNode = next[index]
-    if (nextNode.key == null) return null
-
-    let oldNode = curr[index]
-    if (isSameKeyedNode(oldNode, nextNode)) {
-      matches.push(index)
+    let child = next[index]
+    if (child.key == null) return null
+    let oldIndex = index + skipped
+    if (oldIndex >= curr.length) {
+      matches.push(-1)
       continue
     }
-
-    if (firstMismatch === -1) {
-      firstMismatch = index
-    } else if (secondMismatch === -1) {
-      secondMismatch = index
-    } else {
-      return null
+    if (!isSameKeyedNode(curr[oldIndex], child)) {
+      if (
+        curr.length === next.length + 1 &&
+        !skipped &&
+        isSameKeyedNode(curr[oldIndex + 1], child)
+      ) {
+        skipped = 1
+        oldIndex++
+      } else if (curr.length !== next.length || swapped) {
+        return null
+      } else if (firstMismatch < 0) {
+        firstMismatch = index
+      } else if (
+        isSameKeyedNode(curr[firstMismatch], child) &&
+        isSameKeyedNode(curr[index], next[firstMismatch])
+      ) {
+        matches[firstMismatch] = index
+        oldIndex = firstMismatch
+        swapped = true
+      } else return null
     }
-    matches.push(-1)
+    matches.push(oldIndex)
   }
-
-  if (firstMismatch === -1) return matches
-  if (secondMismatch === -1) return null
-
-  let firstOldNode = curr[firstMismatch]
-  let secondOldNode = curr[secondMismatch]
-  let firstNextNode = next[firstMismatch]
-  let secondNextNode = next[secondMismatch]
-
-  if (
-    !isSameKeyedNode(firstOldNode, secondNextNode) ||
-    !isSameKeyedNode(secondOldNode, firstNextNode)
-  ) {
-    return null
-  }
-
-  matches[firstMismatch] = secondMismatch
-  matches[secondMismatch] = firstMismatch
-  return matches
+  return firstMismatch < 0 || swapped ? matches : null
 }
 
 function analyzeKeyedChildMatches(
@@ -2383,24 +2230,23 @@ function analyzeKeyedChildMatches(
   return { hasRemovals, canSkipPlacement }
 }
 
-function lisMatches(matches: readonly number[], curr: CommittedVNode[]): number[] {
-  let predecessors = Array.from<number>({ length: matches.length })
+// Return positions of the longest increasing subsequence of reusable old indexes.
+export function getStableIndexes(
+  matches: readonly number[],
+  hasAnchor?: (oldIndex: number) => boolean,
+): number[] {
+  let predecessors: number[] = []
   let tails: number[] = []
-
   for (let index = 0; index < matches.length; index++) {
-    let value = matches[index] + 1
-    // A matched child with no DOM yet can't be stable: if it starts rendering
-    // DOM, `replace()` finds an insertion point from the old child order, which
-    // a reorder has already invalidated, so the placement pass has to move it.
-    if (value === 0 || !findFirstDomAnchor(curr[matches[index]])) continue
-
+    let value = matches[index]
+    if (value < 0 || (hasAnchor && !hasAnchor(value))) continue
     let low = 0
     let high = tails.length
 
     while (low < high) {
       let middle = (low + high) >> 1
 
-      if (matches[tails[middle]] + 1 < value) {
+      if (matches[tails[middle]] < value) {
         low = middle + 1
       } else {
         high = middle

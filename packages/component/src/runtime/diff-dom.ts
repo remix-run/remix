@@ -1,5 +1,5 @@
 import { invariant } from './invariant.ts'
-import { excludePortalRanges } from './reconcile.ts'
+import { excludePortalRanges, getStableIndexes } from './reconcile.ts'
 import {
   getFrameId,
   getHydrationId,
@@ -52,13 +52,9 @@ function getClientEntryComparisonUrl(moduleUrl: string): string {
   return `${pathname}${comparisonQuery}${hash}`
 }
 
-type MarkerKind = 'frame-start' | 'frame-end' | 'virtual-root-start' | 'virtual-root-end'
-
 type NodeSiblingUnit = {
   kind: 'node'
-  node: Node
-  startIndex: number
-  endIndex: number
+  start: Node
 }
 
 type BoundarySiblingUnit = {
@@ -73,7 +69,6 @@ type SiblingUnit = NodeSiblingUnit | BoundarySiblingUnit
 
 type SiblingDiff = {
   parent: ParentNode
-  currentNodes: Node[]
   nextNodes: Node[]
   currentUnits: SiblingUnit[]
   nextUnits: SiblingUnit[]
@@ -93,91 +88,17 @@ export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
     context.regionTailRef ??
     (curr.length > 0 ? (curr[curr.length - 1].nextSibling as ChildNode | null) : null)
 
-  // Frame regions rendered inside the head still hold head resources.
-  if (isDocumentHead(parent)) diffHeadUnits(curr, next, parent, regionTailRef, context)
-  else diffSiblingUnits(curr, next, parent, regionTailRef, context)
+  diffSiblingUnits(curr, next, parent, regionTailRef, context)
 }
 
-function diffNode(current: Node, next: Node, context: FrameContext): ChildNode | undefined {
-  // Text -> Text
-  if (isTextNode(current) && isTextNode(next)) {
-    let newText = next.textContent || ''
-    if (current.textContent !== newText) current.textContent = newText
-    return
-  }
-
-  // Hydration marker range -> Hydration marker range
-  if (isHydrationStart(current) && isHydrationStart(next)) {
-    let nextData = next.data
-    if (current.data !== nextData) {
-      current.data = nextData
-    }
-
-    // Fast-forward across this hydrated region.
-    return findHydrationEndMarker(next)
-  }
-
-  // Comment -> Comment
-  if (isCommentNode(current) && isCommentNode(next) && markerKindsMatch(current, next)) {
-    let newData = next.data
-    if (isFrameStart(current)) {
-      if (shouldPreserveFrameStartMarker(current, next, context)) {
-        if (current.data !== newData) {
-          current.data = newData
-        }
-
-        let frame = context.frameInstances.get(current)
-        let nextMarkerData = getFrameMarkerData(next, context)
-        if (frame && nextMarkerData) {
-          if (nextMarkerData.status === 'resolved') {
-            let nextEnd = findFrameEndMarker(next)
-            let nextContent = collectFrameContentFragment(current.ownerDocument, next, nextEnd)
-            let render = frame.renderMarkerContent(
-              { ...nextMarkerData, id: getFrameId(next) },
-              nextContent,
-              {
-                reloadOrigin: context.reloadOrigin,
-                nonce: context.nonce,
-                navigationType: context.navigationType,
-                from: context.from,
-                data: context.data,
-                signal: context.signal,
-                reconciliationTracker: context.reconciliationTracker,
-              },
-            )
-            if (context.reconciliationTracker) context.reconciliationTracker.waitFor(render)
-            else void render
-            return nextEnd
-          }
-
-          if (frame.isDisplayingResolvedContent()) {
-            return findFrameEndMarker(next)
-          }
-        }
-      } else if (current.data !== newData) {
-        disposeFrameStartMarker(current, context)
-      }
-    }
-    if (current.data !== newData) {
-      current.data = newData
-    }
-    return
-  }
-
-  // Same element tag: update attributes then children
-  if (isElement(current) && isElement(next) && current.tagName === next.tagName) {
+// Sibling matching has already paired the elements by tag and split marker ranges into units.
+function diffMatchedNode(current: Node, next: Node, context: FrameContext): void {
+  if (isElement(current) && isElement(next)) {
     if (shouldPreserveDomElement(current, next)) return
     diffElementAttributes(current, next)
-    if (shouldPreserveElementChildren(current, next)) return
-    diffElementChildren(current, next, context)
-    return
-  }
-
-  // Different tags or type mismatch: replace
-  let parent = current.parentNode
-  if (parent) {
-    parent.insertBefore(next, current)
-    removeNode(current, parent, context)
+    if (!shouldPreserveElementChildren(current, next)) diffElementChildren(current, next, context)
+  } else if (current.nodeValue !== next.nodeValue) {
+    current.nodeValue = next.nodeValue
   }
 }
 
@@ -304,23 +225,7 @@ function diffHeadChildren(head: Element, next: Element, context: FrameContext): 
     regionTailRef = currentChildren[lastDiffedIndex + 1] ?? null
     currentChildren = currentChildren.filter((node) => !shouldPreserveHeadNode(node))
   }
-  diffHeadUnits(currentChildren, Array.from(next.childNodes), head, regionTailRef, context)
-}
-
-function diffHeadUnits(
-  currentNodes: Node[],
-  nextNodes: Node[],
-  head: ParentNode,
-  regionTailRef: ChildNode | null,
-  context: FrameContext,
-): void {
-  let diff = createSiblingDiff(currentNodes, nextNodes, head)
-  matchKeyedSiblingUnits(diff, context)
-  matchPositionalSiblingUnits(diff)
-  matchShiftedHeadUnits(diff)
-  let committed = commitSiblingUnits(diff, context)
-  removeUnusedSiblingUnits(diff, context)
-  placeSiblingUnits(diff, committed, regionTailRef)
+  diffSiblingUnits(currentChildren, Array.from(next.childNodes), head, regionTailRef, context)
 }
 
 function diffSiblingUnits(
@@ -333,6 +238,7 @@ function diffSiblingUnits(
   let diff = createSiblingDiff(currentNodes, nextNodes, parent)
   matchKeyedSiblingUnits(diff, context)
   matchPositionalSiblingUnits(diff)
+  if (isDocumentHead(parent)) matchShiftedHeadUnits(diff)
   let committed = commitSiblingUnits(diff, context)
   removeUnusedSiblingUnits(diff, context)
   placeSiblingUnits(diff, committed, regionTailRef)
@@ -348,7 +254,6 @@ function createSiblingDiff(
   let nextUnits = parseSiblingUnits(nextNodes)
   return {
     parent,
-    currentNodes,
     nextNodes,
     currentUnits,
     nextUnits,
@@ -378,7 +283,7 @@ function matchKeyedSiblingUnits(diff: SiblingDiff, context: FrameContext): void 
       if (
         keyedIndex !== undefined &&
         !used[keyedIndex] &&
-        siblingUnitsComparable(currentUnits[keyedIndex], nextUnit)
+        currentUnits[keyedIndex].start.nodeName === nextUnit.start.nodeName
       ) {
         matchIndex = keyedIndex
       }
@@ -406,20 +311,12 @@ function matchKeyedSiblingUnits(diff: SiblingDiff, context: FrameContext): void 
 function matchPositionalSiblingUnits(diff: SiblingDiff): void {
   let { currentUnits, nextUnits, used, matchIndexForNext } = diff
 
-  let remainingCurrentIndexes: number[] = []
-  for (let i = 0; i < currentUnits.length; i++) {
-    if (!used[i]) remainingCurrentIndexes.push(i)
-  }
-
-  let remainingNextIndexes: number[] = []
-  for (let i = 0; i < nextUnits.length; i++) {
-    if (matchIndexForNext[i] === -1) remainingNextIndexes.push(i)
-  }
-
-  let remainingLength = Math.min(remainingCurrentIndexes.length, remainingNextIndexes.length)
-  for (let i = 0; i < remainingLength; i++) {
-    let currentIndex = remainingCurrentIndexes[i]
-    let nextIndex = remainingNextIndexes[i]
+  let cursor = 0
+  for (let nextIndex = 0; nextIndex < nextUnits.length; nextIndex++) {
+    if (matchIndexForNext[nextIndex] !== -1) continue
+    while (used[cursor]) cursor++
+    if (cursor === currentUnits.length) break
+    let currentIndex = cursor++
     let currentUnit = currentUnits[currentIndex]
     let nextUnit = nextUnits[nextIndex]
 
@@ -432,8 +329,8 @@ function matchPositionalSiblingUnits(diff: SiblingDiff): void {
       continue
     }
 
-    let identity = getUnkeyedNodeIdentity(currentUnit.node)
-    if (identity === undefined || identity !== getUnkeyedNodeIdentity(nextUnit.node)) continue
+    let identity = getUnkeyedNodeIdentity(currentUnit.start)
+    if (identity === undefined || identity !== getUnkeyedNodeIdentity(nextUnit.start)) continue
 
     used[currentIndex] = true
     matchIndexForNext[nextIndex] = currentIndex
@@ -452,7 +349,7 @@ function matchShiftedHeadUnits(diff: SiblingDiff): void {
     if (used[i] || currentUnit.kind !== 'node' || getSiblingUnitKey(currentUnit) !== undefined) {
       continue
     }
-    let identity = getUnkeyedNodeIdentity(currentUnit.node)
+    let identity = getUnkeyedNodeIdentity(currentUnit.start)
     if (identity === undefined) continue
     let indexes = currentIndexesByIdentity.get(identity)
     if (indexes) indexes.push(i)
@@ -468,7 +365,7 @@ function matchShiftedHeadUnits(diff: SiblingDiff): void {
     ) {
       continue
     }
-    let identity = getUnkeyedNodeIdentity(nextUnit.node)
+    let identity = getUnkeyedNodeIdentity(nextUnit.start)
     if (identity === undefined) continue
     let currentIndex = currentIndexesByIdentity.get(identity)?.shift()
     if (currentIndex === undefined) continue
@@ -480,7 +377,7 @@ function matchShiftedHeadUnits(diff: SiblingDiff): void {
 // Patches each matched current unit from its next unit and returns the units
 // that will occupy each next position.
 function commitSiblingUnits(diff: SiblingDiff, context: FrameContext): SiblingUnit[] {
-  let { parent, currentNodes, nextNodes, currentUnits, nextUnits, matchIndexForNext } = diff
+  let { parent, nextNodes, currentUnits, nextUnits, matchIndexForNext } = diff
   let committed = new Array<SiblingUnit>(nextUnits.length)
 
   for (let i = 0; i < nextUnits.length; i++) {
@@ -493,7 +390,7 @@ function commitSiblingUnits(diff: SiblingDiff, context: FrameContext): SiblingUn
 
     let currentUnit = currentUnits[matchIndex]
     if (currentUnit.kind === 'node' && nextUnit.kind === 'node') {
-      diffNode(currentUnit.node, nextUnit.node, context)
+      diffMatchedNode(currentUnit.start, nextUnit.start, context)
       committed[i] = currentUnit
       continue
     }
@@ -504,22 +401,45 @@ function commitSiblingUnits(diff: SiblingDiff, context: FrameContext): SiblingUn
     // the incoming range no longer has the same identity, replace the whole range
     // before regular node diffing mutates either marker.
     if (!shouldPreserveBoundaryUnit(currentUnit, nextUnit, context)) {
-      replaceCommentMarkerRange(currentUnit.start, nextUnit.start, parent, context)
+      let oldNodes = collectNodeRange(currentUnit.start, currentUnit.end)
+      for (let node of collectNodeRange(nextUnit.start, nextUnit.end)) {
+        parent.insertBefore(node, currentUnit.start)
+      }
+      for (let node of oldNodes) removeNode(node, parent, context)
       committed[i] = nextUnit
       continue
     }
 
-    let cursor = diffNode(currentUnit.start, nextUnit.start, context)
-    if (!cursor && currentUnit.kind === 'frame' && nextUnit.kind === 'frame') {
-      diffNodes(
-        collectNodesBetween(currentUnit.start, currentUnit.end),
-        nextNodes.slice(nextUnit.startIndex + 1, nextUnit.endIndex),
-        {
-          ...context,
-          regionParent: parent,
-          regionTailRef: currentUnit.end,
-        },
-      )
+    if (currentUnit.start.data !== nextUnit.start.data) currentUnit.start.data = nextUnit.start.data
+    if (currentUnit.kind === 'frame') {
+      let frame = context.frameInstances.get(currentUnit.start)
+      let marker = getFrameMarkerData(nextUnit.start, context)
+      if (frame && marker?.status === 'resolved') {
+        let fragment = currentUnit.start.ownerDocument.createDocumentFragment()
+        // Move the original response nodes so runtime metadata remains associated with them.
+        for (let node of collectNodesBetween(nextUnit.start, nextUnit.end))
+          fragment.appendChild(node)
+        let render = frame.renderMarkerContent(
+          { ...marker, id: getFrameId(nextUnit.start) },
+          fragment,
+          {
+            reloadOrigin: context.reloadOrigin,
+            nonce: context.nonce,
+            navigationType: context.navigationType,
+            from: context.from,
+            data: context.data,
+            signal: context.signal,
+            reconciliationTracker: context.reconciliationTracker,
+          },
+        )
+        context.reconciliationTracker?.waitFor(render)
+      } else if (!frame?.isDisplayingResolvedContent()) {
+        diffNodes(
+          collectNodesBetween(currentUnit.start, currentUnit.end),
+          nextNodes.slice(nextUnit.startIndex + 1, nextUnit.endIndex),
+          { ...context, regionParent: parent, regionTailRef: currentUnit.end },
+        )
+      }
     }
     committed[i] = currentUnit
   }
@@ -549,7 +469,7 @@ function placeSiblingUnits(
   let anchor: Node | null = regionTailRef
   for (let i = committed.length - 1; i >= 0; i--) {
     let unit = committed[i]
-    let first = getSiblingUnitFirstNode(unit)
+    let first = unit.start
     let ref = anchor?.parentNode === parent ? anchor : null
 
     if (stable.has(i)) {
@@ -578,8 +498,8 @@ function getStableCommittedIndexes(diff: SiblingDiff, committed: SiblingUnit[]):
     let unit = committed[i]
     if (
       unit.kind === 'node' &&
-      isPreservedDomElement(unit.node) &&
-      unit.node.parentNode === parent
+      isPreservedDomElement(unit.start) &&
+      unit.start.parentNode === parent
     ) {
       stable.add(i)
       upperBound = matchIndexForNext[i]
@@ -599,7 +519,7 @@ function getStableCommittedIndexes(diff: SiblingDiff, committed: SiblingUnit[]):
       matchIndex <= lowerBound ||
       matchIndex >= upperBounds[i] ||
       committed[i] !== currentUnits[matchIndex] ||
-      getSiblingUnitFirstNode(committed[i]).parentNode !== parent
+      committed[i].start.parentNode !== parent
     ) {
       continue
     }
@@ -607,42 +527,15 @@ function getStableCommittedIndexes(diff: SiblingDiff, committed: SiblingUnit[]):
     currentIndexes.push(matchIndex)
   }
 
-  for (let index of getLongestIncreasingSubsequence(currentIndexes)) {
+  for (let index of getStableIndexes(currentIndexes)) {
     stable.add(committedIndexes[index])
   }
   return stable
 }
 
-// Returns the positions in `values` that form one longest strictly increasing
-// subsequence, in O(n log n).
-function getLongestIncreasingSubsequence(values: number[]): number[] {
-  let tails: number[] = []
-  let previous = new Array<number>(values.length).fill(-1)
-
-  for (let i = 0; i < values.length; i++) {
-    let low = 0
-    let high = tails.length
-    while (low < high) {
-      let middle = (low + high) >> 1
-      if (values[tails[middle]] < values[i]) low = middle + 1
-      else high = middle
-    }
-    if (low > 0) previous[i] = tails[low - 1]
-    tails[low] = i
-  }
-
-  let result = new Array<number>(tails.length)
-  let index = tails.length > 0 ? tails[tails.length - 1] : -1
-  for (let i = tails.length - 1; i >= 0; i--) {
-    result[i] = index
-    index = previous[index]
-  }
-  return result
-}
-
 function getUnkeyedNodeIdentity(node: Node): string | undefined {
   if (isTextNode(node)) return '#text'
-  if (isCommentNode(node)) return `#comment:${getMarkerKind(node) ?? ''}`
+  if (isCommentNode(node)) return '#comment'
   if (!isElement(node)) return undefined
 
   // A link's rel and href identify the resource it loads, and a meta tag's name
@@ -693,21 +586,15 @@ function parseSiblingUnits(nodes: Node[]): SiblingUnit[] {
 
     invariant(!isHydrationEnd(node), 'Unexpected hydration end marker')
     invariant(!isFrameEnd(node), 'Unexpected frame end marker')
-    units.push({ kind: 'node', node, startIndex: i, endIndex: i })
+    units.push({ kind: 'node', start: node })
   }
 
   return units
 }
 
 function getSiblingUnitKey(unit: SiblingUnit): string | undefined {
-  if (unit.kind !== 'node' || !isElement(unit.node)) return
-  return unit.node.getAttribute('data-rmx-key') ?? undefined
-}
-
-function siblingUnitsComparable(current: SiblingUnit, next: SiblingUnit): boolean {
-  if (current.kind !== next.kind) return false
-  if (current.kind !== 'node' || next.kind !== 'node') return true
-  return nodeTypesComparable(current.node, next.node)
+  if (unit.kind !== 'node' || !isElement(unit.start)) return
+  return unit.start.getAttribute('data-rmx-key') ?? undefined
 }
 
 function shouldPreserveBoundaryUnit(
@@ -721,14 +608,10 @@ function shouldPreserveBoundaryUnit(
     : shouldPreserveHydrationStartMarker(current.start, next.start, context)
 }
 
-function getSiblingUnitFirstNode(unit: SiblingUnit): Node {
-  return unit.kind === 'node' ? unit.node : unit.start
-}
-
 function placeSiblingUnitBefore(unit: SiblingUnit, parent: ParentNode, ref: Node | null): void {
   if (unit.kind === 'node') {
-    if (unit.node.parentNode !== parent || unit.node.nextSibling !== ref) {
-      parent.insertBefore(unit.node, ref)
+    if (unit.start.parentNode !== parent || unit.start.nextSibling !== ref) {
+      parent.insertBefore(unit.start, ref)
     }
     return
   }
@@ -743,7 +626,7 @@ function placeSiblingUnitBefore(unit: SiblingUnit, parent: ParentNode, ref: Node
 
 function removeSiblingUnit(unit: SiblingUnit, parent: ParentNode, context: FrameContext): void {
   if (unit.kind === 'node') {
-    removeNode(unit.node, parent, context)
+    removeNode(unit.start, parent, context)
     return
   }
 
@@ -754,34 +637,6 @@ function removeSiblingUnit(unit: SiblingUnit, parent: ParentNode, context: Frame
 
 function isPreservedDomElement(node: Node): node is Element {
   return isElement(node) && node.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)
-}
-
-function nodeTypesComparable(a: Node, b: Node): boolean {
-  if (isTextNode(a) && isTextNode(b)) return true
-  if (isElement(a) && isElement(b)) return a.tagName === b.tagName
-  if (isCommentNode(a) && isCommentNode(b)) return markerKindsMatch(a, b)
-  return false
-}
-
-function getMarkerKind(node: Node): MarkerKind | undefined {
-  if (!isCommentNode(node)) return undefined
-  if (isFrameStart(node)) return 'frame-start'
-  if (isFrameEnd(node)) return 'frame-end'
-  if (isHydrationStart(node)) return 'virtual-root-start'
-  if (isHydrationEnd(node)) return 'virtual-root-end'
-  return undefined
-}
-
-function markerKindsMatch(a: Node, b: Node): boolean {
-  return getMarkerKind(a) === getMarkerKind(b)
-}
-
-function findHydrationEndMarker(start: Comment): Comment {
-  return findEndMarker(start, isHydrationStart, isHydrationEnd, 'Hydration end marker not found')
-}
-
-function findFrameEndMarker(start: Comment): Comment {
-  return findEndMarker(start, isFrameStart, isFrameEnd, 'Frame end marker not found')
 }
 
 function findEndIndex(
@@ -857,32 +712,6 @@ function getFrameMarkerData(marker: Comment, context: FrameContext) {
   return context.data.f?.[id]
 }
 
-function replaceCommentMarkerRange(
-  currentStart: Comment,
-  nextStart: Comment,
-  parent: ParentNode,
-  context: FrameContext,
-): void {
-  let currentEnd = findCommentMarkerRangeEnd(currentStart)
-  let nextEnd = findCommentMarkerRangeEnd(nextStart)
-  let nextNodes = collectNodeRange(nextStart, nextEnd)
-  let currentNodes = collectNodeRange(currentStart, currentEnd)
-
-  for (let node of nextNodes) {
-    parent.insertBefore(node, currentStart)
-  }
-
-  for (let node of currentNodes) {
-    removeNode(node, parent, context)
-  }
-}
-
-function findCommentMarkerRangeEnd(start: Comment): Comment {
-  if (isFrameStart(start)) return findFrameEndMarker(start)
-  if (isHydrationStart(start)) return findHydrationEndMarker(start)
-  throw new Error('Comment marker range start not found')
-}
-
 function collectNodeRange(start: Node, end: Node): Node[] {
   let nodes: Node[] = []
   let node: Node | null = start
@@ -894,23 +723,6 @@ function collectNodeRange(start: Node, end: Node): Node[] {
   }
 
   return nodes
-}
-
-function collectFrameContentFragment(
-  doc: Document,
-  start: Comment,
-  end: Comment,
-): DocumentFragment {
-  let fragment = doc.createDocumentFragment()
-  let node = start.nextSibling
-
-  while (node && node !== end) {
-    let next = node.nextSibling
-    fragment.appendChild(node)
-    node = next
-  }
-
-  return fragment
 }
 
 function removeNode(node: Node, parent: ParentNode, context: FrameContext): void {

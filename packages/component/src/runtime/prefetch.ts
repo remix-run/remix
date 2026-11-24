@@ -118,32 +118,17 @@ const SCROLL_SETTLE_MS = 150
 const IDLE_TIMEOUT_MS = 1000
 const PRELOAD_DESTINATIONS = ['fetch', 'font', 'image', 'script', 'style']
 
-const initialPrefetch = createDefaultPrefetch()
+const initialPrefetch = createFramePrefetch()
 let defaultPrefetchFrame = initialPrefetch
 let prefetchFrame: (src: string, options?: PrefetchFrameOptions) => void | Promise<void> =
-  defaultPrefetch
+  prefetchPage
 const initialAnchorPrefetch = createAnchorPrefetching()
 let prefetchAnchor = initialAnchorPrefetch
 
-/**
- * Fetches and parses frame HTML, then prefetches discovered assets.
- *
- * Prepared HTML requests use low priority and send `X-Remix-Prefetch: true`.
- * Overrides receive the prepared GET request and the inert parsed fragment. Native asset hints
- * never run scripts or apply styles. Pending requests are shared by source and target; the first
- * caller supplies the overrides. Nested sources are exposed to the `processFrame` hook and fetched
- * only when explicitly selected. Completed responses are discarded. Failures and cancellation
- * finish without affecting navigation, and custom work must honor the provided signal.
- *
- * @param src Same-origin frame source, resolved against the document base URL.
- * @param options Destination frame, cancellation signal, and triggering element.
- * @param overrides HTML fetch implementation and post-parse reference handling.
- * @returns Completes after the hook and delegated work finish, or when cancelled.
- */
-export function defaultPrefetch(
+function prefetchPage(
   src: string,
   options?: PrefetchFrameOptions,
-  overrides?: DefaultPrefetchOverrides,
+  overrides?: FramePrefetchOverrides,
 ): Promise<void> {
   let href = getSameOriginHref(src)
   return href ? defaultPrefetchFrame(href, options, overrides) : Promise.resolve()
@@ -335,20 +320,20 @@ function createAnchorPrefetching(
  */
 export function startPrefetching(signal: AbortSignal, prefetchOverride?: PrefetchFrame): void {
   if (signal.aborted) return
-  let strategy = createDefaultPrefetch(signal)
+  let strategy = createFramePrefetch(signal)
   let anchorStrategy = createAnchorPrefetching(
     signal,
     getInterceptableNavigation() ? startViewportPrefetching(signal) : undefined,
   )
   prefetchAnchor = anchorStrategy
   defaultPrefetchFrame = strategy
-  prefetchFrame = prefetchOverride ?? defaultPrefetch
+  prefetchFrame = prefetchOverride ?? prefetchPage
   signal.addEventListener(
     'abort',
     () => {
       if (defaultPrefetchFrame === strategy) {
         defaultPrefetchFrame = initialPrefetch
-        prefetchFrame = defaultPrefetch
+        prefetchFrame = prefetchPage
         prefetchAnchor = initialAnchorPrefetch
       }
     },
@@ -649,13 +634,35 @@ export function fetchFrame(
   return fetchImpl(url.href, { ...init, headers, mode: 'same-origin' })
 }
 
+function createPrefetchOwners(first: AbortSignal, onEmpty: () => void) {
+  let signals = new Set<AbortSignal>()
+  function cancel() {
+    for (let owner of signals) {
+      if (owner.aborted) signals.delete(owner)
+    }
+    if (!signals.size) onEmpty()
+  }
+  function add(signal: AbortSignal) {
+    if (signals.has(signal)) return
+    signals.add(signal)
+    signal.addEventListener('abort', cancel, { once: true })
+  }
+  add(first)
+  return {
+    add,
+    clear() {
+      for (let signal of signals) signal.removeEventListener('abort', cancel)
+      signals.clear()
+    },
+  }
+}
+
 interface FramePrefetchEntry {
   controller: AbortController
-  owners: Set<PrefetchOwner>
+  owners: ReturnType<typeof createPrefetchOwners>
   element: Element | undefined
   dependencies: Set<FramePrefetchEntry>
   ready: Promise<void>
-  cancel(): void
 }
 
 interface PrefetchOwner {
@@ -663,49 +670,55 @@ interface PrefetchOwner {
   element: Element | undefined
 }
 
-export function createDefaultPrefetch(
+interface FramePrefetchOverrides {
+  fetch?: DefaultPrefetchOverrides['fetch']
+  process?(
+    context: Omit<ProcessFrameContext, 'frames'>,
+    elements: Element[],
+    baseURL: string,
+    prefetchAssets: (
+      elements: readonly Element[],
+      cache?: Map<string, Promise<void>>,
+    ) => Promise<void>[],
+    prefetchFrame: (src: string, target?: string) => Promise<void>,
+  ): Promise<void>
+}
+
+function createFramePrefetch(
   signal?: AbortSignal,
 ): (
   src: string,
   options?: PrefetchFrameOptions,
-  overrides?: DefaultPrefetchOverrides,
+  overrides?: FramePrefetchOverrides,
 ) => Promise<void> {
   let pending = new Map<string, FramePrefetchEntry>()
-  let assets = new Map<string, { ready: Promise<void>; owners: Set<AbortSignal>; cancel(): void }>()
+  let assets = new Map<
+    string,
+    { ready: Promise<void>; owners: ReturnType<typeof createPrefetchOwners> }
+  >()
 
   function prefetchAsset(link: HTMLLinkElement, jobSignal: AbortSignal): Promise<void> {
     if (jobSignal.aborted || !link.relList.supports(link.rel)) return Promise.resolve()
     let key = assetKey(link)
     let existing = assets.get(key)
     if (existing) {
-      if (!existing.owners.has(jobSignal)) {
-        existing.owners.add(jobSignal)
-        jobSignal.addEventListener('abort', existing.cancel, { once: true })
-      }
+      existing.owners.add(jobSignal)
       return existing.ready
     }
     let { promise: ready, resolve } = Promise.withResolvers<void>()
-    let owners = new Set([jobSignal])
+    let owners = createPrefetchOwners(jobSignal, finish)
     function finish() {
       link.removeEventListener('load', finish)
       link.removeEventListener('error', finish)
       link.remove()
       pendingPrefetchLinks.delete(link)
       assets.delete(key)
-      for (let owner of owners) owner.removeEventListener('abort', cancel)
       owners.clear()
       resolve()
     }
-    function cancel() {
-      for (let owner of owners) {
-        if (owner.aborted) owners.delete(owner)
-      }
-      if (owners.size === 0) finish()
-    }
-    assets.set(key, { ready, owners, cancel })
+    assets.set(key, { ready, owners })
     link.addEventListener('load', finish, { once: true })
     link.addEventListener('error', finish, { once: true })
-    jobSignal.addEventListener('abort', cancel, { once: true })
     pendingPrefetchLinks.add(link)
     document.head.append(link)
     return ready
@@ -714,7 +727,7 @@ export function createDefaultPrefetch(
   async function discover(
     src: string,
     target: string | undefined,
-    overrides: DefaultPrefetchOverrides | undefined,
+    overrides: FramePrefetchOverrides | undefined,
     entry: FramePrefetchEntry,
     visited: Set<string>,
   ): Promise<void> {
@@ -778,18 +791,13 @@ export function createDefaultPrefetch(
         }
       }
       let elements = getResponseElements(fragment)
-      let allowed = new Set(elements)
       let discoveredAssets = Object.freeze(
         elements.filter((element) => isAssetReference(element, baseURL)),
       )
-      let frames = Object.freeze(discoverFrames(elements, baseURL))
-      let delegated: Promise<void>[] = []
-      let selectedAssets = new Map<string, Promise<void>>()
-      let selectedFrames = new Map<string, Promise<void>>()
-      let accepting = true
-
-      function prefetchReferences(references?: PrefetchReferences): Promise<void> {
-        if (!accepting || jobSignal.aborted) return Promise.resolve()
+      function prefetchAssets(
+        elements: readonly Element[],
+        cache?: Map<string, Promise<void>>,
+      ): Promise<void>[] {
         let activeAssets = new Set<string>()
         for (let element of document.querySelectorAll('link[href], script[src]')) {
           if (element instanceof HTMLLinkElement && pendingPrefetchLinks.has(element)) continue
@@ -797,55 +805,36 @@ export function createDefaultPrefetch(
           if (link) activeAssets.add(assetKey(link))
         }
         let requests: Promise<void>[] = []
-        for (let element of references?.assets ?? discoveredAssets) {
-          if (!allowed.has(element)) continue
+        for (let element of elements) {
           let link = createAssetPrefetch(element, baseURL)
           if (!link) continue
           let key = assetKey(link)
           if (activeAssets.has(key)) continue
-          let ready = selectedAssets.get(key) ?? prefetchAsset(link, jobSignal)
-          selectedAssets.set(key, ready)
+          let ready = cache?.get(key) ?? prefetchAsset(link, jobSignal)
+          cache?.set(key, ready)
           requests.push(ready)
         }
-        for (let frame of references?.frames ?? []) {
-          try {
-            let url = new URL(frame.src, baseURL)
-            if (url.protocol !== 'http:' && url.protocol !== 'https:') continue
-            let href = getSameOriginHref(url.href)
-            if (!href) continue
-            let key = JSON.stringify([href, frame.target])
-            let ready =
-              selectedFrames.get(key) ??
-              traverse(href, frame.target, nestedOwner, overrides, visited, entry)
-            selectedFrames.set(key, ready)
-            requests.push(ready)
-          } catch {
-            // A malformed selected reference does not discard the other references.
-          }
-        }
-        let ready = Promise.all(requests).then(() => {})
-        delegated.push(ready)
-        return ready
+        return requests
       }
 
-      try {
-        if (overrides?.processFrame) {
-          await overrides.processFrame(prefetchReferences, {
+      if (overrides?.process) {
+        await overrides.process(
+          {
             src,
             target,
             response,
             fragment,
             assets: discoveredAssets,
-            frames,
             signal: jobSignal,
             element: entry.element,
-          })
-        } else {
-          void prefetchReferences()
-        }
-      } finally {
-        accepting = false
-        await Promise.all(delegated)
+          },
+          elements,
+          baseURL,
+          prefetchAssets,
+          (href, name) => traverse(href, name, nestedOwner, overrides, visited, entry),
+        )
+      } else {
+        await Promise.all(prefetchAssets(discoveredAssets))
       }
     } catch {
       // Speculative failures leave navigation to the default resolver.
@@ -856,7 +845,7 @@ export function createDefaultPrefetch(
     src: string,
     target: string | undefined,
     owner: PrefetchOwner,
-    overrides: DefaultPrefetchOverrides | undefined,
+    overrides: FramePrefetchOverrides | undefined,
     visited: Set<string>,
     parent?: FramePrefetchEntry,
   ): Promise<void> {
@@ -868,41 +857,31 @@ export function createDefaultPrefetch(
       // Concurrent roots can discover one another; avoid waiting on a dependency cycle.
       if (parent && dependsOn(existing, parent)) return Promise.resolve()
       parent?.dependencies.add(existing)
-      if (!existing.owners.has(owner)) {
-        existing.owners.add(owner)
-        owner.signal.addEventListener('abort', existing.cancel, { once: true })
-      }
+      existing.owners.add(owner.signal)
       return existing.ready
     }
     if (visited.has(key)) return Promise.resolve()
     visited.add(key)
     let { promise: ready, resolve } = Promise.withResolvers<void>()
+    let controller = new AbortController()
+    let cancel = () => controller.abort()
     let entry: FramePrefetchEntry = {
-      controller: new AbortController(),
-      owners: new Set([owner]),
+      controller,
+      owners: createPrefetchOwners(owner.signal, cancel),
       element: owner.element,
       dependencies: new Set(),
       ready,
-      cancel() {
-        for (let subscriber of entry.owners) {
-          if (subscriber.signal.aborted) entry.owners.delete(subscriber)
-        }
-        if (entry.owners.size === 0 || signal?.aborted) entry.controller.abort()
-      },
     }
     function finish() {
       if (pending.get(key) === entry) pending.delete(key)
-      for (let subscriber of entry.owners)
-        subscriber.signal.removeEventListener('abort', entry.cancel)
       entry.owners.clear()
-      signal?.removeEventListener('abort', entry.cancel)
+      signal?.removeEventListener('abort', cancel)
       entry.controller.signal.removeEventListener('abort', finish)
       resolve()
     }
     pending.set(key, entry)
     parent?.dependencies.add(entry)
-    owner.signal.addEventListener('abort', entry.cancel, { once: true })
-    signal?.addEventListener('abort', entry.cancel, { once: true })
+    signal?.addEventListener('abort', cancel, { once: true })
     entry.controller.signal.addEventListener('abort', finish, { once: true })
     void discover(src, target, overrides, entry, visited).finally(finish)
     return ready
@@ -911,7 +890,7 @@ export function createDefaultPrefetch(
   return function prefetch(
     src: string,
     options?: PrefetchFrameOptions,
-    overrides?: DefaultPrefetchOverrides,
+    overrides?: FramePrefetchOverrides,
   ): Promise<void> {
     let owner: PrefetchOwner = {
       signal: options?.signal ?? new AbortController().signal,
@@ -979,55 +958,6 @@ function getAssetHref(value: string | null, baseURL: string): string | undefined
   }
 }
 
-function discoverFrames(elements: Element[], baseURL: string): PrefetchFrameReference[] {
-  let frames: PrefetchFrameReference[] = []
-  for (let element of elements) {
-    if (
-      !(element instanceof HTMLScriptElement) ||
-      element.id !== 'rmx-data' ||
-      element.type !== 'application/json'
-    )
-      continue
-    let data: unknown
-    try {
-      data = JSON.parse(element.textContent ?? '')
-    } catch {
-      continue
-    }
-    if (typeof data !== 'object' || data === null || !('f' in data)) continue
-    if (typeof data.f !== 'object' || data.f === null || Array.isArray(data.f)) continue
-    for (let frame of Object.values(data.f)) {
-      if (
-        typeof frame !== 'object' ||
-        frame === null ||
-        !('src' in frame) ||
-        typeof frame.src !== 'string' ||
-        !frame.src
-      )
-        continue
-      let target = 'name' in frame ? frame.name : undefined
-      if (target !== undefined && typeof target !== 'string') continue
-      try {
-        let url = new URL(frame.src, baseURL)
-        if (url.protocol !== 'http:' && url.protocol !== 'https:') continue
-        let src = getSameOriginHref(url.href)
-        if (src) {
-          let loading: PrefetchFrameReference['loading'] =
-            'status' in frame && frame.status === 'lazy' ? 'lazy' : 'eager'
-          let fallback =
-            'fallback' in frame && typeof frame.fallback === 'boolean'
-              ? frame.fallback
-              : 'status' in frame && frame.status === 'pending'
-          frames.push(Object.freeze({ src, target, loading, fallback }))
-        }
-      } catch {
-        // Malformed frame references do not prevent other prefetches.
-      }
-    }
-  }
-  return frames
-}
-
 function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement | undefined {
   if (element instanceof HTMLLinkElement) {
     if (!isAssetReference(element, baseUrl)) return
@@ -1079,4 +1009,142 @@ function createAssetPrefetch(element: Element, baseUrl: string): HTMLLinkElement
 
 function assetKey(link: HTMLLinkElement): string {
   return JSON.stringify([link.href, link.as, link.crossOrigin, link.integrity, link.referrerPolicy])
+}
+
+/**
+ * Fetches and parses frame HTML, then prefetches discovered assets.
+ *
+ * Prepared HTML requests use low priority and send `X-Remix-Prefetch: true`.
+ * Overrides receive the prepared GET request and the inert parsed fragment. Native asset hints
+ * never run scripts or apply styles. Pending requests are shared by source and target; the first
+ * caller supplies the overrides. Nested sources are exposed to the `processFrame` hook and fetched
+ * only when explicitly selected. Completed responses are discarded. Failures and cancellation
+ * finish without affecting navigation, and custom work must honor the provided signal.
+ *
+ * @param src Same-origin frame source, resolved against the document base URL.
+ * @param options Destination frame, cancellation signal, and triggering element.
+ * @param overrides HTML fetch implementation and post-parse reference handling.
+ * @returns Completes after the hook and delegated work finish, or when cancelled.
+ */
+export function defaultPrefetch(
+  src: string,
+  options?: PrefetchFrameOptions,
+  overrides?: DefaultPrefetchOverrides,
+): Promise<void> {
+  return prefetchPage(src, options, prepareOverrides(overrides))
+}
+
+export function createDefaultPrefetch(signal?: AbortSignal) {
+  let prefetch = createFramePrefetch(signal)
+  return (src: string, options?: PrefetchFrameOptions, overrides?: DefaultPrefetchOverrides) =>
+    prefetch(src, options, prepareOverrides(overrides))
+}
+
+function prepareOverrides(
+  overrides?: DefaultPrefetchOverrides,
+): FramePrefetchOverrides | undefined {
+  if (!overrides) return
+  return {
+    get fetch() {
+      return overrides.fetch
+    },
+    async process(context, elements, baseURL, prefetchAssets, prefetchFrame) {
+      if (!overrides.processFrame) {
+        await Promise.all(prefetchAssets(context.assets))
+        return
+      }
+      let allowed = new Set(elements)
+      let frames = Object.freeze(discoverFrames(elements, baseURL))
+      let assetCache = new Map<string, Promise<void>>()
+      let frameCache = new Map<string, Promise<void>>()
+      let delegated: Promise<void>[] = []
+      let accepting = true
+      function prefetchReferences(references?: PrefetchReferences): Promise<void> {
+        if (!accepting || context.signal.aborted) return Promise.resolve()
+        let selected = references?.assets ?? context.assets
+        let requests = prefetchAssets(
+          selected.filter((element) => allowed.has(element)),
+          assetCache,
+        )
+        for (let frame of references?.frames ?? []) {
+          try {
+            let href = getFrameHref(frame.src, baseURL)
+            if (!href) continue
+            let key = JSON.stringify([href, frame.target])
+            let ready = frameCache.get(key) ?? prefetchFrame(href, frame.target)
+            frameCache.set(key, ready)
+            requests.push(ready)
+          } catch {
+            // A malformed selected reference does not discard the other references.
+          }
+        }
+        let ready = Promise.all(requests).then(() => {})
+        delegated.push(ready)
+        return ready
+      }
+      try {
+        await overrides.processFrame(prefetchReferences, { ...context, frames })
+      } finally {
+        accepting = false
+        await Promise.all(delegated)
+      }
+    },
+  }
+}
+
+function getFrameHref(src: string, baseURL: string): string | undefined {
+  try {
+    let url = new URL(src, baseURL)
+    if (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      url.origin === window.location.origin
+    ) {
+      url.hash = ''
+      return url.href
+    }
+  } catch {
+    // Malformed frame references do not prevent other prefetches.
+  }
+}
+
+function discoverFrames(elements: Element[], baseURL: string): PrefetchFrameReference[] {
+  let frames: PrefetchFrameReference[] = []
+  for (let element of elements) {
+    if (
+      !(element instanceof HTMLScriptElement) ||
+      element.id !== 'rmx-data' ||
+      element.type !== 'application/json'
+    )
+      continue
+    let data: unknown
+    try {
+      data = JSON.parse(element.textContent ?? '')
+    } catch {
+      continue
+    }
+    if (typeof data !== 'object' || data === null || !('f' in data)) continue
+    if (typeof data.f !== 'object' || data.f === null || Array.isArray(data.f)) continue
+    for (let frame of Object.values(data.f)) {
+      if (
+        typeof frame !== 'object' ||
+        frame === null ||
+        !('src' in frame) ||
+        typeof frame.src !== 'string' ||
+        !frame.src
+      )
+        continue
+      let target = 'name' in frame ? frame.name : undefined
+      if (target !== undefined && typeof target !== 'string') continue
+      let src = getFrameHref(frame.src, baseURL)
+      if (!src) continue
+      let loading: PrefetchFrameReference['loading'] =
+        'status' in frame && frame.status === 'lazy' ? 'lazy' : 'eager'
+      let fallback =
+        'fallback' in frame && typeof frame.fallback === 'boolean'
+          ? frame.fallback
+          : 'status' in frame && frame.status === 'pending'
+      frames.push(Object.freeze({ src, target, loading, fallback }))
+    }
+  }
+  return frames
 }

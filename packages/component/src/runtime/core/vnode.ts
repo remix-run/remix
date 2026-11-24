@@ -144,8 +144,8 @@ function normalizeElementProps(props: ElementProps | null | undefined): ElementP
   if (isNormalizedMix(props.mix)) return props
 
   let { mix, ...rest } = props
-  let normalizedMix = normalizeMixValue(mix)
-  return normalizedMix === undefined ? rest : { ...rest, mix: normalizedMix }
+  let normalized = Array.isArray(mix) ? mix.flat(Infinity).filter(Boolean) : mix ? [mix] : []
+  return normalized.length ? { ...rest, mix: normalized } : rest
 }
 
 function isNormalizedMix(mix: unknown): boolean {
@@ -155,27 +155,6 @@ function isNormalizedMix(mix: unknown): boolean {
     if (!item || Array.isArray(item)) return false
   }
   return true
-}
-
-function normalizeMixValue(mix: unknown): unknown[] | undefined {
-  if (!mix) return undefined
-
-  let normalizedMix: unknown[] = []
-  flattenMixValue(mix, normalizedMix)
-  return normalizedMix.length === 0 ? undefined : normalizedMix
-}
-
-function flattenMixValue(mix: unknown, out: unknown[]): void {
-  if (!mix) return
-
-  if (!Array.isArray(mix)) {
-    out.push(mix)
-    return
-  }
-
-  for (let item of mix) {
-    flattenMixValue(item, out)
-  }
 }
 
 export type EmptyChild = boolean | null | undefined
