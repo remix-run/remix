@@ -8,7 +8,7 @@ import {
 } from './component.ts'
 import { invariant } from './invariant.ts'
 import type { RemixNode } from './core/vnode.ts'
-import { createFrameRuntime, NamedFrameRegistry, type ResolveFrame } from './frame-runtime.ts'
+import { createFrameRuntime, FrameRegistry, type ResolveFrame } from './frame-runtime.ts'
 import {
   getDefaultStyleManager,
   diffVNodes,
@@ -247,13 +247,9 @@ function createRootFrameHandle(
       }),
     resolveFrame,
     errorTarget,
-    pendingClientEntries: new Map(),
     scheduler,
     styleManager,
-    moduleCache: new Map(),
-    moduleLoads: new Map(),
-    frameInstances: new WeakMap(),
-    namedFrames: new NamedFrameRegistry(),
+    registry: new FrameRegistry(),
   })
   runtime.canResolveFrames = !!init?.resolveFrame
   let frame = createFrameHandle({ src: init?.src ?? '/', $runtime: runtime })

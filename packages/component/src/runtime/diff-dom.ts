@@ -228,7 +228,7 @@ function diffSiblingUnits(
 
     if (currentUnit.start.data !== nextUnit.start.data) currentUnit.start.data = nextUnit.start.data
     if (currentUnit.kind === 'frame') {
-      let frame = context.frameInstances.get(currentUnit.start)
+      let frame = context.registry.instances.get(currentUnit.start)
       let marker = getFrameMarkerData(nextUnit.start, context)
       if (frame && marker?.status === 'resolved') {
         let fragment = currentUnit.start.ownerDocument.createDocumentFragment()
@@ -573,7 +573,7 @@ function shouldPreserveFrameStartMarker(
   context: FrameContext,
 ): boolean {
   let nextData = getFrameMarkerData(next, context)
-  let currentFrame = context.frameInstances.get(current)
+  let currentFrame = context.registry.instances.get(current)
 
   return (
     currentFrame !== undefined &&
@@ -645,10 +645,10 @@ function visitSubtree(node: Node, visit: (node: Node) => boolean | void): void {
 }
 
 function disposeFrameStartMarker(marker: Comment, context: FrameContext): void {
-  let subFrame = context.frameInstances.get(marker)
+  let subFrame = context.registry.instances.get(marker)
   if (subFrame) {
     subFrame.dispose()
-    context.frameInstances.delete(marker)
+    context.registry.instances.delete(marker)
   }
 }
 

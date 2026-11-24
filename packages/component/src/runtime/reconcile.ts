@@ -1108,7 +1108,7 @@ function insert(
     isCommentNode(hydrationNode)
   ) {
     let runtime = getFrameRuntime(frame)
-    let pending = runtime?.pendingClientEntries.get(hydrationNode)
+    let pending = runtime?.registry.entries.get(hydrationNode)
     let owner = getClientEntryBoundaryOwner(hydrationNode)
     let end = pending?.[0] ?? owner?.end
     if (end) {
@@ -1543,7 +1543,7 @@ function diffComponent(
       getContext: (type: ElementFunction) => findContextFromAncestry(vParent, type),
       getFrameByName(name: string) {
         let runtime = getFrameRuntime(frame)
-        return runtime?.namedFrames.get(name)
+        return runtime?.registry.get(name)
       },
       getTopFrame() {
         let runtime = getFrameRuntime(frame)
@@ -1589,9 +1589,9 @@ function updateClientEntryBoundary(
   }
 
   let runtime = getFrameRuntime(context.frame)
-  let pending = runtime?.pendingClientEntries.get(node._rangeStart)
+  let pending = runtime?.registry.entries.get(node._rangeStart)
   invariant(runtime && pending?.[0] === node._rangeEnd, 'Expected pending client entry boundary')
-  runtime.pendingClientEntries.set(node._rangeStart, [
+  runtime.registry.entries.set(node._rangeStart, [
     node._rangeEnd,
     element,
     getNonceManager().getResourceNonces(node._parent),
@@ -1619,7 +1619,7 @@ function disposeCommittedClientEntryBoundary(
   node: CommittedClientEntryNode,
   context: ReconcileContext,
 ): boolean {
-  getFrameRuntime(context.frame)?.pendingClientEntries.delete(node._rangeStart)
+  getFrameRuntime(context.frame)?.registry.entries.delete(node._rangeStart)
   return disposeClientEntryBoundary(node._rangeStart)
 }
 

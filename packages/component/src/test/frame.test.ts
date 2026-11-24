@@ -13,7 +13,7 @@ import {
   resetDocumentImportMapManager,
 } from '../runtime/frame.ts'
 import {
-  NamedFrameRegistry,
+  FrameRegistry,
   type LoadModule,
   type ResolveFrameOptions,
 } from '../runtime/frame-runtime.ts'
@@ -38,13 +38,9 @@ function createTestFrame(root: Parameters<typeof createFrame>[0], options: TestF
     src: 'https://example.com/initial',
     errorTarget: new EventTarget(),
     loadModule: () => () => () => null,
-    pendingClientEntries: new Map(),
     scheduler: createScheduler(document, new EventTarget()),
     data: {},
-    moduleCache: new Map(),
-    moduleLoads: new Map(),
-    frameInstances: new WeakMap(),
-    namedFrames: new NamedFrameRegistry(),
+    registry: new FrameRegistry(),
     ...options,
   })
 }
@@ -179,14 +175,10 @@ describe('frames', () => {
           ].join(''),
         ])
       },
-      pendingClientEntries: new Map(),
       scheduler,
       styleManager,
       data,
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -397,13 +389,9 @@ describe('frames', () => {
           ),
         ])
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, new EventTarget()),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -1131,6 +1119,34 @@ describe('frames', () => {
     }
   })
 
+  it('retries a client entry after its loader throws synchronously', async (t) => {
+    let root = document.createElement('div')
+    let html = '<!-- rmx:h:h1 --><p>Server</p><!-- /rmx:h -->' + rmxDataScript('hydrated')
+    root.innerHTML = html
+    document.body.append(root)
+
+    let error = new Error('Entry unavailable')
+    let report = t.mock.method(console, 'error', () => {})
+    let attempts = 0
+    let frame = createTestFrame(root, {
+      loadModule() {
+        if (++attempts === 1) throw error
+        return (handle: Handle<{ label: string }>) => () =>
+          jsx('p', { children: handle.props.label })
+      },
+      resolveFrame: () => html,
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    expect(report).toHaveBeenCalledWith('[createFrame] Failed to load module for h1:', error)
+    expect(root.querySelector('p')?.textContent).toBe('Server')
+
+    await frame.handle.reload()
+    expect(attempts).toBe(2)
+    expect(root.querySelector('p')?.textContent).toBe('hydrated')
+  })
+
   it('releases pending hydration metadata when its frame is disposed', async () => {
     document.body.innerHTML = [
       '<!-- rmx:h:h1 -->',
@@ -1147,8 +1163,7 @@ describe('frames', () => {
         return modulePromise
       },
       resolveFrame: () => '',
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
+      registry: new FrameRegistry(),
     }
     let data = {}
     let frame = createTestFrame(document, { ...sharedOptions, data })
@@ -1206,14 +1221,10 @@ describe('frames', () => {
         throw new Error('Unexpected client entry')
       },
       resolveFrame: () => '',
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, errorTarget),
       styleManager,
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     frame.dispose()
@@ -1253,13 +1264,9 @@ describe('frames', () => {
       resolveFrame() {
         return response
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, new EventTarget()),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -1291,13 +1298,9 @@ describe('frames', () => {
           statusText: 'Not Found',
         })
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, errorTarget),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -1328,13 +1331,9 @@ describe('frames', () => {
           statusText: 'Service Unavailable',
         })
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, errorTarget),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -1363,13 +1362,9 @@ describe('frames', () => {
         resolvedOptions = options
         return htmlStream(['<main id="result">Saved</main>'])
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, new EventTarget()),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
     let formData = new FormData()
     formData.set('displayName', 'Ada')
@@ -1458,10 +1453,10 @@ describe('frames', () => {
     if (!from) throw new Error('Expected a current navigation entry')
     let navigation = { navigationType: 'traverse', from } satisfies ResolveFrameOptions
     let nextNavigation = { navigationType: 'replace', from } satisfies ResolveFrameOptions
-    let namedFrames = new NamedFrameRegistry()
+    let registry = new FrameRegistry()
     let loads: Array<Pick<ResolveFrameOptions, 'navigationType' | 'from'>> = []
     let frame = createTestFrame(document, {
-      namedFrames,
+      registry,
       loadModule: () => Entry,
       resolveFrame(src, options) {
         if (src === 'https://example.com/initial') return html
@@ -1475,11 +1470,11 @@ describe('frames', () => {
     renderClientFrame = true
 
     await reloadFrameForNavigation(frame.handle, navigation).finished
-    let serverFrame = namedFrames.get('server-wrapper')
+    let serverFrame = registry.get('server-wrapper')
     expect(serverFrame).toBeDefined()
     await reloadFrameForNavigation(frame.handle, nextNavigation).finished
 
-    expect(namedFrames.get('server-wrapper')).toBe(serverFrame)
+    expect(registry.get('server-wrapper')).toBe(serverFrame)
     expect(loads).toEqual([navigation, nextNavigation])
     expect(document.getElementById('client-child')?.textContent).toBe('Client content')
 
@@ -1755,13 +1750,9 @@ describe('frames', () => {
           })
         })
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, new EventTarget()),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
     let controller = new AbortController()
 
@@ -1798,13 +1789,9 @@ describe('frames', () => {
           },
         })
       },
-      pendingClientEntries: new Map(),
       scheduler: createScheduler(document, new EventTarget()),
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
     let controller = new AbortController()
 
@@ -2406,14 +2393,10 @@ describe('frames', () => {
       errorTarget,
       loadModule: () => () => null,
       resolveFrame: () => '',
-      pendingClientEntries: new Map(),
       scheduler,
       styleManager,
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     await frame.ready()
@@ -2460,14 +2443,10 @@ describe('frames', () => {
           'document',
         )
       },
-      pendingClientEntries: new Map(),
       scheduler,
       styleManager,
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -2563,14 +2542,10 @@ describe('frames', () => {
           rmxDataScript('fragment', '/fragment-entry.js', 'FragmentEntry'),
         ].join('')
       },
-      pendingClientEntries: new Map(),
       scheduler,
       styleManager,
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -2633,14 +2608,10 @@ describe('frames', () => {
           'document',
         )
       },
-      pendingClientEntries: new Map(),
       scheduler,
       styleManager,
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -2681,14 +2652,10 @@ describe('frames', () => {
           'document',
         )
       },
-      pendingClientEntries: new Map(),
       scheduler,
       styleManager,
       data: {},
-      moduleCache: new Map(),
-      moduleLoads: new Map(),
-      frameInstances: new WeakMap(),
-      namedFrames: new NamedFrameRegistry(),
+      registry: new FrameRegistry(),
     })
 
     try {
@@ -2741,14 +2708,10 @@ function createClientEntryResourceTestFrame(): ReturnType<typeof createFrame> {
     resolveFrame() {
       return ''
     },
-    pendingClientEntries: new Map(),
     scheduler,
     styleManager,
     data: {},
-    moduleCache: new Map(),
-    moduleLoads: new Map(),
-    frameInstances: new WeakMap(),
-    namedFrames: new NamedFrameRegistry(),
+    registry: new FrameRegistry(),
   })
 }
 

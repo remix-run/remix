@@ -12,7 +12,7 @@ import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
 import type { ComponentErrorEvent, Handle } from './component.ts'
 import {
-  NamedFrameRegistry,
+  FrameRegistry,
   navigationRequest,
   type LoadModule,
   type ResolveFrame,
@@ -171,21 +171,17 @@ export function run(init: RunInit): AppRuntime {
   let scheduler = createScheduler(document, errorTarget)
 
   let resolveFrame = init.resolveFrame ?? defaultResolveFrame
-  let namedFrames = new NamedFrameRegistry()
+  let registry = new FrameRegistry()
 
   let topFrame = createFrame(document, {
     src: document.location.href,
     errorTarget,
     loadModule: init.loadModule,
     resolveFrame,
-    pendingClientEntries: new Map(),
     scheduler,
     styleManager,
     data: {},
-    moduleCache: new Map(),
-    moduleLoads: new Map(),
-    frameInstances: new WeakMap(),
-    namedFrames,
+    registry,
     processClientEntryPreloads: init.processClientEntryPreloads,
   })
 
@@ -194,7 +190,7 @@ export function run(init: RunInit): AppRuntime {
   let frames: Handle['frames'] = {
     top: topFrame.handle,
     get(name) {
-      return namedFrames.get(name)
+      return registry.get(name)
     },
   }
   let clearAppFrames = setAppFrames(frames)

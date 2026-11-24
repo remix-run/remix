@@ -19,7 +19,7 @@ import { invariant } from './invariant.ts'
 import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
-import type { Scheduler, VirtualRoot } from './vdom.ts'
+import type { VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import {
   createFrameRuntime,
@@ -36,11 +36,8 @@ import {
   type FrameReloadResult,
   type FrameReloadTransition,
   type FrameRuntime,
-  type LoadModule,
-  type NamedFrameRegistry,
-  type PendingClientEntries,
+  type SharedFrameRuntime,
   type ReconciliationTracker,
-  type ResolveFrame,
 } from './frame-runtime.ts'
 import {
   excludePortalRanges,
@@ -267,26 +264,15 @@ export function reloadFrameForNavigation(
   return reload({ ...options, [navigationRequest]: true })
 }
 
-export type FrameContext = {
+export type FrameContext = SharedFrameRuntime & {
   reloadOrigin?: ReloadOrigin
   nonce?: string
   navigationType?: NavigationType
   from?: NavigationHistoryEntry
   topFrame?: FrameHandle
   getContext: (type: ElementFunction) => unknown
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
   frame: FrameHandle
-  styleManager: StyleManager
   data: RmxData
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, FrameInstance>
-  namedFrames: NamedFrameRegistry
-  processClientEntryPreloads?: ProcessClientEntryPreloads
   lifecycleSignal: AbortSignal
   regionTailRef?: ChildNode | null
   regionParent?: ParentNode | null
@@ -296,7 +282,7 @@ export type FrameContext = {
   blockingFrameTracker?: ReconciliationTracker
 }
 
-type FrameInit = {
+type FrameInit = Omit<SharedFrameRuntime, 'styleManager'> & {
   nonce?: string
   navigationType?: NavigationType
   from?: NavigationHistoryEntry
@@ -306,19 +292,9 @@ type FrameInit = {
   topFrame?: FrameHandle
   getContext?: (type: ElementFunction) => unknown
   src: string
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
   styleManager?: StyleManager
   marker?: FrameMarkerData
   data: RmxData
-  moduleCache: Map<string, ElementFunction>
-  moduleLoads: Map<string, Promise<ElementFunction | undefined>>
-  frameInstances: WeakMap<Comment, FrameInstance>
-  namedFrames: NamedFrameRegistry
-  processClientEntryPreloads?: ProcessClientEntryPreloads
   disposeFallback?: () => void
 }
 
@@ -493,7 +469,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
 
   let frameName = init.marker?.name ?? init.name
   if (frameName) {
-    init.namedFrames.register(frameName, frame)
+    init.registry.register(frameName, frame)
   }
 
   let context: FrameContext = {
@@ -1023,7 +999,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     }
 
     if (frameName) {
-      init.namedFrames.unregister(frameName, frame)
+      init.registry.unregister(frameName, frame)
     }
   }
 
@@ -1327,7 +1303,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       if (eventController !== finished.controller) return
       if (!isFrameStart(node)) return
       let end = findFrameEndMarker(node)
-      context.frameInstances.get(node)?.completeInheritedReload(failure)
+      context.registry.instances.get(node)?.completeInheritedReload(failure)
       return end
     })
   }
@@ -1541,12 +1517,12 @@ function insertFrame(
   let getContext = (type: ElementFunction) => findContextFromAncestry(vParent, type)
 
   // Hydration path: adopt server-rendered frame markers and reuse the existing
-  // frame instance created during createSubFrames().
+  // frame instance created during hydration.
   if (isFrameStart(cursor?.current)) {
     let start = cursor.current
     let end = findOptionalEndMarker(start, isFrameStart, isFrameEnd)
     if (end) {
-      let instance = runtime.frameInstances.get(start)
+      let instance = runtime.registry.instances.get(start)
       if (!instance) {
         instance = createFrameInstance(node, start, end, runtime, getContext)
       } else {
@@ -1639,7 +1615,7 @@ function createFrameInstance(
     data: {},
     disposeFallback,
   })
-  runtime.frameInstances.set(start, instance)
+  runtime.registry.instances.set(start, instance)
   return instance
 }
 
@@ -1802,18 +1778,21 @@ function hydrateContainer(
   options?: RenderOptions,
 ): Promise<void> {
   let hydrationData = context.data.h
-  let hydrationMarkers = findHydrationMarkers(container, hydrationData)
+  let markers: HydrationMarker[] = []
+  let parent = container.regionStart && frameClientEntryParents.get(container.regionStart)
+  let frames: Array<() => void> = []
+  let subFramesReady = visit(container.childNodes, parent)
   let hydrations: Array<{
     marker: HydrationMarker
     entry: HydrationData
     complete: () => void
   }> = []
 
-  for (let marker of hydrationMarkers) {
+  for (let marker of markers) {
     let entry = hydrationData?.[marker.id]
     if (!entry) continue
-    if (!context.pendingClientEntries.has(marker.start)) {
-      context.pendingClientEntries.set(marker.start, [marker.end, undefined])
+    if (!context.registry.entries.has(marker.start)) {
+      context.registry.entries.set(marker.start, [marker.end, undefined])
     }
     let { promise, resolve } = Promise.withResolvers<void>()
     pendingClientEntryHydrations.set(marker.start, promise)
@@ -1829,8 +1808,8 @@ function hydrateContainer(
     })
   }
 
-  // Register frame metadata before a cached client entry can adopt its frame markers.
-  let subFramesReady = createSubFrames(container.childNodes, context, options)
+  // A cached entry can synchronously adopt a frame. Register all owners before rendering it.
+  for (let start of frames) start()
   for (let { marker, entry, complete } of hydrations) {
     scheduleHydrationMarker(
       marker,
@@ -1842,6 +1821,76 @@ function hydrateContainer(
     )
   }
   return subFramesReady
+
+  function visit(nodes: Node[], parent?: Comment): Promise<void> {
+    let tasks: Promise<void>[] = []
+    nodes = excludePortalRanges(nodes)
+    let boundaries: typeof markers = []
+    for (let i = 0; i < nodes.length; i++) {
+      let node = nodes[i]
+
+      // Nested frames discover their own entries, inheriting this pass's enclosing boundary.
+      if (isFrameStart(node)) {
+        if (parent) frameClientEntryParents.set(node, parent)
+        else frameClientEntryParents.delete(node)
+        let end = findFrameEndMarker(node)
+        i = findMarkerRangeEndIndex(nodes, end, i)
+        let task = Promise.withResolvers<void>()
+        tasks.push(task.promise)
+        frames.push(() => task.resolve(startFrame(node, end)))
+        continue
+      }
+
+      if (isHydrationStart(node)) {
+        let id = getHydrationId(node)
+        // Fill in the end before starting hydration. Markers stay in parent-first order.
+        let boundary = { id, start: node, end: node, parent }
+        markers.push(boundary)
+        boundaries.push(boundary)
+        if (hydrationData?.[id] || pendingClientEntryHydrations.has(node)) parent = node
+      } else if (isHydrationEnd(node)) {
+        let boundary = boundaries.pop()
+        if (boundary) {
+          boundary.end = node
+          parent = boundary.parent
+        }
+      }
+      if (node.childNodes.length > 0) {
+        tasks.push(visit(Array.from(node.childNodes), parent))
+      }
+    }
+    if (boundaries.length) throw new Error('End marker not found')
+    return Promise.all(tasks).then(() => {})
+  }
+
+  async function startFrame(node: Comment, end: Comment): Promise<void> {
+    if (options?.signal?.aborted) return
+    let existingFrame = context.registry.instances.get(node)
+    let id = getFrameId(node)
+    let marker = context.data.f?.[id]
+
+    if (!marker) {
+      existingFrame?.clearPendingTemplateWatch()
+      return
+    }
+    let frameMarker = { ...marker, id }
+    if (existingFrame) return existingFrame.updateMarker(frameMarker, options)
+
+    let subFrame = createFrame([node, end], {
+      nonce: context.nonce,
+      navigationType: context.navigationType,
+      from: context.from,
+      signal: options?.signal,
+      src: marker.src,
+      topFrame: context.topFrame,
+      getContext: context.getContext,
+      ...getSharedFrameRuntime(context),
+      data: context.data,
+      marker: frameMarker,
+    })
+    context.registry.instances.set(node, subFrame)
+    if (marker.status === 'resolved') return subFrame.ready()
+  }
 }
 
 function scheduleHydrationMarker(
@@ -1865,7 +1914,6 @@ function scheduleHydrationMarker(
   let key = getClientEntryKey(identity)
   let props: Record<string, unknown> | undefined = entry.props
   let completed = false
-
   let complete = () => {
     if (completed) return
     completed = true
@@ -1883,21 +1931,21 @@ function scheduleHydrationMarker(
     if (signal?.aborted || context.lifecycleSignal.aborted) return
     if (!isHydrationMarkerLive(marker, context)) return
     if (!props) return
-    let pending = context.pendingClientEntries.get(marker.start)
+    let pending = context.registry.entries.get(marker.start)
     let vElement = pending?.[1] ?? createElement(component, props)
-    context.pendingClientEntries.set(marker.start, [marker.end, vElement])
+    context.registry.entries.set(marker.start, [marker.end, vElement])
     hydrateRegion(vElement, marker.start, marker.end, identity, context, signal, pending?.[2])
   }
 
   let parentHydration = marker.parent && pendingClientEntryHydrations.get(marker.parent)
-  let cached = context.moduleCache.get(key)
-  if (cached && !parentHydration) {
-    hydrateWithComponent(cached)
+  let component =
+    context.registry.modules.get(key) ?? loadClientEntry(key, identity, marker.id, context)
+  if (typeof component === 'function' && !parentHydration) {
+    hydrateWithComponent(component)
     complete()
     return
   }
 
-  let component = cached ?? getOrStartModuleLoad(key, identity, marker.id, context)
   // Imports can finish in any order, but setup must wait for the owning entry's context.
   Promise.all([component, parentHydration])
     .then(([component]) => {
@@ -1905,40 +1953,36 @@ function scheduleHydrationMarker(
         hydrateWithComponent(component)
       }
     })
-    .finally(() => {
-      complete()
-    })
+    .finally(complete)
 }
 
-function getOrStartModuleLoad(
+function loadClientEntry(
   key: string,
   identity: ClientEntryIdentity,
   markerId: string,
   context: FrameContext,
 ): Promise<ElementFunction | undefined> {
-  let inFlight = context.moduleLoads.get(key)
-  if (inFlight) return inFlight
+  let { promise, resolve } = Promise.withResolvers<ElementFunction | undefined>()
+  context.registry.modules.set(key, promise)
+  void load()
+  return promise
 
-  let loadPromise = (async () => {
+  async function load(): Promise<void> {
     try {
-      let mod = await context.loadModule(identity.moduleUrl, identity.exportName)
-      if (!isElementFunction(mod)) {
+      let component = await context.loadModule(identity.moduleUrl, identity.exportName)
+      if (!isElementFunction(component)) {
         throw new Error(
           `Export "${identity.exportName}" from "${identity.moduleUrl}" is not a function`,
         )
       }
-      context.moduleCache.set(key, mod)
-      return mod
+      context.registry.modules.set(key, component)
+      resolve(component)
     } catch (error) {
+      context.registry.modules.delete(key)
+      resolve(undefined)
       console.error(`[createFrame] Failed to load module for ${markerId}:`, error)
-      return undefined
-    } finally {
-      context.moduleLoads.delete(key)
     }
-  })()
-
-  context.moduleLoads.set(key, loadPromise)
-  return loadPromise
+  }
 }
 
 function createElement(component: ElementFunction, props: Record<string, unknown>): RemixElement {
@@ -2038,7 +2082,7 @@ function hydrateRegion(
 ): void {
   if (signal?.aborted) return
 
-  context.pendingClientEntries.delete(start)
+  context.registry.entries.delete(start)
 
   // During a server frame reload, expose the reload signal and reconciliation
   // tracker to client frames created while this entry renders so blocking
@@ -2107,61 +2151,6 @@ function createFrameRoot(
   return root
 }
 
-async function createSubFrames(
-  nodes: Node[],
-  context: FrameContext,
-  options?: RenderOptions,
-): Promise<void> {
-  let tasks: Promise<void>[] = []
-  nodes = excludePortalRanges(nodes)
-
-  for (let i = 0; i < nodes.length; i++) {
-    if (options?.signal?.aborted) break
-
-    let node = nodes[i]
-
-    if (isFrameStart(node)) {
-      let end = findFrameEndMarker(node)
-      let existingFrame = context.frameInstances.get(node)
-      let id = getFrameId(node)
-      let marker = context.data.f?.[id]
-
-      if (!marker) {
-        existingFrame?.clearPendingTemplateWatch()
-      } else {
-        let frameMarker = { ...marker, id }
-        if (existingFrame) {
-          tasks.push(existingFrame.updateMarker(frameMarker, options))
-        } else {
-          let subFrame = createFrame([node, end], {
-            nonce: context.nonce,
-            navigationType: context.navigationType,
-            from: context.from,
-            signal: options?.signal,
-            src: marker.src,
-            topFrame: context.topFrame,
-            getContext: context.getContext,
-            ...getSharedFrameRuntime(context),
-            data: context.data,
-            marker: frameMarker,
-          })
-          context.frameInstances.set(node, subFrame)
-          if (marker.status === 'resolved') tasks.push(subFrame.ready())
-        }
-      }
-
-      i = findMarkerRangeEndIndex(nodes, end, i)
-      continue
-    }
-
-    if (node.childNodes.length > 0) {
-      tasks.push(createSubFrames(Array.from(node.childNodes), context, options))
-    }
-  }
-
-  await Promise.all(tasks)
-}
-
 function isHydrationMarkerLive(marker: HydrationMarker, context: FrameContext): boolean {
   if (!marker.start.isConnected || !marker.end.isConnected) return false
   if (marker.start.parentNode !== marker.end.parentNode) return false
@@ -2199,7 +2188,7 @@ function visitSubFrames(
     (node) => {
       if (!isFrameStart(node)) return
       let end = findFrameEndMarker(node)
-      let frame = context.frameInstances.get(node)
+      let frame = context.registry.instances.get(node)
       if (frame) visit(frame, node)
       return end
     },
@@ -2210,7 +2199,7 @@ function visitSubFrames(
 function disposeSubFrames(nodes: Node[], context: FrameContext): void {
   visitSubFrames(nodes, context, (frame, start) => {
     frame.dispose()
-    context.frameInstances.delete(start)
+    context.registry.instances.delete(start)
   })
 }
 
@@ -2548,50 +2537,6 @@ type HydrationMarker = {
   start: Comment
   end: Comment
   parent?: Comment
-}
-
-function findHydrationMarkers(container: FrameContainer, data: RmxData['h']): HydrationMarker[] {
-  let markers: Array<Omit<HydrationMarker, 'end'> & { end?: Comment }> = []
-  let parent = container.regionStart && frameClientEntryParents.get(container.regionStart)
-  visit(container.childNodes, parent)
-  return markers.map(({ id, start, end, parent }) => {
-    if (!end) throw new Error('End marker not found')
-    return { id, start, end, parent }
-  })
-
-  function visit(nodes: Node[], parent?: Comment): void {
-    nodes = excludePortalRanges(nodes)
-    let boundaries: typeof markers = []
-    for (let i = 0; i < nodes.length; i++) {
-      let node = nodes[i]
-
-      // Nested frames discover their own entries, inheriting this pass's enclosing boundary.
-      if (isFrameStart(node)) {
-        if (parent) frameClientEntryParents.set(node, parent)
-        else frameClientEntryParents.delete(node)
-        let end = findFrameEndMarker(node)
-        i = findMarkerRangeEndIndex(nodes, end, i)
-        continue
-      }
-
-      if (isHydrationStart(node)) {
-        let id = getHydrationId(node)
-        let boundary = { id, start: node, parent }
-        markers.push(boundary)
-        boundaries.push(boundary)
-        if (data?.[id] || pendingClientEntryHydrations.has(node)) parent = node
-      } else if (isHydrationEnd(node)) {
-        let boundary = boundaries.pop()
-        if (boundary) {
-          boundary.end = node
-          parent = boundary.parent
-        }
-      }
-      if (node.childNodes.length > 0) {
-        visit(Array.from(node.childNodes), parent)
-      }
-    }
-  }
 }
 
 // Visits nodes depth-first. A visitor that handles a range returns its last node, which skips the
