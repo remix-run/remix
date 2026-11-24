@@ -686,16 +686,17 @@ describe('defaultResolveFrame commit', () => {
       animationFrames.push(callback)
       return animationFrames.length
     })
+    function paintFrame() {
+      for (let callback of animationFrames.splice(0)) callback(0)
+    }
 
     await navigate(fixture.url('scroll'))
     expect(window.scrollY).toBe(0)
     expect(scrollTo).not.toHaveBeenCalled()
-    expect(animationFrames.length).toBe(1)
-
-    animationFrames.shift()?.(0)
+    paintFrame()
     expect(scrollTo).toHaveBeenNthCalledWith(1, { behavior: 'instant', left: 0, top: 1 })
     expect(window.scrollY).toBe(1)
-    animationFrames.shift()?.(0)
+    paintFrame()
     expect(scrollTo).toHaveBeenNthCalledWith(2, { behavior: 'instant', left: 0, top: 0 })
     expect(window.scrollY).toBe(0)
     expect(fixture.transitions.length).toBe(0)

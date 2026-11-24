@@ -21,6 +21,7 @@ export const routes = route({
     index: '/books',
     genre: '/books/genre/:genre',
     show: '/books/:slug',
+    related: '/books/:slug/related',
   },
 
   // Auth routes
@@ -55,6 +56,7 @@ export const routes = route({
 
     fragments: {
       items: get('/items'),
+      itemsRestore: post('/items'),
       itemsUpdate: patch('/items'),
       itemsRemove: del('/items'),
     },

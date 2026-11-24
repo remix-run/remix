@@ -26,7 +26,10 @@ describe('form navigation', () => {
     form.action = window.location.href
     form.method = 'get'
     // Exercise the Navigation API source without a cached native formdata event.
-    form.addEventListener('formdata', (event) => event.stopImmediatePropagation())
+    document.addEventListener('formdata', (event) => event.stopImmediatePropagation(), {
+      capture: true,
+      signal: controller.signal,
+    })
     let button = document.createElement('button')
     button.formMethod = 'post'
     button.formEnctype = 'text/plain'
@@ -424,6 +427,54 @@ describe('form navigation', () => {
     }
   })
 
+  it('uses the navigation body when the native snapshot was blocked before an unrelated snapshot', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let initialKey = window.navigation.currentEntry?.key
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+    let submission: FormSubmission | undefined
+    let form = document.createElement('form')
+    form.action = window.location.href
+    form.method = 'post'
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'save'
+    form.append(button)
+    document.body.append(form)
+
+    document.addEventListener('formdata', (event) => event.stopImmediatePropagation(), {
+      capture: true,
+      once: true,
+      signal: controller.signal,
+    })
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        formNavigation = resolveFormNavigation(event)
+        event.intercept({
+          async handler() {
+            submission = await formNavigation?.getSubmission?.()
+          },
+        })
+      },
+      { signal: controller.signal },
+    )
+
+    try {
+      let navigationSucceeded = nextNavigation(controller.signal)
+      form.requestSubmit(button)
+      expect(new FormData(form).has('intent')).toBe(false)
+      await navigationSucceeded
+
+      expect(formNavigation?.submission.formData?.get('intent')).toBe('save')
+      expect(submission?.formData?.get('intent')).toBe('save')
+    } finally {
+      form.remove()
+      controller.abort()
+      if (initialKey) await window.navigation.traverseTo(initialKey).finished
+    }
+  })
+
   it('preserves the original submission when a reused submitter has a later canceled submit', async () => {
     let controller = new AbortController()
     let resolveFormNavigation = createFormNavigationResolver(controller.signal)
@@ -673,10 +724,189 @@ describe('form navigation', () => {
       if (didNavigate) await window.navigation.back().finished
     }
   })
+
+  it('preserves the submitter entry when pending UI disables and renames the button', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+    let submission: FormSubmission | undefined
+
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        formNavigation = resolveFormNavigation(event)
+        event.intercept({
+          async handler() {
+            submission = await formNavigation?.getSubmission?.()
+          },
+        })
+      },
+      { signal: controller.signal },
+    )
+
+    let destination = new URL(window.location.href)
+    destination.searchParams.set('form-navigation', 'disabled-submitter')
+    let form = document.createElement('form')
+    form.action = destination.href
+    form.method = 'post'
+    let input = document.createElement('input')
+    input.name = 'title'
+    input.value = 'x'
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'save'
+    form.append(input, button)
+    form.addEventListener(
+      'formdata',
+      () => {
+        // The native submission's entry list already contains the original button entry.
+        button.disabled = true
+        button.name = 'pending-intent'
+      },
+      { once: true },
+    )
+    document.body.append(form)
+
+    let didNavigate = false
+    try {
+      let navigationSucceeded = nextNavigation(controller.signal)
+      form.requestSubmit(button)
+      // Firefox runs the default action of a synthetic submit on a connected form.
+      form.addEventListener('submit', () => form.remove(), { once: true })
+      form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, submitter: button }))
+      document.body.append(form)
+      await navigationSucceeded
+      didNavigate = true
+
+      expect(button.disabled).toBe(true)
+      expect(Array.from(formNavigation?.submission.formData?.entries() ?? [])).toEqual([
+        ['title', 'x'],
+        ['intent', 'save'],
+      ])
+      expect(Array.from(submission?.formData?.entries() ?? [])).toEqual([
+        ['title', 'x'],
+        ['intent', 'save'],
+      ])
+    } finally {
+      form.remove()
+      controller.abort()
+      if (didNavigate) await window.navigation.back().finished
+    }
+  })
+
+  it('uses the current body when a direct POST supersedes a tracked submission', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let formNavigation: ReturnType<typeof resolveFormNavigation>
+    let submission: FormSubmission | undefined
+    let initialKey = window.navigation.currentEntry?.key
+    let destination = new URL(window.location.href)
+    destination.searchParams.set('form-navigation', 'direct-post')
+
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        let resolved = resolveFormNavigation(event)
+        event.intercept({
+          async handler() {
+            if (event.destination.url !== destination.href) return
+            formNavigation = resolved
+            submission = await resolved?.getSubmission?.()
+          },
+        })
+      },
+      { signal: controller.signal },
+    )
+
+    let form = document.createElement('form')
+    form.method = 'post'
+    form.action = window.location.href
+    let input = document.createElement('input')
+    input.name = 'title'
+    input.value = 'draft'
+    form.append(input)
+    document.body.append(form)
+
+    try {
+      let navigationSucceeded = nextNavigation(controller.signal, destination.href)
+      form.requestSubmit()
+      input.value = 'published'
+      form.action = destination.href
+      form.submit()
+      await navigationSucceeded
+
+      expect(formNavigation?.submission.formData?.get('title')).toBe('published')
+      expect(submission?.formData?.get('title')).toBe('published')
+    } finally {
+      form.remove()
+      controller.abort()
+      if (initialKey) await window.navigation.traverseTo(initialKey).finished
+    }
+  })
+
+  it('uses navigation form data when the newest submit was not captured', async () => {
+    let controller = new AbortController()
+    let resolveFormNavigation = createFormNavigationResolver(controller.signal)
+    let submission: FormSubmission | undefined
+    let initialKey = window.navigation.currentEntry?.key
+    let destination = new URL(window.location.href)
+    destination.searchParams.set('form-navigation', 'uncaptured-post')
+
+    window.navigation.addEventListener(
+      'navigate',
+      (event) => {
+        let resolved = resolveFormNavigation(event)
+        event.intercept({
+          async handler() {
+            if (event.destination.url === destination.href) {
+              submission = await resolved?.getSubmission?.()
+            }
+          },
+        })
+      },
+      { signal: controller.signal },
+    )
+
+    let form = document.createElement('form')
+    form.method = 'post'
+    form.action = window.location.href
+    let button = document.createElement('button')
+    button.name = 'intent'
+    button.value = 'save'
+    form.append(button)
+    document.addEventListener(
+      'formdata',
+      (event) => {
+        if (event.target === form && button.value === 'publish') event.stopImmediatePropagation()
+      },
+      { capture: true, signal: controller.signal },
+    )
+    document.body.append(form)
+
+    try {
+      let navigationSucceeded = nextNavigation(controller.signal, destination.href)
+      form.requestSubmit(button)
+      button.value = 'publish'
+      form.action = destination.href
+      form.requestSubmit(button)
+      await navigationSucceeded
+
+      expect(submission?.formData?.get('intent')).toBe('publish')
+    } finally {
+      form.remove()
+      controller.abort()
+      if (initialKey) await window.navigation.traverseTo(initialKey).finished
+    }
+  })
 })
 
-function nextNavigation(signal: AbortSignal): Promise<void> {
+function nextNavigation(signal: AbortSignal, url?: string): Promise<void> {
   return new Promise((resolve) => {
-    window.navigation.addEventListener('navigatesuccess', () => resolve(), { once: true, signal })
+    function onSuccess() {
+      if (url !== undefined && window.location.href !== url) return
+      window.navigation.removeEventListener('navigatesuccess', onSuccess)
+      resolve()
+    }
+    window.navigation.addEventListener('navigatesuccess', onSuccess, { signal })
   })
 }

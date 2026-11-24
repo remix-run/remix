@@ -1,14 +1,16 @@
-import { css } from 'remix/component'
+import { inList } from 'remix/data-table'
 import { createController, type RouterTypes } from 'remix/router'
 import * as s from 'remix/data-schema'
 import * as fd from 'remix/data-schema/experimental/form'
 import type { FormSubmission } from 'remix/data-schema/experimental/form'
 import { redirect } from 'remix/response/redirect'
 
+import { books } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
+import { getBookImageHref } from '../../../utils/book-images.ts'
 import { getCartTotal } from '../../../utils/cart.ts'
 import { getCurrentCart, getCurrentUserSafely } from '../../../utils/context.ts'
-import { removeCartItem, updateCart } from '../cart-api.ts'
+import { removeCartItem, restoreCartItem, updateCart } from '../cart-api.ts'
 import { CartItems } from './public/cart-items.tsx'
 import { CartItemRemoveForm, CartItemUpdateForm } from './public/schema.ts'
 
@@ -65,10 +67,27 @@ export default createController(routes.cart.fragments, {
 
       return mutationResponse(context, error && { ...error, bookId: submission.value.bookId })
     },
+
+    async itemsRestore(context) {
+      let { db, formData, session } = context
+      let submission = fd.parseSafe(CartItemUpdateForm, formData)
+      if (!submission.success) {
+        return mutationResponse(context, {
+          status: 400,
+          message: submission.issues[0].message,
+          submission,
+        })
+      }
+      let error = await restoreCartItem({ db, session, ...submission.value })
+      return mutationResponse(context, error && { ...error, bookId: submission.value.bookId })
+    },
   },
 })
 
-function mutationResponse(context: RouterTypes['context'], error?: CartError): Response {
+function mutationResponse(
+  context: RouterTypes['context'],
+  error?: CartError,
+): Response | Promise<Response> {
   if (context.request.headers.get('X-Remix-Frame') === 'true') {
     return renderCartItems(context, error)
   }
@@ -78,10 +97,10 @@ function mutationResponse(context: RouterTypes['context'], error?: CartError): R
   return redirect(routes.cart.index.href(), 303)
 }
 
-function renderCartItems(
-  { auth, render, request, session }: RouterTypes['context'],
+async function renderCartItems(
+  { auth, db, render, request, session }: RouterTypes['context'],
   error?: CartError,
-): Response {
+): Promise<Response> {
   let cart = getCurrentCart(session)
   let total = getCartTotal(cart)
   let user = getCurrentUserSafely(auth)
@@ -91,31 +110,23 @@ function renderCartItems(
     headers: { 'Cache-Control': 'no-store' },
   }
 
-  if (cart.items.length === 0) {
-    return render(
-      <div mix={css({ marginTop: '2rem' })}>
-        {error && showErrorMessage ? (
-          <p
-            role="alert"
-            mix={css({ color: '#dc2626', textAlign: 'center', paddingBottom: '1.5rem' })}
-          >
-            {error.message}
-          </p>
-        ) : null}
-        <p>Your cart is empty.</p>
-        <p mix={css({ marginTop: '1rem' })}>
-          <a data-rmx-prefetch="intent" href={routes.books.index.href()} class="btn">
-            Browse Books
-          </a>
-        </p>
-      </div>,
-      responseInit,
-    )
-  }
+  let bookRows = await db.findMany(books, {
+    where: inList(
+      'id',
+      cart.items.map((item) => item.bookId),
+    ),
+  })
+  let covers = await Promise.all(
+    bookRows.map(async (book) => ({
+      id: book.id,
+      href: await getBookImageHref(book.cover_url, 'book-thumbnail'),
+    })),
+  )
+  let thumbnails = new Map(covers.map((cover) => [cover.id, cover.href]))
 
   return render(
     <CartItems
-      items={cart.items}
+      items={cart.items.map((item) => ({ ...item, thumbnailUrl: thumbnails.get(item.bookId) }))}
       total={total}
       canCheckout={!!user}
       error={error?.message}

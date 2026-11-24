@@ -4,6 +4,7 @@ import {
   Fragment,
   Portal,
   FRAME_NODE,
+  PORTAL_NODE,
   createComponentErrorEvent,
   createFrameHandle,
   createFrameReloadStartEvent,
@@ -92,6 +93,7 @@ type HydrationData = {
   moduleUrl: string
   exportName: string
   props: Record<string, unknown>
+  [PORTAL_NODE]?: true
 }
 
 type RmxData = {
@@ -1662,11 +1664,27 @@ function adoptFrameServerStyles(container: FrameContainer, styleManager: StyleMa
 
 function parseRmxDataScript(script: HTMLScriptElement): RmxData {
   try {
-    return JSON.parse(script.textContent || '{}')
+    let source = script.textContent || '{}'
+    let data: RmxData = JSON.parse(source)
+    // A JSON escape can spell part of the tag. Inspect the decoded props in either case.
+    if (data.h && !Object.hasOwn(Portal, PORTAL_NODE) && /\$rmxPortal|\\u/.test(source)) {
+      for (let entry of Object.values(data.h)) {
+        if (entry && hasSerializedPortal(entry.props)) entry[PORTAL_NODE] = true
+      }
+    }
+    return data
   } catch {
     console.error('[createFrame] Failed to parse rmx-data script')
     return {}
   }
+}
+
+function hasSerializedPortal(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(hasSerializedPortal)
+  if (!isRecord(value)) return false
+  let escaped = value[ESCAPED_OBJECT]
+  if (isRecord(escaped)) return Object.values(escaped).some(hasSerializedPortal)
+  return value.$rmxPortal === true || Object.values(value).some(hasSerializedPortal)
 }
 
 function copyOwnRmxEntries<T>(target: Record<string, T>, source: Record<string, T>): void {
@@ -1836,19 +1854,22 @@ function scheduleHydrationMarker(
   let parentHydration = marker.parent && pendingClientEntryHydrations.get(marker.parent)
   let component =
     context.registry.modules.get(key) ?? loadClientEntry(key, identity, marker.id, context)
-  if (typeof component === 'function' && !parentHydration) {
+  let portal =
+    entry[PORTAL_NODE] && !Object.hasOwn(Portal, PORTAL_NODE) ? import('./portal.ts') : undefined
+  if (typeof component === 'function' && !parentHydration && !portal) {
     hydrateWithComponent(component)
     complete()
     return
   }
 
   // Imports can finish in any order, but setup must wait for the owning entry's context.
-  Promise.all([component, parentHydration])
-    .then(([component]) => {
-      if (component) {
-        hydrateWithComponent(component)
-      }
-    })
+  Promise.all([component, parentHydration, portal])
+    .then(
+      ([component]) => {
+        if (component) hydrateWithComponent(component)
+      },
+      (error) => console.error(`[createFrame] Failed to load Portal for ${marker.id}:`, error),
+    )
     .finally(complete)
 }
 
@@ -2502,7 +2523,8 @@ type SubmitterElement = HTMLButtonElement | HTMLInputElement
 type PendingFormSubmission = {
   form: HTMLFormElement
   submitter: SubmitterElement | null
-  formData?: FormData
+  snapshot?: { formData: FormData; submitterEntryName: string | undefined }
+  supersedingSubmit?: Event
   timeout: ReturnType<typeof setTimeout>
   removeFormDataListener(): void
 }
@@ -2564,9 +2586,18 @@ export function createFormNavigationResolver(
     'submit',
     (event) => {
       let form = event.target
-      if (!(form instanceof HTMLFormElement)) return
+      if (!(form instanceof HTMLFormElement) || !event.isTrusted || !(event instanceof SubmitEvent))
+        return
 
-      let eventSubmitter = event instanceof SubmitEvent ? event.submitter : null
+      let previous = pendingSubmissions.get(form)
+      if (
+        previous &&
+        (!previous.supersedingSubmit || previous.supersedingSubmit.defaultPrevented)
+      ) {
+        previous.supersedingSubmit = event
+      }
+
+      let eventSubmitter = event.submitter
       let submitter =
         eventSubmitter instanceof HTMLButtonElement || eventSubmitter instanceof HTMLInputElement
           ? eventSubmitter
@@ -2579,7 +2610,11 @@ export function createFormNavigationResolver(
         // A canceled retry must not replace a submission whose navigation is still pending.
         let existing = pendingSubmissions.get(pending.form)
         if (existing) clearPending(existing)
-        pending.formData = formDataEvent.formData
+        let submitterEntryName = submitter?.name
+        if (submitter instanceof HTMLInputElement && submitter.type === 'image') {
+          submitterEntryName = submitterEntryName ? submitterEntryName + '.x' : 'x'
+        }
+        pending.snapshot = { formData: formDataEvent.formData, submitterEntryName }
         pendingSubmissions.set(pending.form, pending)
         if (submitter) pendingSubmissions.set(submitter, pending)
         pending.removeFormDataListener()
@@ -2589,10 +2624,10 @@ export function createFormNavigationResolver(
         submitter,
         timeout: setTimeout(() => clearPending(pending), PENDING_FORM_SUBMISSION_TIMEOUT),
         removeFormDataListener() {
-          form.removeEventListener('formdata', onFormData)
+          form.removeEventListener('formdata', onFormData, true)
         },
       }
-      form.addEventListener('formdata', onFormData, { signal })
+      form.addEventListener('formdata', onFormData, { capture: true, signal })
     },
     { capture: true, signal },
   )
@@ -2605,38 +2640,51 @@ export function createFormNavigationResolver(
     if (!form) return
 
     let pending = pendingSubmissions.get(form)
-    // Some browsers dispatch `navigate` before `formdata` records the pending submission.
-    let submitter = pending
-      ? pending.submitter
-      : sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement
+    // Some browsers dispatch navigate before the new submission's formdata.
+    if (
+      pending &&
+      (sourceElement !== (pending.submitter ?? form) ||
+        (pending.supersedingSubmit && !pending.supersedingSubmit.defaultPrevented))
+    ) {
+      pending = undefined
+    }
+    let submitter =
+      sourceElement instanceof HTMLButtonElement || sourceElement instanceof HTMLInputElement
         ? sourceElement
         : null
     let method = getFormMethod(form, submitter)
     let encType = getFormEncType(form, submitter)
     let target = getSubmissionAttribute(form, submitter, 'target', 'formtarget')
+    if (pending) clearPending(pending)
     if (method === 'dialog' || target?.toLowerCase() === '_blank') return
 
-    let formEvent = event as FormNavigateEvent
-    let getSubmission: FormNavigation['getSubmission']
-    if (method.toLowerCase() === 'get') {
-      if (pending) clearPending(pending)
-    } else {
-      getSubmission = async () => {
-        if (pending) clearPending(pending)
-        return {
-          formData: formEvent.formData ?? pending?.formData,
-          method,
-          encType,
-        }
+    let isGet = method.toLowerCase() === 'get'
+    let eventFormData = (event as FormNavigateEvent).formData
+    let snapshot = pending?.snapshot
+    let formData = isGet ? undefined : (eventFormData ?? snapshot?.formData)
+    // Chromium and WebKit can rebuild the data after the submitter is disabled. Only prefer
+    // the capture if it contains an entry for the submitter that the navigation lost.
+    if (
+      !isGet &&
+      eventFormData &&
+      snapshot?.submitterEntryName &&
+      submitter?.matches(':disabled')
+    ) {
+      let name = snapshot.submitterEntryName
+      if (snapshot.formData.getAll(name).length > eventFormData.getAll(name).length) {
+        formData = snapshot.formData
       }
     }
+    let getSubmission: FormNavigation['getSubmission'] = isGet
+      ? undefined
+      : async () => ({ formData, method, encType })
     return {
       form,
       submitter,
       submission: {
         method,
         encType,
-        formData: method === 'get' ? undefined : (formEvent.formData ?? pending?.formData),
+        formData,
       },
       hasAttribute(name) {
         return submitter?.hasAttribute(name) === true || form.hasAttribute(name)

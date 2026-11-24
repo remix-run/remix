@@ -1,23 +1,18 @@
 import * as assert from 'remix/assert'
-import { afterEach, beforeEach, describe, it, mock } from 'remix/test'
+import { describe, it } from 'remix/test'
+import sharp from 'sharp'
 
+import { getBookImageHref } from '../../utils/book-images.ts'
 import {
   assertContains,
   createTestRouter,
   getSessionCookie,
   requestWithSession,
 } from '../../../test/helpers.ts'
-import { latency } from './api/controller.tsx'
 
 const router = await createTestRouter()
 
 describe('cart handlers', () => {
-  let latencyMock: ReturnType<typeof mock.method>
-  beforeEach(() => {
-    latencyMock = mock.method(latency, 'wait', async () => {})
-  })
-  afterEach(() => latencyMock.mock.restore())
-
   it('POST /cart/api/add adds book to cart', async () => {
     let response = await router.fetch('https://remix.run/cart/api/add', {
       method: 'POST',
@@ -96,15 +91,33 @@ describe('cart handlers', () => {
     let html = await response.text()
 
     assert.equal(response.status, 200)
-    assertContains(html, '<table>')
+    assert.match(html, /<table\b/)
     assertContains(html, '<th>Book</th>')
     assertContains(html, 'Heavy Metal Guitar Riffs')
-    assertContains(html, 'Update')
+    assertContains(html, 'Decrease quantity of Heavy Metal Guitar Riffs')
+    assertContains(html, 'Increase quantity of Heavy Metal Guitar Riffs')
     assertContains(html, 'Remove')
     assertContains(html, 'Total:')
     assertContains(html, '$27.00')
     assertContains(html, 'Continue Shopping')
     assertContains(html, 'Login to Checkout')
+
+    let thumbnail = html.match(/src="([^" ]+\?transform=book-thumbnail)"/)
+    assert.ok(thumbnail)
+    assertContains(html, 'width="48" height="64"')
+    let image = await router.fetch(new URL(thumbnail[1], 'https://remix.run'))
+    assert.equal(image.status, 200)
+    assert.equal(image.headers.get('Content-Type'), 'image/webp')
+    assert.equal(image.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
+    let bytes = new Uint8Array(await image.arrayBuffer())
+    let metadata = await sharp(bytes).metadata()
+    assert.equal(metadata.width, 96)
+    assert.equal(metadata.height, 128)
+    let catalogImage = await router.fetch(
+      new URL(await getBookImageHref('/images/heavy-metal-1.png'), 'https://remix.run'),
+    )
+    assert.equal(catalogImage.status, 200)
+    assert.ok(bytes.byteLength < (await catalogImage.arrayBuffer()).byteLength)
   })
 
   it('GET /cart/items renders empty state when cart is empty', async () => {
@@ -186,9 +199,44 @@ describe('cart handlers', () => {
     }
   })
 
+  it('POST /cart/items restores the saved quantity with trusted book details and is safe to retry', async () => {
+    let session = await cartSession()
+    await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'DELETE',
+        body: new URLSearchParams({ bookId: '1' }),
+      }),
+    )
+    let body = new URLSearchParams({ bookId: '1', quantity: '3', price: '0', title: 'Untrusted' })
+    let restored = await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'POST',
+        headers: { 'X-Remix-Frame': 'true' },
+        body,
+      }),
+    )
+    assert.equal(restored.status, 200)
+    assert.equal(restored.headers.get('Location'), null)
+    assert.match(await restored.text(), /Total:\s*(?:<[^>]+>\s*)*\$50\.97/)
+
+    let retry = await router.fetch(
+      requestWithSession('https://remix.run/cart/items', session, {
+        method: 'POST',
+        body,
+      }),
+    )
+    assert.equal(retry.status, 303)
+    assert.equal(retry.headers.get('Location'), '/cart')
+    let cart = await router.fetch(requestWithSession('https://remix.run/cart/items', session))
+    let html = await cart.text()
+    assert.match(html, /Total:\s*(?:<[^>]+>\s*)*\$50\.97/)
+    assertContains(html, 'Ash &amp; Smoke')
+    assert.ok(!html.includes('Untrusted'))
+  })
+
   it('rejects malformed item IDs and missing books before changing the cart', async () => {
     let session = await cartSession()
-    for (let method of ['PATCH', 'DELETE']) {
+    for (let method of ['POST', 'PATCH', 'DELETE']) {
       for (let bookId of ['', '0', '-1', '1.5', '1abc', '9007199254740992']) {
         let response = await router.fetch(
           requestWithSession('https://remix.run/cart/items', session, {

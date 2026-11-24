@@ -106,6 +106,7 @@ Mirrors the committed value into a hidden input for forms. Apply it to an `<inpu
 - Typing clears the committed value immediately. The hidden form value becomes empty until the user commits again.
 - Blur commits an exact `label` or `searchValue` match. A non-matching blur clears the draft text and committed value.
 - Escape keeps exact-match draft text but clears non-matching draft text and selection.
+- Draft text continues filtering options during IME composition. Enter, Escape, ArrowDown, and ArrowUp stay available to the IME without selecting options, dismissing the popup, or moving the active option. Normal combobox keyboard behavior resumes after composition is confirmed.
 - Disabled options can stay visible in filtered results, but they are skipped by keyboard navigation and selection.
 
 ## When To Use Something Else

@@ -1,4 +1,5 @@
 import type { Handle, RemixNode } from 'remix/component'
+import { css } from 'remix/component'
 import { ImportMap } from 'remix/component/server'
 import { getContext } from 'remix/middleware/async-context'
 import { getCspNonce } from 'remix/middleware/csp'
@@ -24,6 +25,7 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta charSet="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title>{title}</title>
+          {head}
           <link rel="icon" href="/favicon.ico" sizes="32x32" />
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
           <link rel="stylesheet" href={stylesheetHref} />
@@ -32,9 +34,17 @@ export function Document(handle: Handle<DocumentProps>) {
             <link key={preloadHref} rel="modulepreload" href={preloadHref} nonce={nonce} />
           ))}
           <script type="module" src={href} nonce={nonce} />
-          {head}
         </head>
-        <body>{children}</body>
+        <body
+          mix={css({
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            lineHeight: 1.6,
+            color: '#333',
+            background: '#f5f5f5',
+          })}
+        >
+          {children}
+        </body>
       </html>
     )
   }
