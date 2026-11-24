@@ -1183,6 +1183,55 @@ describe('frames', () => {
     expect(root.querySelector('p')?.textContent).toBe('hydrated')
   })
 
+  it('keeps hydration data for a sibling frame while its preloads are pending', async (t) => {
+    let first = document.createComment(' rmx:f:first ')
+    let earlier = document.createElement('section')
+    earlier.append(first, document.createComment(' /rmx:f '))
+    document.body.append(earlier)
+    let later = document.createElement('section')
+    later.innerHTML = [
+      '<!-- rmx:f:later --><!-- rmx:h:h1 --><p>Server</p><!-- /rmx:h --><!-- /rmx:f -->',
+      '<link data-rmx-module-preload rel="modulepreload" href="/later.js">',
+      rmxDataScript('Hydrated'),
+    ].join('')
+    document.body.append(later)
+
+    let registry = new FrameRegistry()
+    let pending = Promise.withResolvers<string[]>()
+    let requested = Promise.withResolvers<void>()
+    let frame = createTestFrame(document, {
+      registry,
+      data: {
+        f: {
+          first: { src: '/first', status: 'resolved' },
+          later: { src: '/later', status: 'resolved' },
+        },
+      },
+      processClientEntryPreloads(hrefs) {
+        if (hrefs.includes('/later.js')) {
+          requested.resolve()
+          return pending.promise
+        }
+        return hrefs
+      },
+      loadModule: () => (handle: Handle<{ label: string }>) => () =>
+        jsx('p', { children: handle.props.label }),
+      resolveFrame: () => '',
+    })
+    t.after(() => {
+      pending.resolve([])
+      frame.dispose()
+    })
+
+    await requested.promise
+    let sibling = registry.instances.get(first)
+    if (!sibling) throw new Error('Expected the first frame to be mounted')
+    await sibling.ready()
+    pending.resolve([])
+    await frame.ready()
+    expect(later.querySelector('p')?.textContent).toBe('Hydrated')
+  })
+
   it('releases pending hydration metadata when its frame is disposed', async () => {
     document.body.innerHTML = [
       '<!-- rmx:h:h1 -->',

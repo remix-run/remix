@@ -98,10 +98,8 @@ export type FrameReloadTransition = {
 }
 
 export type ReconciliationTracker = {
-  track: () => () => void
   waitFor: (task: Promise<void>) => void
-  finalize: () => void
-  ready: () => Promise<void>
+  finish: () => Promise<void>
 }
 
 export interface FrameFallbackRoot {
