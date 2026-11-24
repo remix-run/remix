@@ -163,7 +163,6 @@ export type SharedFrameRuntime = {
 
 export type FrameRuntime = SharedFrameRuntime & {
   [FRAME_RUNTIME]: true
-  canResolveFrames?: boolean
   getContext?: (type: ElementFunction) => unknown
   topFrame?: FrameHandle
   serverFrameReload:

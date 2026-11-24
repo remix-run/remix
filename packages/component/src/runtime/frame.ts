@@ -20,7 +20,7 @@ import type { RemixElement, RemixNode } from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { FrameHandle, FrameReloadOptions } from './component.ts'
 import type { VirtualRoot } from './vdom.ts'
-import { createRangeRoot, createRoot } from './vdom.ts'
+import { createRangeRoot, createRoot, missingFrameRuntime } from './vdom.ts'
 import {
   createFrameRuntime,
   disposeClientEntryBoundary,
@@ -1508,11 +1508,7 @@ function insertFrame(
 ): CommittedFrameNode {
   let { frame, styles } = context
   let runtime = getFrameRuntime(frame)
-  if (!runtime || runtime.canResolveFrames === false) {
-    throw new Error(
-      'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
-    )
-  }
+  if (!runtime) missingFrameRuntime()
 
   let getContext = (type: ElementFunction) => findContextFromAncestry(vParent, type)
 
