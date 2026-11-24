@@ -1931,6 +1931,7 @@ function getOrStartModuleLoad(
       return mod
     } catch (error) {
       console.error(`[createFrame] Failed to load module for ${markerId}:`, error)
+      context.errorTarget.dispatchEvent(createComponentErrorEvent(error))
       return undefined
     } finally {
       context.moduleLoads.delete(key)
