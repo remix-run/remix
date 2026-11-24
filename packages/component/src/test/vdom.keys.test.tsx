@@ -778,6 +778,28 @@ describe('vnode rendering (keys)', () => {
       expect(input.selectionEnd).toBe(11)
     })
 
+    it('restores ancestor scroll after focus handlers run during a keyed move', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      container.style.cssText = 'height: 40px; overflow: auto; overflow-anchor: none'
+      let item = (key: string) => (
+        <input key={key} id={key} style={{ display: 'block', height: '60px' }} />
+      )
+      render(['a', 'b', 'c'].map(item))
+      let input = getInput(container, 'a')
+      input.focus()
+      container.scrollTop = 10
+      let restored = false
+      input.addEventListener('focus', () => {
+        restored = true
+        container.scrollTop = 50
+      })
+
+      expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(restored).toBe(true)
+      expect(container.scrollTop).toBe(10)
+    })
+
     it('keeps focus and selection on a textarea that a keyed reorder moves', (t) => {
       let { render, container } = createConnectedRoot(t)
       let item = (key: string) => <textarea key={key} id={key} />

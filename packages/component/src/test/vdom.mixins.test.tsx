@@ -50,6 +50,20 @@ describe('vnode mixins', () => {
     expect(seenProps).toEqual([{ title: 'base' }, { title: 'base-one' }])
   })
 
+  it('ignores all returned descriptors when a nested descriptor is invalid', (t) => {
+    let errors = t.mock.method(console, 'error', () => {})
+    let title = createMixin((handle) => () => <handle.element title="unexpected" />)
+    let invalid = title()
+    Reflect.set(invalid, 'type', null)
+    let group = createMixin(() => () => [title(), [invalid]])
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    root.render(<div mix={group()} />)
+    expect(errors).toHaveBeenCalledTimes(1)
+    expect(container.innerHTML).toBe('<div></div>')
+  })
+
   it('composes mixins in order and does not leak mix to the DOM', () => {
     let withTitle = createMixin((handle) => (title: string, props: { title?: string }) => (
       <handle.element {...props} title={title} />
@@ -480,6 +494,32 @@ describe('vnode mixins', () => {
     root.flush()
 
     expect(calls).toEqual(['before:0', 'commit:1'])
+  })
+
+  it('exposes each mixin slot signal during its owner’s scheduled update', async () => {
+    let signals: AbortSignal[] = []
+    let matches: boolean[] = []
+    let observe = createMixin((handle) => {
+      let signal = handle.signal
+      signals.push(signal)
+      handle.addEventListener('beforeUpdate', () => matches.push(handle.signal === signal))
+      handle.addEventListener('commit', () => matches.push(handle.signal === signal))
+    })
+
+    let update: (() => Promise<AbortSignal>) | undefined
+    function Owner(handle: Handle) {
+      update = () => handle.update()
+      return () => <div mix={[observe(), observe()]} />
+    }
+
+    let root = createRoot(document.createElement('div'))
+    root.render(<Owner />)
+    invariant(update)
+    await update()
+    expect(matches).toEqual([true, true, true, true])
+    expect(signals[0]).not.toBe(signals[1])
+    root.dispose()
+    expect(signals.map((signal) => signal.aborted)).toEqual([true, true])
   })
 
   it('keeps running commit listeners after removing a listener that was never added', () => {

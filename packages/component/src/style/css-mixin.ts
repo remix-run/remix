@@ -24,38 +24,25 @@ const clientStyleCache: StyleCache = new Map()
 const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (handle) => {
   let activeSelector = ''
   let activeGeneration = -1
-  let currentStyles: CSSProps = {}
 
   handle.addEventListener('remove', () => {
     if (!activeSelector) return
-    let runtime = handle.frame.$runtime as {
-      styleCache?: StyleCache
-      styleManager?: StyleManagerLike
-    }
-    invariant(runtime, 'css mixin requires frame runtime')
-    let styleTarget = resolveStyleTarget(runtime)
-    styleTarget.styleManager?.remove(activeSelector)
+    runtime().styleManager?.remove(activeSelector)
     activeSelector = ''
     activeGeneration = -1
   })
 
   return (styles, props) => {
-    currentStyles = styles
-    let runtime = handle.frame.$runtime as {
-      styleCache?: StyleCache
-      styleManager?: StyleManagerLike
-    }
-    invariant(runtime, 'css mixin requires frame runtime')
-    let styleTarget = resolveStyleTarget(runtime)
-    let { selector, css: cssText } = processStyleClass(currentStyles, styleTarget.styleCache)
-    let styleGeneration = styleTarget.styleManager?.getGeneration?.() ?? 0
+    let { styleManager, styleCache = clientStyleCache } = runtime()
+    let { selector, css: cssText } = processStyleClass(styles, styleCache)
+    let styleGeneration = styleManager?.getGeneration?.() ?? 0
 
-    if (styleTarget.styleManager) {
+    if (styleManager) {
       if (activeSelector && activeSelector !== selector) {
-        styleTarget.styleManager.remove(activeSelector)
+        styleManager.remove(activeSelector)
       }
       if (selector && (activeSelector !== selector || activeGeneration !== styleGeneration)) {
-        styleTarget.styleManager.insert(selector, cssText)
+        styleManager.insert(selector, cssText)
       }
       activeSelector = selector
       activeGeneration = selector ? styleGeneration : -1
@@ -70,6 +57,15 @@ const cssMixinType: MixinType<Element, [styles: CSSProps], ElementProps> = (hand
       className: props?.className ? `${props.className} ${selector}` : selector,
     })
   }
+
+  function runtime() {
+    let current = handle.frame.$runtime as {
+      styleCache?: StyleCache
+      styleManager?: StyleManagerLike
+    }
+    invariant(current, 'css mixin requires frame runtime')
+    return current
+  }
 }
 
 /**
@@ -83,14 +79,4 @@ export const css: MixinFactory<Element, [styles: CSSProps], ElementProps> = crea
 
 export function isCSSMixinDescriptor(value: unknown): value is CSSMixinDescriptor {
   return isMixinDescriptor(value) && value.type === cssMixinType
-}
-
-function resolveStyleTarget(runtime: {
-  styleCache?: StyleCache
-  styleManager?: StyleManagerLike
-}): { styleCache: StyleCache; styleManager?: StyleManagerLike } {
-  return {
-    styleCache: runtime.styleCache ?? clientStyleCache,
-    styleManager: runtime.styleManager,
-  }
 }

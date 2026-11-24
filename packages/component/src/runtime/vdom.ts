@@ -138,15 +138,7 @@ function createVirtualRoot(
   let scheduler =
     options.scheduler ?? createScheduler(parent.ownerDocument ?? document, eventTarget)
   let frameStub =
-    options.frame ??
-    createRootFrameHandle({
-      src: options.frameInit?.src,
-      resolveFrame: options.frameInit?.resolveFrame,
-      loadModule: options.frameInit?.loadModule,
-      errorTarget: eventTarget,
-      scheduler,
-      styleManager: styles,
-    })
+    options.frame ?? createRootFrameHandle(options.frameInit, eventTarget, scheduler, styles)
   let context: ReconcileContext = {
     frame: frameStub,
     scheduler,
@@ -233,16 +225,14 @@ function createVirtualRoot(
   return root
 }
 
-function createRootFrameHandle(init: {
-  src?: string
-  resolveFrame?: ResolveFrame
-  loadModule?: (moduleUrl: string, exportName: string) => Promise<Function> | Function
-  errorTarget: EventTarget
-  scheduler: Scheduler
-  styleManager: StyleManager
-}): FrameHandle {
+function createRootFrameHandle(
+  init: VirtualRootOptions['frameInit'],
+  errorTarget: EventTarget,
+  scheduler: Scheduler,
+  styleManager: StyleManager,
+): FrameHandle {
   let resolveFrame =
-    init.resolveFrame ??
+    init?.resolveFrame ??
     (() => {
       throw new Error(
         'Cannot render <Frame /> without frame runtime. Use run() or pass frameInit to createRoot/createRangeRoot.',
@@ -250,24 +240,23 @@ function createRootFrameHandle(init: {
     })
 
   let runtime = createFrameRuntime({
-    topFrame: undefined,
     loadModule:
-      init.loadModule ??
+      init?.loadModule ??
       (() => {
         throw new Error('loadModule is required to hydrate client entries inside <Frame />')
       }),
     resolveFrame,
-    errorTarget: init.errorTarget,
+    errorTarget,
     pendingClientEntries: new Map(),
-    scheduler: init.scheduler,
-    styleManager: init.styleManager,
+    scheduler,
+    styleManager,
     moduleCache: new Map(),
     moduleLoads: new Map(),
     frameInstances: new WeakMap(),
     namedFrames: new NamedFrameRegistry(),
   })
-  runtime.canResolveFrames = !!init.resolveFrame
-  let frame = createFrameHandle({ src: init.src ?? '/', $runtime: runtime })
+  runtime.canResolveFrames = !!init?.resolveFrame
+  let frame = createFrameHandle({ src: init?.src ?? '/', $runtime: runtime })
   runtime.topFrame = frame
   return frame
 }
@@ -332,15 +321,9 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
         total: number
         byComponent: WeakMap<CommittedComponentNode, number>
         byName: Map<string, number>
-        warned: boolean
       }
     | undefined
-  let phaseEvents = new EventTarget()
-  let phaseListenerCounts: Record<SchedulerPhaseType, number> = {
-    beforeUpdate: 0,
-    commit: 0,
-  }
-  let scheduler: Scheduler
+  let phaseEvents: EventTarget | undefined
 
   function dispatchError(error: unknown) {
     console.error(error)
@@ -349,7 +332,7 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
 
   function trackCascadingUpdate(vnode: CommittedComponentNode): boolean {
     if (!cascadingUpdates) {
-      cascadingUpdates = { total: 0, byComponent: new WeakMap(), byName: new Map(), warned: false }
+      cascadingUpdates = { total: 0, byComponent: new WeakMap(), byName: new Map() }
       // Close the window when control returns to the event loop while still allowing
       // microtask-driven flushes in the same turn to count as cascading.
       setTimeout(() => {
@@ -365,8 +348,7 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
     let componentUpdateCount = (updates.byComponent.get(vnode) ?? 0) + 1
     updates.byComponent.set(vnode, componentUpdateCount)
 
-    if (!updates.warned && updates.total >= CASCADING_UPDATE_WARN_THRESHOLD) {
-      updates.warned = true
+    if (updates.total === CASCADING_UPDATE_WARN_THRESHOLD) {
       console.warn(
         `${updates.total} cascading component updates detected in one event loop turn. Consider reducing hydration regions. Components: ${formatComponentCounts(updates.byName)}`,
       )
@@ -387,16 +369,14 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
     if (flushState === 'flushing') return
     flushState = 'flushing'
     try {
-      while (true) {
-        let batch = new Map(scheduled)
-        scheduled.clear()
-
-        let hasWork =
-          batch.size > 0 ||
-          workTasks.length > 0 ||
-          commitPhaseTasks.length > 0 ||
-          postCommitTasks.length > 0
-        if (!hasWork) return
+      while (
+        scheduled.size ||
+        workTasks.length ||
+        commitPhaseTasks.length ||
+        postCommitTasks.length
+      ) {
+        let batch = scheduled
+        scheduled = new Map()
 
         documentState.capture()
 
@@ -405,10 +385,9 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
         dispatchPhaseEvent('beforeUpdate', updateParents)
 
         if (batch.size > 0) {
-          let vnodes = Array.from(batch)
           let noScheduledAncestor = new Set<VNodeParent>()
 
-          for (let [vnode, domParent] of vnodes) {
+          for (let [vnode, domParent] of batch) {
             if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
             if (!trackCascadingUpdate(vnode)) return
             let curr = vnode._content
@@ -443,7 +422,7 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
   }
 
   function dispatchPhaseEvent(type: SchedulerPhaseType, parents: ParentNode[]) {
-    if (phaseListenerCounts[type] === 0) return
+    if (!phaseEvents) return
     let event: SchedulerPhaseEvent = Object.assign(new Event(type), { parents })
     phaseEvents.dispatchEvent(event)
   }
@@ -476,10 +455,7 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
 
     while (current) {
       // Already verified this node has no scheduled ancestor above it
-      if (safe.has(current)) {
-        for (let node of path) safe.add(node)
-        return false
-      }
+      if (safe.has(current)) break
 
       path.push(current)
 
@@ -495,7 +471,7 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
     return false
   }
 
-  scheduler = {
+  return {
     enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void {
       scheduled.set(vnode, domParent)
       scheduleFlush()
@@ -517,148 +493,63 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
     },
 
     addEventListener(type, listener, options) {
-      if (listener) phaseListenerCounts[type]++
+      phaseEvents ??= new EventTarget()
       phaseEvents.addEventListener(type, listener, options)
     },
 
     removeEventListener(type, listener, options) {
-      if (listener) phaseListenerCounts[type] = Math.max(0, phaseListenerCounts[type] - 1)
-      phaseEvents.removeEventListener(type, listener, options)
+      phaseEvents?.removeEventListener(type, listener, options)
     },
 
-    dequeue() {
-      flush()
-    },
+    dequeue: flush,
   }
-
-  return scheduler
 }
 
-/**
+/*
  * Adapted from https://github.com/facebook/react/blob/main/packages/react-dom-bindings/src/client/ReactInputSelection.js
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- * MIT License
- *
- * Eventually should be able to use moveBefore and won't need this at all.
+ * Copyright (c) Meta Platforms, Inc. and affiliates. MIT License.
  */
-
-type SelectionInformation = {
-  focusedElem: Element | null
-  selectionRange: { start: number; end: number } | null
-}
-
 function createDocumentState(doc: Document) {
-  function getActiveElement(): Element | null {
-    return doc.activeElement || doc.body
-  }
+  let focused: Element | null
+  let input: HTMLInputElement | HTMLTextAreaElement | null
+  let start: number | null
+  let end: number | null
 
-  function hasSelectionCapabilities(elem: Element): boolean {
-    let nodeName = elem.nodeName.toLowerCase()
-    return (
-      (nodeName === 'input' &&
-        'type' in elem &&
-        (elem.type === 'text' ||
-          elem.type === 'search' ||
-          elem.type === 'tel' ||
-          elem.type === 'url' ||
-          elem.type === 'password')) ||
-      nodeName === 'textarea' ||
-      (elem instanceof HTMLElement && elem.contentEditable === 'true')
-    )
-  }
+  return {
+    capture() {
+      focused = doc.activeElement || doc.body
+      input =
+        focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement
+          ? focused
+          : null
+      start = input?.selectionStart ?? null
+      end = input?.selectionEnd ?? null
+    },
+    restore() {
+      let element = focused
+      focused = null
+      let control = input
+      input = null
+      if (!element || element === (doc.activeElement || doc.body) || !doc.contains(element)) return
 
-  function getSelection(input: Element): { start: number; end: number } | null {
-    if (
-      'selectionStart' in input &&
-      typeof input.selectionStart === 'number' &&
-      'selectionEnd' in input
-    ) {
-      let htmlInput = input as HTMLInputElement | HTMLTextAreaElement
-      return {
-        start: htmlInput.selectionStart ?? 0,
-        end: htmlInput.selectionEnd ?? htmlInput.selectionStart ?? 0,
+      let positions: [Element, number, number][] = []
+      for (let parent: Element | null = element; parent; parent = parent.parentElement) {
+        positions.push([parent, parent.scrollLeft, parent.scrollTop])
       }
-    }
-    // For contentEditable, we'd need more complex logic, but for now return null
-    return null
-  }
 
-  function setSelection(input: Element, offsets: { start: number; end: number }): void {
-    if ('selectionStart' in input && 'selectionEnd' in input) {
-      try {
-        let htmlInput = input as HTMLInputElement | HTMLTextAreaElement
-        htmlInput.selectionStart = offsets.start
-        htmlInput.selectionEnd = Math.min(offsets.end, htmlInput.value?.length ?? 0)
-      } catch {
-        // Ignore errors setting selection
-      }
-    }
-  }
-
-  function isInDocument(node: Node): boolean {
-    return doc.documentElement.contains(node)
-  }
-
-  function getSelectionInformation(): SelectionInformation {
-    let focusedElem = getActiveElement()
-    return {
-      focusedElem,
-      selectionRange:
-        focusedElem && hasSelectionCapabilities(focusedElem) ? getSelection(focusedElem) : null,
-    }
-  }
-
-  function restoreSelection(priorSelectionInformation: SelectionInformation): void {
-    let curFocusedElem = getActiveElement()
-    let priorFocusedElem = priorSelectionInformation.focusedElem
-    let priorSelectionRange = priorSelectionInformation.selectionRange
-
-    if (curFocusedElem !== priorFocusedElem && priorFocusedElem && isInDocument(priorFocusedElem)) {
-      // Save scroll positions before focusing (focusing can change scroll)
-      let ancestors: Array<{ element: Element; left: number; top: number }> = []
-      let ancestor: Node | null = priorFocusedElem
-      while (ancestor) {
-        if (ancestor.nodeType === Node.ELEMENT_NODE) {
-          let el = ancestor as Element
-          ancestors.push({
-            element: el,
-            left: el.scrollLeft ?? 0,
-            top: el.scrollTop ?? 0,
-          })
+      if (control && start != null && end != null) {
+        try {
+          control.selectionStart = start
+          control.selectionEnd = end
+        } catch {
+          // The input type can change during this render.
         }
-        ancestor = ancestor.parentNode
       }
-
-      // Restore selection if applicable
-      if (priorSelectionRange !== null && hasSelectionCapabilities(priorFocusedElem)) {
-        setSelection(priorFocusedElem, priorSelectionRange)
+      if (element instanceof HTMLElement && typeof element.focus === 'function') element.focus()
+      for (let [ancestor, left, top] of positions) {
+        ancestor.scrollLeft = left
+        ancestor.scrollTop = top
       }
-
-      // Restore focus
-      if (priorFocusedElem instanceof HTMLElement && typeof priorFocusedElem.focus === 'function') {
-        priorFocusedElem.focus()
-      }
-
-      // Restore scroll positions
-      for (let info of ancestors) {
-        info.element.scrollLeft = info.left
-        info.element.scrollTop = info.top
-      }
-    }
+    },
   }
-
-  let selectionInfo: SelectionInformation | null = null
-
-  function capture() {
-    selectionInfo = getSelectionInformation()
-  }
-
-  function restore() {
-    if (selectionInfo !== null) {
-      restoreSelection(selectionInfo)
-    }
-    selectionInfo = null
-  }
-
-  return { capture, restore }
 }

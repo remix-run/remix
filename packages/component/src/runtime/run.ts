@@ -19,7 +19,7 @@ import {
   type ResolveFrameOptions,
 } from './frame-runtime.ts'
 import { startNavigationListener } from './navigation.ts'
-import { fetchFrame, startPrefetching, type PrefetchFrame } from './prefetch.ts'
+import { fetchFrame, isHtmlResponse, startPrefetching, type PrefetchFrame } from './prefetch.ts'
 import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
 
 /**
@@ -99,34 +99,6 @@ export interface DefaultResolveFrameOverrides {
   commit?: FrameCommit
 }
 
-function getRequestBody(options?: ResolveFrameOptions): {
-  body?: BodyInit
-  encType?: string
-} {
-  let formData = options?.formData
-  if (!formData) return {}
-  if (['get', 'head'].includes((options?.method ?? 'get').toLowerCase())) return {}
-
-  let encType = options?.encType?.toLowerCase()
-
-  if (encType === 'multipart/form-data') return { body: formData }
-
-  if (encType === 'text/plain') {
-    let body = ''
-    for (let [name, value] of formData) {
-      name = normalizeFormLineBreaks(name)
-      value = normalizeFormLineBreaks(typeof value === 'string' ? value : value.name)
-      body += `${name}=${value}\r\n`
-    }
-    return { body: new Blob([body], { type: 'text/plain' }), encType: 'text/plain' }
-  }
-
-  return {
-    body: encodeFormDataAsSearchParams(formData),
-    encType: 'application/x-www-form-urlencoded',
-  }
-}
-
 /**
  * Fetches frame HTML with default request encoding and response validation.
  *
@@ -147,29 +119,37 @@ export async function defaultResolveFrame(
   options?: ResolveFrameOptions,
   overrides?: DefaultResolveFrameOverrides,
 ): Promise<Response> {
-  let { body, encType } = getRequestBody(options)
-  let response = await fetchFrame(
-    src,
-    options?.target,
-    {
-      body,
-      method: options?.method,
-      signal: options?.signal,
-      // The Navigation API commits the destination URL before this request starts, so the browser's
-      // default referrer would be the destination instead of the page being left.
-      ...(options &&
-      navigationRequest in options &&
-      options[navigationRequest] === true &&
-      options.from?.url
-        ? { referrer: options.from.url }
-        : {}),
-    },
-    encType,
-    overrides?.fetch,
-  )
-
-  let isHtml = response.headers.get('Content-Type')?.toLowerCase().includes('text/html')
-  if (response.status >= 500 || (response.status >= 300 && !isHtml)) {
+  let { method, formData } = options ?? {}
+  let request: RequestInit = { body: undefined, method, signal: options?.signal }
+  // The Navigation API commits the destination before fetching. Keep the referrer of the page being left.
+  if (
+    options &&
+    navigationRequest in options &&
+    options[navigationRequest] === true &&
+    options.from?.url
+  ) {
+    request.referrer = options.from.url
+  }
+  if (formData && !['get', 'head'].includes((method ?? 'get').toLowerCase())) {
+    let encType = options?.encType?.toLowerCase()
+    if (encType === 'multipart/form-data') {
+      request.body = formData
+    } else if (encType === 'text/plain') {
+      let body = ''
+      for (let [name, value] of formData) {
+        name = normalizeFormLineBreaks(name)
+        value = normalizeFormLineBreaks(typeof value === 'string' ? value : value.name)
+        body += `${name}=${value}\r\n`
+      }
+      request.body = new Blob([body], { type: encType })
+      request.headers = { 'Content-Type': encType }
+    } else {
+      request.body = encodeFormDataAsSearchParams(formData)
+      request.headers = { 'Content-Type': 'application/x-www-form-urlencoded' }
+    }
+  }
+  let response = await fetchFrame(src, options?.target, request, overrides?.fetch)
+  if (response.status >= 500 || (response.status >= 300 && !isHtmlResponse(response))) {
     throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
   }
 
@@ -210,6 +190,7 @@ export function run(init: RunInit): AppRuntime {
   })
 
   let appController = new AbortController()
+  let { signal } = appController
   let frames: Handle['frames'] = {
     top: topFrame.handle,
     get(name) {
@@ -223,15 +204,15 @@ export function run(init: RunInit): AppRuntime {
       (event) => {
         if (event.navigationType === 'traverse') frames.top.src = window.location.href
       },
-      { signal: appController.signal },
+      { signal },
     )
   } else {
     window.addEventListener('popstate', () => (frames.top.src = window.location.href), {
-      signal: appController.signal,
+      signal,
     })
   }
-  startNavigationListener(appController.signal, frames)
-  startPrefetching(appController.signal, init.prefetch)
+  startNavigationListener(signal, frames)
+  startPrefetching(signal, init.prefetch)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
     throw error
