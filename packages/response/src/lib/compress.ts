@@ -264,91 +264,209 @@ export function compressStream(
   let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
   let cancelled = false
   let errored = false
+  let compressorPaused = false
+  let pullWaiter: (() => void) | null = null
+  let dataWaiter: (() => void) | null = null
+  let writeWaiter: (() => void) | null = null
+
+  function releaseReader(): void {
+    if (reader !== null) {
+      let current = reader
+      reader = null
+      current.releaseLock()
+    }
+  }
+
+  function wakeWaiters(): void {
+    if (pullWaiter !== null) {
+      let resolve = pullWaiter
+      pullWaiter = null
+      resolve()
+    }
+    if (dataWaiter !== null) {
+      let resolve = dataWaiter
+      dataWaiter = null
+      resolve()
+    }
+    if (writeWaiter !== null) {
+      let resolve = writeWaiter
+      writeWaiter = null
+      resolve()
+    }
+  }
+
+  function waitForPull(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      pullWaiter = resolve
+    })
+  }
+
+  function waitForCompressorData(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      dataWaiter = resolve
+    })
+  }
+
+  function writeToCompressor(
+    chunk: Uint8Array,
+    onAsyncError: (error: Error) => void,
+  ): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      let settled = false
+      let settle = (error?: Error | null) => {
+        if (settled) return
+        settled = true
+        if (writeWaiter === onUnblock) {
+          writeWaiter = null
+        }
+        if (error) {
+          reject(error)
+        } else {
+          resolve()
+        }
+      }
+      let onUnblock = () => {
+        settle()
+      }
+      writeWaiter = onUnblock
+
+      let buffer = Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)
+      let canContinue = compressor.write(buffer, (error) => {
+        if (error) {
+          if (settled) {
+            onAsyncError(error)
+          } else {
+            settle(error)
+          }
+        } else {
+          settle()
+        }
+      })
+
+      if (canContinue) {
+        settle()
+      }
+    })
+  }
 
   return new ReadableStream<Uint8Array>({
-    async start(controller) {
+    start(controller) {
       reader = input.getReader()
 
+      function fail(error: unknown): void {
+        if (errored) return
+        errored = true
+        wakeWaiters()
+        releaseReader()
+        if (!cancelled) {
+          controller.error(error)
+        }
+      }
+
       compressor.on('data', (chunk: Buffer) => {
-        if (!cancelled && !errored) {
-          controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+        if (cancelled || errored) return
+        controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+        if (controller.desiredSize != null && controller.desiredSize <= 0) {
+          compressorPaused = true
+          compressor.pause?.()
+        }
+        if (dataWaiter !== null) {
+          let resolve = dataWaiter
+          dataWaiter = null
+          resolve()
         }
       })
 
       compressor.on('end', () => {
+        if (dataWaiter !== null) {
+          let resolve = dataWaiter
+          dataWaiter = null
+          resolve()
+        }
         if (!cancelled && !errored) {
           controller.close()
         }
       })
 
       compressor.on('error', (error) => {
-        // Ignore duplicate error events
-        if (errored) {
-          return
-        }
-        errored = true
-        if (!cancelled) {
-          controller.error(error)
-        }
+        fail(error)
       })
 
-      try {
-        while (true) {
-          if (cancelled || errored) {
-            break
-          }
-
-          let { done, value } = await reader.read()
-
-          if (cancelled || errored) {
-            break
-          }
-
-          if (done) {
-            compressor.end()
-            break
-          }
-
-          if (!value) {
-            continue
-          }
-
-          await new Promise<void>((resolve, reject) => {
-            let resolvedImmediately = false
-
-            let canContinue = compressor.write(Buffer.from(value), (error) => {
-              if (resolvedImmediately) {
-                return
-              }
-              if (error) {
-                reject(error)
-              } else {
-                resolve()
-              }
-            })
-
-            if (canContinue) {
-              resolvedImmediately = true
-              resolve()
+      void (async () => {
+        try {
+          while (!cancelled && !errored) {
+            if (controller.desiredSize != null && controller.desiredSize <= 0) {
+              await waitForPull()
+              if (cancelled || errored) break
             }
-          })
+
+            if ((compressor as { readableLength?: number }).readableLength! > 0) {
+              await waitForCompressorData()
+              if (cancelled || errored) break
+              continue
+            }
+
+            let currentReader = reader
+            if (currentReader === null) break
+
+            let { done, value } = await currentReader.read()
+
+            if (cancelled || errored) break
+
+            if (done) {
+              releaseReader()
+              compressor.end()
+              break
+            }
+
+            if (!value) continue
+
+            await writeToCompressor(value, (error) => {
+              compressor.destroy(error)
+              fail(error)
+            })
+          }
+        } catch (error) {
+          if (!errored) {
+            errored = true
+            wakeWaiters()
+            releaseReader()
+            compressor.destroy(error as Error)
+            if (!cancelled) {
+              controller.error(error)
+            }
+          }
         }
-      } catch (error) {
-        errored = true
-        compressor.destroy(error as Error)
-        if (!cancelled) {
-          controller.error(error)
-        }
-      } finally {
-        reader.releaseLock()
+      })()
+    },
+
+    pull() {
+      if (cancelled || errored) return
+      if (compressorPaused) {
+        compressorPaused = false
+        compressor.resume?.()
+      }
+      if (pullWaiter !== null) {
+        let resolve = pullWaiter
+        pullWaiter = null
+        resolve()
       }
     },
 
     async cancel(reason) {
       cancelled = true
+      wakeWaiters()
       // Destroy compressor first to unblock any pending write operations
       compressor.destroy()
-      await reader?.cancel(reason)
+      if (reader !== null) {
+        let current = reader
+        reader = null
+        try {
+          await current.cancel(reason)
+        } finally {
+          current.releaseLock()
+        }
+      }
     },
   })
 }
