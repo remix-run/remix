@@ -8,8 +8,15 @@ export class AbortRace {
     this.signal = request.signal
   }
 
+  get isListening(): boolean {
+    return this.#listening
+  }
+
   handleEvent(): void {
-    this.#listening = false
+    if (this.#listening) {
+      this.#listening = false
+      this.signal.removeEventListener('abort', this)
+    }
     let reason = this.signal.reason
     let rejectors = this.#rejectors
     if (rejectors !== undefined) {
@@ -35,7 +42,7 @@ export class AbortRace {
 
     if (!this.#listening) {
       this.#listening = true
-      this.signal.addEventListener('abort', this, { once: true })
+      this.signal.addEventListener('abort', this)
     }
   }
 
@@ -109,9 +116,12 @@ export function raceRequestAbort<value>(promise: Promise<value>, request: Reques
   }
 
   return new Promise<value>((resolve, reject) => {
-    let onAbort = () => reject(signal.reason)
+    let onAbort = () => {
+      signal.removeEventListener('abort', onAbort)
+      reject(signal.reason)
+    }
 
-    signal.addEventListener('abort', onAbort, { once: true })
+    signal.addEventListener('abort', onAbort)
 
     promise.then(
       (value) => {

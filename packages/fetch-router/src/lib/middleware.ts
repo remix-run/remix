@@ -107,14 +107,17 @@ export function createMiddleware<const middleware extends readonly AnyMiddleware
  */
 export type NextFunction = () => Promise<Response>
 
+const noop = () => {}
+
 export function runMiddleware(
   middleware: AnyMiddleware[],
   context: RequestContext<any, any>,
   handler: RequestHandler<any>,
   sharedAbortRace?: AbortRace,
+  canAbort = true,
 ): Promise<Response> {
   let request = context.request
-  let signal = request.signal
+  let signal = canAbort ? request.signal : undefined
   let len = middleware.length
   let index = -1
   let ownedAbortRace: AbortRace | undefined
@@ -128,7 +131,7 @@ export function runMiddleware(
     if (i <= index) throw new Error('next() called multiple times')
     index = i
 
-    if (signal.aborted) {
+    if (signal !== undefined && signal.aborted) {
       throw signal.reason
     }
 
@@ -136,7 +139,7 @@ export function runMiddleware(
       let result = handler(context)
 
       if (result instanceof Response) {
-        if (signal.aborted) {
+        if (signal !== undefined && signal.aborted) {
           cancelAbandonedResponse(result, signal.reason)
           throw signal.reason
         }
@@ -145,11 +148,12 @@ export function runMiddleware(
       }
 
       if (result instanceof Promise) {
-        return getAbortRace().race(result)
+        return canAbort ? getAbortRace().race(result) : result
       }
 
       if (result != null && typeof (result as PromiseLike<Response>).then === 'function') {
-        return getAbortRace().race(Promise.resolve(result))
+        let promise = Promise.resolve(result)
+        return canAbort ? getAbortRace().race(promise) : promise
       }
 
       return result
@@ -157,6 +161,7 @@ export function runMiddleware(
 
     let fn = middleware[i]
     let nextPromise: Promise<Response> | undefined
+    let nextCanReject = false
     let next: NextFunction = () => {
       if (nextPromise !== undefined) {
         return Promise.reject(new Error('next() called multiple times'))
@@ -164,8 +169,14 @@ export function runMiddleware(
 
       try {
         let result = dispatch(i + 1)
-        nextPromise = result instanceof Promise ? result : Promise.resolve(result)
+        if (result instanceof Promise) {
+          nextCanReject = true
+          nextPromise = result
+        } else {
+          nextPromise = Promise.resolve(result)
+        }
       } catch (error) {
+        nextCanReject = true
         nextPromise = Promise.reject(error)
       }
 
@@ -176,15 +187,15 @@ export function runMiddleware(
     try {
       result = fn(context, next)
     } catch (error) {
-      nextPromise?.catch(() => {})
+      if (nextCanReject) nextPromise!.then(undefined, noop)
       throw error
     }
 
     // Synchronous short-circuit response
     if (result instanceof Response) {
-      nextPromise?.catch(() => {})
+      if (nextCanReject) nextPromise!.then(undefined, noop)
 
-      if (signal.aborted) {
+      if (signal !== undefined && signal.aborted) {
         cancelAbandonedResponse(result, signal.reason)
         throw signal.reason
       }
@@ -204,13 +215,29 @@ export function runMiddleware(
     ) {
       let promise = isNativePromise ? result : Promise.resolve(result)
 
-      if (signal.aborted) {
-        nextPromise?.catch(() => {})
-        promise.then(
-          (value) => cancelAbandonedResponse(value, signal.reason),
-          () => {},
+      if (!canAbort) {
+        return promise.then(
+          (response) => {
+            if (response instanceof Response) {
+              if (nextCanReject) nextPromise!.then(undefined, noop)
+              return response
+            }
+            if (nextPromise !== undefined) {
+              return nextPromise
+            }
+            throw new Error('Middleware must return a Response or call next()')
+          },
+          (error) => {
+            if (nextCanReject) nextPromise!.then(undefined, noop)
+            throw error
+          },
         )
-        return Promise.reject(signal.reason)
+      }
+
+      if (signal!.aborted) {
+        if (nextCanReject) nextPromise!.then(undefined, noop)
+        promise.then((value) => cancelAbandonedResponse(value, signal!.reason), noop)
+        return Promise.reject(signal!.reason)
       }
 
       let abortRace = getAbortRace()
@@ -222,14 +249,14 @@ export function runMiddleware(
           (response) => {
             abortRace.removeRejector(reject)
 
-            if (signal.aborted) {
-              nextPromise?.catch(() => {})
-              cancelAbandonedResponse(response, signal.reason)
+            if (signal!.aborted) {
+              if (nextCanReject) nextPromise!.then(undefined, noop)
+              cancelAbandonedResponse(response, signal!.reason)
               return
             }
 
             if (response instanceof Response) {
-              nextPromise?.catch(() => {})
+              if (nextCanReject) nextPromise!.then(undefined, noop)
               resolve(response)
             } else if (nextPromise !== undefined) {
               resolve(nextPromise)
@@ -239,15 +266,15 @@ export function runMiddleware(
           },
           (error) => {
             abortRace.removeRejector(reject)
-            nextPromise?.catch(() => {})
+            if (nextCanReject) nextPromise!.then(undefined, noop)
             reject(error)
           },
         )
       })
     }
 
-    if (signal.aborted) {
-      nextPromise?.catch(() => {})
+    if (signal !== undefined && signal.aborted) {
+      if (nextCanReject) nextPromise!.then(undefined, noop)
       throw signal.reason
     }
 

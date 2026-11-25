@@ -315,10 +315,14 @@ function isRouteTarget(target: MapTarget): target is RouteTarget {
   return typeof target === 'string' || target instanceof Route || target instanceof RoutePattern
 }
 
-function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
+function createRequestContext(
+  input: string | URL | Request,
+  init: RequestInit | undefined,
+  canAbort: boolean,
+): RequestContext {
   let request = input instanceof Request && init == null ? input : new Request(input, init)
 
-  if (request.signal.aborted) {
+  if (canAbort && request.signal.aborted) {
     throw request.signal.reason
   }
 
@@ -352,8 +356,7 @@ function getPrefixedRoutePattern(target: RouteTarget, state: BuilderState): Rout
 
 function assignMatchParams(context: RequestContext, params: Record<string, any> | undefined): void {
   if (params === undefined) return
-  context.params =
-    Reflect.ownKeys(context.params).length > 0 ? { ...context.params, ...params } : params
+  context.params = { ...context.params, ...params }
 }
 
 function createAllowedMethodsResponse(
@@ -373,9 +376,10 @@ function finalizeDirectResult(
   request: Request,
   headFallback: boolean,
   alreadyRaced: boolean,
+  canAbort: boolean,
 ): Promise<Response> {
   if (result instanceof Response) {
-    if (request.signal.aborted) {
+    if (canAbort && request.signal.aborted) {
       cancelAbandonedResponse(result, request.signal.reason)
       return Promise.reject(request.signal.reason)
     }
@@ -384,7 +388,7 @@ function finalizeDirectResult(
   }
 
   let promise = result instanceof Promise ? result : Promise.resolve(result)
-  let raced = alreadyRaced ? promise : raceRequestAbort(promise, request)
+  let raced = alreadyRaced || !canAbort ? promise : raceRequestAbort(promise, request)
   return headFallback ? raced.then(headResponse) : raced
 }
 
@@ -409,6 +413,7 @@ export function createRouter<
     matches: ReadonlyArray<Match<string, MatchData>>,
     context: RequestContext,
     abortRace: AbortRace | undefined,
+    canAbort: boolean,
     onHeadFallback: () => void,
     onMiddlewareRan?: () => void,
   ): Response | Promise<Response> {
@@ -439,7 +444,7 @@ export function createRouter<
         continue
       }
 
-      return invokeRoute(route, match.params, context, abortRace, onMiddlewareRan)
+      return invokeRoute(route, match.params, context, abortRace, canAbort, onMiddlewareRan)
     }
 
     if (headFallback !== null) {
@@ -449,6 +454,7 @@ export function createRouter<
         headFallback.params,
         context,
         abortRace,
+        canAbort,
         onMiddlewareRan,
       )
     }
@@ -465,13 +471,14 @@ export function createRouter<
     params: Record<string, any> | undefined,
     context: RequestContext,
     abortRace: AbortRace | undefined,
+    canAbort: boolean,
     onMiddlewareRan?: () => void,
   ): Response | Promise<Response> {
     assignMatchParams(context, params)
 
     if (route.middleware) {
       onMiddlewareRan?.()
-      return runMiddleware(route.middleware, context, route.handler, abortRace)
+      return runMiddleware(route.middleware, context, route.handler, abortRace, canAbort)
     }
 
     return route.handler(context)
@@ -481,6 +488,7 @@ export function createRouter<
     context: RequestContext,
     initialUrl: string | undefined,
     abortRace: AbortRace | undefined,
+    canAbort: boolean,
     onHeadFallback: () => void,
   ): Response | Promise<Response> {
     if (routeMatcher !== null) {
@@ -494,7 +502,7 @@ export function createRouter<
         if (matched.isHeadFallback) onHeadFallback()
         matched.entry = undefined
         matched.params = undefined
-        return invokeRoute(route, params, context, abortRace)
+        return invokeRoute(route, params, context, abortRace, canAbort)
       }
 
       if (status === MATCH_MISS) {
@@ -510,6 +518,7 @@ export function createRouter<
         routeMatcher.matchAllFallback(context.url),
         context,
         abortRace,
+        canAbort,
         onHeadFallback,
       )
     }
@@ -518,11 +527,12 @@ export function createRouter<
       customMatcher!.matchAll(context.url),
       context,
       abortRace,
+      canAbort,
       onHeadFallback,
     )
   }
 
-  function dispatchDirect(context: RequestContext): Promise<Response> {
+  function dispatchDirect(context: RequestContext, canAbort: boolean): Promise<Response> {
     let request = context.request
     // Only trust raw request.url as WHATWG-canonicalized for native Request instances
     let rawUrl = request.constructor === Request ? request.url : undefined
@@ -546,14 +556,21 @@ export function createRouter<
           }
 
           if (route.middleware === undefined) {
-            return finalizeDirectResult(route.handler(context), request, isHeadFallback, false)
+            return finalizeDirectResult(
+              route.handler(context),
+              request,
+              isHeadFallback,
+              false,
+              canAbort,
+            )
           }
 
           return finalizeDirectResult(
-            runMiddleware(route.middleware, context, route.handler),
+            runMiddleware(route.middleware, context, route.handler, undefined, canAbort),
             request,
             isHeadFallback,
             true,
+            canAbort,
           )
         }
 
@@ -564,7 +581,7 @@ export function createRouter<
               allowed !== null
                 ? createAllowedMethodsResponse(context, allowed)
                 : defaultHandler(context)
-            return finalizeDirectResult(response, request, false, false)
+            return finalizeDirectResult(response, request, false, false, canAbort)
           }
         }
 
@@ -574,6 +591,7 @@ export function createRouter<
           routeMatcher.matchAllFallback(context.url),
           context,
           undefined,
+          canAbort,
           () => {
             headFallback = true
           },
@@ -581,7 +599,7 @@ export function createRouter<
             alreadyRaced = true
           },
         )
-        return finalizeDirectResult(response, request, headFallback, alreadyRaced)
+        return finalizeDirectResult(response, request, headFallback, alreadyRaced, canAbort)
       }
 
       let headFallback = false
@@ -590,6 +608,7 @@ export function createRouter<
         customMatcher!.matchAll(context.url),
         context,
         undefined,
+        canAbort,
         () => {
           headFallback = true
         },
@@ -597,7 +616,7 @@ export function createRouter<
           alreadyRaced = true
         },
       )
-      return finalizeDirectResult(response, request, headFallback, alreadyRaced)
+      return finalizeDirectResult(response, request, headFallback, alreadyRaced, canAbort)
     } catch (error) {
       return Promise.reject(error)
     }
@@ -606,11 +625,13 @@ export function createRouter<
   function dispatchWithRouterMiddleware(
     context: RequestContext,
     middleware: AnyMiddleware[],
+    canAbort: boolean,
   ): Promise<Response> {
     let request = context.request
     // Snapshot raw URL before router middleware so replacing context.request preserves initial URL semantics
     let initialUrl = request.constructor === Request ? request.url : undefined
-    let abortRace = new AbortRace(request)
+    let abortRace = canAbort ? new AbortRace(request) : undefined
+    let routeMatched = false
     let headFallback = false
     let markHeadFallback = () => {
       headFallback = true
@@ -619,18 +640,35 @@ export function createRouter<
     let promise = runMiddleware(
       middleware,
       context,
-      (ctx) => dispatchMatched(ctx, initialUrl, abortRace, markHeadFallback),
+      (ctx) => {
+        routeMatched = true
+        return dispatchMatched(ctx, initialUrl, abortRace, canAbort, markHeadFallback)
+      },
       abortRace,
+      canAbort,
     )
+
+    // When routing already ran synchronously and is not a HEAD fallback, skip chaining an extra Promise
+    if (routeMatched && !headFallback) {
+      if (abortRace !== undefined) {
+        if (abortRace.isListening) {
+          let cleanup = () => abortRace.dispose()
+          promise.then(cleanup, cleanup)
+        } else {
+          abortRace.dispose()
+        }
+      }
+      return promise
+    }
 
     // Strip the body after router middleware so it sees the same response as for GET
     return promise.then(
       (response) => {
-        abortRace.dispose()
+        abortRace?.dispose()
         return headFallback ? headResponse(response) : response
       },
       (error) => {
-        abortRace.dispose()
+        abortRace?.dispose()
         throw error
       },
     )
@@ -788,18 +826,20 @@ export function createRouter<
     ...rootBuilder,
     // Rest tuple keeps router.fetch.length === 1 for single-argument FetchHandler adapters
     fetch(input: string | URL | Request, ...args: [init?: RequestInit]): Promise<Response> {
+      let [init] = args
+      // A Request built from a string/URL without an external signal can never abort
+      let canAbort = input instanceof Request ? init?.signal !== null : init?.signal != null
       let context: RequestContext
       try {
-        let [init] = args
-        context = createRequestContext(input, init)
+        context = createRequestContext(input, init, canAbort)
       } catch (error) {
         return Promise.reject(error)
       }
       context.router = router
 
       return routerMiddleware === undefined
-        ? dispatchDirect(context)
-        : dispatchWithRouterMiddleware(context, routerMiddleware)
+        ? dispatchDirect(context, canAbort)
+        : dispatchWithRouterMiddleware(context, routerMiddleware, canAbort)
     },
   }
 

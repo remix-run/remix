@@ -228,4 +228,45 @@ describe('abort signal support', () => {
     let promise = router.fetch('https://remix.run', { signal: controller.signal })
     await assert.rejects(promise, reason)
   })
+
+  it('still aborts when a Request with a signal is passed alongside init without signal', async () => {
+    let controller = new AbortController()
+    let request = new Request('https://remix.run', { signal: controller.signal })
+    let router = createRouter()
+    let handlerStarted = Promise.withResolvers<void>()
+
+    router.get('/', async () => {
+      handlerStarted.resolve()
+      await new Promise(() => {})
+      return new Response('Home')
+    })
+
+    let responsePromise = router.fetch(request, { headers: { 'X-Test': '1' } })
+    await handlerStarted.promise
+    controller.abort()
+
+    await assert.rejects(responsePromise, (error: any) => {
+      assert.equal(error.name, 'AbortError')
+      return true
+    })
+  })
+
+  it('strips HEAD fallback body when async router middleware sets context.method to HEAD after awaiting', async () => {
+    let router = createRouter({
+      middleware: [
+        async (context, next) => {
+          await Promise.resolve()
+          context.method = 'HEAD'
+          return next()
+        },
+      ],
+    })
+
+    router.get('/file', () => new Response('body content', { headers: { 'X-File': '1' } }))
+
+    let response = await router.fetch('https://remix.run/file', { method: 'POST' })
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('X-File'), '1')
+    assert.equal(response.body, null)
+  })
 })
