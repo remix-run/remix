@@ -1,6 +1,7 @@
 import type { ElementProps } from './vnode.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
+const XML_NS = 'http://www.w3.org/XML/1998/namespace'
 const RESERVED_PROPS = new Set([
   'children',
   'mix',
@@ -46,13 +47,10 @@ const UNSAFE_PROP = /^on|[\0\t\n\f\r "'/>=]/i
 const EXEC_URL_ATTR = new Set(['href', 'src', 'action', 'formaction', 'xlink:href'])
 const BLOCKED_JS_URL =
   "javascript:throw new Error('Remix has blocked a javascript: URL as a security precaution.')"
-const SVG_CAMEL_RE =
-  /^(?:accentHeight|attribute(?:Name|Type)|autoReverse|base(?:Frequency|Profile)|calcMode|clipPathUnits|diffuseConstant|edgeMode|externalResourcesRequired|filter(?:Res|Units)|glyphRef|gradient(?:Transform|Units)|kernel(?:Matrix|UnitLength)|key(?:Points|Splines|Times)|lengthAdjust|limitingConeAngle|marker(?:Height|Units|Width)|mask(?:Content)?Units|numOctaves|pathLength|pattern(?:ContentUnits|Transform|Units)|pointsAt[XYZ]|preserve(?:Alpha|AspectRatio)|primitiveUnits|ref[XY]|required(?:Extensions|Features)|specular(?:Constant|Exponent)|spreadMethod|startOffset|stdDeviation|stitchTiles|surfaceScale|systemLanguage|tableValues|target[XY]|textLength|view(?:Box|Target)|[xy]ChannelSelector|zoomAndPan)$/
-const NS_SVG_RE = /^(xlink|xml|xmlns)(?:[:-]([a-z]+)|([A-Z][a-z]+))$/
-
+const VENDOR_STYLE_PREFIX = /^(?:-?(?:webkit|moz|ms|o)-|(?:[Ww]ebkit|[Mm]oz|[Mm]s|[Oo])(?=[A-Z]))/
 // Properties whose grammar accepts a standalone number, including shorthands and number/length unions.
 const NUMERIC_CSS_PROP =
-  /^(?:-(?:webkit|moz|ms|o)-)?(?:animation(?:-iteration-count)?|aspect-ratio|bookmark-level|(?:border-image|mask-border|mask-box-image)(?:-outset|-slice|-width)?|box-(?:flex|flex-group|ordinal-group)|column(?:s|-count|-span)|flex(?:-grow|-line-count|-negative|-order|-positive|-shrink)?|float-defer|font-(?:size-adjust|weight)|force-broken-image-icon|grid-(?:area|(?:column|row)(?:-end|-span|-start)?)|hyphenate-limit-(?:chars|lines)|initial-letter|line-(?:clamp|height)|math-depth|max-lines|opacity|order|orphans|reading-order|scale|shape-image-threshold|tab-size|voice-balance|widows|z-index|zoom|(?:fill|flood|stop|stroke)-opacity|stroke-(?:dasharray|dashoffset|miterlimit|width))$/
+  /^(?:animation(?:iterationcount)?|aspectratio|bookmarklevel|(?:borderimage|mask(?:border|boximage))(?:outset|slice|width)?|box(?:flex(?:group)?|ordinalgroup)|column(?:s|count|span)|flex(?:grow|linecount|negative|order|positive|shrink)?|floatdefer|font(?:sizeadjust|weight)|forcebrokenimageicon|grid(?:area|(?:column|row)(?:end|span|start)?)|hyphenatelimit(?:chars|lines)|initialletter|line(?:clamp|height)|mathdepth|maxlines|(?:fill|flood|stop|stroke)?opacity|order|orphans|readingorder|scale|shapeimagethreshold|tabsize|voicebalance|widows|zindex|zoom|stroke(?:dash(?:array|offset)|miterlimit|width))$/i
 
 function skipHostProp(name: string, select: HTMLSelectElement | null): boolean {
   return (
@@ -108,8 +106,8 @@ function canUseProperty(
   return !isSvg && name in dom && !ATTR_FALLBACK.has(name) && !BOOLEANISH_ATTR.has(attr)
 }
 
-function removeAttribute(dom: Element, attr: string, ns?: string): void {
-  if (ns) dom.removeAttributeNS(ns, attr.slice(attr.indexOf(':') + 1))
+function removeHostAttribute(dom: Element, attr: string, isSvg: boolean): void {
+  if (isSvg && attr.startsWith('xml:')) dom.removeAttributeNS(XML_NS, attr.slice(4))
   else dom.removeAttribute(attr)
 }
 
@@ -121,7 +119,7 @@ function patchHostProp(
   isSvg: boolean,
   select: HTMLSelectElement | null,
 ): void {
-  let { attr, ns } = normalizeAttributeName(name, isSvg)
+  let attr = normalizeAttributeName(name, isSvg)
 
   if (value == null) {
     if (
@@ -141,7 +139,7 @@ function patchHostProp(
         }
       } catch {}
     }
-    removeAttribute(dom, attr, ns)
+    removeHostAttribute(dom, attr, isSvg)
     return
   }
 
@@ -192,59 +190,56 @@ function patchHostProp(
   let stringify = typeof value !== 'boolean' || shouldStringifyBooleanAttribute(attr)
   if (stringify || value) {
     let str = stringify ? String(value) : ''
-    if (ns) dom.setAttributeNS(ns, attr, str)
+    if (isSvg && attr.startsWith('xml:')) dom.setAttributeNS(XML_NS, attr, str)
     else dom.setAttribute(attr, str)
   } else {
-    removeAttribute(dom, attr, ns)
+    removeHostAttribute(dom, attr, isSvg)
   }
-}
-
-const camelToKebabCache = new Map<string, string>()
-
-export function camelToKebab(str: string): string {
-  if (str.startsWith('--')) return str
-  let cached = camelToKebabCache.get(str)
-  if (cached === undefined) {
-    cached = str
-      .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
-      .replace(/^(webkit|moz|ms|o)-/, '-$1-')
-    if (camelToKebabCache.size >= 256) {
-      let oldest = camelToKebabCache.keys().next()
-      if (!oldest.done) camelToKebabCache.delete(oldest.value)
-    }
-    camelToKebabCache.set(str, cached)
-  }
-  return cached
-}
-
-export function normalizeCssValue(key: string, value: unknown): string | undefined {
-  if (value == null) return undefined
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) return undefined
-    if (value !== 0 && !key.startsWith('--') && !NUMERIC_CSS_PROP.test(camelToKebab(key))) {
-      return `${value}px`
-    }
-  }
-  return String(value)
 }
 
 export function isStyleObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function styleValueToCss(name: string, value: unknown): string | undefined {
+export function normalizeCssValue(key: string, value: unknown): string | undefined {
+  if (value == null) return undefined
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return undefined
+    if (
+      value !== 0 &&
+      !key.startsWith('--') &&
+      !NUMERIC_CSS_PROP.test(key.replace(VENDOR_STYLE_PREFIX, '').replace(/-/g, ''))
+    ) {
+      return `${value}px`
+    }
+  }
+  return String(value)
+}
+
+function toInlineStyleValue(name: string, value: unknown): string | undefined {
   if (typeof value === 'boolean') return undefined
   if (Array.isArray(value)) return value.join(', ')
   return normalizeCssValue(name, value)
 }
 
-export function serializeStyleObject(style: Record<string, unknown>): string {
-  let parts: string[] = []
-  for (let [key, value] of Object.entries(style)) {
-    let cssValue = styleValueToCss(key, value)
-    if (cssValue !== undefined) parts.push(`${camelToKebab(key)}: ${cssValue};`)
+function setInlineStyle(style: CSSStyleDeclaration, name: string, value: string): void {
+  if (name.includes('-')) {
+    if (value) style.setProperty(name, value)
+    else style.removeProperty(name)
+  } else {
+    let record = style as unknown as Record<string, unknown>
+    if (
+      name === 'cssText' ||
+      name === 'length' ||
+      name === 'parentRule' ||
+      typeof record[name] === 'function'
+    ) {
+      return
+    }
+    try {
+      record[name] = value
+    } catch {}
   }
-  return parts.join(' ')
 }
 
 function patchStyleObject(
@@ -252,27 +247,39 @@ function patchStyleObject(
   curr: Record<string, unknown> | undefined,
   next: Record<string, unknown>,
 ): void {
-  if (!(dom instanceof HTMLElement || dom instanceof SVGElement)) {
-    dom.setAttribute('style', serializeStyleObject(next))
+  let style = 'style' in dom ? (dom as HTMLElement).style : undefined
+  if (!(style instanceof CSSStyleDeclaration)) {
+    let parts: string[] = []
+    for (let [key, value] of Object.entries(next)) {
+      let cssValue = toInlineStyleValue(key, value)
+      if (cssValue !== undefined) {
+        let prop = key.startsWith('--')
+          ? key
+          : key
+              .replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
+              .replace(/^(webkit|moz|ms|o)-/, '-$1-')
+        parts.push(`${prop}: ${cssValue};`)
+      }
+    }
+    dom.setAttribute('style', parts.join(' '))
     return
   }
 
-  let style = dom.style
   for (let name in curr) {
     if (
       next[name] !== curr[name] &&
-      styleValueToCss(name, next[name]) === undefined &&
-      styleValueToCss(name, curr[name]) !== undefined
+      toInlineStyleValue(name, next[name]) === undefined &&
+      toInlineStyleValue(name, curr[name]) !== undefined
     ) {
-      style.removeProperty(camelToKebab(name))
+      setInlineStyle(style, name, '')
     }
   }
 
   for (let name in next) {
     if (curr && next[name] === curr[name]) continue
-    let value = styleValueToCss(name, next[name])
-    if (value !== undefined && value !== styleValueToCss(name, curr?.[name])) {
-      style.setProperty(camelToKebab(name), value)
+    let value = toInlineStyleValue(name, next[name])
+    if (value !== undefined && value !== toInlineStyleValue(name, curr?.[name])) {
+      setInlineStyle(style, name, value)
     }
   }
 }
@@ -315,10 +322,8 @@ export function isAllowedHostPropName(name: string): boolean {
 }
 
 export function sanitizeUrlAttribute(tagName: string, attrName: string, value: unknown): unknown {
-  if (
-    !EXEC_URL_ATTR.has(attrName) &&
-    !(attrName === 'data' && tagName.toLowerCase() === 'object')
-  ) {
+  let lower = attrName.toLowerCase()
+  if (!EXEC_URL_ATTR.has(lower) && !(lower === 'data' && tagName.toLowerCase() === 'object')) {
     return value
   }
   // Browsers ignore leading C0 controls and spaces, plus tabs and newlines within URL schemes.
@@ -327,11 +332,6 @@ export function sanitizeUrlAttribute(tagName: string, attrName: string, value: u
     : value
 }
 
-type AttributeName = { attr: string; ns?: string }
-
-const htmlAttrCache = new Map<string, AttributeName>()
-const svgAttrCache = new Map<string, AttributeName>()
-
 const HTML_RENAMES: Record<string, string> = {
   className: 'class',
   htmlFor: 'for',
@@ -339,64 +339,25 @@ const HTML_RENAMES: Record<string, string> = {
   httpEquiv: 'http-equiv',
 }
 
-export function normalizeAttributeName(name: string, isSvg: boolean): AttributeName {
-  if (name.startsWith('data-') || name.startsWith('aria-')) return { attr: name }
-  let cache = isSvg ? svgAttrCache : htmlAttrCache
-  let cached = cache.get(name)
-  if (cached) return cached
+// React-style camelCase SVG props (e.g. strokeWidth, fillOpacity, stopColor) that correspond to
+// kebab-case SVG attributes. Canonical camelCase SVG attributes (viewBox, clipPathUnits,
+// stdDeviation, etc.) and standard kebab-case attributes do not match and pass through verbatim.
+const SVG_KEBAB_PROP =
+  /^(?:(?:stroke|fill|font|color|horiz|vert|overline|strikethrough|underline|unicode|v)[A-Z]|glyph[NO]|(?:marker(?:Start|Mid|End)|clip(?:Path|Rule)|whiteSpace)$)|(?:Baseline|Color|Opacity|Rendering|Spacing|Origin|Shift|Form|Rule|Background|Order|Events|Intent|Anchor|Decoration|Em|Effect|writingMode|capHeight|xHeight)$/
 
-  let normalized: AttributeName
-  if (!isSvg) {
-    normalized = {
-      attr: Object.hasOwn(HTML_RENAMES, name) ? HTML_RENAMES[name] : name.toLowerCase(),
+export function normalizeAttributeName(name: string, isSvg: boolean): string {
+  if (isSvg) {
+    if (name === 'className') return 'class'
+    if (/^xlink(?:Href|:href)$/i.test(name)) return 'href'
+    if (/^xml(?:Lang|Space|Base|nsXlink)$/.test(name)) {
+      return name.replace(/([A-Z])/, (_, c: string) => `:${c.toLowerCase()}`)
     }
-  } else if (name === 'className') {
-    normalized = { attr: 'class' }
-  } else {
-    normalized = normalizeSvgAttribute(name)
+    return SVG_KEBAB_PROP.test(name)
+      ? name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+      : name
   }
-
-  if (cache.size >= 256) cache.clear()
-  cache.set(name, normalized)
-  return normalized
-}
-
-function normalizeSvgAttribute(name: string): AttributeName {
-  if (SVG_CAMEL_RE.test(name)) return { attr: name }
-  if (name.includes('-')) {
-    let camel = name.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase())
-    if (SVG_CAMEL_RE.test(camel)) return { attr: camel }
-  }
-  let match = NS_SVG_RE.exec(name)
-  if (match) {
-    let prefix = match[1]
-    let local = match[2] ?? match[3].toLowerCase()
-    if (
-      prefix === 'xmlns'
-        ? local === 'xlink'
-        : (prefix === 'xlink'
-            ? /^(?:href|actuate|arcrole|role|show|title|type)$/
-            : /^(?:base|lang|space)$/
-          ).test(local)
-    ) {
-      let attr = `${prefix}:${local}`
-      return prefix === 'xmlns'
-        ? { attr }
-        : {
-            attr,
-            ns:
-              prefix === 'xlink'
-                ? 'http://www.w3.org/1999/xlink'
-                : 'http://www.w3.org/XML/1998/namespace',
-          }
-    }
-  }
-  return {
-    attr: name
-      .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-      .replace(/_/g, '-')
-      .toLowerCase(),
-  }
+  if (name.startsWith('data-') || name.startsWith('aria-')) return name
+  return Object.hasOwn(HTML_RENAMES, name) ? HTML_RENAMES[name] : name.toLowerCase()
 }
 
 export function shouldStringifyBooleanAttribute(name: string): boolean {

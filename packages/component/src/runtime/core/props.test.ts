@@ -3,9 +3,11 @@ import { describe, it } from '@remix-run/test'
 import {
   isAllowedHostPropName,
   normalizeAttributeName,
+  normalizeCssValue,
   patchHostProps,
-  serializeStyleObject,
+  sanitizeUrlAttribute,
 } from './props.ts'
+import { serializeStyleObject } from '../../style/stylesheet.ts'
 import { unsafeHTML } from '../unsafe-html.ts'
 
 describe('isAllowedHostPropName', () => {
@@ -37,9 +39,38 @@ describe('isAllowedHostPropName', () => {
 
 describe('normalizeAttributeName', () => {
   it('does not leak Object.prototype keys as HTML attribute renames', () => {
-    expect(normalizeAttributeName('constructor', false)).toEqual({ attr: 'constructor' })
-    expect(normalizeAttributeName('toString', false)).toEqual({ attr: 'tostring' })
-    expect(normalizeAttributeName('valueOf', false)).toEqual({ attr: 'valueof' })
+    expect(normalizeAttributeName('constructor', false)).toBe('constructor')
+    expect(normalizeAttributeName('toString', false)).toBe('tostring')
+    expect(normalizeAttributeName('valueOf', false)).toBe('valueof')
+  })
+
+  it('normalizes SVG attributes while preserving canonical camelCase and kebab-case names', () => {
+    expect(normalizeAttributeName('viewBox', true)).toBe('viewBox')
+    expect(normalizeAttributeName('clipPathUnits', true)).toBe('clipPathUnits')
+    expect(normalizeAttributeName('stdDeviation', true)).toBe('stdDeviation')
+    expect(normalizeAttributeName('stroke-linecap', true)).toBe('stroke-linecap')
+    expect(normalizeAttributeName('strokeLinecap', true)).toBe('stroke-linecap')
+    expect(normalizeAttributeName('strokeWidth', true)).toBe('stroke-width')
+    expect(normalizeAttributeName('stopColor', true)).toBe('stop-color')
+    expect(normalizeAttributeName('whiteSpace', true)).toBe('white-space')
+    expect(normalizeAttributeName('xlinkHref', true)).toBe('href')
+    expect(normalizeAttributeName('xlink:href', true)).toBe('href')
+    expect(normalizeAttributeName('xlink:Href', true)).toBe('href')
+    expect(normalizeAttributeName('XLINK:HREF', true)).toBe('href')
+    expect(normalizeAttributeName('xlinkHelper', true)).toBe('xlinkHelper')
+    expect(normalizeAttributeName('className', true)).toBe('class')
+    expect(normalizeAttributeName('xmlLang', true)).toBe('xml:lang')
+    expect(normalizeAttributeName('xml:lang', true)).toBe('xml:lang')
+    expect(normalizeAttributeName('xmlSpace', true)).toBe('xml:space')
+    expect(normalizeAttributeName('xmlnsXlink', true)).toBe('xmlns:xlink')
+  })
+
+  it('sanitizes executable URL attributes case-insensitively', () => {
+    for (let attr of ['HREF', 'Href', 'xlink:Href', 'XLINK:HREF', 'SRC', 'ACTION']) {
+      expect(String(sanitizeUrlAttribute('a', attr, 'javascript:alert(1)'))).toContain(
+        'blocked a javascript: URL',
+      )
+    }
   })
 })
 
@@ -68,6 +99,21 @@ describe('inline style normalization parity', () => {
     expect(div.style.aspectRatio).toBe('1.5 / 1')
     expect(div.style.opacity).toBe('0.5')
     expect(div.style.getPropertyValue('--gap')).toBe('12')
+
+    expect(normalizeCssValue('webkit-line-clamp', 2)).toBe('2')
+    expect(normalizeCssValue('WebkitLineClamp', 2)).toBe('2')
+  })
+
+  it('ignores reserved CSSStyleDeclaration members in style objects', () => {
+    let div = document.createElement('div')
+    patchHostProps(
+      {},
+      { style: { color: 'red', cssText: 'margin: 0', length: 1, setProperty: 'nope' } },
+      div,
+    )
+    expect(div.style.color).toBe('red')
+    expect(div.style.margin).toBe('')
+    expect(typeof div.style.setProperty).toBe('function')
   })
 
   it('ignores inherited enumerable properties when serializing style objects', () => {

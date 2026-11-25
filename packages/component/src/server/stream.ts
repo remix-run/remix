@@ -22,7 +22,6 @@ import {
   isAllowedHostPropName,
   normalizeAttributeName,
   sanitizeUrlAttribute,
-  serializeStyleObject,
   shouldStringifyBooleanAttribute,
 } from '../runtime/core/props.ts'
 import { DOCUMENT_NONCE_META_NAME } from '../runtime/nonce.ts'
@@ -38,7 +37,7 @@ import {
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
 import { composeMixedProps } from '../runtime/mixins/mixin.ts'
-import { REMIX_UI_STYLE_LAYER } from '../style/stylesheet.ts'
+import { REMIX_UI_STYLE_LAYER, serializeStyleObject } from '../style/stylesheet.ts'
 import { cssMixinType } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
@@ -985,7 +984,7 @@ function renderAttributes(
 
     let value = props[key]
     if (value === undefined || value === null) continue
-    let attrName = normalizeAttributeName(key, isSvg).attr
+    let attrName = normalizeAttributeName(key, isSvg)
     if (typeof value === 'boolean') {
       if (shouldStringifyBooleanAttribute(attrName)) {
         attrs += ` ${attrName}="${value}"`

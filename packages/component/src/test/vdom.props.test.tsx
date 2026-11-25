@@ -211,7 +211,7 @@ describe('vnode rendering', () => {
       expect(container.querySelector('#button')?.getAttribute('formaction')).toBe(
         blockedJavaScriptUrl,
       )
-      expect(container.querySelector('#use')?.getAttribute('xlink:href')).toBe(blockedJavaScriptUrl)
+      expect(container.querySelector('#use')?.getAttribute('href')).toBe(blockedJavaScriptUrl)
       expect(container.querySelector('#object')?.getAttribute('data')).toBe(blockedJavaScriptUrl)
     })
 
