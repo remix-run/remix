@@ -19,6 +19,9 @@ run_benchmark() {
     # Wait for the server to start
     sleep 2
 
+    # Warm up JIT and connections before measuring
+    wrk -t4 -c50 -d"${BENCH_WARMUP_DURATION:-3s}" "${wrk_options[@]}" http://127.0.0.1:3000/ > /dev/null
+
     wrk -t12 -c400 -d30s "${wrk_options[@]}" http://127.0.0.1:3000/
 
     kill -SIGINT $server_pid
