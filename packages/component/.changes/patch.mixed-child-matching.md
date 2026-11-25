@@ -1,1 +1,0 @@
-Speed up updates to lists that mix keyed and unkeyed children when a new child has no matching element or component type. Appending keyed children also skips a pass over the old children to check for removals.

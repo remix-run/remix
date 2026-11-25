@@ -1,1 +1,1 @@
-Enhance incoming request URL validation to reject literal backslashes in the path. `createRequestListener()` returns `400 Bad Request` unless `onError` returns a custom response, and `createRequest()` throws.
+Reject incoming requests with a literal backslash (`\`) in the URL path. `createRequestListener()` responds with `400 Bad Request` unless `onError` returns a custom response, and `createRequest()` throws. Percent-encoded backslashes (`%5C`) and backslashes in the query string are still accepted.
