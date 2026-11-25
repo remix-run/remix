@@ -46,10 +46,10 @@ const UNSAFE_PROP = /^on|[\0\t\n\f\r "'/>=]/i
 const EXEC_URL_ATTR = new Set(['href', 'src', 'action', 'formaction'])
 const BLOCKED_JS_URL =
   "javascript:throw new Error('Remix has blocked a javascript: URL as a security precaution.')"
-
+const VENDOR_STYLE_PREFIX = /^(?:-(?:webkit|moz|ms|o)-|(?:[Ww]ebkit|[Mm]oz|[Mm]s|[Oo])(?=[A-Z]))/
 // Properties whose grammar accepts a standalone number, including shorthands and number/length unions.
 const NUMERIC_CSS_PROP =
-  /^(?:-(?:webkit|moz|ms|o)-)?(?:animation(?:-iteration-count)?|aspect-ratio|bookmark-level|(?:border-image|mask-border|mask-box-image)(?:-outset|-slice|-width)?|box-(?:flex|flex-group|ordinal-group)|column(?:s|-count|-span)|flex(?:-grow|-line-count|-negative|-order|-positive|-shrink)?|float-defer|font-(?:size-adjust|weight)|force-broken-image-icon|grid-(?:area|(?:column|row)(?:-end|-span|-start)?)|hyphenate-limit-(?:chars|lines)|initial-letter|line-(?:clamp|height)|math-depth|max-lines|opacity|order|orphans|reading-order|scale|shape-image-threshold|tab-size|voice-balance|widows|z-index|zoom|(?:fill|flood|stop|stroke)-opacity|stroke-(?:dasharray|dashoffset|miterlimit|width))$/
+  /^(?:animation(?:iterationcount)?|aspectratio|bookmarklevel|(?:borderimage|mask(?:border|boximage))(?:outset|slice|width)?|box(?:flex(?:group)?|ordinalgroup)|column(?:s|count|span)|flex(?:grow|linecount|negative|order|positive|shrink)?|floatdefer|font(?:sizeadjust|weight)|forcebrokenimageicon|grid(?:area|(?:column|row)(?:end|span|start)?)|hyphenatelimit(?:chars|lines)|initialletter|line(?:clamp|height)|mathdepth|maxlines|(?:fill|flood|stop|stroke)?opacity|order|orphans|readingorder|scale|shapeimagethreshold|tabsize|voicebalance|widows|zindex|zoom|stroke(?:dash(?:array|offset)|miterlimit|width))$/i
 
 function skipHostProp(name: string, select: HTMLSelectElement | null): boolean {
   return (
@@ -189,52 +189,38 @@ function patchHostProp(
   }
 }
 
-const camelToKebabCache = new Map<string, string>()
-
-export function camelToKebab(str: string): string {
-  if (str.startsWith('--')) return str
-  let cached = camelToKebabCache.get(str)
-  if (cached === undefined) {
-    cached = str
-      .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
-      .replace(/^(webkit|moz|ms|o)-/, '-$1-')
-    if (camelToKebabCache.size >= 256) {
-      let oldest = camelToKebabCache.keys().next()
-      if (!oldest.done) camelToKebabCache.delete(oldest.value)
-    }
-    camelToKebabCache.set(str, cached)
-  }
-  return cached
+export function isStyleObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 export function normalizeCssValue(key: string, value: unknown): string | undefined {
   if (value == null) return undefined
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) return undefined
-    if (value !== 0 && !key.startsWith('--') && !NUMERIC_CSS_PROP.test(camelToKebab(key))) {
+    if (
+      value !== 0 &&
+      !key.startsWith('--') &&
+      !NUMERIC_CSS_PROP.test(key.replace(VENDOR_STYLE_PREFIX, '').replace(/-/g, ''))
+    ) {
       return `${value}px`
     }
   }
   return String(value)
 }
 
-export function isStyleObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function styleValueToCss(name: string, value: unknown): string | undefined {
+function toInlineStyleValue(name: string, value: unknown): string | undefined {
   if (typeof value === 'boolean') return undefined
   if (Array.isArray(value)) return value.join(', ')
   return normalizeCssValue(name, value)
 }
 
-export function serializeStyleObject(style: Record<string, unknown>): string {
-  let parts: string[] = []
-  for (let [key, value] of Object.entries(style)) {
-    let cssValue = styleValueToCss(key, value)
-    if (cssValue !== undefined) parts.push(`${camelToKebab(key)}: ${cssValue};`)
+function setInlineStyle(style: CSSStyleDeclaration, name: string, value: string): void {
+  if (name.includes('-')) {
+    if (value) style.setProperty(name, value)
+    else style.removeProperty(name)
+  } else {
+    ;(style as unknown as Record<string, string>)[name] = value
   }
-  return parts.join(' ')
 }
 
 function patchStyleObject(
@@ -243,7 +229,19 @@ function patchStyleObject(
   next: Record<string, unknown>,
 ): void {
   if (!(dom instanceof HTMLElement || dom instanceof SVGElement)) {
-    dom.setAttribute('style', serializeStyleObject(next))
+    let parts: string[] = []
+    for (let [key, value] of Object.entries(next)) {
+      let cssValue = toInlineStyleValue(key, value)
+      if (cssValue !== undefined) {
+        let prop = key.startsWith('--')
+          ? key
+          : key
+              .replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
+              .replace(/^(webkit|moz|ms|o)-/, '-$1-')
+        parts.push(`${prop}: ${cssValue};`)
+      }
+    }
+    dom.setAttribute('style', parts.join(' '))
     return
   }
 
@@ -251,18 +249,18 @@ function patchStyleObject(
   for (let name in curr) {
     if (
       next[name] !== curr[name] &&
-      styleValueToCss(name, next[name]) === undefined &&
-      styleValueToCss(name, curr[name]) !== undefined
+      toInlineStyleValue(name, next[name]) === undefined &&
+      toInlineStyleValue(name, curr[name]) !== undefined
     ) {
-      style.removeProperty(camelToKebab(name))
+      setInlineStyle(style, name, '')
     }
   }
 
   for (let name in next) {
     if (curr && next[name] === curr[name]) continue
-    let value = styleValueToCss(name, next[name])
-    if (value !== undefined && value !== styleValueToCss(name, curr?.[name])) {
-      style.setProperty(camelToKebab(name), value)
+    let value = toInlineStyleValue(name, next[name])
+    if (value !== undefined && value !== toInlineStyleValue(name, curr?.[name])) {
+      setInlineStyle(style, name, value)
     }
   }
 }

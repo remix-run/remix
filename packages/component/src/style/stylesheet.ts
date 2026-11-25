@@ -1,3 +1,5 @@
+import { normalizeCssValue } from '../runtime/core/props.ts'
+
 // # Style ownership model
 //
 // Rules are content-addressed: a class name is a hash of the style object that
@@ -199,4 +201,36 @@ export type AllStyleProperties = {
 }
 export interface StyleProps extends AllStyleProperties, DOMStyleProperties {
   cssText?: string | null
+}
+
+const camelToKebabCache = new Map<string, string>()
+
+export function camelToKebab(str: string): string {
+  if (str.startsWith('--')) return str
+  let cached = camelToKebabCache.get(str)
+  if (cached === undefined) {
+    cached = str
+      .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+      .replace(/^(webkit|moz|ms|o)-/, '-$1-')
+    if (camelToKebabCache.size >= 256) {
+      let oldest = camelToKebabCache.keys().next()
+      if (!oldest.done) camelToKebabCache.delete(oldest.value)
+    }
+    camelToKebabCache.set(str, cached)
+  }
+  return cached
+}
+
+export function serializeStyleObject(style: Record<string, unknown>): string {
+  let parts: string[] = []
+  for (let [key, value] of Object.entries(style)) {
+    let cssValue =
+      typeof value === 'boolean'
+        ? undefined
+        : Array.isArray(value)
+          ? value.join(', ')
+          : normalizeCssValue(key, value)
+    if (cssValue !== undefined) parts.push(`${camelToKebab(key)}: ${cssValue};`)
+  }
+  return parts.join(' ')
 }

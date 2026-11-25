@@ -1,11 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import {
-  isAllowedHostPropName,
-  normalizeAttributeName,
-  patchHostProps,
-  serializeStyleObject,
-} from './props.ts'
+import { isAllowedHostPropName, normalizeAttributeName, patchHostProps } from './props.ts'
+import { serializeStyleObject } from '../../style/stylesheet.ts'
 import { unsafeHTML } from '../unsafe-html.ts'
 
 describe('isAllowedHostPropName', () => {

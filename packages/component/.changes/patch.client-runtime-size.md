@@ -1,6 +1,6 @@
 Reduce the JavaScript that browsers download for `run()` and for components mounted with `createRoot()`.
 
-Standalone roots that only use inline styles download less JavaScript. In the browser, stylesheet management and class-name rule generation now load with `css()`, `on()` direct event bindings load with `on()`, the mixin engine loads with `createMixin()`, and CSP nonce tracking and frame runtime helpers stay out of standalone `createRoot()` bundles unless `Frame` or `run()` is imported. SVG attribute handling is also simplified to pass canonical SVG attributes through directly while normalizing `xlinkHref` and `xlink:href` to SVG2 `href`.
+Standalone roots that only use inline styles download less JavaScript. In the browser, stylesheet management, `camelToKebab`, and class-name rule generation now load with `css()`, `on()` direct event bindings load with `on()`, the mixin engine loads with `createMixin()`, and CSP nonce tracking and frame runtime helpers stay out of standalone `createRoot()` bundles unless `Frame` or `run()` is imported. Inline `style` objects write camelCase properties directly to `element.style`, and SVG attribute handling passes canonical SVG attributes through directly while normalizing `xlinkHref` and `xlink:href` to SVG2 `href`.
 
 Standalone roots only allocate frame registries when configured to resolve frames. Hydration now finds frames and client entries in one pass. A later render can retry a client entry when its loader throws synchronously.
 
