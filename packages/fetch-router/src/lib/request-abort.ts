@@ -9,9 +9,11 @@
  * @param signal The request's abort signal
  * @param response The response that arrived, if any
  */
-export function throwIfRequestAborted(signal: AbortSignal, response?: unknown): void {
+export function throwIfRequestAborted(signal: AbortSignal, response?: Response): void {
   if (signal.aborted) {
-    cancelUnreadResponse(response, signal.reason)
+    if (response instanceof Response) {
+      response.body?.cancel(signal.reason).catch(() => {})
+    }
     throw signal.reason
   }
 }
@@ -26,16 +28,4 @@ export function throwIfRequestAborted(signal: AbortSignal, response?: unknown): 
  */
 export function getRejectionReason(signal: AbortSignal, error: unknown): unknown {
   return signal.aborted ? signal.reason : error
-}
-
-// Cancels the body of a response, or of the response a promise resolves to, that nothing will read
-function cancelUnreadResponse(response: unknown, reason: unknown): void {
-  if (response instanceof Promise) {
-    response.then(
-      (value) => cancelUnreadResponse(value, reason),
-      () => {},
-    )
-  } else if (response instanceof Response) {
-    response.body?.cancel(reason).catch(() => {})
-  }
 }

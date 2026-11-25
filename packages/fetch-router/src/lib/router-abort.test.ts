@@ -426,6 +426,47 @@ describe('abort signal support', () => {
     assert.equal(await cancelled, reason)
   })
 
+  it('waits for downstream work when async middleware returns nothing after an abort', async () => {
+    let controller = new AbortController()
+    let reason = new Error('Client disconnected')
+    let { response, cancelled } = createStreamingResponse()
+    let finishHandler = Promise.withResolvers<void>()
+    let events: string[] = []
+
+    let router = createRouter({
+      middleware: [
+        // @ts-expect-error Middleware that calls next() without awaiting or returning its response
+        async ({ url }, next) => {
+          if (url.pathname === '/other') {
+            return await next()
+          }
+          next()
+          controller.abort(reason)
+        },
+      ],
+    })
+    router.get('/', async () => {
+      await finishHandler.promise
+      events.push('handler finished')
+      return response
+    })
+    router.get('/other', async () => new Response('ok'))
+
+    let responsePromise = router.fetch('https://remix.run', { signal: controller.signal })
+    responsePromise.catch(() => events.push('router rejected'))
+
+    // A full async request through the same middleware settles after the first middleware
+    // finishes, while its downstream handler is still waiting on `finishHandler`
+    assert.equal((await router.fetch('https://remix.run/other')).status, 200)
+    assert.deepEqual(events, [])
+
+    finishHandler.resolve()
+
+    await assert.rejects(responsePromise, reason)
+    assert.equal(await cancelled, reason)
+    assert.deepEqual(events, ['handler finished', 'router rejected'])
+  })
+
   it('cancels a late response that passes through route middleware', async () => {
     let controller = new AbortController()
     let reason = new Error('Client disconnected')

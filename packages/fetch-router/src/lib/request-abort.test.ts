@@ -29,15 +29,4 @@ describe('throwIfRequestAborted', () => {
     assert.throws(() => throwIfRequestAborted(controller.signal, response), reason)
     assert.equal(await cancelled.promise, reason)
   })
-
-  it('cancels the body of a response that a pending promise resolves to', async () => {
-    let controller = new AbortController()
-    let reason = new Error('Request cancelled')
-    let cancelled = Promise.withResolvers<unknown>()
-    let response = Promise.resolve(new Response(new ReadableStream({ cancel: cancelled.resolve })))
-    controller.abort(reason)
-
-    assert.throws(() => throwIfRequestAborted(controller.signal, response), reason)
-    assert.equal(await cancelled.promise, reason)
-  })
 })

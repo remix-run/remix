@@ -186,14 +186,14 @@ export function runMiddleware(
       let promise = result instanceof Promise ? result : Promise.resolve(result)
       return promise.then(
         (response) => {
-          // Without a response of its own, the middleware would have returned the downstream one
-          throwIfRequestAborted(signal, response instanceof Response ? response : nextPromise)
           if (response instanceof Response) {
+            throwIfRequestAborted(signal, response)
             return response
           }
           if (nextPromise !== undefined) {
-            return nextPromise
+            return signal.aborted ? settleAndCheckAbort(nextPromise) : nextPromise
           }
+          throwIfRequestAborted(signal)
           throw new Error('Middleware must return a Response or call next()')
         },
         (error) => {
