@@ -404,10 +404,10 @@ export function createRouter<
 
   // Default per-method route matchers backed directly by route-pattern
   let byMethod: Record<string, MultiMatcher<MatchData>> = Object.create(null)
-  let registeredMethods: Array<RequestMethod> = []
+  let registeredMethods: RequestMethod[] = []
   let anyMatcher: MultiMatcher<MatchData> | null = null
-  let anyEntries: Array<RouteEntry> = []
-  let allEntries: Array<RouteEntry> = []
+  let anyEntries: RouteEntry[] = []
+  let allEntries: RouteEntry[] = []
   let allMatcher: MultiMatcher<MatchData> | null = null
   let hasExplicitHead = false
 
@@ -490,7 +490,7 @@ export function createRouter<
     let methodMatcher =
       byMethod[method] ?? (method === 'HEAD' ? byMethod['GET'] : undefined) ?? anyMatcher
 
-    if (methodMatcher !== null && methodMatcher !== undefined) {
+    if (methodMatcher != null) {
       let match = methodMatcher.match(url)
       if (match !== null) {
         return {

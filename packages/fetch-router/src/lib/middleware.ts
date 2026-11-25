@@ -159,19 +159,15 @@ export function runMiddleware(
         nextPromise = Promise.reject(error)
       }
 
+      // Mark handled immediately so middleware that calls next() and later short-circuits
+      // or throws cannot trigger an unhandled rejection
+      nextPromise.then(undefined, noop)
       return nextPromise
     }
 
-    let result: Response | Promise<Response>
-    try {
-      result = fn(context, next)
-    } catch (error) {
-      nextPromise?.then(undefined, noop)
-      throw error
-    }
+    let result = fn(context, next)
 
     if (result instanceof Response) {
-      nextPromise?.then(undefined, noop)
       if (signal.aborted) {
         cancelAbandonedResponse(result, signal.reason)
         throw signal.reason
@@ -181,30 +177,30 @@ export function runMiddleware(
 
     // Direct passthrough (`return next()`): downstream already handles abort racing
     if (result === nextPromise && nextPromise !== undefined) {
+      if (signal.aborted) {
+        nextPromise.then((value) => cancelAbandonedResponse(value, signal.reason), noop)
+        throw signal.reason
+      }
       return nextPromise
     }
 
-    if (result instanceof Promise) {
-      return race(result).then(
-        (response) => {
-          if (response instanceof Response) {
-            nextPromise?.then(undefined, noop)
-            return response
-          }
-          if (nextPromise !== undefined) {
-            return nextPromise
-          }
-          throw new Error('Middleware must return a Response or call next()')
-        },
-        (error) => {
-          nextPromise?.then(undefined, noop)
-          throw error
-        },
-      )
+    if (
+      result instanceof Promise ||
+      (result != null && typeof (result as PromiseLike<Response>).then === 'function')
+    ) {
+      let promise = result instanceof Promise ? result : Promise.resolve(result)
+      return race(promise).then((response) => {
+        if (response instanceof Response) {
+          return response
+        }
+        if (nextPromise !== undefined) {
+          return nextPromise
+        }
+        throw new Error('Middleware must return a Response or call next()')
+      })
     }
 
     if (signal.aborted) {
-      nextPromise?.then(undefined, noop)
       throw signal.reason
     }
 
@@ -218,6 +214,7 @@ export function runMiddleware(
   try {
     let result = dispatch(0)
     if (!(result instanceof Promise)) {
+      ownedAbortRace?.dispose()
       return Promise.resolve(result)
     }
 

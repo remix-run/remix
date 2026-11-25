@@ -166,6 +166,24 @@ describe('runMiddleware', () => {
     assert.equal(await response.text(), 'Short-circuit')
   })
 
+  it('does not leak an unhandled rejection when async middleware calls next() and returns another response after awaiting', async () => {
+    let middleware = [
+      async (_: any, next: NextFunction) => {
+        void next()
+        await Promise.resolve()
+        return new Response('Async short-circuit')
+      },
+    ]
+    let context = mockContext('https://remix.run')
+    let handler = async () => {
+      throw new Error('Async downstream boom')
+    }
+
+    let response = await runMiddleware(middleware, context, handler)
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Async short-circuit')
+  })
+
   it('does not overwrite the first next() promise when a second next() call is caught', async () => {
     let middleware = [
       async (_: any, next: NextFunction) => {
