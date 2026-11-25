@@ -1,1 +1,1 @@
-Fix MIME type detection so unregistered extensions that match inherited property names are treated as unknown. This prevents content type detection from throwing for those filenames.
+Fix `detectMimeType()` and `detectContentType()` throwing for filenames whose extension matches an inherited object property, such as `file.constructor` or `file.__proto__`. These extensions are now treated as unknown.

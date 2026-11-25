@@ -1,1 +1,1 @@
-Preserve accepted keys as own properties in `object()` and `record()` results, including keys produced by record key transforms.
+Fix `object()` and `record()` results missing keys that passed validation. Declared fields, passthrough fields, and keys produced by record key transforms are now always own properties of the result.
