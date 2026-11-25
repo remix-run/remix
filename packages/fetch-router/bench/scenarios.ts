@@ -7,6 +7,7 @@ interface Scenario {
   status: number
   params?: Record<string, string>
   middleware?: 'sync' | 'async'
+  asyncHandler?: boolean
 }
 
 export type CreateFetch = (
@@ -31,6 +32,7 @@ const scenarios: Scenario[] = [
     params: { id: '123' },
   },
   { name: 'Not found, 1,000 routes', routeCount: 1000, url: '/missing/path', status: 404 },
+  { name: 'Async handler, 100 routes', routeCount: 100, url: '/', status: 200, asyncHandler: true },
   {
     name: '3 sync middleware, 100 routes',
     routeCount: 100,
@@ -49,7 +51,11 @@ const scenarios: Scenario[] = [
 
 // Benchmark handlers return this pre-created response without reading params, since some routers
 // parse params only when a handler asks for them.
-export const okResponse = new Response('ok')
+const okResponse = new Response('ok')
+
+export function createHandler(scenario: Scenario): () => Response | Promise<Response> {
+  return scenario.asyncHandler ? async () => okResponse : () => okResponse
+}
 
 // The root route plus alternating list and show routes, such as `/api/v1/resource1` and
 // `/api/v1/resource1/:id`, until there are `count` routes.

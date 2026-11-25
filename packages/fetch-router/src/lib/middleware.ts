@@ -1,5 +1,5 @@
 import type { RequestHandler } from './controller.ts'
-import { AbortRace, cancelAbandonedResponse } from './request-abort.ts'
+import { getRejectionReason, throwIfRequestAborted } from './request-abort.ts'
 import type {
   ContextEntries,
   ContextEntry,
@@ -113,37 +113,38 @@ export function runMiddleware(
   middleware: AnyMiddleware[],
   context: RequestContext<any, any>,
   handler: RequestHandler<any>,
-  sharedAbortRace?: AbortRace,
 ): Promise<Response> {
   let signal = context.request.signal
   let index = -1
-  let ownedAbortRace: AbortRace | undefined
 
-  function race(promise: Promise<Response>): Promise<Response> {
-    let abortRace = sharedAbortRace ?? (ownedAbortRace ??= new AbortRace(context.request))
-    return abortRace.race(promise)
+  // Waits for downstream work to settle, then rejects with the abort reason if the request aborted
+  function settleAndCheckAbort(promise: Promise<Response>): Promise<Response> {
+    return promise.then(
+      (response) => {
+        throwIfRequestAborted(signal, response)
+        return response
+      },
+      (error) => {
+        throw getRejectionReason(signal, error)
+      },
+    )
   }
 
   function dispatch(i: number): Response | Promise<Response> {
     if (i <= index) throw new Error('next() called multiple times')
     index = i
 
-    if (signal.aborted) {
-      throw signal.reason
-    }
+    throwIfRequestAborted(signal)
 
     let fn = middleware[i]
     if (!fn) {
       let result = handler(context)
       if (result instanceof Response) {
-        if (signal.aborted) {
-          cancelAbandonedResponse(result, signal.reason)
-          throw signal.reason
-        }
+        throwIfRequestAborted(signal, result)
         return result
       }
 
-      return race(Promise.resolve(result))
+      return settleAndCheckAbort(Promise.resolve(result))
     }
 
     let nextPromise: Promise<Response> | undefined
@@ -156,7 +157,7 @@ export function runMiddleware(
         let result = dispatch(i + 1)
         nextPromise = result instanceof Promise ? result : Promise.resolve(result)
       } catch (error) {
-        nextPromise = Promise.reject(error)
+        nextPromise = Promise.reject(getRejectionReason(signal, error))
       }
 
       // Mark handled immediately so middleware that calls next() and later short-circuits
@@ -168,20 +169,14 @@ export function runMiddleware(
     let result = fn(context, next)
 
     if (result instanceof Response) {
-      if (signal.aborted) {
-        cancelAbandonedResponse(result, signal.reason)
-        throw signal.reason
-      }
+      throwIfRequestAborted(signal, result)
       return result
     }
 
-    // Direct passthrough (`return next()`): downstream already handles abort racing
+    // Direct passthrough (`return next()`): downstream checks for aborts when it settles, but it
+    // may have settled before an abort that happened while this middleware was running
     if (result === nextPromise && nextPromise !== undefined) {
-      if (signal.aborted) {
-        nextPromise.then((value) => cancelAbandonedResponse(value, signal.reason), noop)
-        throw signal.reason
-      }
-      return nextPromise
+      return signal.aborted ? settleAndCheckAbort(nextPromise) : nextPromise
     }
 
     if (
@@ -189,42 +184,36 @@ export function runMiddleware(
       (result != null && typeof (result as PromiseLike<Response>).then === 'function')
     ) {
       let promise = result instanceof Promise ? result : Promise.resolve(result)
-      return race(promise).then((response) => {
-        if (response instanceof Response) {
-          return response
-        }
-        if (nextPromise !== undefined) {
-          return nextPromise
-        }
-        throw new Error('Middleware must return a Response or call next()')
-      })
-    }
-
-    if (signal.aborted) {
-      throw signal.reason
+      return promise.then(
+        (response) => {
+          // Without a response of its own, the middleware would have returned the downstream one
+          throwIfRequestAborted(signal, response instanceof Response ? response : nextPromise)
+          if (response instanceof Response) {
+            return response
+          }
+          if (nextPromise !== undefined) {
+            return nextPromise
+          }
+          throw new Error('Middleware must return a Response or call next()')
+        },
+        (error) => {
+          throw getRejectionReason(signal, error)
+        },
+      )
     }
 
     if (nextPromise !== undefined) {
-      return nextPromise
+      return signal.aborted ? settleAndCheckAbort(nextPromise) : nextPromise
     }
 
+    throwIfRequestAborted(signal)
     throw new Error('Middleware must return a Response or call next()')
   }
 
   try {
     let result = dispatch(0)
-    if (!(result instanceof Promise)) {
-      ownedAbortRace?.dispose()
-      return Promise.resolve(result)
-    }
-
-    if (ownedAbortRace !== undefined) {
-      let cleanup = () => ownedAbortRace!.dispose()
-      result.then(cleanup, cleanup)
-    }
-    return result
+    return result instanceof Promise ? result : Promise.resolve(result)
   } catch (error) {
-    ownedAbortRace?.dispose()
-    return Promise.reject(error)
+    return Promise.reject(getRejectionReason(signal, error))
   }
 }

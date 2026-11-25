@@ -1,101 +1,41 @@
-export class AbortRace {
-  #signal: AbortSignal
-  #rejectors = new Set<(reason: unknown) => void>()
-  #listening = false
-  #disposed = false
+// The router treats `request.signal` cooperatively: once it aborts, the router starts no more
+// middleware or handlers and rejects with the abort reason, but it waits for work already in
+// progress instead of racing it. See decisions/011-cooperative-request-aborts.md.
 
-  constructor(request: Request) {
-    this.#signal = request.signal
-  }
-
-  handleEvent(): void {
-    this.#listening = false
-    this.#signal.removeEventListener('abort', this)
-    let reason = this.#signal.reason
-    for (let reject of this.#rejectors) {
-      reject(reason)
-    }
-    this.#rejectors.clear()
-  }
-
-  race<value>(promise: Promise<value>): Promise<value> {
-    let signal = this.#signal
-    if (signal.aborted) {
-      promise.then(
-        (value) => cancelAbandonedResponse(value, signal.reason),
-        () => {},
-      )
-      return Promise.reject(signal.reason)
-    }
-    if (this.#disposed) return promise
-
-    if (!this.#listening) {
-      this.#listening = true
-      signal.addEventListener('abort', this)
-    }
-
-    return new Promise<value>((resolve, reject) => {
-      this.#rejectors.add(reject)
-
-      promise.then(
-        (value) => {
-          this.#rejectors.delete(reject)
-          // The race already rejected, so nothing else will read this response's body
-          if (signal.aborted) cancelAbandonedResponse(value, signal.reason)
-          resolve(value)
-        },
-        (error) => {
-          this.#rejectors.delete(reject)
-          reject(error)
-        },
-      )
-    })
-  }
-
-  dispose(): void {
-    this.#disposed = true
-    if (this.#listening) {
-      this.#listening = false
-      this.#signal.removeEventListener('abort', this)
-    }
-    this.#rejectors.clear()
-  }
-}
-
-export function raceRequestAbort<value>(promise: Promise<value>, request: Request): Promise<value> {
-  let signal = request.signal
-
+/**
+ * Throws the abort reason if the request has aborted, cancelling the body of `response` because
+ * nothing will read it.
+ *
+ * @param signal The request's abort signal
+ * @param response The response that arrived, if any
+ */
+export function throwIfRequestAborted(signal: AbortSignal, response?: unknown): void {
   if (signal.aborted) {
-    promise.then(
-      (value) => cancelAbandonedResponse(value, signal.reason),
-      () => {},
-    )
+    cancelUnreadResponse(response, signal.reason)
     throw signal.reason
   }
-
-  return new Promise<value>((resolve, reject) => {
-    let onAbort = () => {
-      signal.removeEventListener('abort', onAbort)
-      reject(signal.reason)
-    }
-
-    signal.addEventListener('abort', onAbort)
-
-    promise.then(
-      (value) => {
-        signal.removeEventListener('abort', onAbort)
-        // The race already rejected, so nothing else will read this response's body
-        if (signal.aborted) cancelAbandonedResponse(value, signal.reason)
-        resolve(value)
-      },
-      (error) => {
-        signal.removeEventListener('abort', onAbort)
-        reject(error)
-      },
-    )
-  })
 }
 
-export function cancelAbandonedResponse(value: unknown, reason: unknown): void {
-  if (value instanceof Response) value.body?.cancel(reason).catch(() => {})
+/**
+ * Returns the error to reject with when work fails: the abort reason if the request has aborted,
+ * so callers see the same rejection however the work ended, or else the work's own error.
+ *
+ * @param signal The request's abort signal
+ * @param error The error the work failed with
+ * @returns The abort reason or `error`
+ */
+export function getRejectionReason(signal: AbortSignal, error: unknown): unknown {
+  return signal.aborted ? signal.reason : error
+}
+
+// Cancels the body of a response, or of the response a promise resolves to, that nothing will read
+function cancelUnreadResponse(response: unknown, reason: unknown): void {
+  if (response instanceof Promise) {
+    response.then(
+      (value) => cancelUnreadResponse(value, reason),
+      () => {},
+    )
+  } else if (response instanceof Response) {
+    response.body?.cancel(reason).catch(() => {})
+  }
 }
