@@ -419,7 +419,48 @@ apiUser.toString()
 
 ## Benchmarks
 
-Benchmarks live in [`bench/`](./bench/).
+`route-pattern` matches URLs with a segment trie, so the time to match a URL stays nearly flat as you add routes. The tables below compare it with [`find-my-way`](https://github.com/delvedor/find-my-way) and [`path-to-regexp`](https://www.npmjs.com/package/path-to-regexp) using pathname patterns that every library supports, plus a set of production-like patterns from Shopify. Every matcher's results are checked against the others before timing. `route-pattern` also matches protocols, hostnames, ports, and search params, which these comparisons don't exercise.
+
+To run the benchmarks and update these results:
+
+```sh
+pnpm run bench
+pnpm run bench:update-readme
+```
+
+<!-- benchmarks:start -->
+
+Last updated: 2026-11-25
+
+Environment: Darwin 25.6.0, Apple M5 Pro, Node.js v24.18.0
+
+Versions: `route-pattern@1.0.0`, `find-my-way@9.3.0`, `path-to-regexp@8.4.2` (`route-pattern` at commit `8a8adc7b70`)
+
+### Matching
+
+Average time to match one URL against a matcher that was built ahead of time, as in a long-running server. Lower is better.
+
+| Routes          | `route-pattern` | `find-my-way` | `path-to-regexp` |
+| --------------- | --------------: | ------------: | ---------------: |
+| 100             |          175 ns |        129 ns |          1.45 µs |
+| 1,000           |          188 ns |        139 ns |          43.8 µs |
+| 5,000           |          192 ns |        138 ns |           284 µs |
+| 2,506 (Shopify) |          208 ns |           n/a |          52.0 µs |
+
+### Building and matching
+
+Average time to build a matcher and match one URL, as in a cold start. Lower is better.
+
+| Routes          | `route-pattern` | `find-my-way` | `path-to-regexp` |
+| --------------- | --------------: | ------------: | ---------------: |
+| 100             |         43.7 µs |        245 µs |           106 µs |
+| 1,000           |          455 µs |       4.94 ms |          1.26 ms |
+| 5,000           |         2.37 ms |       81.7 ms |          10.5 ms |
+| 2,506 (Shopify) |         1.55 ms |           n/a |          3.99 ms |
+
+<!-- benchmarks:end -->
+
+See [`bench/`](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench) for more benchmarks, including href generation, pathological patterns, memory use, and TypeScript performance.
 
 ## Related Work
 
