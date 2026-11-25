@@ -1,1 +1,1 @@
-Frame hydration skips promise creation for ordinary DOM branches. A frame waiting for preloads now keeps its hydration data when a sibling finishes first.
+Fix a frame that is still waiting for its preloads staying on its server HTML when a sibling frame finishes hydrating first.

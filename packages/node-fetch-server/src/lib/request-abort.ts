@@ -3,26 +3,35 @@ import type * as http2 from 'node:http2'
 
 const requestAbortReasons = new WeakSet<object>()
 
-export interface RequestLifecycle {
-  readonly signal: AbortSignal
-  abort(reason?: unknown): void
-  finish(): void
-}
+export class RequestLifecycle {
+  #controller = new AbortController()
+  #finished = false
+  #closed = false
+  responseReader: ReadableStreamDefaultReader<Uint8Array> | undefined
 
-export function createRequestLifecycle(): RequestLifecycle {
-  let controller = new AbortController()
-  let finished = false
+  get signal(): AbortSignal {
+    return this.#controller.signal
+  }
 
-  return {
-    get signal() {
-      return controller.signal
-    },
-    abort(reason?: unknown) {
-      if (!finished) controller.abort(reason)
-    },
-    finish() {
-      finished = true
-    },
+  get closed(): boolean {
+    return this.#closed
+  }
+
+  abort(reason?: unknown): void {
+    if (!this.#finished) this.#controller.abort(reason)
+  }
+
+  close(): void {
+    if (this.#closed) return
+    this.#closed = true
+    if (!this.#finished) this.#controller.abort()
+    if (this.responseReader !== undefined) {
+      void this.responseReader.cancel().catch(() => undefined)
+    }
+  }
+
+  finish(): void {
+    this.#finished = true
   }
 }
 
@@ -34,8 +43,8 @@ export function observeResponseForRequestLifecycle(
   // not yet sent a response (i.e., `close` without `finish`)
   // `finish` -> done rendering the response
   // `close` -> response can no longer be written to
-  res.once('close', () => lifecycle.abort())
-  res.once('finish', () => lifecycle.finish())
+  res.on('close', () => lifecycle.close())
+  res.on('finish', () => lifecycle.finish())
 }
 
 export function isRequestAlreadyAborted(

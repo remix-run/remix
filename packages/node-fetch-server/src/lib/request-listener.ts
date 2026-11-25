@@ -3,20 +3,14 @@ import type * as http2 from 'node:http2'
 import * as net from 'node:net'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
-import type { RequestLifecycle } from './request-abort.ts'
 import {
+  RequestLifecycle,
   createRequestAbortError,
-  createRequestLifecycle,
   isRequestAlreadyAborted,
   isRequestAbortReason,
   markRequestAbortReason,
   observeResponseForRequestLifecycle,
 } from './request-abort.ts'
-
-// "Internal Server Error"
-const internalServerErrorBody = [
-  73, 110, 116, 101, 114, 110, 97, 108, 32, 83, 101, 114, 118, 101, 114, 32, 69, 114, 114, 111, 114,
-]
 
 /**
  * Options for creating a Node.js request listener.
@@ -105,116 +99,59 @@ export function createRequestListener(
   options?: RequestListenerOptions,
 ): http.RequestListener {
   let onError = options?.onError ?? defaultErrorHandler
+  let expectsClient = handler.length >= 2
 
-  if (handler.length === 0) {
-    let handlerWithoutArgs = handler as () => Response | Promise<Response>
-
-    return async (req, res) => {
-      let isResponseClosed = observeResponseClose(res)
-      try {
-        validateRequestTarget(req)
-        getRequestHost(req, undefined, options)
-      } catch (error) {
-        await sendResponseForCreationError(res, onError, error, isResponseClosed)
-        return
-      }
-
-      let response: Response
-      try {
-        response = await handlerWithoutArgs()
-      } catch (error) {
-        response = await createErrorResponse(onError, error)
-      }
-
-      await sendResponseIfOpen(res, response, isResponseClosed)
-    }
-  }
-
-  if (handler.length === 1) {
-    let requestHandler = handler as (request: Request) => Response | Promise<Response>
-
-    return (req, res) => {
-      let isResponseClosed = observeResponseClose(res)
-
-      let request: Request
-      try {
-        request = createRequest(req, res, options)
-      } catch (error) {
-        return sendResponseForCreationError(res, onError, error, isResponseClosed)
-      }
-
-      let response: Response | Promise<Response>
-      try {
-        response = requestHandler(request)
-      } catch (error) {
-        if (isRequestAbortError(request, error)) return Promise.resolve()
-        return sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
-      }
-
-      if (isPromiseLike(response)) {
-        return response.then(
-          (response) => sendResponseForRequest(res, response, request, onError, isResponseClosed),
-          (error) => {
-            if (isRequestAbortError(request, error)) return
-            return sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
-          },
-        )
-      }
-
-      return sendResponseForRequest(res, response, request, onError, isResponseClosed)
-    }
-  }
-
-  return async (req, res) => {
-    let isResponseClosed = observeResponseClose(res)
+  return (req, res) => {
+    let lifecycle = new RequestLifecycle()
+    observeResponseForRequestLifecycle(res, lifecycle)
 
     let request: Request
     try {
-      request = createRequest(req, res, options)
+      request = createRequestWithLifecycle(req, options, lifecycle)
     } catch (error) {
-      await sendResponseForCreationError(res, onError, error, isResponseClosed)
-      return
+      return sendResponseForCreationError(res, onError, error, lifecycle)
     }
 
-    let client = createClientAddress(req, request.headers, options)
-
-    let response: Response
+    let response: Response | Promise<Response>
     try {
-      response = await handler(request, client)
+      response = expectsClient
+        ? handler(request, createClientAddress(req, options))
+        : (handler as (request: Request) => Response | Promise<Response>)(request)
     } catch (error) {
-      if (isRequestAbortError(request, error)) return
-      response = await createErrorResponse(onError, error)
+      if (isRequestAbortError(request, error)) return Promise.resolve()
+      return sendErrorResponseForRequest(res, request, onError, error, lifecycle)
     }
 
-    await sendResponseForRequest(res, response, request, onError, isResponseClosed)
+    if (isPromiseLike(response)) {
+      return response.then(
+        (response) => sendResponseForRequest(res, response, request, onError, lifecycle),
+        (error) => {
+          if (isRequestAbortError(request, error)) return
+          return sendErrorResponseForRequest(res, request, onError, error, lifecycle)
+        },
+      )
+    }
+
+    return sendResponseForRequest(res, response, request, onError, lifecycle)
   }
 }
 
-function observeResponseClose(res: http.ServerResponse | http2.Http2ServerResponse): () => boolean {
-  let responseClosed = false
-  res.once('close', () => {
-    responseClosed = true
-  })
-  return () => responseClosed || res.destroyed
-}
-
-async function sendResponseIfOpen(
+function isResponseClosed(
   res: http.ServerResponse | http2.Http2ServerResponse,
-  response: Response,
-  isResponseClosed: () => boolean,
-): Promise<void> {
-  if (isResponseClosed()) return
-  await sendResponse(res, response)
+  lifecycle: RequestLifecycle,
+): boolean {
+  return lifecycle.closed || res.destroyed
 }
 
 async function sendResponseForCreationError(
   res: http.ServerResponse | http2.Http2ServerResponse,
   onError: ErrorHandler,
   error: unknown,
-  isResponseClosed: () => boolean,
+  lifecycle: RequestLifecycle,
 ): Promise<void> {
   let response = await createErrorResponse(onError, error)
-  await sendResponseIfOpen(res, response, isResponseClosed)
+  if (isResponseClosed(res, lifecycle)) return
+  await writeResponse(res, response, lifecycle)
 }
 
 async function sendErrorResponseForRequest(
@@ -222,33 +159,52 @@ async function sendErrorResponseForRequest(
   request: Request,
   onError: ErrorHandler,
   error: unknown,
-  isResponseClosed: () => boolean,
+  lifecycle: RequestLifecycle,
 ): Promise<void> {
   let response = await createErrorResponse(onError, error)
-  if (isResponseClosed() || request.signal.aborted || hasResponseStarted(res)) return
-  await sendResponse(res, response)
+  if (isResponseClosed(res, lifecycle) || request.signal.aborted || hasResponseStarted(res)) return
+  await writeResponse(res, response, lifecycle)
 }
 
-async function sendResponseForRequest(
+function sendResponseForRequest(
   res: http.ServerResponse | http2.Http2ServerResponse,
   response: Response,
   request: Request,
   onError: ErrorHandler,
-  isResponseClosed: () => boolean,
-): Promise<void> {
-  if (isResponseClosed() || request.signal.aborted) return
+  lifecycle: RequestLifecycle,
+): Promise<void> | void {
+  if (isResponseClosed(res, lifecycle) || request.signal.aborted) return
+
   try {
-    await sendResponse(res, response)
-  } catch (error) {
-    if (isResponseClosed()) return
-    if (isRequestAbortError(request, error)) return
-    if (hasResponseStarted(res)) {
-      destroyResponse(res, error)
-      void createErrorResponse(onError, error)
+    writeResponseHead(res, response)
+    if (response.body == null || res.req.method === 'HEAD') {
+      res.end()
       return
     }
-    await sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
+  } catch (error) {
+    return handleResponseSendError(res, request, onError, error, lifecycle)
   }
+
+  return writeResponseBody(res, response.body, lifecycle).then(undefined, (error) =>
+    handleResponseSendError(res, request, onError, error, lifecycle),
+  )
+}
+
+async function handleResponseSendError(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  request: Request,
+  onError: ErrorHandler,
+  error: unknown,
+  lifecycle: RequestLifecycle,
+): Promise<void> {
+  if (isResponseClosed(res, lifecycle)) return
+  if (isRequestAbortError(request, error)) return
+  if (hasResponseStarted(res)) {
+    destroyResponse(res, error)
+    void createErrorResponse(onError, error)
+    return
+  }
+  await sendErrorResponseForRequest(res, request, onError, error, lifecycle)
 }
 
 async function createErrorResponse(onError: ErrorHandler, error: unknown): Promise<Response> {
@@ -269,7 +225,7 @@ function defaultErrorHandler(error: unknown): void {
 }
 
 function internalServerError(): Response {
-  return new Response(new Uint8Array(internalServerErrorBody), {
+  return new Response('Internal Server Error', {
     status: 500,
     headers: {
       'Content-Type': 'text/plain',
@@ -301,100 +257,118 @@ function destroyResponse(
   }
 }
 
-function createRequestBodyStream(
-  req: http.IncomingMessage | http2.Http2ServerRequest,
-  lifecycle: RequestLifecycle,
-): ReadableStream<Uint8Array> {
-  let bodyController: ReadableStreamDefaultController<Uint8Array> | undefined
-  let requestEnded = false
-  let bodyClosed = false
+class RequestBodySource implements UnderlyingDefaultSource<Uint8Array> {
+  #req: http.IncomingMessage | http2.Http2ServerRequest
+  #lifecycle: RequestLifecycle
+  #controller: ReadableStreamDefaultController<Uint8Array> | undefined
+  #requestEnded = false
+  #bodyClosed = false
 
-  function cleanup({ keepErrorListener = false }: { keepErrorListener?: boolean } = {}) {
-    req.removeListener('data', onData)
-    req.removeListener('end', onEnd)
-    if (!keepErrorListener) req.removeListener('error', onError)
-    req.removeListener('aborted', onAborted)
-    req.removeListener('close', onClose)
+  constructor(req: http.IncomingMessage | http2.Http2ServerRequest, lifecycle: RequestLifecycle) {
+    this.#req = req
+    this.#lifecycle = lifecycle
   }
 
-  function closeBody() {
-    if (bodyClosed) return
-    bodyClosed = true
-    cleanup()
-    bodyController?.close()
-  }
+  start(controller: ReadableStreamDefaultController<Uint8Array>): void {
+    this.#controller = controller
 
-  function abortBody(error: unknown, { keepErrorListener = false } = {}) {
-    if (bodyClosed) return
-    bodyClosed = true
-    cleanup({ keepErrorListener })
-    lifecycle.abort(error)
-    bodyController?.error(error)
-  }
+    // Keep using `on` (not `once`) so late errors after an abort are absorbed by `#bodyClosed`
+    // instead of crashing the process as unhandled `'error'` events.
+    this.#req.on('error', this.#onError)
 
-  function cancelBody() {
-    if (bodyClosed) return
-    bodyClosed = true
-    cleanup()
-  }
+    if (isRequestAlreadyAborted(this.#req)) {
+      this.#abort(createRequestAbortError(), true)
+      return
+    }
 
-  function onData(chunk: Buffer) {
-    if (bodyController == null) return
-    bodyController.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+    this.#req.on('data', this.#onData)
+    this.#req.on('end', this.#onEnd)
+    this.#req.on('aborted', this.#onAborted)
+    this.#req.on('close', this.#onClose)
 
-    // Apply backpressure: once the stream's queue is full, stop pulling data off the socket until
-    // the consumer reads (see pull() below). Without this, an unread request body (e.g. a handler
-    // that rejects a large upload before reading it) would be buffered in the queue unboundedly.
-    if (bodyController.desiredSize != null && bodyController.desiredSize <= 0) {
-      req.pause()
+    if (isRequestAlreadyAborted(this.#req)) {
+      this.#abort(createRequestAbortError(), true)
     }
   }
 
-  function onEnd() {
-    requestEnded = true
-    closeBody()
+  pull(): void {
+    this.#req.resume()
   }
 
-  function onError(error: Error) {
+  cancel(): void {
+    if (this.#bodyClosed) return
+    this.#bodyClosed = true
+    this.#cleanup(false)
+  }
+
+  #cleanup(keepErrorListener: boolean): void {
+    this.#req.removeListener('data', this.#onData)
+    this.#req.removeListener('end', this.#onEnd)
+    if (!keepErrorListener) this.#req.removeListener('error', this.#onError)
+    this.#req.removeListener('aborted', this.#onAborted)
+    this.#req.removeListener('close', this.#onClose)
+  }
+
+  #close(): void {
+    if (this.#bodyClosed) return
+    this.#bodyClosed = true
+    this.#cleanup(false)
+    this.#controller?.close()
+  }
+
+  #abort(error: unknown, keepErrorListener: boolean): void {
+    if (this.#bodyClosed) return
+    this.#bodyClosed = true
+    this.#cleanup(keepErrorListener)
+    this.#lifecycle.abort(error)
+    this.#controller?.error(error)
+  }
+
+  #onData = (chunk: Buffer): void => {
+    if (this.#controller == null) return
+    this.#controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+
+    // Apply backpressure: once the stream's queue is full, stop pulling data off the socket until
+    // the consumer reads (see pull() above). Without this, an unread request body (e.g. a handler
+    // that rejects a large upload before reading it) would be buffered in the queue unboundedly.
+    if (this.#controller.desiredSize != null && this.#controller.desiredSize <= 0) {
+      this.#req.pause()
+    }
+  }
+
+  #onEnd = (): void => {
+    this.#requestEnded = true
+    this.#close()
+  }
+
+  #onError = (error: Error): void => {
     markRequestAbortReason(error)
-    abortBody(error)
+    this.#abort(error, false)
   }
 
-  function onAborted() {
-    abortBody(createRequestAbortError(), { keepErrorListener: true })
+  #onAborted = (): void => {
+    this.#abort(createRequestAbortError(), true)
   }
 
-  function onClose() {
-    if (!requestEnded) abortBody(createRequestAbortError(), { keepErrorListener: true })
+  #onClose = (): void => {
+    if (!this.#requestEnded) this.#abort(createRequestAbortError(), true)
   }
+}
 
-  return new ReadableStream({
-    start(controller) {
-      bodyController = controller
-
-      req.once('error', onError)
-
-      if (isRequestAlreadyAborted(req)) {
-        abortBody(createRequestAbortError(), { keepErrorListener: true })
-        return
-      }
-
-      req.on('data', onData)
-      req.once('end', onEnd)
-      req.once('aborted', onAborted)
-      req.once('close', onClose)
-
-      if (isRequestAlreadyAborted(req)) {
-        abortBody(createRequestAbortError(), { keepErrorListener: true })
-      }
-    },
-    pull() {
-      req.resume()
-    },
-    cancel() {
-      cancelBody()
-    },
-  })
+function hasRequestBody(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  method: string,
+): boolean {
+  if (method === 'GET' || method === 'HEAD') return false
+  // On HTTP/1.x, a request with no Transfer-Encoding and either no Content-Length or
+  // Content-Length: 0 carries no body per RFC 9112.
+  if (req.httpVersionMajor === 1 && req.headers['transfer-encoding'] === undefined) {
+    let contentLength = req.headers['content-length']
+    if (contentLength === undefined || contentLength === '0') {
+      return false
+    }
+  }
+  return true
 }
 
 /**
@@ -420,22 +394,32 @@ export function createRequest(
   res: http.ServerResponse | http2.Http2ServerResponse,
   options?: RequestOptions,
 ): Request {
+  let lifecycle = new RequestLifecycle()
+  let request = createRequestWithLifecycle(req, options, lifecycle)
+  observeResponseForRequestLifecycle(res, lifecycle)
+  return request
+}
+
+function createRequestWithLifecycle(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  options: RequestOptions | undefined,
+  lifecycle: RequestLifecycle,
+): Request {
   validateRequestTarget(req)
 
-  let lifecycle = createRequestLifecycle()
-  observeResponseForRequestLifecycle(res, lifecycle)
-
   let method = req.method ?? 'GET'
-  let headers = createHeaders(req)
-
-  let protocol = getRequestProtocol(req, headers, options)
-  let host = getRequestHost(req, headers, options)
+  let protocol = getRequestProtocol(req, options)
+  let host = getRequestHost(req, options)
   let url = `${protocol}//${host}${req.url}`
 
-  let init: RequestInit = { method, headers, signal: lifecycle.signal }
+  let init: RequestInit = {
+    method,
+    headers: createHeadersInit(req),
+    signal: lifecycle.signal,
+  }
 
-  if (method !== 'GET' && method !== 'HEAD') {
-    init.body = createRequestBodyStream(req, lifecycle)
+  if (hasRequestBody(req, method)) {
+    init.body = new ReadableStream(new RequestBodySource(req, lifecycle))
 
     // init.duplex = 'half' must be set when body is a ReadableStream, and Node follows the spec.
     // However, this property is not defined in the TypeScript types for RequestInit, so we have
@@ -451,65 +435,158 @@ class RequestTargetError extends Error {}
 
 function validateRequestTarget(req: http.IncomingMessage | http2.Http2ServerRequest): void {
   // Validate the incoming path before Web URL parsing normalizes backslashes into forward slashes.
-  if (req.url?.split('?', 1)[0].includes('\\')) {
+  let url = req.url
+  if (url === undefined) return
+  let backslashIndex = url.indexOf('\\')
+  if (backslashIndex === -1) return
+  let queryIndex = url.indexOf('?')
+  if (queryIndex === -1 || backslashIndex < queryIndex) {
     throw new RequestTargetError('Invalid request target: backslash in path')
   }
 }
 
 function getRequestProtocol(
   req: http.IncomingMessage | http2.Http2ServerRequest,
-  headers: Headers,
   options?: RequestOptions,
 ): string {
   return (
     options?.protocol ??
-    (options?.trustProxy ? getForwardedProtocol(headers) : undefined) ??
+    (options?.trustProxy ? getForwardedProtocol(req.headers) : undefined) ??
     ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:')
   )
 }
 
 function createClientAddress(
   req: http.IncomingMessage | http2.Http2ServerRequest,
-  headers: Headers,
   options?: RequestOptions,
 ): ClientAddress {
-  let forwardedClient = options?.trustProxy ? getForwardedClientAddress(headers) : undefined
-  let address = forwardedClient?.address ?? req.socket.remoteAddress ?? ''
+  let forwardedClient = options?.trustProxy ? getForwardedClientAddress(req.headers) : undefined
 
   return {
-    address,
-    family: getClientAddressFamily(address, req.socket.remoteFamily!),
+    address: forwardedClient?.address ?? req.socket.remoteAddress ?? '',
+    family: forwardedClient?.family ?? (req.socket.remoteFamily as ClientAddress['family']),
     port: forwardedClient?.port ?? req.socket.remotePort!,
   }
 }
 
-function getClientAddressFamily(address: string, fallbackFamily: string): ClientAddress['family'] {
-  let version = net.isIP(address)
-  if (version === 4) return 'IPv4'
-  if (version === 6) return 'IPv6'
-  return fallbackFamily as ClientAddress['family']
-}
-
 function getRequestHost(
   req: http.IncomingMessage | http2.Http2ServerRequest,
-  headers: Headers | undefined,
   options?: RequestOptions,
 ): string {
   let authority = getRequestAuthority(req)
 
   let host =
     options?.host ??
-    (options?.trustProxy ? getForwardedHost(headers ?? createHeaders(req)) : undefined) ??
+    (options?.trustProxy ? getForwardedHost(req.headers) : undefined) ??
     authority ??
-    headers?.get('Host') ??
-    req.headers.host ??
+    getHeaderValue(req.headers, 'host') ??
     'localhost'
 
-  parseRequestAuthority(host)
+  validateRequestAuthority(host)
   return host
 }
 
 class RequestAuthorityError extends Error {}
+
+let lastValidAuthority: string | undefined
+
+function validateRequestAuthority(authority: string): void {
+  if (authority === lastValidAuthority) return
+  if (isValidSimpleAuthority(authority)) {
+    lastValidAuthority = authority
+    return
+  }
+  parseRequestAuthority(authority)
+}
+
+// Fast path for standard ASCII hostnames and canonical dotted-quad IPv4 addresses with an optional
+// port (up to 253 DNS chars + `:65535` = 259). Any non-trivial authority (IPv6, punycode, trailing
+// dot, non-canonical numeric host, longer host, or invalid input) falls back to
+// `parseRequestAuthority()` so WHATWG URL validation stays exact.
+function isValidSimpleAuthority(authority: string): boolean {
+  let len = authority.length
+  if (len === 0 || len > 259) return false
+
+  let hostEnd = len
+  let colonIndex = authority.lastIndexOf(':')
+  if (colonIndex !== -1) {
+    if (authority.indexOf(':') !== colonIndex || colonIndex === 0 || colonIndex === len - 1) {
+      return false
+    }
+    let port = 0
+    for (let i = colonIndex + 1; i < len; i++) {
+      let digit = authority.charCodeAt(i) - 48
+      if (digit < 0 || digit > 9) return false
+      port = port * 10 + digit
+    }
+    if (port > 65_535) return false
+    hostEnd = colonIndex
+  }
+
+  let labelStart = 0
+  let hasAlpha = false
+  let lastLabelHasAlphaOrHyphen = false
+  let dotCount = 0
+
+  for (let i = 0; i < hostEnd; i++) {
+    let code = authority.charCodeAt(i)
+    if (code === 46) {
+      if (i === labelStart) return false
+      dotCount++
+      labelStart = i + 1
+      lastLabelHasAlphaOrHyphen = false
+    } else if ((code >= 97 && code <= 122) || (code >= 65 && code <= 90)) {
+      hasAlpha = true
+      lastLabelHasAlphaOrHyphen = true
+    } else if (code >= 48 && code <= 57) {
+      // ASCII digit
+    } else if (code === 45) {
+      // Defer punycode labels (`xn--`) and leading/trailing hyphens to `URL.parse()`.
+      if (i === labelStart || i + 1 === hostEnd || authority.charCodeAt(i + 1) === 46) {
+        return false
+      }
+      if (i - labelStart === 2 && authority.charCodeAt(i + 1) === 45) {
+        return false
+      }
+      lastLabelHasAlphaOrHyphen = true
+    } else {
+      return false
+    }
+  }
+
+  if (labelStart === hostEnd) return false
+
+  if (hasAlpha) {
+    if (!lastLabelHasAlphaOrHyphen) return false
+    // Defer hex-like last labels (`0x...`) so WHATWG's "ends in a number" rule is handled by
+    // `URL.parse()`.
+    if (authority.charCodeAt(labelStart) === 48 && labelStart + 1 < hostEnd) {
+      let second = authority.charCodeAt(labelStart + 1)
+      if (second === 120 || second === 88) return false
+    }
+    return true
+  }
+
+  // Canonical dotted-quad IPv4 (four decimal octets 0..255 with no leading zeros).
+  if (dotCount !== 3) return false
+  let octet = 0
+  let octetLen = 0
+  for (let i = 0; i <= hostEnd; i++) {
+    if (i === hostEnd || authority.charCodeAt(i) === 46) {
+      if (octetLen === 0 || octet > 255) return false
+      octet = 0
+      octetLen = 0
+    } else {
+      let digit = authority.charCodeAt(i) - 48
+      if (digit < 0 || digit > 9) return false
+      if (octetLen === 1 && octet === 0) return false
+      octet = octet * 10 + digit
+      octetLen++
+    }
+  }
+
+  return true
+}
 
 function parseRequestAuthority(authority: string, protocol = 'http:'): URL {
   // Require an authority rather than a complete URL.
@@ -549,34 +626,54 @@ function getRequestAuthority(
   return authority
 }
 
-function getForwardedProtocol(headers: Headers): string | undefined {
+function getHeaderValue(
+  headers: http.IncomingHttpHeaders | http2.IncomingHttpHeaders,
+  name: string,
+): string | undefined {
+  let value = headers[name]
+  if (value == null) return undefined
+  return Array.isArray(value) ? value.join(', ') : value
+}
+
+function getForwardedProtocol(
+  headers: http.IncomingHttpHeaders | http2.IncomingHttpHeaders,
+): string | undefined {
   return (
-    normalizeForwardedProtocol(getForwardedHeaderParameter(headers.get('Forwarded'), 'proto')) ??
-    getXForwardedProtoHeaderProtocol(headers.get('X-Forwarded-Proto'))
+    normalizeForwardedProtocol(
+      getForwardedHeaderParameter(getHeaderValue(headers, 'forwarded'), 'proto'),
+    ) ?? getXForwardedProtoHeaderProtocol(getHeaderValue(headers, 'x-forwarded-proto'))
   )
 }
 
-function getForwardedHost(headers: Headers): string | undefined {
+function getForwardedHost(
+  headers: http.IncomingHttpHeaders | http2.IncomingHttpHeaders,
+): string | undefined {
   return (
-    normalizeForwardedHost(getForwardedHeaderParameter(headers.get('Forwarded'), 'host')) ??
-    normalizeForwardedHost(getFirstHeaderValue(headers.get('X-Forwarded-Host')))
+    normalizeForwardedHost(
+      getForwardedHeaderParameter(getHeaderValue(headers, 'forwarded'), 'host'),
+    ) ?? normalizeForwardedHost(getFirstHeaderValue(getHeaderValue(headers, 'x-forwarded-host')))
   )
 }
 
 interface ForwardedClientAddress {
   address: string
+  family: ClientAddress['family']
   port?: number
 }
 
-function getForwardedClientAddress(headers: Headers): ForwardedClientAddress | undefined {
+function getForwardedClientAddress(
+  headers: http.IncomingHttpHeaders | http2.IncomingHttpHeaders,
+): ForwardedClientAddress | undefined {
   return (
-    normalizeForwardedClientAddress(getForwardedHeaderParameter(headers.get('Forwarded'), 'for')) ??
-    normalizeForwardedClientAddress(getFirstHeaderValue(headers.get('X-Forwarded-For')))
+    normalizeForwardedClientAddress(
+      getForwardedHeaderParameter(getHeaderValue(headers, 'forwarded'), 'for'),
+    ) ??
+    normalizeForwardedClientAddress(getFirstHeaderValue(getHeaderValue(headers, 'x-forwarded-for')))
   )
 }
 
 function getForwardedHeaderParameter(
-  value: string | null,
+  value: string | undefined,
   parameterName: string,
 ): string | undefined {
   if (value == null) return undefined
@@ -596,11 +693,11 @@ function getForwardedHeaderParameter(
   return undefined
 }
 
-function getXForwardedProtoHeaderProtocol(value: string | null): string | undefined {
+function getXForwardedProtoHeaderProtocol(value: string | undefined): string | undefined {
   return normalizeForwardedProtocol(getFirstHeaderValue(value))
 }
 
-function getFirstHeaderValue(value: string | null): string | undefined {
+function getFirstHeaderValue(value: string | undefined): string | undefined {
   if (value == null) return undefined
 
   let firstValue = splitHeaderValue(value, ',')[0]
@@ -651,7 +748,10 @@ function normalizeForwardedClientAddress(
     }
   }
 
-  return net.isIP(address) === 0 ? undefined : { address, port }
+  let version = net.isIP(address)
+  if (version === 4) return { address, family: 'IPv4', port }
+  if (version === 6) return { address, family: 'IPv6', port }
+  return undefined
 }
 
 function parseForwardedPort(value: string): number | undefined {
@@ -713,6 +813,34 @@ function unquoteHeaderValue(value: string): string {
   return unquoted
 }
 
+function createHeadersInit(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+): Record<string, string> {
+  let raw = req.headers
+
+  // On HTTP/1.x, `req.headers` has no pseudo-headers and usually only string values.
+  if (req.httpVersionMajor === 1) {
+    let canReuse = true
+    for (let key in raw) {
+      if (!Object.hasOwn(raw, key)) continue
+      if (typeof raw[key] !== 'string' || key.charCodeAt(0) === 58) {
+        canReuse = false
+        break
+      }
+    }
+    if (canReuse) return raw as Record<string, string>
+  }
+
+  let headers: Record<string, string> = Object.create(null)
+  for (let key in raw) {
+    if (!Object.hasOwn(raw, key) || key.charCodeAt(0) === 58) continue
+    let value = raw[key]
+    if (value == null) continue
+    headers[key] = Array.isArray(value) ? value.join(', ') : value
+  }
+  return headers
+}
+
 /**
  * Creates a [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) object from the headers in a Node.js
  * [`http.IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage)/[`http2.Http2ServerRequest`](https://nodejs.org/api/http2.html#class-http2http2serverrequest).
@@ -721,14 +849,7 @@ function unquoteHeaderValue(value: string): string {
  * @returns A `Headers` object
  */
 export function createHeaders(req: http.IncomingMessage | http2.Http2ServerRequest): Headers {
-  let headers: Record<string, string> = {}
-
-  for (let [key, value] of Object.entries(req.headers)) {
-    if (key.startsWith(':') || value == null) continue
-    headers[key] = Array.isArray(value) ? value.join(', ') : value
-  }
-
-  return new Headers(headers)
+  return new Headers(createHeadersInit(req))
 }
 
 /**
@@ -743,16 +864,37 @@ export async function sendResponse(
   res: http.ServerResponse | http2.Http2ServerResponse,
   response: Response,
 ): Promise<void> {
+  await writeResponse(res, response)
+}
+
+async function writeResponse(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  response: Response,
+  lifecycle?: RequestLifecycle,
+): Promise<void> {
+  writeResponseHead(res, response)
+  if (response.body != null && res.req.method !== 'HEAD') {
+    await writeResponseBody(res, response.body, lifecycle)
+  } else {
+    res.end()
+  }
+}
+
+function writeResponseHead(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  response: Response,
+): void {
   // Iterate over response.headers so we are sure to send multiple Set-Cookie headers correctly.
   // These would incorrectly be merged into a single header if we tried to use
   // `Object.fromEntries(response.headers.entries())`.
   let headers: Record<string, string | string[]> = {}
   for (let [key, value] of response.headers) {
-    if (key in headers) {
-      if (Array.isArray(headers[key])) {
-        headers[key].push(value)
+    if (Object.hasOwn(headers, key)) {
+      let existing = headers[key]
+      if (Array.isArray(existing)) {
+        existing.push(value)
       } else {
-        headers[key] = [headers[key] as string, value]
+        headers[key] = [existing, value]
       }
     } else {
       headers[key] = value
@@ -770,36 +912,57 @@ export async function sendResponse(
     // https://nodejs.org/docs/latest-v22.x/api/http2.html#responsewriteheadstatuscode-statusmessage-headers
     ;(res as http2.Http2ServerResponse).writeHead(response.status, headers)
   }
+}
 
-  if (response.body != null && res.req.method !== 'HEAD') {
-    let reader = response.body.getReader()
-    let responseClosed = false
+async function writeResponseBody(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  body: ReadableStream<Uint8Array>,
+  lifecycle?: RequestLifecycle,
+): Promise<void> {
+  let reader = body.getReader()
+  let responseClosed = lifecycle?.closed ?? false
+  let cancelBody: (() => void) | undefined
 
-    function cancelBody() {
+  if (lifecycle !== undefined) {
+    if (lifecycle.closed) {
+      void reader.cancel().catch(() => undefined)
+      return
+    }
+    lifecycle.responseReader = reader
+  } else {
+    cancelBody = () => {
       responseClosed = true
       void reader.cancel().catch(() => undefined)
     }
-
     res.once('close', cancelBody)
+  }
 
-    try {
-      while (!responseClosed) {
-        let result = await reader.read()
-        if (result.done) break
+  // Don't call `reader.releaseLock()` after consuming the body: `sendResponse` is the terminal
+  // consumer, and Node's WHATWG stream implementation allocates a `TypeError` with a stack trace
+  // on every `releaseLock()` call.
+  try {
+    while (!(lifecycle?.closed ?? responseClosed)) {
+      let result = await reader.read()
+      if (result.done) break
 
-        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
-        if (res.write(result.value) === false) {
-          await waitForDrainOrClose(res)
-          if (responseClosed || res.destroyed) return
+      // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+      if (res.write(result.value) === false) {
+        await waitForDrainOrClose(res)
+        if ((lifecycle?.closed ?? responseClosed) || res.destroyed) {
+          void reader.cancel().catch(() => undefined)
+          return
         }
       }
-    } finally {
-      res.removeListener('close', cancelBody)
-      reader.releaseLock()
     }
-
-    if (responseClosed) return
+  } finally {
+    if (lifecycle !== undefined) {
+      lifecycle.responseReader = undefined
+    } else if (cancelBody !== undefined) {
+      res.removeListener('close', cancelBody)
+    }
   }
+
+  if (lifecycle?.closed ?? responseClosed) return
 
   res.end()
 }

@@ -1,12 +1,8 @@
-import type { RoutePatternParts, PartPattern } from '../route-pattern.ts'
+import type { PartPattern, RoutePatternJSON, RoutePatternParts } from '../route-pattern.ts'
 import { unreachable } from '../unreachable.ts'
 
 export function serializePattern(pattern: RoutePatternParts): string {
-  let protocol = serializeProtocol(pattern)
-  let hostname = serializeHostname(pattern)
-  let port = serializePort(pattern)
-  let pathname = serializePathname(pattern)
-  let search = serializeSearch(pattern)
+  let { protocol, hostname, port, pathname, search } = serializePatternParts(pattern)
 
   let result = ''
   if (protocol || hostname || port) {
@@ -17,13 +13,7 @@ export function serializePattern(pattern: RoutePatternParts): string {
   return result
 }
 
-export function serializePatternParts(pattern: RoutePatternParts): {
-  protocol: string
-  hostname: string
-  port: string
-  pathname: string
-  search: string
-} {
+export function serializePatternParts(pattern: RoutePatternParts): RoutePatternJSON {
   return {
     protocol: serializeProtocol(pattern),
     hostname: serializeHostname(pattern),
@@ -55,45 +45,36 @@ export function serializeSearch(pattern: RoutePatternParts): string {
   for (let [key, constraint] of pattern.search) {
     if (constraint.size === 0) {
       searchParams.append(key, '')
-    } else {
-      for (let value of constraint) {
-        searchParams.append(key, value)
-      }
+    }
+    for (let value of constraint) {
+      searchParams.append(key, value)
     }
   }
   return searchParams.toString()
-}
-
-function escapeText(text: string): string {
-  return text.replaceAll(/[:*()\\]/g, '\\$&')
 }
 
 export function serializePart(part: PartPattern): string {
   let separator = part.type === 'hostname' ? '.' : '/'
   let result = ''
   for (let token of part.tokens) {
-    if (token.type === '(' || token.type === ')') {
-      result += token.type
-      continue
+    switch (token.type) {
+      case '(':
+      case ')':
+        result += token.type
+        break
+      case 'text':
+        result += token.text.replaceAll(/[:*()\\]/g, '\\$&')
+        break
+      case ':':
+      case '*':
+        result += `${token.type}${token.name === '*' ? '' : token.name}`
+        break
+      case 'separator':
+        result += separator
+        break
+      default:
+        unreachable(token)
     }
-
-    if (token.type === 'text') {
-      result += escapeText(token.text)
-      continue
-    }
-
-    if (token.type === ':' || token.type === '*') {
-      let name = token.name === '*' ? '' : token.name
-      result += `${token.type}${name}`
-      continue
-    }
-
-    if (token.type === 'separator') {
-      result += separator
-      continue
-    }
-
-    unreachable(token.type)
   }
 
   return result

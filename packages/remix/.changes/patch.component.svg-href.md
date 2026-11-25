@@ -1,0 +1,1 @@
+SVG `xlinkHref` and `xlink:href` props in `remix/component` now render as the SVG2 `href` attribute instead of the namespaced `xlink:href` attribute. Other xlink props, such as `xlinkTitle`, are unchanged. Update any CSS selectors, tests, or scripts that look for `xlink:href` in rendered SVG.

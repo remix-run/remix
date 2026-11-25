@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 import { on } from '../index.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 
@@ -92,6 +92,36 @@ describe('vnode rendering', () => {
         </svg>,
       )
       expect(text.getAttributeNS(XML_NS, 'lang')).toBe(null)
+    })
+
+    it('sets, updates, and removes xlink:title in the XLink namespace on SVG elements', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let XLINK_NS = 'http://www.w3.org/1999/xlink'
+
+      root.render(
+        <svg>
+          <use id="u" href="#one" xlinkTitle="One" />
+        </svg>,
+      )
+      let use = container.querySelector('#u')
+      invariant(use instanceof SVGUseElement)
+      expect(use.getAttributeNS(XLINK_NS, 'title')).toBe('One')
+      expect(use.getAttribute('xlinkTitle')).toBe(null)
+
+      root.render(
+        <svg>
+          <use id="u" href="#one" xlink:title="Two" />
+        </svg>,
+      )
+      expect(use.getAttributeNS(XLINK_NS, 'title')).toBe('Two')
+
+      root.render(
+        <svg>
+          <use id="u" href="#one" />
+        </svg>,
+      )
+      expect(use.getAttributeNS(XLINK_NS, 'title')).toBe(null)
     })
 
     it('normalizes className to class on SVG elements', () => {

@@ -36,6 +36,7 @@ interface ParsedOptions {
   warmupTimes: number
   metrics: boolean
   steady: boolean
+  json: boolean
 }
 
 interface BenchmarkStats {
@@ -198,6 +199,7 @@ function parseArgOptions(): ParsedOptions {
 
   let steady = false
   let metrics = false
+  let json = false
   let warmupTimes = 50
 
   for (let arg of optionArgs) {
@@ -215,6 +217,11 @@ function parseArgOptions(): ParsedOptions {
       continue
     }
 
+    if (arg === '--json') {
+      json = true
+      continue
+    }
+
     if (arg.startsWith('--warmup=')) {
       let parsedWarmupTimes = Number.parseInt(arg.slice('--warmup='.length), 10)
       if (!Number.isFinite(parsedWarmupTimes) || parsedWarmupTimes < 0) {
@@ -225,11 +232,11 @@ function parseArgOptions(): ParsedOptions {
     }
 
     throw new Error(
-      `Unknown option "${arg}". Supported options: --steady, --metrics, --warmup=<count>`,
+      `Unknown option "${arg}". Supported options: --steady, --metrics, --json, --warmup=<count>`,
     )
   }
 
-  return { parserName, benchmarkId, times, warmupTimes, metrics, steady }
+  return { parserName, benchmarkId, times, warmupTimes, metrics, steady, json }
 }
 
 async function runBenchmarks(
@@ -261,23 +268,8 @@ function printResults(results: BenchmarkResults) {
   console.log(`Platform: ${os.type()} (${os.release()})`)
   console.log(`CPU: ${os.cpus()[0].model}`)
   console.log(`Date: ${new Date().toLocaleString()}`)
-
-  if (typeof Bun !== 'undefined') {
-    console.log(`Bun ${Bun.version}`)
-  } else if (typeof Deno !== 'undefined') {
-    console.log(`Deno ${Deno.version.deno}`)
-  } else {
-    console.log(`Node.js ${process.version}`)
-  }
-
-  let summaryResults: Record<string, Record<string, string>> = {}
-  for (let parserName of Object.keys(results)) {
-    summaryResults[parserName] = {}
-    for (let benchmarkName of Object.keys(results[parserName])) {
-      summaryResults[parserName][benchmarkName] = results[parserName][benchmarkName].summary
-    }
-  }
-  console.table(summaryResults)
+  console.log(getRuntime())
+  console.table(getSummaryResults(results))
 
   let hasStats = Object.values(results).some((resultByBenchmark) =>
     Object.values(resultByBenchmark).some((result) => result.stats !== undefined),
@@ -299,6 +291,22 @@ function printResults(results: BenchmarkResults) {
   }
 }
 
+function getRuntime(): string {
+  if (typeof Bun !== 'undefined') return `Bun ${Bun.version}`
+  return `Node.js ${process.version}`
+}
+
+function getSummaryResults(results: BenchmarkResults): Record<string, Record<string, string>> {
+  let summaryResults: Record<string, Record<string, string>> = {}
+  for (let parserName of Object.keys(results)) {
+    summaryResults[parserName] = {}
+    for (let benchmarkName of Object.keys(results[parserName])) {
+      summaryResults[parserName][benchmarkName] = results[parserName][benchmarkName].summary
+    }
+  }
+  return summaryResults
+}
+
 let options = parseArgOptions()
 
 runBenchmarks(options.parserName, {
@@ -307,7 +315,17 @@ runBenchmarks(options.parserName, {
   warmupTimes: options.warmupTimes,
   metrics: options.metrics,
   steady: options.steady,
-}).then(printResults, (error) => {
-  console.error(error)
-  process.exit(1)
-})
+}).then(
+  (results) => {
+    // update-readme.ts reads this output to render the README tables.
+    if (options.json) {
+      console.log(JSON.stringify({ runtime: getRuntime(), results: getSummaryResults(results) }))
+    } else {
+      printResults(results)
+    }
+  },
+  (error) => {
+    console.error(error)
+    process.exit(1)
+  },
+)

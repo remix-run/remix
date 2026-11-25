@@ -69,7 +69,17 @@ function printResults(results: BenchmarkResults) {
   console.table(results)
 }
 
-runBenchmarks(process.argv[2]).then(printResults, (error) => {
-  console.error(error)
-  process.exit(1)
-})
+let args = process.argv.slice(2)
+let json = args.includes('--json')
+
+runBenchmarks(args.find((arg) => !arg.startsWith('--'))).then(
+  (results) => {
+    // update-readme.ts reads this output to render the README table.
+    if (json) console.log(JSON.stringify({ runtime: `Node.js ${process.version}`, results }))
+    else printResults(results)
+  },
+  (error) => {
+    console.error(error)
+    process.exit(1)
+  },
+)

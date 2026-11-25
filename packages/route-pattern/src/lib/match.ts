@@ -43,9 +43,8 @@ export function createMatcher<source extends string>(
   matcher.add(pattern, undefined)
 
   return {
-    match(url: string | URL, options?: MatchOptions): Match<source, undefined> | null {
-      return matcher.match(url, options) as Match<source, undefined> | null
-    },
+    match: (url, matchOptions) =>
+      matcher.match(url, matchOptions) as Match<source, undefined> | null,
   }
 }
 
@@ -79,8 +78,8 @@ class TrieMatcher<data = unknown> implements MultiMatcher<data> {
   #trie: Trie<data>
 
   constructor(options?: MatcherOptions) {
-    this.ignoreCase = options?.ignoreCase ?? false
     this.#trie = new Trie<data>(options)
+    this.ignoreCase = this.#trie.ignoreCase
   }
 
   add(pattern: string | RoutePattern, data: data): void {
@@ -88,18 +87,15 @@ class TrieMatcher<data = unknown> implements MultiMatcher<data> {
   }
 
   match(url: string | URL, options?: MatchOptions): Match<string, data> | null {
-    let parsedUrl = resolveURL(url, options)
-    return this.#trie.matchBest(parsedUrl)
+    return this.#trie.matchBest(resolveURL(url, options))
   }
 
   matchAll(url: string | URL, options?: MatchOptions): Array<Match<string, data>> {
-    let parsedUrl = resolveURL(url, options)
-    return this.#trie.searchAll(parsedUrl)
+    return this.#trie.searchAll(resolveURL(url, options))
   }
 }
 
 function resolveURL(url: string | URL, options?: MatchOptions): URL {
-  if (options === undefined) return typeof url === 'string' ? new URL(url) : url
-  let baseURL = options.baseURL === undefined ? undefined : new URL(options.baseURL)
-  return typeof url === 'string' ? new URL(url, baseURL) : url
+  if (typeof url !== 'string') return url
+  return options?.baseURL === undefined ? new URL(url) : new URL(url, new URL(options.baseURL))
 }

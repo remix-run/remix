@@ -1,4 +1,4 @@
-import type { RemixNode } from './core/vnode.ts'
+import type { RemixNode } from './vnode.ts'
 import { createRoot, type VirtualRoot, type VirtualRootOptions } from './vdom.ts'
 
 /**

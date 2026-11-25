@@ -6,9 +6,9 @@ import {
   normalizeCssValue,
   patchHostProps,
   sanitizeUrlAttribute,
-} from './props.ts'
-import { serializeStyleObject } from '../../style/stylesheet.ts'
-import { unsafeHTML } from '../unsafe-html.ts'
+} from './vdom.ts'
+import { serializeStyleObject } from '../style/stylesheet.ts'
+import { unsafeHTML } from './vnode.ts'
 
 describe('isAllowedHostPropName', () => {
   it('blocks event prop names in every ASCII letter case', () => {
@@ -58,6 +58,13 @@ describe('normalizeAttributeName', () => {
     expect(normalizeAttributeName('xlink:Href', true)).toBe('href')
     expect(normalizeAttributeName('XLINK:HREF', true)).toBe('href')
     expect(normalizeAttributeName('xlinkHelper', true)).toBe('xlinkHelper')
+    expect(normalizeAttributeName('xlinkTitle', true)).toBe('xlink:title')
+    expect(normalizeAttributeName('xlinkActuate', true)).toBe('xlink:actuate')
+    expect(normalizeAttributeName('xlinkArcrole', true)).toBe('xlink:arcrole')
+    expect(normalizeAttributeName('xlinkRole', true)).toBe('xlink:role')
+    expect(normalizeAttributeName('xlinkShow', true)).toBe('xlink:show')
+    expect(normalizeAttributeName('xlinkType', true)).toBe('xlink:type')
+    expect(normalizeAttributeName('xlink:title', true)).toBe('xlink:title')
     expect(normalizeAttributeName('className', true)).toBe('class')
     expect(normalizeAttributeName('xmlLang', true)).toBe('xml:lang')
     expect(normalizeAttributeName('xml:lang', true)).toBe('xml:lang')

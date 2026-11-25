@@ -1,5 +1,5 @@
-import { invariant } from './invariant.ts'
-import { excludePortalRanges, getStableIndexes, placeNodeBefore } from './reconcile.ts'
+import { invariant } from './vnode.ts'
+import { excludePortalRanges, getStableIndexes, placeNodeBefore } from './vdom.ts'
 import {
   getFrameId,
   getHydrationId,

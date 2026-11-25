@@ -1,13 +1,11 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type { RemixNode } from './core/vnode.ts'
-import { jsx } from './core/vnode.ts'
+import { jsx, unsafeHTML, type RemixNode } from './vnode.ts'
 import { Frame } from './frame.ts'
 import type { PortalProps } from './component.ts'
 import { Portal } from './portal.ts'
-import { toVNode } from './reconcile.ts'
-import { unsafeHTML } from './unsafe-html.ts'
+import { toVNode } from './vdom.ts'
 import type {
   CommittedComponentNode,
   CommittedFrameNode,
@@ -18,7 +16,7 @@ import type {
   HostNode,
   VNodeInput,
   VNodeParent,
-} from './reconcile.ts'
+} from './vdom.ts'
 
 type Equal<left, right> =
   (<value>() => value extends left ? 1 : 2) extends <value>() => value extends right ? 1 : 2

@@ -1,4 +1,4 @@
-import { normalizeCssValue } from '../runtime/core/props.ts'
+import { normalizeCssValue } from '../runtime/vdom.ts'
 
 // # Style ownership model
 //

@@ -1,11 +1,8 @@
-Reduce the JavaScript that browsers download for `run()` and for components mounted with `createRoot()`.
+The browser runtime is smaller and does less work, with no changes to app code. In our measurements, a minimal `createRoot()` app is about 40% smaller minified and gzipped, an app that also uses `on()` and `css()` is about 20% smaller, and an app that hydrates with `run()` is about 10% smaller. Apps served as unbundled ESM by `remix/assets` also make fewer module requests.
 
-Standalone roots that only use inline styles download less JavaScript. In the browser, stylesheet management and class-name rule generation now load with `css()`, `on()` direct event bindings load with `on()`, the mixin engine loads with `createMixin()`, and CSP nonce tracking and frame runtime helpers stay out of standalone `createRoot()` bundles unless `Frame` or `run()` is imported. Inline `style` objects write camelCase properties directly on elements that expose `CSSStyleDeclaration`, and SVG attribute handling passes canonical SVG attributes through directly while normalizing `xlinkHref` and `xlink:href` to SVG2 `href`.
-
-Standalone roots only allocate frame registries when configured to resolve frames. Hydration now finds frames and client entries in one pass. A later render can retry a client entry when its loader throws synchronously.
-
-Mixins can read their own `handle.signal` in `beforeUpdate` and `commit` listeners when their component schedules an update.
-
-Component updates now look for a DOM insertion point only when they need one. A keyed element that returns while its removal is pending reuses its existing mixin without running setup twice and picks up changes to its `innerHTML`.
-
-Range roots keep hydration inside their boundaries, even when a server-rendered tag differs from the client tag or text spans several DOM nodes.
+- Standalone `createRoot()` apps only load the code for the features they import. Stylesheet management and class-name generation load with `css()`, the mixin engine loads with `createMixin()`, and CSP nonce tracking and the frame runtime load only with `Frame` or `run()`.
+- Standalone calls to `navigate()`, `updateUrl()`, `defaultPrefetch()`, and `spaResponse`, and components that use the `link()` mixin, no longer load the frame renderer.
+- Updates to lists that mix keyed and unkeyed children skip repeated searches for child types with no match, and appending keyed children skips a pass over the old children.
+- Frame updates that reorder client entries or nested frames no longer search the same sibling list for each entry, and frame responses that add import map entries no longer copy the mappings the page already installed.
+- Hydration finds frames and client entries in one pass and only waits on DOM branches that contain frames.
+- Focus, text selection, and scroll positions are only saved and restored when moving an element drops focus, instead of on every update.

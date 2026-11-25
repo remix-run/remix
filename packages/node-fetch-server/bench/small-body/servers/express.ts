@@ -6,15 +6,14 @@ const PORT = process.env.PORT || 3000
 let app = express()
 
 app.post('/', async (req, res) => {
-  console.log(`method: ${req.method}`)
-
+  let headerBytes = 0
   for (let [key, value] of Object.entries(req.headers)) {
     if (Array.isArray(value)) {
       for (let item of value) {
-        console.log(`${key}: ${item}`)
+        headerBytes += key.length + item.length
       }
     } else if (value != null) {
-      console.log(`${key}: ${value}`)
+      headerBytes += key.length + value.length
     }
   }
 
@@ -22,18 +21,19 @@ app.post('/', async (req, res) => {
   for await (let chunk of req) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
   }
-  console.log(`body: ${Buffer.concat(chunks).toString()}`)
+  let body = Buffer.concat(chunks).toString()
+  let html = `<html><body><h1>${req.method} ${headerBytes} ${body.length}</h1></body></html>`
 
   res.type('text/html')
 
-  let body = new stream.Readable({
+  let responseBody = new stream.Readable({
     read() {
-      this.push('<html><body><h1>Hello, world!</h1></body></html>')
+      this.push(html)
       this.push(null)
     },
   })
 
-  body.pipe(res)
+  responseBody.pipe(res)
 })
 
 app.listen(PORT)

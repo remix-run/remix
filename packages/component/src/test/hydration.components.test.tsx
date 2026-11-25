@@ -4,7 +4,7 @@ import type { Handle, RemixNode } from '../runtime/component.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 import { on, ref, unsafeHTML } from '../index.ts'
 
 describe('hydration', () => {

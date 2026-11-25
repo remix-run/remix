@@ -324,55 +324,44 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/no
 
 ## Benchmarks
 
-Run the full benchmark suite:
-
-```sh
-pnpm run bench
-```
-
-Update the benchmark results below:
-
-```sh
-pnpm run bench:update-readme
-```
-
+<!-- Update with `pnpm run bench:update-readme` -->
 <!-- benchmarks:start -->
 
-Last updated: 2026-07-23T20:29:32.942Z
+Last updated: 2026-11-25T20:38:11.507Z
 
-Environment: Darwin 25.4.0, Apple M5 Pro, Node.js v24.18.0
+Environment: Darwin 25.6.0, Apple M5 Pro, Node.js v24.18.0
 
 Command: `wrk -t12 -c400 -d30s`
 
 ### Raw Throughput
 
-Simple HTML response benchmarks without inspecting the incoming request.
+Simple HTML response benchmarks.
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `node:http`               | `24.18.0` |     `66,594` |    `5.96ms` |    `13.65MB` |
-| `remix/node-fetch-server` |  `0.14.0` |     `61,587` |    `7.88ms` |    `12.51MB` |
-| `express`                 |   `5.2.1` |     `58,424` |    `8.42ms` |    `14.10MB` |
+| `node:http`               | `24.18.0` |     `46,574` |    `8.50ms` |     `9.55MB` |
+| `express`                 |   `5.2.1` |     `44,543` |    `8.88ms` |    `10.75MB` |
+| `remix/node-fetch-server` |   `1.0.1` |     `41,956` |   `10.96ms` |     `8.52MB` |
 
 ### Small Body
 
-POST benchmarks that read and print the request method, headers, and a small body.
+POST benchmarks that read the request method, headers, and a small body.
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `node:http`               | `24.18.0` |     `35,303` |   `15.60ms` |     `7.24MB` |
-| `express`                 |   `5.2.1` |     `32,614` |   `16.93ms` |     `7.87MB` |
-| `remix/node-fetch-server` |  `0.14.0` |     `29,521` |   `18.98ms` |     `6.00MB` |
+| `node:http`               | `24.18.0` |     `43,264` |    `9.14ms` |     `8.75MB` |
+| `express`                 |   `5.2.1` |     `39,863` |    `9.93ms` |     `9.50MB` |
+| `remix/node-fetch-server` |   `1.0.1` |     `35,262` |   `11.64ms` |     `7.06MB` |
 
 ### Large Body
 
-POST benchmarks that read and print the request method, headers, and a 1 MB body.
+POST benchmarks that read the request method, headers, and a 1 MB body.
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `node:http`               | `24.18.0` |      `1,798` |  `206.65ms` |   `377.42KB` |
-| `remix/node-fetch-server` |  `0.14.0` |      `1,752` |  `167.69ms` |   `364.40KB` |
-| `express`                 |   `5.2.1` |      `1,731` |  `223.19ms` |   `427.67KB` |
+| `express`                 |   `5.2.1` |      `1,516` |  `287.85ms` |   `377.61KB` |
+| `node:http`               | `24.18.0` |      `1,310` |  `313.36ms` |   `277.65KB` |
+| `remix/node-fetch-server` |   `1.0.1` |      `1,234` |  `314.62ms` |   `259.06KB` |
 
 <!-- benchmarks:end -->
 

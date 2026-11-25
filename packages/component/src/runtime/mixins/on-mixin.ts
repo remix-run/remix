@@ -1,5 +1,5 @@
 import type { MixinDescriptor, MixinType } from './mixin.ts'
-import { DIRECT_EVENT, type ElementProps } from '../core/vnode.ts'
+import { DIRECT_EVENT, type ElementProps } from '../vnode.ts'
 import type { EnsureEvent, EventMap } from '../event-types.ts'
 
 type SignaledListener<event extends Event> = (

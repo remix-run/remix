@@ -16,6 +16,7 @@ const benchmarkEnd = '<!-- benchmarks:end -->'
 let threads = getEnv('BENCH_THREADS', '12')
 let connections = getEnv('BENCH_CONNECTIONS', '400')
 let duration = getEnv('BENCH_DURATION', '30s')
+let warmupDuration = getEnv('BENCH_WARMUP_DURATION', '3s')
 let port = getEnv('BENCH_PORT', '3000')
 let startDelayMs = Number(getEnv('BENCH_START_DELAY_MS', '2000'))
 
@@ -57,7 +58,7 @@ async function main(): Promise<void> {
   let groups: BenchmarkGroup[] = [
     {
       name: 'Raw Throughput',
-      description: 'Simple HTML response benchmarks without inspecting the incoming request.',
+      description: 'Simple HTML response benchmarks.',
       benchmarks: [
         {
           name: 'node:http',
@@ -74,8 +75,7 @@ async function main(): Promise<void> {
     },
     {
       name: 'Small Body',
-      description:
-        'POST benchmarks that read and print the request method, headers, and a small body.',
+      description: 'POST benchmarks that read the request method, headers, and a small body.',
       wrkScript: './small-body/request.lua',
       benchmarks: [
         {
@@ -97,8 +97,7 @@ async function main(): Promise<void> {
     },
     {
       name: 'Large Body',
-      description:
-        'POST benchmarks that read and print the request method, headers, and a 1 MB body.',
+      description: 'POST benchmarks that read the request method, headers, and a 1 MB body.',
       wrkScript: './large-body/request.lua',
       benchmarks: [
         {
@@ -154,6 +153,11 @@ async function runBenchmark(benchmark: Benchmark, group: BenchmarkGroup): Promis
     if (server.exitCode != null) {
       throw new Error(`${benchmark.name} exited before wrk started with code ${server.exitCode}`)
     }
+
+    let warmupArgs = ['-t4', '-c50', `-d${warmupDuration}`]
+    if (group.wrkScript != null) warmupArgs.push('-s', group.wrkScript)
+    warmupArgs.push(`http://127.0.0.1:${port}/`)
+    await runCommand('wrk', warmupArgs, benchDir)
 
     let wrkArgs = [`-t${threads}`, `-c${connections}`, `-d${duration}`]
     if (group.wrkScript != null) wrkArgs.push('-s', group.wrkScript)

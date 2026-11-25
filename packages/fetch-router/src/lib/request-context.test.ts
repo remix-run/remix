@@ -327,6 +327,28 @@ describe('new RequestContext()', () => {
     void assertContext
   })
 
+  it('lazily creates and allows overriding context.url', () => {
+    let context = new RequestContext(new Request('https://remix.run/initial?a=1'))
+
+    let firstUrl = context.url
+    assert.equal(firstUrl.pathname, '/initial')
+    assert.equal(firstUrl.searchParams.get('a'), '1')
+    assert.equal(context.url, firstUrl)
+
+    let nextUrl = new URL('https://remix.run/updated')
+    context.url = nextUrl
+
+    assert.equal(context.url, nextUrl)
+    assert.equal(context.url.pathname, '/updated')
+  })
+
+  it('keeps initial request URL even if context.request is replaced before reading context.url', () => {
+    let context = new RequestContext(new Request('https://remix.run/initial'))
+    context.request = new Request('https://remix.run/replaced')
+
+    assert.equal(context.url.pathname, '/initial')
+  })
+
   it('supports class constructors as context keys', () => {
     class Value {
       text: string
@@ -348,5 +370,13 @@ describe('new RequestContext()', () => {
     }
 
     assert.equal(storedValue, value)
+  })
+
+  it('memoizes bound get/has/set helpers', () => {
+    let context = new RequestContext(new Request('https://remix.run/test'))
+
+    assert.equal(context.get, context.get)
+    assert.equal(context.has, context.has)
+    assert.equal(context.set, context.set)
   })
 })

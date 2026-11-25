@@ -6,24 +6,18 @@ import type {
   RemixNode,
   RenderFn,
 } from '../runtime/component.ts'
-import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/core/vnode.ts'
-import type { ElementFunction } from '../runtime/element-function.ts'
-import {
-  Fragment,
-  FRAME_NODE,
-  Portal,
-  createComponent,
-  createFrameHandle,
-} from '../runtime/component.ts'
+
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
+  createComponent,
+  createFrameHandle,
   getMergedClassName,
   getSelectValues,
   isAllowedHostPropName,
   normalizeAttributeName,
   sanitizeUrlAttribute,
   shouldStringifyBooleanAttribute,
-} from '../runtime/core/props.ts'
+} from '../runtime/vdom.ts'
 import { DOCUMENT_NONCE_META_NAME } from '../runtime/nonce.ts'
 import {
   appendFlushMarker,
@@ -39,9 +33,21 @@ import {
 import { composeMixedProps } from '../runtime/mixins/mixin.ts'
 import { REMIX_UI_STYLE_LAYER, serializeStyleObject } from '../style/stylesheet.ts'
 import { cssMixinType } from '../style/css-mixin.ts'
-import { invariant } from '../runtime/invariant.ts'
-import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
-import { jsx, isMixinDescriptor, isRemixElement } from '../runtime/core/vnode.ts'
+import {
+  Fragment,
+  FRAME_NODE,
+  invariant,
+  isMixinDescriptor,
+  isRemixElement,
+  jsx,
+  normalizeUnsafeHTMLProps,
+  Portal,
+  type ElementFunction,
+  type ElementProps,
+  type ElementType,
+  type Props,
+  type RemixElement,
+} from '../runtime/vnode.ts'
 
 interface VNode {
   type: ElementType

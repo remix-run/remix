@@ -1,8 +1,12 @@
-import type * as dom from '../dom.d.ts'
-import type { Handle, RenderFn } from '../component.ts'
+import type * as dom from './dom.d.ts'
+import type { FragmentProps, Handle, PortalProps, RenderFn } from './component.ts'
+
+export type ElementFunction = ((...args: never[]) => unknown) & { readonly name?: string }
+
+export type Key = string | number | bigint
 
 /**
- * Any valid element type accepted by JSX or {@link import('../create-element.ts').createElement}.
+ * Any valid element type accepted by JSX or {@link import('./create-element.ts').createElement}.
  * - `string` for host elements (e.g., 'div')
  * - `Function` for user components
  */
@@ -16,7 +20,7 @@ export type ElementType = string | Function
 export type ElementProps = Record<string, any>
 
 /**
- * A virtual element produced by JSX or {@link import('../create-element.ts').createElement}
+ * A virtual element produced by JSX or {@link import('./create-element.ts').createElement}
  * describing UI. Carries an internal symbol brand that distinguishes it from plain data.
  */
 export interface RemixElement {
@@ -117,6 +121,14 @@ export const DIRECT_EVENT = Symbol.for('remix.directEvent')
 export let defaultMixinDriver: unknown
 export let activeSchedulerUpdateParents: ParentNode[] | undefined
 
+export type ComponentStalenessCheck = (type: Function) => boolean
+export let componentStalenessCheck: ComponentStalenessCheck | null = null
+export const roots = new Set<{ reconcile(): void }>()
+
+export function setComponentStalenessCheck(check: ComponentStalenessCheck): void {
+  componentStalenessCheck = check
+}
+
 export function setDefaultMixinDriver(driver: unknown): void {
   defaultMixinDriver = driver
 }
@@ -185,6 +197,177 @@ export function isRemixNode(value: unknown): value is RemixNode {
     isRemixElement(value) ||
     (Array.isArray(value) && value.every(isRemixNode))
   )
+}
+
+/**
+ * Use this when framework code is incorrect, indicating an internal bug rather
+ * than application code error.
+ *
+ * @param assertion The value to check for truthiness
+ * @param message Optional message to include in the error
+ */
+export function invariant(assertion: any, message?: string): asserts assertion {
+  let prefix = 'Framework invariant'
+  if (assertion) return
+  throw new Error(message ? `${prefix}: ${message}` : prefix)
+}
+
+class UnsafeHTMLValue {
+  #value: string
+
+  constructor(value: string) {
+    this.#value = value
+  }
+
+  static read(value: unknown): string | undefined {
+    return value instanceof UnsafeHTMLValue ? value.#value : undefined
+  }
+}
+
+/**
+ * An opaque value that Remix may insert into an element without HTML escaping.
+ *
+ * Create values with {@link unsafeHTML}. Remix does not sanitize or otherwise modify the HTML.
+ */
+export type UnsafeHTML = UnsafeHTMLValue
+
+/**
+ * Explicitly allows a string to be inserted into an element as raw HTML.
+ *
+ * This function does not sanitize or otherwise modify the HTML. Only pass trusted content or
+ * content that your application has already sanitized.
+ *
+ * @param value The raw HTML string to allow.
+ * @returns An opaque value accepted by raw-HTML props such as `innerHTML` and iframe
+ * `srcDoc`/`srcdoc`.
+ */
+export function unsafeHTML(value: string): UnsafeHTML {
+  let result = new UnsafeHTMLValue(value)
+  Object.freeze(result)
+  return result
+}
+
+interface NormalizedUnsafeHTMLProps extends Record<string, unknown> {
+  innerHTML?: string
+  srcDoc?: string
+  srcdoc?: string
+}
+
+/**
+ * Validates and unwraps every host prop that can cause the browser to parse raw HTML.
+ *
+ * @param props The authored host props to normalize.
+ * @returns Host props with opaque raw-HTML values replaced by their strings.
+ * @internal
+ */
+export function normalizeUnsafeHTMLProps(
+  props: Record<string, unknown>,
+): NormalizedUnsafeHTMLProps {
+  invariant(
+    props.outerHTML === undefined,
+    'Invalid outerHTML prop: outerHTML is not supported on host elements',
+  )
+
+  let normalized: NormalizedUnsafeHTMLProps | undefined
+  for (let name of ['innerHTML', 'srcDoc', 'srcdoc'] as const) {
+    let value = props[name]
+    if (value === undefined) continue
+    let html = UnsafeHTMLValue.read(value)
+    invariant(
+      html !== undefined,
+      `Invalid ${name} prop: expected a value created with unsafeHTML()`,
+    )
+    normalized ??= { ...props }
+    normalized[name] = html
+  }
+
+  return normalized ?? props
+}
+
+type TypedEventListener<eventMap> = {
+  [key in keyof eventMap]: (event: eventMap[key]) => void
+}
+
+/**
+ * An `EventTarget` subclass with typed event maps.
+ */
+export class TypedEventTarget<eventMap> extends EventTarget {}
+
+/**
+ * Interface surface for {@link TypedEventTarget} with typed listener overloads.
+ */
+export interface TypedEventTarget<eventMap> {
+  /**
+   * Adds a listener for a typed event name from the event map.
+   *
+   * @param type Event name to listen for.
+   * @param listener Listener to invoke when the event fires.
+   * @param options Listener registration options.
+   */
+  addEventListener<type extends Extract<keyof eventMap, string>>(
+    type: type,
+    listener: TypedEventListener<eventMap>[type],
+    options?: AddEventListenerOptions,
+  ): void
+  /**
+   * Adds a listener using the standard untyped `EventTarget` signature.
+   *
+   * @param type Event name to listen for.
+   * @param listener Listener to invoke when the event fires.
+   * @param options Listener registration options.
+   */
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ): void
+  /**
+   * Removes a listener for a typed event name from the event map.
+   *
+   * @param type Event name to stop listening for.
+   * @param listener Previously registered listener.
+   * @param options Listener removal options.
+   */
+  removeEventListener<type extends Extract<keyof eventMap, string>>(
+    type: type,
+    listener: TypedEventListener<eventMap>[type],
+    options?: EventListenerOptions,
+  ): void
+  /**
+   * Removes a listener using the standard untyped `EventTarget` signature.
+   *
+   * @param type Event name to stop listening for.
+   * @param listener Previously registered listener.
+   * @param options Listener removal options.
+   */
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: EventListenerOptions,
+  ): void
+}
+
+// Marks the built-in `Frame` and `Portal` components. The symbol properties hold their client node
+// renderers, so the reconciler and server renderer can recognize and render them without importing
+// the frame or portal runtime.
+export const FRAME_NODE = Symbol('FrameNode')
+export const PORTAL_NODE = Symbol('PortalNode')
+
+/**
+ * Built-in component used to group children without adding a host element.
+ *
+ * @param handle Component handle for the fragment instance.
+ * @returns A placeholder render function handled by the reconciler.
+ */
+export function Fragment(handle: Handle<FragmentProps>): RenderFn {
+  void handle
+  return () => null // reconciler renders
+}
+
+// The server and the client entry decoder share this identity before the portal renderer loads.
+export function Portal(handle: Handle<PortalProps>): RenderFn {
+  void handle
+  return () => null
 }
 
 declare global {
