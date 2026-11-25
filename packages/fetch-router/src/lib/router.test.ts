@@ -1594,3 +1594,82 @@ describe('custom matcher', () => {
     assert.deepEqual(addedPatterns, ['/home', '/about'])
   })
 })
+
+describe('per-method route matching', () => {
+  it('prefers an ANY route over a GET fallback for HEAD requests with equal specificity', async () => {
+    let router = createRouter()
+    router.get('/posts/:id', () => new Response('from-get'))
+    router.route(
+      'ANY',
+      '/posts/:id',
+      () => new Response('from-any', { headers: { 'X-Route': 'any' } }),
+    )
+
+    let response = await router.fetch('https://remix.run/posts/42', { method: 'HEAD' })
+
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('X-Route'), 'any')
+  })
+
+  it('preserves registration order between ANY and method-specific routes', async () => {
+    let router = createRouter()
+    router.route('ANY', '/a/:id', () => new Response('any-first'))
+    router.get('/a/:id', () => new Response('get-second'))
+    router.get('/b/:id', () => new Response('get-first'))
+    router.route('ANY', '/b/:id', () => new Response('any-second'))
+
+    assert.equal(await (await router.fetch('https://remix.run/a/1')).text(), 'any-first')
+    assert.equal(await (await router.fetch('https://remix.run/b/1')).text(), 'get-first')
+    assert.equal(
+      await (await router.fetch('https://remix.run/b/1', { method: 'POST' })).text(),
+      'any-second',
+    )
+  })
+
+  it('routes using context.url and context.method mutated by router middleware', async () => {
+    let router = createRouter({
+      middleware: [
+        (context, next) => {
+          if (context.url.pathname === '/legacy') {
+            context.url = new URL('https://remix.run/modern/7')
+          }
+          if (context.headers.get('X-Method-Override') === 'DELETE') {
+            context.method = 'DELETE'
+          }
+          return next()
+        },
+      ],
+    })
+
+    router.delete('/modern/:id', ({ params }) => new Response(`deleted:${params.id}`))
+
+    let response = await router.fetch('https://remix.run/legacy', {
+      method: 'POST',
+      headers: { 'X-Method-Override': 'DELETE' },
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'deleted:7')
+  })
+
+  it('supports registering routes after initial fetches including ANY and HEAD routes', async () => {
+    let router = createRouter()
+    router.get('/v1/users/:id', ({ params }) => new Response(`user:${params.id}`))
+
+    assert.equal(await (await router.fetch('https://remix.run/v1/users/1')).text(), 'user:1')
+
+    router.head('/v1/users/:id', () => new Response(null, { headers: { 'X-Head': 'explicit' } }))
+    router.route(
+      'ANY',
+      '/v1/any/:id',
+      ({ method, params }) => new Response(`${method}:${params.id}`),
+    )
+
+    let headResponse = await router.fetch('https://remix.run/v1/users/1', { method: 'HEAD' })
+    assert.equal(headResponse.headers.get('X-Head'), 'explicit')
+    assert.equal(
+      await (await router.fetch('https://remix.run/v1/any/3', { method: 'PATCH' })).text(),
+      'PATCH:3',
+    )
+  })
+})

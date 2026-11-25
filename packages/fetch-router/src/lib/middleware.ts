@@ -1,5 +1,5 @@
 import type { RequestHandler } from './controller.ts'
-import { raceRequestAbort } from './request-abort.ts'
+import { AbortRace, cancelAbandonedResponse } from './request-abort.ts'
 import type {
   ContextEntries,
   ContextEntry,
@@ -107,46 +107,124 @@ export function createMiddleware<const middleware extends readonly AnyMiddleware
  */
 export type NextFunction = () => Promise<Response>
 
+const noop = () => {}
+
 export function runMiddleware(
   middleware: AnyMiddleware[],
   context: RequestContext<any, any>,
   handler: RequestHandler<any>,
+  sharedAbortRace?: AbortRace,
 ): Promise<Response> {
+  let signal = context.request.signal
   let index = -1
+  let ownedAbortRace: AbortRace | undefined
 
-  let dispatch = async (i: number): Promise<Response> => {
+  function race(promise: Promise<Response>): Promise<Response> {
+    let abortRace = sharedAbortRace ?? (ownedAbortRace ??= new AbortRace(context.request))
+    return abortRace.race(promise)
+  }
+
+  function dispatch(i: number): Response | Promise<Response> {
     if (i <= index) throw new Error('next() called multiple times')
     index = i
 
-    if (context.request.signal.aborted) {
-      throw context.request.signal.reason
+    if (signal.aborted) {
+      throw signal.reason
     }
 
     let fn = middleware[i]
     if (!fn) {
-      return await raceRequestAbort(Promise.resolve(handler(context)), context.request)
+      let result = handler(context)
+      if (result instanceof Response) {
+        if (signal.aborted) {
+          cancelAbandonedResponse(result, signal.reason)
+          throw signal.reason
+        }
+        return result
+      }
+
+      return race(Promise.resolve(result))
     }
 
     let nextPromise: Promise<Response> | undefined
     let next: NextFunction = () => {
-      nextPromise = dispatch(i + 1)
+      if (nextPromise !== undefined) {
+        return Promise.reject(new Error('next() called multiple times'))
+      }
+
+      try {
+        let result = dispatch(i + 1)
+        nextPromise = result instanceof Promise ? result : Promise.resolve(result)
+      } catch (error) {
+        nextPromise = Promise.reject(error)
+      }
+
+      // Mark handled immediately so middleware that calls next() and later short-circuits
+      // or throws cannot trigger an unhandled rejection
+      nextPromise.then(undefined, noop)
       return nextPromise
     }
 
-    let response = await raceRequestAbort(Promise.resolve(fn(context, next)), context.request)
+    let result = fn(context, next)
 
-    // If a response was returned, short-circuit the chain
-    if (response instanceof Response) {
-      return response
+    if (result instanceof Response) {
+      if (signal.aborted) {
+        cancelAbandonedResponse(result, signal.reason)
+        throw signal.reason
+      }
+      return result
     }
 
-    // If the middleware called next(), use the downstream response
-    if (nextPromise != null) {
+    // Direct passthrough (`return next()`): downstream already handles abort racing
+    if (result === nextPromise && nextPromise !== undefined) {
+      if (signal.aborted) {
+        nextPromise.then((value) => cancelAbandonedResponse(value, signal.reason), noop)
+        throw signal.reason
+      }
+      return nextPromise
+    }
+
+    if (
+      result instanceof Promise ||
+      (result != null && typeof (result as PromiseLike<Response>).then === 'function')
+    ) {
+      let promise = result instanceof Promise ? result : Promise.resolve(result)
+      return race(promise).then((response) => {
+        if (response instanceof Response) {
+          return response
+        }
+        if (nextPromise !== undefined) {
+          return nextPromise
+        }
+        throw new Error('Middleware must return a Response or call next()')
+      })
+    }
+
+    if (signal.aborted) {
+      throw signal.reason
+    }
+
+    if (nextPromise !== undefined) {
       return nextPromise
     }
 
     throw new Error('Middleware must return a Response or call next()')
   }
 
-  return dispatch(0)
+  try {
+    let result = dispatch(0)
+    if (!(result instanceof Promise)) {
+      ownedAbortRace?.dispose()
+      return Promise.resolve(result)
+    }
+
+    if (ownedAbortRace !== undefined) {
+      let cleanup = () => ownedAbortRace!.dispose()
+      result.then(cleanup, cleanup)
+    }
+    return result
+  } catch (error) {
+    ownedAbortRace?.dispose()
+    return Promise.reject(error)
+  }
 }

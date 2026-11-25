@@ -201,4 +201,96 @@ describe('abort signal support', () => {
     assert.equal(downstreamMiddlewareCalled, false)
     assert.equal(handlerCalled, false)
   })
+
+  it('rejects and cancels the response body when a sync handler aborts before returning', async () => {
+    let controller = new AbortController()
+    let router = createRouter()
+    let reason = new Error('Sync abort')
+    let cancelled = Promise.withResolvers<unknown>()
+
+    router.get('/', () => {
+      controller.abort(reason)
+      return new Response(new ReadableStream({ cancel: cancelled.resolve }))
+    })
+
+    await assert.rejects(router.fetch('https://remix.run', { signal: controller.signal }), reason)
+    assert.equal(await cancelled.promise, reason)
+  })
+
+  it('returns a rejected promise rather than throwing synchronously when already aborted', async () => {
+    let router = createRouter()
+    router.get('/', () => new Response('Home'))
+
+    let controller = new AbortController()
+    let reason = new Error('Pre-aborted')
+    controller.abort(reason)
+
+    let promise = router.fetch('https://remix.run', { signal: controller.signal })
+    await assert.rejects(promise, reason)
+  })
+
+  it('strips HEAD fallback body when async router middleware sets context.method to HEAD after awaiting', async () => {
+    let router = createRouter({
+      middleware: [
+        async (context, next) => {
+          await Promise.resolve()
+          context.method = 'HEAD'
+          return next()
+        },
+      ],
+    })
+
+    router.get('/file', () => new Response('body content', { headers: { 'X-File': '1' } }))
+
+    let response = await router.fetch('https://remix.run/file', { method: 'POST' })
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('X-File'), '1')
+    assert.equal(response.body, null)
+  })
+
+  it('registers zero abort listeners for sync handlers and one cleaned-up listener for async middleware chains', async () => {
+    let syncRouter = createRouter()
+    syncRouter.get('/', () => new Response('sync'))
+
+    let syncController = new AbortController()
+    let syncRequest = new Request('https://remix.run/', { signal: syncController.signal })
+    let syncAdds = 0
+    let origSyncAdd = syncRequest.signal.addEventListener.bind(syncRequest.signal)
+    syncRequest.signal.addEventListener = (...args: Parameters<typeof origSyncAdd>) => {
+      syncAdds++
+      return origSyncAdd(...args)
+    }
+
+    let syncRes = await syncRouter.fetch(syncRequest)
+    assert.equal(await syncRes.text(), 'sync')
+    assert.equal(syncAdds, 0)
+
+    let asyncRouter = createRouter({
+      middleware: [async (_, next) => next(), async (_, next) => next()],
+    })
+    asyncRouter.get('/', {
+      middleware: [async (_, next) => next()],
+      handler: async () => new Response('async'),
+    })
+
+    let asyncController = new AbortController()
+    let asyncRequest = new Request('https://remix.run/', { signal: asyncController.signal })
+    let asyncAdds = 0
+    let asyncRemoves = 0
+    let origAdd = asyncRequest.signal.addEventListener.bind(asyncRequest.signal)
+    let origRemove = asyncRequest.signal.removeEventListener.bind(asyncRequest.signal)
+    asyncRequest.signal.addEventListener = (...args: Parameters<typeof origAdd>) => {
+      asyncAdds++
+      return origAdd(...args)
+    }
+    asyncRequest.signal.removeEventListener = (...args: Parameters<typeof origRemove>) => {
+      asyncRemoves++
+      return origRemove(...args)
+    }
+
+    let asyncRes = await asyncRouter.fetch(asyncRequest)
+    assert.equal(await asyncRes.text(), 'async')
+    assert.equal(asyncAdds, 1)
+    assert.equal(asyncRemoves, 1)
+  })
 })

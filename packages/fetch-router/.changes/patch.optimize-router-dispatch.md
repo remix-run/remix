@@ -1,0 +1,1 @@
+Improve `createRouter()` request dispatch performance. Routes are now indexed by request method, `RequestContext` initializes `url` and context storage lazily, and synchronous handlers and middleware chains no longer allocate per-layer abort listeners. Routing behavior is unchanged, and routers configured with a custom `matcher` continue to use it for every request.

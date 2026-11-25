@@ -197,10 +197,20 @@ export class RequestContext<
    * @param request The incoming request
    */
   constructor(request: Request) {
-    this.method = request.method.toUpperCase()
+    let method = request.method
+    this.method =
+      method === 'GET' ||
+      method === 'POST' ||
+      method === 'PUT' ||
+      method === 'DELETE' ||
+      method === 'HEAD' ||
+      method === 'PATCH' ||
+      method === 'OPTIONS'
+        ? method
+        : method.toUpperCase()
     this.params = {} as params
     this.request = request
-    this.url = new URL(request.url)
+    this.#initialUrl = request.url
   }
 
   #headers: Headers | undefined
@@ -240,10 +250,9 @@ export class RequestContext<
    */
   request: Request
 
-  #contextMap: Map<object, unknown> = new Map()
-
-  #contextProperties: Map<string, object> = new Map()
-  #contextPropertyKeys: Map<object, string> = new Map()
+  #contextMap: Map<object, unknown> | undefined
+  #contextProperties: Map<string, object> | undefined
+  #contextPropertyKeys: Map<object, string> | undefined
 
   /**
    * Get a value from request context.
@@ -252,7 +261,8 @@ export class RequestContext<
    * @returns The value for the given key, or `undefined` if the value is not available
    */
   get = <key extends object>(key: key): GetContextValue<RequestContext<params, entries>, key> => {
-    if (!this.#contextMap.has(key)) {
+    let map = this.#contextMap
+    if (map === undefined || !map.has(key)) {
       let contextKey = key as ContextKey<GetContextValue<RequestContext<params, entries>, key>>
       if (!Object.hasOwn(contextKey, 'defaultValue')) {
         return undefined as GetContextValue<RequestContext<params, entries>, key>
@@ -261,7 +271,7 @@ export class RequestContext<
       return contextKey.defaultValue as GetContextValue<RequestContext<params, entries>, key>
     }
 
-    return this.#contextMap.get(key) as GetContextValue<RequestContext<params, entries>, key>
+    return map.get(key) as GetContextValue<RequestContext<params, entries>, key>
   }
 
   /**
@@ -270,7 +280,8 @@ export class RequestContext<
    * @param key The key to check
    * @returns `true` if a value has been set for the key
    */
-  has = <key extends object>(key: key): boolean => this.#contextMap.has(key)
+  has = <key extends object>(key: key): boolean =>
+    this.#contextMap !== undefined && this.#contextMap.has(key)
 
   /**
    * Set a value in request context.
@@ -288,7 +299,13 @@ export class RequestContext<
       this.#installContextProperty(key, options.property)
     }
 
-    this.#contextMap.set(key, value)
+    let map = this.#contextMap
+    if (map === undefined) {
+      map = new Map()
+      this.#contextMap = map
+    }
+
+    map.set(key, value)
   }
 
   #installContextProperty(key: object, property: string): void {
@@ -301,15 +318,17 @@ export class RequestContext<
     }
 
     let formattedProperty = JSON.stringify(property)
+    let contextPropertyKeys = (this.#contextPropertyKeys ??= new Map())
+    let contextProperties = (this.#contextProperties ??= new Map())
 
-    let existingProperty = this.#contextPropertyKeys.get(key)
+    let existingProperty = contextPropertyKeys.get(key)
     if (existingProperty != null && existingProperty !== property) {
       throw new Error(
         `Cannot install context property ${formattedProperty} because this context key already uses ${JSON.stringify(existingProperty)}.`,
       )
     }
 
-    let existingKey = this.#contextProperties.get(property)
+    let existingKey = contextProperties.get(property)
     if (existingKey != null) {
       if (existingKey !== key) {
         throw new Error(
@@ -326,8 +345,8 @@ export class RequestContext<
       )
     }
 
-    this.#contextProperties.set(property, key)
-    this.#contextPropertyKeys.set(key, property)
+    contextProperties.set(property, key)
+    contextPropertyKeys.set(key, property)
 
     Object.defineProperty(this, property, {
       get: () => this.get(key),
@@ -351,10 +370,19 @@ export class RequestContext<
     this.#router = router
   }
 
+  #initialUrl: string
+  #url: URL | undefined
+
   /**
    * The URL of the current request.
    */
-  url: URL
+  get url(): URL {
+    return (this.#url ??= new URL(this.#initialUrl))
+  }
+
+  set url(url: URL) {
+    this.#url = url
+  }
 }
 
 export interface RequestContext<
