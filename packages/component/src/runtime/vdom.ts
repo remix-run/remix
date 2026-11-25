@@ -1977,28 +1977,25 @@ function getDeepActiveElement(root: Node): Element | null {
 }
 
 export function placeNodeBefore(parent: ParentNode, node: Node, before: Node | null): void {
-  if (
-    node.parentNode === parent &&
-    node.nodeType === Node.ELEMENT_NODE &&
-    parent.nodeType !== Node.DOCUMENT_NODE &&
-    typeof parent.moveBefore === 'function'
-  ) {
-    parent.moveBefore(node, before)
-    return
-  }
-
   if (node.parentNode !== parent) {
     parent.insertBefore(node, before)
     return
   }
 
-  // Fallback when moveBefore() is unavailable: preserve focus, selection, and ancestor scroll
-  // only when the moved node actually contains the active element.
+  let useMoveBefore =
+    node.nodeType === Node.ELEMENT_NODE &&
+    parent.nodeType !== Node.DOCUMENT_NODE &&
+    typeof parent.moveBefore === 'function'
+
+  // Only snapshot focus, selection, and scroll when the moved node contains the active element.
+  // Even when moveBefore() is used, some engines (e.g. Firefox on <textarea>) can still drop focus,
+  // so verify activeElement after the move and restore only if focus was actually lost.
   let root = parent.getRootNode()
   let focused = getDeepActiveElement(root)
   let body = parent.ownerDocument?.body
   if (!focused || focused === body || !node.contains(focused)) {
-    parent.insertBefore(node, before)
+    if (useMoveBefore) parent.moveBefore(node, before)
+    else parent.insertBefore(node, before)
     return
   }
 
@@ -2023,7 +2020,8 @@ export function placeNodeBefore(parent: ParentNode, node: Node, before: Node | n
     positions.push([p, p.scrollLeft, p.scrollTop])
   }
 
-  parent.insertBefore(node, before)
+  if (useMoveBefore) parent.moveBefore(node, before)
+  else parent.insertBefore(node, before)
 
   if (getDeepActiveElement(root) !== focused && focused.isConnected) {
     if (control && start != null && end != null) {
