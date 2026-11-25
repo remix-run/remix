@@ -3,6 +3,12 @@ import { describe, it } from '@remix-run/test'
 
 import { createRouter } from './router.ts'
 
+function createStreamingResponse() {
+  let cancelled = Promise.withResolvers<unknown>()
+  let response = new Response(new ReadableStream({ cancel: cancelled.resolve }))
+  return { response, cancelled: cancelled.promise }
+}
+
 describe('abort signal support', () => {
   it('throws AbortError when signal is already aborted', async () => {
     let router = createRouter()
@@ -125,7 +131,7 @@ describe('abort signal support', () => {
     assert.deepEqual(events, ['handler finished', 'middleware caught AbortError'])
   })
 
-  it('rejects as soon as downstream work observes the signal', async () => {
+  it('propagates the rejection from work that observes the signal', async () => {
     let controller = new AbortController()
     let caught: unknown
 
@@ -185,6 +191,209 @@ describe('abort signal support', () => {
 
     await assert.rejects(responsePromise, reason)
     assert.equal(await cancelled.promise, reason)
+  })
+
+  it('rejects with the abort reason when downstream work fails after the request aborted', async () => {
+    let controller = new AbortController()
+    let reason = new Error('Client disconnected')
+    let handlerStarted = Promise.withResolvers<void>()
+    let finishHandler = Promise.withResolvers<void>()
+
+    let router = createRouter()
+    router.get('/', async () => {
+      handlerStarted.resolve()
+      await finishHandler.promise
+      throw new Error('Query cancelled')
+    })
+
+    let responsePromise = router.fetch('https://remix.run', { signal: controller.signal })
+
+    await handlerStarted.promise
+    controller.abort(reason)
+    finishHandler.resolve()
+
+    await assert.rejects(responsePromise, reason)
+  })
+
+  it('rejects with the abort reason when middleware fails after the request aborted', async () => {
+    let controller = new AbortController()
+    let reason = new Error('Client disconnected')
+
+    let router = createRouter({
+      middleware: [
+        async (_, next) => {
+          try {
+            return await next()
+          } catch (error) {
+            throw new Error('Wrapped', { cause: error })
+          }
+        },
+      ],
+    })
+    router.get('/', async () => {
+      controller.abort(reason)
+      throw new Error('Query cancelled')
+    })
+
+    await assert.rejects(router.fetch('https://remix.run', { signal: controller.signal }), reason)
+  })
+
+  it('cancels a late response from a handler under router middleware', async () => {
+    let controller = new AbortController()
+    let reason = new Error('Client disconnected')
+    let { response, cancelled } = createStreamingResponse()
+    let finishHandler = Promise.withResolvers<void>()
+
+    let router = createRouter({ middleware: [async (_, next) => next()] })
+    router.get('/', async () => {
+      controller.abort(reason)
+      await finishHandler.promise
+      return response
+    })
+
+    let responsePromise = router.fetch('https://remix.run', { signal: controller.signal })
+    finishHandler.resolve()
+
+    await assert.rejects(responsePromise, reason)
+    assert.equal(await cancelled, reason)
+  })
+
+  it('cancels a response that async middleware returns after the request aborted', async () => {
+    let controller = new AbortController()
+    let reason = new Error('Client disconnected')
+    let { response, cancelled } = createStreamingResponse()
+
+    let router = createRouter({
+      middleware: [
+        async () => {
+          controller.abort(reason)
+          return response
+        },
+      ],
+    })
+    router.get('/', () => new Response('Home'))
+
+    await assert.rejects(router.fetch('https://remix.run', { signal: controller.signal }), reason)
+    assert.equal(await cancelled, reason)
+  })
+
+  it('cancels the downstream response when middleware without its own response finishes after the request aborted', async () => {
+    let controller = new AbortController()
+    let reason = new Error('Client disconnected')
+    let { response, cancelled } = createStreamingResponse()
+
+    let router = createRouter({
+      middleware: [
+        // @ts-expect-error Middleware that awaits next() without returning its response
+        async (_, next) => {
+          await next()
+          controller.abort(reason)
+        },
+      ],
+    })
+    router.get('/', () => response)
+
+    await assert.rejects(router.fetch('https://remix.run', { signal: controller.signal }), reason)
+    assert.equal(await cancelled, reason)
+  })
+
+  it('cancels the downstream response when middleware passes it through after the request aborted', async () => {
+    let controller = new AbortController()
+    let reason = new Error('Client disconnected')
+    let { response, cancelled } = createStreamingResponse()
+
+    let router = createRouter({
+      middleware: [
+        (_, next) => {
+          let downstream = next()
+          controller.abort(reason)
+          return downstream
+        },
+      ],
+    })
+    router.get('/', () => response)
+
+    await assert.rejects(router.fetch('https://remix.run', { signal: controller.signal }), reason)
+    assert.equal(await cancelled, reason)
+  })
+
+  it('cancels a late response that passes through route middleware', async () => {
+    let controller = new AbortController()
+    let reason = new Error('Client disconnected')
+    let { response, cancelled } = createStreamingResponse()
+    let finishHandler = Promise.withResolvers<void>()
+
+    let router = createRouter()
+    router.get('/', {
+      middleware: [async (_, next) => next()],
+      async handler() {
+        controller.abort(reason)
+        await finishHandler.promise
+        return response
+      },
+    })
+
+    let responsePromise = router.fetch('https://remix.run', { signal: controller.signal })
+    finishHandler.resolve()
+
+    await assert.rejects(responsePromise, reason)
+    assert.equal(await cancelled, reason)
+  })
+
+  it('does not run route middleware or the handler after router middleware aborts', async () => {
+    let controller = new AbortController()
+    let routeMiddlewareCalled = false
+    let handlerCalled = false
+
+    let router = createRouter({
+      middleware: [
+        (_, next) => {
+          controller.abort()
+          return next()
+        },
+      ],
+    })
+    router.get('/', {
+      middleware: [
+        (_, next) => {
+          routeMiddlewareCalled = true
+          return next()
+        },
+      ],
+      handler() {
+        handlerCalled = true
+        return new Response('Home')
+      },
+    })
+
+    await assert.rejects(router.fetch('https://remix.run', { signal: controller.signal }), {
+      name: 'AbortError',
+    })
+    assert.equal(routeMiddlewareCalled, false)
+    assert.equal(handlerCalled, false)
+  })
+
+  it('cancels the GET response body when a HEAD request aborts before the handler finishes', async () => {
+    let controller = new AbortController()
+    let reason = new Error('Client disconnected')
+    let { response, cancelled } = createStreamingResponse()
+    let finishHandler = Promise.withResolvers<void>()
+
+    let router = createRouter()
+    router.get('/', async () => {
+      controller.abort(reason)
+      await finishHandler.promise
+      return response
+    })
+
+    let responsePromise = router.fetch('https://remix.run', {
+      method: 'HEAD',
+      signal: controller.signal,
+    })
+    finishHandler.resolve()
+
+    await assert.rejects(responsePromise, reason)
+    assert.equal(await cancelled, reason)
   })
 
   it('completes successfully if not aborted', async () => {
@@ -310,16 +519,22 @@ describe('abort signal support', () => {
   })
 
   it('does not add abort listeners to the request signal', async () => {
-    let router = createRouter({
+    let directRouter = createRouter()
+    directRouter.get('/direct', async () => new Response('direct'))
+    let middlewareRouter = createRouter({
       middleware: [async (_, next) => next(), async (_, next) => next()],
     })
-    router.get('/sync', () => new Response('sync'))
-    router.get('/async', {
+    middlewareRouter.get('/sync', () => new Response('sync'))
+    middlewareRouter.get('/async', {
       middleware: [async (_, next) => next()],
       handler: async () => new Response('async'),
     })
 
-    for (let path of ['/sync', '/async']) {
+    for (let [router, path] of [
+      [directRouter, '/direct'],
+      [middlewareRouter, '/sync'],
+      [middlewareRouter, '/async'],
+    ] as const) {
       let controller = new AbortController()
       let request = new Request(`https://remix.run${path}`, { signal: controller.signal })
       let listeners = 0

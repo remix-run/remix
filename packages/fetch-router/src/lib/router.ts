@@ -6,7 +6,7 @@ import * as Specificity from '@remix-run/route-pattern/specificity'
 
 import { runMiddleware } from './middleware.ts'
 import type { AnyMiddleware, MiddlewareContext } from './middleware.ts'
-import { throwIfRequestAborted } from './request-abort.ts'
+import { rethrowUnlessAborted, throwIfRequestAborted } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
 import type { ContextWithParams, requestContextTypes } from './request-context.ts'
 import { RequestMethods } from './request-methods.ts'
@@ -317,11 +317,7 @@ function isRouteTarget(target: MapTarget): target is RouteTarget {
 
 function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
   let request = input instanceof Request && init == null ? input : new Request(input, init)
-
-  if (request.signal.aborted) {
-    throw request.signal.reason
-  }
-
+  throwIfRequestAborted(request.signal)
   return new RequestContext(request)
 }
 
@@ -372,20 +368,18 @@ function finalizeDirectResult(
   headFallback: boolean,
 ): Promise<Response> {
   if (result instanceof Response) {
-    try {
-      throwIfRequestAborted(result, request.signal)
-    } catch (error) {
-      return Promise.reject(error)
-    }
-
+    throwIfRequestAborted(request.signal, result)
     return Promise.resolve(headFallback ? headResponse(result) : result)
   }
 
   let promise = result instanceof Promise ? result : Promise.resolve(result)
-  return promise.then((response) => {
-    throwIfRequestAborted(response, request.signal)
-    return headFallback ? headResponse(response) : response
-  })
+  return promise.then(
+    (response) => {
+      throwIfRequestAborted(request.signal, response)
+      return headFallback ? headResponse(response) : response
+    },
+    (error) => rethrowUnlessAborted(request.signal, error),
+  )
 }
 
 /**

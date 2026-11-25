@@ -1,5 +1,9 @@
 import type { RequestHandler } from './controller.ts'
-import { throwIfRequestAborted } from './request-abort.ts'
+import {
+  cancelUnreadResponse,
+  rethrowUnlessAborted,
+  throwIfRequestAborted,
+} from './request-abort.ts'
 import type {
   ContextEntries,
   ContextEntry,
@@ -121,20 +125,23 @@ export function runMiddleware(
     if (i <= index) throw new Error('next() called multiple times')
     index = i
 
-    throwIfRequestAborted(undefined, signal)
+    throwIfRequestAborted(signal)
 
     let fn = middleware[i]
     if (!fn) {
       let result = handler(context)
       if (result instanceof Response) {
-        throwIfRequestAborted(result, signal)
+        throwIfRequestAborted(signal, result)
         return result
       }
 
-      return Promise.resolve(result).then((response) => {
-        throwIfRequestAborted(response, signal)
-        return response
-      })
+      return Promise.resolve(result).then(
+        (response) => {
+          throwIfRequestAborted(signal, response)
+          return response
+        },
+        (error) => rethrowUnlessAborted(signal, error),
+      )
     }
 
     let nextPromise: Promise<Response> | undefined
@@ -159,12 +166,14 @@ export function runMiddleware(
     let result = fn(context, next)
 
     if (result instanceof Response) {
-      throwIfRequestAborted(result, signal)
+      throwIfRequestAborted(signal, result)
       return result
     }
 
-    // Direct passthrough (`return next()`): downstream already checks for aborts when it settles
+    // Direct passthrough (`return next()`): downstream checks for aborts when it settles, but it
+    // may have settled before an abort that happened while this middleware was running
     if (result === nextPromise && nextPromise !== undefined) {
+      throwIfRequestAborted(signal, nextPromise)
       return nextPromise
     }
 
@@ -173,19 +182,23 @@ export function runMiddleware(
       (result != null && typeof (result as PromiseLike<Response>).then === 'function')
     ) {
       let promise = result instanceof Promise ? result : Promise.resolve(result)
-      return promise.then((response) => {
-        throwIfRequestAborted(response, signal)
-        if (response instanceof Response) {
-          return response
-        }
-        if (nextPromise !== undefined) {
-          return nextPromise
-        }
-        throw new Error('Middleware must return a Response or call next()')
-      })
+      return promise.then(
+        (response) => {
+          // Without a response of its own, the middleware would have returned the downstream one
+          throwIfRequestAborted(signal, response instanceof Response ? response : nextPromise)
+          if (response instanceof Response) {
+            return response
+          }
+          if (nextPromise !== undefined) {
+            return nextPromise
+          }
+          throw new Error('Middleware must return a Response or call next()')
+        },
+        (error) => rethrowUnlessAborted(signal, error),
+      )
     }
 
-    throwIfRequestAborted(undefined, signal)
+    throwIfRequestAborted(signal, nextPromise)
 
     if (nextPromise !== undefined) {
       return nextPromise

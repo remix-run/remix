@@ -2,7 +2,7 @@
 
 `fetch-router` stops starting new work once `request.signal` aborts and rejects with the abort reason, but it no longer races work already in progress. Middleware and handlers that should stop when a client disconnects pass `context.request.signal` to the work they start.
 
-`request.signal` aborts when the client goes away. `node-fetch-server` aborts it on disconnect, and other runtimes do the same for their Fetch handlers. Since `fetch-router` first supported the signal (f97ade2bc2, October 2025), the router raced every pending async middleware and handler promise against it. `router.fetch()` and each middleware's `await next()` rejected the moment the request aborted, even if the code below them had not settled.
+`request.signal` aborts when the client goes away; `node-fetch-server` aborts it on disconnect. Since `fetch-router` first supported the signal (f97ade2bc2, October 2025), the router raced every pending async middleware and handler promise against it. `router.fetch()` and each middleware's `await next()` rejected the moment the request aborted, even if the code below them had not settled.
 
 ## What racing did
 
@@ -22,7 +22,7 @@ The router checks the signal at boundaries instead of listening for it:
 
 1. Before it starts, `router.fetch()` rejects with the abort reason if the request has already aborted.
 2. Before each middleware and the handler run, it stops the chain if the request has aborted.
-3. When an async middleware or handler settles after the request aborted, it rejects with the abort reason and cancels the body of any `Response` that arrived, which keeps the fix from [#12190][abandoned-responses].
+3. When an async middleware or handler settles after the request aborted, it rejects with the abort reason, even if the work failed with its own error, and cancels the body of any `Response` that arrived or would have been passed on. This keeps the fix from [#12190][abandoned-responses].
 
 The outcomes are the same as before: `router.fetch()` rejects with the abort reason, a middleware's `catch` around `next()` sees it, and late response bodies are cancelled. Only the timing changed. These things now happen when downstream work settles or observes the signal, instead of the moment the request aborts. A handler that never settles used to make `router.fetch()` reject; now `router.fetch()` waits for it. That handler was already holding its memory either way, and racing did not free anything.
 
@@ -32,9 +32,9 @@ The outcomes are the same as before: `router.fetch()` rejects with the abort rea
 - **Race only in `router.fetch()`.** This would let the caller stop waiting while middleware still waits for its own downstream work. It still needs a listener for every async request and still abandons late responses. The main caller, `node-fetch-server`, cannot send anything to a disconnected client, so it gains nothing from settling sooner.
 - **Move body cancellation into `node-fetch-server`.** `node-fetch-server` already skips sending a response after the request aborts, but `fetch-router` also runs outside it, in Bun, workers, and tests. Late bodies are cancelled where the router discards them.
 
-## Release
+## Compatibility
 
-This shipped as a minor change to `@remix-run/fetch-router`. The documented contract still holds: `router.fetch()` rejects with the abort reason when the request aborts. What changed is when it rejects for code that ignores the signal. The release note tells handlers to pass `context.request.signal` to work that should stop on disconnect, and tells middleware that needs a hard deadline to race `next()` against its own timeout.
+The documented contract holds: `router.fetch()` rejects with the abort reason when the request aborts. Only the timing changed, for code that ignores the signal, so the change ships as a minor release of `@remix-run/fetch-router` rather than a major one.
 
 ## When to revisit
 
