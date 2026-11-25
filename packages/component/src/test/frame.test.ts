@@ -17,7 +17,7 @@ import {
   type LoadModule,
   type ResolveFrameOptions,
 } from '../runtime/frame-runtime.ts'
-import { jsx } from '../runtime/core/vnode.ts'
+import { jsx } from '../runtime/vnode.ts'
 import { resetNonceManager } from '../runtime/nonce.ts'
 import { createScheduler } from '../runtime/vdom.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'

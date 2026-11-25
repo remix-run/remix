@@ -6,7 +6,7 @@ import {
   PORTAL_NODE,
   Portal as portalComponent,
   type ElementProps,
-} from './core/vnode.ts'
+} from './vnode.ts'
 import type { MixinDriver } from './mixins/mixin.ts'
 import {
   childrenToVNodes,

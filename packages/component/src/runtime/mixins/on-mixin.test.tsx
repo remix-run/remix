@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoot } from '../vdom.ts'
 import { on } from './on-mixin.ts'
-import { invariant } from '../core/vnode.ts'
+import { invariant } from '../vnode.ts'
 import type { Assert, Equal } from '../../test/utils.ts'
 import type { Dispatched } from '../event-types.ts'
 

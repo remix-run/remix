@@ -3,7 +3,7 @@ import { describe, it } from '@remix-run/test'
 import { createMixin, createRoot, on, ref } from '../index.ts'
 import type { ElementProps, MixinHandle, MixinOptions } from '../index.ts'
 import { renderToString } from '../server/stream.ts'
-import { invariant } from '../runtime/core/vnode.ts'
+import { invariant } from '../runtime/vnode.ts'
 
 describe('createMixin server rendering options', () => {
   it('keeps options separate for factories using the same setup function', async () => {

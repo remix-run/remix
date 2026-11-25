@@ -1,5 +1,5 @@
 import type { StyleProps } from '../style/stylesheet.ts'
-import type { RemixNode, UnsafeHTML } from './core/vnode.ts'
+import type { RemixNode, UnsafeHTML } from './vnode.ts'
 import type { MixInput } from './mixins/mixin.ts'
 
 /**

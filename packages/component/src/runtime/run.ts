@@ -37,7 +37,7 @@ import {
   type NavigationState,
 } from './navigation.ts'
 import { fetchFrame, isHtmlResponse, startPrefetching, type PrefetchFrame } from './prefetch.ts'
-import { TypedEventTarget } from './core/vnode.ts'
+import { TypedEventTarget } from './vnode.ts'
 
 /**
  * Options for starting the client runtime with {@link run}.

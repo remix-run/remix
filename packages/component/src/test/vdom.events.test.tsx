@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/core/vnode.ts'
+import { invariant } from '../runtime/vnode.ts'
 import { on } from '../index.ts'
 
 describe('vnode rendering', () => {

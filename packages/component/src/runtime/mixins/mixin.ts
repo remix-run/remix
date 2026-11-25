@@ -10,8 +10,8 @@ import {
   type ElementProps,
   type RemixElement,
   type TypedEventTarget,
-} from '../core/vnode.ts'
-import type { Key } from '../key.ts'
+} from '../vnode.ts'
+import type { Key } from '../vnode.ts'
 import {
   findContextFromAncestry,
   patchHostProps,

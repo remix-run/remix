@@ -1,11 +1,15 @@
-import type * as dom from '../dom.d.ts'
-import type { FragmentProps, Handle, PortalProps, RenderFn } from '../component.ts'
+import type * as dom from './dom.d.ts'
+import type { FragmentProps, Handle, PortalProps, RenderFn } from './component.ts'
 
 /**
  * Any valid element type accepted by JSX or {@link import('../create-element.ts').createElement}.
  * - `string` for host elements (e.g., 'div')
  * - `Function` for user components
  */
+export type ElementFunction = ((...args: never[]) => unknown) & { readonly name?: string }
+
+export type Key = string | number | bigint
+
 export type ElementType = string | Function
 
 /**

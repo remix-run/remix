@@ -27,8 +27,8 @@ export type {
 } from './runtime/client-entries.ts'
 
 // -- Components --
-export { Fragment, TypedEventTarget, unsafeHTML } from './runtime/core/vnode.ts'
-export type { UnsafeHTML } from './runtime/core/vnode.ts'
+export { Fragment, TypedEventTarget, unsafeHTML } from './runtime/vnode.ts'
+export type { UnsafeHTML } from './runtime/vnode.ts'
 export { Portal } from './runtime/portal.ts'
 export { Frame } from './runtime/frame.ts'
 export type { PortalProps } from './runtime/component.ts'
@@ -54,7 +54,7 @@ export type {
   Renderable,
   RemixNode,
   Props,
-} from './runtime/core/vnode.ts'
+} from './runtime/vnode.ts'
 export type { HostProps, LayoutAnimationConfig } from './runtime/dom.ts'
 export { createMixin } from './runtime/mixins/mixin.ts'
 export type {

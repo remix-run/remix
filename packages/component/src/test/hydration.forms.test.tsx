@@ -5,7 +5,7 @@ import type { Handle } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
-import { invariant } from '../runtime/core/vnode.ts'
+import { invariant } from '../runtime/vnode.ts'
 
 describe('hydration', () => {
   let container: HTMLDivElement

@@ -1,5 +1,5 @@
 import { createMixin, renderMixinElement } from './mixin.ts'
-import type { ElementProps } from '../core/vnode.ts'
+import type { ElementProps } from '../vnode.ts'
 import type { MixinDescriptor } from './mixin.ts'
 
 const attrsMixin = createMixin<Element, [defaults: ElementProps], ElementProps>(

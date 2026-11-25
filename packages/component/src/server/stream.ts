@@ -6,8 +6,8 @@ import type {
   RemixNode,
   RenderFn,
 } from '../runtime/component.ts'
-import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/core/vnode.ts'
-import type { ElementFunction } from '../runtime/element-function.ts'
+import type { ElementType, ElementProps, Props, RemixElement } from '../runtime/vnode.ts'
+import type { ElementFunction } from '../runtime/vnode.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
   createComponent,
@@ -43,7 +43,7 @@ import {
   jsx,
   normalizeUnsafeHTMLProps,
   Portal,
-} from '../runtime/core/vnode.ts'
+} from '../runtime/vnode.ts'
 
 interface VNode {
   type: ElementType

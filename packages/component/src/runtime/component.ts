@@ -1,12 +1,6 @@
-import type {
-  ElementProps,
-  ElementType,
-  RemixNode,
-  Renderable,
-  TypedEventTarget,
-} from './core/vnode.ts'
-import type { ElementFunction } from './element-function.ts'
-import type { Key } from './key.ts'
+import type { ElementProps, ElementType, RemixNode, Renderable, TypedEventTarget } from './vnode.ts'
+import type { ElementFunction } from './vnode.ts'
+import type { Key } from './vnode.ts'
 
 /**
  * Error event shape emitted by the component runtime.
@@ -336,7 +330,7 @@ export type ComponentFn<Props = Record<string, never>, ContextValue = NoContext>
  */
 export type RenderFn = () => RemixNode
 
-export type { RemixNode } from './core/vnode.ts'
+export type { RemixNode } from './vnode.ts'
 
 // Handle is already exported as an interface above, no need to re-export
 
@@ -361,7 +355,7 @@ export interface BuiltinElements {
 /**
  * Key type used to stabilize host elements and components during reconciliation.
  */
-export type { Key } from './key.ts'
+export type { Key } from './vnode.ts'
 
 export type ComponentConfig = {
   id: string

@@ -4,7 +4,7 @@ import { on } from '../index.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { createElement } from '../runtime/create-element.ts'
 import { renderToString } from '../server/stream.ts'
-import { invariant } from '../runtime/core/vnode.ts'
+import { invariant } from '../runtime/vnode.ts'
 
 describe('hydration', () => {
   let container: HTMLDivElement

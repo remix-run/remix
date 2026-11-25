@@ -1,4 +1,4 @@
-import { invariant } from './core/vnode.ts'
+import { invariant } from './vnode.ts'
 import { excludePortalRanges, getStableIndexes, placeNodeBefore } from './vdom.ts'
 import {
   getFrameId,

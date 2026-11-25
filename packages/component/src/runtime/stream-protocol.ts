@@ -1,4 +1,4 @@
-import { invariant } from './core/vnode.ts'
+import { invariant } from './vnode.ts'
 
 export const ESCAPED_OBJECT = '$rmxObject'
 

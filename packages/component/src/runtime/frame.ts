@@ -8,7 +8,7 @@ import {
   PORTAL_NODE,
   type RemixElement,
   type RemixNode,
-} from './core/vnode.ts'
+} from './vnode.ts'
 import type {
   FrameContent,
   FrameHandle,
@@ -19,7 +19,7 @@ import type {
   ReloadOrigin,
   RenderFn,
 } from './component.ts'
-import type { ElementFunction } from './element-function.ts'
+import type { ElementFunction } from './vnode.ts'
 import {
   createComponentErrorEvent,
   createFrameHandle,

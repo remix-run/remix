@@ -2,9 +2,9 @@ import * as assert from '@remix-run/assert'
 import { expect } from '@remix-run/assert'
 import { describe, it, type TestContext } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/core/vnode.ts'
+import { invariant } from '../runtime/vnode.ts'
 import { createElement } from '../runtime/create-element.ts'
-import { Fragment } from '../runtime/core/vnode.ts'
+import { Fragment } from '../runtime/vnode.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 
 describe('vnode rendering (keys)', () => {

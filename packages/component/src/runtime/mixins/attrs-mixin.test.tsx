@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoot } from '../vdom.ts'
-import { invariant } from '../core/vnode.ts'
+import { invariant } from '../vnode.ts'
 import { attrs } from './attrs-mixin.ts'
 
 describe('attrs mixin', () => {

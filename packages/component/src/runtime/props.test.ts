@@ -6,8 +6,8 @@ import {
   normalizeCssValue,
   patchHostProps,
   sanitizeUrlAttribute,
-} from '../vdom.ts'
-import { serializeStyleObject } from '../../style/stylesheet.ts'
+} from './vdom.ts'
+import { serializeStyleObject } from '../style/stylesheet.ts'
 import { unsafeHTML } from './vnode.ts'
 
 describe('isAllowedHostPropName', () => {

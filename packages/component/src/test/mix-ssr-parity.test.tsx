@@ -5,7 +5,7 @@ import { createMixin, on, unsafeHTML } from '../index.ts'
 import type { MixinDescriptor } from '../index.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
-import { invariant } from '../runtime/core/vnode.ts'
+import { invariant } from '../runtime/vnode.ts'
 
 function getClientAttributes(element: RemixNode): Record<string, string> {
   let container = document.createElement('div')

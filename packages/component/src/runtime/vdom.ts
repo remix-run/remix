@@ -39,9 +39,9 @@ import {
   type ElementProps,
   type ElementType,
   type RemixNode,
-} from './core/vnode.ts'
-import type { ElementFunction } from './element-function.ts'
-import type { Key } from './key.ts'
+} from './vnode.ts'
+import type { ElementFunction } from './vnode.ts'
+import type { Key } from './vnode.ts'
 import type { MixinDriver, MixinRuntime, MixinRuntimeValue } from './mixins/mixin.ts'
 import type { DirectEventSync, OnBinding, OnMixinDescriptor } from './mixins/on-mixin.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
