@@ -9,14 +9,13 @@ permissions:
 
 jobs:
   repeat:
-    name: WebKit (${{ matrix.diagnostics }}, batch ${{ matrix.batch }})
+    name: WebKit control (${{ matrix.workload }})
     runs-on: macos-15
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        diagnostics: [minimal, heartbeat]
-        batch: [1, 2]
+        workload: [none, dialog, focus-portal, idle-browsers]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -24,7 +23,7 @@ jobs:
 
       - name: Apply diagnostics without changing the tested implementation
         env:
-          DIAGNOSTIC_SHA: ${{ matrix.diagnostics == 'minimal' && '92944d6177fcbc12dfae897e29f65f31128ed552' || github.sha }}
+          DIAGNOSTIC_SHA: ${{ github.sha }}
         run: |
           git fetch --depth=1 origin "$DIAGNOSTIC_SHA"
           git show "$DIAGNOSTIC_SHA:docs/ui/app/examples/animation/spring/iterator.example.test.browser.tsx" > docs/ui/app/examples/animation/spring/iterator.example.test.browser.tsx
@@ -43,26 +42,50 @@ jobs:
           node --version
           pnpm --filter @remix-run/component exec playwright --version
 
-      - name: Replay spring alongside UI interaction tests
+      - name: Compare spring with separate browser workloads
         shell: bash
         env:
           CI: 'true'
+          WORKLOAD: ${{ matrix.workload }}
         run: |
           mkdir -p "$RUNNER_TEMP/spring-diagnostics"
           set +e
-          (
-            interaction_failed=0
-            for repetition in {1..3}; do
-              pnpm --filter @remix-run/ui test src/test/dialog.test.e2e.ts src/test/focus-portal.test.e2e.ts --project webkit > "$RUNNER_TEMP/spring-diagnostics/interactions-$repetition.log" 2>&1
-              status=$?
-              echo "interactions $repetition $status" | tee -a "$RUNNER_TEMP/spring-diagnostics/interactions-results.txt"
-              if [ "$status" -ne 0 ]; then interaction_failed=1; fi
-            done
-            exit "$interaction_failed"
-          ) &
-          interaction_pid=$!
+          workload_pid=''
+          if [ "$WORKLOAD" = 'dialog' ] || [ "$WORKLOAD" = 'focus-portal' ]; then
+            (
+              interaction_failed=0
+              for repetition in {1..3}; do
+                DEBUG=pw:api pnpm --filter @remix-run/ui test "src/test/$WORKLOAD.test.e2e.ts" --project webkit > "$RUNNER_TEMP/spring-diagnostics/interactions-$repetition.log" 2>&1
+                status=$?
+                echo "interactions $repetition $status" | tee -a "$RUNNER_TEMP/spring-diagnostics/interactions-results.txt"
+                if [ "$status" -ne 0 ]; then interaction_failed=1; fi
+              done
+              exit "$interaction_failed"
+            ) &
+            workload_pid=$!
+          elif [ "$WORKLOAD" = 'idle-browsers' ]; then
+            cat > packages/component/spring-idle-diagnostics.mjs <<'JAVASCRIPT'
+          import { webkit } from 'playwright'
+          let stopped = new Promise((resolve) => process.once('SIGTERM', resolve))
+          let browsers = []
+          try {
+            for (let index = 0; index < 2; index++) {
+              let browser = await webkit.launch()
+              browsers.push(browser)
+              let page = await browser.newPage()
+              await page.setContent('<!doctype html><input><button>Idle browser</button>')
+            }
+            console.log('Idle browsers ready', Date.now())
+            await stopped
+          } finally {
+            await Promise.all(browsers.map((browser) => browser.close()))
+          }
+          JAVASCRIPT
+            node packages/component/spring-idle-diagnostics.mjs > "$RUNNER_TEMP/spring-diagnostics/idle-browsers.log" 2>&1 &
+            workload_pid=$!
+          fi
           failed=0
-          for repetition in {1..12}; do
+          for repetition in {1..8}; do
             echo "::group::Spring repetition $repetition"
             pnpm --filter remix-ui-docs test app/examples/animation/spring/iterator.example.test.browser.tsx --project webkit --browser.echo 2>&1 | tee "$RUNNER_TEMP/spring-diagnostics/spring-$repetition.log"
             status=${PIPESTATUS[0]}
@@ -70,13 +93,18 @@ jobs:
             if [ "$status" -ne 0 ]; then failed=1; fi
             echo '::endgroup::'
           done
-          wait "$interaction_pid"
-          if [ "$?" -ne 0 ]; then failed=1; fi
+          if [ "$WORKLOAD" = 'idle-browsers' ]; then
+            kill -TERM "$workload_pid"
+          fi
+          if [ -n "$workload_pid" ]; then
+            wait "$workload_pid"
+            if [ "$?" -ne 0 ]; then failed=1; fi
+          fi
           exit "$failed"
 
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: spring-${{ matrix.diagnostics }}-${{ matrix.batch }}
+          name: spring-control-${{ matrix.workload }}
           path: ${{ runner.temp }}/spring-diagnostics
           retention-days: 7
