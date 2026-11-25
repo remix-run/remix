@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
-import { createElement, on } from '../index.ts'
+import { on } from '../index.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 
 describe('vnode rendering', () => {
@@ -13,7 +13,7 @@ describe('vnode rendering', () => {
 
       render(
         <svg viewBox="0 0 24 24" fill="none" class="icon">
-          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          <path strokeLinecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
         </svg>,
       )
 
@@ -25,124 +25,86 @@ describe('vnode rendering', () => {
       expect(svg.namespaceURI).toBe('http://www.w3.org/2000/svg')
       expect(path.namespaceURI).toBe('http://www.w3.org/2000/svg')
 
-      // Attribute casing: preserve exceptions and kebab-case general SVG attrs
       expect(svg.getAttribute('viewBox')).toBe('0 0 24 24')
       expect(svg.getAttribute('class')).toBe('icon')
       expect(path.getAttribute('stroke-linecap')).toBe('round')
       expect(path.getAttribute('stroke-linejoin')).toBe('round')
     })
 
-    it('supports xlinkHref -> xlink:href on SVG elements', () => {
-      let container = document.createElement('div')
-      let { render } = createRoot(container)
-
-      render(
-        <svg>
-          <use xlinkHref="#my-id" />
-        </svg>,
-      )
-
-      let useEl = container.querySelector('use')
-      invariant(useEl instanceof SVGUseElement)
-
-      expect(useEl.getAttribute('xlink:href')).toBe('#my-id')
-    })
-
-    it('renders every spelling of namespaced attributes with their qualified names', () => {
-      let attributes = [
-        ['xlink', 'href', 'Href', XLINK_NS],
-        ['xlink', 'actuate', 'Actuate', XLINK_NS],
-        ['xlink', 'arcrole', 'Arcrole', XLINK_NS],
-        ['xlink', 'role', 'Role', XLINK_NS],
-        ['xlink', 'show', 'Show', XLINK_NS],
-        ['xlink', 'title', 'Title', XLINK_NS],
-        ['xlink', 'type', 'Type', XLINK_NS],
-        ['xml', 'base', 'Base', XML_NS],
-        ['xml', 'lang', 'Lang', XML_NS],
-        ['xml', 'space', 'Space', XML_NS],
-      ]
-
-      for (let [prefix, localName, camelName, ns] of attributes) {
-        for (let name of [prefix + camelName, `${prefix}:${localName}`, `${prefix}-${localName}`]) {
-          expect(renderSvgAttribute(name)).toEqual({ name: `${prefix}:${localName}`, ns })
-        }
-      }
-    })
-
-    it('renders every spelling of xmlns:xlink without a namespace', () => {
-      for (let name of ['xmlnsXlink', 'xmlns:xlink', 'xmlns-xlink']) {
-        expect(renderSvgAttribute(name)).toEqual({ name: 'xmlns:xlink', ns: null })
-      }
-    })
-
-    it('does not namespace near-miss attribute names', () => {
-      expect(renderSvgAttribute('xlinkHREF')).toEqual({ name: 'xlink-href', ns: null })
-      expect(renderSvgAttribute('xlink:Href')).toEqual({ name: 'xlink:href', ns: null })
-      expect(renderSvgAttribute('xlinkhref')).toEqual({ name: 'xlinkhref', ns: null })
-      expect(renderSvgAttribute('xlinkLang')).toEqual({ name: 'xlink-lang', ns: null })
-      expect(renderSvgAttribute('xmlHref')).toEqual({ name: 'xml-href', ns: null })
-      expect(renderSvgAttribute('xmlnsHref')).toEqual({ name: 'xmlns-href', ns: null })
-      expect(renderSvgAttribute('xlink_href')).toEqual({ name: 'xlink-href', ns: null })
-    })
-
-    it('updates and removes namespaced SVG attributes', () => {
+    it('normalizes xlinkHref and xlink:href to href on SVG elements', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
       root.render(
         <svg>
-          <use id="u" xlinkHref="#one" />
+          <use id="a" xlinkHref="#one" />
+          <use id="b" xlink:href="#two" />
+        </svg>,
+      )
+
+      let a = container.querySelector('#a')
+      let b = container.querySelector('#b')
+      invariant(a instanceof SVGUseElement)
+      invariant(b instanceof SVGUseElement)
+
+      expect(a.getAttribute('href')).toBe('#one')
+      expect(b.getAttribute('href')).toBe('#two')
+
+      root.render(
+        <svg>
+          <use id="a" xlinkHref="#three" />
+          <use id="b" />
+        </svg>,
+      )
+
+      expect(a.getAttribute('href')).toBe('#three')
+      expect(b.getAttribute('href')).toBe(null)
+    })
+
+    it('sets, updates, and removes xml:lang in the XML namespace on SVG elements', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let XML_NS = 'http://www.w3.org/XML/1998/namespace'
+
+      root.render(
+        <svg>
           <text id="t" xmlLang="en">
             Hi
           </text>
         </svg>,
       )
-
-      let useEl = container.querySelector('#u')
-      invariant(useEl instanceof SVGUseElement)
-      expect(useEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href')).toBe('#one')
-
-      let textEl = container.querySelector('#t')
-      invariant(textEl instanceof SVGTextElement)
-      expect(textEl.getAttributeNS('http://www.w3.org/XML/1998/namespace', 'lang')).toBe('en')
+      let text = container.querySelector('#t')
+      invariant(text instanceof SVGTextElement)
+      expect(text.getAttributeNS(XML_NS, 'lang')).toBe('en')
 
       root.render(
         <svg>
-          <use id="u" xlinkHref="#two" />
-          <text id="t" xmlLang="fr">
+          <text id="t" xml:lang="fr">
             Hi
           </text>
         </svg>,
       )
-
-      let updatedUseEl = container.querySelector('#u')
-      invariant(updatedUseEl instanceof SVGUseElement)
-      expect(updatedUseEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href')).toBe('#two')
-
-      let updatedTextEl = container.querySelector('#t')
-      invariant(updatedTextEl instanceof SVGTextElement)
-      expect(updatedTextEl.getAttributeNS('http://www.w3.org/XML/1998/namespace', 'lang')).toBe(
-        'fr',
-      )
+      expect(text.getAttributeNS(XML_NS, 'lang')).toBe('fr')
 
       root.render(
         <svg>
-          <use id="u" />
           <text id="t">Hi</text>
         </svg>,
       )
+      expect(text.getAttributeNS(XML_NS, 'lang')).toBe(null)
+    })
 
-      let removedUseEl = container.querySelector('#u')
-      invariant(removedUseEl instanceof SVGUseElement)
-      expect(removedUseEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href')).toBe(null)
-      expect(removedUseEl.getAttribute('xlink:href')).toBe(null)
+    it('normalizes className to class on SVG elements', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
 
-      let removedTextEl = container.querySelector('#t')
-      invariant(removedTextEl instanceof SVGTextElement)
-      expect(removedTextEl.getAttributeNS('http://www.w3.org/XML/1998/namespace', 'lang')).toBe(
-        null,
-      )
-      expect(removedTextEl.getAttribute('xml:lang')).toBe(null)
+      root.render(<svg className="icon" />)
+      let svg = container.querySelector('svg')
+      invariant(svg instanceof SVGSVGElement)
+      expect(svg.getAttribute('class')).toBe('icon')
+
+      root.render(<svg />)
+      expect(svg.getAttribute('class')).toBe(null)
     })
 
     it('renders HTML subtree inside foreignObject with HTML namespace', () => {
@@ -169,7 +131,7 @@ describe('vnode rendering', () => {
 
       root.render(
         <svg>
-          <path id="p" strokeLinecap="round" />
+          <path id="p" stroke-linecap="round" />
         </svg>,
       )
       let path = container.querySelector('#p')
@@ -178,7 +140,7 @@ describe('vnode rendering', () => {
       // Update value
       root.render(
         <svg>
-          <path id="p" strokeLinecap="square" />
+          <path id="p" stroke-linecap="square" />
         </svg>,
       )
       let updated = container.querySelector('#p')
@@ -197,7 +159,7 @@ describe('vnode rendering', () => {
       expect(removed.hasAttribute('stroke-linecap')).toBe(false)
     })
 
-    it('uses canonical semantics for critical SVG attributes', () => {
+    it('preserves camelCase for canonical SVG attributes', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
 
@@ -319,21 +281,9 @@ describe('vnode rendering', () => {
       invariant(group instanceof SVGGElement)
       invariant(path instanceof SVGPathElement)
 
-      // All elements should have SVG namespace
       expect(svg.namespaceURI).toBe('http://www.w3.org/2000/svg')
       expect(group.namespaceURI).toBe('http://www.w3.org/2000/svg')
       expect(path.namespaceURI).toBe('http://www.w3.org/2000/svg')
     })
   })
 })
-
-const XLINK_NS = 'http://www.w3.org/1999/xlink'
-const XML_NS = 'http://www.w3.org/XML/1998/namespace'
-
-function renderSvgAttribute(name: string): { name: string; ns: string | null } {
-  let container = document.createElement('div')
-  createRoot(container).render(createElement('svg', {}, createElement('use', { [name]: 'value' })))
-  let attribute = container.querySelector('use')?.attributes[0]
-  invariant(attribute)
-  return { name: attribute.name, ns: attribute.namespaceURI }
-}

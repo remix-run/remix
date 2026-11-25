@@ -238,7 +238,7 @@ describe('hydration', () => {
       expect(getComputedStyle(existingMath).getPropertyValue('math-style')).toBe('compact')
     })
 
-    it('hydrates SVG xlinkHref as xlink:href', async () => {
+    it('hydrates SVG xlinkHref as href', async () => {
       let html = await renderToString(
         <svg>
           <use xlinkHref="#icon-star" />
@@ -258,7 +258,7 @@ describe('hydration', () => {
       root.flush()
 
       expect(container.querySelector('use')).toBe(existingUse)
-      expect(existingUse.getAttributeNS('http://www.w3.org/1999/xlink', 'href')).toBe('#icon-star')
+      expect(existingUse.getAttribute('href')).toBe('#icon-star')
     })
 
     it('hydrates SVG viewBox with preserved case', async () => {

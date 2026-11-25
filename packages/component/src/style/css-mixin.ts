@@ -4,11 +4,12 @@ import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
 import type { ElementProps } from '../runtime/core/vnode.ts'
 import { invariant } from '../runtime/invariant.ts'
 import {
+  camelToKebab,
   getDefaultStyleManager,
   type DOMStyleProperties,
   type ServerStyleSource,
 } from './stylesheet.ts'
-import { camelToKebab, isStyleObject, normalizeCssValue } from '../runtime/core/props.ts'
+import { isStyleObject, normalizeCssValue } from '../runtime/core/props.ts'
 
 export interface CSSProps extends DOMStyleProperties {
   [key: string]: CSSProps | string | number | null | undefined

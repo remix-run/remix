@@ -890,7 +890,11 @@ describe('stream', () => {
             <img id="image" alt="" src={'\u0000 \tJ\na\rv\ta\ns\rc\tr\ni\tp\tt:alert(1)'} />
             <form id="form" action="javascript:alert(1)" />
             {createElement('button', { id: 'button', formaction: 'javascript:alert(1)' })}
-            <svg>{createElement('use', { id: 'use', 'xlink:href': 'javascript:alert(1)' })}</svg>
+            <svg>
+              {createElement('use', { id: 'use', 'xlink:href': 'javascript:alert(1)' })}
+              {createElement('use', { id: 'use-mixed', 'xlink:Href': 'javascript:alert(1)' })}
+              {createElement('a', { id: 'svg-link', HREF: 'javascript:alert(1)' })}
+            </svg>
             <object id="object" data="javascript:alert(1)" />
           </>,
         ),
@@ -906,7 +910,11 @@ describe('stream', () => {
       expect(shelf.content.querySelector('#button')?.getAttribute('formaction')).toBe(
         blockedJavaScriptUrl,
       )
-      expect(shelf.content.querySelector('#use')?.getAttribute('xlink:href')).toBe(
+      expect(shelf.content.querySelector('#use')?.getAttribute('href')).toBe(blockedJavaScriptUrl)
+      expect(shelf.content.querySelector('#use-mixed')?.getAttribute('href')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(shelf.content.querySelector('#svg-link')?.getAttribute('href')).toBe(
         blockedJavaScriptUrl,
       )
       expect(shelf.content.querySelector('#object')?.getAttribute('data')).toBe(
@@ -1028,14 +1036,15 @@ describe('stream', () => {
       )
     })
 
-    it('handles namespaced xlinkHref to xlink:href', async () => {
+    it('normalizes xlinkHref and xlink:href to href', async () => {
       let stream = renderToStream(
         <svg>
           <use xlinkHref="#icon-star" />
+          <use xlink:href="#icon-moon" />
         </svg>,
       )
       let html = await drain(stream)
-      expect(html).toBe('<svg><use xlink:href="#icon-star"></use></svg>')
+      expect(html).toBe('<svg><use href="#icon-star"></use><use href="#icon-moon"></use></svg>')
     })
 
     it("lowercases camelCase attributes that don't need special handling", async () => {
@@ -1123,7 +1132,7 @@ describe('stream', () => {
       expect(html).toBe(
         '<input disabled value="0" title="A &amp; &quot;B&quot;" />' +
           '<div contenteditable="true" draggable="false"></div>' +
-          '<svg preserveAlpha="false" focusable="true"><use xlink:href="#safe"></use></svg>',
+          '<svg preserveAlpha="false" focusable="true"><use href="#safe"></use></svg>',
       )
     })
 
