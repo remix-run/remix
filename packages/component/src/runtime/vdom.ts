@@ -36,12 +36,12 @@ import {
   PORTAL_NODE,
   setActiveSchedulerUpdateParents,
   TypedEventTarget,
+  type ElementFunction,
   type ElementProps,
   type ElementType,
+  type Key,
   type RemixNode,
 } from './vnode.ts'
-import type { ElementFunction } from './vnode.ts'
-import type { Key } from './vnode.ts'
 import type { MixinDriver, MixinRuntime, MixinRuntimeValue } from './mixins/mixin.ts'
 import type { DirectEventSync, OnBinding, OnMixinDescriptor } from './mixins/on-mixin.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
@@ -1959,14 +1959,21 @@ function placeVNode(node: CommittedVNode, domParent: ParentNode, anchor: Node | 
   for (let cur: Node | null = first; cur; ) {
     let portalEnd: Comment | undefined = ends?.get(cur)
     if (portalEnd) {
+      if (cur === last || portalEnd === last) break
       cur = portalEnd.nextSibling
       continue
     }
     let next: Node | null = cur === last ? null : cur.nextSibling
-    placeNodeBefore(domParent, cur, anchor)
+    if (cur.parentNode === domParent) placeNodeBefore(domParent, cur, anchor)
     if (cur === last) break
     cur = next
   }
+}
+
+function getDeepActiveElement(root: Node): Element | null {
+  let active = 'activeElement' in root ? (root as Document | ShadowRoot).activeElement : null
+  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement
+  return active
 }
 
 export function placeNodeBefore(parent: ParentNode, node: Node, before: Node | null): void {
@@ -1987,17 +1994,30 @@ export function placeNodeBefore(parent: ParentNode, node: Node, before: Node | n
 
   // Fallback when moveBefore() is unavailable: preserve focus, selection, and ancestor scroll
   // only when the moved node actually contains the active element.
-  let doc = parent.nodeType === Node.DOCUMENT_NODE ? (parent as Document) : parent.ownerDocument
-  let focused = doc?.activeElement
-  if (!focused || focused === doc?.body || !node.contains(focused)) {
+  let root = parent.getRootNode()
+  let focused = getDeepActiveElement(root)
+  let body = parent.ownerDocument?.body
+  if (!focused || focused === body || !node.contains(focused)) {
     parent.insertBefore(node, before)
     return
   }
 
+  // Duck-type selection and focus so iframe documents and focusable SVG elements work cross-realm.
   let control =
-    focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement ? focused : null
-  let start = control?.selectionStart
-  let end = control?.selectionEnd
+    'selectionStart' in focused && 'selectionEnd' in focused
+      ? (focused as HTMLInputElement | HTMLTextAreaElement)
+      : null
+  let start: number | null | undefined
+  let end: number | null | undefined
+  let direction: 'forward' | 'backward' | 'none' | null | undefined
+  if (control) {
+    try {
+      start = control.selectionStart
+      end = control.selectionEnd
+      direction = control.selectionDirection
+    } catch {}
+  }
+
   let positions: [Element, number, number][] = []
   for (let p: Element | null = focused; p; p = p.parentElement) {
     positions.push([p, p.scrollLeft, p.scrollTop])
@@ -2005,16 +2025,22 @@ export function placeNodeBefore(parent: ParentNode, node: Node, before: Node | n
 
   parent.insertBefore(node, before)
 
-  if (doc && doc.activeElement !== focused && doc.contains(focused)) {
+  if (getDeepActiveElement(root) !== focused && focused.isConnected) {
     if (control && start != null && end != null) {
       try {
-        control.selectionStart = start
-        control.selectionEnd = end
+        if (typeof control.setSelectionRange === 'function') {
+          control.setSelectionRange(start, end, direction ?? undefined)
+        } else {
+          control.selectionStart = start
+          control.selectionEnd = end
+        }
       } catch {
         // The input type can change during this render.
       }
     }
-    if (focused instanceof HTMLElement && typeof focused.focus === 'function') focused.focus()
+    if ('focus' in focused && typeof (focused as HTMLElement).focus === 'function') {
+      ;(focused as HTMLElement).focus()
+    }
     for (let [ancestor, left, top] of positions) {
       ancestor.scrollLeft = left
       ancestor.scrollTop = top

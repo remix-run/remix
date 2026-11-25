@@ -1,13 +1,11 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type { RemixNode } from './vnode.ts'
-import { jsx } from './vnode.ts'
+import { jsx, unsafeHTML, type RemixNode } from './vnode.ts'
 import { Frame } from './frame.ts'
 import type { PortalProps } from './component.ts'
 import { Portal } from './portal.ts'
 import { toVNode } from './vdom.ts'
-import { unsafeHTML } from './vnode.ts'
 import type {
   CommittedComponentNode,
   CommittedFrameNode,

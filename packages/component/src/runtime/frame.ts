@@ -6,6 +6,7 @@ import {
   jsx,
   Portal,
   PORTAL_NODE,
+  type ElementFunction,
   type RemixElement,
   type RemixNode,
 } from './vnode.ts'
@@ -19,7 +20,6 @@ import type {
   ReloadOrigin,
   RenderFn,
 } from './component.ts'
-import type { ElementFunction } from './vnode.ts'
 import {
   createComponentErrorEvent,
   createFrameHandle,

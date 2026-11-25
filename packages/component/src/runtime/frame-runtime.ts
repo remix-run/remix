@@ -1,11 +1,8 @@
 import type { FrameHandle, FrameResolution, ReloadOrigin } from './component.ts'
-import type { RemixElement, RemixNode } from './vnode.ts'
-import type { ElementFunction } from './vnode.ts'
-import type { FrameInstance } from './frame.ts'
-import type { ProcessClientEntryPreloads } from './frame.ts'
+import { invariant, type ElementFunction, type RemixElement, type RemixNode } from './vnode.ts'
+import type { FrameInstance, ProcessClientEntryPreloads } from './frame.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 import { getNonceManager, type NonceManager, type ResourceNonces } from './nonce.ts'
-import { invariant } from './vnode.ts'
 import type { Scheduler, VirtualRoot, VNodeParent } from './vdom.ts'
 
 // Unlike `from`, this marker must not propagate to nested frame loads.

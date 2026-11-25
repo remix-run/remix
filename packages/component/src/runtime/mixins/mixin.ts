@@ -8,10 +8,10 @@ import {
   MIXIN_RUNTIME,
   setDefaultMixinDriver,
   type ElementProps,
+  type Key,
   type RemixElement,
   type TypedEventTarget,
 } from '../vnode.ts'
-import type { Key } from '../vnode.ts'
 import {
   findContextFromAncestry,
   patchHostProps,

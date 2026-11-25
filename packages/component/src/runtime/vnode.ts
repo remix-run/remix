@@ -1,15 +1,15 @@
 import type * as dom from './dom.d.ts'
 import type { FragmentProps, Handle, PortalProps, RenderFn } from './component.ts'
 
-/**
- * Any valid element type accepted by JSX or {@link import('../create-element.ts').createElement}.
- * - `string` for host elements (e.g., 'div')
- * - `Function` for user components
- */
 export type ElementFunction = ((...args: never[]) => unknown) & { readonly name?: string }
 
 export type Key = string | number | bigint
 
+/**
+ * Any valid element type accepted by JSX or {@link import('./create-element.ts').createElement}.
+ * - `string` for host elements (e.g., 'div')
+ * - `Function` for user components
+ */
 export type ElementType = string | Function
 
 /**
@@ -20,7 +20,7 @@ export type ElementType = string | Function
 export type ElementProps = Record<string, any>
 
 /**
- * A virtual element produced by JSX or {@link import('../create-element.ts').createElement}
+ * A virtual element produced by JSX or {@link import('./create-element.ts').createElement}
  * describing UI. Carries an internal symbol brand that distinguishes it from plain data.
  */
 export interface RemixElement {
@@ -339,8 +339,9 @@ export interface TypedEventTarget<eventMap> {
   ): void
 }
 
-// Marks the built-in `Frame` and `Portal` components so the reconciler and server renderer can
-// recognize and render them without importing the frame or portal runtime.
+// Marks the built-in `Frame` and `Portal` components. The symbol properties hold their client node
+// renderers, so the reconciler and server renderer can recognize and render them without importing
+// the frame or portal runtime.
 export const FRAME_NODE = Symbol('FrameNode')
 export const PORTAL_NODE = Symbol('PortalNode')
 

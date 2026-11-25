@@ -1,6 +1,12 @@
-import type { ElementProps, ElementType, RemixNode, Renderable, TypedEventTarget } from './vnode.ts'
-import type { ElementFunction } from './vnode.ts'
-import type { Key } from './vnode.ts'
+import type {
+  ElementFunction,
+  ElementProps,
+  ElementType,
+  Key,
+  RemixNode,
+  Renderable,
+  TypedEventTarget,
+} from './vnode.ts'
 
 /**
  * Error event shape emitted by the component runtime.

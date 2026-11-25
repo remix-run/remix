@@ -1,5 +1,12 @@
-import { invariant, isRemixNode, jsx, normalizeChildren } from './vnode.ts'
-import type { ElementProps, ElementType, RemixElement } from './vnode.ts'
+import {
+  invariant,
+  isRemixNode,
+  jsx,
+  normalizeChildren,
+  type ElementProps,
+  type ElementType,
+  type RemixElement,
+} from './vnode.ts'
 
 /**
  * Creates a Remix virtual element from a JSX-like call signature.

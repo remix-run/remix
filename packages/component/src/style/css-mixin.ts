@@ -1,8 +1,7 @@
 import { createMixin, renderMixinElement } from '../runtime/mixins/mixin.ts'
 import type { MixinFactory, MixinType } from '../runtime/mixins/mixin.ts'
 import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
-import type { ElementProps } from '../runtime/vnode.ts'
-import { invariant } from '../runtime/vnode.ts'
+import { invariant, type ElementProps } from '../runtime/vnode.ts'
 import {
   camelToKebab,
   getDefaultStyleManager,
