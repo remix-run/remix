@@ -1,5 +1,4 @@
 import type { ElementProps } from './vnode.ts'
-import { camelToKebab, normalizeCssValue } from '../../style/stylesheet.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 const RESERVED_PROPS = /^(?:children|mix|key|animate|innerHTML|class|className)$/
@@ -283,21 +282,6 @@ export function shouldStringifyBooleanAttribute(name: string): boolean {
     BOOLEANISH_ATTR.test(name) ||
     name === 'value'
   )
-}
-
-export function serializeStyleObject(style: Record<string, unknown>): string {
-  let parts: string[] = []
-  for (let key in style) {
-    let raw = style[key]
-    let cssValue =
-      typeof raw === 'boolean'
-        ? undefined
-        : Array.isArray(raw)
-          ? raw.join(', ')
-          : normalizeCssValue(key, raw)
-    if (cssValue !== undefined) parts.push(`${camelToKebab(key)}: ${cssValue};`)
-  }
-  return parts.join(' ')
 }
 
 export function getMergedClassName(props: ElementProps): string | undefined {

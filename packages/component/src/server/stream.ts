@@ -22,7 +22,6 @@ import {
   isAllowedHostPropName,
   normalizeAttributeName,
   sanitizeUrlAttribute,
-  serializeStyleObject,
   shouldStringifyBooleanAttribute,
 } from '../runtime/core/props.ts'
 import { DOCUMENT_NONCE_META_NAME } from '../runtime/nonce.ts'
@@ -38,7 +37,7 @@ import {
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
 import { composeMixedProps, isMixinDescriptor } from '../runtime/mixins/mixin.ts'
-import { REMIX_UI_STYLE_LAYER } from '../style/stylesheet.ts'
+import { camelToKebab, normalizeCssValue, REMIX_UI_STYLE_LAYER } from '../style/stylesheet.ts'
 import { cssMixinType } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
@@ -1629,6 +1628,21 @@ function processStyleProps(props: ElementProps): ElementProps {
   }
 
   return processedProps
+}
+
+function serializeStyleObject(style: Record<string, unknown>): string {
+  let parts: string[] = []
+  for (let key in style) {
+    let raw = style[key]
+    let cssValue =
+      typeof raw === 'boolean'
+        ? undefined
+        : Array.isArray(raw)
+          ? raw.join(', ')
+          : normalizeCssValue(key, raw)
+    if (cssValue !== undefined) parts.push(`${camelToKebab(key)}: ${cssValue};`)
+  }
+  return parts.join(' ')
 }
 
 function collectStyleTags(context: RenderContext): string {
