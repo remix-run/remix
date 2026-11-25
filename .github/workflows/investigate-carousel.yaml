@@ -13,9 +13,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        fixture: [full, small]
-        sample: [1, 2, 3]
-    runs-on: macos-15
+        include:
+          - { os: macos-15, fixture: full, sample: 4 }
+          - { os: macos-15, fixture: full, sample: 5 }
+          - { os: macos-15, fixture: full, sample: 6 }
+          - { os: macos-15, fixture: full, sample: 7 }
+          - { os: macos-15, fixture: full, sample: 8 }
+          - { os: macos-15, fixture: full, sample: 9 }
+          - { os: ubuntu-latest, fixture: full, sample: 1 }
+          - { os: ubuntu-latest, fixture: small, sample: 1 }
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
       CAROUSEL_CATALOG_FIXTURE: ${{ matrix.fixture }}
@@ -24,16 +31,27 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: ./.github/actions/setup-node-pnpm-cache
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install webkit
+      - name: Install browsers
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == macOS ]]; then
+            pnpm exec playwright install webkit
+          else
+            pnpm exec playwright install --with-deps chromium firefox
+          fi
       - name: Original main browser suite concurrency
         shell: bash
         run: |
           mkdir -p investigation-logs
           node -e 'console.log({platform:process.platform, arch:process.arch, cpus:require("node:os").availableParallelism(), node:process.version, fixture:process.env.CAROUSEL_CATALOG_FIXTURE})'
           set -o pipefail
-          pnpm test:browser 2>&1 | tee investigation-logs/suite.log
+          if [[ "$RUNNER_OS" == macOS ]]; then
+            pnpm test:browser 2>&1 | tee investigation-logs/suite.log
+          else
+            pnpm test 2>&1 | tee investigation-logs/suite.log
+          fi
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: carousel-${{ matrix.fixture }}-${{ matrix.sample }}
+          name: carousel-${{ matrix.os }}-${{ matrix.fixture }}-${{ matrix.sample }}
           path: investigation-logs
