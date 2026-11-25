@@ -1,0 +1,17 @@
+{
+  "name": "fetch-router-bench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "vitest bench --run",
+    "update-readme": "node update-readme.ts"
+  },
+  "dependencies": {
+    "@remix-run/fetch-router": "workspace:^",
+    "hono": "^4.13.22"
+  },
+  "devDependencies": {
+    "vite": "7.3.3",
+    "vitest": "4.1.6"
+  }
+}

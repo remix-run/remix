@@ -49,6 +49,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "bench": "pnpm --dir ./bench run bench",
+    "bench:update-readme": "pnpm --dir ./bench run update-readme",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix test",

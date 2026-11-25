@@ -31,12 +31,12 @@ catalogs:
       specifier: ^7.0.2
       version: 7.0.2
 
+packageExtensionsChecksum: sha256-Ri2l4ZxTnate0Ijm1toJrqDOXJAZ8sxKmcNw/f8Gzz0=
+
 patchedDependencies:
   playwright-core@1.63.0:
     hash: 9de972030ab106a5cb051ec55fefe7492089a14fd422a48a61aa0dca4e66f5bb
     path: patches/playwright-core@1.63.0.patch
-
-packageExtensionsChecksum: sha256-Ri2l4ZxTnate0Ijm1toJrqDOXJAZ8sxKmcNw/f8Gzz0=
 
 importers:
 
@@ -1265,6 +1265,22 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
+
+  packages/fetch-router/bench:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:..
+      hono:
+        specifier: ^4.13.22
+        version: 4.13.22
+    devDependencies:
+      vite:
+        specifier: 7.3.3
+        version: 7.3.3(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
+      vitest:
+        specifier: 4.1.6
+        version: 4.1.6(@types/node@24.10.4)(vite@7.3.3(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/fetch-router/demos/bun:
     dependencies:
@@ -5424,6 +5440,10 @@ packages:
     resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
     hasBin: true
 
+  hono@4.13.22:
+    resolution: {integrity: sha512-wncKd5/40Pj8grx0RZ2fgNIicFEmVFwIHT5UFLTnphR8I6AQWFf9c2JoM6ZJ9g8y4pMzg3sNlCVNe0m2Yclg0Q==}
+    engines: {node: '>=16.9.0'}
+
   html-entities@2.3.3:
     resolution: {integrity: sha512-DV5Ln36z34NNTDgnz0EWGBLZENelNAtkiFA4kyNOG2tDI6Mz1uSWiq1wAKdyjnJwyDiDO7Fa2SO1CTxPXL8VxA==}
 
@@ -6358,10 +6378,6 @@ packages:
   tinyexec@1.0.2:
     resolution: {integrity: sha512-W/KYk+NFhkmsYpuHq5JykngiOCnxeVL8v8dFnqxSD8qEEdRfXk1SDM6JzNqcERbcGYj9tMrDQBYV9cjgnunFIg==}
     engines: {node: '>=18'}
-
-  tinyglobby@0.2.15:
-    resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
-    engines: {node: '>=12.0.0'}
 
   tinyglobby@0.2.16:
     resolution: {integrity: sha512-pn99VhoACYR8nFHhxqix+uvsbXineAasWm5ojXoN8xEwK5Kd3/TrhNn1wByuD52UxWRLy8pu+kRMniEi6Eq9Zg==}
@@ -8944,6 +8960,8 @@ snapshots:
 
   he@1.2.0: {}
 
+  hono@4.13.22: {}
+
   html-entities@2.3.3: {}
 
   html-escaper@2.0.2: {}
@@ -10247,11 +10265,6 @@ snapshots:
 
   tinyexec@1.0.2: {}
 
-  tinyglobby@0.2.15:
-    dependencies:
-      fdir: 6.5.0(picomatch@4.0.4)
-      picomatch: 4.0.4
-
   tinyglobby@0.2.16:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.4)
@@ -10471,7 +10484,7 @@ snapshots:
       std-env: 4.1.0
       tinybench: 2.9.0
       tinyexec: 1.0.2
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.16
       tinyrainbow: 3.1.0
       vite: 7.3.3(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
       why-is-node-running: 2.3.0

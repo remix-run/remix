@@ -1004,6 +1004,26 @@ describe('blog routes', () => {
 
 No special test harness or mocking required! Just use `fetch()` like you would in production.
 
+## Benchmarks
+
+Average time to dispatch one request compared with [Hono](https://hono.dev). Handlers return a pre-created `Response`, so results measure routing and middleware overhead. Lower is better.
+
+<!-- Update with `pnpm run bench:update-readme` -->
+<!-- benchmarks:start -->
+
+| Scenario                       | `fetch-router` |  `hono` |
+| ------------------------------ | -------------: | ------: |
+| Static route, 100 routes       |         284 ns | 83.2 ns |
+| One param, 100 routes          |         500 ns |  380 ns |
+| One param, 1,000 routes        |         500 ns | 1.97 µs |
+| Not found, 1,000 routes        |        1.38 µs | 1.81 µs |
+| 3 sync middleware, 100 routes  |         473 ns |  408 ns |
+| 3 async middleware, 100 routes |        1.06 µs |  484 ns |
+
+Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `fetch-router@1.0.1` (`8a8adc7b70`), and `hono@4.13.22`.
+
+<!-- benchmarks:end -->
+
 ## Related Packages
 
 - [auth-middleware](../auth-middleware/README.md) - Request authentication and route protection helpers
