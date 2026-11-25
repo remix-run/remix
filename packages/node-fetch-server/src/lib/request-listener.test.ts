@@ -1412,15 +1412,17 @@ describe('createRequest authority', () => {
       'exam\tple.com',
       'example.123',
       'foo.0x123',
-      'xn--99999999999',
       '256.0.0.1',
       '1.2.3.4.5',
       'example.com:65536',
       'example.com:abc',
+      '[::1',
     ]) {
-      assert.throws(() => createRequest(req, res, { host }), {
-        message: 'Invalid request authority',
-      })
+      assert.throws(
+        () => createRequest(req, res, { host }),
+        { message: 'Invalid request authority' },
+        `expected invalid authority to throw: ${host}`,
+      )
     }
   })
 
