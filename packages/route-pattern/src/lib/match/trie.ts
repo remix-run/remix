@@ -168,11 +168,47 @@ plainAsciiLen1[47] = 1 // /
 plainAsciiLen1[95] = 1 // _
 plainAsciiLen1[126] = 1 // ~
 
-// Reusable capture stack for raw trie traversal (safe because search/matchBest are synchronous & non-reentrant)
-const capTypeStack = new Uint8Array(256) // 0 = ':', 1 = '*', 2 = omitted
-const capBeginStack = new Int32Array(256)
-const capEndStack = new Int32Array(256)
-const capSegIdxStack = new Int32Array(256)
+// Reusable growable capture stacks for trie traversal (synchronous & non-reentrant)
+let capTypeStack = new Uint8Array(256) // 0 = ':', 1 = '*', 2 = omitted
+let capBeginStack = new Int32Array(256)
+let capEndStack = new Int32Array(256)
+let capSegIdxStack = new Int32Array(256)
+let lastFastInsertion = 0
+
+function growCapStacks(minLength: number): void {
+  let nextLen = capTypeStack.length
+  while (nextLen < minLength) nextLen *= 2
+
+  let nextType = new Uint8Array(nextLen)
+  nextType.set(capTypeStack)
+  capTypeStack = nextType
+
+  let nextBegin = new Int32Array(nextLen)
+  nextBegin.set(capBeginStack)
+  capBeginStack = nextBegin
+
+  let nextEnd = new Int32Array(nextLen)
+  nextEnd.set(capEndStack)
+  capEndStack = nextEnd
+
+  let nextSegIdx = new Int32Array(nextLen)
+  nextSegIdx.set(capSegIdxStack)
+  capSegIdxStack = nextSegIdx
+}
+
+function setCapFrame(
+  depth: number,
+  type: number,
+  begin: number,
+  end: number,
+  segIdx: number,
+): void {
+  if (depth >= capTypeStack.length) growCapStacks(depth + 1)
+  capTypeStack[depth] = type
+  capBeginStack[depth] = begin
+  capEndStack[depth] = end
+  capSegIdxStack[depth] = segIdx
+}
 
 export class Trie<data = unknown> {
   readonly ignoreCase: boolean
@@ -412,7 +448,9 @@ export class Trie<data = unknown> {
     }
 
     // General path with origin (hostname/protocol/port) patterns
-    let decodedHostname = decodeHostname(url.hostname)
+    let rawHostname = url.hostname
+    consumeMatchWork(budget, rawHostname.length)
+    let decodedHostname = decodeHostname(rawHostname)
     let lowerHostname = decodedHostname.toLowerCase()
     let best: CandidateMatch<data> | null = null
 
@@ -550,6 +588,7 @@ export class Trie<data = unknown> {
     )
 
     if (this.#hasOriginPatterns) {
+      consumeMatchWork(budget, url.hostname.length)
       let lowerHostname = decodedHostname.toLowerCase()
       if (this.#staticHostTries !== null) {
         let staticHostTrie = this.#staticHostTries.get(lowerHostname)
@@ -1263,9 +1302,7 @@ function matchRawOriginlessFast<data>(
 
     // Empty segment with optParam (omitted = static specificity)
     if (segLen === 0 && node.optParam !== null) {
-      capTypeStack[capDepth] = 2
-      capBeginStack[capDepth] = pos
-      capEndStack[capDepth] = pos
+      setCapFrame(capDepth, 2, pos, pos, -1)
       if (isLastSeg) {
         let match = matchFirstFastLeaf(
           node.optParam.entries,
@@ -1297,9 +1334,7 @@ function matchRawOriginlessFast<data>(
       (node.param !== null || node.optParam !== null) &&
       !hasDotInRange(rawPath, pos, segEnd)
     ) {
-      capTypeStack[capDepth] = 0
-      capBeginStack[capDepth] = pos
-      capEndStack[capDepth] = segEnd
+      setCapFrame(capDepth, 0, pos, segEnd, -1)
 
       // Fast straight-line iteration when ONLY param (or ONLY optParam) exists and no trailing wildcard
       if (node.param !== null && node.optParam === null && node.trailingWildcards === null) {
@@ -1321,13 +1356,39 @@ function matchRawOriginlessFast<data>(
         continue
       }
 
-      if (node.param !== null) {
+      if (node.param !== null && node.optParam !== null) {
+        // Both branches consume ':' at this segment; check both and compare specificity + insertion order.
+        let paramMatch = isLastSeg
+          ? matchFirstFastLeaf(node.param.entries, capDepth + 1, -1, rawPath, url, budget)
+          : matchRawOriginlessFast(node.param, rawPath, slash + 1, capDepth + 1, url, budget)
+        let paramInsertion = lastFastInsertion
+        let optMatch = isLastSeg
+          ? matchFirstFastLeaf(node.optParam.entries, capDepth + 1, -1, rawPath, url, budget)
+          : matchRawOriginlessFast(node.optParam, rawPath, slash + 1, capDepth + 1, url, budget)
+        let optInsertion = lastFastInsertion
+        if (paramMatch !== null && optMatch !== null) {
+          let cmp = compare(optMatch, paramMatch)
+          if (cmp > 0 || (cmp === 0 && optInsertion < paramInsertion)) {
+            lastFastInsertion = optInsertion
+            return optMatch
+          }
+          lastFastInsertion = paramInsertion
+          return paramMatch
+        }
+        if (paramMatch !== null) {
+          lastFastInsertion = paramInsertion
+          return paramMatch
+        }
+        if (optMatch !== null) {
+          lastFastInsertion = optInsertion
+          return optMatch
+        }
+      } else if (node.param !== null) {
         let match = isLastSeg
           ? matchFirstFastLeaf(node.param.entries, capDepth + 1, -1, rawPath, url, budget)
           : matchRawOriginlessFast(node.param, rawPath, slash + 1, capDepth + 1, url, budget)
         if (match !== null) return match
-      }
-      if (node.optParam !== null) {
+      } else if (node.optParam !== null) {
         let match = isLastSeg
           ? matchFirstFastLeaf(node.optParam.entries, capDepth + 1, -1, rawPath, url, budget)
           : matchRawOriginlessFast(node.optParam, rawPath, slash + 1, capDepth + 1, url, budget)
@@ -1376,6 +1437,7 @@ function materializeFastOriginlessMatch<data>(
   rawPath: string,
 ): Match<string, data> {
   let entry = leaf.entry
+  lastFastInsertion = entry.insertion
   let paramNames = leaf.paramNames
   let wildcardName = leaf.wildcardName
   let params: Record<string, string | undefined> = {}
@@ -1503,6 +1565,9 @@ function searchPathTrieBest<data>(
       if (
         best !== null &&
         best.pathnameMeta.length === 0 &&
+        best.deferredCaps === null &&
+        best.deferredWildcardStart === -1 &&
+        best.deferredWildcardDecodedSeg === -1 &&
         !pathTrie.hasComplex &&
         !pathTrie.hasMixedOriginRank &&
         !(pathTrie.hasOptParam && hasEmptyPathSegment(rawPath))
@@ -1651,10 +1716,7 @@ function searchPathTrieBest<data>(
         }
 
         if (segLen === 0 && node.optParam !== null) {
-          capTypeStack[capDepth] = 2
-          capBeginStack[capDepth] = pos
-          capEndStack[capDepth] = pos
-          capSegIdxStack[capDepth] = -1
+          setCapFrame(capDepth, 2, pos, pos, -1)
           let prevBest = best
           if (isLastSeg) checkLeaves(node.optParam.entries, capDepth + 1, -1, -1)
           else walkRaw(node.optParam, nextPos, capDepth + 1)
@@ -1668,10 +1730,7 @@ function searchPathTrieBest<data>(
           (node.param !== null || node.optParam !== null) &&
           !hasDotInRange(rawPath, pos, segEnd)
         ) {
-          capTypeStack[capDepth] = 0
-          capBeginStack[capDepth] = pos
-          capEndStack[capDepth] = segEnd
-          capSegIdxStack[capDepth] = -1
+          setCapFrame(capDepth, 0, pos, segEnd, -1)
           let foundParam = false
 
           if (node.param !== null) {
@@ -1723,10 +1782,7 @@ function searchPathTrieBest<data>(
         }
 
         if (seg.decoded.length === 0 && node.optParam !== null) {
-          capTypeStack[capDepth] = 2
-          capBeginStack[capDepth] = seg.encBegin
-          capEndStack[capDepth] = seg.encEnd
-          capSegIdxStack[capDepth] = segIdx
+          setCapFrame(capDepth, 2, seg.encBegin, seg.encEnd, segIdx)
           let prevBest = best
           if (isLastSeg) checkLeaves(node.optParam.entries, capDepth + 1, -1, -1)
           else walkDecoded(node.optParam, segIdx + 1, capDepth + 1)
@@ -1740,10 +1796,7 @@ function searchPathTrieBest<data>(
           !seg.hasStructuralDot &&
           (node.param !== null || node.optParam !== null)
         ) {
-          capTypeStack[capDepth] = 0
-          capBeginStack[capDepth] = seg.encBegin
-          capEndStack[capDepth] = seg.encEnd
-          capSegIdxStack[capDepth] = segIdx
+          setCapFrame(capDepth, 0, seg.encBegin, seg.encEnd, segIdx)
           let foundParam = false
 
           if (node.param !== null) {
@@ -2264,10 +2317,7 @@ function searchPathTrieAll<data>(
 
         let segLen = segEnd - pos
         if (segLen === 0 && node.optParam !== null) {
-          capTypeStack[capDepth] = 2
-          capBeginStack[capDepth] = pos
-          capEndStack[capDepth] = pos
-          capSegIdxStack[capDepth] = -1
+          setCapFrame(capDepth, 2, pos, pos, -1)
           if (isLastSeg) emitLeaves(node.optParam.entries, capDepth + 1, -1, -1)
           else walk(node.optParam, nextPos, capDepth + 1)
         } else if (
@@ -2275,10 +2325,7 @@ function searchPathTrieAll<data>(
           (node.param !== null || node.optParam !== null) &&
           !hasDotInRange(rawPath, pos, segEnd)
         ) {
-          capTypeStack[capDepth] = 0
-          capBeginStack[capDepth] = pos
-          capEndStack[capDepth] = segEnd
-          capSegIdxStack[capDepth] = -1
+          setCapFrame(capDepth, 0, pos, segEnd, -1)
           if (node.param !== null) {
             if (isLastSeg) {
               emitLeaves(node.param.entries, capDepth + 1, -1, -1)
@@ -2318,10 +2365,7 @@ function searchPathTrieAll<data>(
         }
 
         if (seg.decoded.length === 0 && node.optParam !== null) {
-          capTypeStack[capDepth] = 2
-          capBeginStack[capDepth] = seg.encBegin
-          capEndStack[capDepth] = seg.encEnd
-          capSegIdxStack[capDepth] = segIdx
+          setCapFrame(capDepth, 2, seg.encBegin, seg.encEnd, segIdx)
           if (isLastSeg) emitLeaves(node.optParam.entries, capDepth + 1, -1, -1)
           else walk(node.optParam, segIdx + 1, capDepth + 1)
         } else if (
@@ -2329,10 +2373,7 @@ function searchPathTrieAll<data>(
           !seg.hasStructuralDot &&
           (node.param !== null || node.optParam !== null)
         ) {
-          capTypeStack[capDepth] = 0
-          capBeginStack[capDepth] = seg.encBegin
-          capEndStack[capDepth] = seg.encEnd
-          capSegIdxStack[capDepth] = segIdx
+          setCapFrame(capDepth, 0, seg.encBegin, seg.encEnd, segIdx)
           if (node.param !== null) {
             if (isLastSeg) {
               emitLeaves(node.param.entries, capDepth + 1, -1, -1)

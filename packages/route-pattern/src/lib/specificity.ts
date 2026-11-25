@@ -168,12 +168,17 @@ function compareRangeSlice(
   if (segBegin >= segEnd) return 0
 
   let aIndex = 0
-  while (aIndex < a.length && a[aIndex].end <= segBegin) aIndex += 1
   let bIndex = 0
-  while (bIndex < b.length && b[bIndex].end <= segBegin) bIndex += 1
-
   let pos = segBegin
+
   while (pos < segEnd) {
+    while (aIndex < a.length && (a[aIndex].end <= pos || a[aIndex].begin === a[aIndex].end)) {
+      aIndex += 1
+    }
+    while (bIndex < b.length && (b[bIndex].end <= pos || b[bIndex].begin === b[bIndex].end)) {
+      bIndex += 1
+    }
+
     let aRange = aIndex < a.length && a[aIndex].begin < segEnd ? a[aIndex] : undefined
     let bRange = bIndex < b.length && b[bIndex].begin < segEnd ? b[bIndex] : undefined
 
@@ -192,9 +197,6 @@ function compareRangeSlice(
     let nextPos = nextA < nextB ? nextA : nextB
     if (nextPos > segEnd) nextPos = segEnd
     pos = nextPos
-
-    if (aRange !== undefined && aRange.end <= pos) aIndex += 1
-    if (bRange !== undefined && bRange.end <= pos) bIndex += 1
   }
 
   return 0

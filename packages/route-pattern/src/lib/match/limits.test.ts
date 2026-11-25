@@ -101,6 +101,16 @@ describe('matcher resource limits', () => {
     )
   })
 
+  it('enforces match work before scanning oversized hostnames', () => {
+    let matcher = createMultiMatcher({ limits: { maxMatchWork: 100 } })
+    matcher.add('https://example.com/a', null)
+
+    assert.throws(
+      () => matcher.match(`https://${'a.'.repeat(80)}example.com/a`),
+      exceedsMatchWork(100),
+    )
+  })
+
   it('enforces match work while scanning optional hostname variables', () => {
     let matcher = createMultiMatcher({ limits: { maxMatchWork: 50 } })
     matcher.add('://:tenant(.:region).example.com/', null)

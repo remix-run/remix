@@ -1515,6 +1515,37 @@ describe('Matcher', () => {
       ])
     })
 
+    it('compares specificity and insertion order when param and optional-param branches both exist', () => {
+      let optMoreSpecific = createMultiMatcher<string>()
+      optMoreSpecific.add('(:locale)/start', 'opt-static')
+      optMoreSpecific.add('/:a/:b', 'two-params')
+      assert.equal(optMoreSpecific.match('https://example.com/uk/start')?.data, 'opt-static')
+
+      let tieOptFirst = createMultiMatcher<string>()
+      tieOptFirst.add('(:locale)/start', 'opt')
+      tieOptFirst.add('/:locale/start', 'param')
+      assert.equal(tieOptFirst.match('https://example.com/uk/start')?.data, 'opt')
+
+      let tieParamFirst = createMultiMatcher<string>()
+      tieParamFirst.add('/:locale/start', 'param')
+      tieParamFirst.add('(:locale)/start', 'opt')
+      assert.equal(tieParamFirst.match('https://example.com/uk/start')?.data, 'param')
+    })
+
+    it('matches patterns with more than 256 variable segments', () => {
+      let count = 300
+      let pattern = '/' + Array.from({ length: count }, (_, i) => `:p${i}`).join('/')
+      let pathname = '/' + Array.from({ length: count }, (_, i) => `v${i}`).join('/')
+      let matcher = createMultiMatcher<string>()
+      matcher.add(pattern, 'deep')
+
+      let match = matcher.match(`https://example.com${pathname}`)
+      assert.equal(match?.data, 'deep')
+      assert.equal(match?.params.p0, 'v0')
+      assert.equal(match?.params.p256, 'v256')
+      assert.equal(match?.params.p299, 'v299')
+    })
+
     it('matches very large multi-optional patterns iteratively without overflowing the call stack', () => {
       let count = 200
       let pattern = '/root'
