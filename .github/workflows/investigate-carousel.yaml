@@ -14,14 +14,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-15, fixture: full, sample: 4 }
-          - { os: macos-15, fixture: full, sample: 5 }
-          - { os: macos-15, fixture: full, sample: 6 }
-          - { os: macos-15, fixture: full, sample: 7 }
-          - { os: macos-15, fixture: full, sample: 8 }
-          - { os: macos-15, fixture: full, sample: 9 }
-          - { os: ubuntu-latest, fixture: full, sample: 1 }
-          - { os: ubuntu-latest, fixture: small, sample: 1 }
+          - { os: macos-15, fixture: small, sample: 4 }
+          - { os: macos-15, fixture: small, sample: 5 }
+          - { os: macos-15, fixture: small, sample: 6 }
+          - { os: macos-15, fixture: small, sample: 7 }
+          - { os: macos-15, fixture: small, sample: 8 }
+          - { os: macos-15, fixture: small, sample: 9 }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
