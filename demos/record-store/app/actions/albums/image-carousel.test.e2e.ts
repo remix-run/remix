@@ -6,6 +6,7 @@ import type { Page, Request as BrowserRequest } from 'playwright'
 import sharp from 'sharp'
 
 import { createTestRouter, expectSelectedImage } from '../../../test/helpers.ts'
+import { assets } from '../../utils/assets.ts'
 
 // Bound the whole file, including cleanup, without keeping successful workers alive.
 setTimeout(() => {
@@ -174,7 +175,27 @@ describe('album image selection', () => {
     diagnostic('STEP', 'let page = await serveDiagnostic(t, await createTestRouter())')
     let page = await serveDiagnostic(t, await createTestRouter())
     diagnostic('STEP', "await page.goto('/albums')")
-    await page.goto('/albums')
+    try {
+      await page.goto('/albums')
+    } catch (error) {
+      diagnostic('GOTO FAILED', String(error))
+      await snapshot(page)
+      try {
+        await page.waitForLoadState('load')
+        diagnostic('LOAD AFTER TIMEOUT')
+        let entry = await page.locator('script[type="module"][src]').getAttribute('src')
+        assert.ok(entry)
+        await page.evaluate(async (href) => {
+          let { app } = await import(href)
+          await app.ready()
+        }, entry)
+        diagnostic('APP READY AFTER TIMEOUT')
+        await snapshot(page)
+      } catch (laterError) {
+        diagnostic('AFTER TIMEOUT ERROR', String(laterError))
+      }
+      throw error
+    }
     let main = page.getByRole('main')
     let search = main.getByRole('searchbox', { name: 'Search records', exact: true })
     assert.equal(await search.count(), 1)
@@ -304,6 +325,26 @@ const pendingRequests = new Map<BrowserRequest, string>()
 const serverRequests = new Map<number, string>()
 let requestId = 0
 let currentStage: unknown
+const hrefs = { started: 0, completed: 0, active: 0, peak: 0 }
+const hrefKeys = new Set<string>()
+const originalGetHref = assets.getHref.bind(assets)
+assets.getHref = async (filePath, options) => {
+  let isImage = filePath.includes('/images/')
+  if (isImage) {
+    hrefs.started++
+    hrefs.active++
+    hrefs.peak = Math.max(hrefs.peak, hrefs.active)
+    hrefKeys.add(filePath + JSON.stringify(options))
+  }
+  try {
+    return await originalGetHref(filePath, options)
+  } finally {
+    if (isImage) {
+      hrefs.completed++
+      hrefs.active--
+    }
+  }
+}
 setInterval(
   () =>
     diagnostic('PROGRESS', {
@@ -311,6 +352,7 @@ setInterval(
       pending: [...pendingRequests.values()],
       server: [...serverRequests],
       sharp: sharp.counters(),
+      hrefs: { ...hrefs, unique: hrefKeys.size },
       memory: process.memoryUsage(),
     }),
   5000,

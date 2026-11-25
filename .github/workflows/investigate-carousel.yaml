@@ -13,7 +13,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-15]
+        os: [macos-15]
+        sample: [1, 2]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -38,7 +39,7 @@ jobs:
           project=firefox
           if [[ "$RUNNER_OS" == macOS ]]; then project=webkit; fi
           status=0
-          for repetition in 1 2 3; do
+          for repetition in 1; do
             pnpm -C demos/record-store test app/actions/albums/image-carousel.test.e2e.ts --project "$project" > "investigation-logs/isolated-$repetition.log" 2>&1 || status=1
             cat "investigation-logs/isolated-$repetition.log"
           done
@@ -48,13 +49,9 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          if [[ "$RUNNER_OS" == macOS ]]; then
-            pnpm test:browser 2>&1 | tee investigation-logs/suite.log
-          else
-            pnpm test 2>&1 | tee investigation-logs/suite.log
-          fi
+          pnpm test:browser 2>&1 | tee investigation-logs/suite.log
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: carousel-${{ matrix.os }}
+          name: carousel-${{ matrix.os }}-${{ matrix.sample }}
           path: investigation-logs
