@@ -106,7 +106,9 @@ describe('album image selection', () => {
   })
 
   it('searches the catalog through a labeled search field', async (t) => {
-    let page = await t.serve(await createTestServer((await createTestRouter()).fetch))
+    let page = await t.serve(
+      await createTestServer((await createTestRouter({ albumIds: [1, 2, 3] })).fetch),
+    )
     await page.goto('/albums')
     let main = page.getByRole('main')
     let search = main.getByRole('searchbox', { name: 'Search records', exact: true })
