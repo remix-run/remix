@@ -1,5 +1,5 @@
-import { roots } from '../runtime/vdom.ts'
-export { setComponentStalenessCheck } from '../runtime/vdom.ts'
+import { roots } from '../runtime/vnode.ts'
+export { setComponentStalenessCheck } from '../runtime/vnode.ts'
 
 /**
  * Immediately schedules reconciliation for every active component root using its current element.

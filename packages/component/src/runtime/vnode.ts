@@ -121,6 +121,14 @@ export const DIRECT_EVENT = Symbol.for('remix.directEvent')
 export let defaultMixinDriver: unknown
 export let activeSchedulerUpdateParents: ParentNode[] | undefined
 
+export type ComponentStalenessCheck = (type: Function) => boolean
+export let componentStalenessCheck: ComponentStalenessCheck | null = null
+export const roots = new Set<{ reconcile(): void }>()
+
+export function setComponentStalenessCheck(check: ComponentStalenessCheck): void {
+  componentStalenessCheck = check
+}
+
 export function setDefaultMixinDriver(driver: unknown): void {
   defaultMixinDriver = driver
 }

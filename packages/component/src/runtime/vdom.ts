@@ -18,6 +18,7 @@ import type {
 } from './component.ts'
 import type { ClientEntryBoundaryRuntime, FrameMountState, ResolveFrame } from './frame-runtime.ts'
 import {
+  componentStalenessCheck,
   defaultMixinDriver,
   DIRECT_EVENT,
   Fragment,
@@ -34,6 +35,7 @@ import {
   normalizeUnsafeHTMLProps,
   Portal,
   PORTAL_NODE,
+  roots,
   setActiveSchedulerUpdateParents,
   TypedEventTarget,
   type ElementFunction,
@@ -47,18 +49,6 @@ import type { DirectEventSync, OnBinding, OnMixinDescriptor } from './mixins/on-
 import type { StyleManager } from '../style/stylesheet.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
-
-// -- Refresh / HMR registration --
-
-export type ComponentStalenessCheck = (type: Function) => boolean
-
-export let componentStalenessCheck: ComponentStalenessCheck | null = null
-
-export const roots = new Set<VirtualRoot>()
-
-export function setComponentStalenessCheck(check: ComponentStalenessCheck): void {
-  componentStalenessCheck = check
-}
 
 function registerRoot(root: VirtualRoot): void {
   roots.add(root)
