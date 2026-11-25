@@ -33,10 +33,16 @@ describe('Spring iterator example', () => {
       worker.terminate()
       URL.revokeObjectURL(workerUrl)
     })
+    let lastTick = started
     let requestFrame = window.requestAnimationFrame.bind(window)
     t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
       let requested = performance.now() - started
       return requestFrame((timestamp) => {
+        if (callback.name === 'tick') {
+          let now = performance.now()
+          if (now - lastTick > 500) console.log('Spring frame pause', now - lastTick)
+          lastTick = now
+        }
         frames.push({
           name: callback.name,
           requested,
