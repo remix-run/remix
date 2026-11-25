@@ -173,7 +173,12 @@ describe('album image selection', () => {
   it('searches the catalog through a labeled search field', async (t) => {
     diagnostic('TEST START', 'searches the catalog through a labeled search field')
     diagnostic('STEP', 'let page = await serveDiagnostic(t, await createTestRouter())')
-    let page = await serveDiagnostic(t, await createTestRouter())
+    let page = await serveDiagnostic(
+      t,
+      await createTestRouter(
+        process.env.CAROUSEL_CATALOG_FIXTURE === 'small' ? { albumIds: [1, 2, 3] } : {},
+      ),
+    )
     diagnostic('STEP', "await page.goto('/albums')")
     try {
       await page.goto('/albums')
@@ -203,6 +208,11 @@ describe('album image selection', () => {
     assert.equal(await search.count(), 1)
     diagnostic('STEP', "await search.fill('Overpass Stereo')")
     await search.fill('Overpass Stereo')
+    if (process.env.CAROUSEL_BREAK_SEARCH === '1') {
+      await search.evaluate((node) => {
+        node.closest('form')?.addEventListener('submit', (event) => event.preventDefault())
+      })
+    }
     diagnostic('STEP', "await main.getByRole('button', { name: 'Search', exact: true }).click()")
     await main.getByRole('button', { name: 'Search', exact: true }).click()
     diagnostic('STEP', "await page.waitForURL('**/search?q=Overpass*')")
