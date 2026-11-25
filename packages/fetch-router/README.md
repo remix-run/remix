@@ -1014,15 +1014,15 @@ Average time to dispatch one request compared with [Hono](https://hono.dev). Han
 
 | Scenario                       | `fetch-router` |  `hono` |
 | ------------------------------ | -------------: | ------: |
-| Static route, 100 routes       |         273 ns | 72.7 ns |
-| One param, 100 routes          |         465 ns |  362 ns |
-| One param, 1,000 routes        |         462 ns | 1.89 µs |
-| Not found, 1,000 routes        |        1.30 µs | 1.72 µs |
-| Async handler, 100 routes      |         300 ns |  173 ns |
-| 3 sync middleware, 100 routes  |         440 ns |  374 ns |
-| 3 async middleware, 100 routes |         613 ns |  448 ns |
+| Static route, 100 routes       |         283 ns | 73.7 ns |
+| One param, 100 routes          |         473 ns |  366 ns |
+| One param, 1,000 routes        |         474 ns | 1.85 µs |
+| Not found, 1,000 routes        |        1.31 µs | 1.75 µs |
+| Async handler, 100 routes      |         301 ns |  165 ns |
+| 3 sync middleware, 100 routes  |         480 ns |  382 ns |
+| 3 async middleware, 100 routes |         635 ns |  493 ns |
 
-Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `fetch-router@1.0.1` (`7178c88d3e`), and `hono@4.13.22`.
+Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `fetch-router@1.0.1` (`5bc1a08add`), and `hono@4.13.22`.
 
 <!-- benchmarks:end -->
 
