@@ -1,0 +1,1 @@
+Significantly improve route matching and matcher construction performance in `createMatcher()` and `createMultiMatcher()` by replacing character-level substring prefilters and eager 2D state tables with a segment-level trie, reversed-label hostname indexing, zero-allocation ASCII pathname matching, and pruned reachable-state matching for complex optional and wildcard patterns.

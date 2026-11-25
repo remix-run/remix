@@ -3,7 +3,6 @@ import type { RoutePattern } from './route-pattern.ts'
 import { Trie } from './match/trie.ts'
 import type { Match } from './match/types.ts'
 import type { MatcherLimits } from './match/limits.ts'
-import * as Specificity from './specificity.ts'
 
 /** Options that control route pattern matching. */
 export interface MatcherOptions {
@@ -90,26 +89,17 @@ class TrieMatcher<data = unknown> implements MultiMatcher<data> {
 
   match(url: string | URL, options?: MatchOptions): Match<string, data> | null {
     let parsedUrl = resolveURL(url, options)
-    let best: Match<string, data> | null = null
-    for (let match of this.#trie.search(parsedUrl)) {
-      if (best === null || Specificity.greaterThan(match, best)) {
-        best = match
-      }
-    }
-    return best
+    return this.#trie.matchBest(parsedUrl)
   }
 
   matchAll(url: string | URL, options?: MatchOptions): Array<Match<string, data>> {
     let parsedUrl = resolveURL(url, options)
-    let matches: Array<Match<string, data>> = []
-    for (let match of this.#trie.search(parsedUrl)) {
-      matches.push(match)
-    }
-    return matches.sort(Specificity.descending)
+    return this.#trie.searchAll(parsedUrl)
   }
 }
 
 function resolveURL(url: string | URL, options?: MatchOptions): URL {
-  let baseURL = options?.baseURL === undefined ? undefined : new URL(options.baseURL)
+  if (options === undefined) return typeof url === 'string' ? new URL(url) : url
+  let baseURL = options.baseURL === undefined ? undefined : new URL(options.baseURL)
   return typeof url === 'string' ? new URL(url, baseURL) : url
 }

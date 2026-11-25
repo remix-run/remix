@@ -2,6 +2,8 @@
 
 Type-safe URL matching and href generation for JavaScript. `route-pattern` supports path variables, wildcards, optionals, search constraints, and full-URL patterns with predictable ranking.
 
+Existing JavaScript routers tend to force a tradeoff between expressiveness, cold-start cost, and runtime speed: regex-based matchers like `path-to-regexp` scale linearly as routes grow, while pathname-only radix trees like `find-my-way` omit full-URL matching, arbitrary optional groups, and deterministic specificity ranking and pay higher cold-start costs. `route-pattern` is built on a segment-level trie and bounded-state matcher so you get a richer full-URL grammar with fast cold starts, hot-path throughput alongside `find-my-way`, and protection against regex backtracking and exponential optional blowup (see the [benchmarks](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench)).
+
 ## Features
 
 - **Type-safe** - Infer params from patterns for compile-time correctness
