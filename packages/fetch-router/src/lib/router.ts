@@ -7,7 +7,7 @@ import * as Specificity from '@remix-run/route-pattern/specificity'
 import { runMiddleware } from './middleware.ts'
 import type { AnyMiddleware, MiddlewareContext } from './middleware.ts'
 import { getRejectionReason, throwIfRequestAborted } from './request-abort.ts'
-import { RequestContext } from './request-context.ts'
+import { getMatchUrl, RequestContext } from './request-context.ts'
 import type { ContextWithParams, requestContextTypes } from './request-context.ts'
 import { RequestMethods } from './request-methods.ts'
 import type { RequestMethod } from './request-methods.ts'
@@ -346,6 +346,55 @@ function getPrefixedRoutePattern(target: RouteTarget, state: BuilderState): Rout
   return state.prefix ? joinPatterns(state.prefix, pattern) : pattern
 }
 
+// Extracts the raw pathname from a canonical http(s) URL string without allocating a URL object.
+// Unnormalized inputs (percent-encoding, dot-segments, fragments) will not match any key in the
+// static map and fall back to full `route-pattern` matching.
+function extractSimplePathname(url: string): string | null {
+  let schemeEnd: number
+  if (url.startsWith('https://')) {
+    schemeEnd = 8
+  } else if (url.startsWith('http://')) {
+    schemeEnd = 7
+  } else {
+    return null
+  }
+
+  let pathStart = url.indexOf('/', schemeEnd)
+  if (pathStart === -1) return null
+
+  let queryIndex = url.indexOf('?', schemeEnd)
+  if (queryIndex !== -1) {
+    if (queryIndex < pathStart) return null
+    return url.slice(pathStart, queryIndex)
+  }
+
+  return url.slice(pathStart)
+}
+
+// Returns the exact static pathname (with leading `/`) for a plain static route, `null` for a
+// dynamic pathname route that cannot outrank or tie a static route, or `false` when the pattern
+// has origin, search, optional, escape, or percent-encoded constraints that disable the static map.
+function classifyStaticRoute(pattern: RoutePattern): string | null | false {
+  let parts = pattern.toJSON()
+  if (parts.protocol || parts.hostname || parts.port || parts.search) {
+    return false
+  }
+
+  let pathname = parts.pathname
+  if (/[()\\%#?]/.test(pathname)) {
+    return false
+  }
+  if (pathname.includes(':') || pathname.includes('*')) {
+    return null
+  }
+  // Keep dot-segment paths out of the static map so raw unnormalized dot-segment URLs can never hit
+  if (pathname.startsWith('.') || pathname.includes('/.')) {
+    return null
+  }
+
+  return '/' + pathname
+}
+
 type ResolvedRoute =
   | { kind: 'route'; route: RouteEntry; params: Record<string, any>; headFallback: boolean }
   | { kind: 'response'; response: Response | Promise<Response> }
@@ -409,6 +458,11 @@ export function createRouter<
   let allMatcher: MultiMatcher<MatchData> | null = null
   let hasExplicitHead = false
 
+  // Exact static pathname fast path used when no origin/search/optional patterns are registered
+  let canUseStaticMap = true
+  let staticByMethod: Record<string, Map<string, RouteEntry>> = Object.create(null)
+  let anyStaticMap: Map<string, RouteEntry> | null = null
+
   function getAllMatcher(): MultiMatcher<MatchData> {
     if (allMatcher === null) {
       let matcher = createMultiMatcher<MatchData>()
@@ -471,6 +525,33 @@ export function createRouter<
     return { kind: 'response', response: defaultHandler(context) }
   }
 
+  function matchStaticRoute(context: RequestContext, rawUrl: string | URL): RouteEntry | undefined {
+    if (!canUseStaticMap || customMatcher != null) return undefined
+
+    let method = context.method
+    if (method === 'HEAD' && (hasExplicitHead || anyMatcher !== null)) return undefined
+
+    let staticMap =
+      staticByMethod[method] ??
+      (method === 'HEAD' ? staticByMethod['GET'] : undefined) ??
+      anyStaticMap
+    if (staticMap === undefined || staticMap === null) return undefined
+
+    let pathname: string | null
+    if (typeof rawUrl === 'string') {
+      pathname = extractSimplePathname(rawUrl)
+    } else if (
+      (rawUrl.protocol === 'https:' || rawUrl.protocol === 'http:') &&
+      !rawUrl.pathname.includes('%')
+    ) {
+      pathname = rawUrl.pathname
+    } else {
+      return undefined
+    }
+
+    return pathname !== null ? staticMap.get(pathname) : undefined
+  }
+
   function resolveRoute(context: RequestContext): ResolvedRoute {
     let url = context.url
 
@@ -521,6 +602,17 @@ export function createRouter<
 
   function dispatchDirect(context: RequestContext): Promise<Response> {
     try {
+      let staticRoute = matchStaticRoute(context, context.request.url)
+      if (staticRoute !== undefined) {
+        let headFallback = context.method === 'HEAD' && staticRoute.method === 'GET'
+        if (staticRoute.middleware) {
+          let response = runMiddleware(staticRoute.middleware, context, staticRoute.handler)
+          return headFallback ? response.then(headResponse) : response
+        }
+
+        return finalizeDirectResult(staticRoute.handler(context), context.request, headFallback)
+      }
+
       let resolved = resolveRoute(context)
       if (resolved.kind === 'response') {
         return finalizeDirectResult(resolved.response, context.request, false)
@@ -545,8 +637,18 @@ export function createRouter<
     middleware: AnyMiddleware[],
   ): Promise<Response> {
     let headFallback = false
+    let routeResolved = false
 
     let promise = runMiddleware(middleware, context, (ctx) => {
+      routeResolved = true
+      let staticRoute = matchStaticRoute(ctx, getMatchUrl(ctx))
+      if (staticRoute !== undefined) {
+        headFallback = ctx.method === 'HEAD' && staticRoute.method === 'GET'
+        return staticRoute.middleware
+          ? runMiddleware(staticRoute.middleware, ctx, staticRoute.handler)
+          : staticRoute.handler(ctx)
+      }
+
       let resolved = resolveRoute(ctx)
       if (resolved.kind === 'response') {
         return resolved.response
@@ -559,8 +661,20 @@ export function createRouter<
         : resolved.route.handler(ctx)
     })
 
-    // Strip the body after router middleware so it sees the same response as for GET
+    // Strip the body after router middleware so it sees the same response as for GET.
+    // When the route already resolved synchronously, `headFallback` is already known.
+    if (routeResolved) {
+      return headFallback ? promise.then(headResponse) : promise
+    }
+
     return promise.then((response) => (headFallback ? headResponse(response) : response))
+  }
+
+  function addStaticEntry(method: RequestMethod, path: string, entry: RouteEntry): void {
+    let map = (staticByMethod[method] ??= new Map())
+    if (!map.has(path)) {
+      map.set(path, entry)
+    }
   }
 
   function registerRoute(
@@ -585,12 +699,26 @@ export function createRouter<
     allEntries.push(entry)
     allMatcher = null
 
+    let staticPath = canUseStaticMap ? classifyStaticRoute(pattern) : null
+    if (staticPath === false) {
+      canUseStaticMap = false
+    }
+
     if (method === 'ANY') {
       anyEntries.push(entry)
       anyMatcher ??= createMultiMatcher<MatchData>()
       anyMatcher.add(pattern, entry)
       for (let i = 0; i < registeredMethods.length; i++) {
         byMethod[registeredMethods[i]].add(pattern, entry)
+      }
+      if (canUseStaticMap && typeof staticPath === 'string') {
+        anyStaticMap ??= new Map()
+        if (!anyStaticMap.has(staticPath)) {
+          anyStaticMap.set(staticPath, entry)
+        }
+        for (let i = 0; i < registeredMethods.length; i++) {
+          addStaticEntry(registeredMethods[i], staticPath, entry)
+        }
       }
       return
     }
@@ -608,9 +736,17 @@ export function createRouter<
       }
       byMethod[method] = matcher
       registeredMethods.push(method)
+
+      if (canUseStaticMap && anyStaticMap !== null) {
+        staticByMethod[method] = new Map(anyStaticMap)
+      }
     }
 
     matcher.add(pattern, entry)
+
+    if (canUseStaticMap && typeof staticPath === 'string') {
+      addStaticEntry(method, staticPath, entry)
+    }
   }
 
   function addRoute(
@@ -741,11 +877,13 @@ export function createRouter<
 
   let router: Router<RouterContext> = {
     ...rootBuilder,
-    // Rest tuple keeps router.fetch.length === 1 for single-argument FetchHandler adapters
-    fetch(input: string | URL | Request, ...args: [init?: RequestInit]): Promise<Response> {
+    // Default parameter keeps router.fetch.length === 1 for single-argument FetchHandler adapters
+    fetch(
+      input: string | URL | Request,
+      init: RequestInit | undefined = undefined,
+    ): Promise<Response> {
       let context: RequestContext
       try {
-        let [init] = args
         context = createRequestContext(input, init)
       } catch (error) {
         return Promise.reject(error)

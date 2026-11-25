@@ -155,14 +155,19 @@ export function runMiddleware(
 
       try {
         let result = dispatch(i + 1)
-        nextPromise = result instanceof Promise ? result : Promise.resolve(result)
+        if (result instanceof Promise) {
+          // Mark handled immediately so middleware that calls next() and later short-circuits
+          // or throws cannot trigger an unhandled rejection
+          result.then(undefined, noop)
+          nextPromise = result
+        } else {
+          nextPromise = Promise.resolve(result)
+        }
       } catch (error) {
         nextPromise = Promise.reject(getRejectionReason(signal, error))
+        nextPromise.then(undefined, noop)
       }
 
-      // Mark handled immediately so middleware that calls next() and later short-circuits
-      // or throws cannot trigger an unhandled rejection
-      nextPromise.then(undefined, noop)
       return nextPromise
     }
 
