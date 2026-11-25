@@ -9,29 +9,19 @@ const readmePath = path.resolve(benchDir, '../README.md')
 const benchmarkStart = '<!-- benchmarks:start -->'
 const benchmarkEnd = '<!-- benchmarks:end -->'
 
-const runtimeCommands: Record<string, string[]> = {
-  node: ['node', 'runner.ts', '--json'],
-  bun: ['bun', 'run', 'runner.ts', '--json'],
-}
+const runtimeCommands = [
+  ['node', 'runner.ts', '--json'],
+  ['bun', 'run', 'runner.ts', '--json'],
+]
 
 interface RunnerOutput {
   runtime: string
   results: Record<string, Record<string, string>>
 }
 
-let runtimes = (process.env.BENCH_RUNTIMES ?? 'node,bun').split(',')
-let lines = [
-  `Last updated: ${new Date().toISOString().slice(0, 10)}`,
-  '',
-  `Environment: ${os.type()} ${os.release()}, ${os.cpus()[0]?.model ?? 'Unknown CPU'}`,
-  '',
-  `Versions: ${(await readVersions()).join(', ')} (\`multipart-parser\` at commit \`${readCommit()}\`)`,
-]
+let lines: string[] = []
 
-for (let runtime of runtimes) {
-  let command = runtimeCommands[runtime]
-  if (command === undefined) throw new Error(`Unknown runtime "${runtime}" in BENCH_RUNTIMES`)
-
+for (let command of runtimeCommands) {
   console.log(`Running benchmarks with ${command.join(' ')} ...`)
   let result = spawnSync(command[0], command.slice(1), {
     cwd: benchDir,
@@ -46,14 +36,21 @@ for (let runtime of runtimes) {
   let parsers = Object.keys(output.results)
   let benchmarks = Object.keys(output.results[parsers[0]])
 
-  lines.push('', `### ${output.runtime}`, '')
+  lines.push(`### ${output.runtime}`, '')
   lines.push(`| Message | ${parsers.map((parser) => `\`${parser}\``).join(' | ')} |`)
   lines.push(`|---|${parsers.map(() => '---:').join('|')}|`)
   for (let benchmark of benchmarks) {
     let cells = parsers.map((parser) => output.results[parser][benchmark])
     lines.push(`| ${benchmark} | ${cells.join(' | ')} |`)
   }
+  lines.push('')
 }
+
+let [multipartParser, ...otherParsers] = await readVersions()
+let tools = [`${multipartParser} (\`${readCommit()}\`)`, ...otherParsers]
+lines.push(
+  `Measured ${new Date().toISOString().slice(0, 10)} on ${os.cpus()[0]?.model ?? 'Unknown CPU'} (${os.type()} ${os.release()}) with ${new Intl.ListFormat('en-US').format(tools)}.`,
+)
 
 let readme = await readFile(readmePath, 'utf8')
 await writeFile(readmePath, replaceBenchmarkSection(readme, lines.join('\n')))

@@ -1006,22 +1006,10 @@ No special test harness or mocking required! Just use `fetch()` like you would i
 
 ## Benchmarks
 
-`fetch-router` builds on the trie matcher in [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern#benchmarks) and only does extra work, such as parsing the request URL, when a handler needs it. The table below compares the average time to dispatch one request with [Hono](https://hono.dev) using its default router. Handlers return a pre-created `Response` and each scenario reuses one `Request`, so the results measure routing, middleware, and request context overhead. Lower is better.
+Average time to dispatch one request compared with [Hono](https://hono.dev). Handlers return a pre-created `Response`, so results measure routing and middleware overhead. Lower is better.
 
-To run the benchmarks and update these results:
-
-```sh
-pnpm run bench
-pnpm run bench:update-readme
-```
-
+<!-- Update with `pnpm run bench:update-readme` -->
 <!-- benchmarks:start -->
-
-Last updated: 2026-11-25
-
-Environment: Darwin 25.6.0, Apple M5 Pro, Node.js v24.18.0
-
-Versions: `fetch-router@1.0.1`, `hono@4.13.22` (`fetch-router` at commit `8a8adc7b70`)
 
 | Scenario                       | `fetch-router` |  `hono` |
 | ------------------------------ | -------------: | ------: |
@@ -1031,6 +1019,8 @@ Versions: `fetch-router@1.0.1`, `hono@4.13.22` (`fetch-router` at commit `8a8adc
 | Not found, 1,000 routes        |        1.38 µs | 1.81 µs |
 | 3 sync middleware, 100 routes  |         473 ns |  408 ns |
 | 3 async middleware, 100 routes |        1.06 µs |  484 ns |
+
+Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `fetch-router@1.0.1` (`8a8adc7b70`), and `hono@4.13.22`.
 
 <!-- benchmarks:end -->
 

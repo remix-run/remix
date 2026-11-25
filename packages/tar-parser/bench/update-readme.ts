@@ -26,19 +26,18 @@ let output: RunnerOutput = JSON.parse(result.stdout.trim().split('\n').at(-1)!)
 let parsers = Object.keys(output.results)
 let archives = Object.keys(output.results[parsers[0]])
 
+let [tarParser, ...otherParsers] = await readVersions()
+let tools = [output.runtime, `${tarParser} (\`${readCommit()}\`)`, ...otherParsers]
+
 let lines = [
-  `Last updated: ${new Date().toISOString().slice(0, 10)}`,
-  '',
-  `Environment: ${os.type()} ${os.release()}, ${os.cpus()[0]?.model ?? 'Unknown CPU'}, ${output.runtime}`,
-  '',
-  `Versions: ${(await readVersions()).join(', ')} (\`tar-parser\` at commit \`${readCommit()}\`)`,
-  '',
   `| Archive | ${parsers.map((parser) => `\`${parser}\``).join(' | ')} |`,
   `|---|${parsers.map(() => '---:').join('|')}|`,
   ...archives.map(
     (archive) =>
       `| ${archive} | ${parsers.map((parser) => output.results[parser][archive]).join(' | ')} |`,
   ),
+  '',
+  `Measured ${new Date().toISOString().slice(0, 10)} on ${os.cpus()[0]?.model ?? 'Unknown CPU'} (${os.type()} ${os.release()}) with ${new Intl.ListFormat('en-US').format(tools)}.`,
 ]
 
 let readme = await readFile(readmePath, 'utf8')

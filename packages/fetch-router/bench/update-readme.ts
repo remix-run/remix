@@ -49,12 +49,6 @@ try {
   ])
 
   let lines = [
-    `Last updated: ${new Date().toISOString().slice(0, 10)}`,
-    '',
-    `Environment: ${os.type()} ${os.release()}, ${os.cpus()[0]?.model ?? 'Unknown CPU'}, Node.js ${process.version}`,
-    '',
-    `Versions: ${routers.map((name, index) => `\`${name}@${versions[index]}\``).join(', ')} (\`fetch-router\` at commit \`${readCommit()}\`)`,
-    '',
     `| Scenario | ${routers.map((name) => `\`${name}\``).join(' | ')} |`,
     `|---|${routers.map(() => '---:').join('|')}|`,
   ]
@@ -78,6 +72,16 @@ try {
     })
     lines.push(`| ${scenario} | ${cells.join(' | ')} |`)
   }
+
+  let tools = [
+    `Node.js ${process.version}`,
+    `\`fetch-router@${versions[0]}\` (\`${readCommit()}\`)`,
+    `\`hono@${versions[1]}\``,
+  ]
+  lines.push(
+    '',
+    `Measured ${new Date().toISOString().slice(0, 10)} on ${os.cpus()[0]?.model ?? 'Unknown CPU'} (${os.type()} ${os.release()}) with ${new Intl.ListFormat('en-US').format(tools)}.`,
+  )
 
   let readme = await readFile(readmePath, 'utf8')
   await writeFile(readmePath, replaceBenchmarkSection(readme, lines.join('\n')))

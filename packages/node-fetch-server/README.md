@@ -324,18 +324,7 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/no
 
 ## Benchmarks
 
-Run the full benchmark suite:
-
-```sh
-pnpm run bench
-```
-
-Update the benchmark results below:
-
-```sh
-pnpm run bench:update-readme
-```
-
+<!-- Update with `pnpm run bench:update-readme` -->
 <!-- benchmarks:start -->
 
 Last updated: 2026-11-25T08:56:16.212Z

@@ -217,24 +217,10 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/mu
 
 ## Benchmarks
 
-`multipart-parser` operates on streams of data and rarely buffers in common usage, so it stays fast for multipart payloads of any size. The tables below compare the average time to parse each message, plus or minus one standard deviation, with [`multipasta`](https://github.com/tim-smart/multipasta), [`busboy`](https://github.com/mscdex/busboy), and [`@fastify/busboy`](https://github.com/fastify/busboy) on Node.js and Bun. Small files are 1 KB and large files are 10 to 50 MB, with 100 MB across the five large files. Adversarial files are filled with sequences that almost match the boundary, which forces extra work during boundary search. Lower is better.
+Average time (± one standard deviation) to parse each message compared with [`multipasta`](https://github.com/tim-smart/multipasta), [`busboy`](https://github.com/mscdex/busboy), and [`@fastify/busboy`](https://github.com/fastify/busboy). Small files are 1 KB, large files are 10 to 50 MB, and adversarial files are full of near-matches for the boundary. Lower is better.
 
-To run the benchmarks and update these results:
-
-```sh
-pnpm run bench
-pnpm run bench:update-readme
-```
-
-Set `BENCH_RUNTIMES`, such as `BENCH_RUNTIMES=bun`, to update the results for one runtime.
-
+<!-- Update with `pnpm run bench:update-readme` -->
 <!-- benchmarks:start -->
-
-Last updated: 2026-11-25
-
-Environment: Darwin 25.6.0, Apple M5 Pro
-
-Versions: `multipart-parser@1.1.2`, `multipasta@0.2.5`, `busboy@1.6.0`, `@fastify/busboy@3.0.0` (`multipart-parser` at commit `8a8adc7b70`)
 
 ### Node.js v24.18.0
 
@@ -257,6 +243,8 @@ Versions: `multipart-parser@1.1.2`, `multipasta@0.2.5`, `busboy@1.6.0`, `@fastif
 | 5 large files               |     4.89 ms ± 0.08 |            5.11 ms ± 0.10 | 6.85 ms ± 0.51 | 23.33 ms ± 0.94 |    5.85 ms ± 0.35 |
 | 1 large file (adversarial)  |     0.34 ms ± 0.01 |            0.38 ms ± 0.02 | 0.62 ms ± 0.27 |  0.86 ms ± 0.02 |    0.41 ms ± 0.02 |
 | 5 large files (adversarial) |     3.38 ms ± 0.21 |            3.69 ms ± 0.25 | 4.90 ms ± 0.40 |  8.95 ms ± 0.54 |    4.10 ms ± 0.34 |
+
+Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with `multipart-parser@1.1.2` (`8a8adc7b70`), `multipasta@0.2.5`, `busboy@1.6.0`, and `@fastify/busboy@3.0.0`.
 
 <!-- benchmarks:end -->
 

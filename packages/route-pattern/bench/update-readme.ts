@@ -72,24 +72,26 @@ try {
     readPackageVersion('node_modules/path-to-regexp/package.json'),
   ])
 
+  let tools = [
+    `Node.js ${process.version}`,
+    `\`route-pattern@${versions[0]}\` (\`${readCommit()}\`)`,
+    `\`find-my-way@${versions[1]}\``,
+    `\`path-to-regexp@${versions[2]}\``,
+  ]
   let lines = [
-    `Last updated: ${new Date().toISOString().slice(0, 10)}`,
-    '',
-    `Environment: ${os.type()} ${os.release()}, ${os.cpus()[0]?.model ?? 'Unknown CPU'}, Node.js ${process.version}`,
-    '',
-    `Versions: ${matchers.map((name, index) => `\`${name}@${versions[index]}\``).join(', ')} (\`route-pattern\` at commit \`${readCommit()}\`)`,
-    '',
     '### Matching',
     '',
-    'Average time to match one URL against a matcher that was built ahead of time, as in a long-running server. Lower is better.',
+    'Matching one URL with a matcher built ahead of time, as in a long-running server.',
     '',
     ...renderTable(scenarios, (scenario, matcher) => findMean(means, scenario, 'server', matcher)),
     '',
     '### Building and matching',
     '',
-    'Average time to build a matcher and match one URL, as in a cold start. Lower is better.',
+    'Building a matcher and matching one URL, as in a cold start.',
     '',
     ...renderTable(scenarios, (scenario, matcher) => findMean(means, scenario, 'lambda', matcher)),
+    '',
+    `Measured ${new Date().toISOString().slice(0, 10)} on ${os.cpus()[0]?.model ?? 'Unknown CPU'} (${os.type()} ${os.release()}) with ${new Intl.ListFormat('en-US').format(tools)}.`,
   ]
 
   let readme = await readFile(readmePath, 'utf8')

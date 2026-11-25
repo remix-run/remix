@@ -87,7 +87,7 @@ export async function benchRouter(name: string, createFetch: CreateFetch): Promi
     describe(scenario.name, () => {
       let fetch = createFetch(scenario, false)
       // Vitest awaits a returned promise, so this measures async routers to completion without adding
-      // an \`await\` to routers that respond synchronously.
+      // an `await` to routers that respond synchronously.
       let run: () => void = () => fetch(request)
       bench(name, run)
     })

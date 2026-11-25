@@ -95,26 +95,16 @@ Exceeding a limit throws `MaxEntrySizeExceededError`, `MaxTotalSizeExceededError
 
 ## Benchmarks
 
-The table below compares the average time to parse the gzipped `lodash` npm package, plus or minus one standard deviation, with [`tar-stream`](https://github.com/mafintosh/tar-stream) and [`node-tar`](https://github.com/isaacs/node-tar) on Node.js. Each parser decompresses the archive and visits every entry without keeping its contents. Lower is better.
+Average time (± one standard deviation) to parse the gzipped `lodash` npm package compared with [`tar-stream`](https://github.com/mafintosh/tar-stream) and [`node-tar`](https://github.com/isaacs/node-tar). Lower is better.
 
-To run the benchmarks and update these results:
-
-```sh
-pnpm run bench
-pnpm run bench:update-readme
-```
-
+<!-- Update with `pnpm run bench:update-readme` -->
 <!-- benchmarks:start -->
-
-Last updated: 2026-11-25
-
-Environment: Darwin 25.6.0, Apple M5 Pro, Node.js v24.18.0
-
-Versions: `tar-parser@1.0.1`, `tar-stream@3.1.7`, `tar@7.5.15` (`tar-parser` at commit `8a8adc7b70`)
 
 | Archive            |   `tar-parser` |   `tar-stream` |     `node-tar` |
 | ------------------ | -------------: | -------------: | -------------: |
 | lodash npm package | 4.05 ms ± 0.51 | 3.38 ms ± 0.57 | 4.25 ms ± 0.45 |
+
+Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `tar-parser@1.0.1` (`8a8adc7b70`), `tar-stream@3.1.7`, and `tar@7.5.15`.
 
 <!-- benchmarks:end -->
 

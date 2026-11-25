@@ -419,26 +419,14 @@ apiUser.toString()
 
 ## Benchmarks
 
-`route-pattern` matches URLs with a segment trie, so the time to match a URL stays nearly flat as you add routes. The tables below compare it with [`find-my-way`](https://github.com/delvedor/find-my-way) and [`path-to-regexp`](https://www.npmjs.com/package/path-to-regexp) using pathname patterns that every library supports, plus a set of production-like patterns from Shopify. Every matcher's results are checked against the others before timing. `route-pattern` also matches protocols, hostnames, ports, and search params, which these comparisons don't exercise.
+Average time compared with [`find-my-way`](https://github.com/delvedor/find-my-way) and [`path-to-regexp`](https://github.com/pillarjs/path-to-regexp) on pathname patterns all three support, plus production patterns from Shopify that `find-my-way` can't represent. Lower is better. More benchmarks live in [`bench/`](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench).
 
-To run the benchmarks and update these results:
-
-```sh
-pnpm run bench
-pnpm run bench:update-readme
-```
-
+<!-- Update with `pnpm run bench:update-readme` -->
 <!-- benchmarks:start -->
-
-Last updated: 2026-11-25
-
-Environment: Darwin 25.6.0, Apple M5 Pro, Node.js v24.18.0
-
-Versions: `route-pattern@1.0.0`, `find-my-way@9.3.0`, `path-to-regexp@8.4.2` (`route-pattern` at commit `8a8adc7b70`)
 
 ### Matching
 
-Average time to match one URL against a matcher that was built ahead of time, as in a long-running server. Lower is better.
+Matching one URL with a matcher built ahead of time, as in a long-running server.
 
 | Routes          | `route-pattern` | `find-my-way` | `path-to-regexp` |
 | --------------- | --------------: | ------------: | ---------------: |
@@ -449,7 +437,7 @@ Average time to match one URL against a matcher that was built ahead of time, as
 
 ### Building and matching
 
-Average time to build a matcher and match one URL, as in a cold start. Lower is better.
+Building a matcher and matching one URL, as in a cold start.
 
 | Routes          | `route-pattern` | `find-my-way` | `path-to-regexp` |
 | --------------- | --------------: | ------------: | ---------------: |
@@ -458,9 +446,9 @@ Average time to build a matcher and match one URL, as in a cold start. Lower is 
 | 5,000           |         2.37 ms |       81.7 ms |          10.5 ms |
 | 2,506 (Shopify) |         1.55 ms |           n/a |          3.99 ms |
 
-<!-- benchmarks:end -->
+Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `route-pattern@1.0.0` (`8a8adc7b70`), `find-my-way@9.3.0`, and `path-to-regexp@8.4.2`.
 
-See [`bench/`](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench) for more benchmarks, including href generation, pathological patterns, memory use, and TypeScript performance.
+<!-- benchmarks:end -->
 
 ## Related Work
 
