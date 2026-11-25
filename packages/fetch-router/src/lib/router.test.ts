@@ -4,8 +4,8 @@ import { describe, it } from '@remix-run/test'
 
 import { createRoutes as route } from '../routes.ts'
 import type { Action, Controller } from './controller.ts'
-import type { NextFunction } from './middleware.ts'
-import type { RequestContext } from './request-context.ts'
+import type { Middleware, NextFunction } from './middleware.ts'
+import { createContextKey, type RequestContext } from './request-context.ts'
 import { createRouter, type MatchData } from './router.ts'
 
 describe('router.fetch()', () => {
@@ -1157,6 +1157,242 @@ describe('error handling', () => {
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 500)
     assert.equal(await response.text(), 'Caught: Action error')
+  })
+})
+
+describe('errorHandler', () => {
+  it('handles errors thrown in request handlers', async () => {
+    let router = createRouter({
+      errorHandler(error, { url }) {
+        return new Response(`Error at ${url.pathname}: ${(error as Error).message}`, {
+          status: 500,
+        })
+      },
+    })
+    router.get('/', () => {
+      throw new Error('Action error')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 500)
+    assert.equal(await response.text(), 'Error at /: Action error')
+  })
+
+  it('handles async errors thrown in route actions', async () => {
+    let router = createRouter({
+      async errorHandler(error) {
+        await Promise.resolve()
+        return new Response(`Caught: ${(error as Error).message}`, { status: 500 })
+      },
+    })
+    router.get('/', async () => {
+      await Promise.resolve()
+      throw new Error('Async action error')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 500)
+    assert.equal(await response.text(), 'Caught: Async action error')
+  })
+
+  it('handles errors thrown in action and controller middleware', async () => {
+    let routes = route({ home: '/' })
+    let router = createRouter({
+      errorHandler(error) {
+        return new Response(`Caught: ${(error as Error).message}`, { status: 500 })
+      },
+    })
+    router.get('/action', {
+      middleware: [
+        () => {
+          throw new Error('Action middleware error')
+        },
+      ],
+      handler() {
+        return new Response('OK')
+      },
+    })
+    router.map(routes, {
+      middleware: [
+        () => {
+          throw new Error('Controller middleware error')
+        },
+      ],
+      actions: {
+        home() {
+          return new Response('Home')
+        },
+      },
+    })
+
+    let actionResponse = await router.fetch('https://remix.run/action')
+    assert.equal(await actionResponse.text(), 'Caught: Action middleware error')
+
+    let controllerResponse = await router.fetch('https://remix.run/')
+    assert.equal(await controllerResponse.text(), 'Caught: Controller middleware error')
+  })
+
+  it('handles errors thrown in the default handler', async () => {
+    let router = createRouter({
+      defaultHandler() {
+        throw new Error('Default handler error')
+      },
+      errorHandler(error) {
+        return new Response(`Caught: ${(error as Error).message}`, { status: 500 })
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/missing')
+
+    assert.equal(response.status, 500)
+    assert.equal(await response.text(), 'Caught: Default handler error')
+  })
+
+  it('receives the context provided by router middleware', async () => {
+    let CurrentUser = createContextKey<string>()
+    let loadCurrentUser: Middleware<{
+      key: typeof CurrentUser
+      value: string
+      property: 'currentUser'
+    }> = (context, next) => {
+      context.set(CurrentUser, 'mj', { property: 'currentUser' })
+      return next()
+    }
+    let router = createRouter({
+      middleware: [loadCurrentUser],
+      errorHandler(_, { currentUser }) {
+        return new Response(`Sorry, ${currentUser}`, { status: 500 })
+      },
+    })
+    router.get('/', () => {
+      throw new Error('Action error')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(await response.text(), 'Sorry, mj')
+  })
+
+  it('passes the error response back through router middleware', async () => {
+    let router = createRouter({
+      middleware: [
+        async (_, next) => {
+          let response = await next()
+          response.headers.set('X-Middleware', 'seen')
+          return response
+        },
+      ],
+      errorHandler() {
+        return new Response('Something went wrong', { status: 500 })
+      },
+    })
+    router.get('/', () => {
+      throw new Error('Action error')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 500)
+    assert.equal(response.headers.get('X-Middleware'), 'seen')
+  })
+
+  it('strips the error response body when a GET route serves a HEAD request', async () => {
+    let router = createRouter({
+      errorHandler() {
+        return new Response('Something went wrong', { status: 500 })
+      },
+    })
+    router.get('/', () => {
+      throw new Error('Action error')
+    })
+
+    let response = await router.fetch('https://remix.run/', { method: 'HEAD' })
+
+    assert.equal(response.status, 500)
+    assert.equal(response.body, null)
+  })
+
+  it('does not handle errors thrown in router middleware', async () => {
+    let errorHandlerCalls = 0
+    let router = createRouter({
+      middleware: [
+        () => {
+          throw new Error('Router middleware error')
+        },
+      ],
+      errorHandler() {
+        errorHandlerCalls++
+        return new Response('Something went wrong', { status: 500 })
+      },
+    })
+    router.get('/', () => new Response('OK'))
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/')
+    }, new Error('Router middleware error'))
+    assert.equal(errorHandlerCalls, 0)
+  })
+
+  it('lets router middleware catch errors thrown in the error handler', async () => {
+    let router = createRouter({
+      middleware: [
+        async (_, next) => {
+          try {
+            return await next()
+          } catch (error) {
+            return new Response(`Caught: ${(error as Error).message}`, { status: 500 })
+          }
+        },
+      ],
+      errorHandler() {
+        throw new Error('Error handler error')
+      },
+    })
+    router.get('/', () => {
+      throw new Error('Action error')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(await response.text(), 'Caught: Error handler error')
+  })
+
+  it('does not handle errors from aborted requests', async () => {
+    let errorHandlerCalls = 0
+    let controller = new AbortController()
+    let router = createRouter({
+      errorHandler() {
+        errorHandlerCalls++
+        return new Response('Something went wrong', { status: 500 })
+      },
+    })
+    router.get('/', () => {
+      controller.abort()
+      throw new Error('Action error')
+    })
+
+    await assert.rejects(async () => {
+      await router.fetch('https://remix.run/', { signal: controller.signal })
+    }, new Error('Action error'))
+    assert.equal(errorHandlerCalls, 0)
+  })
+
+  it('does not run when the request handler succeeds', async () => {
+    let errorHandlerCalls = 0
+    let router = createRouter({
+      errorHandler() {
+        errorHandlerCalls++
+        return new Response('Something went wrong', { status: 500 })
+      },
+    })
+    router.get('/', () => new Response('Home'))
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(await response.text(), 'Home')
+    assert.equal(errorHandlerCalls, 0)
   })
 })
 

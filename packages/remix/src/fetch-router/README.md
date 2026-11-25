@@ -876,15 +876,44 @@ type AppContext = MiddlewareContext<typeof middleware>
 // context.get(CurrentUser)
 ```
 
+### Not Found and Error Pages
+
+Use `defaultHandler` to respond when no route matches, and `errorHandler` to respond when a route action, action middleware, or the default handler throws. Both run inside the router middleware, so they receive the same context as an action, including values like `context.render`, and their responses pass back through the router middleware like any other response.
+
+```tsx
+import { render } from 'remix/middleware/render'
+import { createRouter } from 'remix/router'
+
+let router = createRouter({
+  middleware: [render()],
+  defaultHandler({ render }) {
+    return render(<NotFoundPage />, { status: 404 })
+  },
+  errorHandler(error, { render }) {
+    console.error(error)
+    return render(<ErrorPage />, { status: 500 })
+  },
+})
+```
+
+Keep error details out of the response body. Log or report the error instead.
+
+The error handler does not run for:
+
+- errors thrown by router middleware, including render errors that the `render()` middleware rethrows after the action returns
+- errors from aborted requests
+- errors thrown by the error handler itself
+
+These reject `router.fetch()`. Catch them in the server adapter, for example with the `onError` option of `createRequestListener()` from [`node-fetch-server`](../node-fetch-server/README.md), and return a static `500` response that does not depend on the failing app.
+
 ### Additional Topics
 
 #### Scaling Your Application
 
 - how to spread controllers across multiple files
 
-#### Error Handling and Aborted Requests
+#### Aborted Requests
 
-- wrap `router.fetch()` in a try/catch to handle errors
 - `AbortError` is thrown when a request is aborted
 
 #### Content Negotiation

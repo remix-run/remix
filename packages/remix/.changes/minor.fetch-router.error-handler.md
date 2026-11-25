@@ -1,0 +1,1 @@
+Render app-owned error pages when an action throws with the new `errorHandler` option of `createRouter()` from `remix/router`. It receives the error and the same context as an action, so it can call `context.render(...)` with a `500` status.
