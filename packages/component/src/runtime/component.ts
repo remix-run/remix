@@ -1,95 +1,18 @@
-import type { ElementProps, ElementType, RemixNode, Renderable } from './core/vnode.ts'
+import type {
+  ElementProps,
+  ElementType,
+  RemixNode,
+  Renderable,
+  TypedEventTarget,
+} from './core/vnode.ts'
 import type { ElementFunction } from './element-function.ts'
 import type { Key } from './key.ts'
-
-/**
- * An `EventTarget` subclass with typed event maps.
- */
-export class TypedEventTarget<eventMap> extends EventTarget {}
-
-/**
- * Interface surface for {@link TypedEventTarget} with typed listener overloads.
- */
-export interface TypedEventTarget<eventMap> {
-  /**
-   * Adds a listener for a typed event name from the event map.
-   *
-   * @param type Event name to listen for.
-   * @param listener Listener to invoke when the event fires.
-   * @param options Listener registration options.
-   */
-  addEventListener<type extends Extract<keyof eventMap, string>>(
-    type: type,
-    listener: TypedEventListener<eventMap>[type],
-    options?: AddEventListenerOptions,
-  ): void
-  /**
-   * Adds a listener using the standard untyped `EventTarget` signature.
-   *
-   * @param type Event name to listen for.
-   * @param listener Listener to invoke when the event fires.
-   * @param options Listener registration options.
-   */
-  addEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject | null,
-    options?: boolean | AddEventListenerOptions,
-  ): void
-  /**
-   * Removes a listener for a typed event name from the event map.
-   *
-   * @param type Event name to stop listening for.
-   * @param listener Previously registered listener.
-   * @param options Listener removal options.
-   */
-  removeEventListener<type extends Extract<keyof eventMap, string>>(
-    type: type,
-    listener: TypedEventListener<eventMap>[type],
-    options?: EventListenerOptions,
-  ): void
-  /**
-   * Removes a listener using the standard untyped `EventTarget` signature.
-   *
-   * @param type Event name to stop listening for.
-   * @param listener Previously registered listener.
-   * @param options Listener removal options.
-   */
-  removeEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject | null,
-    options?: EventListenerOptions,
-  ): void
-}
-
-type TypedEventListener<eventMap> = {
-  [key in keyof eventMap]: (event: eventMap[key]) => void
-}
 
 /**
  * Error event shape emitted by the component runtime.
  */
 export type ComponentErrorEvent = ErrorEvent & {
   readonly error: unknown
-}
-
-/**
- * Creates a normalized component error event from any thrown value.
- *
- * @param error Error-like value to expose on the event.
- * @returns An `error` event carrying the original value.
- */
-export function createComponentErrorEvent(error: unknown): ComponentErrorEvent {
-  return new ErrorEvent('error', { error }) as ComponentErrorEvent
-}
-
-/**
- * Reads the `.error` payload from a dispatched component error event.
- *
- * @param event Event to inspect.
- * @returns The original error value, if present.
- */
-export function getComponentError(event: Event): unknown {
-  return (event as { error?: unknown }).error
 }
 
 /**
@@ -325,26 +248,6 @@ export type FrameReloadStartEventInit = {
 export type ReloadOrigin = Omit<FrameReloadStartEventInit, 'finished'>
 
 /**
- * Creates a `reloadStart` event.
- *
- * @param init The reload's submission and outcome.
- * @returns A `reloadStart` event carrying the reload's details.
- */
-export function createFrameReloadStartEvent(
-  init: FrameReloadStartEventInit,
-): FrameReloadStartEvent {
-  return Object.assign(new Event('reloadStart'), {
-    src: init.src,
-    method: init.method,
-    encType: init.encType,
-    formData: init.formData ?? null,
-    element: init.element ?? null,
-    submitter: init.submitter ?? null,
-    finished: init.finished,
-  })
-}
-
-/**
  * Events emitted by frame handles during reloads.
  */
 export type FrameHandleEventMap = {
@@ -460,7 +363,7 @@ export interface BuiltinElements {
  */
 export type { Key } from './key.ts'
 
-type ComponentConfig = {
+export type ComponentConfig = {
   id: string
   type: ElementFunction
   frame: FrameHandle
@@ -489,166 +392,6 @@ export interface ComponentHandle<C = NoContext> {
   isRemoved(): boolean
 }
 
-export function createComponent<C = NoContext>(config: ComponentConfig): ComponentHandle<C> {
-  let connectedController: AbortController | undefined
-  let contextValue: C | undefined
-  let props: ElementProps = {}
-  let renderController: AbortController | undefined
-  let renderFn: RenderFn | undefined
-  let removed = false
-  let phase: 'idle' | 'setup' | 'render' = 'idle'
-  let updateQueue: UpdateQueue | undefined
-  let updateVNode: object | undefined
-  let updateDomParent: ParentNode | undefined
-  let tasks: Task[] = []
-
-  let handle: Handle<ElementProps, C> = {
-    id: config.id,
-    props,
-    update() {
-      if (removed) return Promise.resolve(AbortSignal.abort())
-      let name = config.type.name || 'Anonymous'
-      if (phase === 'setup') {
-        console.warn(
-          `Ignored handle.update() while ${name} is running its setup function. The initial render includes setup changes.`,
-        )
-        return new Promise((resolve) => tasks.push(resolve))
-      }
-      if (phase !== 'idle' || !updateQueue || !updateVNode || !updateDomParent) {
-        let when =
-          phase !== 'idle'
-            ? `while ${name} is running its ${phase} function`
-            : `before ${name}'s initial render commits`
-        throw new Error(
-          `Cannot call handle.update() ${when}. Call it from an event handler or handle.queueTask() instead.`,
-        )
-      }
-      let queue = updateQueue
-      let vnode = updateVNode
-      let domParent = updateDomParent
-      return new Promise((resolve) => {
-        tasks.push(resolve)
-        queue.enqueue(vnode, domParent)
-      })
-    },
-    queueTask(task: Task) {
-      tasks.push(task)
-    },
-    frame: config.frame,
-    frames: config.frames,
-    context: {
-      set(value) {
-        contextValue = value
-      },
-      get: (type: ElementType | symbol) =>
-        typeof type === 'function' ? config.getContext(type as ElementFunction) : undefined,
-    },
-    get signal() {
-      return config.signal ?? (connectedController ??= new AbortController()).signal
-    },
-  }
-
-  function dequeueTasks(signal?: AbortSignal): Array<() => void> {
-    if (!tasks.length) return EMPTY_TASKS
-    if (signal === undefined && tasks.some((task) => task.length >= 1)) {
-      renderController ??= new AbortController()
-    }
-    let resolved =
-      signal ?? renderController?.signal ?? (sharedAbortedSignal ??= AbortSignal.abort())
-    return tasks.splice(0).map((task) => () => task(resolved))
-  }
-
-  return {
-    frame: config.frame,
-    render(nextProps) {
-      if (removed) {
-        console.warn('render called after component was removed, potential application memory leak')
-        return [null, EMPTY_TASKS]
-      }
-      renderController?.abort()
-      renderController = undefined
-      syncProps(props, nextProps)
-
-      let element: RemixNode
-      try {
-        if (!renderFn) {
-          phase = 'setup'
-          let result = (config.type as unknown as (h: Handle<ElementProps, C>) => unknown)(handle)
-          if (typeof result !== 'function') {
-            throw new Error(
-              `${config.type.name || 'Anonymous'} must return a render function, received ${typeof result}`,
-            )
-          }
-          renderFn = result as RenderFn
-        }
-        phase = 'render'
-        element = renderFn()
-      } finally {
-        phase = 'idle'
-      }
-      return [element, dequeueTasks()]
-    },
-    remove() {
-      if (removed) return EMPTY_TASKS
-      removed = true
-      connectedController?.abort()
-      renderController?.abort()
-      renderController = undefined
-      return dequeueTasks((sharedAbortedSignal ??= AbortSignal.abort()))
-    },
-    setScheduleUpdate(queue, vnode, domParent) {
-      updateQueue = queue
-      updateVNode = vnode
-      updateDomParent = domParent
-    },
-    getContextValue: () => contextValue,
-    isRemoved: () => removed,
-  }
-}
-
-// Shared empty result and aborted signal so the common no-task removal path
-// (large subtree teardowns dispose many components at once) allocates nothing.
-const EMPTY_TASKS: Array<() => void> = []
-let sharedAbortedSignal: AbortSignal | undefined
-
-function syncProps(target: ElementProps, next: ElementProps): void {
-  for (let key in target) {
-    if (!Object.hasOwn(next, key)) {
-      delete target[key]
-    }
-  }
-
-  for (let key in next) {
-    if (key === '__proto__') {
-      Object.defineProperty(target, key, {
-        value: next[key],
-        writable: true,
-        enumerable: true,
-        configurable: true,
-      })
-    } else {
-      target[key] = next[key]
-    }
-  }
-}
-
-// Marks the built-in `Frame` component, which is defined with the frame runtime. The property
-// holds the client frame node renderer, so the reconciler and server renderer can recognize and
-// render frames without importing the frame runtime.
-export const FRAME_NODE = Symbol('FrameNode')
-export const PORTAL_NODE = Symbol('PortalNode')
-
-/**
- * Built-in component used to group children without adding a host element.
- *
- * @param handle Component handle for the fragment instance.
- * @returns A placeholder render function handled by the reconciler.
- */
-export function Fragment(handle: Handle<FragmentProps>): RenderFn {
-  void handle
-  return () => null // reconciler renders
-}
-
 /** Props accepted by the built-in {@link Portal} component. */
 export interface PortalProps {
   /** Children to render at the destination while retaining their component context and frame. */
@@ -660,41 +403,4 @@ export interface PortalProps {
    * the portal is disposed.
    */
   container?: HTMLElement
-}
-
-// The server and the client entry decoder share this identity before the portal renderer loads.
-export function Portal(handle: Handle<PortalProps>): RenderFn {
-  void handle
-  return () => null
-}
-
-/**
- * Creates a frame handle with default no-op implementations for testing and internal wiring.
- *
- * @param def Partial frame-handle implementation to merge with the defaults.
- * @returns A frame handle object.
- */
-export function createFrameHandle(
-  def?: Partial<{
-    src: string
-    replace: FrameHandle['replace']
-    reload: FrameHandle['reload']
-    $runtime: FrameHandle['$runtime']
-  }>,
-): FrameHandle {
-  return Object.assign(
-    new TypedEventTarget<FrameHandleEventMap>(),
-    {
-      src: '/',
-      replace: notImplemented('replace not implemented'),
-      reload: notImplemented('reload not implemented'),
-    },
-    def,
-  )
-}
-
-function notImplemented(msg: string) {
-  return (): never => {
-    throw new Error(msg)
-  }
 }

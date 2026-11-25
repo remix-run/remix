@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createElement } from '../runtime/create-element.ts'
 import { createRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/core/vnode.ts'
 import { css, unsafeHTML } from '../index.ts'
 
 const blockedJavaScriptUrl =

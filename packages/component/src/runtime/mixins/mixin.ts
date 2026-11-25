@@ -1,19 +1,20 @@
-import type { Component, Context, FrameHandle, TypedEventTarget } from '../component.ts'
-import type { ElementProps, RemixElement } from '../core/vnode.ts'
-import type { Key } from '../key.ts'
-import type { Scheduler, SchedulerPhaseEvent } from '../vdom.ts'
+import type { Component, Context, FrameHandle } from '../component.ts'
 import {
   activeSchedulerUpdateParents,
+  invariant,
   isMixinDescriptor,
   isRemixElement,
   jsx,
   MIXIN_RUNTIME,
   setDefaultMixinDriver,
+  type ElementProps,
+  type RemixElement,
+  type TypedEventTarget,
 } from '../core/vnode.ts'
-import { patchHostProps } from '../core/props.ts'
-import { invariant } from '../invariant.ts'
+import type { Key } from '../key.ts'
 import {
   findContextFromAncestry,
+  patchHostProps,
   portalRanges,
   restoreAncestorSelect,
   syncHostControls,
@@ -21,8 +22,10 @@ import {
   type HostNode,
   type ReconcileContext,
   type RuntimeHostProps,
+  type Scheduler,
+  type SchedulerPhaseEvent,
   type VNodeParent,
-} from '../reconcile.ts'
+} from '../vdom.ts'
 
 type RebindNode<value, baseNode, boundNode> = value extends (
   ...args: infer fnArgs

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import { link } from '../index.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/core/vnode.ts'
 
 describe('hydration', () => {
   let container: HTMLDivElement

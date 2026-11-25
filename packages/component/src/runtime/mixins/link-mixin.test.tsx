@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, type TestContext } from '@remix-run/test'
 
 import { createRoot } from '../vdom.ts'
-import { invariant } from '../invariant.ts'
+import { invariant } from '../core/vnode.ts'
 import type { RemixNode } from '../core/vnode.ts'
 import { link } from './link-mixin.ts'
 

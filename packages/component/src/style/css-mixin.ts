@@ -2,14 +2,14 @@ import { createMixin, renderMixinElement } from '../runtime/mixins/mixin.ts'
 import type { MixinFactory, MixinType } from '../runtime/mixins/mixin.ts'
 import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
 import type { ElementProps } from '../runtime/core/vnode.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/core/vnode.ts'
 import {
   camelToKebab,
   getDefaultStyleManager,
   type DOMStyleProperties,
   type ServerStyleSource,
 } from './stylesheet.ts'
-import { isStyleObject, normalizeCssValue } from '../runtime/core/props.ts'
+import { isStyleObject, normalizeCssValue } from '../runtime/vdom.ts'
 
 export interface CSSProps extends DOMStyleProperties {
   [key: string]: CSSProps | string | number | null | undefined

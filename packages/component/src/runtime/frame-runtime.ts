@@ -5,9 +5,8 @@ import type { FrameInstance } from './frame.ts'
 import type { ProcessClientEntryPreloads } from './frame.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 import { getNonceManager, type NonceManager, type ResourceNonces } from './nonce.ts'
-import { invariant } from './invariant.ts'
-import type { VNodeParent } from './reconcile.ts'
-import type { Scheduler, VirtualRoot } from './vdom.ts'
+import { invariant } from './core/vnode.ts'
+import type { Scheduler, VirtualRoot, VNodeParent } from './vdom.ts'
 
 // Unlike `from`, this marker must not propagate to nested frame loads.
 export const navigationRequest = Symbol('navigationRequest')

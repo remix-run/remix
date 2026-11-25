@@ -2,9 +2,10 @@ import * as assert from '@remix-run/assert'
 import { expect } from '@remix-run/assert'
 import { describe, it, type TestContext } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/core/vnode.ts'
 import { createElement } from '../runtime/create-element.ts'
-import { Fragment, type Handle, type RemixNode } from '../runtime/component.ts'
+import { Fragment } from '../runtime/core/vnode.ts'
+import type { Handle, RemixNode } from '../runtime/component.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {
@@ -956,6 +957,30 @@ describe('vnode rendering (keys)', () => {
 
         expect(document.activeElement).toBe(element)
         render([])
+      }
+    })
+
+    it('keeps focus and selection when a keyed multi-node fragment moves', (t) => {
+      for (let disableNativeMove of [false, true]) {
+        let { render, container } = createConnectedRoot(t)
+        if (disableNativeMove) Object.defineProperty(container, 'moveBefore', { value: undefined })
+        let item = (key: string) => (
+          <Fragment key={key}>
+            <label>{key}</label>
+            <input id={key} type="text" />
+          </Fragment>
+        )
+        render(['a', 'b', 'c'].map(item))
+        let input = getInput(container, 'a')
+        input.value = 'Hello World'
+        input.focus()
+        input.setSelectionRange(2, 7)
+
+        expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+        expect(document.activeElement).toBe(input)
+        expect(input.selectionStart).toBe(2)
+        expect(input.selectionEnd).toBe(7)
       }
     })
   })

@@ -4,7 +4,7 @@ import { describe, it, type TestContext } from '@remix-run/test'
 import { clientEntry } from '../runtime/client-entries.ts'
 import type { Handle } from '../runtime/component.ts'
 import { Frame } from '../runtime/frame.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/core/vnode.ts'
 import { renderToStream, renderToString } from '../server/stream.ts'
 import { drain, readChunks, renderNonceDocument } from './utils.ts'
 

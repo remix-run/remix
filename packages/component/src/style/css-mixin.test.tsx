@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/core/vnode.ts'
 import { createMixin } from '../runtime/mixins/mixin.ts'
 import type { MixinBeforeRemoveEvent } from '../runtime/mixins/mixin.ts'
 import { css } from './css-mixin.ts'

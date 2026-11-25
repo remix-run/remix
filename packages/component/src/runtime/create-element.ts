@@ -1,5 +1,4 @@
-import { isRemixNode, jsx, normalizeChildren } from './core/vnode.ts'
-import { invariant } from './invariant.ts'
+import { invariant, isRemixNode, jsx, normalizeChildren } from './core/vnode.ts'
 import type { ElementProps, ElementType, RemixElement } from './core/vnode.ts'
 
 /**

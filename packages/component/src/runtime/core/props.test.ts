@@ -6,9 +6,9 @@ import {
   normalizeCssValue,
   patchHostProps,
   sanitizeUrlAttribute,
-} from './props.ts'
+} from '../vdom.ts'
 import { serializeStyleObject } from '../../style/stylesheet.ts'
-import { unsafeHTML } from '../unsafe-html.ts'
+import { unsafeHTML } from './vnode.ts'
 
 describe('isAllowedHostPropName', () => {
   it('blocks event prop names in every ASCII letter case', () => {

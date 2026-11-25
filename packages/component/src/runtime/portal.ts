@@ -1,7 +1,13 @@
-import { PORTAL_NODE, Portal as portalComponent, type PortalProps } from './component.ts'
-import { defaultMixinDriver, isRemixNode, type ElementProps } from './core/vnode.ts'
+import type { PortalProps } from './component.ts'
+import {
+  defaultMixinDriver,
+  invariant,
+  isRemixNode,
+  PORTAL_NODE,
+  Portal as portalComponent,
+  type ElementProps,
+} from './core/vnode.ts'
 import type { MixinDriver } from './mixins/mixin.ts'
-import { invariant } from './invariant.ts'
 import {
   childrenToVNodes,
   diffChildren,
@@ -18,7 +24,7 @@ import {
   type ReconcileContext,
   type RuntimeHostProps,
   type VNodeParent,
-} from './reconcile.ts'
+} from './vdom.ts'
 
 export type PortalNodeRenderer = typeof portalNodeRenderer
 
