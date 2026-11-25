@@ -7,7 +7,7 @@ import * as Specificity from '@remix-run/route-pattern/specificity'
 import { runMiddleware } from './middleware.ts'
 import type { AnyMiddleware, MiddlewareContext } from './middleware.ts'
 import { AbortRace, cancelAbandonedResponse, raceRequestAbort } from './request-abort.ts'
-import { RequestContext } from './request-context.ts'
+import { getRoutingUrl, RequestContext } from './request-context.ts'
 import type { ContextWithParams, requestContextTypes } from './request-context.ts'
 import { RequestMethods } from './request-methods.ts'
 import type { RequestMethod } from './request-methods.ts'
@@ -402,7 +402,9 @@ export function createRouter<
   let customMatcher = options?.matcher
   let routerMiddleware = normalizeMiddleware(options?.middleware)
 
-  // Default per-method route matchers backed directly by route-pattern
+  // Default per-method route matchers backed directly by route-pattern. Lazy matches let them match
+  // `request.url` without parsing it, since the router reads only `data` and `params`.
+  let matcherOptions = { lazyMatches: true }
   let byMethod: Record<string, MultiMatcher<MatchData>> = Object.create(null)
   let registeredMethods: RequestMethod[] = []
   let anyMatcher: MultiMatcher<MatchData> | null = null
@@ -413,7 +415,7 @@ export function createRouter<
 
   function getAllMatcher(): MultiMatcher<MatchData> {
     if (allMatcher === null) {
-      let matcher = createMultiMatcher<MatchData>()
+      let matcher = createMultiMatcher<MatchData>(matcherOptions)
       for (let i = 0; i < allEntries.length; i++) {
         let entry = allEntries[i]
         matcher.add(entry.pattern, entry)
@@ -474,11 +476,11 @@ export function createRouter<
   }
 
   function resolveRoute(context: RequestContext): ResolvedRoute {
-    let url = context.url
-
     if (customMatcher != null) {
-      return resolveFromMatchAll(customMatcher.matchAll(url), context)
+      return resolveFromMatchAll(customMatcher.matchAll(context.url), context)
     }
+
+    let url = getRoutingUrl(context)
 
     let method = context.method
 
@@ -613,7 +615,7 @@ export function createRouter<
 
     if (method === 'ANY') {
       anyEntries.push(entry)
-      anyMatcher ??= createMultiMatcher<MatchData>()
+      anyMatcher ??= createMultiMatcher<MatchData>(matcherOptions)
       anyMatcher.add(pattern, entry)
       for (let i = 0; i < registeredMethods.length; i++) {
         byMethod[registeredMethods[i]].add(pattern, entry)
@@ -627,7 +629,7 @@ export function createRouter<
 
     let matcher = byMethod[method]
     if (matcher === undefined) {
-      matcher = createMultiMatcher<MatchData>()
+      matcher = createMultiMatcher<MatchData>(matcherOptions)
       for (let i = 0; i < anyEntries.length; i++) {
         let anyEntry = anyEntries[i]
         matcher.add(anyEntry.pattern, anyEntry)

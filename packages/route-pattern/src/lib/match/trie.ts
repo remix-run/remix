@@ -1,8 +1,9 @@
 import type { PartPattern, RoutePattern, RoutePatternParts } from '../route-pattern.ts'
 import { parsePattern } from '../route-pattern/parse.ts'
 import { serializeSearch } from '../route-pattern/serialize.ts'
-import { compare, compareHostnameRanges, comparePathnameRanges } from '../specificity.ts'
+import { compareHostnameRanges, comparePathnameRanges, compareSameURL } from '../specificity.ts'
 import { decodeHostname } from './punycode.ts'
+import type { SerializedURL } from '../match.ts'
 import {
   canonicalizePatternSegmentText,
   canonicalizeUrlPart,
@@ -110,8 +111,10 @@ type CandidateMatch<data> = {
   deferred: DeferredPath<data> | null
 }
 
+type MatchURL = URL | SerializedURL
+
 type MatchContext = {
-  readonly url: URL
+  readonly url: MatchURL
   readonly proto: 'http:' | 'https:'
   readonly rawPath: string
   readonly decodedPath: DecodedPathname | null
@@ -158,6 +161,10 @@ const CAP_PARAM = 0
 const CAP_OMITTED = 2
 
 // Reusable growable capture stacks for synchronous, non-reentrant trie traversal
+// Whether the current synchronous `matchBest()` or `searchAll()` call creates lazy matches. Set at
+// the start of each call, like the capture stacks below, so match builders need not thread it.
+const matchState = { lazy: false }
+
 const capStacks = {
   type: new Uint8Array(256),
   begin: new Int32Array(256),
@@ -213,8 +220,15 @@ export class Trie<data = unknown> {
   #dynamicHostRoot: HostTrieNode<data> | null = null
   #complexHostEntries: Array<Entry<data>> | null = null
 
-  constructor(options?: { ignoreCase?: boolean; limits?: Partial<MatcherLimits> }) {
+  readonly lazyMatches: boolean
+
+  constructor(options?: {
+    ignoreCase?: boolean
+    lazyMatches?: boolean
+    limits?: Partial<MatcherLimits>
+  }) {
     this.ignoreCase = options?.ignoreCase ?? false
+    this.lazyMatches = options?.lazyMatches ?? false
     this.#limits = resolveMatcherLimits(options?.limits)
     this.#budget = { maximum: this.#limits.maxMatchWork, actual: 0 }
   }
@@ -330,7 +344,8 @@ export class Trie<data = unknown> {
     this.#size += canonicalSize
   }
 
-  matchBest(url: URL): Match<string, data> | null {
+  matchBest(url: MatchURL): Match<string, data> | null {
+    matchState.lazy = this.lazyMatches
     let proto = url.protocol
     if (proto !== 'https:' && proto !== 'http:') return null
     if (this.#insertion === 0) return null
@@ -368,7 +383,7 @@ export class Trie<data = unknown> {
               ? findFirstOriginlessLeaf(leaves, url, budget)
               : findFirstMatchingLeafRaw(leaves, url, proto, budget)
           if (winner !== null) {
-            return buildMatch(url, winner.entry, wildcardHostMeta(url.hostname), emptyMeta)
+            return buildMatch(url, winner.entry, null, emptyMeta)
           }
         }
       }
@@ -385,12 +400,7 @@ export class Trie<data = unknown> {
       let ctx = createMatchContext(url, proto, rawPath, decodedPath, budget, this.ignoreCase)
       let best = searchPathTrieBest(pathTrie, ctx, emptyMeta, null, null)
       if (best === null) return null
-      return buildMatch(
-        url,
-        best.entry,
-        wildcardHostMeta(url.hostname),
-        resolveCandidatePathMeta(best, ctx),
-      )
+      return buildMatch(url, best.entry, null, resolveCandidatePathMeta(best, ctx))
     }
 
     let ctx = createMatchContext(url, proto, rawPath, decodedPath, budget, this.ignoreCase)
@@ -448,7 +458,8 @@ export class Trie<data = unknown> {
     return buildMatch(url, best.entry, best.hostnameMeta, resolveCandidatePathMeta(best, ctx))
   }
 
-  searchAll(url: URL): Array<Match<string, data>> {
+  searchAll(url: MatchURL): Array<Match<string, data>> {
+    matchState.lazy = this.lazyMatches
     let proto = url.protocol
     if (proto !== 'https:' && proto !== 'http:') return []
     if (this.#insertion === 0) return []
@@ -515,7 +526,10 @@ export class Trie<data = unknown> {
     }
 
     if (!singleBatchAlreadySorted) {
-      results.sort((a, b) => compare(b.match, a.match) || a.insertion - b.insertion)
+      results.sort(
+        (a, b) =>
+          compareSameURL(b.match, a.match, () => decodedHostname) || a.insertion - b.insertion,
+      )
     }
 
     let out = new Array<Match<string, data>>(results.length)
@@ -960,7 +974,7 @@ function compareStaticEntryPriority<data>(a: Entry<data>, b: Entry<data>): numbe
 // ============================================================================
 
 function createMatchContext(
-  url: URL,
+  url: MatchURL,
   proto: 'http:' | 'https:',
   rawPath: string,
   decodedPath: DecodedPathname | null,
@@ -982,7 +996,7 @@ function createMatchContext(
 
 function entryMatchesUrlRaw<data>(
   entry: Entry<data>,
-  url: URL,
+  url: MatchURL,
   proto: 'http:' | 'https:',
   budget: MatchWorkBudget,
 ): boolean {
@@ -1000,7 +1014,7 @@ function entryMatchesUrl<data>(entry: Entry<data>, ctx: MatchContext): boolean {
 
 function findFirstOriginlessLeaf<data>(
   leaves: ReadonlyArray<PathLeaf<data>>,
-  url: URL,
+  url: MatchURL,
   budget: MatchWorkBudget,
 ): PathLeaf<data> | null {
   for (let i = 0; i < leaves.length; i++) {
@@ -1019,7 +1033,7 @@ function findFirstOriginlessLeaf<data>(
 
 function findFirstMatchingLeafRaw<data>(
   leaves: ReadonlyArray<PathLeaf<data>> | null,
-  url: URL,
+  url: MatchURL,
   proto: 'http:' | 'https:',
   budget: MatchWorkBudget,
 ): PathLeaf<data> | null {
@@ -1078,7 +1092,7 @@ function matchRawOriginlessFast<data>(
   rawPath: string,
   pos: number,
   capDepth: number,
-  url: URL,
+  url: MatchURL,
   budget: MatchWorkBudget,
 ): Match<string, data> | null {
   let len = rawPath.length
@@ -1139,7 +1153,7 @@ function matchRawOriginlessFast<data>(
         let optInsertion = capStacks.lastFastInsertion
 
         if (paramMatch !== null && optMatch !== null) {
-          let cmp = compare(optMatch, paramMatch)
+          let cmp = compareSameURL(optMatch, paramMatch, () => decodeHostname(url.hostname))
           let optWins = cmp > 0 || (cmp === 0 && optInsertion < paramInsertion)
           capStacks.lastFastInsertion = optWins ? optInsertion : paramInsertion
           return optWins ? optMatch : paramMatch
@@ -1183,7 +1197,7 @@ function matchFastLeaf<data>(
   capDepth: number,
   wildcardStart: number,
   rawPath: string,
-  url: URL,
+  url: MatchURL,
   budget: MatchWorkBudget,
 ): Match<string, data> | null {
   if (leaves === null) return null
@@ -1201,37 +1215,23 @@ function matchFastLeaf<data>(
     let paramNames = leaf.paramNames
     let wildcardName = leaf.wildcardName
     let params: Record<string, string | undefined> = {}
-    let pathnameMeta: Array<MatchParamMeta> = []
-    let rawPosCursor = 1
-    let rawEncCursor = 0
+    // Begin and end offsets in `rawPath` and the `paramNames` index of each captured param
+    let spans: Array<number> = []
     let capturedCount = 0
 
     for (let k = 0; k < capDepth; k++) {
       if (capStacks.type[k] === CAP_OMITTED) continue
       let sBegin = capStacks.begin[k]
       let sEnd = capStacks.end[k]
-      rawEncCursor += encodedPathnameLength(rawPath, rawPosCursor, sBegin)
-      let begin = rawEncCursor
-      rawEncCursor += encodedPathnameLength(rawPath, sBegin, sEnd)
-      let end = rawEncCursor
-      rawPosCursor = sEnd
-      let value = rawPath.slice(sBegin, sEnd)
       let name = paramNames[k]
       if (!Object.hasOwn(params, name)) capturedCount += 1
-      params[name] = value
-      pathnameMeta.push({ type: ':', name, value, begin, end })
+      params[name] = rawPath.slice(sBegin, sEnd)
+      spans.push(sBegin, sEnd, k)
     }
 
-    if (wildcardName !== null) {
-      rawEncCursor += encodedPathnameLength(rawPath, rawPosCursor, wildcardStart)
-      let begin = rawEncCursor
-      let end = begin + encodedPathnameLength(rawPath, wildcardStart, rawPath.length)
-      let value = rawPath.slice(wildcardStart)
-      if (wildcardName !== '*') {
-        if (!Object.hasOwn(params, wildcardName)) capturedCount += 1
-        params[wildcardName] = value
-      }
-      pathnameMeta.push({ type: '*', name: wildcardName, value, begin, end })
+    if (wildcardName !== null && wildcardName !== '*') {
+      if (!Object.hasOwn(params, wildcardName)) capturedCount += 1
+      params[wildcardName] = rawPath.slice(wildcardStart)
     }
 
     if (capturedCount < entry.allCaptureNames.length) {
@@ -1242,16 +1242,11 @@ function matchFastLeaf<data>(
       }
     }
 
-    return {
-      url,
-      pattern: entry.pattern,
-      data: entry.data,
-      params,
-      paramsMeta: {
-        hostname: wildcardHostMeta(url.hostname),
-        pathname: pathnameMeta,
-      },
-    }
+    let pathnameMeta: PathnameMetaSource =
+      spans.length === 0 && wildcardName === null
+        ? emptyMeta
+        : { rawPath, spans, paramNames, wildcardName, wildcardStart }
+    return createMatch(url, entry, params, null, pathnameMeta)
   }
   return null
 }
@@ -1885,32 +1880,135 @@ function wildcardHostMeta(rawHostname: string): ReadonlyArray<MatchParamMeta> {
 }
 
 function buildMatch<data>(
-  url: URL,
+  url: MatchURL,
   entry: Entry<data>,
-  hostnameMeta: ReadonlyArray<MatchParamMeta>,
+  hostnameMeta: ReadonlyArray<MatchParamMeta> | null,
   pathnameMeta: ReadonlyArray<MatchParamMeta>,
 ): Match<string, data> {
   let params: Record<string, string | undefined> = {}
   let names = entry.allCaptureNames
   for (let i = 0; i < names.length; i++) params[names[i]] = undefined
-  for (let i = 0; i < hostnameMeta.length; i++) {
-    let cap = hostnameMeta[i]
-    if (cap.name !== '*') params[cap.name] = cap.value
+  if (hostnameMeta !== null) {
+    for (let i = 0; i < hostnameMeta.length; i++) {
+      let cap = hostnameMeta[i]
+      if (cap.name !== '*') params[cap.name] = cap.value
+    }
   }
   for (let i = 0; i < pathnameMeta.length; i++) {
     let cap = pathnameMeta[i]
     if (cap.name !== '*') params[cap.name] = cap.value
   }
 
+  return createMatch(url, entry, params, hostnameMeta, pathnameMeta)
+}
+
+function createMatch<data>(
+  url: MatchURL,
+  entry: Entry<data>,
+  params: Match<string, data>['params'],
+  // `null` when the pattern has no hostname, so the whole hostname is an implicit wildcard
+  hostnameMeta: ReadonlyArray<MatchParamMeta> | null,
+  pathnameMeta: PathnameMetaSource,
+): Match<string, data> {
+  if (matchState.lazy) {
+    return new LazyMatch(url, entry.pattern, entry.data, params, hostnameMeta, pathnameMeta)
+  }
   return {
-    url,
+    url: 'toURL' in url ? url.toURL() : url,
     pattern: entry.pattern,
     data: entry.data,
     params,
-    paramsMeta: {
-      hostname: hostnameMeta,
-      pathname: pathnameMeta,
-    },
+    paramsMeta: resolveParamsMeta(url, hostnameMeta, pathnameMeta),
+  }
+}
+
+function resolveParamsMeta(
+  url: MatchURL,
+  hostnameMeta: ReadonlyArray<MatchParamMeta> | null,
+  pathnameMeta: PathnameMetaSource,
+): Match['paramsMeta'] {
+  return {
+    hostname: hostnameMeta ?? wildcardHostMeta(url.hostname),
+    pathname: 'rawPath' in pathnameMeta ? resolveFastPathnameMeta(pathnameMeta) : pathnameMeta,
+  }
+}
+
+// Pathname param metadata for a match from the originless fast path, computed only when a caller
+// reads `paramsMeta`.
+type FastPathnameMeta = {
+  readonly rawPath: string
+  readonly spans: ReadonlyArray<number>
+  readonly paramNames: ReadonlyArray<string>
+  readonly wildcardName: string | null
+  readonly wildcardStart: number
+}
+
+type PathnameMetaSource = ReadonlyArray<MatchParamMeta> | FastPathnameMeta
+
+function resolveFastPathnameMeta(source: FastPathnameMeta): ReadonlyArray<MatchParamMeta> {
+  let { rawPath, spans, paramNames, wildcardName, wildcardStart } = source
+  let meta: Array<MatchParamMeta> = []
+  let rawPosCursor = 1
+  let rawEncCursor = 0
+  for (let i = 0; i < spans.length; i += 3) {
+    let sBegin = spans[i]
+    let sEnd = spans[i + 1]
+    rawEncCursor += encodedPathnameLength(rawPath, rawPosCursor, sBegin)
+    let begin = rawEncCursor
+    rawEncCursor += encodedPathnameLength(rawPath, sBegin, sEnd)
+    rawPosCursor = sEnd
+    let name = paramNames[spans[i + 2]]
+    meta.push({ type: ':', name, value: rawPath.slice(sBegin, sEnd), begin, end: rawEncCursor })
+  }
+  if (wildcardName !== null) {
+    rawEncCursor += encodedPathnameLength(rawPath, rawPosCursor, wildcardStart)
+    let begin = rawEncCursor
+    let end = begin + encodedPathnameLength(rawPath, wildcardStart, rawPath.length)
+    meta.push({ type: '*', name: wildcardName, value: rawPath.slice(wildcardStart), begin, end })
+  }
+  return meta
+}
+
+// A match from a matcher created with `lazyMatches`. A class rather than an object literal so `url`
+// and `paramsMeta` can be computed on first read without the cost of creating own accessor
+// properties for every match.
+class LazyMatch<data> implements Match<string, data> {
+  pattern: Match<string, data>['pattern']
+  data: data
+  params: Match<string, data>['params']
+  #url: MatchURL
+  #hostnameMeta: ReadonlyArray<MatchParamMeta> | null
+  #pathnameMeta: PathnameMetaSource
+  #paramsMeta: Match<string, data>['paramsMeta'] | undefined
+
+  constructor(
+    url: MatchURL,
+    pattern: Match<string, data>['pattern'],
+    data: data,
+    params: Match<string, data>['params'],
+    hostnameMeta: ReadonlyArray<MatchParamMeta> | null,
+    pathnameMeta: PathnameMetaSource,
+  ) {
+    this.#url = url
+    this.pattern = pattern
+    this.data = data
+    this.params = params
+    this.#hostnameMeta = hostnameMeta
+    this.#pathnameMeta = pathnameMeta
+  }
+
+  get url(): URL {
+    let url = this.#url
+    // Check for `SerializedURL` rather than `URL`, so `URL` objects from other realms still work
+    return 'toURL' in url ? url.toURL() : url
+  }
+
+  get paramsMeta(): Match<string, data>['paramsMeta'] {
+    return (this.#paramsMeta ??= resolveParamsMeta(
+      this.#url,
+      this.#hostnameMeta,
+      this.#pathnameMeta,
+    ))
   }
 }
 
@@ -2157,7 +2255,7 @@ function matchesProtocolAndPort(
 }
 
 function matchSearch(
-  url: URL,
+  url: MatchURL,
   constraints: ReadonlyMap<string, ReadonlySet<string>>,
   budget: MatchWorkBudget,
 ): boolean {

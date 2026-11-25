@@ -241,6 +241,21 @@ let matcher = createMultiMatcher({
 })
 ```
 
+### Lazy matches
+
+Routers usually read only a match's `params` and attached data. Pass `lazyMatches: true` to skip the rest of the work: lazy matches compute `url` and `paramsMeta` the first time you read them, and a URL string that is already in the form `URL` serializes to, such as `request.url`, is matched without being parsed into a `URL`.
+
+```ts
+let matcher = createMultiMatcher<() => Response>({ lazyMatches: true })
+matcher.add('/users/:id', () => new Response('User'))
+
+let match = matcher.match(request.url)
+match?.params
+// { id: '123' }
+```
+
+Lazy matches are class instances whose `url` and `paramsMeta` are getters, so spreading a lazy match or passing it to `JSON.stringify()` leaves them out. Read those fields from the match directly when you need them.
+
 ### Ranking matches by specificity
 
 When multiple patterns match the same URL, `route-pattern` chooses the most specific match deterministically. Matches are ranked left-to-right, character-by-character:

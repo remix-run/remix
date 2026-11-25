@@ -185,6 +185,10 @@ export type ContextWithEntry<context, entry extends ContextEntry> = ContextWithE
   [entry]
 >
 
+// Returns the URL to route a request with: `context.url` once something has read or replaced it,
+// or else the request's serialized URL string, which route matchers can read without parsing it.
+export let getRoutingUrl: (context: RequestContext<any, any>) => string | URL
+
 /**
  * A context object that contains information about the current request. Every request
  * handler or middleware in the lifecycle of a request receives the same context object.
@@ -382,6 +386,14 @@ export class RequestContext<
 
   set url(url: URL) {
     this.#url = url
+  }
+
+  static {
+    /**
+     * @param context The request context to route
+     * @returns `context.url` if it was read or replaced, otherwise the request's URL string
+     */
+    getRoutingUrl = (context) => context.#url ?? context.#initialUrl
   }
 }
 

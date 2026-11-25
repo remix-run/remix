@@ -1626,6 +1626,26 @@ describe('per-method route matching', () => {
     )
   })
 
+  it('does not parse the request URL when nothing reads context.url', async (t) => {
+    let created = 0
+    class CountingURL extends URL {
+      constructor(url: string | URL, base?: string | URL) {
+        super(url, base)
+        created++
+      }
+    }
+
+    let router = createRouter()
+    router.get('/posts/:id', ({ params }) => new Response(`Post ${params.id}`))
+    let request = new Request('https://remix.run/posts/7')
+
+    t.mock.property(globalThis, 'URL', CountingURL)
+    let response = await router.fetch(request)
+
+    assert.equal(await response.text(), 'Post 7')
+    assert.equal(created, 0)
+  })
+
   it('routes using context.url and context.method mutated by router middleware', async () => {
     let router = createRouter({
       middleware: [

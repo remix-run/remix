@@ -54,6 +54,128 @@ describe('Matcher', () => {
       })
     })
 
+    describe('URL strings', () => {
+      it('matches strings the same way as the URLs they parse to', () => {
+        let eagerMatcher = createMultiMatcher<string>()
+        let lazyMatcher = createMultiMatcher<string>({ lazyMatches: true })
+        for (let pattern of [
+          '/',
+          '/users/:id',
+          '/files/*path',
+          '/api(/:version)/items',
+          '/search?q',
+          'https://:tenant.example.com/dashboard',
+          '://example.com:8080/admin',
+          '://xn--bcher-kva.example/catalog',
+          '://127.0.0.1/local',
+        ]) {
+          eagerMatcher.add(pattern, pattern)
+          lazyMatcher.add(pattern, pattern)
+        }
+
+        for (let href of [
+          'https://example.com/',
+          'https://example.com/users/123',
+          'https://example.com/users/%F0%9F%98%80',
+          'https://example.com/files/a/b/c.txt',
+          'https://example.com/api/items',
+          'https://example.com/api/v2/items',
+          'https://example.com/search?q=remix',
+          'https://example.com/search?',
+          'https://example.com/users/123#details',
+          'https://acme.example.com/dashboard',
+          'https://example.com:8080/admin',
+          'https://xn--bcher-kva.example/catalog',
+          'https://bücher.example/catalog',
+          'https://127.0.0.1/local',
+          'https://127.1/local',
+          'https://EXAMPLE.com/users/123',
+          'https://example.com:443/users/123',
+          'https://example.com:08080/admin',
+          'https://user:pass@example.com/users/123',
+          'https://example.com/users/../files/a',
+          'https://example.com/users/%2e%2E/files/a',
+          'https://example.com/users/./123',
+          'https://example.com\\users\\123',
+          'https://example.com/users/a b',
+          'https://example.com/users/ü',
+          'https://example.com/users/123?q=a"b',
+          ' https://example.com/users/123',
+          'https://example.com/us\ters/123',
+          'https://example.com',
+          'https://example.com.',
+          'ftp://example.com/users/123',
+        ]) {
+          let expected = eagerMatcher.match(new URL(href))
+          let expectedAll = eagerMatcher.matchAll(new URL(href)).map((match) => match.data)
+          for (let match of [eagerMatcher.match(href), lazyMatcher.match(href)]) {
+            assert.equal(match?.data, expected?.data, href)
+            assert.deepEqual(match?.params, expected?.params, href)
+            assert.deepEqual(match?.paramsMeta, expected?.paramsMeta, href)
+            assert.equal(match?.url.href, expected?.url.href, href)
+          }
+          for (let matcher of [eagerMatcher, lazyMatcher]) {
+            assert.deepEqual(
+              matcher.matchAll(href).map((match) => match.data),
+              expectedAll,
+              href,
+            )
+          }
+        }
+      })
+
+      it('creates a lazy match.url from a string once, when it is first read', () => {
+        let matcher = createMatcher('/users/:id', { lazyMatches: true })
+        let match = matcher.match('https://example.com/users/123?tab=posts')
+        assert.ok(match)
+        assert.ok(match.url instanceof URL)
+        assert.equal(match.url.href, 'https://example.com/users/123?tab=posts')
+        assert.equal(match.url, match.url)
+      })
+
+      it('keeps url and paramsMeta as own properties unless matches are lazy', () => {
+        let match = createMatcher('/users/:id').match('https://example.com/users/123')
+        assert.ok(match)
+        let copy = { ...match }
+        assert.equal(copy.url.href, 'https://example.com/users/123')
+        assert.deepEqual(copy.paramsMeta, match.paramsMeta)
+      })
+
+      it('lazy matchers do not create a URL from a serialized string until match.url is read', (t) => {
+        let created = 0
+        class CountingURL extends URL {
+          constructor(url: string | URL, base?: string | URL) {
+            super(url, base)
+            created++
+          }
+        }
+        t.mock.property(globalThis, 'URL', CountingURL)
+
+        let matcher = createMultiMatcher<null>({ lazyMatches: true })
+        matcher.add('/users/:id', null)
+        matcher.add('/search?q', null)
+        let match = matcher.match('https://example.com/users/123')
+        assert.ok(matcher.match('https://example.com/search?q=remix'))
+        assert.equal(created, 0)
+
+        assert.ok(match)
+        assert.equal(match.url.href, 'https://example.com/users/123')
+        assert.equal(created, 1)
+      })
+
+      it('returns the given URL as match.url', () => {
+        let matcher = createMatcher('/users/:id')
+        let url = new URL('https://example.com/users/123')
+        assert.equal(matcher.match(url)?.url, url)
+      })
+
+      it('throws for strings that are not valid absolute URLs', () => {
+        let matcher = createMatcher('/users/:id')
+        assert.throws(() => matcher.match('/users/123'), TypeError)
+        assert.throws(() => matcher.match('https://exa mple.com/users/123'), TypeError)
+      })
+    })
+
     describe('relative URL references', () => {
       it('requires an absolute base URL', () => {
         let matcher = createMultiMatcher<null>()

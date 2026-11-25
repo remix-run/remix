@@ -30,7 +30,7 @@ export type MatchParamMeta = {
 
 /** Result returned by route pattern matchers. */
 export type Match<source extends string = string, data = unknown> = {
-  /** URL object used for the match. */
+  /** URL object used for the match. Lazy matches create it the first time it is read. */
   url: URL
 
   /** Pattern that matched the URL. */

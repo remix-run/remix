@@ -71,15 +71,19 @@ export function compare(a: Match, b: Match): -1 | 0 | 1 {
   if (a.url !== b.url && a.url.href !== b.url.href) {
     throw new Error(`Cannot compare matches for different URLs: ${a.url.href} vs ${b.url.href}`)
   }
+  return compareSameURL(a, b, () => decodeHostname(a.url.hostname))
+}
+
+// Compares two matches for the same URL without reading `match.url`, which is created lazily for
+// string URLs.
+export function compareSameURL(a: Match, b: Match, getHostname: () => string): -1 | 0 | 1 {
   let aParts = a.pattern._parts
   let bParts = b.pattern._parts
 
   return (
     compareProtocol(aParts.protocol, bParts.protocol) ||
     comparePort(aParts.port, bParts.port) ||
-    compareHostnameRanges(a.paramsMeta.hostname, b.paramsMeta.hostname, () =>
-      decodeHostname(a.url.hostname),
-    ) ||
+    compareHostnameRanges(a.paramsMeta.hostname, b.paramsMeta.hostname, getHostname) ||
     comparePathnameRanges(a.paramsMeta.pathname, b.paramsMeta.pathname) ||
     compareSearch(aParts.search, bParts.search)
   )

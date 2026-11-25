@@ -18,7 +18,16 @@ export class AbortRace {
     this.#rejectors.clear()
   }
 
-  race<value>(promise: Promise<value>): Promise<value> {
+  /**
+   * Rejects with the abort reason if the request aborts before `promise` settles. `map`, when
+   * given, transforms the settled value, which saves chaining another `.then()` on the result.
+   */
+  race<value>(promise: Promise<value>): Promise<value>
+  race<value, result>(
+    promise: Promise<value>,
+    map: (value: value) => result | Promise<result>,
+  ): Promise<result>
+  race(promise: Promise<unknown>, map?: (value: unknown) => unknown): Promise<unknown> {
     let signal = this.#signal
     if (signal.aborted) {
       promise.then(
@@ -27,14 +36,14 @@ export class AbortRace {
       )
       return Promise.reject(signal.reason)
     }
-    if (this.#disposed) return promise
+    if (this.#disposed) return map === undefined ? promise : promise.then(map)
 
     if (!this.#listening) {
       this.#listening = true
       signal.addEventListener('abort', this)
     }
 
-    return new Promise<value>((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       this.#rejectors.add(reject)
 
       promise.then(
@@ -42,7 +51,15 @@ export class AbortRace {
           this.#rejectors.delete(reject)
           // The race already rejected, so nothing else will read this response's body
           if (signal.aborted) cancelAbandonedResponse(value, signal.reason)
-          resolve(value)
+          if (map === undefined) {
+            resolve(value)
+            return
+          }
+          try {
+            resolve(map(value))
+          } catch (error) {
+            reject(error)
+          }
         },
         (error) => {
           this.#rejectors.delete(reject)

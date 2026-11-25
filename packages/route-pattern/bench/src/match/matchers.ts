@@ -13,7 +13,8 @@ export let matchers = {
   routePattern: {
     name: 'route-pattern',
     supportsDetailedVerification: true,
-    createMatcher: () => createMultiMatcher<BenchData>(),
+    // Routers such as fetch-router use lazy matches, which skip work for fields they don't read
+    createMatcher: () => createMultiMatcher<BenchData>({ lazyMatches: true }),
   },
   routePatternArray: {
     name: 'route-pattern/array',

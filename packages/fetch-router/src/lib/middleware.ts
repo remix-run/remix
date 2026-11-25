@@ -119,9 +119,8 @@ export function runMiddleware(
   let index = -1
   let ownedAbortRace: AbortRace | undefined
 
-  function race(promise: Promise<Response>): Promise<Response> {
-    let abortRace = sharedAbortRace ?? (ownedAbortRace ??= new AbortRace(context.request))
-    return abortRace.race(promise)
+  function getAbortRace(): AbortRace {
+    return sharedAbortRace ?? (ownedAbortRace ??= new AbortRace(context.request))
   }
 
   function dispatch(i: number): Response | Promise<Response> {
@@ -143,7 +142,7 @@ export function runMiddleware(
         return result
       }
 
-      return race(Promise.resolve(result))
+      return getAbortRace().race(Promise.resolve(result))
     }
 
     let nextPromise: Promise<Response> | undefined
@@ -189,7 +188,7 @@ export function runMiddleware(
       (result != null && typeof (result as PromiseLike<Response>).then === 'function')
     ) {
       let promise = result instanceof Promise ? result : Promise.resolve(result)
-      return race(promise).then((response) => {
+      return getAbortRace().race(promise, (response) => {
         if (response instanceof Response) {
           return response
         }
