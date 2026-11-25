@@ -37,7 +37,7 @@ The value returned by `run()` emits `error` events for hydration, component, sch
 
 ## Treat request aborts as cancellation {#aborts-request-signal-and-the-router}
 
-The router rejects with `request.signal.reason` when a request aborts. Pass the signal into database, fetch, upload, and rendering work when those APIs support it, and let the Node adapter drop responses after the client disconnects instead of logging an expected abort as a server failure.
+When a request aborts, the router stops running middleware and handlers and rejects with `request.signal.reason` once work already in progress settles. It does not interrupt that work, so pass the signal into database, fetch, upload, and rendering work when those APIs support it, and let the Node adapter drop responses after the client disconnects instead of logging an expected abort as a server failure.
 
 ## Match component cleanup to the work's lifetime {#cancellation-in-components-with-handle-signal}
 
