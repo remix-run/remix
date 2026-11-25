@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { normalizeCssValue } from '../style/stylesheet.ts'
+import { normalizeCssValue } from '../runtime/core/props.ts'
 import { processStyleClass } from '../style/css-mixin.ts'
 
 describe('processStyleClass', () => {

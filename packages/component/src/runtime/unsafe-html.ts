@@ -1,15 +1,23 @@
 import { invariant } from './invariant.ts'
 
-const UNSAFE_HTML = Symbol('UnsafeHTML')
+class UnsafeHTMLValue {
+  #value: string
+
+  constructor(value: string) {
+    this.#value = value
+  }
+
+  static read(value: unknown): string | undefined {
+    return value instanceof UnsafeHTMLValue ? value.#value : undefined
+  }
+}
 
 /**
  * An opaque value that Remix may insert into an element without HTML escaping.
  *
  * Create values with {@link unsafeHTML}. Remix does not sanitize or otherwise modify the HTML.
  */
-export interface UnsafeHTML {
-  readonly [UNSAFE_HTML]: string
-}
+export type UnsafeHTML = UnsafeHTMLValue
 
 /**
  * Explicitly allows a string to be inserted into an element as raw HTML.
@@ -22,10 +30,10 @@ export interface UnsafeHTML {
  * `srcDoc`/`srcdoc`.
  */
 export function unsafeHTML(value: string): UnsafeHTML {
-  return Object.freeze({ [UNSAFE_HTML]: value })
+  let result = new UnsafeHTMLValue(value)
+  Object.freeze(result)
+  return result
 }
-
-const RAW_HTML_PROPS = ['innerHTML', 'srcDoc', 'srcdoc'] as const
 
 interface NormalizedUnsafeHTMLProps extends Record<string, unknown> {
   innerHTML?: string
@@ -49,13 +57,10 @@ export function normalizeUnsafeHTMLProps(
   )
 
   let normalized: NormalizedUnsafeHTMLProps | undefined
-  for (let name of RAW_HTML_PROPS) {
+  for (let name of ['innerHTML', 'srcDoc', 'srcdoc'] as const) {
     let value = props[name]
     if (value === undefined) continue
-    let html =
-      typeof value === 'object' && value !== null
-        ? (value as Partial<UnsafeHTML>)[UNSAFE_HTML]
-        : undefined
+    let html = UnsafeHTMLValue.read(value)
     invariant(
       html !== undefined,
       `Invalid ${name} prop: expected a value created with unsafeHTML()`,

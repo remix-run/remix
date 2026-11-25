@@ -1454,10 +1454,13 @@ function ensureFrameRuntime(frame: FrameHandle): FrameRuntime | undefined {
         errorTarget?: EventTarget
         scheduler?: SharedFrameRuntime['scheduler']
         styleManager?: StyleManager
+        styleRoot?: ParentNode
       }
     | undefined
   let init = stub?.frameInit
   if (!init?.resolveFrame || !stub?.errorTarget || !stub.scheduler) return undefined
+  let styleManager = stub.styleManager ?? getDefaultStyleManager()
+  if (stub.styleRoot) styleManager.adoptServerStyles(stub.styleRoot)
   let runtime = createFrameRuntime({
     loadModule:
       init.loadModule ??
@@ -1467,7 +1470,7 @@ function ensureFrameRuntime(frame: FrameHandle): FrameRuntime | undefined {
     resolveFrame: init.resolveFrame,
     errorTarget: stub.errorTarget,
     scheduler: stub.scheduler,
-    styleManager: stub.styleManager ?? getDefaultStyleManager(),
+    styleManager,
     registry: new FrameRegistry(),
     topFrame: frame,
   })

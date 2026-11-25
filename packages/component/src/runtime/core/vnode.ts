@@ -112,12 +112,17 @@ export { jsx as jsxDEV, jsx as jsxs }
 
 // Shared across module instances, and enumerable so element spreads retain their identity.
 const REMIX_ELEMENT = Symbol.for('remix.element')
-export const MIXIN_RUNTIME = Symbol('MixinRuntime')
-export const DIRECT_EVENT = Symbol('DirectEvent')
+export const MIXIN_RUNTIME = Symbol.for('remix.mixinRuntime')
+export const DIRECT_EVENT = Symbol.for('remix.directEvent')
 export let defaultMixinDriver: unknown
+export let activeSchedulerUpdateParents: ParentNode[] | undefined
 
 export function setDefaultMixinDriver(driver: unknown): void {
   defaultMixinDriver = driver
+}
+
+export function setActiveSchedulerUpdateParents(parents: ParentNode[] | undefined): void {
+  activeSchedulerUpdateParents = parents
 }
 
 export function isMixinDescriptor(

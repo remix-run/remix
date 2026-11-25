@@ -3,6 +3,7 @@ import type { ElementProps, RemixElement } from '../core/vnode.ts'
 import type { Key } from '../key.ts'
 import type { Scheduler, SchedulerPhaseEvent } from '../vdom.ts'
 import {
+  activeSchedulerUpdateParents,
   isMixinDescriptor,
   isRemixElement,
   jsx,
@@ -341,7 +342,6 @@ export interface MixinRuntime {
 
 export interface MixinDriver {
   persistedNodes: Set<CommittedHostNode>
-  setActiveUpdateParents(parents: ParentNode[] | undefined): void
   reclaim(
     type: string,
     key: Key | undefined,
@@ -359,14 +359,10 @@ export interface MixinDriver {
 }
 
 let persistedRemovalToken = 0
-let activeUpdateParents: ParentNode[] | undefined
 const persistedMixinNodes = new Set<CommittedHostNode>()
 
 const mixinDriver: MixinDriver = {
   persistedNodes: persistedMixinNodes,
-  setActiveUpdateParents(parents) {
-    activeUpdateParents = parents
-  },
   reclaim(type, key, domParent, vParent) {
     if (key == null) return null
     for (let p of persistedMixinNodes) {
@@ -393,8 +389,8 @@ const mixinDriver: MixinDriver = {
   },
   shouldDispatchInline(node) {
     return (
-      !activeUpdateParents?.length ||
-      !activeUpdateParents.some((p) => p instanceof Node && p.contains(node))
+      !activeSchedulerUpdateParents?.length ||
+      !activeSchedulerUpdateParents.some((p) => p instanceof Node && p.contains(node))
     )
   },
 }
@@ -833,8 +829,6 @@ function withoutMixinContentProps(props: ElementProps, returned = false): Elemen
   } = props
   return output
 }
-
-export { isMixinDescriptor }
 
 function isMixinElementFunction(
   value: unknown,

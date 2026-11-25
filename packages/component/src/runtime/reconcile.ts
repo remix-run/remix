@@ -945,7 +945,11 @@ function nextHydrationNode(
       cursor = cursor.nextSibling
       continue
     }
-    if (cursor.nodeType === 1 && (cursor as Element).hasAttribute('data-rmx-style')) {
+    if (
+      cursor.nodeType === 1 &&
+      (cursor as Element).localName === 'style' &&
+      (cursor as Element).hasAttribute('data-rmx-style')
+    ) {
       cursor = cursor.nextSibling
       continue
     }

@@ -1,20 +1,66 @@
 import type { ElementProps } from './vnode.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
-const RESERVED_PROPS = /^(?:children|mix|key|animate|innerHTML|class|className)$/
-const ATTR_FALLBACK =
-  /^(?:width|height|href|list|form|tabIndex|download|rowSpan|colSpan|role|popover|translate)$/
-const BOOLEANISH_ATTR =
-  /^(?:accent(?:under)?|autoReverse|contenteditable|displaystyle|draggable|externalResourcesRequired|fence|focusable|largeop|movablelimits|preserveAlpha|separator|spellcheck|stretchy|symmetric)$/
+const RESERVED_PROPS = new Set([
+  'children',
+  'mix',
+  'key',
+  'animate',
+  'innerHTML',
+  'class',
+  'className',
+])
+const ATTR_FALLBACK = new Set([
+  'width',
+  'height',
+  'href',
+  'list',
+  'form',
+  'tabIndex',
+  'download',
+  'rowSpan',
+  'colSpan',
+  'role',
+  'popover',
+  'translate',
+])
+const BOOLEANISH_ATTR = new Set([
+  'accent',
+  'accentunder',
+  'autoReverse',
+  'contenteditable',
+  'displaystyle',
+  'draggable',
+  'externalResourcesRequired',
+  'fence',
+  'focusable',
+  'largeop',
+  'movablelimits',
+  'preserveAlpha',
+  'separator',
+  'spellcheck',
+  'stretchy',
+  'symmetric',
+])
 const UNSAFE_PROP = /^on|[\0\t\n\f\r "'/>=]/i
-const EXEC_URL_ATTR = /^(?:href|src|action|formaction|xlink:href)$/
+const EXEC_URL_ATTR = new Set(['href', 'src', 'action', 'formaction', 'xlink:href'])
 const BLOCKED_JS_URL =
   "javascript:throw new Error('Remix has blocked a javascript: URL as a security precaution.')"
-const UNITLESS_STYLE =
-  /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine-?[ch]|zoo|^ord|itera|anim(?:ation)?$|border-?i|mask-?b|scale|shape-?i|tab-?s|clamp/i
 const SVG_CAMEL_RE =
   /^(?:accentHeight|attribute(?:Name|Type)|autoReverse|base(?:Frequency|Profile)|calcMode|clipPathUnits|diffuseConstant|edgeMode|externalResourcesRequired|filter(?:Res|Units)|glyphRef|gradient(?:Transform|Units)|kernel(?:Matrix|UnitLength)|key(?:Points|Splines|Times)|lengthAdjust|limitingConeAngle|marker(?:Height|Units|Width)|mask(?:Content)?Units|numOctaves|pathLength|pattern(?:ContentUnits|Transform|Units)|pointsAt[XYZ]|preserve(?:Alpha|AspectRatio)|primitiveUnits|ref[XY]|required(?:Extensions|Features)|specular(?:Constant|Exponent)|spreadMethod|startOffset|stdDeviation|stitchTiles|surfaceScale|systemLanguage|tableValues|target[XY]|textLength|view(?:Box|Target)|[xy]ChannelSelector|zoomAndPan)$/
 const NS_SVG_RE = /^(xlink|xml|xmlns)(?:[:-]([a-z]+)|([A-Z][a-z]+))$/
+
+// Properties whose grammar accepts a standalone number, including shorthands and number/length unions.
+const NUMERIC_CSS_PROP =
+  /^(?:-(?:webkit|moz|ms|o)-)?(?:animation(?:-iteration-count)?|aspect-ratio|bookmark-level|(?:border-image|mask-border|mask-box-image)(?:-outset|-slice|-width)?|box-(?:flex|flex-group|ordinal-group)|column(?:s|-count|-span)|flex(?:-grow|-line-count|-negative|-order|-positive|-shrink)?|float-defer|font-(?:size-adjust|weight)|force-broken-image-icon|grid-(?:area|(?:column|row)(?:-end|-span|-start)?)|hyphenate-limit-(?:chars|lines)|initial-letter|line-(?:clamp|height)|math-depth|max-lines|opacity|order|orphans|reading-order|scale|shape-image-threshold|tab-size|voice-balance|widows|z-index|zoom|(?:fill|flood|stop|stroke)-opacity|stroke-(?:dasharray|dashoffset|miterlimit|width))$/
+
+function skipHostProp(name: string, select: HTMLSelectElement | null): boolean {
+  return (
+    RESERVED_PROPS.has(name) ||
+    !isAllowedHostPropName(name) ||
+    (select !== null && name === 'defaultValue')
+  )
+}
 
 /**
  * Patches DOM attributes and selected properties from old props to new props.
@@ -35,29 +81,36 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
     else dom.removeAttribute('class')
   }
 
-  let visit = (name: string, value: unknown, prev: unknown) => {
-    if (
-      RESERVED_PROPS.test(name) ||
-      !isAllowedHostPropName(name) ||
-      (select && name === 'defaultValue')
-    ) {
-      return
-    }
-    patchHostProp(dom, name, value, prev, isSvg, select)
-  }
-
   for (let name in curr) {
-    if (next[name] == null) visit(name, next[name], curr[name])
+    if (skipHostProp(name, select)) continue
+    let value = next[name]
+    if (value == null) patchHostProp(dom, name, value, curr[name], isSvg, select)
   }
   for (let name in next) {
+    if (skipHostProp(name, select)) continue
     let value = next[name]
+    if (value == null) continue
     let prev = curr[name]
-    if (value != null && value !== prev) visit(name, value, prev)
+    if (value !== prev) patchHostProp(dom, name, value, prev, isSvg, select)
   }
 
   if (select && wasMultiple !== select.multiple && next.value == null) {
     setSelectDefaultValue(select, next.defaultValue)
   }
+}
+
+function canUseProperty(
+  dom: Element,
+  name: string,
+  isSvg: boolean,
+  attr: string,
+): dom is Element & Record<string, unknown> {
+  return !isSvg && name in dom && !ATTR_FALLBACK.has(name) && !BOOLEANISH_ATTR.has(attr)
+}
+
+function removeAttribute(dom: Element, attr: string, ns?: string): void {
+  if (ns) dom.removeAttributeNS(ns, attr.slice(attr.indexOf(':') + 1))
+  else dom.removeAttribute(attr)
 }
 
 function patchHostProp(
@@ -69,27 +122,26 @@ function patchHostProp(
   select: HTMLSelectElement | null,
 ): void {
   let { attr, ns } = normalizeAttributeName(name, isSvg)
-  let useProp = !isSvg && name in dom && !ATTR_FALLBACK.test(name) && !BOOLEANISH_ATTR.test(attr)
-  let el = dom as Element & Record<string, unknown>
-  let del = () =>
-    ns ? dom.removeAttributeNS(ns, attr.slice(attr.indexOf(':') + 1)) : dom.removeAttribute(attr)
 
   if (value == null) {
     if (
       (name === 'value' || name === 'checked') &&
       prev === undefined &&
-      (value === undefined || (name === 'value' && select))
-    )
+      (value === undefined || (name === 'value' && select !== null))
+    ) {
       return
-    if (useProp) {
+    }
+    if (canUseProperty(dom, name, isSvg, attr)) {
       try {
-        if (name === 'value' || name === 'defaultValue') el[name] = ''
-        else if (name === 'checked' || name === 'defaultChecked' || name === 'selected')
-          el[name] = false
-        else if (name === 'selectedIndex') el[name] = -1
+        if (name === 'value' || name === 'defaultValue') dom[name] = ''
+        else if (name === 'checked' || name === 'defaultChecked' || name === 'selected') {
+          dom[name] = false
+        } else if (name === 'selectedIndex') {
+          dom[name] = -1
+        }
       } catch {}
     }
-    del()
+    removeAttribute(dom, attr, ns)
     return
   }
 
@@ -105,77 +157,123 @@ function patchHostProp(
       dom.setAttribute('style', value)
       return
     }
-    if (typeof value === 'object' && !Array.isArray(value)) {
-      let prevStyle =
-        name === 'style' && typeof prev === 'object' && prev !== null && !Array.isArray(prev)
-          ? (prev as Record<string, unknown>)
-          : undefined
+    if (isStyleObject(value)) {
+      let prevStyle = name === 'style' && isStyleObject(prev) ? prev : undefined
       if (!prevStyle && name === 'style') dom.removeAttribute('style')
-      patchStyleObject((dom as HTMLElement).style, prevStyle, value as Record<string, unknown>)
+      patchStyleObject(dom, prevStyle, value)
       return
     }
   }
 
-  if (useProp) {
+  if (canUseProperty(dom, name, isSvg, attr)) {
+    // An empty attribute means present, and the server renders `""` as one. As a boolean property,
+    // `""` would mean false. `hidden` can currently hold the string "until-found".
     if (value === '') {
       try {
         if (
           name === 'hidden' ||
           ((!dom.localName.includes('-') || name in HTMLElement.prototype) &&
-            typeof el[name] === 'boolean')
+            typeof dom[name] === 'boolean')
         ) {
           value = true
         }
       } catch {}
     }
     try {
-      el[name] = value
+      dom[name] = value
       return
     } catch {}
   }
 
   if (typeof value === 'function') return
 
+  // Match server rendering: booleans render as "true"/"false" only for attributes that read them as
+  // strings; otherwise `true` renders an empty attribute and `false` omits it.
   let stringify = typeof value !== 'boolean' || shouldStringifyBooleanAttribute(attr)
   if (stringify || value) {
     let str = stringify ? String(value) : ''
     if (ns) dom.setAttributeNS(ns, attr, str)
     else dom.setAttribute(attr, str)
   } else {
-    del()
+    removeAttribute(dom, attr, ns)
   }
 }
 
-function toStyleValue(name: string, val: unknown): string | undefined {
-  if (val == null || typeof val === 'boolean') return undefined
-  if (Array.isArray(val)) return val.join(', ')
-  if (typeof val === 'number') {
-    if (!Number.isFinite(val)) return undefined
-    return val && name[0] !== '-' && !UNITLESS_STYLE.test(name) ? `${val}px` : String(val)
+const camelToKebabCache = new Map<string, string>()
+
+export function camelToKebab(str: string): string {
+  if (str.startsWith('--')) return str
+  let cached = camelToKebabCache.get(str)
+  if (cached === undefined) {
+    cached = str
+      .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+      .replace(/^(webkit|moz|ms|o)-/, '-$1-')
+    if (camelToKebabCache.size >= 256) {
+      let oldest = camelToKebabCache.keys().next()
+      if (!oldest.done) camelToKebabCache.delete(oldest.value)
+    }
+    camelToKebabCache.set(str, cached)
   }
-  return String(val)
+  return cached
+}
+
+export function normalizeCssValue(key: string, value: unknown): string | undefined {
+  if (value == null) return undefined
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return undefined
+    if (value !== 0 && !key.startsWith('--') && !NUMERIC_CSS_PROP.test(camelToKebab(key))) {
+      return `${value}px`
+    }
+  }
+  return String(value)
+}
+
+export function isStyleObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function styleValueToCss(name: string, value: unknown): string | undefined {
+  if (typeof value === 'boolean') return undefined
+  if (Array.isArray(value)) return value.join(', ')
+  return normalizeCssValue(name, value)
+}
+
+export function serializeStyleObject(style: Record<string, unknown>): string {
+  let parts: string[] = []
+  for (let [key, value] of Object.entries(style)) {
+    let cssValue = styleValueToCss(key, value)
+    if (cssValue !== undefined) parts.push(`${camelToKebab(key)}: ${cssValue};`)
+  }
+  return parts.join(' ')
 }
 
 function patchStyleObject(
-  style: CSSStyleDeclaration | undefined,
+  dom: Element,
   curr: Record<string, unknown> | undefined,
   next: Record<string, unknown>,
 ): void {
-  if (!style) return
-  let set = (k: string, v: string) =>
-    k.includes('-')
-      ? v
-        ? style.setProperty(k, v)
-        : style.removeProperty(k)
-      : ((style as unknown as Record<string, string>)[k] = v)
-  for (let k in curr) {
-    if (toStyleValue(k, next[k]) === undefined && toStyleValue(k, curr[k]) !== undefined) {
-      set(k, '')
+  if (!(dom instanceof HTMLElement || dom instanceof SVGElement)) {
+    dom.setAttribute('style', serializeStyleObject(next))
+    return
+  }
+
+  let style = dom.style
+  for (let name in curr) {
+    if (
+      next[name] !== curr[name] &&
+      styleValueToCss(name, next[name]) === undefined &&
+      styleValueToCss(name, curr[name]) !== undefined
+    ) {
+      style.removeProperty(camelToKebab(name))
     }
   }
-  for (let k in next) {
-    let val = toStyleValue(k, next[k])
-    if (val !== undefined && val !== toStyleValue(k, curr?.[k])) set(k, val)
+
+  for (let name in next) {
+    if (curr && next[name] === curr[name]) continue
+    let value = styleValueToCss(name, next[name])
+    if (value !== undefined && value !== styleValueToCss(name, curr?.[name])) {
+      style.setProperty(camelToKebab(name), value)
+    }
   }
 }
 
@@ -197,7 +295,8 @@ export function setSelectDefaultValue(
     if (!firstEnabled && !option.disabled) firstEnabled = option
     let selected = (values?.has(option.value) ?? false) && !(scalar && matched)
     if (selected) matched = true
-    option.defaultSelected = option.selected = selected
+    option.defaultSelected = selected
+    option.selected = selected
   }
   if (!select.multiple && !matched && firstEnabled) firstEnabled.selected = true
 }
@@ -216,14 +315,22 @@ export function isAllowedHostPropName(name: string): boolean {
 }
 
 export function sanitizeUrlAttribute(tagName: string, attrName: string, value: unknown): unknown {
-  if (!EXEC_URL_ATTR.test(attrName) && !(attrName === 'data' && tagName.toLowerCase() === 'object'))
+  if (
+    !EXEC_URL_ATTR.has(attrName) &&
+    !(attrName === 'data' && tagName.toLowerCase() === 'object')
+  ) {
     return value
+  }
+  // Browsers ignore leading C0 controls and spaces, plus tabs and newlines within URL schemes.
   return /^javascript:/i.test(String(value).replace(/^[\0- ]+|[\r\n\t]/g, ''))
     ? BLOCKED_JS_URL
     : value
 }
 
 type AttributeName = { attr: string; ns?: string }
+
+const htmlAttrCache = new Map<string, AttributeName>()
+const svgAttrCache = new Map<string, AttributeName>()
 
 const HTML_RENAMES: Record<string, string> = {
   className: 'class',
@@ -234,17 +341,36 @@ const HTML_RENAMES: Record<string, string> = {
 
 export function normalizeAttributeName(name: string, isSvg: boolean): AttributeName {
   if (name.startsWith('data-') || name.startsWith('aria-')) return { attr: name }
-  if (!isSvg) return { attr: HTML_RENAMES[name] ?? name.toLowerCase() }
-  if (name === 'className') return { attr: 'class' }
+  let cache = isSvg ? svgAttrCache : htmlAttrCache
+  let cached = cache.get(name)
+  if (cached) return cached
+
+  let normalized: AttributeName
+  if (!isSvg) {
+    normalized = {
+      attr: Object.hasOwn(HTML_RENAMES, name) ? HTML_RENAMES[name] : name.toLowerCase(),
+    }
+  } else if (name === 'className') {
+    normalized = { attr: 'class' }
+  } else {
+    normalized = normalizeSvgAttribute(name)
+  }
+
+  if (cache.size >= 256) cache.clear()
+  cache.set(name, normalized)
+  return normalized
+}
+
+function normalizeSvgAttribute(name: string): AttributeName {
   if (SVG_CAMEL_RE.test(name)) return { attr: name }
   if (name.includes('-')) {
-    let camel = name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+    let camel = name.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase())
     if (SVG_CAMEL_RE.test(camel)) return { attr: camel }
   }
-  let m = NS_SVG_RE.exec(name)
-  if (m) {
-    let prefix = m[1]
-    let local = m[2] ?? m[3].toLowerCase()
+  let match = NS_SVG_RE.exec(name)
+  if (match) {
+    let prefix = match[1]
+    let local = match[2] ?? match[3].toLowerCase()
     if (
       prefix === 'xmlns'
         ? local === 'xlink'
@@ -279,13 +405,13 @@ export function shouldStringifyBooleanAttribute(name: string): boolean {
     (name.startsWith('data-') &&
       name !== 'data-rmx-document' &&
       name !== 'data-rmx-preserve-dom') ||
-    BOOLEANISH_ATTR.test(name) ||
+    BOOLEANISH_ATTR.has(name) ||
     name === 'value'
   )
 }
 
 export function getMergedClassName(props: ElementProps): string | undefined {
-  let a = typeof props.class === 'string' ? props.class : ''
-  let b = typeof props.className === 'string' ? props.className : ''
-  return a && b ? `${a} ${b}` : a || b || undefined
+  let classAttr = typeof props.class === 'string' ? props.class : ''
+  let className = typeof props.className === 'string' ? props.className : ''
+  return classAttr && className ? `${classAttr} ${className}` : classAttr || className || undefined
 }

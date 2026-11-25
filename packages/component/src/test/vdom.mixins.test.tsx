@@ -882,4 +882,75 @@ describe('vnode mixins', () => {
     expect(removeCalls).toBe(1)
     expect(container.querySelector('#deferred-remove')).toBe(null)
   })
+
+  it('transitions cleanly between direct on() events, mixed mixins, and no mixins', () => {
+    let calls: string[] = []
+    let withLabel = createMixin((handle) => (label: string, props: { ['data-label']?: string }) => (
+      <handle.element {...props} data-label={label} />
+    ))
+
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    // Direct on() only
+    root.render(
+      <button
+        mix={[
+          on('click', () => {
+            calls.push('direct-1')
+          }),
+        ]}
+      >
+        click
+      </button>,
+    )
+    root.flush()
+    let button = container.querySelector('button')
+    invariant(button)
+    button.click()
+    expect(calls).toEqual(['direct-1'])
+
+    // Direct -> mixed [on(), createMixin()]
+    root.render(
+      <button
+        mix={[
+          on('click', () => {
+            calls.push('mixed')
+          }),
+          withLabel('hi'),
+        ]}
+      >
+        click
+      </button>,
+    )
+    root.flush()
+    expect(button.getAttribute('data-label')).toBe('hi')
+    button.click()
+    expect(calls).toEqual(['direct-1', 'mixed'])
+
+    // Mixed -> direct on() only
+    root.render(
+      <button
+        mix={[
+          on('click', () => {
+            calls.push('direct-2')
+          }),
+        ]}
+      >
+        click
+      </button>,
+    )
+    root.flush()
+    expect(button.getAttribute('data-label')).toBe(null)
+    button.click()
+    expect(calls).toEqual(['direct-1', 'mixed', 'direct-2'])
+
+    // Direct -> no mixins
+    root.render(<button>click</button>)
+    root.flush()
+    button.click()
+    expect(calls).toEqual(['direct-1', 'mixed', 'direct-2'])
+
+    root.dispose()
+  })
 })
