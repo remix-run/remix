@@ -18,6 +18,21 @@ describe('Spring iterator example', () => {
 
     let frames: { name: string; requested: number; fired: number; timestamp: number }[] = []
     let heartbeats: number[] = []
+    let workerHeartbeats: { sent: number; received: number }[] = []
+    let workerUrl = URL.createObjectURL(
+      new Blob(['setInterval(() => postMessage(Date.now()), 100)'], { type: 'text/javascript' }),
+    )
+    let worker = new Worker(workerUrl)
+    worker.addEventListener('message', (event: MessageEvent<number>) => {
+      workerHeartbeats.push({
+        sent: event.data - (performance.timeOrigin + started),
+        received: performance.now() - started,
+      })
+    })
+    t.after(() => {
+      worker.terminate()
+      URL.revokeObjectURL(workerUrl)
+    })
     let requestFrame = window.requestAnimationFrame.bind(window)
     t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
       let requested = performance.now() - started
@@ -64,6 +79,7 @@ describe('Spring iterator example', () => {
             samples,
             frames,
             heartbeats,
+            workerHeartbeats,
           })}`,
           { cause: error },
         )
@@ -91,7 +107,13 @@ describe('Spring iterator example', () => {
     assert.equal(next.disabled, false)
     console.log(
       'Spring diagnostics passed:',
-      JSON.stringify({ startedAt: performance.timeOrigin + started, samples, frames, heartbeats }),
+      JSON.stringify({
+        startedAt: performance.timeOrigin + started,
+        samples,
+        frames,
+        heartbeats,
+        workerHeartbeats,
+      }),
     )
   })
 })
