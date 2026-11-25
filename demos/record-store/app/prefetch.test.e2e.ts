@@ -333,7 +333,17 @@ describe('record store prefetching', () => {
     let requests = 0
     let page = await t.serve(
       await createTestServer(async (request) => {
-        if (new URL(request.url).pathname === scriptHref) {
+        let pathname = new URL(request.url).pathname
+        // Other visible album cards share this script. Keep their prefetches from starting it
+        // before the album retained below has discovered its assets.
+        if (
+          request.headers.get('X-Remix-Prefetch') === 'true' &&
+          pathname.startsWith('/albums/') &&
+          pathname !== '/albums/overpass-stereo'
+        ) {
+          await release.promise
+        }
+        if (pathname === scriptHref) {
           requests++
           started.resolve()
           await release.promise
