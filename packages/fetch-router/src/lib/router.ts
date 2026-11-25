@@ -6,7 +6,7 @@ import * as Specificity from '@remix-run/route-pattern/specificity'
 
 import { runMiddleware } from './middleware.ts'
 import type { AnyMiddleware, MiddlewareContext } from './middleware.ts'
-import { rethrowUnlessAborted, throwIfRequestAborted } from './request-abort.ts'
+import { getRejectionReason, throwIfRequestAborted } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
 import type { ContextWithParams, requestContextTypes } from './request-context.ts'
 import { RequestMethods } from './request-methods.ts'
@@ -378,7 +378,9 @@ function finalizeDirectResult(
       throwIfRequestAborted(request.signal, response)
       return headFallback ? headResponse(response) : response
     },
-    (error) => rethrowUnlessAborted(request.signal, error),
+    (error) => {
+      throw getRejectionReason(request.signal, error)
+    },
   )
 }
 
@@ -534,7 +536,7 @@ export function createRouter<
 
       return finalizeDirectResult(route.handler(context), context.request, resolved.headFallback)
     } catch (error) {
-      return Promise.reject(error)
+      return Promise.reject(getRejectionReason(context.request.signal, error))
     }
   }
 

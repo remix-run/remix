@@ -1,9 +1,5 @@
 import type { RequestHandler } from './controller.ts'
-import {
-  cancelUnreadResponse,
-  rethrowUnlessAborted,
-  throwIfRequestAborted,
-} from './request-abort.ts'
+import { getRejectionReason, throwIfRequestAborted } from './request-abort.ts'
 import type {
   ContextEntries,
   ContextEntry,
@@ -121,6 +117,19 @@ export function runMiddleware(
   let signal = context.request.signal
   let index = -1
 
+  // Waits for downstream work to settle, then rejects with the abort reason if the request aborted
+  function settleAndCheckAbort(promise: Promise<Response>): Promise<Response> {
+    return promise.then(
+      (response) => {
+        throwIfRequestAborted(signal, response)
+        return response
+      },
+      (error) => {
+        throw getRejectionReason(signal, error)
+      },
+    )
+  }
+
   function dispatch(i: number): Response | Promise<Response> {
     if (i <= index) throw new Error('next() called multiple times')
     index = i
@@ -135,13 +144,7 @@ export function runMiddleware(
         return result
       }
 
-      return Promise.resolve(result).then(
-        (response) => {
-          throwIfRequestAborted(signal, response)
-          return response
-        },
-        (error) => rethrowUnlessAborted(signal, error),
-      )
+      return settleAndCheckAbort(Promise.resolve(result))
     }
 
     let nextPromise: Promise<Response> | undefined
@@ -154,7 +157,7 @@ export function runMiddleware(
         let result = dispatch(i + 1)
         nextPromise = result instanceof Promise ? result : Promise.resolve(result)
       } catch (error) {
-        nextPromise = Promise.reject(error)
+        nextPromise = Promise.reject(getRejectionReason(signal, error))
       }
 
       // Mark handled immediately so middleware that calls next() and later short-circuits
@@ -173,8 +176,7 @@ export function runMiddleware(
     // Direct passthrough (`return next()`): downstream checks for aborts when it settles, but it
     // may have settled before an abort that happened while this middleware was running
     if (result === nextPromise && nextPromise !== undefined) {
-      throwIfRequestAborted(signal, nextPromise)
-      return nextPromise
+      return signal.aborted ? settleAndCheckAbort(nextPromise) : nextPromise
     }
 
     if (
@@ -194,16 +196,17 @@ export function runMiddleware(
           }
           throw new Error('Middleware must return a Response or call next()')
         },
-        (error) => rethrowUnlessAborted(signal, error),
+        (error) => {
+          throw getRejectionReason(signal, error)
+        },
       )
     }
 
-    throwIfRequestAborted(signal, nextPromise)
-
     if (nextPromise !== undefined) {
-      return nextPromise
+      return signal.aborted ? settleAndCheckAbort(nextPromise) : nextPromise
     }
 
+    throwIfRequestAborted(signal)
     throw new Error('Middleware must return a Response or call next()')
   }
 
@@ -211,6 +214,6 @@ export function runMiddleware(
     let result = dispatch(0)
     return result instanceof Promise ? result : Promise.resolve(result)
   } catch (error) {
-    return Promise.reject(error)
+    return Promise.reject(getRejectionReason(signal, error))
   }
 }

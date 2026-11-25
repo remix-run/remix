@@ -17,23 +17,19 @@ export function throwIfRequestAborted(signal: AbortSignal, response?: unknown): 
 }
 
 /**
- * Rethrows `error` from work that settled, or the abort reason instead if the request aborted
- * first, so callers see the same rejection however the work ended.
+ * Returns the error to reject with when work fails: the abort reason if the request has aborted,
+ * so callers see the same rejection however the work ended, or else the work's own error.
  *
  * @param signal The request's abort signal
- * @param error The error the work rejected with
+ * @param error The error the work failed with
+ * @returns The abort reason or `error`
  */
-export function rethrowUnlessAborted(signal: AbortSignal, error: unknown): never {
-  throw signal.aborted ? signal.reason : error
+export function getRejectionReason(signal: AbortSignal, error: unknown): unknown {
+  return signal.aborted ? signal.reason : error
 }
 
-/**
- * Cancels the body of a response, or of the response a promise resolves to, that nothing will read.
- *
- * @param response A response, a promise for one, or any other value
- * @param reason The reason to cancel the body with
- */
-export function cancelUnreadResponse(response: unknown, reason: unknown): void {
+// Cancels the body of a response, or of the response a promise resolves to, that nothing will read
+function cancelUnreadResponse(response: unknown, reason: unknown): void {
   if (response instanceof Promise) {
     response.then(
       (value) => cancelUnreadResponse(value, reason),
