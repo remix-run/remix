@@ -556,14 +556,12 @@ export function createRouter<
     middleware: AnyMiddleware[],
   ): Promise<Response> {
     let abortRace = new AbortRace(context.request)
-    let routeMatched = false
     let headFallback = false
 
     let promise = runMiddleware(
       middleware,
       context,
       (ctx) => {
-        routeMatched = true
         let resolved = resolveRoute(ctx)
         if (resolved.kind === 'response') {
           return resolved.response
@@ -577,17 +575,6 @@ export function createRouter<
       },
       abortRace,
     )
-
-    // When routing already ran synchronously and is not a HEAD fallback, skip chaining an extra Promise
-    if (routeMatched && !headFallback) {
-      if (abortRace.isListening) {
-        let cleanup = () => abortRace.dispose()
-        promise.then(cleanup, cleanup)
-      } else {
-        abortRace.dispose()
-      }
-      return promise
-    }
 
     // Strip the body after router middleware so it sees the same response as for GET
     return promise.then(

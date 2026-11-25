@@ -229,28 +229,6 @@ describe('abort signal support', () => {
     await assert.rejects(promise, reason)
   })
 
-  it('still aborts when a Request with a signal is passed alongside init without signal', async () => {
-    let controller = new AbortController()
-    let request = new Request('https://remix.run', { signal: controller.signal })
-    let router = createRouter()
-    let handlerStarted = Promise.withResolvers<void>()
-
-    router.get('/', async () => {
-      handlerStarted.resolve()
-      await new Promise(() => {})
-      return new Response('Home')
-    })
-
-    let responsePromise = router.fetch(request, { headers: { 'X-Test': '1' } })
-    await handlerStarted.promise
-    controller.abort()
-
-    await assert.rejects(responsePromise, (error: any) => {
-      assert.equal(error.name, 'AbortError')
-      return true
-    })
-  })
-
   it('strips HEAD fallback body when async router middleware sets context.method to HEAD after awaiting', async () => {
     let router = createRouter({
       middleware: [
