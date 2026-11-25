@@ -1022,7 +1022,7 @@ Average time to dispatch one request compared with [Hono](https://hono.dev). Han
 | 3 sync middleware, 100 routes  |         480 ns |  382 ns |
 | 3 async middleware, 100 routes |         635 ns |  493 ns |
 
-Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `fetch-router@1.0.1` (`5bc1a08add`), and `hono@4.13.22`.
+Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `fetch-router@1.0.1` (`80575f9ffa`), and `hono@4.13.22`.
 
 <!-- benchmarks:end -->
 
