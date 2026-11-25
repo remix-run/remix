@@ -1355,15 +1355,173 @@ describe('createRequest authority', () => {
     })
   })
 
+  it('passes a Request to rest-parameter handlers whose function length is 0', async (t) => {
+    let receivedRequest: Request | undefined
+
+    await new Promise<void>((resolve) => {
+      let listener = createRequestListener((...args: [Request]) => {
+        receivedRequest = args[0]
+        return new Response('ok')
+      })
+
+      let req = createMockRequest({ url: '/hello', headers: { Host: 'example.com' } })
+      let res = createMockResponse({ req })
+      t.mock.method(res, 'end', () => resolve())
+
+      listener(req, res)
+    })
+
+    assert.ok(receivedRequest instanceof Request)
+    assert.equal(receivedRequest.url, 'http://example.com/hello')
+  })
+
+  it('routes errors from rest-parameter handlers through onError', async (t) => {
+    let onError = t.mock.fn((_error: unknown) => undefined)
+    let status: number | undefined
+
+    await new Promise<void>((resolve) => {
+      let listener = createRequestListener(
+        (..._args: [Request]) => {
+          throw new Error('boom')
+        },
+        { onError },
+      )
+
+      let req = createMockRequest({ headers: { Host: 'example.com' } })
+      let res = createMockResponse({ req })
+      t.mock.method(res, 'writeHead', (statusCode: number) => {
+        status = statusCode
+      })
+      t.mock.method(res, 'end', () => resolve())
+
+      listener(req, res)
+    })
+
+    assert.equal(onError.mock.callCount(), 1)
+    assert.equal(status, 500)
+  })
+
   it('throws for invalid authority syntax in host overrides', () => {
     let req = createMockRequest({ url: '/secret', headers: { Host: 'example.com' } })
     let res = createMockResponse({ req })
 
-    for (let host of ['', 'example.com\\admin', 'example.com%2fadmin', 'exam\tple.com']) {
-      assert.throws(() => createRequest(req, res, { host }), {
-        message: 'Invalid request authority',
-      })
+    for (let host of [
+      '',
+      'example.com\\admin',
+      'example.com%2fadmin',
+      'exam\tple.com',
+      'example.123',
+      'foo.0x123',
+      '256.0.0.1',
+      '1.2.3.4.5',
+      'example.com:65536',
+      'example.com:abc',
+      '[::1',
+    ]) {
+      assert.throws(
+        () => createRequest(req, res, { host }),
+        { message: 'Invalid request authority' },
+        `expected invalid authority to throw: ${host}`,
+      )
     }
+  })
+
+  it('matches URL.parse for valid hostnames, IPv4, IPv6, punycode, and ports', () => {
+    let longHost = `${'a'.repeat(60)}.${'b'.repeat(60)}.${'c'.repeat(60)}.${'d'.repeat(60)}.example.com`
+
+    for (let host of [
+      '127.0.0.1:3000',
+      'api.example.com:0',
+      'api.example.com:65535',
+      'example.com:0080',
+      'example.com:',
+      'example.com.',
+      'EXAMPLE.com',
+      'a-b.c-d.com',
+      '01.2.3.4',
+      '1.2.3',
+      'xn--nxasmq6b.com',
+      '[::1]',
+      '[::1]:3000',
+      longHost,
+    ]) {
+      let req = createMockRequest({ url: '/ok' })
+      let res = createMockResponse({ req })
+      let expected = new URL(`http://${host}/ok`).href
+      assert.equal(createRequest(req, res, { host }).url, expected)
+    }
+  })
+
+  it('handles HTTP/1 string headers, array headers, and HTTP/2 pseudo-headers without mutating req.headers', () => {
+    let req1 = createMockRequest({ headers: { Host: 'example.com', 'X-Test': 'one' } })
+    req1.httpVersionMajor = 1
+    let res1 = createMockResponse({ req: req1 })
+    let request1 = createRequest(req1, res1)
+    request1.headers.set('X-Test', 'mutated')
+    assert.equal(req1.headers['x-test'], 'one')
+
+    let reqArray = createMockRequest({ headers: { Host: 'example.com' } })
+    reqArray.httpVersionMajor = 1
+    reqArray.headers['x-multi'] = ['a', 'b']
+    let resArray = createMockResponse({ req: reqArray })
+    assert.equal(createRequest(reqArray, resArray).headers.get('X-Multi'), 'a, b')
+
+    let req2 = createMockRequest({
+      headers: { ':authority': 'example.com', ':method': 'GET', 'X-Test': 'two' },
+    })
+    req2.httpVersionMajor = 2
+    let res2 = createMockResponse({ req: req2 })
+    let request2 = createRequest(req2, res2)
+    assert.deepEqual([...request2.headers], [['x-test', 'two']])
+  })
+
+  it('cancels the response stream when res is destroyed during backpressure before close fires', async () => {
+    let resolveCancelled!: () => void
+    let cancelled = new Promise<void>((resolve) => {
+      resolveCancelled = resolve
+    })
+
+    let listener = createRequestListener(
+      () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('chunk'))
+            },
+            cancel() {
+              resolveCancelled()
+            },
+          }),
+        ),
+    )
+
+    let req = createMockRequest()
+    req.httpVersionMajor = 1
+    let res = Object.assign(new stream.Writable(), {
+      req,
+      destroyed: false,
+      writeHead() {},
+      write() {
+        // Mark destroyed synchronously before `'close'` is emitted on a later tick.
+        this.destroyed = true
+        return false
+      },
+      end() {},
+    }) as unknown as http.ServerResponse
+
+    await listener(req, res)
+    await waitFor(cancelled, 'expected response stream to be cancelled on destroyed response')
+  })
+
+  it('enqueues request body chunks as plain Uint8Array instances', async () => {
+    let req = createMockRequest({ method: 'POST', body: 'hello' })
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+
+    let reader = request.body!.getReader()
+    let { value } = await reader.read()
+    assert.ok(value instanceof Uint8Array)
+    assert.equal(value.constructor, Uint8Array)
   })
 
   it('preserves URL hostname normalization and request-target encoding', () => {

@@ -5,23 +5,42 @@ const requestAbortReasons = new WeakSet<object>()
 
 export interface RequestLifecycle {
   readonly signal: AbortSignal
+  readonly closed: boolean
   abort(reason?: unknown): void
+  close(): void
   finish(): void
+  setResponseReader(reader: ReadableStreamDefaultReader<Uint8Array> | undefined): void
 }
 
 export function createRequestLifecycle(): RequestLifecycle {
   let controller = new AbortController()
   let finished = false
+  let closed = false
+  let responseReader: ReadableStreamDefaultReader<Uint8Array> | undefined
 
   return {
     get signal() {
       return controller.signal
     },
+    get closed() {
+      return closed
+    },
     abort(reason?: unknown) {
       if (!finished) controller.abort(reason)
     },
+    close() {
+      if (closed) return
+      closed = true
+      if (!finished) controller.abort()
+      if (responseReader !== undefined) {
+        void responseReader.cancel().catch(() => undefined)
+      }
+    },
     finish() {
       finished = true
+    },
+    setResponseReader(reader: ReadableStreamDefaultReader<Uint8Array> | undefined) {
+      responseReader = reader
     },
   }
 }
@@ -34,8 +53,8 @@ export function observeResponseForRequestLifecycle(
   // not yet sent a response (i.e., `close` without `finish`)
   // `finish` -> done rendering the response
   // `close` -> response can no longer be written to
-  res.once('close', () => lifecycle.abort())
-  res.once('finish', () => lifecycle.finish())
+  res.on('close', () => lifecycle.close())
+  res.on('finish', () => lifecycle.finish())
 }
 
 export function isRequestAlreadyAborted(
