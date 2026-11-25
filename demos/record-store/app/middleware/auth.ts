@@ -1,0 +1,135 @@
+import type { Route } from 'remix/routes'
+import { createCredentialsAuthProvider } from 'remix/auth'
+import {
+  auth,
+  createSessionAuthScheme,
+  requireAuth as requireAuthenticated,
+} from 'remix/middleware/auth'
+import { redirect } from 'remix/response/redirect'
+
+import { users } from '../data/schema.ts'
+import type { User } from '../data/schema.ts'
+import { routes } from '../routes.ts'
+import { parseId } from '../utils/ids.ts'
+import { verifyPassword } from '../utils/password-hash.ts'
+import { databaseContext } from './database.ts'
+
+interface RecordStoreAuthSession {
+  userId: number
+}
+
+export function loadAuth() {
+  return auth({
+    schemes: [
+      createSessionAuthScheme<User, RecordStoreAuthSession>({
+        read(session) {
+          return parseRecordStoreAuthSession(session.get('auth'))
+        },
+        async verify(value, context) {
+          let db = context.get(databaseContext)
+          if (db == null) {
+            throw new Error('Expected loadDatabase() middleware before loadAuth()')
+          }
+
+          return (await db.find(users, value.userId)) ?? null
+        },
+        invalidate(session) {
+          session.unset('auth')
+        },
+      }),
+    ],
+  })
+}
+
+export const passwordProvider = createCredentialsAuthProvider({
+  parse(context) {
+    let formData = context.get(FormData)
+    if (formData == null) {
+      throw new Error('Expected formData() middleware before password auth provider')
+    }
+
+    return {
+      email: normalizeEmail(formData.get('email')?.toString() ?? ''),
+      password: formData.get('password')?.toString() ?? '',
+    }
+  },
+  async verify({ email, password }, context) {
+    let db = context.get(databaseContext)
+    if (db == null) {
+      throw new Error('Expected loadDatabase() middleware before password auth provider')
+    }
+
+    let user = await db.findOne(users, { where: { email } })
+
+    if (!user || !(await verifyPassword(password, user.password_hash))) {
+      return null
+    }
+
+    return user
+  },
+})
+
+export interface RequireAuthOptions {
+  redirectTo?: Route
+}
+
+export function requireAuth(options?: RequireAuthOptions) {
+  let redirectTo = options?.redirectTo ?? routes.auth.login.index
+
+  return requireAuthenticated<User>({
+    onFailure(context) {
+      return redirect(
+        redirectTo.href(undefined, {
+          searchParams: {
+            returnTo:
+              getSafeReturnTo(context.url.searchParams.get('returnTo')) ??
+              context.url.pathname + context.url.search,
+          },
+        }),
+      )
+    },
+  })
+}
+
+export function getPostAuthRedirect(url: URL, fallback = routes.account.index.href()): string {
+  return getSafeReturnTo(url.searchParams.get('returnTo')) ?? fallback
+}
+
+export function getLoginRedirectURL(
+  url: URL,
+  route: Route<any, any> = routes.auth.login.index,
+): string {
+  return route.href(undefined, {
+    searchParams: { returnTo: getSafeReturnTo(url.searchParams.get('returnTo')) },
+  })
+}
+
+function parseRecordStoreAuthSession(value: unknown): RecordStoreAuthSession | null {
+  if (typeof value !== 'object' || value == null) {
+    return null
+  }
+
+  let userId = parseId((value as { userId?: unknown }).userId)
+
+  if (userId == null) {
+    return null
+  }
+
+  return { userId }
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
+}
+
+function getSafeReturnTo(returnTo: string | null): string | undefined {
+  if (returnTo == null || returnTo === '') {
+    return undefined
+  }
+
+  if (!returnTo.startsWith('/') || returnTo.startsWith('//')) {
+    return undefined
+  }
+
+  return returnTo
+}

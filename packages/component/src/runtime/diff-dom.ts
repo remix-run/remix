@@ -1,5 +1,5 @@
 import { invariant } from './invariant.ts'
-import { excludePortalRanges, getStableIndexes } from './reconcile.ts'
+import { excludePortalRanges, getStableIndexes, placeNodeBefore } from './reconcile.ts'
 import {
   getFrameId,
   getHydrationId,
@@ -427,7 +427,7 @@ function getBoundaryKey(
 function placeSiblingUnitBefore(unit: SiblingUnit, parent: ParentNode, ref: Node | null): void {
   if (unit.start.parentNode === parent && (unit.end ?? unit.start).nextSibling === ref) return
   if (!unit.kind) {
-    parent.insertBefore(unit.start, ref)
+    placeNodeBefore(parent, unit.start, ref)
     return
   }
 

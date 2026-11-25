@@ -1301,6 +1301,10 @@ function placeVNode(node: CommittedVNode, domParent: ParentNode, anchor: Node | 
       if (cur === last) break
     }
   }
+  if (first === last) {
+    placeNodeBefore(domParent, first, anchor)
+    return
+  }
   let ends = portalRanges?.has(domParent) ? portalRanges.ends : undefined
   for (let cur: Node | null = first; cur; ) {
     let portalEnd: Comment | undefined = ends?.get(cur)
@@ -1312,6 +1316,19 @@ function placeVNode(node: CommittedVNode, domParent: ParentNode, anchor: Node | 
     domParent.insertBefore(cur, anchor)
     if (cur === last) break
     cur = next
+  }
+}
+
+export function placeNodeBefore(parent: ParentNode, node: Node, before: Node | null): void {
+  if (
+    node.parentNode === parent &&
+    node.nodeType === Node.ELEMENT_NODE &&
+    parent.nodeType !== Node.DOCUMENT_NODE &&
+    typeof parent.moveBefore === 'function'
+  ) {
+    parent.moveBefore(node, before)
+  } else {
+    parent.insertBefore(node, before)
   }
 }
 

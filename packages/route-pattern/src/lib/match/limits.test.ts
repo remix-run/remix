@@ -46,30 +46,30 @@ describe('matcher resource limits', () => {
   })
 
   it('enforces match work below, at, and above the boundary', () => {
-    let belowBoundary = createMultiMatcher({ limits: { maxMatchWork: 11 } })
+    let belowBoundary = createMultiMatcher({ limits: { maxMatchWork: 3 } })
     belowBoundary.add('/a', null)
     assert.ok(belowBoundary.match('https://example.com/a'))
 
-    let atBoundary = createMultiMatcher({ limits: { maxMatchWork: 10 } })
+    let atBoundary = createMultiMatcher({ limits: { maxMatchWork: 2 } })
     atBoundary.add('/a', null)
     assert.ok(atBoundary.match('https://example.com/a'))
 
-    let aboveBoundary = createMultiMatcher({ limits: { maxMatchWork: 9 } })
+    let aboveBoundary = createMultiMatcher({ limits: { maxMatchWork: 1 } })
     aboveBoundary.add('/a', null)
     assert.throws(
       () => aboveBoundary.match('https://example.com/a'),
-      resourceError('maxMatchWork', 9, 10),
+      resourceError('maxMatchWork', 1, 2),
     )
   })
 
   it('enforces match work across all candidates', () => {
-    let matcher = createMultiMatcher({ limits: { maxMatchWork: 17 } })
+    let matcher = createMultiMatcher({ limits: { maxMatchWork: 2 } })
     matcher.add('/a', null)
     matcher.add('/a', null)
 
     assert.throws(
-      () => matcher.match('https://example.com/a'),
-      resourceError('maxMatchWork', 17, 18),
+      () => matcher.matchAll('https://example.com/a'),
+      resourceError('maxMatchWork', 2, 3),
     )
   })
 
@@ -92,22 +92,32 @@ describe('matcher resource limits', () => {
   })
 
   it('enforces match work while scanning optional pathname variables', () => {
-    let matcher = createMultiMatcher({ limits: { maxMatchWork: 1_000 } })
+    let matcher = createMultiMatcher({ limits: { maxMatchWork: 200 } })
     matcher.add('/:name(.:extension)', null)
 
     assert.throws(
       () => matcher.match(`https://example.com/${'a'.repeat(128)}`),
-      exceedsMatchWork(1_000),
+      exceedsMatchWork(200),
+    )
+  })
+
+  it('enforces match work before scanning oversized hostnames', () => {
+    let matcher = createMultiMatcher({ limits: { maxMatchWork: 100 } })
+    matcher.add('https://example.com/a', null)
+
+    assert.throws(
+      () => matcher.match(`https://${'a.'.repeat(80)}example.com/a`),
+      exceedsMatchWork(100),
     )
   })
 
   it('enforces match work while scanning optional hostname variables', () => {
-    let matcher = createMultiMatcher({ limits: { maxMatchWork: 2_000 } })
+    let matcher = createMultiMatcher({ limits: { maxMatchWork: 50 } })
     matcher.add('://:tenant(.:region).example.com/', null)
 
     assert.throws(
       () => matcher.match(`https://${'a'.repeat(64)}.example.com/`),
-      exceedsMatchWork(2_000),
+      exceedsMatchWork(50),
     )
   })
 

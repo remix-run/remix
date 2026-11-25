@@ -1,0 +1,66 @@
+export interface CartItem {
+  albumId: number
+  slug: string
+  title: string
+  price: number
+  quantity: number
+}
+
+export interface Cart {
+  items: CartItem[]
+}
+
+export function isCart(value: unknown): value is Cart {
+  return (
+    typeof value === 'object' && value !== null && 'items' in value && Array.isArray(value.items)
+  )
+}
+
+export function getCart(value: unknown): Cart {
+  return isCart(value) ? value : { items: [] }
+}
+
+export function addToCart(
+  cart: Cart,
+  albumId: number,
+  slug: string,
+  title: string,
+  price: number,
+  quantity: number = 1,
+): Cart {
+  let existingItem = cart.items.find((item) => item.albumId === albumId)
+  if (existingItem) {
+    existingItem.quantity += quantity
+  } else {
+    cart.items.push({ albumId, slug, title, price, quantity })
+  }
+
+  return cart
+}
+
+export function updateCartItem(cart: Cart, albumId: number, quantity: number): Cart | undefined {
+  let item = cart.items.find((item) => item.albumId === albumId)
+
+  if (!item) return undefined
+
+  if (quantity <= 0) {
+    cart.items = cart.items.filter((item) => item.albumId !== albumId)
+  } else {
+    item.quantity = quantity
+  }
+
+  return cart
+}
+
+export function removeFromCart(cart: Cart, albumId: number): Cart {
+  cart.items = cart.items.filter((item) => item.albumId !== albumId)
+  return cart
+}
+
+export function clearCart(): Cart {
+  return { items: [] }
+}
+
+export function getCartTotal(cart: Cart): number {
+  return cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+}

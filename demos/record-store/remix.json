@@ -1,0 +1,42 @@
+{
+  "$schema": "node_modules/remix/schema/remix.json",
+  "assets": {
+    "rootDir": "../..",
+    "basePath": "/assets",
+    "mounts": {
+      "app": "demos/record-store/app",
+      "npm": "node_modules",
+      "packages": "packages"
+    },
+    "allowFiles": [
+      "demos/record-store/app/routes.ts",
+      "demos/record-store/app/data/album-genres.ts",
+      "demos/record-store/app/**/public/**",
+      "demos/record-store/app/actions/auth/login/login-form.ts",
+      "demos/record-store/app/actions/auth/login/login-schema.ts",
+      "demos/record-store/app/actions/auth/schemas.ts",
+      "demos/record-store/app/ui/restful-form.tsx",
+      "demos/record-store/app/ui/album-transitions.ts",
+      "demos/record-store/app/images/*.png"
+    ],
+    "allowPackages": ["remix", "@remix-run/ui"],
+    "denyFiles": ["demos/record-store/app/**/*.test.*"],
+    "files": { "extensions": [".png"] }
+  },
+  "db": {
+    "adapter": {
+      "type": "sqlite",
+      "filename": "./db/records.sqlite",
+      "foreignKeys": true
+    },
+    "migrations": {
+      "directory": "./db/migrations"
+    },
+    "seed": "./db/seed.sql"
+  },
+  "test": {
+    "playwright": {
+      "configFile": "./playwright.config.ts"
+    }
+  }
+}
