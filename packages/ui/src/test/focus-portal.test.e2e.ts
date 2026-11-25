@@ -387,13 +387,29 @@ describe('Portal focus navigation', () => {
       let style = document.createElement('style')
       style.textContent = '#modal-child-surface[data-state="closed"] { opacity:0 !important }'
       document.head.append(style)
+      node.addEventListener(
+        'transitionrun',
+        () => {
+          for (let animation of node.getAnimations()) animation.pause()
+        },
+        { once: true },
+      )
     })
     await page.locator('#modal-child-close').press('Enter')
     await page.locator('#modal-child-surface[data-state="closed"][data-open]').waitFor()
+    await page.waitForFunction(() =>
+      document
+        .querySelector('#modal-child-surface')
+        ?.getAnimations()
+        .some((animation) => animation.playState === 'paused'),
+    )
     await page.keyboard.press('Tab')
     expect(
       await page.evaluate(() => !!document.activeElement?.closest('#modal-child-surface')),
     ).toBe(true)
+    await page.locator('#modal-child-surface').evaluate((node) => {
+      for (let animation of node.getAnimations()) animation.finish()
+    })
     await page.locator('#modal-child-surface[data-open]').waitFor({ state: 'hidden' })
     await page.locator('#modal-child-trigger:focus').waitFor()
     await page.keyboard.press('Tab')
