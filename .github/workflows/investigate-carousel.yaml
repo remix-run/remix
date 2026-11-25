@@ -1,0 +1,39 @@
+name: Record store carousel timeout diagnostics
+
+on:
+  push:
+    branches:
+      - markdalgleish/record-store-carousel-timeouts
+
+permissions:
+  contents: read
+
+jobs:
+  reproduce:
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture: [full, small]
+        sample: [1, 2, 3]
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      CAROUSEL_CATALOG_FIXTURE: ${{ matrix.fixture }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: ./.github/actions/setup-node-pnpm-cache
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install webkit
+      - name: Original main browser suite concurrency
+        shell: bash
+        run: |
+          mkdir -p investigation-logs
+          node -e 'console.log({platform:process.platform, arch:process.arch, cpus:require("node:os").availableParallelism(), node:process.version, fixture:process.env.CAROUSEL_CATALOG_FIXTURE})'
+          set -o pipefail
+          pnpm test:browser 2>&1 | tee investigation-logs/suite.log
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: carousel-${{ matrix.fixture }}-${{ matrix.sample }}
+          path: investigation-logs
