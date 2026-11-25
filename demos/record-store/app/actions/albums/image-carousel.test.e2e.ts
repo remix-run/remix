@@ -179,20 +179,22 @@ describe('album image selection', () => {
       await page.goto('/albums')
     } catch (error) {
       diagnostic('GOTO FAILED', String(error))
-      await snapshot(page)
-      try {
-        await page.waitForLoadState('load')
-        diagnostic('LOAD AFTER TIMEOUT')
-        let entry = await page.locator('script[type="module"][src]').getAttribute('src')
-        assert.ok(entry)
-        await page.evaluate(async (href) => {
-          let { app } = await import(href)
-          await app.ready()
-        }, entry)
-        diagnostic('APP READY AFTER TIMEOUT')
+      if (process.env.CAROUSEL_OBSERVE_AFTER_TIMEOUT === 'observe') {
         await snapshot(page)
-      } catch (laterError) {
-        diagnostic('AFTER TIMEOUT ERROR', String(laterError))
+        try {
+          await page.waitForURL('**/albums', { waitUntil: 'load' })
+          diagnostic('LOAD AFTER TIMEOUT')
+          let entry = await page.locator('script[type="module"][src]').getAttribute('src')
+          assert.ok(entry)
+          await page.evaluate(async (href) => {
+            let { app } = await import(href)
+            await app.ready()
+          }, entry)
+          diagnostic('APP READY AFTER TIMEOUT')
+          await snapshot(page)
+        } catch (laterError) {
+          diagnostic('AFTER TIMEOUT ERROR', String(laterError))
+        }
       }
       throw error
     }

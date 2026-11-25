@@ -14,9 +14,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-15]
-        sample: [1, 2]
+        sample: [baseline, observe]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      CAROUSEL_OBSERVE_AFTER_TIMEOUT: ${{ matrix.sample }}
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
