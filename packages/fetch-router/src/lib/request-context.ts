@@ -185,13 +185,6 @@ export type ContextWithEntry<context, entry extends ContextEntry> = ContextWithE
   [entry]
 >
 
-const initializedUrls = new WeakMap<RequestContext<any, any>, URL>()
-
-// Internal helper used by router matching to inspect initialized `context.url` without forcing URL parsing.
-export function peekContextUrl(context: RequestContext<any, any>): URL | undefined {
-  return initializedUrls.get(context)
-}
-
 /**
  * A context object that contains information about the current request. Every request
  * handler or middleware in the lifecycle of a request receives the same context object.
@@ -261,19 +254,13 @@ export class RequestContext<
   #contextProperties: Map<string, object> | undefined
   #contextPropertyKeys: Map<object, string> | undefined
 
-  #boundGet:
-    | (<key extends object>(key: key) => GetContextValue<RequestContext<params, entries>, key>)
-    | undefined
-  #boundHas: ((key: object) => boolean) | undefined
-  #boundSet:
-    | (<key extends object>(
-        key: key,
-        value: ContextValue<key>,
-        options?: { property: string },
-      ) => void)
-    | undefined
-
-  #getValue<key extends object>(key: key): GetContextValue<RequestContext<params, entries>, key> {
+  /**
+   * Get a value from request context.
+   *
+   * @param key The key to read
+   * @returns The value for the given key, or `undefined` if the value is not available
+   */
+  get = <key extends object>(key: key): GetContextValue<RequestContext<params, entries>, key> => {
     let map = this.#contextMap
     if (map === undefined || !map.has(key)) {
       let contextKey = key as ContextKey<GetContextValue<RequestContext<params, entries>, key>>
@@ -288,36 +275,13 @@ export class RequestContext<
   }
 
   /**
-   * Get a value from request context.
-   *
-   * @param key The key to read
-   * @returns The value for the given key, or `undefined` if the value is not available
-   */
-  get get(): <key extends object>(
-    key: key,
-  ) => GetContextValue<RequestContext<params, entries>, key> {
-    return (this.#boundGet ??= (key) => this.#getValue(key))
-  }
-
-  set get(
-    fn: <key extends object>(key: key) => GetContextValue<RequestContext<params, entries>, key>,
-  ) {
-    this.#boundGet = fn
-  }
-
-  /**
    * Check whether a value exists in request context.
    *
    * @param key The key to check
    * @returns `true` if a value has been set for the key
    */
-  get has(): <key extends object>(key: key) => boolean {
-    return (this.#boundHas ??= (key) => this.#contextMap !== undefined && this.#contextMap.has(key))
-  }
-
-  set has(fn: <key extends object>(key: key) => boolean) {
-    this.#boundHas = fn
-  }
+  has = <key extends object>(key: key): boolean =>
+    this.#contextMap !== undefined && this.#contextMap.has(key)
 
   /**
    * Set a value in request context.
@@ -326,34 +290,22 @@ export class RequestContext<
    * @param value The value to write
    * @param options Options for installing the value as a direct context property
    */
-  get set(): <key extends object>(
+  set = <key extends object>(
     key: key,
     value: ContextValue<key>,
     options?: { property: string },
-  ) => void {
-    return (this.#boundSet ??= (key, value, options) => {
-      if (options != null) {
-        this.#installContextProperty(key, options.property)
-      }
+  ): void => {
+    if (options != null) {
+      this.#installContextProperty(key, options.property)
+    }
 
-      let map = this.#contextMap
-      if (map === undefined) {
-        map = new Map()
-        this.#contextMap = map
-      }
+    let map = this.#contextMap
+    if (map === undefined) {
+      map = new Map()
+      this.#contextMap = map
+    }
 
-      map.set(key, value)
-    })
-  }
-
-  set set(
-    fn: <key extends object>(
-      key: key,
-      value: ContextValue<key>,
-      options?: { property: string },
-    ) => void,
-  ) {
-    this.#boundSet = fn
+    map.set(key, value)
   }
 
   #installContextProperty(key: object, property: string): void {
@@ -397,7 +349,7 @@ export class RequestContext<
     contextPropertyKeys.set(key, property)
 
     Object.defineProperty(this, property, {
-      get: () => this.#getValue(key),
+      get: () => this.get(key),
     })
   }
 
@@ -425,19 +377,11 @@ export class RequestContext<
    * The URL of the current request.
    */
   get url(): URL {
-    let url = this.#url
-    if (url === undefined) {
-      url = new URL(this.#initialUrl)
-      this.#url = url
-      initializedUrls.set(this, url)
-    }
-
-    return url
+    return (this.#url ??= new URL(this.#initialUrl))
   }
 
   set url(url: URL) {
     this.#url = url
-    initializedUrls.set(this, url)
   }
 }
 

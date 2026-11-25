@@ -114,10 +114,9 @@ export function runMiddleware(
   context: RequestContext<any, any>,
   handler: RequestHandler<any>,
   sharedAbortRace?: AbortRace,
-  canAbort = true,
 ): Promise<Response> {
   let request = context.request
-  let signal = canAbort ? request.signal : undefined
+  let signal = request.signal
   let len = middleware.length
   let index = -1
   let ownedAbortRace: AbortRace | undefined
@@ -131,7 +130,7 @@ export function runMiddleware(
     if (i <= index) throw new Error('next() called multiple times')
     index = i
 
-    if (signal !== undefined && signal.aborted) {
+    if (signal.aborted) {
       throw signal.reason
     }
 
@@ -139,7 +138,7 @@ export function runMiddleware(
       let result = handler(context)
 
       if (result instanceof Response) {
-        if (signal !== undefined && signal.aborted) {
+        if (signal.aborted) {
           cancelAbandonedResponse(result, signal.reason)
           throw signal.reason
         }
@@ -147,16 +146,7 @@ export function runMiddleware(
         return result
       }
 
-      if (result instanceof Promise) {
-        return canAbort ? getAbortRace().race(result) : result
-      }
-
-      if (result != null && typeof (result as PromiseLike<Response>).then === 'function') {
-        let promise = Promise.resolve(result)
-        return canAbort ? getAbortRace().race(promise) : promise
-      }
-
-      return result
+      return getAbortRace().race(result instanceof Promise ? result : Promise.resolve(result))
     }
 
     let fn = middleware[i]
@@ -191,11 +181,10 @@ export function runMiddleware(
       throw error
     }
 
-    // Synchronous short-circuit response
     if (result instanceof Response) {
       if (nextCanReject) nextPromise!.then(undefined, noop)
 
-      if (signal !== undefined && signal.aborted) {
+      if (signal.aborted) {
         cancelAbandonedResponse(result, signal.reason)
         throw signal.reason
       }
@@ -208,36 +197,16 @@ export function runMiddleware(
       return nextPromise
     }
 
-    let isNativePromise = result instanceof Promise
     if (
-      isNativePromise ||
+      result instanceof Promise ||
       (result != null && typeof (result as PromiseLike<Response>).then === 'function')
     ) {
-      let promise = isNativePromise ? result : Promise.resolve(result)
+      let promise = result instanceof Promise ? result : Promise.resolve(result)
 
-      if (!canAbort) {
-        return promise.then(
-          (response) => {
-            if (response instanceof Response) {
-              if (nextCanReject) nextPromise!.then(undefined, noop)
-              return response
-            }
-            if (nextPromise !== undefined) {
-              return nextPromise
-            }
-            throw new Error('Middleware must return a Response or call next()')
-          },
-          (error) => {
-            if (nextCanReject) nextPromise!.then(undefined, noop)
-            throw error
-          },
-        )
-      }
-
-      if (signal!.aborted) {
+      if (signal.aborted) {
         if (nextCanReject) nextPromise!.then(undefined, noop)
-        promise.then((value) => cancelAbandonedResponse(value, signal!.reason), noop)
-        return Promise.reject(signal!.reason)
+        promise.then((value) => cancelAbandonedResponse(value, signal.reason), noop)
+        return Promise.reject(signal.reason)
       }
 
       let abortRace = getAbortRace()
@@ -249,9 +218,9 @@ export function runMiddleware(
           (response) => {
             abortRace.removeRejector(reject)
 
-            if (signal!.aborted) {
+            if (signal.aborted) {
               if (nextCanReject) nextPromise!.then(undefined, noop)
-              cancelAbandonedResponse(response, signal!.reason)
+              cancelAbandonedResponse(response, signal.reason)
               return
             }
 
@@ -273,7 +242,7 @@ export function runMiddleware(
       })
     }
 
-    if (signal !== undefined && signal.aborted) {
+    if (signal.aborted) {
       if (nextCanReject) nextPromise!.then(undefined, noop)
       throw signal.reason
     }
