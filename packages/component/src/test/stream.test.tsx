@@ -906,9 +906,7 @@ describe('stream', () => {
       expect(shelf.content.querySelector('#button')?.getAttribute('formaction')).toBe(
         blockedJavaScriptUrl,
       )
-      expect(shelf.content.querySelector('#use')?.getAttribute('xlink:href')).toBe(
-        blockedJavaScriptUrl,
-      )
+      expect(shelf.content.querySelector('#use')?.getAttribute('href')).toBe(blockedJavaScriptUrl)
       expect(shelf.content.querySelector('#object')?.getAttribute('data')).toBe(
         blockedJavaScriptUrl,
       )
@@ -1028,14 +1026,15 @@ describe('stream', () => {
       )
     })
 
-    it('handles namespaced xlinkHref to xlink:href', async () => {
+    it('normalizes xlinkHref and xlink:href to href', async () => {
       let stream = renderToStream(
         <svg>
           <use xlinkHref="#icon-star" />
+          <use xlink:href="#icon-moon" />
         </svg>,
       )
       let html = await drain(stream)
-      expect(html).toBe('<svg><use xlink:href="#icon-star"></use></svg>')
+      expect(html).toBe('<svg><use href="#icon-star"></use><use href="#icon-moon"></use></svg>')
     })
 
     it("lowercases camelCase attributes that don't need special handling", async () => {
@@ -1123,7 +1122,7 @@ describe('stream', () => {
       expect(html).toBe(
         '<input disabled value="0" title="A &amp; &quot;B&quot;" />' +
           '<div contenteditable="true" draggable="false"></div>' +
-          '<svg preserveAlpha="false" focusable="true"><use xlink:href="#safe"></use></svg>',
+          '<svg preserveAlpha="false" focusable="true"><use href="#safe"></use></svg>',
       )
     })
 
@@ -1428,7 +1427,7 @@ describe('stream', () => {
     it('renders SVG with preserved viewBox and kebab-cased attributes', async () => {
       let stream = renderToStream(
         <svg viewBox="0 0 24 24" fill="none" className="icon">
-          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
         </svg>,
       )
       let html = await drain(stream)
@@ -1453,10 +1452,10 @@ describe('stream', () => {
       )
     })
 
-    it('renders xmlLang and xmlSpace as xml:lang and xml:space', async () => {
+    it('preserves xml:lang and xml:space as written', async () => {
       let stream = renderToStream(
         <svg>
-          <text xmlLang="en" xmlSpace="preserve">
+          <text xml:lang="en" xml:space="preserve">
             Hi
           </text>
         </svg>,

@@ -29,8 +29,8 @@ const quantityIconProps = {
   focusable: 'false',
   fill: 'none',
   stroke: 'currentColor',
-  strokeWidth: '1.5',
-  strokeLinecap: 'round',
+  'stroke-width': '1.5',
+  'stroke-linecap': 'round',
 } satisfies Props<'svg'>
 
 interface CartItemWithThumbnail extends CartItem {

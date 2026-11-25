@@ -60,23 +60,6 @@ export interface SVGProps<
   accumulate?: Trackable<'none' | 'sum' | undefined>
   /** The `additive` SVG attribute. */
   additive?: Trackable<'replace' | 'sum' | undefined>
-  /** The `alignmentBaseline` SVG attribute. */
-  alignmentBaseline?: Trackable<
-    | 'auto'
-    | 'baseline'
-    | 'before-edge'
-    | 'text-before-edge'
-    | 'middle'
-    | 'central'
-    | 'after-edge'
-    | 'text-after-edge'
-    | 'ideographic'
-    | 'alphabetic'
-    | 'hanging'
-    | 'mathematical'
-    | 'inherit'
-    | undefined
-  >
   /** The `alignment-baseline` SVG attribute. */
   'alignment-baseline'?: Trackable<
     | 'auto'
@@ -103,8 +86,6 @@ export interface SVGProps<
   /** The `amplitude` SVG attribute. */
   amplitude?: Trackable<number | string | undefined>
   /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/arabic-form */
-  arabicForm?: Trackable<'initial' | 'medial' | 'terminal' | 'isolated' | undefined>
-  /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/arabic-form */
   'arabic-form'?: Trackable<'initial' | 'medial' | 'terminal' | 'isolated' | undefined>
   /** The `ascent` SVG attribute. */
   ascent?: Trackable<number | string | undefined>
@@ -118,8 +99,6 @@ export interface SVGProps<
   azimuth?: Trackable<number | string | undefined>
   /** The `baseFrequency` SVG attribute. */
   baseFrequency?: Trackable<number | string | undefined>
-  /** The `baselineShift` SVG attribute. */
-  baselineShift?: Trackable<number | string | undefined>
   /** The `baseline-shift` SVG attribute. */
   'baseline-shift'?: Trackable<number | string | undefined>
   /** The `baseProfile` SVG attribute. */
@@ -134,36 +113,22 @@ export interface SVGProps<
   by?: Trackable<number | string | undefined>
   /** The `calcMode` SVG attribute. */
   calcMode?: Trackable<number | string | undefined>
-  /** The `capHeight` SVG attribute. */
-  capHeight?: Trackable<number | string | undefined>
   /** The `cap-height` SVG attribute. */
   'cap-height'?: Trackable<number | string | undefined>
   /** The `clip` SVG attribute. */
   clip?: Trackable<number | string | undefined>
-  /** The `clipPath` SVG attribute. */
-  clipPath?: Trackable<string | undefined>
   /** The `clip-path` SVG attribute. */
   'clip-path'?: Trackable<string | undefined>
   /** The `clipPathUnits` SVG attribute. */
   clipPathUnits?: Trackable<number | string | undefined>
-  /** The `clipRule` SVG attribute. */
-  clipRule?: Trackable<number | string | undefined>
   /** The `clip-rule` SVG attribute. */
   'clip-rule'?: Trackable<number | string | undefined>
-  /** The `colorInterpolation` SVG attribute. */
-  colorInterpolation?: Trackable<number | string | undefined>
   /** The `color-interpolation` SVG attribute. */
   'color-interpolation'?: Trackable<number | string | undefined>
-  /** The `colorInterpolationFilters` SVG attribute. */
-  colorInterpolationFilters?: Trackable<'auto' | 'sRGB' | 'linearRGB' | 'inherit' | undefined>
   /** The `color-interpolation-filters` SVG attribute. */
   'color-interpolation-filters'?: Trackable<'auto' | 'sRGB' | 'linearRGB' | 'inherit' | undefined>
-  /** The `colorProfile` SVG attribute. */
-  colorProfile?: Trackable<number | string | undefined>
   /** The `color-profile` SVG attribute. */
   'color-profile'?: Trackable<number | string | undefined>
-  /** The `colorRendering` SVG attribute. */
-  colorRendering?: Trackable<number | string | undefined>
   /** The `color-rendering` SVG attribute. */
   'color-rendering'?: Trackable<number | string | undefined>
   /** The `contentScriptType` SVG attribute. */
@@ -194,8 +159,6 @@ export interface SVGProps<
   display?: Trackable<number | string | undefined>
   /** The `divisor` SVG attribute. */
   divisor?: Trackable<number | string | undefined>
-  /** The `dominantBaseline` SVG attribute. */
-  dominantBaseline?: Trackable<number | string | undefined>
   /** The `dominant-baseline` SVG attribute. */
   'dominant-baseline'?: Trackable<number | string | undefined>
   /** The `dur` SVG attribute. */
@@ -208,8 +171,6 @@ export interface SVGProps<
   edgeMode?: Trackable<number | string | undefined>
   /** The `elevation` SVG attribute. */
   elevation?: Trackable<number | string | undefined>
-  /** The `enableBackground` SVG attribute. */
-  enableBackground?: Trackable<number | string | undefined>
   /** The `enable-background` SVG attribute. */
   'enable-background'?: Trackable<number | string | undefined>
   /** The `end` SVG attribute. */
@@ -220,12 +181,8 @@ export interface SVGProps<
   externalResourcesRequired?: Trackable<Booleanish | undefined>
   /** The `fill` SVG attribute. */
   fill?: Trackable<string | undefined>
-  /** The `fillOpacity` SVG attribute. */
-  fillOpacity?: Trackable<number | string | undefined>
   /** The `fill-opacity` SVG attribute. */
   'fill-opacity'?: Trackable<number | string | undefined>
-  /** The `fillRule` SVG attribute. */
-  fillRule?: Trackable<'nonzero' | 'evenodd' | 'inherit' | undefined>
   /** The `fill-rule` SVG attribute. */
   'fill-rule'?: Trackable<'nonzero' | 'evenodd' | 'inherit' | undefined>
   /** The `filter` SVG attribute. */
@@ -234,42 +191,24 @@ export interface SVGProps<
   filterRes?: Trackable<number | string | undefined>
   /** The `filterUnits` SVG attribute. */
   filterUnits?: Trackable<number | string | undefined>
-  /** The `floodColor` SVG attribute. */
-  floodColor?: Trackable<number | string | undefined>
   /** The `flood-color` SVG attribute. */
   'flood-color'?: Trackable<number | string | undefined>
-  /** The `floodOpacity` SVG attribute. */
-  floodOpacity?: Trackable<number | string | undefined>
   /** The `flood-opacity` SVG attribute. */
   'flood-opacity'?: Trackable<number | string | undefined>
   /** The `focusable` SVG attribute. */
   focusable?: Trackable<Booleanish | undefined>
-  /** The `fontFamily` SVG attribute. */
-  fontFamily?: Trackable<string | undefined>
   /** The `font-family` SVG attribute. */
   'font-family'?: Trackable<string | undefined>
-  /** The `fontSize` SVG attribute. */
-  fontSize?: Trackable<number | string | undefined>
   /** The `font-size` SVG attribute. */
   'font-size'?: Trackable<number | string | undefined>
-  /** The `fontSizeAdjust` SVG attribute. */
-  fontSizeAdjust?: Trackable<number | string | undefined>
   /** The `font-size-adjust` SVG attribute. */
   'font-size-adjust'?: Trackable<number | string | undefined>
-  /** The `fontStretch` SVG attribute. */
-  fontStretch?: Trackable<number | string | undefined>
   /** The `font-stretch` SVG attribute. */
   'font-stretch'?: Trackable<number | string | undefined>
-  /** The `fontStyle` SVG attribute. */
-  fontStyle?: Trackable<number | string | undefined>
   /** The `font-style` SVG attribute. */
   'font-style'?: Trackable<number | string | undefined>
-  /** The `fontVariant` SVG attribute. */
-  fontVariant?: Trackable<number | string | undefined>
   /** The `font-variant` SVG attribute. */
   'font-variant'?: Trackable<number | string | undefined>
-  /** The `fontWeight` SVG attribute. */
-  fontWeight?: Trackable<number | string | undefined>
   /** The `font-weight` SVG attribute. */
   'font-weight'?: Trackable<number | string | undefined>
   /** The `format` SVG attribute. */
@@ -284,16 +223,10 @@ export interface SVGProps<
   g1?: Trackable<number | string | undefined>
   /** The `g2` SVG attribute. */
   g2?: Trackable<number | string | undefined>
-  /** The `glyphName` SVG attribute. */
-  glyphName?: Trackable<number | string | undefined>
   /** The `glyph-name` SVG attribute. */
   'glyph-name'?: Trackable<number | string | undefined>
-  /** The `glyphOrientationHorizontal` SVG attribute. */
-  glyphOrientationHorizontal?: Trackable<number | string | undefined>
   /** The `glyph-orientation-horizontal` SVG attribute. */
   'glyph-orientation-horizontal'?: Trackable<number | string | undefined>
-  /** The `glyphOrientationVertical` SVG attribute. */
-  glyphOrientationVertical?: Trackable<number | string | undefined>
   /** The `glyph-orientation-vertical` SVG attribute. */
   'glyph-orientation-vertical'?: Trackable<number | string | undefined>
   /** The `glyphRef` SVG attribute. */
@@ -306,12 +239,8 @@ export interface SVGProps<
   hanging?: Trackable<number | string | undefined>
   /** The `height` SVG attribute. */
   height?: Trackable<number | string | undefined>
-  /** The `horizAdvX` SVG attribute. */
-  horizAdvX?: Trackable<number | string | undefined>
   /** The `horiz-adv-x` SVG attribute. */
   'horiz-adv-x'?: Trackable<number | string | undefined>
-  /** The `horizOriginX` SVG attribute. */
-  horizOriginX?: Trackable<number | string | undefined>
   /** The `horiz-origin-x` SVG attribute. */
   'horiz-origin-x'?: Trackable<number | string | undefined>
   /** The `href` SVG attribute. */
@@ -322,8 +251,6 @@ export interface SVGProps<
   hrefLang?: Trackable<string | undefined>
   /** The `ideographic` SVG attribute. */
   ideographic?: Trackable<number | string | undefined>
-  /** The `imageRendering` SVG attribute. */
-  imageRendering?: Trackable<number | string | undefined>
   /** The `image-rendering` SVG attribute. */
   'image-rendering'?: Trackable<number | string | undefined>
   /** The `in2` SVG attribute. */
@@ -356,30 +283,20 @@ export interface SVGProps<
   keyTimes?: Trackable<number | string | undefined>
   /** The `lengthAdjust` SVG attribute. */
   lengthAdjust?: Trackable<number | string | undefined>
-  /** The `letterSpacing` SVG attribute. */
-  letterSpacing?: Trackable<number | string | undefined>
   /** The `letter-spacing` SVG attribute. */
   'letter-spacing'?: Trackable<number | string | undefined>
-  /** The `lightingColor` SVG attribute. */
-  lightingColor?: Trackable<number | string | undefined>
   /** The `lighting-color` SVG attribute. */
   'lighting-color'?: Trackable<number | string | undefined>
   /** The `limitingConeAngle` SVG attribute. */
   limitingConeAngle?: Trackable<number | string | undefined>
   /** The `local` SVG attribute. */
   local?: Trackable<number | string | undefined>
-  /** The `markerEnd` SVG attribute. */
-  markerEnd?: Trackable<string | undefined>
   /** The `marker-end` SVG attribute. */
   'marker-end'?: Trackable<string | undefined>
   /** The `markerHeight` SVG attribute. */
   markerHeight?: Trackable<number | string | undefined>
-  /** The `markerMid` SVG attribute. */
-  markerMid?: Trackable<string | undefined>
   /** The `marker-mid` SVG attribute. */
   'marker-mid'?: Trackable<string | undefined>
-  /** The `markerStart` SVG attribute. */
-  markerStart?: Trackable<string | undefined>
   /** The `marker-start` SVG attribute. */
   'marker-start'?: Trackable<string | undefined>
   /** The `markerUnits` SVG attribute. */
@@ -414,16 +331,10 @@ export interface SVGProps<
   origin?: Trackable<number | string | undefined>
   /** The `overflow` SVG attribute. */
   overflow?: Trackable<number | string | undefined>
-  /** The `overlinePosition` SVG attribute. */
-  overlinePosition?: Trackable<number | string | undefined>
   /** The `overline-position` SVG attribute. */
   'overline-position'?: Trackable<number | string | undefined>
-  /** The `overlineThickness` SVG attribute. */
-  overlineThickness?: Trackable<number | string | undefined>
   /** The `overline-thickness` SVG attribute. */
   'overline-thickness'?: Trackable<number | string | undefined>
-  /** The `paintOrder` SVG attribute. */
-  paintOrder?: Trackable<number | string | undefined>
   /** The `paint-order` SVG attribute. */
   'paint-order'?: Trackable<number | string | undefined>
   /** The `panose1` SVG attribute. */
@@ -438,8 +349,6 @@ export interface SVGProps<
   patternTransform?: Trackable<number | string | undefined>
   /** The `patternUnits` SVG attribute. */
   patternUnits?: Trackable<string | undefined>
-  /** The `pointerEvents` SVG attribute. */
-  pointerEvents?: Trackable<number | string | undefined>
   /** The `pointer-events` SVG attribute. */
   'pointer-events'?: Trackable<number | string | undefined>
   /** The `points` SVG attribute. */
@@ -464,8 +373,6 @@ export interface SVGProps<
   refX?: Trackable<number | string | undefined>
   /** The `refY` SVG attribute. */
   refY?: Trackable<number | string | undefined>
-  /** The `renderingIntent` SVG attribute. */
-  renderingIntent?: Trackable<number | string | undefined>
   /** The `rendering-intent` SVG attribute. */
   'rendering-intent'?: Trackable<number | string | undefined>
   /** The `repeatCount` SVG attribute. */
@@ -494,8 +401,6 @@ export interface SVGProps<
   scale?: Trackable<number | string | undefined>
   /** The `seed` SVG attribute. */
   seed?: Trackable<number | string | undefined>
-  /** The `shapeRendering` SVG attribute. */
-  shapeRendering?: Trackable<number | string | undefined>
   /** The `shape-rendering` SVG attribute. */
   'shape-rendering'?: Trackable<number | string | undefined>
   /** The `slope` SVG attribute. */
@@ -520,52 +425,30 @@ export interface SVGProps<
   stemv?: Trackable<number | string | undefined>
   /** The `stitchTiles` SVG attribute. */
   stitchTiles?: Trackable<number | string | undefined>
-  /** The `stopColor` SVG attribute. */
-  stopColor?: Trackable<string | undefined>
   /** The `stop-color` SVG attribute. */
   'stop-color'?: Trackable<string | undefined>
-  /** The `stopOpacity` SVG attribute. */
-  stopOpacity?: Trackable<number | string | undefined>
   /** The `stop-opacity` SVG attribute. */
   'stop-opacity'?: Trackable<number | string | undefined>
-  /** The `strikethroughPosition` SVG attribute. */
-  strikethroughPosition?: Trackable<number | string | undefined>
   /** The `strikethrough-position` SVG attribute. */
   'strikethrough-position'?: Trackable<number | string | undefined>
-  /** The `strikethroughThickness` SVG attribute. */
-  strikethroughThickness?: Trackable<number | string | undefined>
   /** The `strikethrough-thickness` SVG attribute. */
   'strikethrough-thickness'?: Trackable<number | string | undefined>
   /** The `string` SVG attribute. */
   string?: Trackable<number | string | undefined>
   /** The `stroke` SVG attribute. */
   stroke?: Trackable<string | undefined>
-  /** The `strokeDasharray` SVG attribute. */
-  strokeDasharray?: Trackable<string | number | undefined>
   /** The `stroke-dasharray` SVG attribute. */
   'stroke-dasharray'?: Trackable<string | number | undefined>
-  /** The `strokeDashoffset` SVG attribute. */
-  strokeDashoffset?: Trackable<string | number | undefined>
   /** The `stroke-dashoffset` SVG attribute. */
   'stroke-dashoffset'?: Trackable<string | number | undefined>
-  /** The `strokeLinecap` SVG attribute. */
-  strokeLinecap?: Trackable<'butt' | 'round' | 'square' | 'inherit' | undefined>
   /** The `stroke-linecap` SVG attribute. */
   'stroke-linecap'?: Trackable<'butt' | 'round' | 'square' | 'inherit' | undefined>
-  /** The `strokeLinejoin` SVG attribute. */
-  strokeLinejoin?: Trackable<'miter' | 'round' | 'bevel' | 'inherit' | undefined>
   /** The `stroke-linejoin` SVG attribute. */
   'stroke-linejoin'?: Trackable<'miter' | 'round' | 'bevel' | 'inherit' | undefined>
-  /** The `strokeMiterlimit` SVG attribute. */
-  strokeMiterlimit?: Trackable<string | number | undefined>
   /** The `stroke-miterlimit` SVG attribute. */
   'stroke-miterlimit'?: Trackable<string | number | undefined>
-  /** The `strokeOpacity` SVG attribute. */
-  strokeOpacity?: Trackable<number | string | undefined>
   /** The `stroke-opacity` SVG attribute. */
   'stroke-opacity'?: Trackable<number | string | undefined>
-  /** The `strokeWidth` SVG attribute. */
-  strokeWidth?: Trackable<number | string | undefined>
   /** The `stroke-width` SVG attribute. */
   'stroke-width'?: Trackable<number | string | undefined>
   /** The `surfaceScale` SVG attribute. */
@@ -578,26 +461,18 @@ export interface SVGProps<
   targetX?: Trackable<number | string | undefined>
   /** The `targetY` SVG attribute. */
   targetY?: Trackable<number | string | undefined>
-  /** The `textAnchor` SVG attribute. */
-  textAnchor?: Trackable<string | undefined>
   /** The `text-anchor` SVG attribute. */
   'text-anchor'?: Trackable<string | undefined>
-  /** The `textDecoration` SVG attribute. */
-  textDecoration?: Trackable<number | string | undefined>
   /** The `text-decoration` SVG attribute. */
   'text-decoration'?: Trackable<number | string | undefined>
   /** The `textLength` SVG attribute. */
   textLength?: Trackable<number | string | undefined>
-  /** The `textRendering` SVG attribute. */
-  textRendering?: Trackable<number | string | undefined>
   /** The `text-rendering` SVG attribute. */
   'text-rendering'?: Trackable<number | string | undefined>
   /** The `to` SVG attribute. */
   to?: Trackable<number | string | undefined>
   /** The `transform` SVG attribute. */
   transform?: Trackable<string | undefined>
-  /** The `transformOrigin` SVG attribute. */
-  transformOrigin?: Trackable<string | undefined>
   /** The `transform-origin` SVG attribute. */
   'transform-origin'?: Trackable<string | undefined>
   /** The `type` SVG attribute. */
@@ -606,58 +481,34 @@ export interface SVGProps<
   u1?: Trackable<number | string | undefined>
   /** The `u2` SVG attribute. */
   u2?: Trackable<number | string | undefined>
-  /** The `underlinePosition` SVG attribute. */
-  underlinePosition?: Trackable<number | string | undefined>
   /** The `underline-position` SVG attribute. */
   'underline-position'?: Trackable<number | string | undefined>
-  /** The `underlineThickness` SVG attribute. */
-  underlineThickness?: Trackable<number | string | undefined>
   /** The `underline-thickness` SVG attribute. */
   'underline-thickness'?: Trackable<number | string | undefined>
   /** The `unicode` SVG attribute. */
   unicode?: Trackable<number | string | undefined>
-  /** The `unicodeBidi` SVG attribute. */
-  unicodeBidi?: Trackable<number | string | undefined>
   /** The `unicode-bidi` SVG attribute. */
   'unicode-bidi'?: Trackable<number | string | undefined>
-  /** The `unicodeRange` SVG attribute. */
-  unicodeRange?: Trackable<number | string | undefined>
   /** The `unicode-range` SVG attribute. */
   'unicode-range'?: Trackable<number | string | undefined>
-  /** The `unitsPerEm` SVG attribute. */
-  unitsPerEm?: Trackable<number | string | undefined>
   /** The `units-per-em` SVG attribute. */
   'units-per-em'?: Trackable<number | string | undefined>
-  /** The `vAlphabetic` SVG attribute. */
-  vAlphabetic?: Trackable<number | string | undefined>
   /** The `v-alphabetic` SVG attribute. */
   'v-alphabetic'?: Trackable<number | string | undefined>
   /** The `values` SVG attribute. */
   values?: Trackable<string | undefined>
-  /** The `vectorEffect` SVG attribute. */
-  vectorEffect?: Trackable<number | string | undefined>
   /** The `vector-effect` SVG attribute. */
   'vector-effect'?: Trackable<number | string | undefined>
   /** The `version` SVG attribute. */
   version?: Trackable<string | undefined>
-  /** The `vertAdvY` SVG attribute. */
-  vertAdvY?: Trackable<number | string | undefined>
   /** The `vert-adv-y` SVG attribute. */
   'vert-adv-y'?: Trackable<number | string | undefined>
-  /** The `vertOriginX` SVG attribute. */
-  vertOriginX?: Trackable<number | string | undefined>
   /** The `vert-origin-x` SVG attribute. */
   'vert-origin-x'?: Trackable<number | string | undefined>
-  /** The `vertOriginY` SVG attribute. */
-  vertOriginY?: Trackable<number | string | undefined>
   /** The `vert-origin-y` SVG attribute. */
   'vert-origin-y'?: Trackable<number | string | undefined>
-  /** The `vHanging` SVG attribute. */
-  vHanging?: Trackable<number | string | undefined>
   /** The `v-hanging` SVG attribute. */
   'v-hanging'?: Trackable<number | string | undefined>
-  /** The `vIdeographic` SVG attribute. */
-  vIdeographic?: Trackable<number | string | undefined>
   /** The `v-ideographic` SVG attribute. */
   'v-ideographic'?: Trackable<number | string | undefined>
   /** The `viewBox` SVG attribute. */
@@ -666,18 +517,12 @@ export interface SVGProps<
   viewTarget?: Trackable<number | string | undefined>
   /** The `visibility` SVG attribute. */
   visibility?: Trackable<number | string | undefined>
-  /** The `vMathematical` SVG attribute. */
-  vMathematical?: Trackable<number | string | undefined>
   /** The `v-mathematical` SVG attribute. */
   'v-mathematical'?: Trackable<number | string | undefined>
   /** The `width` SVG attribute. */
   width?: Trackable<number | string | undefined>
-  /** The `wordSpacing` SVG attribute. */
-  wordSpacing?: Trackable<number | string | undefined>
   /** The `word-spacing` SVG attribute. */
   'word-spacing'?: Trackable<number | string | undefined>
-  /** The `writingMode` SVG attribute. */
-  writingMode?: Trackable<number | string | undefined>
   /** The `writing-mode` SVG attribute. */
   'writing-mode'?: Trackable<number | string | undefined>
   /** The `x1` SVG attribute. */
@@ -688,52 +533,30 @@ export interface SVGProps<
   x?: Trackable<number | string | undefined>
   /** The `xChannelSelector` SVG attribute. */
   xChannelSelector?: Trackable<string | undefined>
-  /** The `xHeight` SVG attribute. */
-  xHeight?: Trackable<number | string | undefined>
   /** The `x-height` SVG attribute. */
   'x-height'?: Trackable<number | string | undefined>
-  /** The `xlinkActuate` SVG attribute. */
-  xlinkActuate?: Trackable<string | undefined>
   /** The `xlink:actuate` SVG attribute. */
-  'xlink:actuate'?: Trackable<SVGProps['xlinkActuate']>
-  /** The `xlinkArcrole` SVG attribute. */
-  xlinkArcrole?: Trackable<string | undefined>
+  'xlink:actuate'?: Trackable<string | undefined>
   /** The `xlink:arcrole` SVG attribute. */
   'xlink:arcrole'?: Trackable<string | undefined>
   /** The `xlinkHref` SVG attribute. */
   xlinkHref?: Trackable<string | undefined>
   /** The `xlink:href` SVG attribute. */
   'xlink:href'?: Trackable<string | undefined>
-  /** The `xlinkRole` SVG attribute. */
-  xlinkRole?: Trackable<string | undefined>
   /** The `xlink:role` SVG attribute. */
   'xlink:role'?: Trackable<string | undefined>
-  /** The `xlinkShow` SVG attribute. */
-  xlinkShow?: Trackable<string | undefined>
   /** The `xlink:show` SVG attribute. */
   'xlink:show'?: Trackable<string | undefined>
-  /** The `xlinkTitle` SVG attribute. */
-  xlinkTitle?: Trackable<string | undefined>
   /** The `xlink:title` SVG attribute. */
   'xlink:title'?: Trackable<string | undefined>
-  /** The `xlinkType` SVG attribute. */
-  xlinkType?: Trackable<string | undefined>
   /** The `xlink:type` SVG attribute. */
   'xlink:type'?: Trackable<string | undefined>
-  /** The `xmlBase` SVG attribute. */
-  xmlBase?: Trackable<string | undefined>
   /** The `xml:base` SVG attribute. */
   'xml:base'?: Trackable<string | undefined>
-  /** The `xmlLang` SVG attribute. */
-  xmlLang?: Trackable<string | undefined>
   /** The `xml:lang` SVG attribute. */
   'xml:lang'?: Trackable<string | undefined>
   /** The `xmlns` SVG attribute. */
   xmlns?: Trackable<string | undefined>
-  /** The `xmlnsXlink` SVG attribute. */
-  xmlnsXlink?: Trackable<string | undefined>
-  /** The `xmlSpace` SVG attribute. */
-  xmlSpace?: Trackable<string | undefined>
   /** The `xml:space` SVG attribute. */
   'xml:space'?: Trackable<string | undefined>
   /** The `y1` SVG attribute. */

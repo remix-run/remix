@@ -342,8 +342,8 @@ function xIcon() {
         d="M4.25 4.25 11.75 11.75M11.75 4.25 4.25 11.75"
         fill="none"
         stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.75"
+        stroke-linecap="round"
+        stroke-width="1.75"
       />
     </svg>
   )
@@ -375,10 +375,10 @@ function spinnerIcon() {
         fill="none"
         r="6"
         stroke="currentColor"
-        strokeDasharray="28"
-        strokeDashoffset="8"
-        strokeLinecap="round"
-        strokeWidth="2"
+        stroke-dasharray="28"
+        stroke-dashoffset="8"
+        stroke-linecap="round"
+        stroke-width="2"
       />
     </svg>
   )

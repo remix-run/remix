@@ -214,9 +214,9 @@ function Loader() {
         viewBox={`0 0 ${VIEW_BOX_SIZE} ${VIEW_BOX_SIZE}`}
         fill="none"
         stroke="currentColor"
-        strokeWidth={STROKE_WIDTH}
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        stroke-width={STROKE_WIDTH}
+        stroke-linecap="round"
+        stroke-linejoin="round"
       >
         <path d="M21 12a9 9 0 1 1-6.219-8.56" />
       </svg>
@@ -232,9 +232,9 @@ function Check() {
       viewBox={`0 0 ${VIEW_BOX_SIZE} ${VIEW_BOX_SIZE}`}
       fill="none"
       stroke="currentColor"
-      strokeWidth={STROKE_WIDTH}
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      stroke-width={STROKE_WIDTH}
+      stroke-linecap="round"
+      stroke-linejoin="round"
     >
       <polyline
         points="4 12 9 17 20 6"
@@ -262,9 +262,9 @@ function X() {
       viewBox={`0 0 ${VIEW_BOX_SIZE} ${VIEW_BOX_SIZE}`}
       fill="none"
       stroke="currentColor"
-      strokeWidth={STROKE_WIDTH}
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      stroke-width={STROKE_WIDTH}
+      stroke-linecap="round"
+      stroke-linejoin="round"
     >
       <line
         x1="6"

@@ -37,9 +37,19 @@ describe('isAllowedHostPropName', () => {
 
 describe('normalizeAttributeName', () => {
   it('does not leak Object.prototype keys as HTML attribute renames', () => {
-    expect(normalizeAttributeName('constructor', false)).toEqual({ attr: 'constructor' })
-    expect(normalizeAttributeName('toString', false)).toEqual({ attr: 'tostring' })
-    expect(normalizeAttributeName('valueOf', false)).toEqual({ attr: 'valueof' })
+    expect(normalizeAttributeName('constructor', false)).toBe('constructor')
+    expect(normalizeAttributeName('toString', false)).toBe('tostring')
+    expect(normalizeAttributeName('valueOf', false)).toBe('valueof')
+  })
+
+  it('passes standard SVG attributes through and normalizes xlinkHref, xlink:href, and className', () => {
+    expect(normalizeAttributeName('viewBox', true)).toBe('viewBox')
+    expect(normalizeAttributeName('stroke-linecap', true)).toBe('stroke-linecap')
+    expect(normalizeAttributeName('clipPathUnits', true)).toBe('clipPathUnits')
+    expect(normalizeAttributeName('xlinkHref', true)).toBe('href')
+    expect(normalizeAttributeName('xlink:href', true)).toBe('href')
+    expect(normalizeAttributeName('className', true)).toBe('class')
+    expect(normalizeAttributeName('xml:lang', true)).toBe('xml:lang')
   })
 })
 

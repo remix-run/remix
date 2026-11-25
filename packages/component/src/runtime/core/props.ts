@@ -43,12 +43,9 @@ const BOOLEANISH_ATTR = new Set([
   'symmetric',
 ])
 const UNSAFE_PROP = /^on|[\0\t\n\f\r "'/>=]/i
-const EXEC_URL_ATTR = new Set(['href', 'src', 'action', 'formaction', 'xlink:href'])
+const EXEC_URL_ATTR = new Set(['href', 'src', 'action', 'formaction'])
 const BLOCKED_JS_URL =
   "javascript:throw new Error('Remix has blocked a javascript: URL as a security precaution.')"
-const SVG_CAMEL_RE =
-  /^(?:accentHeight|attribute(?:Name|Type)|autoReverse|base(?:Frequency|Profile)|calcMode|clipPathUnits|diffuseConstant|edgeMode|externalResourcesRequired|filter(?:Res|Units)|glyphRef|gradient(?:Transform|Units)|kernel(?:Matrix|UnitLength)|key(?:Points|Splines|Times)|lengthAdjust|limitingConeAngle|marker(?:Height|Units|Width)|mask(?:Content)?Units|numOctaves|pathLength|pattern(?:ContentUnits|Transform|Units)|pointsAt[XYZ]|preserve(?:Alpha|AspectRatio)|primitiveUnits|ref[XY]|required(?:Extensions|Features)|specular(?:Constant|Exponent)|spreadMethod|startOffset|stdDeviation|stitchTiles|surfaceScale|systemLanguage|tableValues|target[XY]|textLength|view(?:Box|Target)|[xy]ChannelSelector|zoomAndPan)$/
-const NS_SVG_RE = /^(xlink|xml|xmlns)(?:[:-]([a-z]+)|([A-Z][a-z]+))$/
 
 // Properties whose grammar accepts a standalone number, including shorthands and number/length unions.
 const NUMERIC_CSS_PROP =
@@ -108,11 +105,6 @@ function canUseProperty(
   return !isSvg && name in dom && !ATTR_FALLBACK.has(name) && !BOOLEANISH_ATTR.has(attr)
 }
 
-function removeAttribute(dom: Element, attr: string, ns?: string): void {
-  if (ns) dom.removeAttributeNS(ns, attr.slice(attr.indexOf(':') + 1))
-  else dom.removeAttribute(attr)
-}
-
 function patchHostProp(
   dom: Element,
   name: string,
@@ -121,7 +113,7 @@ function patchHostProp(
   isSvg: boolean,
   select: HTMLSelectElement | null,
 ): void {
-  let { attr, ns } = normalizeAttributeName(name, isSvg)
+  let attr = normalizeAttributeName(name, isSvg)
 
   if (value == null) {
     if (
@@ -141,7 +133,7 @@ function patchHostProp(
         }
       } catch {}
     }
-    removeAttribute(dom, attr, ns)
+    dom.removeAttribute(attr)
     return
   }
 
@@ -191,11 +183,9 @@ function patchHostProp(
   // strings; otherwise `true` renders an empty attribute and `false` omits it.
   let stringify = typeof value !== 'boolean' || shouldStringifyBooleanAttribute(attr)
   if (stringify || value) {
-    let str = stringify ? String(value) : ''
-    if (ns) dom.setAttributeNS(ns, attr, str)
-    else dom.setAttribute(attr, str)
+    dom.setAttribute(attr, stringify ? String(value) : '')
   } else {
-    removeAttribute(dom, attr, ns)
+    dom.removeAttribute(attr)
   }
 }
 
@@ -327,11 +317,6 @@ export function sanitizeUrlAttribute(tagName: string, attrName: string, value: u
     : value
 }
 
-type AttributeName = { attr: string; ns?: string }
-
-const htmlAttrCache = new Map<string, AttributeName>()
-const svgAttrCache = new Map<string, AttributeName>()
-
 const HTML_RENAMES: Record<string, string> = {
   className: 'class',
   htmlFor: 'for',
@@ -339,64 +324,14 @@ const HTML_RENAMES: Record<string, string> = {
   httpEquiv: 'http-equiv',
 }
 
-export function normalizeAttributeName(name: string, isSvg: boolean): AttributeName {
-  if (name.startsWith('data-') || name.startsWith('aria-')) return { attr: name }
-  let cache = isSvg ? svgAttrCache : htmlAttrCache
-  let cached = cache.get(name)
-  if (cached) return cached
-
-  let normalized: AttributeName
-  if (!isSvg) {
-    normalized = {
-      attr: Object.hasOwn(HTML_RENAMES, name) ? HTML_RENAMES[name] : name.toLowerCase(),
-    }
-  } else if (name === 'className') {
-    normalized = { attr: 'class' }
-  } else {
-    normalized = normalizeSvgAttribute(name)
+export function normalizeAttributeName(name: string, isSvg: boolean): string {
+  if (isSvg) {
+    // Pass standard SVG attribute names through as written. Only normalize legacy `xlinkHref` /
+    // `xlink:href` to SVG2 `href` and `className` to `class`.
+    return name === 'className' ? 'class' : name.replace(/^xlink(?:H|:h)/, 'h')
   }
-
-  if (cache.size >= 256) cache.clear()
-  cache.set(name, normalized)
-  return normalized
-}
-
-function normalizeSvgAttribute(name: string): AttributeName {
-  if (SVG_CAMEL_RE.test(name)) return { attr: name }
-  if (name.includes('-')) {
-    let camel = name.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase())
-    if (SVG_CAMEL_RE.test(camel)) return { attr: camel }
-  }
-  let match = NS_SVG_RE.exec(name)
-  if (match) {
-    let prefix = match[1]
-    let local = match[2] ?? match[3].toLowerCase()
-    if (
-      prefix === 'xmlns'
-        ? local === 'xlink'
-        : (prefix === 'xlink'
-            ? /^(?:href|actuate|arcrole|role|show|title|type)$/
-            : /^(?:base|lang|space)$/
-          ).test(local)
-    ) {
-      let attr = `${prefix}:${local}`
-      return prefix === 'xmlns'
-        ? { attr }
-        : {
-            attr,
-            ns:
-              prefix === 'xlink'
-                ? 'http://www.w3.org/1999/xlink'
-                : 'http://www.w3.org/XML/1998/namespace',
-          }
-    }
-  }
-  return {
-    attr: name
-      .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-      .replace(/_/g, '-')
-      .toLowerCase(),
-  }
+  if (name.startsWith('data-') || name.startsWith('aria-')) return name
+  return Object.hasOwn(HTML_RENAMES, name) ? HTML_RENAMES[name] : name.toLowerCase()
 }
 
 export function shouldStringifyBooleanAttribute(name: string): boolean {

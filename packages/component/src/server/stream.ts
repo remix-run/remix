@@ -985,7 +985,7 @@ function renderAttributes(
 
     let value = props[key]
     if (value === undefined || value === null) continue
-    let attrName = normalizeAttributeName(key, isSvg).attr
+    let attrName = normalizeAttributeName(key, isSvg)
     if (typeof value === 'boolean') {
       if (shouldStringifyBooleanAttribute(attrName)) {
         attrs += ` ${attrName}="${value}"`
