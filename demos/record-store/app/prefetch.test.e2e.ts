@@ -418,12 +418,24 @@ describe('record store prefetching', () => {
     let errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     await page.setViewportSize({ width: 412, height: 823 })
+    let supportsAssetPrefetch = await prefetchesAssets(page)
+    let faceout = supportsAssetPrefetch
+      ? page.waitForResponse((response) => {
+          let url = new URL(response.url())
+          return (
+            url.pathname.includes('/overpass-stereo-1.') &&
+            url.search === '?transform=album-image-320'
+          )
+        })
+      : undefined
     let mainPage = page.waitForResponse(
       (response) => new URL(response.url()).pathname === '/albums/overpass-stereo',
     )
     await page.goto('/search?q=Overpass%20Stereo')
     await waitForNavigationRuntime(page)
     await (await mainPage).finished()
+    // HTML can finish before idle asset discovery creates any prefetch hints.
+    if (faceout) await (await faceout).finished()
     await page.waitForFunction(
       () => !document.querySelector('head link[rel="prefetch"], [data-responsive-prefetch]'),
     )
@@ -431,7 +443,6 @@ describe('record store prefetching', () => {
       requests.map((request) => new URL(request.url).pathname),
       ['/albums/overpass-stereo'],
     )
-    let supportsAssetPrefetch = await prefetchesAssets(page)
     if (supportsAssetPrefetch) {
       assert.deepEqual(
         images
