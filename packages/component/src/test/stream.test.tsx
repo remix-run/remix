@@ -890,7 +890,11 @@ describe('stream', () => {
             <img id="image" alt="" src={'\u0000 \tJ\na\rv\ta\ns\rc\tr\ni\tp\tt:alert(1)'} />
             <form id="form" action="javascript:alert(1)" />
             {createElement('button', { id: 'button', formaction: 'javascript:alert(1)' })}
-            <svg>{createElement('use', { id: 'use', 'xlink:href': 'javascript:alert(1)' })}</svg>
+            <svg>
+              {createElement('use', { id: 'use', 'xlink:href': 'javascript:alert(1)' })}
+              {createElement('use', { id: 'use-mixed', 'xlink:Href': 'javascript:alert(1)' })}
+              {createElement('a', { id: 'svg-link', HREF: 'javascript:alert(1)' })}
+            </svg>
             <object id="object" data="javascript:alert(1)" />
           </>,
         ),
@@ -907,6 +911,12 @@ describe('stream', () => {
         blockedJavaScriptUrl,
       )
       expect(shelf.content.querySelector('#use')?.getAttribute('href')).toBe(blockedJavaScriptUrl)
+      expect(shelf.content.querySelector('#use-mixed')?.getAttribute('href')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(shelf.content.querySelector('#svg-link')?.getAttribute('href')).toBe(
+        blockedJavaScriptUrl,
+      )
       expect(shelf.content.querySelector('#object')?.getAttribute('data')).toBe(
         blockedJavaScriptUrl,
       )

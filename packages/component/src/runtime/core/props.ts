@@ -1,6 +1,7 @@
 import type { ElementProps } from './vnode.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
+const XML_NS = 'http://www.w3.org/XML/1998/namespace'
 const RESERVED_PROPS = new Set([
   'children',
   'mix',
@@ -43,10 +44,10 @@ const BOOLEANISH_ATTR = new Set([
   'symmetric',
 ])
 const UNSAFE_PROP = /^on|[\0\t\n\f\r "'/>=]/i
-const EXEC_URL_ATTR = new Set(['href', 'src', 'action', 'formaction'])
+const EXEC_URL_ATTR = new Set(['href', 'src', 'action', 'formaction', 'xlink:href'])
 const BLOCKED_JS_URL =
   "javascript:throw new Error('Remix has blocked a javascript: URL as a security precaution.')"
-const VENDOR_STYLE_PREFIX = /^(?:-(?:webkit|moz|ms|o)-|(?:[Ww]ebkit|[Mm]oz|[Mm]s|[Oo])(?=[A-Z]))/
+const VENDOR_STYLE_PREFIX = /^(?:-?(?:webkit|moz|ms|o)-|(?:[Ww]ebkit|[Mm]oz|[Mm]s|[Oo])(?=[A-Z]))/
 // Properties whose grammar accepts a standalone number, including shorthands and number/length unions.
 const NUMERIC_CSS_PROP =
   /^(?:animation(?:iterationcount)?|aspectratio|bookmarklevel|(?:borderimage|mask(?:border|boximage))(?:outset|slice|width)?|box(?:flex(?:group)?|ordinalgroup)|column(?:s|count|span)|flex(?:grow|linecount|negative|order|positive|shrink)?|floatdefer|font(?:sizeadjust|weight)|forcebrokenimageicon|grid(?:area|(?:column|row)(?:end|span|start)?)|hyphenatelimit(?:chars|lines)|initialletter|line(?:clamp|height)|mathdepth|maxlines|(?:fill|flood|stop|stroke)?opacity|order|orphans|readingorder|scale|shapeimagethreshold|tabsize|voicebalance|widows|zindex|zoom|stroke(?:dash(?:array|offset)|miterlimit|width))$/i
@@ -105,6 +106,11 @@ function canUseProperty(
   return !isSvg && name in dom && !ATTR_FALLBACK.has(name) && !BOOLEANISH_ATTR.has(attr)
 }
 
+function removeHostAttribute(dom: Element, attr: string, isSvg: boolean): void {
+  if (isSvg && attr.startsWith('xml:')) dom.removeAttributeNS(XML_NS, attr.slice(4))
+  else dom.removeAttribute(attr)
+}
+
 function patchHostProp(
   dom: Element,
   name: string,
@@ -133,7 +139,7 @@ function patchHostProp(
         }
       } catch {}
     }
-    dom.removeAttribute(attr)
+    removeHostAttribute(dom, attr, isSvg)
     return
   }
 
@@ -183,9 +189,11 @@ function patchHostProp(
   // strings; otherwise `true` renders an empty attribute and `false` omits it.
   let stringify = typeof value !== 'boolean' || shouldStringifyBooleanAttribute(attr)
   if (stringify || value) {
-    dom.setAttribute(attr, stringify ? String(value) : '')
+    let str = stringify ? String(value) : ''
+    if (isSvg && attr.startsWith('xml:')) dom.setAttributeNS(XML_NS, attr, str)
+    else dom.setAttribute(attr, str)
   } else {
-    dom.removeAttribute(attr)
+    removeHostAttribute(dom, attr, isSvg)
   }
 }
 
@@ -219,7 +227,18 @@ function setInlineStyle(style: CSSStyleDeclaration, name: string, value: string)
     if (value) style.setProperty(name, value)
     else style.removeProperty(name)
   } else {
-    ;(style as unknown as Record<string, string>)[name] = value
+    let record = style as unknown as Record<string, unknown>
+    if (
+      name === 'cssText' ||
+      name === 'length' ||
+      name === 'parentRule' ||
+      typeof record[name] === 'function'
+    ) {
+      return
+    }
+    try {
+      record[name] = value
+    } catch {}
   }
 }
 
@@ -228,7 +247,8 @@ function patchStyleObject(
   curr: Record<string, unknown> | undefined,
   next: Record<string, unknown>,
 ): void {
-  if (!(dom instanceof HTMLElement || dom instanceof SVGElement)) {
+  let style = 'style' in dom ? (dom as HTMLElement).style : undefined
+  if (!(style instanceof CSSStyleDeclaration)) {
     let parts: string[] = []
     for (let [key, value] of Object.entries(next)) {
       let cssValue = toInlineStyleValue(key, value)
@@ -245,7 +265,6 @@ function patchStyleObject(
     return
   }
 
-  let style = dom.style
   for (let name in curr) {
     if (
       next[name] !== curr[name] &&
@@ -303,10 +322,8 @@ export function isAllowedHostPropName(name: string): boolean {
 }
 
 export function sanitizeUrlAttribute(tagName: string, attrName: string, value: unknown): unknown {
-  if (
-    !EXEC_URL_ATTR.has(attrName) &&
-    !(attrName === 'data' && tagName.toLowerCase() === 'object')
-  ) {
+  let lower = attrName.toLowerCase()
+  if (!EXEC_URL_ATTR.has(lower) && !(lower === 'data' && tagName.toLowerCase() === 'object')) {
     return value
   }
   // Browsers ignore leading C0 controls and spaces, plus tabs and newlines within URL schemes.
@@ -326,12 +343,12 @@ const HTML_RENAMES: Record<string, string> = {
 // kebab-case SVG attributes. Canonical camelCase SVG attributes (viewBox, clipPathUnits,
 // stdDeviation, etc.) and standard kebab-case attributes do not match and pass through verbatim.
 const SVG_KEBAB_PROP =
-  /^(?:(?:stroke|fill|font|color|horiz|vert|overline|strikethrough|underline|unicode|v)[A-Z]|glyph[NO]|(?:marker(?:Start|Mid|End)|clip(?:Path|Rule))$)|(?:Baseline|Color|Opacity|Rendering|Spacing|Origin|Shift|Form|Rule|Background|Order|Events|Intent|Anchor|Decoration|Em|Effect|writingMode|capHeight|xHeight)$/
+  /^(?:(?:stroke|fill|font|color|horiz|vert|overline|strikethrough|underline|unicode|v)[A-Z]|glyph[NO]|(?:marker(?:Start|Mid|End)|clip(?:Path|Rule)|whiteSpace)$)|(?:Baseline|Color|Opacity|Rendering|Spacing|Origin|Shift|Form|Rule|Background|Order|Events|Intent|Anchor|Decoration|Em|Effect|writingMode|capHeight|xHeight)$/
 
 export function normalizeAttributeName(name: string, isSvg: boolean): string {
   if (isSvg) {
     if (name === 'className') return 'class'
-    if (/^xlink(?:H|:h)/.test(name)) return 'href'
+    if (/^xlink(?:Href|:href)$/i.test(name)) return 'href'
     if (/^xml(?:Lang|Space|Base|nsXlink)$/.test(name)) {
       return name.replace(/([A-Z])/, (_, c: string) => `:${c.toLowerCase()}`)
     }

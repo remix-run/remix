@@ -61,6 +61,39 @@ describe('vnode rendering', () => {
       expect(b.getAttribute('href')).toBe(null)
     })
 
+    it('sets, updates, and removes xml:lang in the XML namespace on SVG elements', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let XML_NS = 'http://www.w3.org/XML/1998/namespace'
+
+      root.render(
+        <svg>
+          <text id="t" xmlLang="en">
+            Hi
+          </text>
+        </svg>,
+      )
+      let text = container.querySelector('#t')
+      invariant(text instanceof SVGTextElement)
+      expect(text.getAttributeNS(XML_NS, 'lang')).toBe('en')
+
+      root.render(
+        <svg>
+          <text id="t" xml:lang="fr">
+            Hi
+          </text>
+        </svg>,
+      )
+      expect(text.getAttributeNS(XML_NS, 'lang')).toBe('fr')
+
+      root.render(
+        <svg>
+          <text id="t">Hi</text>
+        </svg>,
+      )
+      expect(text.getAttributeNS(XML_NS, 'lang')).toBe(null)
+    })
+
     it('normalizes className to class on SVG elements', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
