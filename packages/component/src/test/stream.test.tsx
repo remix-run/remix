@@ -1473,6 +1473,18 @@ describe('stream', () => {
       expect(html).toBe('<svg><text xml:lang="en" xml:space="preserve">Hi</text></svg>')
     })
 
+    it('renders camelCase xlink attributes other than href with the xlink prefix', async () => {
+      let stream = renderToStream(
+        <svg>
+          <use href="#one" xlinkTitle="One" xlinkShow="new" xlinkActuate="onRequest" />
+        </svg>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<svg><use href="#one" xlink:title="One" xlink:show="new" xlink:actuate="onRequest"></use></svg>',
+      )
+    })
+
     it('renders canonical camelCase unit attributes for SVG filters and gradients', async () => {
       let stream = renderToStream(
         <svg>

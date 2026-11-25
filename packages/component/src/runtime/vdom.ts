@@ -2078,6 +2078,7 @@ function findNextSiblingDomAnchor(
 // -- Host props & styles --
 
 const XML_NS = 'http://www.w3.org/XML/1998/namespace'
+const XLINK_NS = 'http://www.w3.org/1999/xlink'
 const RESERVED_PROPS = new Set([
   'children',
   'mix',
@@ -2182,8 +2183,17 @@ function canUseProperty(
   return !isSvg && name in dom && !ATTR_FALLBACK.has(name) && !BOOLEANISH_ATTR.has(attr)
 }
 
+// The HTML parser places `xml:*` and `xlink:*` attributes in their namespaces. Match it for
+// elements created in the browser.
+function getSvgAttributeNamespace(attr: string, isSvg: boolean): string | null {
+  if (!isSvg) return null
+  if (attr.startsWith('xml:')) return XML_NS
+  return attr.startsWith('xlink:') ? XLINK_NS : null
+}
+
 function removeHostAttribute(dom: Element, attr: string, isSvg: boolean): void {
-  if (isSvg && attr.startsWith('xml:')) dom.removeAttributeNS(XML_NS, attr.slice(4))
+  let ns = getSvgAttributeNamespace(attr, isSvg)
+  if (ns) dom.removeAttributeNS(ns, attr.slice(attr.indexOf(':') + 1))
   else dom.removeAttribute(attr)
 }
 
@@ -2266,7 +2276,8 @@ function patchHostProp(
   let stringify = typeof value !== 'boolean' || shouldStringifyBooleanAttribute(attr)
   if (stringify || value) {
     let str = stringify ? String(value) : ''
-    if (isSvg && attr.startsWith('xml:')) dom.setAttributeNS(XML_NS, attr, str)
+    let ns = getSvgAttributeNamespace(attr, isSvg)
+    if (ns) dom.setAttributeNS(ns, attr, str)
     else dom.setAttribute(attr, str)
   } else {
     removeHostAttribute(dom, attr, isSvg)
@@ -2421,11 +2432,15 @@ const HTML_RENAMES: Record<string, string> = {
 const SVG_KEBAB_PROP =
   /^(?:(?:stroke|fill|font|color|horiz|vert|overline|strikethrough|underline|unicode|v)[A-Z]|glyph[NO]|(?:marker(?:Start|Mid|End)|clip(?:Path|Rule)|whiteSpace)$)|(?:Baseline|Color|Opacity|Rendering|Spacing|Origin|Shift|Form|Rule|Background|Order|Events|Intent|Anchor|Decoration|Em|Effect|writingMode|capHeight|xHeight)$/
 
+// camelCase props for prefixed `xml:`, `xmlns:`, and `xlink:` SVG attributes, such as xlinkTitle.
+const PREFIXED_SVG_PROP =
+  /^(?:xml(?:Lang|Space|Base|nsXlink)|xlink(?:Actuate|Arcrole|Role|Show|Title|Type))$/
+
 export function normalizeAttributeName(name: string, isSvg: boolean): string {
   if (isSvg) {
     if (name === 'className') return 'class'
     if (/^xlink(?:Href|:href)$/i.test(name)) return 'href'
-    if (/^xml(?:Lang|Space|Base|nsXlink)$/.test(name)) {
+    if (PREFIXED_SVG_PROP.test(name)) {
       return name.replace(/([A-Z])/, (_, c: string) => `:${c.toLowerCase()}`)
     }
     return SVG_KEBAB_PROP.test(name)
