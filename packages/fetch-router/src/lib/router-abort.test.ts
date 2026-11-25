@@ -216,4 +216,16 @@ describe('abort signal support', () => {
     await assert.rejects(router.fetch('https://remix.run', { signal: controller.signal }), reason)
     assert.equal(await cancelled.promise, reason)
   })
+
+  it('returns a rejected promise rather than throwing synchronously when already aborted', async () => {
+    let router = createRouter()
+    router.get('/', () => new Response('Home'))
+
+    let controller = new AbortController()
+    let reason = new Error('Pre-aborted')
+    controller.abort(reason)
+
+    let promise = router.fetch('https://remix.run', { signal: controller.signal })
+    await assert.rejects(promise, reason)
+  })
 })

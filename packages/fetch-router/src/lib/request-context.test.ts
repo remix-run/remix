@@ -330,14 +330,35 @@ describe('new RequestContext()', () => {
   it('lazily creates and allows overriding context.url', () => {
     let context = new RequestContext(new Request('https://remix.run/initial?a=1'))
 
-    assert.equal(context.url.pathname, '/initial')
-    assert.equal(context.url.searchParams.get('a'), '1')
+    let firstUrl = context.url
+    assert.equal(firstUrl.pathname, '/initial')
+    assert.equal(firstUrl.searchParams.get('a'), '1')
+    assert.equal(context.url, firstUrl)
 
     let nextUrl = new URL('https://remix.run/updated')
     context.url = nextUrl
 
     assert.equal(context.url, nextUrl)
     assert.equal(context.url.pathname, '/updated')
+  })
+
+  it('keeps initial request URL even if context.request is replaced before reading context.url', () => {
+    let context = new RequestContext(new Request('https://remix.run/initial'))
+    context.request = new Request('https://remix.run/replaced')
+
+    assert.equal(context.url.pathname, '/initial')
+  })
+
+  it('allows overriding get, has, and set on a request context instance', () => {
+    let key = createContextKey<string>()
+    let context = new RequestContext(new Request('https://remix.run/test'))
+
+    context.get = (() => 'stubbed') as typeof context.get
+    context.has = () => true
+    context.set = () => {}
+
+    assert.equal(context.get(key), 'stubbed')
+    assert.equal(context.has(key), true)
   })
 
   it('supports class constructors as context keys', () => {

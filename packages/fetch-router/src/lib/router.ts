@@ -3,30 +3,22 @@ import { joinPatterns } from '@remix-run/route-pattern/join'
 import type { Match, MatchParams, MultiMatcher } from '@remix-run/route-pattern/match'
 import * as Specificity from '@remix-run/route-pattern/specificity'
 
-import { type AnyMiddleware, type MiddlewareContext, runMiddleware } from './middleware.ts'
-import {
-  type AbortRace,
-  cancelAbandonedResponse,
-  createAbortRace,
-  raceRequestAbort,
-} from './request-abort.ts'
-import {
-  type ContextWithParams,
-  peekContextUrl,
-  RequestContext,
-  type requestContextTypes,
-} from './request-context.ts'
-import { RequestMethods, type RequestMethod } from './request-methods.ts'
+import { runMiddleware } from './middleware.ts'
+import type { AnyMiddleware, MiddlewareContext } from './middleware.ts'
+import { AbortRace, cancelAbandonedResponse, raceRequestAbort } from './request-abort.ts'
+import { peekContextUrl, RequestContext } from './request-context.ts'
+import type { ContextWithParams, requestContextTypes } from './request-context.ts'
+import { RequestMethods } from './request-methods.ts'
+import type { RequestMethod } from './request-methods.ts'
 import { MATCH_HIT, MATCH_MISS, RouteMatcher } from './route-matcher.ts'
-import { type RouteMap, Route } from './route-map.ts'
-import {
-  type RequestHandler,
-  type Action,
-  type Controller,
-  type ControllerActionMiddleware,
-  isRequestHandler,
-  isActionObject,
-  isController,
+import { Route } from './route-map.ts'
+import type { RouteMap } from './route-map.ts'
+import { isRequestHandler, isActionObject, isController } from './controller.ts'
+import type {
+  RequestHandler,
+  Action,
+  Controller,
+  ControllerActionMiddleware,
 } from './controller.ts'
 
 type AnyContext = RequestContext<any, any>
@@ -224,7 +216,7 @@ export interface RouterOptions<
   /**
    * The matcher to use for matching routes.
    *
-   * @default `createMultiMatcher()`
+   * Defaults to an internal matcher with `createMultiMatcher()` semantics.
    */
   matcher?: MultiMatcher<MatchData>
   /**
@@ -358,14 +350,10 @@ function getPrefixedRoutePattern(target: RouteTarget, state: BuilderState): Rout
   return state.prefix ? joinPatterns(state.prefix, pattern) : pattern
 }
 
-function hasOwnKeys(obj: Record<string, any>): boolean {
-  for (let _ in obj) return true
-  return false
-}
-
 function assignMatchParams(context: RequestContext, params: Record<string, any> | undefined): void {
   if (params === undefined) return
-  context.params = hasOwnKeys(context.params) ? { ...context.params, ...params } : params
+  context.params =
+    Reflect.ownKeys(context.params).length > 0 ? { ...context.params, ...params } : params
 }
 
 function createAllowedMethodsResponse(
@@ -422,7 +410,8 @@ export function createRouter<
     context: RequestContext,
     abortRace: AbortRace | undefined,
     onHeadFallback: () => void,
-  ): { response: Response | Promise<Response>; alreadyRaced: boolean } {
+    onMiddlewareRan?: () => void,
+  ): Response | Promise<Response> {
     // The most specific GET match that may serve a HEAD request when no HEAD (or ANY) route
     // matches with the same specificity
     let headFallback: Match<string, MatchData> | null = null
@@ -450,22 +439,25 @@ export function createRouter<
         continue
       }
 
-      return invokeRoute(route, match.params, context, abortRace)
+      return invokeRoute(route, match.params, context, abortRace, onMiddlewareRan)
     }
 
     if (headFallback !== null) {
       onHeadFallback()
-      return invokeRoute(headFallback.data, headFallback.params, context, abortRace)
+      return invokeRoute(
+        headFallback.data,
+        headFallback.params,
+        context,
+        abortRace,
+        onMiddlewareRan,
+      )
     }
 
     if (allowedMethods !== null) {
-      return {
-        response: createAllowedMethodsResponse(context, allowedMethods),
-        alreadyRaced: false,
-      }
+      return createAllowedMethodsResponse(context, allowedMethods)
     }
 
-    return { response: defaultHandler(context), alreadyRaced: false }
+    return defaultHandler(context)
   }
 
   function invokeRoute(
@@ -473,49 +465,44 @@ export function createRouter<
     params: Record<string, any> | undefined,
     context: RequestContext,
     abortRace: AbortRace | undefined,
-  ): { response: Response | Promise<Response>; alreadyRaced: boolean } {
+    onMiddlewareRan?: () => void,
+  ): Response | Promise<Response> {
     assignMatchParams(context, params)
 
     if (route.middleware) {
-      return {
-        response: runMiddleware(route.middleware, context, route.handler, abortRace),
-        alreadyRaced: true,
-      }
+      onMiddlewareRan?.()
+      return runMiddleware(route.middleware, context, route.handler, abortRace)
     }
 
-    return { response: route.handler(context), alreadyRaced: false }
+    return route.handler(context)
   }
 
   function dispatchMatched(
     context: RequestContext,
+    initialUrl: string | undefined,
     abortRace: AbortRace | undefined,
     onHeadFallback: () => void,
-  ): { response: Response | Promise<Response>; alreadyRaced: boolean } {
+  ): Response | Promise<Response> {
     if (routeMatcher !== null) {
       let contextUrl = peekContextUrl(context)
-      let status = routeMatcher.match(context.method, context.request.url, contextUrl)
+      let status = routeMatcher.match(context.method, initialUrl, contextUrl, context)
 
       if (status === MATCH_HIT) {
         let matched = routeMatcher.result
         let route = matched.entry!
+        let params = matched.params
         if (matched.isHeadFallback) onHeadFallback()
-        return invokeRoute(route, matched.params, context, abortRace)
+        matched.entry = undefined
+        matched.params = undefined
+        return invokeRoute(route, params, context, abortRace)
       }
 
       if (status === MATCH_MISS) {
-        let allowed = routeMatcher.findAllowedMethodsFast(
-          context.method,
-          context.request.url,
-          contextUrl,
-        )
+        let allowed = routeMatcher.findAllowedMethodsFast(context.method, initialUrl, contextUrl)
         if (allowed !== undefined) {
-          return {
-            response:
-              allowed !== null
-                ? createAllowedMethodsResponse(context, allowed)
-                : defaultHandler(context),
-            alreadyRaced: false,
-          }
+          return allowed !== null
+            ? createAllowedMethodsResponse(context, allowed)
+            : defaultHandler(context)
         }
       }
 
@@ -537,18 +524,25 @@ export function createRouter<
 
   function dispatchDirect(context: RequestContext): Promise<Response> {
     let request = context.request
+    // Only trust raw request.url as WHATWG-canonicalized for native Request instances
+    let rawUrl = request.constructor === Request ? request.url : undefined
 
     try {
-      // Inline ultra-fast path for the default matcher with no router middleware
+      // With no router middleware, context.url, context.method, and context.params cannot have
+      // been modified yet, so raw request.url and direct param assignment are safe.
       if (routeMatcher !== null) {
-        let status = routeMatcher.match(context.method, request.url, undefined)
+        let status = routeMatcher.match(context.method, rawUrl, undefined, context)
 
         if (status === MATCH_HIT) {
           let matched = routeMatcher.result
           let route = matched.entry!
+          let params = matched.params
           let isHeadFallback = matched.isHeadFallback
-          if (matched.params !== undefined) {
-            context.params = matched.params
+          matched.entry = undefined
+          matched.params = undefined
+
+          if (params !== undefined) {
+            context.params = params
           }
 
           if (route.middleware === undefined) {
@@ -564,7 +558,7 @@ export function createRouter<
         }
 
         if (status === MATCH_MISS) {
-          let allowed = routeMatcher.findAllowedMethodsFast(context.method, request.url, undefined)
+          let allowed = routeMatcher.findAllowedMethodsFast(context.method, rawUrl, undefined)
           if (allowed !== undefined) {
             let response =
               allowed !== null
@@ -575,32 +569,35 @@ export function createRouter<
         }
 
         let headFallback = false
-        let fallbackResult = dispatchFromMatchAll(
+        let alreadyRaced = false
+        let response = dispatchFromMatchAll(
           routeMatcher.matchAllFallback(context.url),
           context,
           undefined,
           () => {
             headFallback = true
           },
+          () => {
+            alreadyRaced = true
+          },
         )
-        return finalizeDirectResult(
-          fallbackResult.response,
-          request,
-          headFallback,
-          fallbackResult.alreadyRaced,
-        )
+        return finalizeDirectResult(response, request, headFallback, alreadyRaced)
       }
 
       let headFallback = false
-      let result = dispatchFromMatchAll(
+      let alreadyRaced = false
+      let response = dispatchFromMatchAll(
         customMatcher!.matchAll(context.url),
         context,
         undefined,
         () => {
           headFallback = true
         },
+        () => {
+          alreadyRaced = true
+        },
       )
-      return finalizeDirectResult(result.response, request, headFallback, result.alreadyRaced)
+      return finalizeDirectResult(response, request, headFallback, alreadyRaced)
     } catch (error) {
       return Promise.reject(error)
     }
@@ -610,7 +607,10 @@ export function createRouter<
     context: RequestContext,
     middleware: AnyMiddleware[],
   ): Promise<Response> {
-    let abortRace = createAbortRace(context.request)
+    let request = context.request
+    // Snapshot raw URL before router middleware so replacing context.request preserves initial URL semantics
+    let initialUrl = request.constructor === Request ? request.url : undefined
+    let abortRace = new AbortRace(request)
     let headFallback = false
     let markHeadFallback = () => {
       headFallback = true
@@ -619,7 +619,7 @@ export function createRouter<
     let promise = runMiddleware(
       middleware,
       context,
-      (ctx) => dispatchMatched(ctx, abortRace, markHeadFallback).response,
+      (ctx) => dispatchMatched(ctx, initialUrl, abortRace, markHeadFallback),
       abortRace,
     )
 
@@ -786,9 +786,15 @@ export function createRouter<
 
   let router: Router<RouterContext> = {
     ...rootBuilder,
+    // Rest tuple keeps router.fetch.length === 1 for single-argument FetchHandler adapters
     fetch(input: string | URL | Request, ...args: [init?: RequestInit]): Promise<Response> {
-      let [init] = args
-      let context = createRequestContext(input, init)
+      let context: RequestContext
+      try {
+        let [init] = args
+        context = createRequestContext(input, init)
+      } catch (error) {
+        return Promise.reject(error)
+      }
       context.router = router
 
       return routerMiddleware === undefined

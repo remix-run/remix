@@ -1,85 +1,99 @@
-export interface AbortRace {
+export class AbortRace {
   readonly signal: AbortSignal
-  addRejector(reject: (reason: unknown) => void): void
-  removeRejector(reject: (reason: unknown) => void): void
-  race<value>(promise: Promise<value>): Promise<value>
-  dispose(): void
-}
+  #rejectors: Array<(reason: unknown) => void> | undefined
+  #listening = false
+  #disposed = false
 
-export function createAbortRace(request: Request): AbortRace {
-  let signal = request.signal
-  let rejectors: Array<(reason: unknown) => void> | undefined
-  let onAbort: (() => void) | undefined
+  constructor(request: Request) {
+    this.signal = request.signal
+  }
 
-  function addRejector(reject: (reason: unknown) => void): void {
-    if (onAbort === undefined) {
-      rejectors = [reject]
-      onAbort = () => {
-        let reason = signal.reason
-        if (rejectors !== undefined) {
-          for (let i = 0; i < rejectors.length; i++) {
-            rejectors[i](reason)
-          }
-          rejectors.length = 0
-        }
+  handleEvent(): void {
+    this.#listening = false
+    let reason = this.signal.reason
+    let rejectors = this.#rejectors
+    if (rejectors !== undefined) {
+      for (let i = 0; i < rejectors.length; i++) {
+        rejectors[i](reason)
       }
-      signal.addEventListener('abort', onAbort, { once: true })
-    } else {
-      rejectors!.push(reject)
+      rejectors.length = 0
     }
   }
 
-  function removeRejector(reject: (reason: unknown) => void): void {
+  addRejector(reject: (reason: unknown) => void): void {
+    if (this.signal.aborted) {
+      reject(this.signal.reason)
+      return
+    }
+    if (this.#disposed) return
+
+    if (this.#rejectors === undefined) {
+      this.#rejectors = [reject]
+    } else {
+      this.#rejectors.push(reject)
+    }
+
+    if (!this.#listening) {
+      this.#listening = true
+      this.signal.addEventListener('abort', this, { once: true })
+    }
+  }
+
+  removeRejector(reject: (reason: unknown) => void): void {
+    let rejectors = this.#rejectors
     if (rejectors === undefined || rejectors.length === 0) return
+
     // Middleware unwinds LIFO, so the common case is popping the last entry in O(1)
     let last = rejectors.length - 1
     if (rejectors[last] === reject) {
       rejectors.pop()
       return
     }
+
     let idx = rejectors.indexOf(reject)
     if (idx !== -1) {
       rejectors.splice(idx, 1)
     }
   }
 
-  return {
-    signal,
-    addRejector,
-    removeRejector,
-    race<value>(promise: Promise<value>): Promise<value> {
-      if (signal.aborted) {
-        promise.then(
-          (value) => cancelAbandonedResponse(value, signal.reason),
-          () => {},
-        )
-        return Promise.reject(signal.reason)
-      }
+  race<value>(promise: Promise<value>): Promise<value> {
+    let signal = this.signal
+    if (signal.aborted) {
+      promise.then(
+        (value) => cancelAbandonedResponse(value, signal.reason),
+        () => {},
+      )
+      return Promise.reject(signal.reason)
+    }
+    if (this.#disposed) return promise
 
-      return new Promise<value>((resolve, reject) => {
-        addRejector(reject)
+    return new Promise<value>((resolve, reject) => {
+      this.addRejector(reject)
 
-        promise.then(
-          (value) => {
-            removeRejector(reject)
-            // The race already rejected, so nothing else will read this response's body
-            if (signal.aborted) cancelAbandonedResponse(value, signal.reason)
-            resolve(value)
-          },
-          (error) => {
-            removeRejector(reject)
-            reject(error)
-          },
-        )
-      })
-    },
-    dispose(): void {
-      if (onAbort !== undefined) {
-        signal.removeEventListener('abort', onAbort)
-        onAbort = undefined
-        if (rejectors !== undefined) rejectors.length = 0
-      }
-    },
+      promise.then(
+        (value) => {
+          this.removeRejector(reject)
+          // The race already rejected, so nothing else will read this response's body
+          if (signal.aborted) cancelAbandonedResponse(value, signal.reason)
+          resolve(value)
+        },
+        (error) => {
+          this.removeRejector(reject)
+          reject(error)
+        },
+      )
+    })
+  }
+
+  dispose(): void {
+    this.#disposed = true
+    if (this.#listening) {
+      this.#listening = false
+      this.signal.removeEventListener('abort', this)
+    }
+    if (this.#rejectors !== undefined) {
+      this.#rejectors.length = 0
+    }
   }
 }
 

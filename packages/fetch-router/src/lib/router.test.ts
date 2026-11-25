@@ -1626,7 +1626,7 @@ describe('route matching edge cases', () => {
     assert.equal(prefixOnly.status, 404)
   })
 
-  it('rejects dots and empty segments in pathname params', async () => {
+  it('falls back to wildcard when a param segment is empty or contains a dot', async () => {
     let router = createRouter()
     router.get('/files/:name', ({ params }) => new Response(`name:${params.name}`))
     router.get('/files/*path', ({ params }) => new Response(`path:${params.path}`))
@@ -1736,5 +1736,176 @@ describe('route matching edge cases', () => {
     let methodNotAllowed = await router.fetch('https://remix.run/files/img/logo.png')
     assert.equal(methodNotAllowed.status, 405)
     assert.equal(methodNotAllowed.headers.get('Allow'), 'POST')
+  })
+
+  it('matches inline static suffixes on param and wildcard segments identically to MultiMatcher', async () => {
+    let fastRouter = createRouter()
+    let referenceRouter = createRouter({ matcher: createMultiMatcher() })
+
+    for (let router of [fastRouter, referenceRouter]) {
+      router.get('/files/:name.json', ({ params }) => new Response(`json:${params.name}`))
+      router.get('/posts/:id.edit', ({ params }) => new Response(`edit:${params.id}`))
+      router.get('/assets/*.js', () => new Response('js'))
+      router.get('/docs/*path.html', ({ params }) => new Response(`html:${params.path}`))
+      router.get(
+        '/:__proto__',
+        ({ params }) => new Response(`proto:${Object.hasOwn(params, '__proto__')}`),
+      )
+    }
+
+    let urls = [
+      'https://remix.run/files/data.json',
+      'https://remix.run/files/data',
+      'https://remix.run/posts/42.edit',
+      'https://remix.run/posts/42',
+      'https://remix.run/assets/app.js',
+      'https://remix.run/assets/app.css',
+      'https://remix.run/docs/guide/intro.html',
+      'https://remix.run/docs/guide/intro.md',
+      'https://remix.run/anything',
+    ]
+
+    for (let url of urls) {
+      let actual = await fastRouter.fetch(url)
+      let expected = await referenceRouter.fetch(url)
+      assert.equal(actual.status, expected.status)
+      assert.equal(await actual.text(), await expected.text())
+    }
+  })
+
+  it('handles multi-branch static tries, >3 params, param+wildcard, trailing-slash params, and prefix boundaries', async () => {
+    let router = createRouter()
+    router.get('/a/:x', ({ params }) => new Response(`a:${params.x}`))
+    router.get('/b/:y', ({ params }) => new Response(`b:${params.y}`))
+    router.get('/c/:z', ({ params }) => new Response(`c:${params.z}`))
+    router.get(
+      '/deep/:a/:b/:c/:d',
+      ({ params }) => new Response(`${params.a}-${params.b}-${params.c}-${params.d}`),
+    )
+    router.get('/u/:id/*rest', ({ params }) => new Response(`${params.id}:${params.rest}`))
+    router.get('/trailing/:id/', ({ params }) => new Response(`trailing:${params.id}`))
+    router.get('/admin/users/:id', ({ params }) => new Response(`admin:${params.id}`))
+
+    assert.equal(await (await router.fetch('https://remix.run/a/1')).text(), 'a:1')
+    assert.equal(await (await router.fetch('https://remix.run/b/2')).text(), 'b:2')
+    assert.equal(await (await router.fetch('https://remix.run/c/3')).text(), 'c:3')
+    assert.equal(await (await router.fetch('https://remix.run/deep/1/2/3/4')).text(), '1-2-3-4')
+    assert.equal(await (await router.fetch('https://remix.run/u/42/a/b')).text(), '42:a/b')
+    assert.equal(await (await router.fetch('https://remix.run/trailing/5/')).text(), 'trailing:5')
+    assert.equal((await router.fetch('https://remix.run/trailing/5')).status, 404)
+    assert.equal((await router.fetch('https://remix.run/admin/usersX/1')).status, 404)
+    assert.equal((await router.fetch('https://remix.run/adminx/users/1')).status, 404)
+  })
+
+  it('recompiles routes added after initial fetches including ANY and fallback matches', async () => {
+    let router = createRouter()
+    router.get('/v1/users/:id', ({ params }) => new Response(`user:${params.id}`))
+
+    assert.equal(await (await router.fetch('https://remix.run/v1/users/1')).text(), 'user:1')
+    assert.equal(
+      await (await router.fetch('https://remix.run/v1/users/hello%20world')).text(),
+      'user:hello world',
+    )
+
+    router.get('/v1/posts/:id', ({ params }) => new Response(`post:${params.id}`))
+    router.route(
+      'ANY',
+      '/v1/any/:id',
+      ({ method, params }) => new Response(`${method}:${params.id}`),
+    )
+
+    assert.equal(await (await router.fetch('https://remix.run/v1/posts/2')).text(), 'post:2')
+    assert.equal(await (await router.fetch('https://remix.run/v1/posts/a%20b')).text(), 'post:a b')
+    assert.equal(
+      await (await router.fetch('https://remix.run/v1/any/3', { method: 'PATCH' })).text(),
+      'PATCH:3',
+    )
+  })
+
+  it('computes 405 Allow headers across mixed fast and complex method buckets and under router middleware', async () => {
+    let router = createRouter({
+      middleware: [
+        (context, next) => {
+          void context.url.pathname
+          return next()
+        },
+      ],
+    })
+    router.get('/items/:id', ({ params }) => new Response(`get:${params.id}`))
+    router.put('/items/:id(.:ext)', ({ params }) => new Response(`put:${params.id}`))
+
+    let res405 = await router.fetch('https://remix.run/items/42', { method: 'POST' })
+    assert.equal(res405.status, 405)
+    assert.equal(res405.headers.get('Allow'), 'GET, HEAD, PUT')
+
+    let encoded = await router.fetch('https://remix.run/items/hello%20world')
+    assert.equal(encoded.status, 200)
+    assert.equal(await encoded.text(), 'get:hello world')
+  })
+
+  it('preserves symbol keys added to context.params by router middleware', async () => {
+    let sym = Symbol('meta')
+    let router = createRouter({
+      middleware: [
+        (context, next) => {
+          ;(context.params as Record<PropertyKey, unknown>)[sym] = 'kept'
+          return next()
+        },
+      ],
+    })
+
+    router.get('/users/:id', ({ params }) => {
+      let meta = (params as Record<PropertyKey, unknown>)[sym]
+      return new Response(`${params.id}:${String(meta)}`)
+    })
+
+    let response = await router.fetch('https://remix.run/users/9')
+    assert.equal(await response.text(), '9:kept')
+  })
+
+  it('matches MultiMatcher semantics across a broad differential route matrix', async () => {
+    let fastRouter = createRouter()
+    let referenceRouter = createRouter({ matcher: createMultiMatcher() })
+
+    for (let router of [fastRouter, referenceRouter]) {
+      router.get('/', () => new Response('root'))
+      router.get('/users/new', () => new Response('users-new'))
+      router.get('/users/:id', ({ params }) => new Response(`user:${params.id}`))
+      router.post('/users/:id', ({ params }) => new Response(`post-user:${params.id}`))
+      router.get('/users/admin/settings', () => new Response('admin-settings'))
+      router.get('/users/:id/profile', ({ params }) => new Response(`profile:${params.id}`))
+      router.route(
+        'ANY',
+        '/any/:id',
+        ({ method, params }) => new Response(`any-${method}:${params.id}`),
+      )
+      router.get('/files/*path', ({ params }) => new Response(`files:${params.path}`))
+    }
+
+    let requests: Array<[string, RequestInit?]> = [
+      ['https://remix.run/'],
+      ['https://remix.run/users/new'],
+      ['https://remix.run/users/42'],
+      ['https://remix.run/users/42', { method: 'POST' }],
+      ['https://remix.run/users/42', { method: 'DELETE' }],
+      ['https://remix.run/users/42', { method: 'HEAD' }],
+      ['https://remix.run/users/admin/settings'],
+      ['https://remix.run/users/admin/profile'],
+      ['https://remix.run/users/a.b'],
+      ['https://remix.run/users/hello%20world'],
+      ['https://remix.run/any/7', { method: 'HEAD' }],
+      ['https://remix.run/any/7', { method: 'PUT' }],
+      ['https://remix.run/files/'],
+      ['https://remix.run/files/a/b.txt'],
+      ['https://remix.run/missing'],
+    ]
+
+    for (let [url, init] of requests) {
+      let actual = await fastRouter.fetch(url, init)
+      let expected = await referenceRouter.fetch(url, init)
+      assert.equal(actual.status, expected.status)
+      assert.equal(actual.headers.get('Allow'), expected.headers.get('Allow'))
+      assert.equal(await actual.text(), await expected.text())
+    }
   })
 })

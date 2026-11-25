@@ -185,11 +185,11 @@ export type ContextWithEntry<context, entry extends ContextEntry> = ContextWithE
   [entry]
 >
 
-let peekContextUrlImpl: (context: RequestContext<any, any>) => URL | undefined
+const initializedUrls = new WeakMap<RequestContext<any, any>, URL>()
 
-// Internal helper used by router matching to inspect `#url` without triggering lazy URL parsing.
+// Internal helper used by router matching to inspect initialized `context.url` without forcing URL parsing.
 export function peekContextUrl(context: RequestContext<any, any>): URL | undefined {
-  return peekContextUrlImpl(context)
+  return initializedUrls.get(context)
 }
 
 /**
@@ -217,6 +217,7 @@ export class RequestContext<
         : method.toUpperCase()
     this.params = {} as params
     this.request = request
+    this.#initialUrl = request.url
   }
 
   #headers: Headers | undefined
@@ -298,6 +299,12 @@ export class RequestContext<
     return (this.#boundGet ??= (key) => this.#getValue(key))
   }
 
+  set get(
+    fn: <key extends object>(key: key) => GetContextValue<RequestContext<params, entries>, key>,
+  ) {
+    this.#boundGet = fn
+  }
+
   /**
    * Check whether a value exists in request context.
    *
@@ -306,6 +313,10 @@ export class RequestContext<
    */
   get has(): <key extends object>(key: key) => boolean {
     return (this.#boundHas ??= (key) => this.#contextMap !== undefined && this.#contextMap.has(key))
+  }
+
+  set has(fn: <key extends object>(key: key) => boolean) {
+    this.#boundHas = fn
   }
 
   /**
@@ -333,6 +344,16 @@ export class RequestContext<
 
       map.set(key, value)
     })
+  }
+
+  set set(
+    fn: <key extends object>(
+      key: key,
+      value: ContextValue<key>,
+      options?: { property: string },
+    ) => void,
+  ) {
+    this.#boundSet = fn
   }
 
   #installContextProperty(key: object, property: string): void {
@@ -397,25 +418,26 @@ export class RequestContext<
     this.#router = router
   }
 
+  #initialUrl: string
   #url: URL | undefined
 
   /**
    * The URL of the current request.
    */
   get url(): URL {
-    return (this.#url ??= new URL(this.request.url))
+    let url = this.#url
+    if (url === undefined) {
+      url = new URL(this.#initialUrl)
+      this.#url = url
+      initializedUrls.set(this, url)
+    }
+
+    return url
   }
 
   set url(url: URL) {
     this.#url = url
-  }
-
-  static #peekUrl(context: RequestContext<any, any>): URL | undefined {
-    return context.#url
-  }
-
-  static {
-    peekContextUrlImpl = RequestContext.#peekUrl
+    initializedUrls.set(this, url)
   }
 }
 

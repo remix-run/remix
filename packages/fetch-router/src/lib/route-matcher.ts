@@ -1,11 +1,13 @@
 import type { RoutePattern } from '@remix-run/route-pattern'
-import { createMultiMatcher, type Match, type MultiMatcher } from '@remix-run/route-pattern/match'
+import { createMultiMatcher } from '@remix-run/route-pattern/match'
+import type { Match, MultiMatcher } from '@remix-run/route-pattern/match'
 
+import type { RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import type { RouteEntry } from './router.ts'
 
-// Characters allowed in fast-indexed static pathname segments (WHATWG URL unreserved + sub-delims
-// that are never percent-encoded, plus '/', ':', '*' which are handled during segment parsing).
+// Conservative ASCII subset of WHATWG path characters (unreserved + sub-delims) that URL
+// serialization preserves without percent-encoding, plus '/', ':', '*' parsed per segment below.
 const plainPatternChars = new Uint8Array(128)
 for (let c = 48; c <= 57; c++) plainPatternChars[c] = 1 // 0-9
 for (let c = 65; c <= 90; c++) plainPatternChars[c] = 1 // A-Z
@@ -39,6 +41,11 @@ type FastPattern =
       readonly trailingWildcard: string | null
     }
 
+type StoredRoute = {
+  readonly entry: RouteEntry
+  readonly parsed: FastPattern | null
+}
+
 type TrieLeaf = {
   readonly entry: RouteEntry
   readonly paramNames: ReadonlyArray<string>
@@ -60,6 +67,7 @@ type FastBucket = {
   readonly kind: 'fast'
   readonly staticMap: Record<string, RouteEntry>
   readonly root: RadixNode
+  hasStatic: boolean
   hasDynamic: boolean
 }
 
@@ -82,23 +90,51 @@ export interface FastMatchResult {
   isHeadFallback: boolean
 }
 
-// Reusable scratch buffers for synchronous trie matching
-let capStarts = new Int32Array(32)
-let capEnds = new Int32Array(32)
+// Reusable scratch buffers for synchronous, non-reentrant trie matching
+const captureScratch = {
+  starts: new Int32Array(32),
+  ends: new Int32Array(32),
+}
 
 function setCapture(depth: number, start: number, end: number): void {
-  if (depth >= capStarts.length) {
-    let nextLen = capStarts.length * 2
+  if (depth >= captureScratch.starts.length) {
+    let nextLen = captureScratch.starts.length * 2
     while (nextLen <= depth) nextLen *= 2
     let nextStarts = new Int32Array(nextLen)
-    nextStarts.set(capStarts)
-    capStarts = nextStarts
+    nextStarts.set(captureScratch.starts)
+    captureScratch.starts = nextStarts
     let nextEnds = new Int32Array(nextLen)
-    nextEnds.set(capEnds)
-    capEnds = nextEnds
+    nextEnds.set(captureScratch.ends)
+    captureScratch.ends = nextEnds
   }
-  capStarts[depth] = start
-  capEnds[depth] = end
+  captureScratch.starts[depth] = start
+  captureScratch.ends[depth] = end
+}
+
+// Matches route-pattern's identifier grammar ([A-Za-z_$][A-Za-z0-9_$]*)
+function isIdentifierStart(code: number): boolean {
+  return (
+    (code >= 97 && code <= 122) || // a-z
+    (code >= 65 && code <= 90) || // A-Z
+    code === 95 || // _
+    code === 36 // $
+  )
+}
+
+function isIdentifierContinue(code: number): boolean {
+  return isIdentifierStart(code) || (code >= 48 && code <= 57) // 0-9
+}
+
+function isWholeSegmentIdentifier(raw: string, start: number, end: number): boolean {
+  if (start >= end || !isIdentifierStart(raw.charCodeAt(start))) {
+    return false
+  }
+  for (let i = start + 1; i < end; i++) {
+    if (!isIdentifierContinue(raw.charCodeAt(i))) {
+      return false
+    }
+  }
+  return true
 }
 
 function classifyFastPathname(raw: string): FastPattern | null {
@@ -134,23 +170,25 @@ function classifyFastPathname(raw: string): FastPattern | null {
     let first = segLen > 0 ? raw.charCodeAt(pos) : -1
 
     if (first === 42) {
-      // Wildcards are only fast-indexed in the trailing segment
+      // Wildcards are only fast-indexed when they span the entire trailing segment
       if (!isLast) return null
-      for (let i = pos + 1; i < segEnd; i++) {
-        let c = raw.charCodeAt(i)
-        if (c === 58 || c === 42) return null
+      if (segLen === 1) {
+        trailingWildcard = '*'
+      } else {
+        if (!isWholeSegmentIdentifier(raw, pos + 1, segEnd)) return null
+        let name = raw.slice(pos + 1, segEnd)
+        if (name === '__proto__') return null
+        trailingWildcard = name
       }
-      trailingWildcard = segLen > 1 ? raw.slice(pos + 1, segEnd) : '*'
       break
     }
 
     if (first === 58) {
-      if (segLen === 1) return null
-      for (let i = pos + 1; i < segEnd; i++) {
-        let c = raw.charCodeAt(i)
-        if (c === 58 || c === 42) return null
-      }
-      segments.push({ kind: 'param', name: raw.slice(pos + 1, segEnd) })
+      // Params are only fast-indexed when the identifier spans the entire segment
+      if (!isWholeSegmentIdentifier(raw, pos + 1, segEnd)) return null
+      let name = raw.slice(pos + 1, segEnd)
+      if (name === '__proto__') return null
+      segments.push({ kind: 'param', name })
     } else {
       for (let i = pos; i < segEnd; i++) {
         let c = raw.charCodeAt(i)
@@ -199,27 +237,29 @@ function buildLeafParams(
 
   let params: Record<string, string> = {}
   let names = leaf.paramNames
+  let starts = captureScratch.starts
+  let ends = captureScratch.ends
 
   if (namedWildcard === null) {
     if (count === 1) {
-      params[names[0]] = path.slice(capStarts[0], capEnds[0])
+      params[names[0]] = path.slice(starts[0], ends[0])
       return params
     }
     if (count === 2) {
-      params[names[0]] = path.slice(capStarts[0], capEnds[0])
-      params[names[1]] = path.slice(capStarts[1], capEnds[1])
+      params[names[0]] = path.slice(starts[0], ends[0])
+      params[names[1]] = path.slice(starts[1], ends[1])
       return params
     }
     if (count === 3) {
-      params[names[0]] = path.slice(capStarts[0], capEnds[0])
-      params[names[1]] = path.slice(capStarts[1], capEnds[1])
-      params[names[2]] = path.slice(capStarts[2], capEnds[2])
+      params[names[0]] = path.slice(starts[0], ends[0])
+      params[names[1]] = path.slice(starts[1], ends[1])
+      params[names[2]] = path.slice(starts[2], ends[2])
       return params
     }
   }
 
   for (let i = 0; i < capCount; i++) {
-    params[names[i]] = path.slice(capStarts[i], capEnds[i])
+    params[names[i]] = path.slice(starts[i], ends[i])
   }
   if (namedWildcard !== null) {
     params[namedWildcard] = path.slice(wildcardStart)
@@ -241,6 +281,7 @@ function createRadixNode(): RadixNode {
 
 function insertIntoFastBucket(bucket: FastBucket, parsed: FastPattern, entry: RouteEntry): void {
   if (parsed.kind === 'static') {
+    bucket.hasStatic = true
     if (bucket.staticMap[parsed.path] === undefined) {
       bucket.staticMap[parsed.path] = entry
     }
@@ -344,6 +385,7 @@ function hasDotInRange(str: string, start: number, end: number): boolean {
   return false
 }
 
+// Keep traversal semantics in sync with testRadix() below.
 function matchRadix(
   node: RadixNode,
   path: string,
@@ -454,13 +496,8 @@ function matchRadix(
   }
 }
 
-function testFastBucket(bucket: FastBucket, path: string): boolean {
-  if (bucket.staticMap[path] !== undefined) return true
-  if (!bucket.hasDynamic) return false
-  return testRadix(bucket.root, path, 1)
-}
-
-function testRadix(node: RadixNode, path: string, pos: number): boolean {
+// Keep traversal semantics in sync with matchRadix() above.
+function testRadix(node: RadixNode, path: string, pos: number, hasAnyDot: boolean): boolean {
   let len = path.length
 
   while (true) {
@@ -500,12 +537,12 @@ function testRadix(node: RadixNode, path: string, pos: number): boolean {
 
       if (isLast) {
         if (staticChild.prefix.length === 0 && staticChild.leaf !== null) return true
-      } else if (testRadix(staticChild, path, slash + 1)) {
+      } else if (testRadix(staticChild, path, slash + 1, hasAnyDot)) {
         return true
       }
     }
 
-    if (node.param !== null && segLen > 0 && !hasDotInRange(path, pos, segEnd)) {
+    if (node.param !== null && segLen > 0 && (!hasAnyDot || !hasDotInRange(path, pos, segEnd))) {
       let pNode = node.param
       if (node.wildcard === null) {
         if (isLast) return pNode.prefix.length === 0 && pNode.leaf !== null
@@ -516,7 +553,7 @@ function testRadix(node: RadixNode, path: string, pos: number): boolean {
 
       if (isLast) {
         if (pNode.prefix.length === 0 && pNode.leaf !== null) return true
-      } else if (testRadix(pNode, path, slash + 1)) {
+      } else if (testRadix(pNode, path, slash + 1, hasAnyDot)) {
         return true
       }
     }
@@ -559,17 +596,12 @@ export function extractPlainHttpPathname(url: string): string | null {
   let h = url.indexOf('#', start)
   let end = q === -1 ? (h === -1 ? len : h) : h === -1 || q < h ? q : h
 
-  // Request URLs are already WHATWG-canonicalized (backslashes, dot segments, and non-ASCII are
-  // normalized/percent-encoded); only '%' requires full URL/percent-decoding fallback.
+  // Standard Request URLs are already WHATWG-canonicalized (backslashes, dot segments, and
+  // non-ASCII are normalized/percent-encoded); only '%' requires full URL/percent-decoding fallback.
   let pct = url.indexOf('%', start)
   if (pct !== -1 && pct < end) return null
 
   return end === len ? url.slice(start) : url.slice(start, end)
-}
-
-type StoredRoute = {
-  readonly entry: RouteEntry
-  readonly parsed: FastPattern | null
 }
 
 function buildBucket(items: ReadonlyArray<StoredRoute>): MethodBucket {
@@ -594,6 +626,7 @@ function buildBucket(items: ReadonlyArray<StoredRoute>): MethodBucket {
     kind: 'fast',
     staticMap: Object.create(null),
     root: createRadixNode(),
+    hasStatic: false,
     hasDynamic: false,
   }
 
@@ -618,6 +651,8 @@ export class RouteMatcher {
   #allFast = true
   #fallbackMatcher: MultiMatcher<RouteEntry> | null = null
 
+  // Shared scratch result reused across requests; callers must read fields synchronously
+  // before invoking user middleware or handlers.
   readonly result: FastMatchResult = {
     entry: undefined,
     params: undefined,
@@ -634,8 +669,6 @@ export class RouteMatcher {
 
   #ensureCompiled(): void {
     if (!this.#dirty) return
-    this.#dirty = false
-    this.#fallbackMatcher = null
 
     let grouped: Record<string, Array<StoredRoute>> = Object.create(null)
     let methods: Array<RequestMethod> = []
@@ -691,9 +724,16 @@ export class RouteMatcher {
     this.#methods = methods
     this.#anyBucket = anyBucket
     this.#allFast = allFast
+    this.#fallbackMatcher = null
+    this.#dirty = false
   }
 
-  match(method: string, requestUrl: string, contextUrl: URL | undefined): FastMatchStatus {
+  match(
+    method: string,
+    requestUrl: string | undefined,
+    contextUrl: URL | undefined,
+    context: RequestContext,
+  ): FastMatchStatus {
     if (this.#items.length === 0) return MATCH_MISS
     if (this.#dirty) this.#ensureCompiled()
 
@@ -715,20 +755,24 @@ export class RouteMatcher {
       let pathname: string | null
       if (contextUrl !== undefined) {
         let proto = contextUrl.protocol
-        if (proto !== 'http:' && proto !== 'https:') return MATCH_MISS
+        if (proto !== 'http:' && proto !== 'https:') return MATCH_FALLBACK
         pathname = contextUrl.pathname
         if (pathname.indexOf('%') !== -1) return MATCH_FALLBACK
-      } else {
+      } else if (requestUrl !== undefined) {
         pathname = extractPlainHttpPathname(requestUrl)
         if (pathname === null) return MATCH_FALLBACK
+      } else {
+        return MATCH_FALLBACK
       }
 
-      let staticEntry = bucket.staticMap[pathname]
-      if (staticEntry !== undefined) {
-        this.result.entry = staticEntry
-        this.result.params = undefined
-        this.result.isHeadFallback = method === 'HEAD' && staticEntry.method === 'GET'
-        return MATCH_HIT
+      if (bucket.hasStatic) {
+        let staticEntry = bucket.staticMap[pathname]
+        if (staticEntry !== undefined) {
+          this.result.entry = staticEntry
+          this.result.params = undefined
+          this.result.isHeadFallback = method === 'HEAD' && staticEntry.method === 'GET'
+          return MATCH_HIT
+        }
       }
 
       if (
@@ -742,7 +786,7 @@ export class RouteMatcher {
       return MATCH_MISS
     }
 
-    let match = bucket.matcher.match(contextUrl ?? requestUrl)
+    let match = bucket.matcher.match(contextUrl ?? context.url)
     if (match === null) return MATCH_MISS
 
     this.result.entry = match.data
@@ -755,7 +799,7 @@ export class RouteMatcher {
   // avoiding full matchAll() construction on plain 404 misses.
   findAllowedMethodsFast(
     currentMethod: string,
-    requestUrl: string,
+    requestUrl: string | undefined,
     contextUrl: URL | undefined,
   ): Set<RequestMethod> | null | undefined {
     if (this.#items.length === 0) return null
@@ -765,20 +809,27 @@ export class RouteMatcher {
     let pathname: string | null
     if (contextUrl !== undefined) {
       let proto = contextUrl.protocol
-      if (proto !== 'http:' && proto !== 'https:') return null
+      if (proto !== 'http:' && proto !== 'https:') return undefined
       pathname = contextUrl.pathname
       if (pathname.indexOf('%') !== -1) return undefined
-    } else {
+    } else if (requestUrl !== undefined) {
       pathname = extractPlainHttpPathname(requestUrl)
       if (pathname === null) return undefined
+    } else {
+      return undefined
     }
 
+    let hasAnyDot: boolean | undefined
     let allowed: Set<RequestMethod> | null = null
     for (let i = 0; i < this.#methods.length; i++) {
       let method = this.#methods[i]
       if (method === currentMethod) continue
       let bucket = this.#byMethod[method] as FastBucket
-      if (testFastBucket(bucket, pathname)) {
+      let matched =
+        (bucket.hasStatic && bucket.staticMap[pathname] !== undefined) ||
+        (bucket.hasDynamic &&
+          testRadix(bucket.root, pathname, 1, (hasAnyDot ??= pathname.indexOf('.') !== -1)))
+      if (matched) {
         allowed ??= new Set()
         allowed.add(method)
       }

@@ -1,5 +1,5 @@
 import type { RequestHandler } from './controller.ts'
-import { type AbortRace, cancelAbandonedResponse, createAbortRace } from './request-abort.ts'
+import { AbortRace, cancelAbandonedResponse } from './request-abort.ts'
 import type {
   ContextEntries,
   ContextEntry,
@@ -121,7 +121,7 @@ export function runMiddleware(
 
   function getAbortRace(): AbortRace {
     if (sharedAbortRace !== undefined) return sharedAbortRace
-    return (ownedAbortRace ??= createAbortRace(request))
+    return (ownedAbortRace ??= new AbortRace(request))
   }
 
   function dispatch(i: number): Response | Promise<Response> {
@@ -158,6 +158,10 @@ export function runMiddleware(
     let fn = middleware[i]
     let nextPromise: Promise<Response> | undefined
     let next: NextFunction = () => {
+      if (nextPromise !== undefined) {
+        return Promise.reject(new Error('next() called multiple times'))
+      }
+
       try {
         let result = dispatch(i + 1)
         nextPromise = result instanceof Promise ? result : Promise.resolve(result)
@@ -168,10 +172,18 @@ export function runMiddleware(
       return nextPromise
     }
 
-    let result = fn(context, next)
+    let result: Response | Promise<Response>
+    try {
+      result = fn(context, next)
+    } catch (error) {
+      nextPromise?.catch(() => {})
+      throw error
+    }
 
     // Synchronous short-circuit response
     if (result instanceof Response) {
+      nextPromise?.catch(() => {})
+
       if (signal.aborted) {
         cancelAbandonedResponse(result, signal.reason)
         throw signal.reason
@@ -193,6 +205,7 @@ export function runMiddleware(
       let promise = isNativePromise ? result : Promise.resolve(result)
 
       if (signal.aborted) {
+        nextPromise?.catch(() => {})
         promise.then(
           (value) => cancelAbandonedResponse(value, signal.reason),
           () => {},
@@ -210,11 +223,13 @@ export function runMiddleware(
             abortRace.removeRejector(reject)
 
             if (signal.aborted) {
+              nextPromise?.catch(() => {})
               cancelAbandonedResponse(response, signal.reason)
               return
             }
 
             if (response instanceof Response) {
+              nextPromise?.catch(() => {})
               resolve(response)
             } else if (nextPromise !== undefined) {
               resolve(nextPromise)
@@ -224,6 +239,7 @@ export function runMiddleware(
           },
           (error) => {
             abortRace.removeRejector(reject)
+            nextPromise?.catch(() => {})
             reject(error)
           },
         )
@@ -231,6 +247,7 @@ export function runMiddleware(
     }
 
     if (signal.aborted) {
+      nextPromise?.catch(() => {})
       throw signal.reason
     }
 
