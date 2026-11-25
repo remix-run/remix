@@ -3,10 +3,9 @@ import type * as http2 from 'node:http2'
 import * as net from 'node:net'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
-import type { RequestLifecycle } from './request-abort.ts'
 import {
+  RequestLifecycle,
   createRequestAbortError,
-  createRequestLifecycle,
   isRequestAlreadyAborted,
   isRequestAbortReason,
   markRequestAbortReason,
@@ -103,7 +102,7 @@ export function createRequestListener(
   let expectsClient = handler.length >= 2
 
   return (req, res) => {
-    let lifecycle = createRequestLifecycle()
+    let lifecycle = new RequestLifecycle()
     observeResponseForRequestLifecycle(res, lifecycle)
 
     let request: Request
@@ -167,26 +166,45 @@ async function sendErrorResponseForRequest(
   await writeResponse(res, response, lifecycle)
 }
 
-async function sendResponseForRequest(
+function sendResponseForRequest(
   res: http.ServerResponse | http2.Http2ServerResponse,
   response: Response,
   request: Request,
   onError: ErrorHandler,
   lifecycle: RequestLifecycle,
-): Promise<void> {
+): Promise<void> | void {
   if (isResponseClosed(res, lifecycle) || request.signal.aborted) return
+
   try {
-    await writeResponse(res, response, lifecycle)
-  } catch (error) {
-    if (isResponseClosed(res, lifecycle)) return
-    if (isRequestAbortError(request, error)) return
-    if (hasResponseStarted(res)) {
-      destroyResponse(res, error)
-      void createErrorResponse(onError, error)
+    writeResponseHead(res, response)
+    if (response.body == null || res.req.method === 'HEAD') {
+      res.end()
       return
     }
-    await sendErrorResponseForRequest(res, request, onError, error, lifecycle)
+  } catch (error) {
+    return handleResponseSendError(res, request, onError, error, lifecycle)
   }
+
+  return writeResponseBody(res, response.body, lifecycle).then(undefined, (error) =>
+    handleResponseSendError(res, request, onError, error, lifecycle),
+  )
+}
+
+async function handleResponseSendError(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  request: Request,
+  onError: ErrorHandler,
+  error: unknown,
+  lifecycle: RequestLifecycle,
+): Promise<void> {
+  if (isResponseClosed(res, lifecycle)) return
+  if (isRequestAbortError(request, error)) return
+  if (hasResponseStarted(res)) {
+    destroyResponse(res, error)
+    void createErrorResponse(onError, error)
+    return
+  }
+  await sendErrorResponseForRequest(res, request, onError, error, lifecycle)
 }
 
 async function createErrorResponse(onError: ErrorHandler, error: unknown): Promise<Response> {
@@ -239,102 +257,118 @@ function destroyResponse(
   }
 }
 
-function createRequestBodyStream(
-  req: http.IncomingMessage | http2.Http2ServerRequest,
-  lifecycle: RequestLifecycle,
-): ReadableStream<Uint8Array> {
-  let bodyController: ReadableStreamDefaultController<Uint8Array> | undefined
-  let requestEnded = false
-  let bodyClosed = false
+class RequestBodySource implements UnderlyingDefaultSource<Uint8Array> {
+  #req: http.IncomingMessage | http2.Http2ServerRequest
+  #lifecycle: RequestLifecycle
+  #controller: ReadableStreamDefaultController<Uint8Array> | undefined
+  #requestEnded = false
+  #bodyClosed = false
 
-  function cleanup({ keepErrorListener = false }: { keepErrorListener?: boolean } = {}) {
-    req.removeListener('data', onData)
-    req.removeListener('end', onEnd)
-    if (!keepErrorListener) req.removeListener('error', onError)
-    req.removeListener('aborted', onAborted)
-    req.removeListener('close', onClose)
+  constructor(req: http.IncomingMessage | http2.Http2ServerRequest, lifecycle: RequestLifecycle) {
+    this.#req = req
+    this.#lifecycle = lifecycle
   }
 
-  function closeBody() {
-    if (bodyClosed) return
-    bodyClosed = true
-    cleanup()
-    bodyController?.close()
-  }
+  start(controller: ReadableStreamDefaultController<Uint8Array>): void {
+    this.#controller = controller
 
-  function abortBody(error: unknown, { keepErrorListener = false } = {}) {
-    if (bodyClosed) return
-    bodyClosed = true
-    cleanup({ keepErrorListener })
-    lifecycle.abort(error)
-    bodyController?.error(error)
-  }
+    // Keep using `on` (not `once`) so late errors after an abort are absorbed by `#bodyClosed`
+    // instead of crashing the process as unhandled `'error'` events.
+    this.#req.on('error', this.#onError)
 
-  function cancelBody() {
-    if (bodyClosed) return
-    bodyClosed = true
-    cleanup()
-  }
+    if (isRequestAlreadyAborted(this.#req)) {
+      this.#abort(createRequestAbortError(), true)
+      return
+    }
 
-  function onData(chunk: Buffer) {
-    if (bodyController == null) return
-    bodyController.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+    this.#req.on('data', this.#onData)
+    this.#req.on('end', this.#onEnd)
+    this.#req.on('aborted', this.#onAborted)
+    this.#req.on('close', this.#onClose)
 
-    // Apply backpressure: once the stream's queue is full, stop pulling data off the socket until
-    // the consumer reads (see pull() below). Without this, an unread request body (e.g. a handler
-    // that rejects a large upload before reading it) would be buffered in the queue unboundedly.
-    if (bodyController.desiredSize != null && bodyController.desiredSize <= 0) {
-      req.pause()
+    if (isRequestAlreadyAborted(this.#req)) {
+      this.#abort(createRequestAbortError(), true)
     }
   }
 
-  function onEnd() {
-    requestEnded = true
-    closeBody()
+  pull(): void {
+    this.#req.resume()
   }
 
-  function onError(error: Error) {
+  cancel(): void {
+    if (this.#bodyClosed) return
+    this.#bodyClosed = true
+    this.#cleanup(false)
+  }
+
+  #cleanup(keepErrorListener: boolean): void {
+    this.#req.removeListener('data', this.#onData)
+    this.#req.removeListener('end', this.#onEnd)
+    if (!keepErrorListener) this.#req.removeListener('error', this.#onError)
+    this.#req.removeListener('aborted', this.#onAborted)
+    this.#req.removeListener('close', this.#onClose)
+  }
+
+  #close(): void {
+    if (this.#bodyClosed) return
+    this.#bodyClosed = true
+    this.#cleanup(false)
+    this.#controller?.close()
+  }
+
+  #abort(error: unknown, keepErrorListener: boolean): void {
+    if (this.#bodyClosed) return
+    this.#bodyClosed = true
+    this.#cleanup(keepErrorListener)
+    this.#lifecycle.abort(error)
+    this.#controller?.error(error)
+  }
+
+  #onData = (chunk: Buffer): void => {
+    if (this.#controller == null) return
+    this.#controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+
+    // Apply backpressure: once the stream's queue is full, stop pulling data off the socket until
+    // the consumer reads (see pull() above). Without this, an unread request body (e.g. a handler
+    // that rejects a large upload before reading it) would be buffered in the queue unboundedly.
+    if (this.#controller.desiredSize != null && this.#controller.desiredSize <= 0) {
+      this.#req.pause()
+    }
+  }
+
+  #onEnd = (): void => {
+    this.#requestEnded = true
+    this.#close()
+  }
+
+  #onError = (error: Error): void => {
     markRequestAbortReason(error)
-    abortBody(error)
+    this.#abort(error, false)
   }
 
-  function onAborted() {
-    abortBody(createRequestAbortError(), { keepErrorListener: true })
+  #onAborted = (): void => {
+    this.#abort(createRequestAbortError(), true)
   }
 
-  function onClose() {
-    if (!requestEnded) abortBody(createRequestAbortError(), { keepErrorListener: true })
+  #onClose = (): void => {
+    if (!this.#requestEnded) this.#abort(createRequestAbortError(), true)
   }
+}
 
-  return new ReadableStream({
-    start(controller) {
-      bodyController = controller
-
-      // Keep using `on` (not `once`) so late errors after an abort are absorbed by `bodyClosed`
-      // instead of crashing the process as unhandled `'error'` events.
-      req.on('error', onError)
-
-      if (isRequestAlreadyAborted(req)) {
-        abortBody(createRequestAbortError(), { keepErrorListener: true })
-        return
-      }
-
-      req.on('data', onData)
-      req.on('end', onEnd)
-      req.on('aborted', onAborted)
-      req.on('close', onClose)
-
-      if (isRequestAlreadyAborted(req)) {
-        abortBody(createRequestAbortError(), { keepErrorListener: true })
-      }
-    },
-    pull() {
-      req.resume()
-    },
-    cancel() {
-      cancelBody()
-    },
-  })
+function hasRequestBody(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  method: string,
+): boolean {
+  if (method === 'GET' || method === 'HEAD') return false
+  // On HTTP/1.x, a request with no Transfer-Encoding and either no Content-Length or
+  // Content-Length: 0 carries no body per RFC 9112.
+  if (req.httpVersionMajor === 1 && req.headers['transfer-encoding'] === undefined) {
+    let contentLength = req.headers['content-length']
+    if (contentLength === undefined || contentLength === '0') {
+      return false
+    }
+  }
+  return true
 }
 
 /**
@@ -360,7 +394,7 @@ export function createRequest(
   res: http.ServerResponse | http2.Http2ServerResponse,
   options?: RequestOptions,
 ): Request {
-  let lifecycle = createRequestLifecycle()
+  let lifecycle = new RequestLifecycle()
   let request = createRequestWithLifecycle(req, options, lifecycle)
   observeResponseForRequestLifecycle(res, lifecycle)
   return request
@@ -384,8 +418,8 @@ function createRequestWithLifecycle(
     signal: lifecycle.signal,
   }
 
-  if (method !== 'GET' && method !== 'HEAD') {
-    init.body = createRequestBodyStream(req, lifecycle)
+  if (hasRequestBody(req, method)) {
+    init.body = new ReadableStream(new RequestBodySource(req, lifecycle))
 
     // init.duplex = 'half' must be set when body is a ReadableStream, and Node follows the spec.
     // However, this property is not defined in the TypeScript types for RequestInit, so we have
@@ -454,10 +488,15 @@ function getRequestHost(
 
 class RequestAuthorityError extends Error {}
 
+let lastValidAuthority: string | undefined
+
 function validateRequestAuthority(authority: string): void {
-  if (!isValidSimpleAuthority(authority)) {
-    parseRequestAuthority(authority)
+  if (authority === lastValidAuthority) return
+  if (isValidSimpleAuthority(authority)) {
+    lastValidAuthority = authority
+    return
   }
+  parseRequestAuthority(authority)
 }
 
 // Fast path for standard ASCII hostnames and canonical dotted-quad IPv4 addresses with an optional
@@ -833,6 +872,18 @@ async function writeResponse(
   response: Response,
   lifecycle?: RequestLifecycle,
 ): Promise<void> {
+  writeResponseHead(res, response)
+  if (response.body != null && res.req.method !== 'HEAD') {
+    await writeResponseBody(res, response.body, lifecycle)
+  } else {
+    res.end()
+  }
+}
+
+function writeResponseHead(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  response: Response,
+): void {
   // Iterate over response.headers so we are sure to send multiple Set-Cookie headers correctly.
   // These would incorrectly be merged into a single header if we tried to use
   // `Object.fromEntries(response.headers.entries())`.
@@ -861,53 +912,57 @@ async function writeResponse(
     // https://nodejs.org/docs/latest-v22.x/api/http2.html#responsewriteheadstatuscode-statusmessage-headers
     ;(res as http2.Http2ServerResponse).writeHead(response.status, headers)
   }
+}
 
-  if (response.body != null && res.req.method !== 'HEAD') {
-    let reader = response.body.getReader()
-    let responseClosed = lifecycle?.closed ?? false
-    let cancelBody: (() => void) | undefined
+async function writeResponseBody(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  body: ReadableStream<Uint8Array>,
+  lifecycle?: RequestLifecycle,
+): Promise<void> {
+  let reader = body.getReader()
+  let responseClosed = lifecycle?.closed ?? false
+  let cancelBody: (() => void) | undefined
 
-    if (lifecycle !== undefined) {
-      if (lifecycle.closed) {
-        void reader.cancel().catch(() => undefined)
-        return
-      }
-      lifecycle.setResponseReader(reader)
-    } else {
-      cancelBody = () => {
-        responseClosed = true
-        void reader.cancel().catch(() => undefined)
-      }
-      res.once('close', cancelBody)
+  if (lifecycle !== undefined) {
+    if (lifecycle.closed) {
+      void reader.cancel().catch(() => undefined)
+      return
     }
+    lifecycle.responseReader = reader
+  } else {
+    cancelBody = () => {
+      responseClosed = true
+      void reader.cancel().catch(() => undefined)
+    }
+    res.once('close', cancelBody)
+  }
 
-    // Don't call `reader.releaseLock()` after consuming the body: `sendResponse` is the terminal
-    // consumer, and Node's WHATWG stream implementation allocates a `TypeError` with a stack trace
-    // on every `releaseLock()` call.
-    try {
-      while (!(lifecycle?.closed ?? responseClosed)) {
-        let result = await reader.read()
-        if (result.done) break
+  // Don't call `reader.releaseLock()` after consuming the body: `sendResponse` is the terminal
+  // consumer, and Node's WHATWG stream implementation allocates a `TypeError` with a stack trace
+  // on every `releaseLock()` call.
+  try {
+    while (!(lifecycle?.closed ?? responseClosed)) {
+      let result = await reader.read()
+      if (result.done) break
 
-        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
-        if (res.write(result.value) === false) {
-          await waitForDrainOrClose(res)
-          if ((lifecycle?.closed ?? responseClosed) || res.destroyed) {
-            void reader.cancel().catch(() => undefined)
-            return
-          }
+      // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+      if (res.write(result.value) === false) {
+        await waitForDrainOrClose(res)
+        if ((lifecycle?.closed ?? responseClosed) || res.destroyed) {
+          void reader.cancel().catch(() => undefined)
+          return
         }
       }
-    } finally {
-      if (lifecycle !== undefined) {
-        lifecycle.setResponseReader(undefined)
-      } else if (cancelBody !== undefined) {
-        res.removeListener('close', cancelBody)
-      }
     }
-
-    if (lifecycle?.closed ?? responseClosed) return
+  } finally {
+    if (lifecycle !== undefined) {
+      lifecycle.responseReader = undefined
+    } else if (cancelBody !== undefined) {
+      res.removeListener('close', cancelBody)
+    }
   }
+
+  if (lifecycle?.closed ?? responseClosed) return
 
   res.end()
 }

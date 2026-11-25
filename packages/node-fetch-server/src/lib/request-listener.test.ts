@@ -1524,6 +1524,53 @@ describe('createRequest authority', () => {
     assert.equal(value.constructor, Uint8Array)
   })
 
+  it('omits the request body stream for bodyless HTTP/1 requests', async () => {
+    let reqZero = createMockRequest({
+      method: 'POST',
+      headers: { Host: 'example.com', 'Content-Length': '0' },
+    })
+    reqZero.httpVersionMajor = 1
+    let requestZero = createRequest(reqZero, createMockResponse({ req: reqZero }))
+    assert.equal(requestZero.body, null)
+    assert.equal(await requestZero.text(), '')
+
+    let reqNone = createMockRequest({
+      method: 'DELETE',
+      headers: { Host: 'example.com' },
+    })
+    reqNone.httpVersionMajor = 1
+    let requestNone = createRequest(reqNone, createMockResponse({ req: reqNone }))
+    assert.equal(requestNone.body, null)
+
+    let reqChunked = createMockRequest({
+      method: 'POST',
+      headers: { Host: 'example.com', 'Transfer-Encoding': 'chunked' },
+      body: 'chunked',
+    })
+    reqChunked.httpVersionMajor = 1
+    let requestChunked = createRequest(reqChunked, createMockResponse({ req: reqChunked }))
+    assert.notEqual(requestChunked.body, null)
+    assert.equal(await requestChunked.text(), 'chunked')
+
+    let reqLength = createMockRequest({
+      method: 'POST',
+      headers: { Host: 'example.com', 'Content-Length': '5' },
+      body: 'hello',
+    })
+    reqLength.httpVersionMajor = 1
+    let requestLength = createRequest(reqLength, createMockResponse({ req: reqLength }))
+    assert.equal(await requestLength.text(), 'hello')
+
+    let reqH2 = createMockRequest({
+      method: 'POST',
+      headers: { ':authority': 'example.com' },
+      body: 'h2-body',
+    })
+    reqH2.httpVersionMajor = 2
+    let requestH2 = createRequest(reqH2, createMockResponse({ req: reqH2 }))
+    assert.equal(await requestH2.text(), 'h2-body')
+  })
+
   it('preserves URL hostname normalization and request-target encoding', () => {
     let req = createMockRequest({ url: '/secret%2Fvalue?next=%2Fadmin' })
     let res = createMockResponse({ req })

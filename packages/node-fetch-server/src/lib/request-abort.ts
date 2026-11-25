@@ -3,45 +3,35 @@ import type * as http2 from 'node:http2'
 
 const requestAbortReasons = new WeakSet<object>()
 
-export interface RequestLifecycle {
-  readonly signal: AbortSignal
-  readonly closed: boolean
-  abort(reason?: unknown): void
-  close(): void
-  finish(): void
-  setResponseReader(reader: ReadableStreamDefaultReader<Uint8Array> | undefined): void
-}
+export class RequestLifecycle {
+  #controller = new AbortController()
+  #finished = false
+  #closed = false
+  responseReader: ReadableStreamDefaultReader<Uint8Array> | undefined
 
-export function createRequestLifecycle(): RequestLifecycle {
-  let controller = new AbortController()
-  let finished = false
-  let closed = false
-  let responseReader: ReadableStreamDefaultReader<Uint8Array> | undefined
+  get signal(): AbortSignal {
+    return this.#controller.signal
+  }
 
-  return {
-    get signal() {
-      return controller.signal
-    },
-    get closed() {
-      return closed
-    },
-    abort(reason?: unknown) {
-      if (!finished) controller.abort(reason)
-    },
-    close() {
-      if (closed) return
-      closed = true
-      if (!finished) controller.abort()
-      if (responseReader !== undefined) {
-        void responseReader.cancel().catch(() => undefined)
-      }
-    },
-    finish() {
-      finished = true
-    },
-    setResponseReader(reader: ReadableStreamDefaultReader<Uint8Array> | undefined) {
-      responseReader = reader
-    },
+  get closed(): boolean {
+    return this.#closed
+  }
+
+  abort(reason?: unknown): void {
+    if (!this.#finished) this.#controller.abort(reason)
+  }
+
+  close(): void {
+    if (this.#closed) return
+    this.#closed = true
+    if (!this.#finished) this.#controller.abort()
+    if (this.responseReader !== undefined) {
+      void this.responseReader.cancel().catch(() => undefined)
+    }
+  }
+
+  finish(): void {
+    this.#finished = true
   }
 }
 
