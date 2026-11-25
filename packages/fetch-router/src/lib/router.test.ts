@@ -1672,4 +1672,83 @@ describe('per-method route matching', () => {
       'PATCH:3',
     )
   })
+
+  it('matches static routes with query strings, percent-encoded paths, and dot segments', async () => {
+    let router = createRouter()
+    router.get('/users', ({ url }) => new Response(`users:${url.searchParams.get('page') ?? ''}`))
+    router.get('/.well-known/health', () => new Response('ok'))
+
+    assert.equal(await (await router.fetch('https://remix.run/users?page=2')).text(), 'users:2')
+    assert.equal(await (await router.fetch('https://remix.run/%75sers')).text(), 'users:')
+    assert.equal(await (await router.fetch('https://remix.run/.well-known/health')).text(), 'ok')
+  })
+
+  it('preserves specificity when origin, search, or optional routes share a static path', async () => {
+    let originRouter = createRouter()
+    originRouter.get('/users', () => new Response('plain'))
+    originRouter.get('https://api.remix.run/users', () => new Response('api'))
+
+    assert.equal(await (await originRouter.fetch('https://remix.run/users')).text(), 'plain')
+    assert.equal(await (await originRouter.fetch('https://api.remix.run/users')).text(), 'api')
+
+    let searchRouter = createRouter()
+    searchRouter.get('/users', () => new Response('plain'))
+    searchRouter.get('/users?admin', () => new Response('admin'))
+
+    assert.equal(await (await searchRouter.fetch('https://remix.run/users')).text(), 'plain')
+    assert.equal(await (await searchRouter.fetch('https://remix.run/users?admin')).text(), 'admin')
+
+    let optionalRouter = createRouter()
+    let seenParams: Record<string, string | undefined> | undefined
+    optionalRouter.get('/users(/:id)', ({ params }) => {
+      seenParams = params
+      return new Response('opt')
+    })
+    optionalRouter.get('/users', () => new Response('static'))
+
+    assert.equal(await (await optionalRouter.fetch('https://remix.run/users')).text(), 'opt')
+    assert.deepEqual(seenParams, { id: undefined })
+  })
+
+  it('preserves registration order between ANY and method-specific static routes', async () => {
+    let router = createRouter()
+    router.route('ANY', '/first', () => new Response('any-first'))
+    router.get('/first', () => new Response('get-second'))
+    router.get('/second', () => new Response('get-first'))
+    router.route('ANY', '/second', () => new Response('any-second'))
+
+    assert.equal(await (await router.fetch('https://remix.run/first')).text(), 'any-first')
+    assert.equal(await (await router.fetch('https://remix.run/second')).text(), 'get-first')
+    assert.equal(
+      await (await router.fetch('https://remix.run/second', { method: 'POST' })).text(),
+      'any-second',
+    )
+  })
+
+  it('preserves params set by router middleware on static and parameterized routes', async () => {
+    let router = createRouter({
+      middleware: [
+        (context, next) => {
+          ;(context.params as Record<string, string>).tenant = 'acme'
+          return next()
+        },
+      ],
+    })
+
+    router.get('/static', ({ params }) => Response.json(params))
+    router.get('/items/:id', ({ params }) => Response.json(params))
+
+    assert.deepEqual(await (await router.fetch('https://remix.run/static')).json(), {
+      tenant: 'acme',
+    })
+    assert.deepEqual(await (await router.fetch('https://remix.run/items/42')).json(), {
+      tenant: 'acme',
+      id: '42',
+    })
+  })
+
+  it('keeps router.fetch.length equal to 1', () => {
+    let router = createRouter()
+    assert.equal(router.fetch.length, 1)
+  })
 })

@@ -371,4 +371,14 @@ describe('new RequestContext()', () => {
 
     assert.equal(storedValue, value)
   })
+
+  it('memoizes bound get/has/set helpers and lazily initializes params', () => {
+    let context = new RequestContext(new Request('https://remix.run/test'))
+
+    assert.equal(context.get, context.get)
+    assert.equal(context.has, context.has)
+    assert.equal(context.set, context.set)
+    assert.deepEqual(context.params, {})
+    assert.equal(context.params, context.params)
+  })
 })
