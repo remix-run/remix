@@ -7,8 +7,8 @@ class UnsafeHTMLValue {
     this.#value = value
   }
 
-  static read(value: UnsafeHTMLValue): string {
-    return value.#value
+  static read(value: unknown): string | undefined {
+    return value instanceof UnsafeHTMLValue ? value.#value : undefined
   }
 }
 
@@ -35,14 +35,6 @@ export function unsafeHTML(value: string): UnsafeHTML {
   return result
 }
 
-function readHTMLProp(props: Record<string, unknown>, name: string): string | undefined {
-  let value = props[name]
-  if (value === undefined) return
-  let html = value instanceof UnsafeHTMLValue ? UnsafeHTMLValue.read(value) : undefined
-  invariant(html !== undefined, `Invalid ${name} prop: expected a value created with unsafeHTML()`)
-  return html
-}
-
 interface NormalizedUnsafeHTMLProps extends Record<string, unknown> {
   innerHTML?: string
   srcDoc?: string
@@ -59,20 +51,23 @@ interface NormalizedUnsafeHTMLProps extends Record<string, unknown> {
 export function normalizeUnsafeHTMLProps(
   props: Record<string, unknown>,
 ): NormalizedUnsafeHTMLProps {
-  let innerHTML = readHTMLProp(props, 'innerHTML')
-  let srcDoc = readHTMLProp(props, 'srcDoc')
-  let srcdoc = readHTMLProp(props, 'srcdoc')
-
   invariant(
     props.outerHTML === undefined,
     'Invalid outerHTML prop: outerHTML is not supported on host elements',
   )
 
-  if (innerHTML === undefined && srcDoc === undefined && srcdoc === undefined) return props
-  return {
-    ...props,
-    ...(innerHTML === undefined ? {} : { innerHTML }),
-    ...(srcDoc === undefined ? {} : { srcDoc }),
-    ...(srcdoc === undefined ? {} : { srcdoc }),
+  let normalized: NormalizedUnsafeHTMLProps | undefined
+  for (let name of ['innerHTML', 'srcDoc', 'srcdoc'] as const) {
+    let value = props[name]
+    if (value === undefined) continue
+    let html = UnsafeHTMLValue.read(value)
+    invariant(
+      html !== undefined,
+      `Invalid ${name} prop: expected a value created with unsafeHTML()`,
+    )
+    normalized ??= { ...props }
+    normalized[name] = html
   }
+
+  return normalized ?? props
 }

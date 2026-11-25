@@ -1,4 +1,3 @@
-import { getNonceManager } from './nonce.ts'
 import type { ComponentErrorEvent, FrameHandle } from './component.ts'
 import {
   createComponentErrorEvent,
@@ -7,26 +6,22 @@ import {
   TypedEventTarget,
 } from './component.ts'
 import { invariant } from './invariant.ts'
-import type { RemixNode } from './core/vnode.ts'
-import { createFrameRuntime, FrameRegistry, type ResolveFrame } from './frame-runtime.ts'
+import { setActiveSchedulerUpdateParents, type RemixNode } from './core/vnode.ts'
+import type { ResolveFrame } from './frame-runtime.ts'
+import type { NonceManager } from './nonce.ts'
 import {
-  getDefaultStyleManager,
   diffVNodes,
-  isCommittedComponentNode,
   renderComponent,
   restoreAncestorSelect,
   remove as removeVNode,
   ROOT_VNODE,
-  setActiveSchedulerUpdateParents,
   toVNode,
   type CommittedComponentNode,
   type CommittedVNode,
   type ReconcileContext,
   type RootVNode,
-  type VNodeParent,
 } from './reconcile.ts'
 import { registerRoot, unregisterRoot } from './refresh.ts'
-import { getHydrationId, isHydrationStart } from './stream-protocol.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 import type { ElementFunction } from './element-function.ts'
 
@@ -98,7 +93,9 @@ export function createRangeRoot(
   let container = end.parentNode
   invariant(container, 'Expected parent node')
   invariant(start.parentNode === container, 'Boundaries must share parent')
-  return createVirtualRoot(container, start.nextSibling, options, start, end)
+  let markerData = start.nodeType === 8 ? (start as Comment).data.trim() : ''
+  let hydrationId = markerData.startsWith('rmx:h:') ? markerData.slice(6) : undefined
+  return createVirtualRoot(container, start.nextSibling, options, start, end, hydrationId)
 }
 
 /**
@@ -110,13 +107,18 @@ export function createRangeRoot(
  */
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
   let start: ChildNode | null = null
+  let styleRoot: HTMLElement | undefined
   if (hasServerContent(container)) {
-    let styles = options.styleManager ?? getDefaultStyleManager()
-    styles.adoptServerStyles(container)
-    // Adoption can remove or replace the first node.
-    if (hasServerContent(container)) start = container.firstChild
+    if (options.styleManager) {
+      options.styleManager.adoptServerStyles(container)
+      // Adoption can remove or replace the first node.
+      if (hasServerContent(container)) start = container.firstChild
+    } else {
+      start = container.firstChild
+      styleRoot = container
+    }
   }
-  return createVirtualRoot(container, start, options)
+  return createVirtualRoot(container, start, options, undefined, undefined, undefined, styleRoot)
 }
 
 function hasServerContent(container: HTMLElement): boolean {
@@ -132,17 +134,19 @@ function createVirtualRoot(
   options: VirtualRootOptions,
   rangeStart?: Node,
   rangeEnd?: Node,
+  pendingHydrationId?: string,
+  styleRoot?: HTMLElement,
 ): VirtualRoot {
-  let nonceManager = getNonceManager()
   let vroot: CommittedVNode | null = null
   let currentElement: RemixNode | undefined
-  let styles = options.styleManager ?? getDefaultStyleManager()
+  let styles = options.styleManager
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
   let scheduler =
     options.scheduler ?? createScheduler(parent.ownerDocument ?? document, eventTarget)
   let frameStub =
-    options.frame ?? createRootFrameHandle(options.frameInit, eventTarget, scheduler, styles)
+    options.frame ??
+    createRootFrameHandle(options.frameInit, eventTarget, scheduler, styles, styleRoot)
   let context: ReconcileContext = {
     frame: frameStub,
     scheduler,
@@ -160,19 +164,19 @@ function createVirtualRoot(
       if (currentElement === undefined) parent.addEventListener('error', forwardDomError)
       currentElement = element
 
+      let nonceManager = (frameStub.$runtime as { nonceManager?: NonceManager } | undefined)
+        ?.nonceManager
       let vnode = toVNode(element)
       let vParent: RootVNode = {
         kind: 'root',
         type: ROOT_VNODE,
         _children: [],
         _svg: false,
-        _resourceNonces: nonceManager.getRootResourceNonces(root),
+        _nonces: nonceManager?.getRootResourceNonces(root),
         _getContext: options.getContext,
         _rangeStart: rangeStart,
         _rangeEnd: rangeEnd,
-        _pendingHydrationComponentId: isHydrationStart(rangeStart)
-          ? getHydrationId(rangeStart)
-          : undefined,
+        _hid: pendingHydrationId,
       }
       scheduler.enqueueWork([
         () => {
@@ -230,24 +234,18 @@ function createRootFrameHandle(
   init: VirtualRootOptions['frameInit'],
   errorTarget: EventTarget,
   scheduler: Scheduler,
-  styleManager: StyleManager,
+  styleManager: StyleManager | undefined,
+  styleRoot: HTMLElement | undefined,
 ): FrameHandle {
   let frame = createFrameHandle({ src: init?.src ?? '/' })
-  frame.$runtime = init?.resolveFrame
-    ? createFrameRuntime({
-        loadModule:
-          init.loadModule ??
-          (() => {
-            throw new Error('loadModule is required to hydrate client entries inside <Frame />')
-          }),
-        resolveFrame: init.resolveFrame,
-        errorTarget,
-        scheduler,
-        styleManager,
-        registry: new FrameRegistry(),
-        topFrame: frame,
-      })
-    : { styleManager, resolveFrame: missingFrameRuntime }
+  frame.$runtime = {
+    styleManager,
+    styleRoot,
+    frameInit: init,
+    errorTarget,
+    scheduler,
+    resolveFrame: missingFrameRuntime,
+  }
   return frame
 }
 
@@ -282,19 +280,10 @@ export interface Scheduler {
   dequeue(): void
 }
 
-const CASCADING_UPDATE_WARN_THRESHOLD = 50
-const MAX_CASCADING_COMPONENT_UPDATES = 50
+const CASCADING_UPDATE_LIMIT = 50
 
 export type SchedulerPhaseEvent = Event & {
   parents: ParentNode[]
-}
-
-function getComponentName(vnode: CommittedComponentNode): string {
-  return vnode.type.name || 'Anonymous'
-}
-
-function formatComponentCounts(counts: Map<string, number>): string {
-  return Array.from(counts, ([name, count]) => `${name} x${count}`).join(', ')
 }
 
 /**
@@ -309,12 +298,11 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
   let workTasks: EmptyFn[] = []
   let commitPhaseTasks: EmptyFn[] = []
   let postCommitTasks: EmptyFn[] = []
-  let flushState: 'idle' | 'scheduled' | 'flushing' = 'idle'
-  // Counts for the current event loop turn, or undefined when no component has updated in it yet.
-  let cascadingUpdates:
+  let flushState = 0 // 0=idle, 1=scheduled, 2=flushing
+  let cascading:
     | {
         total: number
-        byComponent: WeakMap<CommittedComponentNode, number>
+        byNode: WeakMap<CommittedComponentNode, number>
         byName: Map<string, number>
       }
     | undefined
@@ -325,44 +313,55 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
     rootTarget.dispatchEvent(createComponentErrorEvent(error))
   }
 
+  function formatCounts(counts: Map<string, number>) {
+    return Array.from(counts, ([name, count]) => `${name} x${count}`).join(', ')
+  }
+
   function trackCascadingUpdate(vnode: CommittedComponentNode): boolean {
-    if (!cascadingUpdates) {
-      cascadingUpdates = { total: 0, byComponent: new WeakMap(), byName: new Map() }
-      // Close the window when control returns to the event loop while still allowing
-      // microtask-driven flushes in the same turn to count as cascading.
+    if (!cascading) {
+      cascading = { total: 0, byNode: new WeakMap(), byName: new Map() }
       setTimeout(() => {
-        cascadingUpdates = undefined
+        cascading = undefined
       }, 0)
     }
-    let updates = cascadingUpdates
-    updates.total++
+    let name = vnode.type.name || 'Anonymous'
+    let nodeCount = (cascading.byNode.get(vnode) ?? 0) + 1
+    cascading.byNode.set(vnode, nodeCount)
+    cascading.byName.set(name, (cascading.byName.get(name) ?? 0) + 1)
 
-    let componentName = getComponentName(vnode)
-    updates.byName.set(componentName, (updates.byName.get(componentName) ?? 0) + 1)
-
-    let componentUpdateCount = (updates.byComponent.get(vnode) ?? 0) + 1
-    updates.byComponent.set(vnode, componentUpdateCount)
-
-    if (updates.total === CASCADING_UPDATE_WARN_THRESHOLD) {
+    if (++cascading.total === CASCADING_UPDATE_LIMIT) {
       console.warn(
-        `${updates.total} cascading component updates detected in one event loop turn. Consider reducing hydration regions. Components: ${formatComponentCounts(updates.byName)}`,
+        `${cascading.total} cascading component updates detected in one event loop turn. Consider reducing hydration regions. Components: ${formatCounts(cascading.byName)}`,
       )
     }
-
-    if (componentUpdateCount > MAX_CASCADING_COMPONENT_UPDATES) {
-      let error = new Error(
-        `handle.update() infinite loop detected in ${componentName} after ${componentUpdateCount} cascading updates. Components: ${formatComponentCounts(updates.byName)}`,
+    if (nodeCount > CASCADING_UPDATE_LIMIT) {
+      dispatchError(
+        new Error(
+          `handle.update() infinite loop detected in ${name} after ${nodeCount} cascading updates. Components: ${formatCounts(cascading.byName)}`,
+        ),
       )
-      dispatchError(error)
       return false
     }
-
     return true
   }
 
+  function flushQueue(queue: EmptyFn[]) {
+    while (queue.length) {
+      try {
+        queue.shift()!()
+      } catch (error) {
+        dispatchError(error)
+      }
+    }
+  }
+
+  function dispatchPhase(type: SchedulerPhaseType, parents: ParentNode[]) {
+    phaseEvents?.dispatchEvent(Object.assign(new Event(type), { parents }))
+  }
+
   function flush() {
-    if (flushState === 'flushing') return
-    flushState = 'flushing'
+    if (flushState === 2) return
+    flushState = 2
     try {
       while (
         scheduled.size ||
@@ -381,124 +380,73 @@ export function createScheduler(doc: Document, rootTarget: EventTarget): Schedul
         let start = input?.selectionStart
         let end = input?.selectionEnd
 
-        let updateParents = batch.size > 0 ? Array.from(new Set(batch.values())) : []
+        let updateParents = batch.size ? Array.from(new Set(batch.values())) : []
         setActiveSchedulerUpdateParents(updateParents)
-        dispatchPhaseEvent('beforeUpdate', updateParents)
+        dispatchPhase('beforeUpdate', updateParents)
 
-        if (batch.size > 0) {
-          let noScheduledAncestor = new Set<VNodeParent>()
-
-          for (let [vnode, domParent] of batch) {
-            if (ancestorIsScheduled(vnode, batch, noScheduledAncestor)) continue
-            if (!trackCascadingUpdate(vnode)) return
-            let curr = vnode._content
-            try {
-              renderComponent(curr, vnode, domParent, vnode._context)
-            } catch (error) {
-              dispatchError(error)
+        for (let [vnode, domParent] of batch) {
+          let skipped = false
+          for (let p = vnode._parent; p.kind !== 'root'; p = p._parent) {
+            if (p.kind === 'component' && batch.has(p as CommittedComponentNode)) {
+              skipped = true
+              break
             }
+          }
+          if (skipped) continue
+          if (!trackCascadingUpdate(vnode)) return
+          try {
+            renderComponent(vnode._content, vnode, domParent, vnode._context)
+          } catch (error) {
+            dispatchError(error)
           }
         }
 
-        flushTaskQueue(workTasks)
+        flushQueue(workTasks)
         setActiveSchedulerUpdateParents(undefined)
 
-        // Restore selection before commit-phase lifecycle work so mixins see
-        // the final DOM state but still run before commit listeners and user tasks.
         if (focused && focused !== (doc.activeElement || doc.body) && doc.contains(focused)) {
           restoreFocus(focused, input, start, end)
         }
 
-        flushTaskQueue(commitPhaseTasks)
-        dispatchPhaseEvent('commit', updateParents)
-        flushTaskQueue(postCommitTasks)
+        flushQueue(commitPhaseTasks)
+        dispatchPhase('commit', updateParents)
+        flushQueue(postCommitTasks)
       }
     } finally {
       setActiveSchedulerUpdateParents(undefined)
-      flushState = 'idle'
-    }
-  }
-
-  function dispatchPhaseEvent(type: SchedulerPhaseType, parents: ParentNode[]) {
-    if (!phaseEvents) return
-    let event: SchedulerPhaseEvent = Object.assign(new Event(type), { parents })
-    phaseEvents.dispatchEvent(event)
-  }
-
-  function flushTaskQueue(queue: EmptyFn[]) {
-    while (queue.length > 0) {
-      let task = queue.shift()
-      if (!task) continue
-      try {
-        task()
-      } catch (error) {
-        dispatchError(error)
-      }
+      flushState = 0
     }
   }
 
   function scheduleFlush() {
-    if (flushState !== 'idle') return
-    flushState = 'scheduled'
+    if (flushState) return
+    flushState = 1
     queueMicrotask(flush)
   }
 
-  function ancestorIsScheduled(
-    vnode: CommittedComponentNode,
-    batch: Map<CommittedComponentNode, ParentNode>,
-    safe: Set<VNodeParent>,
-  ): boolean {
-    let path: VNodeParent[] = []
-    let current: VNodeParent | undefined = vnode._parent
-
-    while (current) {
-      // Already verified this node has no scheduled ancestor above it
-      if (safe.has(current)) break
-
-      path.push(current)
-
-      if (isCommittedComponentNode(current) && batch.has(current)) {
-        return true
-      }
-
-      current = current.kind === 'root' ? undefined : current._parent
-    }
-
-    // Reached root - mark entire path as safe for future lookups
-    for (let node of path) safe.add(node)
-    return false
-  }
-
   return {
-    enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void {
+    enqueue(vnode, domParent) {
       scheduled.set(vnode, domParent)
       scheduleFlush()
     },
-
-    enqueueWork(newTasks: EmptyFn[]): void {
-      workTasks.push(...newTasks)
+    enqueueWork(tasks) {
+      workTasks.push(...tasks)
       scheduleFlush()
     },
-
-    enqueueCommitPhase(newTasks: EmptyFn[]): void {
-      commitPhaseTasks.push(...newTasks)
+    enqueueCommitPhase(tasks) {
+      commitPhaseTasks.push(...tasks)
       scheduleFlush()
     },
-
-    enqueueTasks(newTasks: EmptyFn[]): void {
-      postCommitTasks.push(...newTasks)
+    enqueueTasks(tasks) {
+      postCommitTasks.push(...tasks)
       scheduleFlush()
     },
-
     addEventListener(type, listener, options) {
-      phaseEvents ??= new EventTarget()
-      phaseEvents.addEventListener(type, listener, options)
+      ;(phaseEvents ??= new EventTarget()).addEventListener(type, listener, options)
     },
-
     removeEventListener(type, listener, options) {
       phaseEvents?.removeEventListener(type, listener, options)
     },
-
     dequeue: flush,
   }
 }

@@ -37,12 +37,12 @@ import {
   type FlushKind,
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
-import { composeMixedProps, isMixinDescriptor } from '../runtime/mixins/mixin.ts'
+import { composeMixedProps } from '../runtime/mixins/mixin.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/stylesheet.ts'
 import { cssMixinType } from '../style/css-mixin.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { normalizeUnsafeHTMLProps } from '../runtime/unsafe-html.ts'
-import { jsx, isRemixElement } from '../runtime/core/vnode.ts'
+import { jsx, isMixinDescriptor, isRemixElement } from '../runtime/core/vnode.ts'
 
 interface VNode {
   type: ElementType

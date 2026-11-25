@@ -112,16 +112,36 @@ export { jsx as jsxDEV, jsx as jsxs }
 
 // Shared across module instances, and enumerable so element spreads retain their identity.
 const REMIX_ELEMENT = Symbol.for('remix.element')
+export const MIXIN_RUNTIME = Symbol.for('remix.mixinRuntime')
+export const DIRECT_EVENT = Symbol.for('remix.directEvent')
+export let defaultMixinDriver: unknown
+export let activeSchedulerUpdateParents: ParentNode[] | undefined
+
+export function setDefaultMixinDriver(driver: unknown): void {
+  defaultMixinDriver = driver
+}
+
+export function setActiveSchedulerUpdateParents(parents: ParentNode[] | undefined): void {
+  activeSchedulerUpdateParents = parents
+}
+
+export function isMixinDescriptor(
+  value: unknown,
+): value is { type: (...args: any[]) => unknown; args: readonly unknown[] } {
+  if (!value || typeof value !== 'object' || isRemixElement(value)) return false
+  let descriptor = value as { type?: unknown; args?: unknown }
+  return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
+}
 
 export function isRemixElement(node: unknown): node is RemixElement {
-  if (typeof node !== 'object' || node === null) return false
-  if (Reflect.get(node, REMIX_ELEMENT) !== true) return false
-  let type = Reflect.get(node, 'type')
-  let props = Reflect.get(node, 'props')
   return (
-    (typeof type === 'string' || typeof type === 'function') &&
-    typeof props === 'object' &&
-    props !== null
+    typeof node === 'object' &&
+    node !== null &&
+    (node as Partial<RemixElement>)[REMIX_ELEMENT] === true &&
+    (typeof (node as RemixElement).type === 'string' ||
+      typeof (node as RemixElement).type === 'function') &&
+    typeof (node as RemixElement).props === 'object' &&
+    (node as RemixElement).props !== null
   )
 }
 
@@ -129,22 +149,15 @@ function normalizeElementProps(props: ElementProps | null | undefined): ElementP
   if (!props) return {}
   if (!('mix' in props)) return props
 
-  // Fast path: `mix={[a, b]}` with flat, truthy entries is already normalized.
-  // Skipping the copy avoids two prop-object spreads per element per render.
-  if (isNormalizedMix(props.mix)) return props
-
-  let { mix, ...rest } = props
-  let normalized = Array.isArray(mix) ? mix.flat(Infinity).filter(Boolean) : mix ? [mix] : []
-  return normalized.length ? { ...rest, mix: normalized } : rest
-}
-
-function isNormalizedMix(mix: unknown): boolean {
-  if (!Array.isArray(mix) || mix.length === 0) return false
-  for (let i = 0; i < mix.length; i++) {
-    let item = mix[i]
-    if (!item || Array.isArray(item)) return false
+  let mix = props.mix
+  if (Array.isArray(mix) && mix.length > 0 && mix.every((item) => item && !Array.isArray(item))) {
+    return props
   }
-  return true
+
+  let { mix: _mix, ...rest } = props
+  let normalized = Array.isArray(mix) ? mix.flat(Infinity).filter(Boolean) : mix ? [mix] : []
+  if (normalized.length) rest.mix = normalized
+  return rest
 }
 
 export type EmptyChild = boolean | null | undefined
@@ -160,22 +173,18 @@ export function isPrimitiveChild(value: unknown): value is PrimitiveChild {
 }
 
 export function normalizeChildren(children: readonly RemixNode[]): RemixNode[] {
-  for (let i = 0; i < children.length; i++) {
-    if (Array.isArray(children[i])) {
-      return (children as unknown[]).flat(Infinity) as RemixNode[]
-    }
-  }
-
-  return children as RemixNode[]
+  return children.some(Array.isArray)
+    ? ((children as unknown[]).flat(Infinity) as RemixNode[])
+    : (children as RemixNode[])
 }
 
 export function isRemixNode(value: unknown): value is RemixNode {
-  if (isEmptyChild(value) || isPrimitiveChild(value) || isRemixElement(value)) return true
-  if (!Array.isArray(value)) return false
-  for (let child of value) {
-    if (!isRemixNode(child)) return false
-  }
-  return true
+  return (
+    isEmptyChild(value) ||
+    isPrimitiveChild(value) ||
+    isRemixElement(value) ||
+    (Array.isArray(value) && value.every(isRemixNode))
+  )
 }
 
 declare global {

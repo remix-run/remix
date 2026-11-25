@@ -1,7 +1,7 @@
 import type { RuntimeHostProps, VNodeParent } from './reconcile.ts'
 
 export type ResourceNonces = Set<string>
-type NonceManager = ReturnType<typeof createNonceManager>
+export type NonceManager = ReturnType<typeof createNonceManager>
 
 const state: { manager: NonceManager | undefined } = {
   manager: undefined,
@@ -62,7 +62,7 @@ function createNonceManager(doc: Document) {
 
   function getResourceNonces(parent: VNodeParent): ResourceNonces | undefined {
     while (parent.kind !== 'root') parent = parent._parent
-    return parent._resourceNonces
+    return parent._nonces
   }
 
   function addRootResourceNonces(root: object, nonces: ResourceNonces | undefined): void {

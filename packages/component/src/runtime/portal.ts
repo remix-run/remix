@@ -1,12 +1,11 @@
 import { PORTAL_NODE, Portal as portalComponent, type PortalProps } from './component.ts'
-import type { ElementProps } from './core/vnode.ts'
-import { isRemixNode } from './core/vnode.ts'
+import { defaultMixinDriver, isRemixNode, type ElementProps } from './core/vnode.ts'
+import type { MixinDriver } from './mixins/mixin.ts'
 import { invariant } from './invariant.ts'
 import {
   childrenToVNodes,
   diffChildren,
   parseHostProps,
-  persistedMixinNodes,
   portalRanges,
   reconcileVNodes,
   remove,
@@ -42,7 +41,7 @@ const portalNodeRenderer = {
   dispose(node: CommittedPortalNode, context: ReconcileContext) {
     if (node._removed) return
     node._removed = true
-    context._pendingPortals?.delete(node)
+    context._portals?.delete(node)
     for (let child of node._children) remove(child, node._container, context)
     node._children = []
     // An interrupted child update can leave DOM outside the recorded child list. Removing a
@@ -53,11 +52,14 @@ const portalNodeRenderer = {
       node._rangeStart.nextSibling !== node._rangeEnd
     ) {
       let retained: Set<Node> | undefined
-      for (let child of persistedMixinNodes) {
-        if (child._persistence?.parent !== node._container) continue
-        if (portalRanges?.ownerOf(child._parent) !== node) continue
-        retained ??= new Set()
-        retained.add(child._dom)
+      let persisted = (defaultMixinDriver as MixinDriver | undefined)?.persistedNodes
+      if (persisted) {
+        for (let child of persisted) {
+          if (child._persisted?.parent !== node._container) continue
+          if (portalRanges?.ownerOf(child._parent) !== node) continue
+          retained ??= new Set()
+          retained.add(child._dom)
+        }
       }
       let current = node._rangeStart.nextSibling
       while (current && current !== node._rangeEnd) {
@@ -117,8 +119,8 @@ function reconcilePortal(
     }
     let ranges = portalRanges ?? setPortalRanges(new PortalRanges())
     ranges.register(curr)
-    context._pendingPortals ??= new Set()
-    context._pendingPortals.add(curr)
+    context._portals ??= new Set()
+    context._portals.add(curr)
     for (let child of childrenToVNodes(node.props.children)) {
       curr._children.push(reconcileVNodes(null, child, container, curr, context, end))
     }

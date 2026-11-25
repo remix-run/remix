@@ -25,6 +25,7 @@ import { createRangeRoot, createRoot, missingFrameRuntime } from './vdom.ts'
 import {
   createFrameRuntime,
   disposeClientEntryBoundary,
+  FrameRegistry,
   getClientEntryBoundaryOwner,
   getFrameRuntime,
   getSharedFrameRuntime,
@@ -62,7 +63,11 @@ import {
   findOptionalEndMarker,
   getClientEntryKey,
 } from './diff-dom.ts'
-import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
+import {
+  createStyleManager,
+  getDefaultStyleManager,
+  type StyleManager,
+} from '../style/stylesheet.ts'
 import { css } from '../style/css-mixin.ts'
 import { createMixin } from './mixins/mixin.ts'
 import type { CSSProps } from '../style/css-mixin.ts'
@@ -1437,6 +1442,42 @@ function diffFrame(
   return committed
 }
 
+function ensureFrameRuntime(frame: FrameHandle): FrameRuntime | undefined {
+  let existing = getFrameRuntime(frame)
+  if (existing) return existing
+  let stub = frame.$runtime as
+    | {
+        frameInit?: {
+          resolveFrame?: SharedFrameRuntime['resolveFrame']
+          loadModule?: SharedFrameRuntime['loadModule']
+        }
+        errorTarget?: EventTarget
+        scheduler?: SharedFrameRuntime['scheduler']
+        styleManager?: StyleManager
+        styleRoot?: ParentNode
+      }
+    | undefined
+  let init = stub?.frameInit
+  if (!init?.resolveFrame || !stub?.errorTarget || !stub.scheduler) return undefined
+  let styleManager = stub.styleManager ?? getDefaultStyleManager()
+  if (stub.styleRoot) styleManager.adoptServerStyles(stub.styleRoot)
+  let runtime = createFrameRuntime({
+    loadModule:
+      init.loadModule ??
+      (() => {
+        throw new Error('loadModule is required to hydrate client entries inside <Frame />')
+      }),
+    resolveFrame: init.resolveFrame,
+    errorTarget: stub.errorTarget,
+    scheduler: stub.scheduler,
+    styleManager,
+    registry: new FrameRegistry(),
+    topFrame: frame,
+  })
+  frame.$runtime = runtime
+  return runtime
+}
+
 function insertFrame(
   node: FrameNode,
   domParent: ParentNode,
@@ -1446,9 +1487,10 @@ function insertFrame(
   anchor?: Node,
   cursor?: HydrationCursor,
 ): CommittedFrameNode {
-  let { frame, styles } = context
-  let runtime = getFrameRuntime(frame)
+  let { frame } = context
+  let runtime = ensureFrameRuntime(frame)
   if (!runtime) missingFrameRuntime()
+  let styles = context.styles ?? runtime.styleManager
 
   let getContext = (type: ElementFunction) => findContextFromAncestry(vParent, type)
 
