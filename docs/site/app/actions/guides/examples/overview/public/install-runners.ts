@@ -27,10 +27,5 @@ export function createInstallRunners(projectDirectory: string): InstallRunner[] 
       label: "Bun",
       script: `bunx remix new ${projectDirectory}\ncd ${projectDirectory}\nbun install\nbun run dev`,
     },
-    {
-      value: "deno",
-      label: "Deno",
-      script: `deno run -A npm:remix new ${projectDirectory}\ncd ${projectDirectory}\ndeno install\ndeno task dev`,
-    },
   ];
 }

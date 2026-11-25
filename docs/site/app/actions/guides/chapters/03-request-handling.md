@@ -109,9 +109,9 @@ const requestListener = createRequestListener((request, client) => {
 
 If an existing Node integration needs lower-level control, [`remix/node-fetch-server`](/api/node-fetch-server/) also exports `createRequest(...)` and `sendResponse(...)`. Prefer `createRequestListener(...)` until you need to work between those two operations.
 
-## Alternate runtimes: Bun, Deno, Workers {#alternate-runtimes-bun-deno-workers}
+## Alternate runtimes: Bun, Workers {#alternate-runtimes-bun-deno-workers}
 
-Bun, Deno, and edge worker runtimes already accept Fetch handlers, so they do not need the Node adapter. Their entrypoints can call the same router directly.
+Bun and edge worker runtimes already accept Fetch handlers, so they do not need the Node adapter. Their entrypoints can call the same router directly.
 
 Bun uses the handler in `Bun.serve(...)`:
 
@@ -124,14 +124,6 @@ Bun.serve({
     return router.fetch(request);
   },
 });
-```
-
-Deno uses the handler in `Deno.serve(...)`:
-
-```ts filename=server.ts
-import { router } from "./app/router.ts";
-
-Deno.serve({ port: 44100 }, router.fetch);
 ```
 
 A Cloudflare Worker exports an object with a `fetch` method:

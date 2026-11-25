@@ -212,7 +212,6 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/mu
 
 - [`demos/bun`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos/bun) - using multipart-parser in Bun
 - [`demos/cf-workers`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos/cf-workers) - using multipart-parser in a Cloudflare Worker and storing file uploads in R2
-- [`demos/deno`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos/deno) - using multipart-parser in Deno
 - [`demos/node`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser/demos/node) - using multipart-parser in Node.js
 
 ## Benchmark

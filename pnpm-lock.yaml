@@ -31,12 +31,12 @@ catalogs:
       specifier: ^7.0.2
       version: 7.0.2
 
+packageExtensionsChecksum: sha256-Ri2l4ZxTnate0Ijm1toJrqDOXJAZ8sxKmcNw/f8Gzz0=
+
 patchedDependencies:
   playwright-core@1.63.0:
     hash: 9de972030ab106a5cb051ec55fefe7492089a14fd422a48a61aa0dca4e66f5bb
     path: patches/playwright-core@1.63.0.patch
-
-packageExtensionsChecksum: sha256-Ri2l4ZxTnate0Ijm1toJrqDOXJAZ8sxKmcNw/f8Gzz0=
 
 importers:
 
@@ -1713,19 +1713,6 @@ importers:
       wrangler:
         specifier: ^4.90.1
         version: 4.90.1(@cloudflare/workers-types@4.20260511.1)
-
-  packages/multipart-parser/demos/deno:
-    dependencies:
-      '@remix-run/multipart-parser':
-        specifier: workspace:^
-        version: link:../..
-      tmp:
-        specifier: ^0.2.5
-        version: 0.2.5
-    devDependencies:
-      '@types/tmp':
-        specifier: ^0.2.6
-        version: 0.2.6
 
   packages/multipart-parser/demos/node:
     dependencies:

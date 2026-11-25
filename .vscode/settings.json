@@ -38,7 +38,6 @@
   "[yaml]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
   },
-  "deno.enablePaths": ["./packages/multipart-parser/examples/deno"],
   "nodejs-testing.extensions": [
     {
       "extensions": ["ts", "tsx"],
