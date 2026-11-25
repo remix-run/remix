@@ -327,6 +327,19 @@ describe('new RequestContext()', () => {
     void assertContext
   })
 
+  it('lazily creates and allows overriding context.url', () => {
+    let context = new RequestContext(new Request('https://remix.run/initial?a=1'))
+
+    assert.equal(context.url.pathname, '/initial')
+    assert.equal(context.url.searchParams.get('a'), '1')
+
+    let nextUrl = new URL('https://remix.run/updated')
+    context.url = nextUrl
+
+    assert.equal(context.url, nextUrl)
+    assert.equal(context.url.pathname, '/updated')
+  })
+
   it('supports class constructors as context keys', () => {
     class Value {
       text: string

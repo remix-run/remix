@@ -201,4 +201,19 @@ describe('abort signal support', () => {
     assert.equal(downstreamMiddlewareCalled, false)
     assert.equal(handlerCalled, false)
   })
+
+  it('rejects and cancels the response body when a sync handler aborts before returning', async () => {
+    let controller = new AbortController()
+    let router = createRouter()
+    let reason = new Error('Sync abort')
+    let cancelled = Promise.withResolvers<unknown>()
+
+    router.get('/', () => {
+      controller.abort(reason)
+      return new Response(new ReadableStream({ cancel: cancelled.resolve }))
+    })
+
+    await assert.rejects(router.fetch('https://remix.run', { signal: controller.signal }), reason)
+    assert.equal(await cancelled.promise, reason)
+  })
 })

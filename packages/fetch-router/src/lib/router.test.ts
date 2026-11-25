@@ -1594,3 +1594,147 @@ describe('custom matcher', () => {
     assert.deepEqual(addedPatterns, ['/home', '/about'])
   })
 })
+
+describe('route matching edge cases', () => {
+  it('backtracks from a partial static branch to a param branch', async () => {
+    let router = createRouter()
+    router.get('/users/admin/settings', () => new Response('admin settings'))
+    router.get('/users/:id/profile', ({ params }) => new Response(`profile:${params.id}`))
+
+    let response = await router.fetch('https://remix.run/users/admin/profile')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'profile:admin')
+  })
+
+  it('backtracks from static and param branches to a trailing wildcard', async () => {
+    let router = createRouter()
+    router.get('/api/v1/users/profile', () => new Response('user profile'))
+    router.get('/api/v1/:id/posts', ({ params }) => new Response(`posts:${params.id}`))
+    router.get('/api/v1/*rest', ({ params }) => new Response(`rest:${params.rest}`))
+
+    let staticMiss = await router.fetch('https://remix.run/api/v1/users/settings')
+    assert.equal(await staticMiss.text(), 'rest:users/settings')
+
+    let paramMiss = await router.fetch('https://remix.run/api/v1/42/comments')
+    assert.equal(await paramMiss.text(), 'rest:42/comments')
+
+    let emptyWildcard = await router.fetch('https://remix.run/api/v1/')
+    assert.equal(await emptyWildcard.text(), 'rest:')
+
+    let prefixOnly = await router.fetch('https://remix.run/api/v1')
+    assert.equal(prefixOnly.status, 404)
+  })
+
+  it('rejects dots and empty segments in pathname params', async () => {
+    let router = createRouter()
+    router.get('/files/:name', ({ params }) => new Response(`name:${params.name}`))
+    router.get('/files/*path', ({ params }) => new Response(`path:${params.path}`))
+
+    let dotResponse = await router.fetch('https://remix.run/files/readme.md')
+    assert.equal(await dotResponse.text(), 'path:readme.md')
+
+    let emptyResponse = await router.fetch('https://remix.run/files/')
+    assert.equal(await emptyResponse.text(), 'path:')
+
+    let plainResponse = await router.fetch('https://remix.run/files/readme')
+    assert.equal(await plainResponse.text(), 'name:readme')
+  })
+
+  it('omits unnamed wildcard from params', async () => {
+    let router = createRouter()
+    router.get('/assets/*', ({ params }) => new Response(JSON.stringify(params)))
+
+    let response = await router.fetch('https://remix.run/assets/js/app.js')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), '{}')
+  })
+
+  it('preserves registration order for equal-specificity routes', async () => {
+    let router = createRouter()
+    router.get('/items/:first', ({ params }) => new Response(`first:${params.first}`))
+    router.get('/items/:second', ({ params }) => new Response(`second:${params.second}`))
+
+    let response = await router.fetch('https://remix.run/items/42')
+
+    assert.equal(await response.text(), 'first:42')
+  })
+
+  it('prefers an ANY route over a GET fallback for HEAD requests with equal specificity', async () => {
+    let router = createRouter()
+    router.get('/posts/:id', () => new Response('from-get'))
+    router.route(
+      'ANY',
+      '/posts/:id',
+      () => new Response('from-any', { headers: { 'X-Route': 'any' } }),
+    )
+
+    let response = await router.fetch('https://remix.run/posts/42', { method: 'HEAD' })
+
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('X-Route'), 'any')
+  })
+
+  it('decodes percent-encoded segments and exposes query params lazily', async () => {
+    let router = createRouter()
+    router.get(
+      '/users/:id',
+      ({ params, url }) => new Response(`${params.id}:${url.searchParams.get('tab')}`),
+    )
+
+    let encoded = await router.fetch('https://remix.run/users/hello%20world?tab=bio')
+    assert.equal(await encoded.text(), 'hello world:bio')
+
+    let plain = await router.fetch('https://remix.run/users/42?tab=posts')
+    assert.equal(await plain.text(), '42:posts')
+  })
+
+  it('routes using context.url and context.method mutated by router middleware', async () => {
+    let router = createRouter({
+      middleware: [
+        (context, next) => {
+          if (context.url.pathname === '/legacy') {
+            context.url = new URL('https://remix.run/modern/7')
+          }
+          if (context.headers.get('X-Method-Override') === 'DELETE') {
+            context.method = 'DELETE'
+          }
+          return next()
+        },
+      ],
+    })
+
+    router.delete('/modern/:id', ({ params }) => new Response(`deleted:${params.id}`))
+
+    let response = await router.fetch('https://remix.run/legacy', {
+      method: 'POST',
+      headers: { 'X-Method-Override': 'DELETE' },
+    })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'deleted:7')
+  })
+
+  it('handles mixed plain and complex patterns including 405 responses', async () => {
+    let router = createRouter()
+    router.get('/health', () => new Response('ok'))
+    router.post('/files/*path(.:ext)', ({ params }) => new Response(`${params.path}.${params.ext}`))
+    router.get(
+      '/api(/:version)/users/:id',
+      ({ params }) => new Response(`${params.version ?? 'default'}:${params.id}`),
+    )
+
+    assert.equal(await (await router.fetch('https://remix.run/health')).text(), 'ok')
+    assert.equal(await (await router.fetch('https://remix.run/api/v2/users/9')).text(), 'v2:9')
+    assert.equal(await (await router.fetch('https://remix.run/api/users/9')).text(), 'default:9')
+    assert.equal(
+      await (await router.fetch('https://remix.run/files/img/logo.png', { method: 'POST' })).text(),
+      'img/logo.png',
+    )
+
+    let methodNotAllowed = await router.fetch('https://remix.run/files/img/logo.png')
+    assert.equal(methodNotAllowed.status, 405)
+    assert.equal(methodNotAllowed.headers.get('Allow'), 'POST')
+  })
+})

@@ -1,5 +1,5 @@
 import type { RequestHandler } from './controller.ts'
-import { raceRequestAbort } from './request-abort.ts'
+import { type AbortRace, cancelAbandonedResponse, createAbortRace } from './request-abort.ts'
 import type {
   ContextEntries,
   ContextEntry,
@@ -111,42 +111,152 @@ export function runMiddleware(
   middleware: AnyMiddleware[],
   context: RequestContext<any, any>,
   handler: RequestHandler<any>,
+  sharedAbortRace?: AbortRace,
 ): Promise<Response> {
+  let request = context.request
+  let signal = request.signal
+  let len = middleware.length
   let index = -1
+  let ownedAbortRace: AbortRace | undefined
 
-  let dispatch = async (i: number): Promise<Response> => {
+  function getAbortRace(): AbortRace {
+    if (sharedAbortRace !== undefined) return sharedAbortRace
+    return (ownedAbortRace ??= createAbortRace(request))
+  }
+
+  function dispatch(i: number): Response | Promise<Response> {
     if (i <= index) throw new Error('next() called multiple times')
     index = i
 
-    if (context.request.signal.aborted) {
-      throw context.request.signal.reason
+    if (signal.aborted) {
+      throw signal.reason
+    }
+
+    if (i === len) {
+      let result = handler(context)
+
+      if (result instanceof Response) {
+        if (signal.aborted) {
+          cancelAbandonedResponse(result, signal.reason)
+          throw signal.reason
+        }
+
+        return result
+      }
+
+      if (result instanceof Promise) {
+        return getAbortRace().race(result)
+      }
+
+      if (result != null && typeof (result as PromiseLike<Response>).then === 'function') {
+        return getAbortRace().race(Promise.resolve(result))
+      }
+
+      return result
     }
 
     let fn = middleware[i]
-    if (!fn) {
-      return await raceRequestAbort(Promise.resolve(handler(context)), context.request)
-    }
-
     let nextPromise: Promise<Response> | undefined
     let next: NextFunction = () => {
-      nextPromise = dispatch(i + 1)
+      try {
+        let result = dispatch(i + 1)
+        nextPromise = result instanceof Promise ? result : Promise.resolve(result)
+      } catch (error) {
+        nextPromise = Promise.reject(error)
+      }
+
       return nextPromise
     }
 
-    let response = await raceRequestAbort(Promise.resolve(fn(context, next)), context.request)
+    let result = fn(context, next)
 
-    // If a response was returned, short-circuit the chain
-    if (response instanceof Response) {
-      return response
+    // Synchronous short-circuit response
+    if (result instanceof Response) {
+      if (signal.aborted) {
+        cancelAbandonedResponse(result, signal.reason)
+        throw signal.reason
+      }
+
+      return result
     }
 
-    // If the middleware called next(), use the downstream response
-    if (nextPromise != null) {
+    // Direct passthrough (`return next()`): downstream already handles abort racing
+    if (result === nextPromise && nextPromise !== undefined) {
+      return nextPromise
+    }
+
+    let isNativePromise = result instanceof Promise
+    if (
+      isNativePromise ||
+      (result != null && typeof (result as PromiseLike<Response>).then === 'function')
+    ) {
+      let promise = isNativePromise ? result : Promise.resolve(result)
+
+      if (signal.aborted) {
+        promise.then(
+          (value) => cancelAbandonedResponse(value, signal.reason),
+          () => {},
+        )
+        return Promise.reject(signal.reason)
+      }
+
+      let abortRace = getAbortRace()
+
+      return new Promise<Response>((resolve, reject) => {
+        abortRace.addRejector(reject)
+
+        promise.then(
+          (response) => {
+            abortRace.removeRejector(reject)
+
+            if (signal.aborted) {
+              cancelAbandonedResponse(response, signal.reason)
+              return
+            }
+
+            if (response instanceof Response) {
+              resolve(response)
+            } else if (nextPromise !== undefined) {
+              resolve(nextPromise)
+            } else {
+              reject(new Error('Middleware must return a Response or call next()'))
+            }
+          },
+          (error) => {
+            abortRace.removeRejector(reject)
+            reject(error)
+          },
+        )
+      })
+    }
+
+    if (signal.aborted) {
+      throw signal.reason
+    }
+
+    if (nextPromise !== undefined) {
       return nextPromise
     }
 
     throw new Error('Middleware must return a Response or call next()')
   }
 
-  return dispatch(0)
+  try {
+    let result = dispatch(0)
+
+    if (!(result instanceof Promise)) {
+      return Promise.resolve(result)
+    }
+
+    if (ownedAbortRace === undefined) {
+      return result
+    }
+
+    let cleanup = () => ownedAbortRace!.dispose()
+    result.then(cleanup, cleanup)
+    return result
+  } catch (error) {
+    ownedAbortRace?.dispose()
+    return Promise.reject(error)
+  }
 }
