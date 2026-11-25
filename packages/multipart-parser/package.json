@@ -62,6 +62,7 @@
     "bench:node:single": "node ./bench/runner.ts",
     "bench:node:profile": "node --cpu-prof --heap-prof ./bench/runner.ts",
     "bench:node:steady": "node --expose-gc ./bench/runner.ts --steady --metrics",
+    "bench:update-readme": "node ./bench/update-readme.ts",
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",

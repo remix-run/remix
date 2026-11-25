@@ -93,26 +93,30 @@ await parseTar(
 
 Exceeding a limit throws `MaxEntrySizeExceededError`, `MaxTotalSizeExceededError`, or `MaxEntriesExceededError`, all exported from `remix/tar-parser` and extending `TarParseError`.
 
-## Benchmark
+## Benchmarks
 
-`tar-parser` performs on par with other popular tar parsing libraries on Node.js.
+The table below compares the average time to parse the gzipped `lodash` npm package, plus or minus one standard deviation, with [`tar-stream`](https://github.com/mafintosh/tar-stream) and [`node-tar`](https://github.com/isaacs/node-tar) on Node.js. Each parser decompresses the archive and visits every entry without keeping its contents. Lower is better.
 
+To run the benchmarks and update these results:
+
+```sh
+pnpm run bench
+pnpm run bench:update-readme
 ```
-> @remix-run/tar-parser@0.0.0 bench /Users/michael/Projects/remix-the-web/packages/tar-parser
-> node ./bench/runner.ts
 
-Platform: Darwin (24.0.0)
-CPU: Apple M1 Pro
-Date: 12/6/2024, 11:00:55 AM
-Node.js v22.8.0
-┌────────────┬────────────────────┐
-│ (index)    │ lodash npm package │
-├────────────┼────────────────────┤
-│ tar-parser │ '6.23 ms ± 0.58'   │
-│ tar-stream │ '6.72 ms ± 2.24'   │
-│ node-tar   │ '6.49 ms ± 0.44'   │
-└────────────┴────────────────────┘
-```
+<!-- benchmarks:start -->
+
+Last updated: 2026-11-25
+
+Environment: Darwin 25.6.0, Apple M5 Pro, Node.js v24.18.0
+
+Versions: `tar-parser@1.0.1`, `tar-stream@3.1.7`, `tar@7.5.15` (`tar-parser` at commit `8a8adc7b70`)
+
+| Archive            |   `tar-parser` |   `tar-stream` |     `node-tar` |
+| ------------------ | -------------: | -------------: | -------------: |
+| lodash npm package | 4.05 ms ± 0.51 | 3.38 ms ± 0.57 | 4.25 ms ± 0.45 |
+
+<!-- benchmarks:end -->
 
 ## Related Packages
 

@@ -5,6 +5,7 @@
   "scripts": {
     "bench": "vitest bench --run",
     "bench:memory": "node --expose-gc src/match/memory.ts",
+    "update-readme": "node update-readme.ts",
     "bench:types": "node src/types/grammar.ts && node src/types/href.ts && node src/types/join.ts && node src/types/match.ts && node src/types/new.ts && node src/types/params.ts"
   },
   "dependencies": {

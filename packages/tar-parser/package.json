@@ -41,6 +41,7 @@
   },
   "scripts": {
     "bench": "node ./bench/runner.ts",
+    "bench:update-readme": "node ./bench/update-readme.ts",
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
