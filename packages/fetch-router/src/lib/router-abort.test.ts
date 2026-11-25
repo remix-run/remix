@@ -84,9 +84,9 @@ describe('abort signal support', () => {
     )
   })
 
-  it('allows middleware to catch and handle abort errors', async () => {
+  it('rejects next() with the abort reason once downstream work settles', async () => {
     let controller = new AbortController()
-    let errorCaught = false
+    let events: string[] = []
 
     let router = createRouter({
       middleware: [
@@ -94,9 +94,48 @@ describe('abort signal support', () => {
           try {
             return await next()
           } catch (error) {
-            if ((error as Error).name === 'AbortError') {
-              errorCaught = true
-            }
+            events.push(`middleware caught ${(error as Error).name}`)
+            throw error
+          }
+        },
+      ],
+    })
+
+    let handlerStarted = Promise.withResolvers<void>()
+    let finishHandler = Promise.withResolvers<void>()
+
+    // This handler ignores the signal, so the router waits for it instead of racing it
+    router.get('/', async () => {
+      handlerStarted.resolve()
+      await finishHandler.promise
+      events.push('handler finished')
+      return new Response('Home')
+    })
+
+    let responsePromise = router.fetch('https://remix.run', { signal: controller.signal })
+
+    await handlerStarted.promise
+    controller.abort()
+    finishHandler.resolve()
+
+    await assert.rejects(responsePromise, (error: any) => {
+      assert.equal(error.name, 'AbortError')
+      return true
+    })
+    assert.deepEqual(events, ['handler finished', 'middleware caught AbortError'])
+  })
+
+  it('rejects as soon as downstream work observes the signal', async () => {
+    let controller = new AbortController()
+    let caught: unknown
+
+    let router = createRouter({
+      middleware: [
+        async (_, next) => {
+          try {
+            return await next()
+          } catch (error) {
+            caught = error
             throw error
           }
         },
@@ -105,25 +144,47 @@ describe('abort signal support', () => {
 
     let handlerStarted = Promise.withResolvers<void>()
 
-    router.get('/', async () => {
+    router.get('/', async ({ request }) => {
       handlerStarted.resolve()
-      await new Promise(() => {})
+      // Stands in for work that accepts a signal, such as fetch() or a database query
+      await new Promise((_, reject) => {
+        request.signal.addEventListener('abort', () => reject(request.signal.reason))
+      })
       return new Response('Home')
     })
 
     let responsePromise = router.fetch('https://remix.run', { signal: controller.signal })
 
-    // Abort while handler is running
     await handlerStarted.promise
-    controller.abort()
+    let reason = new Error('Client disconnected')
+    controller.abort(reason)
 
-    await assert.rejects(responsePromise, (error: any) => {
-      assert.equal(error.name, 'AbortError')
-      return true
+    await assert.rejects(responsePromise, reason)
+    assert.equal(caught, reason)
+  })
+
+  it('cancels the body of a response that resolves after the request aborted', async () => {
+    let controller = new AbortController()
+    let reason = new Error('Client disconnected')
+    let cancelled = Promise.withResolvers<unknown>()
+    let handlerStarted = Promise.withResolvers<void>()
+    let finishHandler = Promise.withResolvers<void>()
+
+    let router = createRouter()
+    router.get('/', async () => {
+      handlerStarted.resolve()
+      await finishHandler.promise
+      return new Response(new ReadableStream({ cancel: cancelled.resolve }))
     })
 
-    // Middleware should have caught the error
-    assert.equal(errorCaught, true)
+    let responsePromise = router.fetch('https://remix.run', { signal: controller.signal })
+
+    await handlerStarted.promise
+    controller.abort(reason)
+    finishHandler.resolve()
+
+    await assert.rejects(responsePromise, reason)
+    assert.equal(await cancelled.promise, reason)
   })
 
   it('completes successfully if not aborted', async () => {
@@ -248,49 +309,29 @@ describe('abort signal support', () => {
     assert.equal(response.body, null)
   })
 
-  it('registers zero abort listeners for sync handlers and one cleaned-up listener for async middleware chains', async () => {
-    let syncRouter = createRouter()
-    syncRouter.get('/', () => new Response('sync'))
-
-    let syncController = new AbortController()
-    let syncRequest = new Request('https://remix.run/', { signal: syncController.signal })
-    let syncAdds = 0
-    let origSyncAdd = syncRequest.signal.addEventListener.bind(syncRequest.signal)
-    syncRequest.signal.addEventListener = (...args: Parameters<typeof origSyncAdd>) => {
-      syncAdds++
-      return origSyncAdd(...args)
-    }
-
-    let syncRes = await syncRouter.fetch(syncRequest)
-    assert.equal(await syncRes.text(), 'sync')
-    assert.equal(syncAdds, 0)
-
-    let asyncRouter = createRouter({
+  it('does not add abort listeners to the request signal', async () => {
+    let router = createRouter({
       middleware: [async (_, next) => next(), async (_, next) => next()],
     })
-    asyncRouter.get('/', {
+    router.get('/sync', () => new Response('sync'))
+    router.get('/async', {
       middleware: [async (_, next) => next()],
       handler: async () => new Response('async'),
     })
 
-    let asyncController = new AbortController()
-    let asyncRequest = new Request('https://remix.run/', { signal: asyncController.signal })
-    let asyncAdds = 0
-    let asyncRemoves = 0
-    let origAdd = asyncRequest.signal.addEventListener.bind(asyncRequest.signal)
-    let origRemove = asyncRequest.signal.removeEventListener.bind(asyncRequest.signal)
-    asyncRequest.signal.addEventListener = (...args: Parameters<typeof origAdd>) => {
-      asyncAdds++
-      return origAdd(...args)
-    }
-    asyncRequest.signal.removeEventListener = (...args: Parameters<typeof origRemove>) => {
-      asyncRemoves++
-      return origRemove(...args)
-    }
+    for (let path of ['/sync', '/async']) {
+      let controller = new AbortController()
+      let request = new Request(`https://remix.run${path}`, { signal: controller.signal })
+      let listeners = 0
+      let addEventListener = request.signal.addEventListener.bind(request.signal)
+      request.signal.addEventListener = (...args: Parameters<typeof addEventListener>) => {
+        listeners++
+        return addEventListener(...args)
+      }
 
-    let asyncRes = await asyncRouter.fetch(asyncRequest)
-    assert.equal(await asyncRes.text(), 'async')
-    assert.equal(asyncAdds, 1)
-    assert.equal(asyncRemoves, 1)
+      let response = await router.fetch(request)
+      assert.equal(response.status, 200)
+      assert.equal(listeners, 0)
+    }
   })
 })

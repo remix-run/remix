@@ -6,7 +6,7 @@ import * as Specificity from '@remix-run/route-pattern/specificity'
 
 import { runMiddleware } from './middleware.ts'
 import type { AnyMiddleware, MiddlewareContext } from './middleware.ts'
-import { AbortRace, cancelAbandonedResponse, raceRequestAbort } from './request-abort.ts'
+import { throwIfRequestAborted } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
 import type { ContextWithParams, requestContextTypes } from './request-context.ts'
 import { RequestMethods } from './request-methods.ts'
@@ -370,20 +370,22 @@ function finalizeDirectResult(
   result: Response | Promise<Response>,
   request: Request,
   headFallback: boolean,
-  alreadyRaced: boolean,
 ): Promise<Response> {
   if (result instanceof Response) {
-    if (request.signal.aborted) {
-      cancelAbandonedResponse(result, request.signal.reason)
-      return Promise.reject(request.signal.reason)
+    try {
+      throwIfRequestAborted(result, request.signal)
+    } catch (error) {
+      return Promise.reject(error)
     }
 
     return Promise.resolve(headFallback ? headResponse(result) : result)
   }
 
   let promise = result instanceof Promise ? result : Promise.resolve(result)
-  let raced = alreadyRaced ? promise : raceRequestAbort(promise, request)
-  return headFallback ? raced.then(headResponse) : raced
+  return promise.then((response) => {
+    throwIfRequestAborted(response, request.signal)
+    return headFallback ? headResponse(response) : response
+  })
 }
 
 /**
@@ -525,27 +527,18 @@ export function createRouter<
     try {
       let resolved = resolveRoute(context)
       if (resolved.kind === 'response') {
-        return finalizeDirectResult(resolved.response, context.request, false, false)
+        return finalizeDirectResult(resolved.response, context.request, false)
       }
 
       let route = resolved.route
       context.params = resolved.params
 
       if (route.middleware) {
-        return finalizeDirectResult(
-          runMiddleware(route.middleware, context, route.handler),
-          context.request,
-          resolved.headFallback,
-          true,
-        )
+        let response = runMiddleware(route.middleware, context, route.handler)
+        return resolved.headFallback ? response.then(headResponse) : response
       }
 
-      return finalizeDirectResult(
-        route.handler(context),
-        context.request,
-        resolved.headFallback,
-        false,
-      )
+      return finalizeDirectResult(route.handler(context), context.request, resolved.headFallback)
     } catch (error) {
       return Promise.reject(error)
     }
@@ -555,38 +548,23 @@ export function createRouter<
     context: RequestContext,
     middleware: AnyMiddleware[],
   ): Promise<Response> {
-    let abortRace = new AbortRace(context.request)
     let headFallback = false
 
-    let promise = runMiddleware(
-      middleware,
-      context,
-      (ctx) => {
-        let resolved = resolveRoute(ctx)
-        if (resolved.kind === 'response') {
-          return resolved.response
-        }
+    let promise = runMiddleware(middleware, context, (ctx) => {
+      let resolved = resolveRoute(ctx)
+      if (resolved.kind === 'response') {
+        return resolved.response
+      }
 
-        headFallback = resolved.headFallback
-        ctx.params = { ...ctx.params, ...resolved.params }
-        return resolved.route.middleware
-          ? runMiddleware(resolved.route.middleware, ctx, resolved.route.handler, abortRace)
-          : resolved.route.handler(ctx)
-      },
-      abortRace,
-    )
+      headFallback = resolved.headFallback
+      ctx.params = { ...ctx.params, ...resolved.params }
+      return resolved.route.middleware
+        ? runMiddleware(resolved.route.middleware, ctx, resolved.route.handler)
+        : resolved.route.handler(ctx)
+    })
 
     // Strip the body after router middleware so it sees the same response as for GET
-    return promise.then(
-      (response) => {
-        abortRace.dispose()
-        return headFallback ? headResponse(response) : response
-      },
-      (error) => {
-        abortRace.dispose()
-        throw error
-      },
-    )
+    return promise.then((response) => (headFallback ? headResponse(response) : response))
   }
 
   function registerRoute(

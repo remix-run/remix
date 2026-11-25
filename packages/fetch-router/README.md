@@ -885,7 +885,8 @@ type AppContext = MiddlewareContext<typeof middleware>
 #### Error Handling and Aborted Requests
 
 - wrap `router.fetch()` in a try/catch to handle errors
-- `AbortError` is thrown when a request is aborted
+- when `request.signal` aborts, the router stops running middleware and handlers and rejects with the abort reason once work already in progress settles
+- pass `context.request.signal` to `fetch()`, database queries, and other work that should stop when the client disconnects
 
 #### Content Negotiation
 

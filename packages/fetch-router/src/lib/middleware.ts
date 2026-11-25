@@ -1,5 +1,5 @@
 import type { RequestHandler } from './controller.ts'
-import { AbortRace, cancelAbandonedResponse } from './request-abort.ts'
+import { throwIfRequestAborted } from './request-abort.ts'
 import type {
   ContextEntries,
   ContextEntry,
@@ -113,37 +113,28 @@ export function runMiddleware(
   middleware: AnyMiddleware[],
   context: RequestContext<any, any>,
   handler: RequestHandler<any>,
-  sharedAbortRace?: AbortRace,
 ): Promise<Response> {
   let signal = context.request.signal
   let index = -1
-  let ownedAbortRace: AbortRace | undefined
-
-  function race(promise: Promise<Response>): Promise<Response> {
-    let abortRace = sharedAbortRace ?? (ownedAbortRace ??= new AbortRace(context.request))
-    return abortRace.race(promise)
-  }
 
   function dispatch(i: number): Response | Promise<Response> {
     if (i <= index) throw new Error('next() called multiple times')
     index = i
 
-    if (signal.aborted) {
-      throw signal.reason
-    }
+    throwIfRequestAborted(undefined, signal)
 
     let fn = middleware[i]
     if (!fn) {
       let result = handler(context)
       if (result instanceof Response) {
-        if (signal.aborted) {
-          cancelAbandonedResponse(result, signal.reason)
-          throw signal.reason
-        }
+        throwIfRequestAborted(result, signal)
         return result
       }
 
-      return race(Promise.resolve(result))
+      return Promise.resolve(result).then((response) => {
+        throwIfRequestAborted(response, signal)
+        return response
+      })
     }
 
     let nextPromise: Promise<Response> | undefined
@@ -168,19 +159,12 @@ export function runMiddleware(
     let result = fn(context, next)
 
     if (result instanceof Response) {
-      if (signal.aborted) {
-        cancelAbandonedResponse(result, signal.reason)
-        throw signal.reason
-      }
+      throwIfRequestAborted(result, signal)
       return result
     }
 
-    // Direct passthrough (`return next()`): downstream already handles abort racing
+    // Direct passthrough (`return next()`): downstream already checks for aborts when it settles
     if (result === nextPromise && nextPromise !== undefined) {
-      if (signal.aborted) {
-        nextPromise.then((value) => cancelAbandonedResponse(value, signal.reason), noop)
-        throw signal.reason
-      }
       return nextPromise
     }
 
@@ -189,7 +173,8 @@ export function runMiddleware(
       (result != null && typeof (result as PromiseLike<Response>).then === 'function')
     ) {
       let promise = result instanceof Promise ? result : Promise.resolve(result)
-      return race(promise).then((response) => {
+      return promise.then((response) => {
+        throwIfRequestAborted(response, signal)
         if (response instanceof Response) {
           return response
         }
@@ -200,9 +185,7 @@ export function runMiddleware(
       })
     }
 
-    if (signal.aborted) {
-      throw signal.reason
-    }
+    throwIfRequestAborted(undefined, signal)
 
     if (nextPromise !== undefined) {
       return nextPromise
@@ -213,18 +196,8 @@ export function runMiddleware(
 
   try {
     let result = dispatch(0)
-    if (!(result instanceof Promise)) {
-      ownedAbortRace?.dispose()
-      return Promise.resolve(result)
-    }
-
-    if (ownedAbortRace !== undefined) {
-      let cleanup = () => ownedAbortRace!.dispose()
-      result.then(cleanup, cleanup)
-    }
-    return result
+    return result instanceof Promise ? result : Promise.resolve(result)
   } catch (error) {
-    ownedAbortRace?.dispose()
     return Promise.reject(error)
   }
 }
