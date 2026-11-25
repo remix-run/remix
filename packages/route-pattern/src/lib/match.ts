@@ -70,18 +70,28 @@ export type MultiMatcher<data = unknown> = {
  * @returns A matcher that can register multiple patterns with associated data
  */
 export function createMultiMatcher<data = unknown>(options?: MatcherOptions): MultiMatcher<data> {
-  let trie = new Trie<data>(options)
-  return {
-    ignoreCase: trie.ignoreCase,
-    add(pattern, data) {
-      trie.insert(pattern, data)
-    },
-    match(url, matchOptions) {
-      return trie.matchBest(resolveURL(url, matchOptions))
-    },
-    matchAll(url, matchOptions) {
-      return trie.searchAll(resolveURL(url, matchOptions))
-    },
+  return new TrieMatcher<data>(options)
+}
+
+class TrieMatcher<data = unknown> implements MultiMatcher<data> {
+  readonly ignoreCase: boolean
+  #trie: Trie<data>
+
+  constructor(options?: MatcherOptions) {
+    this.#trie = new Trie<data>(options)
+    this.ignoreCase = this.#trie.ignoreCase
+  }
+
+  add(pattern: string | RoutePattern, data: data): void {
+    this.#trie.insert(pattern, data)
+  }
+
+  match(url: string | URL, options?: MatchOptions): Match<string, data> | null {
+    return this.#trie.matchBest(resolveURL(url, options))
+  }
+
+  matchAll(url: string | URL, options?: MatchOptions): Array<Match<string, data>> {
+    return this.#trie.searchAll(resolveURL(url, options))
   }
 }
 

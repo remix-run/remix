@@ -28,6 +28,8 @@ export type UnitCompiledToken =
   | { readonly type: ')' }
 
 export type PartProgram = {
+  readonly part: PartPattern
+  readonly ignoreCase: boolean
   readonly type: PartPattern['type']
   readonly tokens: ReadonlyArray<CompiledToken>
   readonly matchKind: 'static' | 'linear' | 'trailing-wildcard' | 'single-wildcard' | 'state'
@@ -93,7 +95,7 @@ export function encodedPathnameLength(text: string, start: number, end: number):
   return len
 }
 
-function decodePercentChunk(chunk: string, strict: boolean): string | null {
+export function decodePercentChunk(chunk: string, strict: boolean): string | null {
   if (chunk.indexOf('%') === -1) return chunk
   try {
     return decodeURIComponent(chunk)
@@ -220,6 +222,8 @@ export function compilePart(part: PartPattern, options?: { ignoreCase?: boolean 
   }
 
   return {
+    part,
+    ignoreCase,
     type: part.type,
     tokens,
     matchKind: classifyMatchKind(tokens),
@@ -286,12 +290,8 @@ function compileUnitTokens(part: PartPattern, ignoreCase: boolean): Array<UnitCo
 }
 
 // Lazily compiles and caches unit tokens when a URL has encoded separators (%2E/%2F).
-export function ensureUnitProgram(
-  part: PartPattern,
-  program: PartProgram,
-  ignoreCase: boolean,
-): ReadonlyArray<UnitCompiledToken> {
-  return (program.unitTokens ??= compileUnitTokens(part, ignoreCase))
+export function ensureUnitProgram(program: PartProgram): ReadonlyArray<UnitCompiledToken> {
+  return (program.unitTokens ??= compileUnitTokens(program.part, program.ignoreCase))
 }
 
 export function canonicalizeUrlPart(
@@ -526,32 +526,40 @@ function matchStateString(
         }
       } else {
         let best: Solution | null = null
-        let trySplit = (endPos: number, nextState: number, nextPos: number): boolean => {
-          consumeMatchWork(budget, 1)
-          let tail = solve(nextState, nextPos)
-          if (tail === null) return false
-          let candidate = prependCapture(tail, {
-            type: '*',
-            name: token.name,
-            begin: pos,
-            end: endPos,
-          })!
-          best = betterSolution(len, hostnameOrder, candidate, best, budget, pos)
-          return true
-        }
-
         if (nextToken.type === 'text') {
           let endPos = input.indexOf(nextToken.text, pos)
           while (endPos !== -1 && endPos <= maxEnd) {
-            if (trySplit(endPos, state + 2, endPos + nextToken.text.length) && isPathname) {
-              // Earliest static continuation strictly beats any later wildcard split in pathname.
-              break
+            consumeMatchWork(budget, 1)
+            let tail = solve(state + 2, endPos + nextToken.text.length)
+            if (tail !== null) {
+              let candidate = prependCapture(tail, {
+                type: '*',
+                name: token.name,
+                begin: pos,
+                end: endPos,
+              })!
+              if (isPathname) {
+                // Earliest static continuation strictly beats any later wildcard split in pathname.
+                best = candidate
+                break
+              }
+              best = betterSolution(len, hostnameOrder, candidate, best, budget, pos)
             }
             endPos = input.indexOf(nextToken.text, endPos + 1)
           }
         } else {
           for (let endPos = pos; endPos <= maxEnd; endPos++) {
-            trySplit(endPos, state + 1, endPos)
+            consumeMatchWork(budget, 1)
+            let tail = solve(state + 1, endPos)
+            if (tail !== null) {
+              let candidate = prependCapture(tail, {
+                type: '*',
+                name: token.name,
+                begin: pos,
+                end: endPos,
+              })!
+              best = betterSolution(len, hostnameOrder, candidate, best, budget, pos)
+            }
           }
         }
         result = best

@@ -52,20 +52,11 @@ export function parsePart(
 
   let tokens: Array<Mutable<PartPatternToken>> = []
   let tokenIndices: Array<number> = []
-  let optionals = new Map<number, number>()
-  let optionalStack: Array<{ tokenIndex: number; sourceIndex: number }> = []
+  let optionals: Map<number, number> | null = null
+  let optionalStack: Array<{ tokenIndex: number; sourceIndex: number }> | null = null
+  let hasParams = false
   let emptyOptionalIndex = -1
   let i = start
-
-  function appendText(text: string, sourceIndex: number): void {
-    let lastToken = tokens[tokens.length - 1]
-    if (lastToken !== undefined && lastToken.type === 'text') {
-      lastToken.text += text
-    } else {
-      tokens.push({ type: 'text', text })
-      tokenIndices.push(sourceIndex)
-    }
-  }
 
   while (i < end) {
     let code = source.charCodeAt(i)
@@ -78,6 +69,7 @@ export function parsePart(
     }
 
     if (code === 40) {
+      optionalStack ??= []
       optionalStack.push({ tokenIndex: tokens.length, sourceIndex: i })
       tokens.push({ type: '(' })
       tokenIndices.push(i)
@@ -86,13 +78,14 @@ export function parsePart(
     }
 
     if (code === 41) {
-      let optional = optionalStack.pop()
+      let optional = optionalStack?.pop()
       if (optional === undefined) {
         throw new ParseError('unmatched )', source, i)
       }
       if (optional.tokenIndex === tokens.length - 1 && emptyOptionalIndex === -1) {
         emptyOptionalIndex = optional.sourceIndex
       }
+      optionals ??= new Map()
       optionals.set(optional.tokenIndex, tokens.length)
       tokens.push({ type: ')' })
       tokenIndices.push(i)
@@ -115,6 +108,7 @@ export function parsePart(
         })
       }
       tokenIndices.push(i)
+      hasParams = true
       i = nameEnd
       continue
     }
@@ -123,7 +117,7 @@ export function parsePart(
       if (i + 1 === end) {
         throw new ParseError('dangling escape', source, i)
       }
-      appendText(source.slice(i + 1, i + 2), i)
+      appendTextToken(tokens, tokenIndices, source.slice(i + 1, i + 2), i)
       i += 2
       continue
     }
@@ -137,20 +131,40 @@ export function parsePart(
       }
       i += 1
     }
-    appendText(source.slice(textStart, i), textStart)
+    appendTextToken(tokens, tokenIndices, source.slice(textStart, i), textStart)
   }
 
-  if (optionalStack.length > 0) {
+  if (optionalStack !== null && optionalStack.length > 0) {
     throw new ParseError('unmatched (', source, optionalStack[optionalStack.length - 1].sourceIndex)
   }
   if (emptyOptionalIndex !== -1) {
     throw new ParseError('empty optional', source, emptyOptionalIndex)
   }
 
-  validateTokenGrammar(source, tokens, optionals, tokenIndices)
-  validateOptionalCaptureSchemas(source, tokens, optionals, tokenIndices)
+  let resolvedOptionals = optionals ?? emptyOptionals
+  if (hasParams) {
+    validateTokenGrammar(source, tokens, resolvedOptionals, tokenIndices)
+  }
+  if (resolvedOptionals.size >= 2) {
+    validateOptionalCaptureSchemas(source, tokens, resolvedOptionals, tokenIndices)
+  }
 
-  return { tokens, optionals, type: options.type }
+  return { tokens, optionals: resolvedOptionals, type: options.type }
+}
+
+function appendTextToken(
+  tokens: Array<Mutable<PartPatternToken>>,
+  tokenIndices: Array<number>,
+  text: string,
+  sourceIndex: number,
+): void {
+  let lastToken = tokens[tokens.length - 1]
+  if (lastToken !== undefined && lastToken.type === 'text') {
+    lastToken.text += text
+  } else {
+    tokens.push({ type: 'text', text })
+    tokenIndices.push(sourceIndex)
+  }
 }
 
 function readIdentifierEnd(source: string, start: number, end: number): number {
@@ -182,6 +196,25 @@ function validateTokenGrammar(
   for (let index = 0; index < tokens.length; index++) {
     let token = tokens[index]
     if (token.type !== ':' && token.type !== '*') continue
+
+    // Fast path when the immediate next token is not an optional boundary (avoids Set allocations)
+    let immediate = tokens[index + 1]
+    if (immediate === undefined || immediate.type === 'separator') continue
+    if (immediate.type !== '(' && immediate.type !== ')') {
+      if (token.type === '*') {
+        if (immediate.type === '*') {
+          throw new ParseError('adjacent wildcards', source, tokenIndices[index + 1])
+        }
+        continue
+      }
+      if (
+        immediate.type === '*' ||
+        (immediate.type === 'text' && immediate.text.charCodeAt(0) === 46)
+      ) {
+        continue
+      }
+      throw new ParseError('invalid param delimiter', source, tokenIndices[index + 1])
+    }
 
     for (let next of nextConsumingTokenIndices(tokens, optionals, index + 1)) {
       if (next === tokens.length) continue

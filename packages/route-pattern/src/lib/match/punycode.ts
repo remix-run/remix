@@ -84,10 +84,13 @@ function decodeLabel(input: string): string {
 }
 
 export function decodeHostname(input: string): string {
-  if (!input.includes('xn--')) return input
+  if (input.indexOf('--') === -1) return input
 
   return input
     .split('.')
-    .map((label) => (label.startsWith('xn--') ? decodeLabel(label.slice(4)) : label))
+    .map((label) => {
+      let lower = label.toLowerCase()
+      return lower.startsWith('xn--') ? decodeLabel(lower.slice(4)) : label
+    })
     .join('.')
 }

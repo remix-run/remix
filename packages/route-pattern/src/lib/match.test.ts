@@ -1559,5 +1559,15 @@ describe('Matcher', () => {
 
       assert.ok(matcher.match(`https://example.com${pathname}`))
     })
+
+    it('preserves undefined keys for omitted optional params when another param name repeats', () => {
+      let matcher = createMultiMatcher<null>()
+      matcher.add('/:a/:a(/:b)', null)
+
+      let match = matcher.match('https://example.com/x/y')
+      assert.ok(match)
+      assert.deepEqual(match.params, { a: 'y', b: undefined })
+      assert.equal(Object.hasOwn(match.params, 'b'), true)
+    })
   })
 })

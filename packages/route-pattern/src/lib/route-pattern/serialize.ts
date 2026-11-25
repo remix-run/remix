@@ -40,6 +40,7 @@ export function serializePathname(pattern: RoutePatternParts): string {
 }
 
 export function serializeSearch(pattern: RoutePatternParts): string {
+  if (pattern.search.size === 0) return ''
   let searchParams = new URLSearchParams()
   for (let [key, constraint] of pattern.search) {
     if (constraint.size === 0) {
