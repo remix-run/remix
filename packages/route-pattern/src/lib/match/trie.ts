@@ -1,8 +1,8 @@
 import type { PartPattern, RoutePattern, RoutePatternParts } from '../route-pattern.ts'
 import { parsePattern } from '../route-pattern/parse.ts'
-import { serializeSearch } from '../route-pattern/serialize.ts'
+import { serializePattern } from '../route-pattern/serialize.ts'
 import { compare, compareHostnameRanges, comparePathnameRanges } from '../specificity.ts'
-import { decodeHostname } from './decode.ts'
+import { decodeHostname } from './punycode.ts'
 import {
   canonicalizePatternSegmentText,
   canonicalizeUrlPart,
@@ -11,18 +11,11 @@ import {
   ensureUnitProgram,
   matchPartString,
   matchPartUnits,
-  type CanonicalText,
-  type PartProgram,
 } from './program.ts'
+import type { CanonicalText, PartProgram } from './program.ts'
 import type { Match, MatchParamMeta } from './types.ts'
-import {
-  checkMatcherLimit,
-  consumeMatchWork,
-  createMatchWorkBudget,
-  resolveMatcherLimits,
-  type MatchWorkBudget,
-  type MatcherLimits,
-} from './limits.ts'
+import { checkMatcherLimit, consumeMatchWork, resolveMatcherLimits } from './limits.ts'
+import type { MatcherLimits, MatchWorkBudget } from './limits.ts'
 
 const emptyStrings: ReadonlyArray<string> = []
 const emptyMeta: ReadonlyArray<MatchParamMeta> = []
@@ -37,19 +30,17 @@ type Entry<data> = {
   readonly searchKeyValue: number
   readonly searchKey: number
   readonly allCaptureNames: ReadonlyArray<string>
-  // For dynamic-hostname trie entries, param names in right-to-left label order (and trailing/leading wildcard name if any)
+  // For dynamic-hostname trie entries, param names in right-to-left label order
   readonly hostnameParamNames: ReadonlyArray<string>
   readonly hostnameWildcardName: string | null
   readonly hostnameProgram: PartProgram | null
-  pathnameProgram: PartProgram | null
+  readonly pathnameProgram: PartProgram | null
 }
 
 type PathLeaf<data> = {
   readonly entry: Entry<data>
   readonly paramNames: ReadonlyArray<string>
   readonly wildcardName: string | null
-  // True when every declared capture name in `entry.allCaptureNames` is covered by `paramNames` + `wildcardName`
-  readonly coversAllCaptures: boolean
 }
 
 type PathTrieNode<data> = {
@@ -67,7 +58,6 @@ type PathTrie<data> = {
   staticMap: Map<string, Array<PathLeaf<data>>> | null
   root: PathTrieNode<data> | null
   suffixRoot: PathTrieNode<data> | null
-  hasDynamic: boolean
   hasOptParam: boolean
   hasComplex: boolean
   hasMixedOriginRank: boolean
@@ -84,6 +74,7 @@ type HostTrieNode<data> = {
 
 type DecodedSegment = {
   readonly decoded: string
+  readonly decodedStart: number
   readonly hasStructuralDot: boolean
   readonly hasNonStructuralSep: boolean
   readonly encBegin: number
@@ -98,24 +89,36 @@ type DecodedPathname = {
 }
 
 type PendingCapture = {
-  readonly type: ':' | '*'
   readonly segStart: number
   readonly segEnd: number
-  // For decoded % pathnames, index into segments (-1 for raw fast-path)
   readonly decodedSegIndex: number
-  // True when an optParam matched empty segment "" (omitted)
   readonly omitted: boolean
+}
+
+type DeferredPath<data> = {
+  readonly leaf: PathLeaf<data>
+  readonly caps: ReadonlyArray<PendingCapture> | null
+  readonly wildcardStart: number
+  readonly wildcardDecodedSeg: number
 }
 
 type CandidateMatch<data> = {
   readonly entry: Entry<data>
   readonly hostnameMeta: ReadonlyArray<MatchParamMeta>
-  readonly pathnameMeta: ReadonlyArray<MatchParamMeta>
-  // Deferred pathname capture construction when matched via fast-path trie
-  readonly deferredLeaf: PathLeaf<data> | null
-  readonly deferredCaps: Array<PendingCapture> | null
-  readonly deferredWildcardStart: number
-  readonly deferredWildcardDecodedSeg: number
+  pathnameMeta: ReadonlyArray<MatchParamMeta>
+  deferred: DeferredPath<data> | null
+}
+
+type MatchContext = {
+  readonly url: URL
+  readonly proto: 'http:' | 'https:'
+  readonly rawPath: string
+  readonly decodedPath: DecodedPathname | null
+  readonly budget: MatchWorkBudget
+  readonly ignoreCase: boolean
+  lowerHostname: string | null
+  canonicalHost: CanonicalText | null | undefined
+  canonicalPath: CanonicalText | null | undefined
 }
 
 type PathSegmentSpec =
@@ -142,7 +145,6 @@ type HostClassification =
   | { readonly kind: 'static'; readonly host: string }
   | {
       readonly kind: 'trie'
-      // Right-to-left labels
       readonly labels: ReadonlyArray<
         | { readonly kind: 'static'; readonly text: string }
         | { readonly kind: 'param'; readonly name: string }
@@ -151,49 +153,13 @@ type HostClassification =
     }
   | { readonly kind: 'complex' }
 
-// Precomputed 128-byte ASCII fast check for whether a raw pathname has any char with encoded len !== 1
-// (i.e. anything other than unreserved ASCII + '/' + '.')
-const plainAsciiLen1 = new Uint8Array(128)
-for (let c = 48; c <= 57; c++) plainAsciiLen1[c] = 1
-for (let c = 65; c <= 90; c++) plainAsciiLen1[c] = 1
-for (let c = 97; c <= 122; c++) plainAsciiLen1[c] = 1
-plainAsciiLen1[33] = 1 // !
-plainAsciiLen1[39] = 1 // '
-plainAsciiLen1[40] = 1 // (
-plainAsciiLen1[41] = 1 // )
-plainAsciiLen1[42] = 1 // *
-plainAsciiLen1[45] = 1 // -
-plainAsciiLen1[46] = 1 // .
-plainAsciiLen1[47] = 1 // /
-plainAsciiLen1[95] = 1 // _
-plainAsciiLen1[126] = 1 // ~
-
-// Reusable growable capture stacks for trie traversal (synchronous & non-reentrant)
-let capTypeStack = new Uint8Array(256) // 0 = ':', 1 = '*', 2 = omitted
-let capBeginStack = new Int32Array(256)
-let capEndStack = new Int32Array(256)
-let capSegIdxStack = new Int32Array(256)
-let lastFastInsertion = 0
-
-function growCapStacks(minLength: number): void {
-  let nextLen = capTypeStack.length
-  while (nextLen < minLength) nextLen *= 2
-
-  let nextType = new Uint8Array(nextLen)
-  nextType.set(capTypeStack)
-  capTypeStack = nextType
-
-  let nextBegin = new Int32Array(nextLen)
-  nextBegin.set(capBeginStack)
-  capBeginStack = nextBegin
-
-  let nextEnd = new Int32Array(nextLen)
-  nextEnd.set(capEndStack)
-  capEndStack = nextEnd
-
-  let nextSegIdx = new Int32Array(nextLen)
-  nextSegIdx.set(capSegIdxStack)
-  capSegIdxStack = nextSegIdx
+// Reusable growable capture stacks for synchronous, non-reentrant trie traversal
+const capStacks = {
+  type: new Uint8Array(256), // 0 = ':', 2 = omitted optParam
+  begin: new Int32Array(256),
+  end: new Int32Array(256),
+  segIdx: new Int32Array(256),
+  lastFastInsertion: 0,
 }
 
 function setCapFrame(
@@ -203,11 +169,30 @@ function setCapFrame(
   end: number,
   segIdx: number,
 ): void {
-  if (depth >= capTypeStack.length) growCapStacks(depth + 1)
-  capTypeStack[depth] = type
-  capBeginStack[depth] = begin
-  capEndStack[depth] = end
-  capSegIdxStack[depth] = segIdx
+  if (depth >= capStacks.type.length) {
+    let nextLen = capStacks.type.length
+    while (nextLen <= depth) nextLen *= 2
+
+    let nextType = new Uint8Array(nextLen)
+    nextType.set(capStacks.type)
+    capStacks.type = nextType
+
+    let nextBegin = new Int32Array(nextLen)
+    nextBegin.set(capStacks.begin)
+    capStacks.begin = nextBegin
+
+    let nextEnd = new Int32Array(nextLen)
+    nextEnd.set(capStacks.end)
+    capStacks.end = nextEnd
+
+    let nextSegIdx = new Int32Array(nextLen)
+    nextSegIdx.set(capStacks.segIdx)
+    capStacks.segIdx = nextSegIdx
+  }
+  capStacks.type[depth] = type
+  capStacks.begin[depth] = begin
+  capStacks.end[depth] = end
+  capStacks.segIdx[depth] = segIdx
 }
 
 export class Trie<data = unknown> {
@@ -227,29 +212,22 @@ export class Trie<data = unknown> {
   constructor(options?: { ignoreCase?: boolean; limits?: Partial<MatcherLimits> }) {
     this.ignoreCase = options?.ignoreCase ?? false
     this.#limits = resolveMatcherLimits(options?.limits)
-    this.#budget = createMatchWorkBudget(this.#limits.maxMatchWork)
+    this.#budget = { maximum: this.#limits.maxMatchWork, actual: 0 }
   }
 
   insert(pattern: string | RoutePattern, data: data): void {
-    let patternSize: number
     if (typeof pattern === 'string') {
-      let source = pattern
-      patternSize = this.#checkSizeLimits(source)
+      let rawSize = utf8Size(pattern)
+      checkMatcherLimit('maxPatternSize', this.#limits.maxPatternSize, rawSize)
+      checkMatcherLimit('maxMatcherSize', this.#limits.maxMatcherSize, this.#size + rawSize)
       pattern = parsePattern(pattern)
-      let canonicalSize = serializedPatternUtf8Size(pattern._parts)
-      if (canonicalSize !== patternSize) {
-        checkMatcherLimit('maxPatternSize', this.#limits.maxPatternSize, canonicalSize)
-        checkMatcherLimit('maxMatcherSize', this.#limits.maxMatcherSize, this.#size + canonicalSize)
-        patternSize = canonicalSize
-      }
-    } else {
-      let canonicalSize = serializedPatternUtf8Size(pattern._parts)
-      checkMatcherLimit('maxPatternSize', this.#limits.maxPatternSize, canonicalSize)
-      checkMatcherLimit('maxMatcherSize', this.#limits.maxMatcherSize, this.#size + canonicalSize)
-      patternSize = canonicalSize
     }
 
     let parts = pattern._parts
+    let canonicalSize = utf8Size(serializePattern(parts))
+    checkMatcherLimit('maxPatternSize', this.#limits.maxPatternSize, canonicalSize)
+    checkMatcherLimit('maxMatcherSize', this.#limits.maxMatcherSize, this.#size + canonicalSize)
+
     let hostClass = classifyHostname(parts.hostname)
     let pathClass = classifyPathname(parts.pathname, this.ignoreCase)
 
@@ -258,14 +236,10 @@ export class Trie<data = unknown> {
 
     let searchKeyValue = 0
     let searchKey = 0
-    if (parts.search.size > 0) {
-      for (let constraint of parts.search.values()) {
-        if (constraint.size === 0) searchKey += 1
-        else searchKeyValue += constraint.size
-      }
+    for (let constraint of parts.search.values()) {
+      if (constraint.size === 0) searchKey += 1
+      else searchKeyValue += constraint.size
     }
-
-    let allCaptureNames = collectAllCaptureNames(parts)
 
     let hostnameParamNames: ReadonlyArray<string> = emptyStrings
     let hostnameWildcardName: string | null = null
@@ -286,7 +260,7 @@ export class Trie<data = unknown> {
     }
 
     let pathnameProgram: PartProgram | null =
-      pathClass.kind === 'complex'
+      pathClass.kind === 'complex' || hostClass.kind === 'complex'
         ? compilePart(parts.pathname, { ignoreCase: this.ignoreCase })
         : null
 
@@ -299,7 +273,7 @@ export class Trie<data = unknown> {
       portRank,
       searchKeyValue,
       searchKey,
-      allCaptureNames,
+      allCaptureNames: collectAllCaptureNames(parts),
       hostnameParamNames,
       hostnameWildcardName,
       hostnameProgram,
@@ -311,7 +285,7 @@ export class Trie<data = unknown> {
     } else {
       this.#hasOriginPatterns = true
       if (hostClass.kind === 'static') {
-        if (this.#staticHostTries === null) this.#staticHostTries = new Map()
+        this.#staticHostTries ??= new Map()
         let pathTrie = this.#staticHostTries.get(hostClass.host)
         if (pathTrie === undefined) {
           pathTrie = createPathTrie<data>()
@@ -319,11 +293,10 @@ export class Trie<data = unknown> {
         }
         insertIntoPathTrie(pathTrie, pathClass, entry)
       } else if (hostClass.kind === 'trie') {
-        if (this.#dynamicHostRoot === null) this.#dynamicHostRoot = createHostTrieNode<data>()
-        let node = this.#dynamicHostRoot
+        let node = (this.#dynamicHostRoot ??= createHostTrieNode<data>())
         for (let label of hostClass.labels) {
           if (label.kind === 'static') {
-            if (node.static === null) node.static = new Map()
+            node.static ??= new Map()
             let next = node.static.get(label.text)
             if (next === undefined) {
               next = createHostTrieNode<data>()
@@ -331,41 +304,24 @@ export class Trie<data = unknown> {
             }
             node = next
           } else {
-            if (node.param === null) node.param = createHostTrieNode<data>()
-            node = node.param
+            node = node.param ??= createHostTrieNode<data>()
           }
         }
-        let targetTrie: PathTrie<data>
-        if (hostClass.leadingWildcard !== null) {
-          if (node.leadingWildcards === null) node.leadingWildcards = createPathTrie<data>()
-          targetTrie = node.leadingWildcards
-        } else {
-          if (node.pathTrie === null) node.pathTrie = createPathTrie<data>()
-          targetTrie = node.pathTrie
-        }
+        let targetTrie =
+          hostClass.leadingWildcard !== null
+            ? (node.leadingWildcards ??= createPathTrie<data>())
+            : (node.pathTrie ??= createPathTrie<data>())
         insertIntoPathTrie(targetTrie, pathClass, entry)
       } else {
-        // complex hostname: always need pathnameProgram if not already compiled?
-        // Actually we can evaluate pathname via compilePart lazily or eagerly here.
-        if (entry.pathnameProgram === null) {
-          entry.pathnameProgram = compilePart(parts.pathname, { ignoreCase: this.ignoreCase })
-        }
-        if (this.#complexHostEntries === null) this.#complexHostEntries = []
+        this.#complexHostEntries ??= []
         this.#complexHostEntries.push(entry)
       }
     }
 
-    this.#size += patternSize
+    this.#size += canonicalSize
   }
 
-  #checkSizeLimits(source: string): number {
-    let size = utf8Size(source)
-    checkMatcherLimit('maxPatternSize', this.#limits.maxPatternSize, size)
-    checkMatcherLimit('maxMatcherSize', this.#limits.maxMatcherSize, this.#size + size)
-    return size
-  }
-
-  matchBest(url: URL): Match<string, data> | null {
+  #prepare(url: URL): MatchContext | null {
     let proto = url.protocol
     if (proto !== 'https:' && proto !== 'http:') return null
     if (this.#insertion === 0) return null
@@ -374,194 +330,122 @@ export class Trie<data = unknown> {
     budget.actual = 0
 
     let rawPathname = url.pathname
-    let pathLen = rawPathname.length - 1
-    consumeMatchWork(budget, pathLen)
+    consumeMatchWork(budget, rawPathname.length - 1)
 
     let hasPercent = rawPathname.indexOf('%') !== -1
     let decodedPath: DecodedPathname | null = null
-    let matchRawPath: string
+    let rawPath: string
     if (hasPercent) {
       decodedPath = decodeUrlPathname(rawPathname, this.ignoreCase, budget)
       if (decodedPath === null) return null
-      matchRawPath = '/' + decodedPath.fullDecoded
+      rawPath = '/' + decodedPath.fullDecoded
     } else {
-      matchRawPath = this.ignoreCase ? rawPathname.toLowerCase() : rawPathname
+      rawPath = this.ignoreCase ? rawPathname.toLowerCase() : rawPathname
     }
+
+    return {
+      url,
+      proto,
+      rawPath,
+      decodedPath,
+      budget,
+      ignoreCase: this.ignoreCase,
+      lowerHostname: null,
+      canonicalHost: undefined,
+      canonicalPath: undefined,
+    }
+  }
+
+  matchBest(url: URL): Match<string, data> | null {
+    let ctx = this.#prepare(url)
+    if (ctx === null) return null
 
     if (!this.#hasOriginPatterns) {
       let pathTrie = this.#pathnameOnlyTrie
-      let optParamEmptyRisk =
-        !hasPercent && pathTrie.hasOptParam && hasEmptyPathSegment(matchRawPath)
-
-      // O(1) static exact match fast path
-      if (
-        !hasPercent &&
-        pathTrie.staticMap !== null &&
+      let fastEligible =
+        ctx.decodedPath === null &&
         !pathTrie.hasComplex &&
         !pathTrie.hasMixedOriginRank &&
-        !optParamEmptyRisk
-      ) {
-        let leaves = pathTrie.staticMap.get(matchRawPath)
+        !(pathTrie.hasOptParam && hasEmptyPathSegment(ctx.rawPath))
+
+      // O(1) static exact match fast path
+      if (fastEligible && pathTrie.staticMap !== null) {
+        let leaves = pathTrie.staticMap.get(ctx.rawPath)
         if (leaves !== undefined) {
-          let winner =
-            pathTrie.firstProtocolRank === 0 && pathTrie.firstPortRank === 0
-              ? findBestOriginlessStaticLeaf(leaves, url, budget)
-              : findBestStaticLeaf(leaves, url, proto, budget)
+          let winner = findFirstMatchingLeaf(leaves, ctx)
           if (winner !== null) {
-            return materializeStaticOriginlessMatch(url, winner)
+            return buildMatch(url, winner.entry, wildcardHostMeta(url), emptyMeta)
           }
         }
       }
 
-      // Zero-intermediate-allocation direct dynamic fast path
+      // Direct zero-intermediate-allocation dynamic trie fast path
       if (
-        !hasPercent &&
+        fastEligible &&
         pathTrie.root !== null &&
-        !pathTrie.hasComplex &&
-        !pathTrie.hasMixedOriginRank &&
-        !optParamEmptyRisk &&
         pathTrie.firstProtocolRank === 0 &&
         pathTrie.firstPortRank === 0
       ) {
-        return matchRawOriginlessFast(pathTrie.root, matchRawPath, 1, 0, url, budget)
+        return matchRawOriginlessFast(pathTrie.root, ctx.rawPath, 1, 0, ctx)
       }
 
-      let best = searchPathTrieBest(
-        pathTrie,
-        url,
-        proto,
-        matchRawPath,
-        decodedPath,
-        emptyMeta,
-        null,
-        null,
-        null,
-        budget,
-        this.ignoreCase,
-      )
+      let best = searchPathTrieBest(pathTrie, ctx, emptyMeta, null, null)
       if (best === null) return null
-      let decodedHostname = decodeHostname(url.hostname)
-      let wildcardHostMeta: ReadonlyArray<MatchParamMeta> = [
-        { type: '*', name: '*', value: decodedHostname, begin: 0, end: decodedHostname.length },
-      ]
-      return materializeCandidate(url, best, wildcardHostMeta, matchRawPath, decodedPath)
+      return buildMatch(url, best.entry, wildcardHostMeta(url), resolveCandidatePathMeta(best, ctx))
     }
 
-    // General path with origin (hostname/protocol/port) patterns
     let rawHostname = url.hostname
-    consumeMatchWork(budget, rawHostname.length)
+    consumeMatchWork(ctx.budget, rawHostname.length)
     let decodedHostname = decodeHostname(rawHostname)
-    let lowerHostname = decodedHostname.toLowerCase()
+    ctx.lowerHostname = decodedHostname.toLowerCase()
     let best: CandidateMatch<data> | null = null
 
-    // 1. Exact static hostname lookup
     if (this.#staticHostTries !== null) {
-      let staticHostTrie = this.#staticHostTries.get(lowerHostname)
+      let staticHostTrie = this.#staticHostTries.get(ctx.lowerHostname)
       if (staticHostTrie !== undefined) {
-        best = searchPathTrieBest(
-          staticHostTrie,
-          url,
-          proto,
-          matchRawPath,
-          decodedPath,
-          emptyMeta,
-          lowerHostname,
-          best,
-          null,
-          budget,
-          this.ignoreCase,
-        )
+        best = searchPathTrieBest(staticHostTrie, ctx, emptyMeta, best, null)
       }
     }
 
-    // 2. Dynamic hostname trie (reversed labels: right-to-left)
     if (this.#dynamicHostRoot !== null) {
-      best = searchDynamicHostTrieBest(
-        this.#dynamicHostRoot,
-        lowerHostname,
-        url,
-        proto,
-        matchRawPath,
-        decodedPath,
-        best,
-        budget,
-        this.ignoreCase,
-      )
+      walkDynamicHostTrie(this.#dynamicHostRoot, ctx, (pathTrie, filter) => {
+        best = searchPathTrieBest(pathTrie, ctx, emptyMeta, best, filter)
+      })
     }
 
-    // 3. Complex hostname entries
     if (this.#complexHostEntries !== null) {
-      best = searchComplexHostEntriesBest(
-        this.#complexHostEntries,
-        lowerHostname,
-        url,
-        proto,
-        matchRawPath,
-        decodedPath,
-        best,
-        budget,
-        this.ignoreCase,
-      )
+      forEachComplexHostMatch(this.#complexHostEntries, ctx, (entry, hMeta, pMeta) => {
+        best = pickBetterCandidate(
+          best,
+          { entry, hostnameMeta: hMeta, pathnameMeta: pMeta, deferred: null },
+          ctx,
+        )
+      })
     }
 
-    // 4. Origin-less pathname trie:
-    // If we already have a best match from an explicit-hostname pattern that is NOT a full-hostname
-    // wildcard (i.e. it has better protocol, port, or hostname specificity than origin-less),
-    // we only need to check #pathnameOnlyTrie if best could possibly be beaten (e.g., if
-    // #pathnameOnlyTrie has explicit protocol or best had full-hostname wildcard).
-    let wildcardHostMeta: ReadonlyArray<MatchParamMeta> = [
-      { type: '*', name: '*', value: decodedHostname, begin: 0, end: decodedHostname.length },
-    ]
-    let needOriginless =
+    // Only check origin-less routes if they could still beat an explicit-hostname match
+    if (
       best === null ||
       this.#hasFullWildcardHostname ||
       this.#pathnameOnlyTrie.firstProtocolRank === 1 ||
       this.#pathnameOnlyTrie.hasMixedOriginRank
-    if (needOriginless) {
-      best = searchPathTrieBest(
-        this.#pathnameOnlyTrie,
-        url,
-        proto,
-        matchRawPath,
-        decodedPath,
-        wildcardHostMeta,
-        lowerHostname,
-        best,
-        null,
-        budget,
-        this.ignoreCase,
-      )
+    ) {
+      let hostMeta: ReadonlyArray<MatchParamMeta> = [
+        { type: '*', name: '*', value: decodedHostname, begin: 0, end: decodedHostname.length },
+      ]
+      best = searchPathTrieBest(this.#pathnameOnlyTrie, ctx, hostMeta, best, null)
     }
 
     if (best === null) return null
-    return materializeCandidate(url, best, best.hostnameMeta, matchRawPath, decodedPath)
+    return buildMatch(url, best.entry, best.hostnameMeta, resolveCandidatePathMeta(best, ctx))
   }
 
   searchAll(url: URL): Array<Match<string, data>> {
-    let proto = url.protocol
-    if (proto !== 'https:' && proto !== 'http:') return []
-    if (this.#insertion === 0) return []
-
-    let budget = this.#budget
-    budget.actual = 0
-
-    let rawPathname = url.pathname
-    let pathLen = rawPathname.length - 1
-    consumeMatchWork(budget, pathLen)
-
-    let hasPercent = rawPathname.indexOf('%') !== -1
-    let decodedPath: DecodedPathname | null = null
-    let matchRawPath: string
-    if (hasPercent) {
-      decodedPath = decodeUrlPathname(rawPathname, this.ignoreCase, budget)
-      if (decodedPath === null) return []
-      matchRawPath = '/' + decodedPath.fullDecoded
-    } else {
-      matchRawPath = this.ignoreCase ? rawPathname.toLowerCase() : rawPathname
-    }
+    let ctx = this.#prepare(url)
+    if (ctx === null) return []
 
     let decodedHostname = decodeHostname(url.hostname)
-    let wildcardHostMeta: ReadonlyArray<MatchParamMeta> = [
+    let wildcardHost: ReadonlyArray<MatchParamMeta> = [
       { type: '*', name: '*', value: decodedHostname, begin: 0, end: decodedHostname.length },
     ]
 
@@ -574,66 +458,30 @@ export class Trie<data = unknown> {
       if (!sorted || leafBatchCount > 1) singleBatchAlreadySorted = false
     }
 
-    searchPathTrieAll(
-      this.#pathnameOnlyTrie,
-      url,
-      proto,
-      matchRawPath,
-      decodedPath,
-      wildcardHostMeta,
-      results,
-      budget,
-      this.ignoreCase,
-      onLeafBatch,
-    )
+    searchPathTrieAll(this.#pathnameOnlyTrie, ctx, wildcardHost, results, onLeafBatch, null)
 
     if (this.#hasOriginPatterns) {
-      consumeMatchWork(budget, url.hostname.length)
-      let lowerHostname = decodedHostname.toLowerCase()
+      consumeMatchWork(ctx.budget, url.hostname.length)
+      ctx.lowerHostname = decodedHostname.toLowerCase()
+
       if (this.#staticHostTries !== null) {
-        let staticHostTrie = this.#staticHostTries.get(lowerHostname)
+        let staticHostTrie = this.#staticHostTries.get(ctx.lowerHostname)
         if (staticHostTrie !== undefined) {
-          searchPathTrieAll(
-            staticHostTrie,
-            url,
-            proto,
-            matchRawPath,
-            decodedPath,
-            emptyMeta,
-            results,
-            budget,
-            this.ignoreCase,
-            onLeafBatch,
-          )
+          searchPathTrieAll(staticHostTrie, ctx, emptyMeta, results, onLeafBatch, null)
         }
       }
+
       if (this.#dynamicHostRoot !== null) {
-        searchDynamicHostTrieAll(
-          this.#dynamicHostRoot,
-          lowerHostname,
-          url,
-          proto,
-          matchRawPath,
-          decodedPath,
-          results,
-          budget,
-          this.ignoreCase,
-          onLeafBatch,
-        )
+        walkDynamicHostTrie(this.#dynamicHostRoot, ctx, (pathTrie, filter) => {
+          searchPathTrieAll(pathTrie, ctx, emptyMeta, results, onLeafBatch, filter)
+        })
       }
+
       if (this.#complexHostEntries !== null) {
-        searchComplexHostEntriesAll(
-          this.#complexHostEntries,
-          lowerHostname,
-          url,
-          proto,
-          matchRawPath,
-          decodedPath,
-          results,
-          budget,
-          this.ignoreCase,
-          onLeafBatch,
-        )
+        forEachComplexHostMatch(this.#complexHostEntries, ctx, (entry, hMeta, pMeta) => {
+          results.push({ match: buildMatch(url, entry, hMeta, pMeta), insertion: entry.insertion })
+          onLeafBatch(false)
+        })
       }
     }
 
@@ -641,17 +489,13 @@ export class Trie<data = unknown> {
       return results.length === 1 ? [results[0].match] : []
     }
 
-    if (singleBatchAlreadySorted) {
-      let out = new Array<Match<string, data>>(results.length)
-      for (let i = 0; i < results.length; i++) out[i] = results[i].match
-      return out
+    if (!singleBatchAlreadySorted) {
+      results.sort((a, b) => compare(b.match, a.match) || a.insertion - b.insertion)
     }
 
-    // Preserve insertion order before stable descending specificity sort
-    results.sort((a, b) => a.insertion - b.insertion)
     let out = new Array<Match<string, data>>(results.length)
     for (let i = 0; i < results.length; i++) out[i] = results[i].match
-    return out.sort((a, b) => compare(a, b) * -1)
+    return out
   }
 }
 
@@ -659,59 +503,60 @@ export class Trie<data = unknown> {
 // Pattern Classification & Insertion
 // ============================================================================
 
+function parseSegmentSpec(
+  tokens: ReadonlyArray<PartPattern['tokens'][number]>,
+  start: number,
+  len: number,
+  partKind: PartPattern['type'],
+  ignoreCase: boolean,
+):
+  | { readonly kind: 'static'; readonly text: string }
+  | { readonly kind: 'param'; readonly name: string }
+  | null {
+  if (len === 0) return { kind: 'static', text: '' }
+  if (len !== 1) return null
+  let tok = tokens[start]
+  if (tok.type === 'text') {
+    let canon = canonicalizePatternSegmentText(tok.text, partKind, ignoreCase)
+    return canon.hasNonStructuralSep ? null : { kind: 'static', text: canon.text }
+  }
+  if (tok.type === ':') return { kind: 'param', name: tok.name }
+  return null
+}
+
 function classifyHostname(part: PartPattern | null): HostClassification {
   if (part === null) return { kind: 'none' }
 
   let tokens = part.tokens
   if (tokens.length === 0) return { kind: 'static', host: '' }
-
-  // Check for optionals first -> complex
   if (part.optionals.size > 0) return { kind: 'complex' }
 
-  // Split tokens by '.' separator into left-to-right labels
   let labels: Array<
     | { readonly kind: 'static'; readonly text: string }
     | { readonly kind: 'param'; readonly name: string }
-    | { readonly kind: 'wildcard'; readonly name: string }
   > = []
-
+  let leadingWildcard: string | null = null
+  let hasDynamic = false
   let i = 0
+
   while (true) {
     let segStart = i
     while (i < tokens.length && tokens[i].type !== 'separator') i += 1
     let segLen = i - segStart
 
-    if (segLen === 0) {
-      labels.push({ kind: 'static', text: '' })
-    } else if (segLen === 1) {
-      let tok = tokens[segStart]
-      if (tok.type === 'text') {
-        let canon = canonicalizePatternSegmentText(tok.text, 'hostname', true)
-        if (canon.hasNonStructuralSep) return { kind: 'complex' }
-        labels.push({ kind: 'static', text: canon.text })
-      } else if (tok.type === ':') {
-        labels.push({ kind: 'param', name: tok.name })
-      } else if (tok.type === '*') {
-        // Leading wildcard is only allowed at label 0 (before first '.')
-        if (labels.length !== 0) return { kind: 'complex' }
-        labels.push({ kind: 'wildcard', name: tok.name })
-      } else {
-        return { kind: 'complex' }
-      }
+    if (segLen === 1 && tokens[segStart].type === '*') {
+      if (labels.length !== 0 || leadingWildcard !== null) return { kind: 'complex' }
+      leadingWildcard = (tokens[segStart] as { type: '*'; name: string }).name
+      hasDynamic = true
     } else {
-      return { kind: 'complex' }
+      let spec = parseSegmentSpec(tokens, segStart, segLen, 'hostname', true)
+      if (spec === null) return { kind: 'complex' }
+      if (spec.kind === 'param') hasDynamic = true
+      labels.push(spec)
     }
 
     if (i >= tokens.length) break
-    i += 1 // skip separator
-  }
-
-  let hasDynamic = false
-  for (let l of labels) {
-    if (l.kind !== 'static') {
-      hasDynamic = true
-      break
-    }
+    i += 1
   }
 
   if (!hasDynamic) {
@@ -723,32 +568,14 @@ function classifyHostname(part: PartPattern | null): HostClassification {
     return { kind: 'static', host }
   }
 
-  let leadingWildcard: string | null = null
-  let startIdx = 0
-  if (labels[0].kind === 'wildcard') {
-    leadingWildcard = labels[0].name
-    startIdx = 1
-  }
-
-  // Reverse labels for right-to-left trie
-  let reversed: Array<
-    | { readonly kind: 'static'; readonly text: string }
-    | { readonly kind: 'param'; readonly name: string }
-  > = []
-  for (let j = labels.length - 1; j >= startIdx; j--) {
-    let l = labels[j]
-    if (l.kind === 'wildcard') return { kind: 'complex' }
-    reversed.push(l)
-  }
-
-  return { kind: 'trie', labels: reversed, leadingWildcard }
+  labels.reverse()
+  return { kind: 'trie', labels, leadingWildcard }
 }
 
 function classifyPathname(part: PartPattern, ignoreCase: boolean): PathClassification {
   let tokens = part.tokens
   if (tokens.length === 0) return { kind: 'static', key: '/' }
 
-  // Fast check for pure static pathname
   if (part.optionals.size === 0) {
     let hasDynamic = false
     for (let i = 0; i < tokens.length; i++) {
@@ -760,7 +587,6 @@ function classifyPathname(part: PartPattern, ignoreCase: boolean): PathClassific
     }
     if (!hasDynamic) {
       let key = '/'
-      let hasNonStructuralSep = false
       for (let i = 0; i < tokens.length; i++) {
         let tok = tokens[i]
         if (tok.type === 'separator') {
@@ -768,21 +594,15 @@ function classifyPathname(part: PartPattern, ignoreCase: boolean): PathClassific
         } else if (tok.type === 'text') {
           let canon = canonicalizePatternSegmentText(tok.text, 'pathname', ignoreCase)
           if (canon.hasNonStructuralSep) {
-            hasNonStructuralSep = true
-            break
+            return { kind: 'complex', leadingPrefix: [], trailingSuffix: [] }
           }
           key += canon.text
         }
       }
-      if (!hasNonStructuralSep) {
-        return { kind: 'static', key }
-      }
-      return { kind: 'complex', leadingPrefix: [], trailingSuffix: [] }
+      return { kind: 'static', key }
     }
   }
 
-  // Try to parse as segment-trie path (supports static, :param, (:param) whole-segment optParam,
-  // trailing nested optional segments (/seg(/seg...)), and trailing /*wildcard)
   let segments: Array<PathSegmentSpec> = []
   let terminalIndices: Array<number> = []
   let trailingWildcard: string | null = null
@@ -792,7 +612,6 @@ function classifyPathname(part: PartPattern, ignoreCase: boolean): PathClassific
   let canBeTrie = true
 
   while (true) {
-    // Check for trailing wildcard at start of segment: *name followed by end (or closing ')'s)
     if (i < tokens.length && tokens[i].type === '*') {
       if (i === expectedCloseIdx) {
         trailingWildcard = (tokens[i] as { type: '*'; name: string }).name
@@ -802,7 +621,7 @@ function classifyPathname(part: PartPattern, ignoreCase: boolean): PathClassific
       break
     }
 
-    // Check for whole-segment (:param) optional: '(', ':', ')', followed by separator or end
+    // Whole-segment (:param) optional
     if (
       i + 2 < tokens.length &&
       tokens[i].type === '(' &&
@@ -811,74 +630,48 @@ function classifyPathname(part: PartPattern, ignoreCase: boolean): PathClassific
       optParamCount < 2
     ) {
       let after = i + 3
-      if (after > expectedCloseIdx) {
-        segments.push({
-          kind: 'optParam',
-          name: (tokens[i + 1] as { type: ':'; name: string }).name,
-        })
-        optParamCount += 1
-        terminalIndices.push(segments.length)
-        break
-      }
-      if (tokens[after].type === 'separator') {
-        segments.push({
-          kind: 'optParam',
-          name: (tokens[i + 1] as { type: ':'; name: string }).name,
-        })
-        optParamCount += 1
-        i = after + 1
-        continue
-      }
-      // Trailing nested optional starting right after (:param), e.g. (:a)(/:b)
-      if (
+      let optName = (tokens[i + 1] as { type: ':'; name: string }).name
+      let isEnd = after > expectedCloseIdx
+      let isSep = !isEnd && tokens[after].type === 'separator'
+      let isTrailingOpt =
+        !isEnd &&
+        !isSep &&
         tokens[after].type === '(' &&
         part.optionals.get(after) === expectedCloseIdx &&
         after + 1 < tokens.length &&
         tokens[after + 1].type === 'separator'
-      ) {
-        segments.push({
-          kind: 'optParam',
-          name: (tokens[i + 1] as { type: ':'; name: string }).name,
-        })
-        optParamCount += 1
+
+      if (!isEnd && !isSep && !isTrailingOpt) {
+        canBeTrie = false
+        break
+      }
+
+      segments.push({ kind: 'optParam', name: optName })
+      optParamCount += 1
+      if (isEnd) {
         terminalIndices.push(segments.length)
-        expectedCloseIdx -= 1
-        i = after + 2
+        break
+      }
+      if (isSep) {
+        i = after + 1
         continue
       }
-      canBeTrie = false
-      break
+      terminalIndices.push(segments.length)
+      expectedCloseIdx -= 1
+      i = after + 2
+      continue
     }
 
-    // Scan segment up to separator, trailing nested '(', or expectedCloseIdx
     let segStart = i
     while (i <= expectedCloseIdx && tokens[i].type !== 'separator' && tokens[i].type !== '(') {
       i += 1
     }
-    let segLen = i - segStart
-
-    if (segLen === 0) {
-      // Empty segment before '/' (e.g. //start) or end after trailing '/' (e.g. /:a/)
-      segments.push({ kind: 'static', text: '' })
-    } else if (segLen === 1) {
-      let tok = tokens[segStart]
-      if (tok.type === 'text') {
-        let canon = canonicalizePatternSegmentText(tok.text, 'pathname', ignoreCase)
-        if (canon.hasNonStructuralSep) {
-          canBeTrie = false
-          break
-        }
-        segments.push({ kind: 'static', text: canon.text })
-      } else if (tok.type === ':') {
-        segments.push({ kind: 'param', name: tok.name })
-      } else {
-        canBeTrie = false
-        break
-      }
-    } else {
+    let spec = parseSegmentSpec(tokens, segStart, i - segStart, 'pathname', ignoreCase)
+    if (spec === null) {
       canBeTrie = false
       break
     }
+    segments.push(spec)
 
     if (i > expectedCloseIdx) {
       terminalIndices.push(segments.length)
@@ -890,7 +683,6 @@ function classifyPathname(part: PartPattern, ignoreCase: boolean): PathClassific
       continue
     }
 
-    // tokens[i].type === '(' -> check if it's a trailing nested optional starting with '/'
     if (
       tokens[i].type === '(' &&
       part.optionals.get(i) === expectedCloseIdx &&
@@ -911,15 +703,12 @@ function classifyPathname(part: PartPattern, ignoreCase: boolean): PathClassific
     return { kind: 'trie', segments, terminalIndices, trailingWildcard }
   }
 
-  // Complex pattern: extract safe deterministic leading prefix segments & trailing suffix segments
   let leadingPrefix = extractComplexLeadingPrefix(part, ignoreCase)
   let trailingSuffix =
     leadingPrefix.length === 0 ? extractComplexTrailingSuffix(part, ignoreCase) : []
-
   return { kind: 'complex', leadingPrefix, trailingSuffix }
 }
 
-// A leading segment is only anchored when every continuation begins with '/' or end-of-pattern.
 function extractComplexLeadingPrefix(
   part: PartPattern,
   ignoreCase: boolean,
@@ -934,27 +723,9 @@ function extractComplexLeadingPrefix(
       i += 1
     }
     let segLen = i - segStart
-    let seg: PathSegmentSpec | null = null
-    if (segLen === 0) {
-      if (i < tokens.length && tokens[i].type === 'separator') {
-        seg = { kind: 'static', text: '' }
-      } else {
-        break
-      }
-    } else if (segLen === 1) {
-      let tok = tokens[segStart]
-      if (tok.type === 'text') {
-        let canon = canonicalizePatternSegmentText(tok.text, 'pathname', ignoreCase)
-        if (canon.hasNonStructuralSep) break
-        seg = { kind: 'static', text: canon.text }
-      } else if (tok.type === ':') {
-        seg = { kind: 'param', name: tok.name }
-      } else {
-        break
-      }
-    } else {
-      break
-    }
+    if (segLen === 0 && (i >= tokens.length || tokens[i].type !== 'separator')) break
+    let seg = parseSegmentSpec(tokens, segStart, segLen, 'pathname', ignoreCase)
+    if (seg === null) break
 
     if (i >= tokens.length) {
       prefix.push(seg)
@@ -965,7 +736,6 @@ function extractComplexLeadingPrefix(
       i += 1
       continue
     }
-    // tokens[i].type === '(': only safe to include `seg` if every possible next consuming token is '/' or end
     if (allNextAreSeparatorOrEnd(tokens, part.optionals, i)) {
       prefix.push(seg)
     }
@@ -1002,7 +772,6 @@ function allNextAreSeparatorOrEnd(
   return true
 }
 
-// Trailing segments (right-to-left) at optionalDepth === 0 preceded by a mandatory '/'.
 function extractComplexTrailingSuffix(
   part: PartPattern,
   ignoreCase: boolean,
@@ -1018,32 +787,37 @@ function extractComplexTrailingSuffix(
       if (t === '(' || t === ')' || t === '*') return suffix
       i -= 1
     }
-    // Must be preceded by a '/' separator so this is guaranteed to be a complete trailing segment
     if (i < 0 || tokens[i].type !== 'separator') break
 
-    let segStart = i + 1
-    let segLen = segEnd - segStart
-    if (segLen === 0) {
-      suffix.push({ kind: 'static', text: '' })
-    } else if (segLen === 1) {
-      let tok = tokens[segStart]
-      if (tok.type === 'text') {
-        let canon = canonicalizePatternSegmentText(tok.text, 'pathname', ignoreCase)
-        if (canon.hasNonStructuralSep) break
-        suffix.push({ kind: 'static', text: canon.text })
-      } else if (tok.type === ':') {
-        suffix.push({ kind: 'param', name: tok.name })
-      } else {
-        break
-      }
-    } else {
-      break
-    }
-
-    i -= 1 // step before '/'
+    let seg = parseSegmentSpec(tokens, i + 1, segEnd - (i + 1), 'pathname', ignoreCase)
+    if (seg === null) break
+    suffix.push(seg)
+    i -= 1
   }
 
   return suffix
+}
+
+function addStaticLeaf<data>(pathTrie: PathTrie<data>, key: string, entry: Entry<data>): void {
+  pathTrie.staticMap ??= new Map()
+  let leaf: PathLeaf<data> = { entry, paramNames: emptyStrings, wildcardName: null }
+  let list = pathTrie.staticMap.get(key)
+  if (list === undefined) pathTrie.staticMap.set(key, [leaf])
+  else insertSortedLeaf(list, leaf)
+}
+
+function descendSpecs<data>(
+  root: PathTrieNode<data>,
+  specs: ReadonlyArray<PathSegmentSpec>,
+): PathTrieNode<data> {
+  let node = root
+  for (let seg of specs) {
+    node =
+      seg.kind === 'static'
+        ? getOrCreatePathStaticChild(node, seg.text)
+        : (node.param ??= createPathTrieNode<data>())
+  }
+  return node
 }
 
 function insertIntoPathTrie<data>(
@@ -1062,33 +836,19 @@ function insertIntoPathTrie<data>(
   }
 
   if (pathClass.kind === 'static') {
-    if (pathTrie.staticMap === null) pathTrie.staticMap = new Map()
-    let list = pathTrie.staticMap.get(pathClass.key)
-    let leaf: PathLeaf<data> = {
-      entry,
-      paramNames: emptyStrings,
-      wildcardName: null,
-      coversAllCaptures: entry.allCaptureNames.length === 0,
-    }
-    if (list === undefined) {
-      pathTrie.staticMap.set(pathClass.key, [leaf])
-    } else {
-      insertSortedLeaf(list, leaf)
-    }
+    addStaticLeaf(pathTrie, pathClass.key, entry)
     return
   }
 
-  pathTrie.hasDynamic = true
-  if (pathTrie.root === null) pathTrie.root = createPathTrieNode<data>()
+  let root = (pathTrie.root ??= createPathTrieNode<data>())
 
   if (pathClass.kind === 'trie') {
-    let node = pathTrie.root
+    let node = root
     let paramNames: Array<string> = []
     let staticPrefixSoFar = ''
     let allStaticSoFar = true
     let termPos = 0
 
-    // Check if terminal at depth 0 (cannot happen for non-empty segments, handled above)
     for (let s = 0; s < pathClass.segments.length; s++) {
       let seg = pathClass.segments[s]
       if (seg.kind === 'static') {
@@ -1097,14 +857,12 @@ function insertIntoPathTrie<data>(
       } else if (seg.kind === 'param') {
         allStaticSoFar = false
         paramNames.push(seg.name)
-        if (node.param === null) node.param = createPathTrieNode<data>()
-        node = node.param
+        node = node.param ??= createPathTrieNode<data>()
       } else {
         allStaticSoFar = false
         pathTrie.hasOptParam = true
         paramNames.push(seg.name)
-        if (node.optParam === null) node.optParam = createPathTrieNode<data>()
-        node = node.optParam
+        node = node.optParam ??= createPathTrieNode<data>()
       }
 
       if (
@@ -1113,28 +871,12 @@ function insertIntoPathTrie<data>(
       ) {
         termPos += 1
         if (allStaticSoFar) {
-          // Base static terminal of a trailing-optional route (e.g. /api/resource/3 from /api/resource/3(/:version))
-          // Place directly in staticMap so static lookups find it in O(1) with exact tiebreaking!
-          if (pathTrie.staticMap === null) pathTrie.staticMap = new Map()
-          let leaf: PathLeaf<data> = {
-            entry,
-            paramNames: emptyStrings,
-            wildcardName: null,
-            coversAllCaptures: entry.allCaptureNames.length === 0,
-          }
-          let list = pathTrie.staticMap.get(staticPrefixSoFar)
-          if (list === undefined) {
-            pathTrie.staticMap.set(staticPrefixSoFar, [leaf])
-          } else {
-            insertSortedLeaf(list, leaf)
-          }
+          addStaticLeaf(pathTrie, staticPrefixSoFar, entry)
         } else {
-          let pNames = paramNames.length > 0 ? paramNames.slice() : emptyStrings
           let leaf: PathLeaf<data> = {
             entry,
-            paramNames: pNames,
+            paramNames: paramNames.length > 0 ? paramNames.slice() : emptyStrings,
             wildcardName: null,
-            coversAllCaptures: leafCoversAllCaptures(entry, pNames, null),
           }
           if (node.entries === null) node.entries = [leaf]
           else insertSortedLeaf(node.entries, leaf)
@@ -1143,12 +885,10 @@ function insertIntoPathTrie<data>(
     }
 
     if (pathClass.trailingWildcard !== null) {
-      let pNames = paramNames.length > 0 ? paramNames.slice() : emptyStrings
       let leaf: PathLeaf<data> = {
         entry,
-        paramNames: pNames,
+        paramNames: paramNames.length > 0 ? paramNames.slice() : emptyStrings,
         wildcardName: pathClass.trailingWildcard,
-        coversAllCaptures: leafCoversAllCaptures(entry, pNames, pathClass.trailingWildcard),
       }
       if (node.trailingWildcards === null) node.trailingWildcards = [leaf]
       else insertSortedLeaf(node.trailingWildcards, leaf)
@@ -1156,40 +896,20 @@ function insertIntoPathTrie<data>(
     return
   }
 
-  // Complex pattern
   pathTrie.hasComplex = true
-  if (pathClass.leadingPrefix.length > 0) {
-    let node = pathTrie.root
-    for (let seg of pathClass.leadingPrefix) {
-      if (seg.kind === 'static') {
-        node = getOrCreatePathStaticChild(node, seg.text)
-      } else {
-        if (node.param === null) node.param = createPathTrieNode<data>()
-        node = node.param
-      }
-    }
-    if (node.complex === null) node.complex = [entry]
-    else node.complex.push(entry)
-  } else if (pathClass.trailingSuffix.length > 0) {
-    if (pathTrie.suffixRoot === null) pathTrie.suffixRoot = createPathTrieNode<data>()
-    let node = pathTrie.suffixRoot
-    for (let seg of pathClass.trailingSuffix) {
-      if (seg.kind === 'static') {
-        node = getOrCreatePathStaticChild(node, seg.text)
-      } else {
-        if (node.param === null) node.param = createPathTrieNode<data>()
-        node = node.param
-      }
-    }
-    if (node.complex === null) node.complex = [entry]
-    else node.complex.push(entry)
-  } else {
-    if (pathTrie.root.complex === null) pathTrie.root.complex = [entry]
-    else pathTrie.root.complex.push(entry)
-  }
+  let target =
+    pathClass.leadingPrefix.length > 0
+      ? descendSpecs(root, pathClass.leadingPrefix)
+      : pathClass.trailingSuffix.length > 0
+        ? descendSpecs(
+            (pathTrie.suffixRoot ??= createPathTrieNode<data>()),
+            pathClass.trailingSuffix,
+          )
+        : root
+  if (target.complex === null) target.complex = [entry]
+  else target.complex.push(entry)
 }
 
-// Keep leaves at the same trie node sorted by descending specificity and ascending insertion order.
 function insertSortedLeaf<data>(list: Array<PathLeaf<data>>, leaf: PathLeaf<data>): void {
   let e = leaf.entry
   let idx = list.length
@@ -1198,11 +918,8 @@ function insertSortedLeaf<data>(list: Array<PathLeaf<data>>, leaf: PathLeaf<data
     if (compareStaticEntryPriority(prev, e) <= 0) break
     idx -= 1
   }
-  if (idx === list.length) {
-    list.push(leaf)
-  } else {
-    list.splice(idx, 0, leaf)
-  }
+  if (idx === list.length) list.push(leaf)
+  else list.splice(idx, 0, leaf)
 }
 
 function compareStaticEntryPriority<data>(a: Entry<data>, b: Entry<data>): number {
@@ -1214,121 +931,122 @@ function compareStaticEntryPriority<data>(a: Entry<data>, b: Entry<data>): numbe
 }
 
 // ============================================================================
-// Best-Match Search (`match()`)
+// Entry & Complex Part Matching Helpers
 // ============================================================================
 
-function findBestOriginlessStaticLeaf<data>(
-  leaves: ReadonlyArray<PathLeaf<data>>,
-  url: URL,
-  budget: MatchWorkBudget,
+function entryMatchesUrl<data>(entry: Entry<data>, ctx: MatchContext): boolean {
+  consumeMatchWork(ctx.budget, 1)
+  if (!matchesProtocolAndPort(entry.patternParts, ctx.proto, ctx.url.port)) return false
+  if (
+    entry.patternParts.search.size > 0 &&
+    !matchSearch(ctx.url, entry.patternParts.search, ctx.budget)
+  ) {
+    return false
+  }
+  return true
+}
+
+function findFirstMatchingLeaf<data>(
+  leaves: ReadonlyArray<PathLeaf<data>> | null,
+  ctx: MatchContext,
 ): PathLeaf<data> | null {
+  if (leaves === null) return null
   for (let i = 0; i < leaves.length; i++) {
-    let leaf = leaves[i]
-    let entry = leaf.entry
-    consumeMatchWork(budget, 1)
-    if (
-      entry.patternParts.search.size > 0 &&
-      !matchSearch(url, entry.patternParts.search, budget)
-    ) {
-      continue
-    }
-    return leaf
+    if (entryMatchesUrl(leaves[i].entry, ctx)) return leaves[i]
   }
   return null
 }
 
-function findBestStaticLeaf<data>(
-  leaves: ReadonlyArray<PathLeaf<data>>,
-  url: URL,
-  proto: 'http:' | 'https:',
-  budget: MatchWorkBudget,
-): PathLeaf<data> | null {
-  for (let i = 0; i < leaves.length; i++) {
-    let leaf = leaves[i]
-    let entry = leaf.entry
-    consumeMatchWork(budget, 1)
-    if (!matchesProtocolAndPort(entry.patternParts, proto, url.port)) continue
-    if (
-      entry.patternParts.search.size > 0 &&
-      !matchSearch(url, entry.patternParts.search, budget)
-    ) {
-      continue
-    }
-    return leaf
+function matchComplexHostname<data>(
+  entry: Entry<data>,
+  ctx: MatchContext,
+): ReadonlyArray<MatchParamMeta> | null {
+  let program = entry.hostnameProgram!
+  if (!program.hasNonStructuralSep) {
+    return matchPartString(program, ctx.lowerHostname!, ctx.budget)
   }
-  return null
+  if (ctx.canonicalHost === undefined) {
+    ctx.canonicalHost = canonicalizeUrlPart(ctx.lowerHostname!, 'hostname', {
+      budget: ctx.budget,
+      ignoreCase: true,
+    })
+  }
+  if (ctx.canonicalHost === null) return null
+  let unitTokens = ensureUnitProgram(entry.patternParts.hostname!, program, true)
+  return matchPartUnits(unitTokens, 'hostname', ctx.canonicalHost, ctx.budget)
 }
 
-// Direct fast path for origin-less dynamic tries without complex or mixed-origin entries.
+function matchComplexPathname<data>(
+  entry: Entry<data>,
+  ctx: MatchContext,
+): ReadonlyArray<MatchParamMeta> | null {
+  let program = entry.pathnameProgram!
+  if (
+    !program.hasNonStructuralSep &&
+    (ctx.decodedPath === null || !ctx.decodedPath.anyNonStructuralSep)
+  ) {
+    return matchPartString(program, ctx.rawPath.slice(1), ctx.budget)
+  }
+  if (ctx.canonicalPath === undefined) {
+    ctx.canonicalPath = canonicalizeUrlPart(ctx.url.pathname.slice(1), 'pathname', {
+      budget: ctx.budget,
+      ignoreCase: ctx.ignoreCase,
+    })
+  }
+  if (ctx.canonicalPath === null) return null
+  let unitTokens = ensureUnitProgram(entry.patternParts.pathname, program, ctx.ignoreCase)
+  return matchPartUnits(unitTokens, 'pathname', ctx.canonicalPath, ctx.budget)
+}
+
+// ============================================================================
+// Direct Fast Path (`match()` on origin-less dynamic tries)
+// ============================================================================
+
 function matchRawOriginlessFast<data>(
   node: PathTrieNode<data>,
   rawPath: string,
   pos: number,
   capDepth: number,
-  url: URL,
-  budget: MatchWorkBudget,
+  ctx: MatchContext,
 ): Match<string, data> | null {
   let len = rawPath.length
   while (true) {
-    consumeMatchWork(budget, 1)
+    consumeMatchWork(ctx.budget, 1)
     let slash = rawPath.indexOf('/', pos)
     let segEnd = slash === -1 ? len : slash
     let isLastSeg = slash === -1
     let segLen = segEnd - pos
 
-    // Check if static matches (inline single-child check avoids substring slice & Map lookup!)
     let staticChild = lookupPathStaticRaw(node, rawPath, pos, segEnd, segLen)
-
     let hasAnyFallback =
       node.param !== null || node.optParam !== null || node.trailingWildcards !== null
 
-    // Fast straight-line iteration when ONLY staticChild matches and no fallback exists
-    if (staticChild !== undefined && !hasAnyFallback) {
-      if (isLastSeg) {
-        return matchFirstFastLeaf(staticChild.entries, capDepth, -1, rawPath, url, budget)
-      }
-      node = staticChild
-      pos = slash + 1
-      continue
-    }
-
-    // Try static branch first (highest specificity)
     if (staticChild !== undefined) {
+      if (!hasAnyFallback) {
+        if (isLastSeg) return matchFastLeaf(staticChild.entries, capDepth, -1, rawPath, ctx)
+        node = staticChild
+        pos = slash + 1
+        continue
+      }
       let match = isLastSeg
-        ? matchFirstFastLeaf(staticChild.entries, capDepth, -1, rawPath, url, budget)
-        : matchRawOriginlessFast(staticChild, rawPath, slash + 1, capDepth, url, budget)
+        ? matchFastLeaf(staticChild.entries, capDepth, -1, rawPath, ctx)
+        : matchRawOriginlessFast(staticChild, rawPath, slash + 1, capDepth, ctx)
       if (match !== null) return match
     }
 
-    // Empty segment with optParam (omitted = static specificity)
     if (segLen === 0 && node.optParam !== null) {
       setCapFrame(capDepth, 2, pos, pos, -1)
-      if (isLastSeg) {
-        let match = matchFirstFastLeaf(
-          node.optParam.entries,
-          capDepth + 1,
-          -1,
-          rawPath,
-          url,
-          budget,
-        )
-        if (match !== null) return match
-      } else if (node.trailingWildcards === null) {
+      if (node.trailingWildcards === null) {
+        if (isLastSeg) return matchFastLeaf(node.optParam.entries, capDepth + 1, -1, rawPath, ctx)
         node = node.optParam
         pos = slash + 1
         capDepth += 1
         continue
-      } else {
-        let match = matchRawOriginlessFast(
-          node.optParam,
-          rawPath,
-          slash + 1,
-          capDepth + 1,
-          url,
-          budget,
-        )
-        if (match !== null) return match
       }
+      let match = isLastSeg
+        ? matchFastLeaf(node.optParam.entries, capDepth + 1, -1, rawPath, ctx)
+        : matchRawOriginlessFast(node.optParam, rawPath, slash + 1, capDepth + 1, ctx)
+      if (match !== null) return match
     } else if (
       segLen > 0 &&
       (node.param !== null || node.optParam !== null) &&
@@ -1336,262 +1054,108 @@ function matchRawOriginlessFast<data>(
     ) {
       setCapFrame(capDepth, 0, pos, segEnd, -1)
 
-      // Fast straight-line iteration when ONLY param (or ONLY optParam) exists and no trailing wildcard
-      if (node.param !== null && node.optParam === null && node.trailingWildcards === null) {
-        if (isLastSeg) {
-          return matchFirstFastLeaf(node.param.entries, capDepth + 1, -1, rawPath, url, budget)
-        }
-        node = node.param
-        pos = slash + 1
-        capDepth += 1
-        continue
-      }
-      if (node.optParam !== null && node.param === null && node.trailingWildcards === null) {
-        if (isLastSeg) {
-          return matchFirstFastLeaf(node.optParam.entries, capDepth + 1, -1, rawPath, url, budget)
-        }
-        node = node.optParam
-        pos = slash + 1
-        capDepth += 1
-        continue
-      }
-
       if (node.param !== null && node.optParam !== null) {
-        // Both branches consume ':' at this segment; check both and compare specificity + insertion order.
         let paramMatch = isLastSeg
-          ? matchFirstFastLeaf(node.param.entries, capDepth + 1, -1, rawPath, url, budget)
-          : matchRawOriginlessFast(node.param, rawPath, slash + 1, capDepth + 1, url, budget)
-        let paramInsertion = lastFastInsertion
+          ? matchFastLeaf(node.param.entries, capDepth + 1, -1, rawPath, ctx)
+          : matchRawOriginlessFast(node.param, rawPath, slash + 1, capDepth + 1, ctx)
+        let paramInsertion = capStacks.lastFastInsertion
         let optMatch = isLastSeg
-          ? matchFirstFastLeaf(node.optParam.entries, capDepth + 1, -1, rawPath, url, budget)
-          : matchRawOriginlessFast(node.optParam, rawPath, slash + 1, capDepth + 1, url, budget)
-        let optInsertion = lastFastInsertion
+          ? matchFastLeaf(node.optParam.entries, capDepth + 1, -1, rawPath, ctx)
+          : matchRawOriginlessFast(node.optParam, rawPath, slash + 1, capDepth + 1, ctx)
+        let optInsertion = capStacks.lastFastInsertion
+
         if (paramMatch !== null && optMatch !== null) {
           let cmp = compare(optMatch, paramMatch)
-          if (cmp > 0 || (cmp === 0 && optInsertion < paramInsertion)) {
-            lastFastInsertion = optInsertion
-            return optMatch
-          }
-          lastFastInsertion = paramInsertion
-          return paramMatch
+          let optWins = cmp > 0 || (cmp === 0 && optInsertion < paramInsertion)
+          capStacks.lastFastInsertion = optWins ? optInsertion : paramInsertion
+          return optWins ? optMatch : paramMatch
         }
         if (paramMatch !== null) {
-          lastFastInsertion = paramInsertion
+          capStacks.lastFastInsertion = paramInsertion
           return paramMatch
         }
         if (optMatch !== null) {
-          lastFastInsertion = optInsertion
+          capStacks.lastFastInsertion = optInsertion
           return optMatch
         }
-      } else if (node.param !== null) {
+      } else {
+        let nextNode = (node.param ?? node.optParam)!
+        if (node.trailingWildcards === null) {
+          if (isLastSeg) return matchFastLeaf(nextNode.entries, capDepth + 1, -1, rawPath, ctx)
+          node = nextNode
+          pos = slash + 1
+          capDepth += 1
+          continue
+        }
         let match = isLastSeg
-          ? matchFirstFastLeaf(node.param.entries, capDepth + 1, -1, rawPath, url, budget)
-          : matchRawOriginlessFast(node.param, rawPath, slash + 1, capDepth + 1, url, budget)
-        if (match !== null) return match
-      } else if (node.optParam !== null) {
-        let match = isLastSeg
-          ? matchFirstFastLeaf(node.optParam.entries, capDepth + 1, -1, rawPath, url, budget)
-          : matchRawOriginlessFast(node.optParam, rawPath, slash + 1, capDepth + 1, url, budget)
+          ? matchFastLeaf(nextNode.entries, capDepth + 1, -1, rawPath, ctx)
+          : matchRawOriginlessFast(nextNode, rawPath, slash + 1, capDepth + 1, ctx)
         if (match !== null) return match
       }
     }
 
-    // Lowest specificity: trailing wildcards
     if (node.trailingWildcards !== null) {
-      return matchFirstFastLeaf(node.trailingWildcards, capDepth, pos, rawPath, url, budget)
+      return matchFastLeaf(node.trailingWildcards, capDepth, pos, rawPath, ctx)
     }
 
     return null
   }
 }
 
-function matchFirstFastLeaf<data>(
+function matchFastLeaf<data>(
   leaves: ReadonlyArray<PathLeaf<data>> | null,
   capDepth: number,
   wildcardStart: number,
   rawPath: string,
-  url: URL,
-  budget: MatchWorkBudget,
+  ctx: MatchContext,
 ): Match<string, data> | null {
-  if (leaves === null) return null
-  for (let i = 0; i < leaves.length; i++) {
-    let leaf = leaves[i]
-    let entry = leaf.entry
-    consumeMatchWork(budget, 1)
-    if (
-      entry.patternParts.search.size > 0 &&
-      !matchSearch(url, entry.patternParts.search, budget)
-    ) {
-      continue
-    }
-    return materializeFastOriginlessMatch(url, leaf, capDepth, wildcardStart, rawPath)
-  }
-  return null
+  let leaf = findFirstMatchingLeaf(leaves, ctx)
+  if (leaf === null) return null
+  capStacks.lastFastInsertion = leaf.entry.insertion
+  let pathnameMeta = buildPathMetaFromStacks(leaf, capDepth, wildcardStart, rawPath)
+  return buildMatch(ctx.url, leaf.entry, wildcardHostMeta(ctx.url), pathnameMeta)
 }
 
-function materializeFastOriginlessMatch<data>(
-  url: URL,
-  leaf: PathLeaf<data>,
-  capDepth: number,
-  wildcardStart: number,
-  rawPath: string,
-): Match<string, data> {
-  let entry = leaf.entry
-  lastFastInsertion = entry.insertion
-  let paramNames = leaf.paramNames
-  let wildcardName = leaf.wildcardName
-  let params: Record<string, string | undefined> = {}
-
-  let hasOmitted = false
-  for (let i = 0; i < capDepth; i++) {
-    if (capTypeStack[i] === 2) {
-      hasOmitted = true
-      break
-    }
-  }
-  if (!leaf.coversAllCaptures || hasOmitted) {
-    let names = entry.allCaptureNames
-    for (let i = 0; i < names.length; i++) params[names[i]] = undefined
-  }
-
-  let pathnameMeta: Array<MatchParamMeta> = []
-  let rawPosCursor = 1
-  let rawEncCursor = 0
-
-  for (let i = 0; i < capDepth; i++) {
-    if (capTypeStack[i] === 2) continue
-    let sBegin = capBeginStack[i]
-    let sEnd = capEndStack[i]
-    rawEncCursor += fastRawEncodedLength(rawPath, rawPosCursor, sBegin)
-    let begin = rawEncCursor
-    rawEncCursor += fastRawEncodedLength(rawPath, sBegin, sEnd)
-    let end = rawEncCursor
-    rawPosCursor = sEnd
-    let value = rawPath.slice(sBegin, sEnd)
-    let name = paramNames[i]
-    params[name] = value
-    pathnameMeta.push({ type: ':', name, value, begin, end })
-  }
-
-  if (wildcardName !== null) {
-    rawEncCursor += fastRawEncodedLength(rawPath, rawPosCursor, wildcardStart)
-    let begin = rawEncCursor
-    let end = begin + fastRawEncodedLength(rawPath, wildcardStart, rawPath.length)
-    let value = rawPath.slice(wildcardStart)
-    if (wildcardName !== '*') params[wildcardName] = value
-    pathnameMeta.push({ type: '*', name: wildcardName, value, begin, end })
-  }
-
-  let decodedHostname = decodeHostname(url.hostname)
-  return {
-    url,
-    pattern: entry.pattern,
-    data: entry.data,
-    params,
-    paramsMeta: {
-      hostname: [
-        { type: '*', name: '*', value: decodedHostname, begin: 0, end: decodedHostname.length },
-      ],
-      pathname: pathnameMeta,
-    },
-  }
-}
-
-function leafCoversAllCaptures<data>(
-  entry: Entry<data>,
-  paramNames: ReadonlyArray<string>,
-  wildcardName: string | null,
-): boolean {
-  let all = entry.allCaptureNames
-  if (all.length === 0) return true
-  for (let i = 0; i < all.length; i++) {
-    let name = all[i]
-    if (wildcardName === name) continue
-    if (!paramNames.includes(name)) return false
-  }
-  return true
-}
+// ============================================================================
+// General PathTrie Search (`match()` and `matchAll()`)
+// ============================================================================
 
 function searchPathTrieBest<data>(
   pathTrie: PathTrie<data>,
-  url: URL,
-  proto: 'http:' | 'https:',
-  rawPath: string,
-  decodedPath: DecodedPathname | null,
+  ctx: MatchContext,
   hostnameMeta: ReadonlyArray<MatchParamMeta>,
-  lowerHostname: string | null,
   best: CandidateMatch<data> | null,
   hostEntryFilter: ((entry: Entry<data>) => ReadonlyArray<MatchParamMeta>) | null,
-  budget: MatchWorkBudget,
-  ignoreCase: boolean,
 ): CandidateMatch<data> | null {
-  let canUseStaticMap = decodedPath === null || !decodedPath.anyNonStructuralSep
+  let canUseStaticMap = ctx.decodedPath === null || !ctx.decodedPath.anyNonStructuralSep
 
-  // 1. Check exact staticMap first
   if (canUseStaticMap && pathTrie.staticMap !== null) {
-    let leaves = pathTrie.staticMap.get(rawPath)
-    if (leaves !== undefined) {
-      for (let i = 0; i < leaves.length; i++) {
-        let leaf = leaves[i]
-        let entry = leaf.entry
-        consumeMatchWork(budget, 1)
-        if (!matchesProtocolAndPort(entry.patternParts, proto, url.port)) continue
-        if (
-          entry.patternParts.search.size > 0 &&
-          !matchSearch(url, entry.patternParts.search, budget)
-        ) {
-          continue
-        }
-        let hMeta = hostEntryFilter !== null ? hostEntryFilter(entry) : hostnameMeta
-        best = pickBetterCandidate(
-          best,
-          {
-            entry,
-            hostnameMeta: hMeta,
-            pathnameMeta: emptyMeta,
-            deferredLeaf: leaf,
-            deferredCaps: null,
-            deferredWildcardStart: -1,
-            deferredWildcardDecodedSeg: -1,
-          },
-          lowerHostname,
-          rawPath,
-          decodedPath,
-        )
-        // Leaves in staticMap are sorted by (protocol, port, search, insertion), so first match wins this bucket
-        break
-      }
+    let winner = findFirstMatchingLeaf(pathTrie.staticMap.get(ctx.rawPath) ?? null, ctx)
+    if (winner !== null) {
+      let entry = winner.entry
+      let hMeta = hostEntryFilter !== null ? hostEntryFilter(entry) : hostnameMeta
+      best = pickBetterCandidate(
+        best,
+        { entry, hostnameMeta: hMeta, pathnameMeta: emptyMeta, deferred: null },
+        ctx,
+      )
 
       if (
-        best !== null &&
         best.pathnameMeta.length === 0 &&
-        best.deferredCaps === null &&
-        best.deferredWildcardStart === -1 &&
-        best.deferredWildcardDecodedSeg === -1 &&
+        best.deferred === null &&
         !pathTrie.hasComplex &&
         !pathTrie.hasMixedOriginRank &&
-        !(pathTrie.hasOptParam && hasEmptyPathSegment(rawPath))
+        !(pathTrie.hasOptParam && hasEmptyPathSegment(ctx.rawPath))
       ) {
         return best
       }
     }
   }
 
-  if (!pathTrie.hasDynamic) return best
+  if (pathTrie.root === null) return best
 
   let allowEarlyExit =
     !pathTrie.hasComplex && !pathTrie.hasMixedOriginRank && hostEntryFilter === null
-  let canonicalPath: CanonicalText | null | undefined = undefined
-  let plainPath: string | null = null
-  let getCanonicalPath = (): CanonicalText | null => {
-    if (canonicalPath === undefined) {
-      canonicalPath = canonicalizeUrlPart(url.pathname.slice(1), 'pathname', {
-        budget,
-        ignoreCase,
-      })
-    }
-    return canonicalPath
-  }
 
   let checkLeaves = (
     leaves: ReadonlyArray<PathLeaf<data>> | null,
@@ -1603,14 +1167,7 @@ function searchPathTrieBest<data>(
     for (let i = 0; i < leaves.length; i++) {
       let leaf = leaves[i]
       let entry = leaf.entry
-      consumeMatchWork(budget, 1)
-      if (!matchesProtocolAndPort(entry.patternParts, proto, url.port)) continue
-      if (
-        entry.patternParts.search.size > 0 &&
-        !matchSearch(url, entry.patternParts.search, budget)
-      ) {
-        continue
-      }
+      if (!entryMatchesUrl(entry, ctx)) continue
 
       let hMeta = hostEntryFilter !== null ? hostEntryFilter(entry) : hostnameMeta
       best = pickBetterCandidate(
@@ -1619,14 +1176,14 @@ function searchPathTrieBest<data>(
           entry,
           hostnameMeta: hMeta,
           pathnameMeta: emptyMeta,
-          deferredLeaf: leaf,
-          deferredCaps: snapshotPendingCaps(capDepth),
-          deferredWildcardStart: wildcardStart,
-          deferredWildcardDecodedSeg: wildcardDecodedSeg,
+          deferred: {
+            leaf,
+            caps: snapshotPendingCaps(capDepth),
+            wildcardStart,
+            wildcardDecodedSeg,
+          },
         },
-        lowerHostname,
-        rawPath,
-        decodedPath,
+        ctx,
       )
       if (hostEntryFilter === null) break
     }
@@ -1636,505 +1193,190 @@ function searchPathTrieBest<data>(
     if (entries === null) return
     for (let i = 0; i < entries.length; i++) {
       let entry = entries[i]
-      consumeMatchWork(budget, 1)
-      if (!matchesProtocolAndPort(entry.patternParts, proto, url.port)) continue
-      if (
-        entry.patternParts.search.size > 0 &&
-        !matchSearch(url, entry.patternParts.search, budget)
-      ) {
-        continue
-      }
-
-      let program = entry.pathnameProgram!
-      let pathnameMeta: ReadonlyArray<MatchParamMeta> | null
-      if (
-        !program.hasNonStructuralSep &&
-        (decodedPath === null || !decodedPath.anyNonStructuralSep)
-      ) {
-        if (plainPath === null) {
-          plainPath = decodedPath === null ? rawPath.slice(1) : decodedPath.fullDecoded
-        }
-        pathnameMeta = matchPartString(program, plainPath, budget)
-      } else {
-        let canonical = getCanonicalPath()
-        if (canonical === null) continue
-        let unitProg = ensureUnitProgram(entry.patternParts.pathname, program, ignoreCase)
-        pathnameMeta = matchPartUnits(
-          unitProg.tokens,
-          unitProg.optionals,
-          'pathname',
-          canonical,
-          budget,
-        )
-      }
+      if (!entryMatchesUrl(entry, ctx)) continue
+      let pathnameMeta = matchComplexPathname(entry, ctx)
       if (pathnameMeta === null) continue
-
       let hMeta = hostEntryFilter !== null ? hostEntryFilter(entry) : hostnameMeta
       best = pickBetterCandidate(
         best,
-        {
-          entry,
-          hostnameMeta: hMeta,
-          pathnameMeta,
-          deferredLeaf: null,
-          deferredCaps: null,
-          deferredWildcardStart: -1,
-          deferredWildcardDecodedSeg: -1,
-        },
-        lowerHostname,
-        rawPath,
-        decodedPath,
+        { entry, hostnameMeta: hMeta, pathnameMeta, deferred: null },
+        ctx,
       )
     }
   }
 
-  // 2. Walk forward segment trie
-  if (pathTrie.root !== null) {
-    if (decodedPath === null) {
-      let len = rawPath.length
-      let walkRaw = (node: PathTrieNode<data>, pos: number, capDepth: number) => {
-        consumeMatchWork(budget, 1)
-        evalComplex(node.complex)
+  if (ctx.decodedPath === null) {
+    let rawPath = ctx.rawPath
+    let len = rawPath.length
+    let walkRaw = (node: PathTrieNode<data>, pos: number, capDepth: number) => {
+      consumeMatchWork(ctx.budget, 1)
+      evalComplex(node.complex)
 
-        let slash = rawPath.indexOf('/', pos)
-        let segEnd = slash === -1 ? len : slash
-        let isLastSeg = slash === -1
-        let nextPos = isLastSeg ? len + 1 : slash + 1
-        let segLen = segEnd - pos
-        let foundHigher = false
+      let slash = rawPath.indexOf('/', pos)
+      let segEnd = slash === -1 ? len : slash
+      let isLastSeg = slash === -1
+      let nextPos = isLastSeg ? len + 1 : slash + 1
+      let segLen = segEnd - pos
+      let foundHigher = false
 
-        let staticChild = lookupPathStaticRaw(node, rawPath, pos, segEnd, segLen)
+      let staticChild = lookupPathStaticRaw(node, rawPath, pos, segEnd, segLen)
+      if (staticChild !== undefined) {
+        let prevBest = best
+        if (isLastSeg) {
+          checkLeaves(staticChild.entries, capDepth, -1, -1)
+          evalComplex(staticChild.complex)
+        } else {
+          walkRaw(staticChild, nextPos, capDepth)
+        }
+        if (best !== prevBest) foundHigher = true
+      }
+
+      if (segLen === 0 && node.optParam !== null) {
+        setCapFrame(capDepth, 2, pos, pos, -1)
+        let prevBest = best
+        if (isLastSeg) checkLeaves(node.optParam.entries, capDepth + 1, -1, -1)
+        else walkRaw(node.optParam, nextPos, capDepth + 1)
+        if (best !== prevBest) foundHigher = true
+      }
+
+      if (allowEarlyExit && foundHigher) return
+
+      if (
+        segLen > 0 &&
+        (node.param !== null || node.optParam !== null) &&
+        !hasDotInRange(rawPath, pos, segEnd)
+      ) {
+        setCapFrame(capDepth, 0, pos, segEnd, -1)
+        let foundParam = false
+
+        if (node.param !== null) {
+          let prevBest = best
+          if (isLastSeg) {
+            checkLeaves(node.param.entries, capDepth + 1, -1, -1)
+            evalComplex(node.param.complex)
+          } else {
+            walkRaw(node.param, nextPos, capDepth + 1)
+          }
+          if (best !== prevBest) foundParam = true
+        }
+        if (node.optParam !== null) {
+          let prevBest = best
+          if (isLastSeg) checkLeaves(node.optParam.entries, capDepth + 1, -1, -1)
+          else walkRaw(node.optParam, nextPos, capDepth + 1)
+          if (best !== prevBest) foundParam = true
+        }
+        if (allowEarlyExit && foundParam) return
+      }
+
+      if (node.trailingWildcards !== null) {
+        checkLeaves(node.trailingWildcards, capDepth, pos, -1)
+      }
+    }
+    walkRaw(pathTrie.root, 1, 0)
+  } else {
+    let segs = ctx.decodedPath.segments
+    let walkDecoded = (node: PathTrieNode<data>, segIdx: number, capDepth: number) => {
+      consumeMatchWork(ctx.budget, 1)
+      evalComplex(node.complex)
+
+      let seg = segs[segIdx]
+      let isLastSeg = segIdx + 1 === segs.length
+      let foundHigher = false
+
+      if (!seg.hasNonStructuralSep) {
+        let staticChild = lookupPathStaticKey(node, seg.decoded)
         if (staticChild !== undefined) {
           let prevBest = best
           if (isLastSeg) {
             checkLeaves(staticChild.entries, capDepth, -1, -1)
             evalComplex(staticChild.complex)
           } else {
-            walkRaw(staticChild, nextPos, capDepth)
+            walkDecoded(staticChild, segIdx + 1, capDepth)
           }
           if (best !== prevBest) foundHigher = true
-        }
-
-        if (segLen === 0 && node.optParam !== null) {
-          setCapFrame(capDepth, 2, pos, pos, -1)
-          let prevBest = best
-          if (isLastSeg) checkLeaves(node.optParam.entries, capDepth + 1, -1, -1)
-          else walkRaw(node.optParam, nextPos, capDepth + 1)
-          if (best !== prevBest) foundHigher = true
-        }
-
-        if (allowEarlyExit && foundHigher) return
-
-        if (
-          segLen > 0 &&
-          (node.param !== null || node.optParam !== null) &&
-          !hasDotInRange(rawPath, pos, segEnd)
-        ) {
-          setCapFrame(capDepth, 0, pos, segEnd, -1)
-          let foundParam = false
-
-          if (node.param !== null) {
-            let prevBest = best
-            if (isLastSeg) {
-              checkLeaves(node.param.entries, capDepth + 1, -1, -1)
-              evalComplex(node.param.complex)
-            } else {
-              walkRaw(node.param, nextPos, capDepth + 1)
-            }
-            if (best !== prevBest) foundParam = true
-          }
-          if (node.optParam !== null) {
-            let prevBest = best
-            if (isLastSeg) checkLeaves(node.optParam.entries, capDepth + 1, -1, -1)
-            else walkRaw(node.optParam, nextPos, capDepth + 1)
-            if (best !== prevBest) foundParam = true
-          }
-          if (allowEarlyExit && foundParam) return
-        }
-
-        if (node.trailingWildcards !== null) {
-          checkLeaves(node.trailingWildcards, capDepth, pos, -1)
         }
       }
-      walkRaw(pathTrie.root, 1, 0)
-    } else {
-      let segs = decodedPath.segments
-      let walkDecoded = (node: PathTrieNode<data>, segIdx: number, capDepth: number) => {
-        consumeMatchWork(budget, 1)
-        evalComplex(node.complex)
 
-        let seg = segs[segIdx]
-        let isLastSeg = segIdx + 1 === segs.length
-        let foundHigher = false
+      if (seg.decoded.length === 0 && node.optParam !== null) {
+        setCapFrame(capDepth, 2, seg.encBegin, seg.encEnd, segIdx)
+        let prevBest = best
+        if (isLastSeg) checkLeaves(node.optParam.entries, capDepth + 1, -1, -1)
+        else walkDecoded(node.optParam, segIdx + 1, capDepth + 1)
+        if (best !== prevBest) foundHigher = true
+      }
 
-        if (!seg.hasNonStructuralSep) {
-          let staticChild = lookupPathStaticKey(node, seg.decoded)
-          if (staticChild !== undefined) {
-            let prevBest = best
-            if (isLastSeg) {
-              checkLeaves(staticChild.entries, capDepth, -1, -1)
-              evalComplex(staticChild.complex)
-            } else {
-              walkDecoded(staticChild, segIdx + 1, capDepth)
-            }
-            if (best !== prevBest) foundHigher = true
+      if (allowEarlyExit && foundHigher) return
+
+      if (
+        seg.decoded.length > 0 &&
+        !seg.hasStructuralDot &&
+        (node.param !== null || node.optParam !== null)
+      ) {
+        setCapFrame(capDepth, 0, seg.encBegin, seg.encEnd, segIdx)
+        let foundParam = false
+
+        if (node.param !== null) {
+          let prevBest = best
+          if (isLastSeg) {
+            checkLeaves(node.param.entries, capDepth + 1, -1, -1)
+            evalComplex(node.param.complex)
+          } else {
+            walkDecoded(node.param, segIdx + 1, capDepth + 1)
           }
+          if (best !== prevBest) foundParam = true
         }
-
-        if (seg.decoded.length === 0 && node.optParam !== null) {
-          setCapFrame(capDepth, 2, seg.encBegin, seg.encEnd, segIdx)
+        if (node.optParam !== null) {
           let prevBest = best
           if (isLastSeg) checkLeaves(node.optParam.entries, capDepth + 1, -1, -1)
           else walkDecoded(node.optParam, segIdx + 1, capDepth + 1)
-          if (best !== prevBest) foundHigher = true
+          if (best !== prevBest) foundParam = true
         }
-
-        if (allowEarlyExit && foundHigher) return
-
-        if (
-          seg.decoded.length > 0 &&
-          !seg.hasStructuralDot &&
-          (node.param !== null || node.optParam !== null)
-        ) {
-          setCapFrame(capDepth, 0, seg.encBegin, seg.encEnd, segIdx)
-          let foundParam = false
-
-          if (node.param !== null) {
-            let prevBest = best
-            if (isLastSeg) {
-              checkLeaves(node.param.entries, capDepth + 1, -1, -1)
-              evalComplex(node.param.complex)
-            } else {
-              walkDecoded(node.param, segIdx + 1, capDepth + 1)
-            }
-            if (best !== prevBest) foundParam = true
-          }
-          if (node.optParam !== null) {
-            let prevBest = best
-            if (isLastSeg) checkLeaves(node.optParam.entries, capDepth + 1, -1, -1)
-            else walkDecoded(node.optParam, segIdx + 1, capDepth + 1)
-            if (best !== prevBest) foundParam = true
-          }
-          if (allowEarlyExit && foundParam) return
-        }
-
-        if (node.trailingWildcards !== null) {
-          checkLeaves(node.trailingWildcards, capDepth, -1, segIdx)
-        }
+        if (allowEarlyExit && foundParam) return
       }
-      walkDecoded(pathTrie.root, 0, 0)
+
+      if (node.trailingWildcards !== null) {
+        checkLeaves(node.trailingWildcards, capDepth, -1, segIdx)
+      }
     }
+    walkDecoded(pathTrie.root, 0, 0)
   }
 
-  // 3. Walk reversed-segment suffix trie (ONLY for leading-wildcard complex entries)
   if (pathTrie.suffixRoot !== null) {
-    if (decodedPath === null) {
-      let walkSuffixRaw = (node: PathTrieNode<data>, endPos: number) => {
-        consumeMatchWork(budget, 1)
-        evalComplex(node.complex)
-        if (endPos < 1) return
-        let slash = rawPath.lastIndexOf('/', endPos - 1)
-        if (slash < 0) return
-        let segStart = slash + 1
-        let child = lookupPathStaticRaw(node, rawPath, segStart, endPos, endPos - segStart)
-        if (child !== undefined) walkSuffixRaw(child, slash)
-        if (node.param !== null && endPos > segStart && !hasDotInRange(rawPath, segStart, endPos)) {
-          walkSuffixRaw(node.param, slash)
-        }
-      }
-      walkSuffixRaw(pathTrie.suffixRoot, rawPath.length)
-    } else {
-      let segs = decodedPath.segments
-      let walkSuffixDecoded = (node: PathTrieNode<data>, segIdx: number) => {
-        consumeMatchWork(budget, 1)
-        evalComplex(node.complex)
-        if (segIdx < 0) return
-        let seg = segs[segIdx]
-        if (!seg.hasNonStructuralSep) {
-          let child = lookupPathStaticKey(node, seg.decoded)
-          if (child !== undefined) walkSuffixDecoded(child, segIdx - 1)
-        }
-        if (node.param !== null && seg.decoded.length > 0 && !seg.hasStructuralDot) {
-          walkSuffixDecoded(node.param, segIdx - 1)
-        }
-      }
-      walkSuffixDecoded(pathTrie.suffixRoot, segs.length - 1)
-    }
+    walkSuffixTrie(pathTrie.suffixRoot, ctx, evalComplex)
   }
 
   return best
 }
-
-// ============================================================================
-// Dynamic & Complex Hostname Search (`match()`)
-// ============================================================================
-
-function searchDynamicHostTrieBest<data>(
-  root: HostTrieNode<data>,
-  lowerHostname: string,
-  url: URL,
-  proto: 'http:' | 'https:',
-  rawPath: string,
-  decodedPath: DecodedPathname | null,
-  best: CandidateMatch<data> | null,
-  budget: MatchWorkBudget,
-  ignoreCase: boolean,
-): CandidateMatch<data> | null {
-  let hostCapBegins: Array<number> = []
-  let hostCapEnds: Array<number> = []
-
-  let walk = (node: HostTrieNode<data>, segEnd: number) => {
-    consumeMatchWork(budget, 1)
-
-    // Check leading wildcard pathTrie (e.g. `*host.example.com`)
-    if (node.leadingWildcards !== null) {
-      let wcEnd = segEnd
-      let depth = hostCapBegins.length
-      let filter = (entry: Entry<data>): ReadonlyArray<MatchParamMeta> =>
-        buildHostMetaFromCaptures(
-          lowerHostname,
-          entry.hostnameParamNames,
-          hostCapBegins,
-          hostCapEnds,
-          depth,
-          entry.hostnameWildcardName,
-          wcEnd,
-        )
-      best = searchPathTrieBest(
-        node.leadingWildcards,
-        url,
-        proto,
-        rawPath,
-        decodedPath,
-        emptyMeta,
-        lowerHostname,
-        best,
-        filter,
-        budget,
-        ignoreCase,
-      )
-    }
-
-    let dot = segEnd === 0 ? -1 : lowerHostname.lastIndexOf('.', segEnd - 1)
-    let segBegin = dot + 1
-    let isLeftmost = dot === -1
-
-    // 1. Static label (highest hostname specificity at this label)
-    if (node.static !== null) {
-      let label = lowerHostname.slice(segBegin, segEnd)
-      let child = node.static.get(label)
-      if (child !== undefined) {
-        if (isLeftmost) {
-          if (child.pathTrie !== null) {
-            let depth = hostCapBegins.length
-            let filter = (entry: Entry<data>): ReadonlyArray<MatchParamMeta> =>
-              buildHostMetaFromCaptures(
-                lowerHostname,
-                entry.hostnameParamNames,
-                hostCapBegins,
-                hostCapEnds,
-                depth,
-                null,
-                -1,
-              )
-            best = searchPathTrieBest(
-              child.pathTrie,
-              url,
-              proto,
-              rawPath,
-              decodedPath,
-              emptyMeta,
-              lowerHostname,
-              best,
-              filter,
-              budget,
-              ignoreCase,
-            )
-          }
-        } else {
-          walk(child, dot)
-        }
-      }
-    }
-
-    // 2. Param label (`:` requires non-empty label)
-    if (node.param !== null && segEnd > segBegin) {
-      hostCapBegins.push(segBegin)
-      hostCapEnds.push(segEnd)
-      if (isLeftmost) {
-        if (node.param.pathTrie !== null) {
-          let depth = hostCapBegins.length
-          let filter = (entry: Entry<data>): ReadonlyArray<MatchParamMeta> =>
-            buildHostMetaFromCaptures(
-              lowerHostname,
-              entry.hostnameParamNames,
-              hostCapBegins,
-              hostCapEnds,
-              depth,
-              null,
-              -1,
-            )
-          best = searchPathTrieBest(
-            node.param.pathTrie,
-            url,
-            proto,
-            rawPath,
-            decodedPath,
-            emptyMeta,
-            lowerHostname,
-            best,
-            filter,
-            budget,
-            ignoreCase,
-          )
-        }
-      } else {
-        walk(node.param, dot)
-      }
-      hostCapBegins.pop()
-      hostCapEnds.pop()
-    }
-  }
-
-  walk(root, lowerHostname.length)
-  return best
-}
-
-function searchComplexHostEntriesBest<data>(
-  entries: ReadonlyArray<Entry<data>>,
-  lowerHostname: string,
-  url: URL,
-  proto: 'http:' | 'https:',
-  rawPath: string,
-  decodedPath: DecodedPathname | null,
-  best: CandidateMatch<data> | null,
-  budget: MatchWorkBudget,
-  ignoreCase: boolean,
-): CandidateMatch<data> | null {
-  let canonicalHost: CanonicalText | null | undefined = undefined
-  let canonicalPath: CanonicalText | null | undefined = undefined
-  let plainPath: string | null = null
-
-  for (let i = 0; i < entries.length; i++) {
-    let entry = entries[i]
-    consumeMatchWork(budget, 1)
-    if (!matchesProtocolAndPort(entry.patternParts, proto, url.port)) continue
-    if (
-      entry.patternParts.search.size > 0 &&
-      !matchSearch(url, entry.patternParts.search, budget)
-    ) {
-      continue
-    }
-
-    let hProg = entry.hostnameProgram!
-    let hMeta: ReadonlyArray<MatchParamMeta> | null
-    if (!hProg.hasNonStructuralSep) {
-      hMeta = matchPartString(hProg, lowerHostname, budget)
-    } else {
-      if (canonicalHost === undefined) {
-        canonicalHost = canonicalizeUrlPart(lowerHostname, 'hostname', { budget, ignoreCase: true })
-      }
-      if (canonicalHost === null) continue
-      let unitProg = ensureUnitProgram(entry.patternParts.hostname!, hProg, true)
-      hMeta = matchPartUnits(unitProg.tokens, unitProg.optionals, 'hostname', canonicalHost, budget)
-    }
-    if (hMeta === null) continue
-
-    let pProg = entry.pathnameProgram!
-    let pMeta: ReadonlyArray<MatchParamMeta> | null
-    if (!pProg.hasNonStructuralSep && (decodedPath === null || !decodedPath.anyNonStructuralSep)) {
-      if (plainPath === null)
-        plainPath = decodedPath === null ? rawPath.slice(1) : decodedPath.fullDecoded
-      pMeta = matchPartString(pProg, plainPath, budget)
-    } else {
-      if (canonicalPath === undefined) {
-        canonicalPath = canonicalizeUrlPart(url.pathname.slice(1), 'pathname', {
-          budget,
-          ignoreCase,
-        })
-      }
-      if (canonicalPath === null) continue
-      let unitProg = ensureUnitProgram(entry.patternParts.pathname, pProg, ignoreCase)
-      pMeta = matchPartUnits(unitProg.tokens, unitProg.optionals, 'pathname', canonicalPath, budget)
-    }
-    if (pMeta === null) continue
-
-    best = pickBetterCandidate(
-      best,
-      {
-        entry,
-        hostnameMeta: hMeta,
-        pathnameMeta: pMeta,
-        deferredLeaf: null,
-        deferredCaps: null,
-        deferredWildcardStart: -1,
-        deferredWildcardDecodedSeg: -1,
-      },
-      lowerHostname,
-      rawPath,
-      decodedPath,
-    )
-  }
-  return best
-}
-
-// ============================================================================
-// Match-All Search (`matchAll()`)
-// ============================================================================
 
 function searchPathTrieAll<data>(
   pathTrie: PathTrie<data>,
-  url: URL,
-  proto: 'http:' | 'https:',
-  rawPath: string,
-  decodedPath: DecodedPathname | null,
+  ctx: MatchContext,
   hostnameMeta: ReadonlyArray<MatchParamMeta>,
   results: Array<{ match: Match<string, data>; insertion: number }>,
-  budget: MatchWorkBudget,
-  ignoreCase: boolean,
   onLeafBatch: (sorted: boolean) => void,
-  hostEntryFilter?: (entry: Entry<data>) => ReadonlyArray<MatchParamMeta>,
+  hostEntryFilter: ((entry: Entry<data>) => ReadonlyArray<MatchParamMeta>) | null,
 ): void {
-  let canUseStaticMap = decodedPath === null || !decodedPath.anyNonStructuralSep
+  let canUseStaticMap = ctx.decodedPath === null || !ctx.decodedPath.anyNonStructuralSep
 
   if (canUseStaticMap && pathTrie.staticMap !== null) {
-    let leaves = pathTrie.staticMap.get(rawPath)
+    let leaves = pathTrie.staticMap.get(ctx.rawPath)
     if (leaves !== undefined) {
       let emitted = 0
       for (let i = 0; i < leaves.length; i++) {
-        let leaf = leaves[i]
-        let entry = leaf.entry
-        consumeMatchWork(budget, 1)
-        if (!matchesProtocolAndPort(entry.patternParts, proto, url.port)) continue
-        if (
-          entry.patternParts.search.size > 0 &&
-          !matchSearch(url, entry.patternParts.search, budget)
-        ) {
-          continue
-        }
-        let hMeta = hostEntryFilter !== undefined ? hostEntryFilter(entry) : hostnameMeta
+        let entry = leaves[i].entry
+        if (!entryMatchesUrl(entry, ctx)) continue
+        let hMeta = hostEntryFilter !== null ? hostEntryFilter(entry) : hostnameMeta
         results.push({
-          match: buildMatch(url, entry, hMeta, emptyMeta),
+          match: buildMatch(ctx.url, entry, hMeta, emptyMeta),
           insertion: entry.insertion,
         })
         emitted += 1
       }
-      if (emitted > 0) onLeafBatch(hostEntryFilter === undefined)
+      if (emitted > 0) onLeafBatch(hostEntryFilter === null)
     }
   }
 
-  if (!pathTrie.hasDynamic) return
-
-  let canonicalPath: CanonicalText | null | undefined = undefined
-  let getCanonicalPath = (): CanonicalText | null => {
-    if (canonicalPath === undefined) {
-      canonicalPath = canonicalizeUrlPart(url.pathname.slice(1), 'pathname', {
-        budget,
-        ignoreCase,
-      })
-    }
-    return canonicalPath
-  }
+  if (pathTrie.root === null) return
 
   let emitLeaves = (
     leaves: ReadonlyArray<PathLeaf<data>> | null,
@@ -2143,334 +1385,221 @@ function searchPathTrieAll<data>(
     wildcardDecodedSeg: number,
   ) => {
     if (leaves === null) return
-    // Precompute shared capture slices & canonical offsets ONCE across all leaves at this node!
-    let sharedValues: Array<string> | null = null
-    let sharedBegins: Array<number> | null = null
-    let sharedEnds: Array<number> | null = null
-    let sharedOmitted: Array<boolean> | null = null
-    let sharedWildcardValue = ''
-    let sharedWildcardBegin = 0
-    let sharedWildcardEnd = 0
-    let hasWildcard = wildcardStart !== -1 || wildcardDecodedSeg !== -1
-
-    let isRaw = decodedPath === null
-    if (capDepth > 0 || hasWildcard) {
-      let rawPosCursor = 1
-      let rawEncCursor = 0
-      if (capDepth > 0) {
-        sharedValues = new Array<string>(capDepth)
-        sharedBegins = new Array<number>(capDepth)
-        sharedEnds = new Array<number>(capDepth)
-        sharedOmitted = new Array<boolean>(capDepth)
-        for (let k = 0; k < capDepth; k++) {
-          if (capTypeStack[k] === 2) {
-            sharedOmitted[k] = true
-            sharedValues[k] = ''
-            sharedBegins[k] = 0
-            sharedEnds[k] = 0
-            continue
-          }
-          sharedOmitted[k] = false
-          if (isRaw) {
-            let sBegin = capBeginStack[k]
-            let sEnd = capEndStack[k]
-            rawEncCursor += fastRawEncodedLength(rawPath, rawPosCursor, sBegin)
-            sharedBegins[k] = rawEncCursor
-            rawEncCursor += fastRawEncodedLength(rawPath, sBegin, sEnd)
-            sharedEnds[k] = rawEncCursor
-            rawPosCursor = sEnd
-            sharedValues[k] = rawPath.slice(sBegin, sEnd)
-          } else {
-            let seg = decodedPath!.segments[capSegIdxStack[k]]
-            sharedValues[k] = seg.decoded
-            sharedBegins[k] = seg.encBegin
-            sharedEnds[k] = seg.encEnd
-          }
-        }
-      }
-      if (hasWildcard) {
-        if (isRaw) {
-          rawEncCursor += fastRawEncodedLength(rawPath, rawPosCursor, wildcardStart)
-          sharedWildcardBegin = rawEncCursor
-          sharedWildcardEnd =
-            sharedWildcardBegin + fastRawEncodedLength(rawPath, wildcardStart, rawPath.length)
-          sharedWildcardValue = rawPath.slice(wildcardStart)
-        } else {
-          let segs = decodedPath!.segments
-          sharedWildcardBegin = segs[wildcardDecodedSeg].encBegin
-          sharedWildcardEnd = decodedPath!.totalEncLen
-          let val = ''
-          for (let j = wildcardDecodedSeg; j < segs.length; j++) {
-            if (j > wildcardDecodedSeg) val += '/'
-            val += segs[j].decoded
-          }
-          sharedWildcardValue = val
-        }
-      }
-    }
-
+    let caps = snapshotPendingCaps(capDepth)
     let emitted = 0
     for (let i = 0; i < leaves.length; i++) {
       let leaf = leaves[i]
       let entry = leaf.entry
-      consumeMatchWork(budget, 1)
-      if (!matchesProtocolAndPort(entry.patternParts, proto, url.port)) continue
-      if (
-        entry.patternParts.search.size > 0 &&
-        !matchSearch(url, entry.patternParts.search, budget)
-      ) {
-        continue
-      }
-      let hMeta = hostEntryFilter !== undefined ? hostEntryFilter(entry) : hostnameMeta
-      let pMeta: ReadonlyArray<MatchParamMeta>
-      if (capDepth === 0 && !hasWildcard) {
-        pMeta = emptyMeta
-      } else {
-        let meta: Array<MatchParamMeta> = []
-        if (sharedValues !== null) {
-          let pNames = leaf.paramNames
-          for (let k = 0; k < capDepth; k++) {
-            if (sharedOmitted![k]) continue
-            meta.push({
-              type: ':',
-              name: pNames[k],
-              value: sharedValues[k],
-              begin: sharedBegins![k],
-              end: sharedEnds![k],
-            })
-          }
-        }
-        if (hasWildcard && leaf.wildcardName !== null) {
-          meta.push({
-            type: '*',
-            name: leaf.wildcardName,
-            value: sharedWildcardValue,
-            begin: sharedWildcardBegin,
-            end: sharedWildcardEnd,
-          })
-        }
-        pMeta = meta
-      }
-      results.push({ match: buildMatch(url, entry, hMeta, pMeta), insertion: entry.insertion })
+      if (!entryMatchesUrl(entry, ctx)) continue
+      let hMeta = hostEntryFilter !== null ? hostEntryFilter(entry) : hostnameMeta
+      let pMeta = materializePendingPathMeta(
+        leaf,
+        caps,
+        wildcardStart,
+        wildcardDecodedSeg,
+        ctx.rawPath,
+        ctx.decodedPath,
+      )
+      results.push({ match: buildMatch(ctx.url, entry, hMeta, pMeta), insertion: entry.insertion })
       emitted += 1
     }
-    if (emitted > 0) onLeafBatch(hostEntryFilter === undefined)
+    if (emitted > 0) onLeafBatch(hostEntryFilter === null)
   }
 
   let evalComplex = (entries: ReadonlyArray<Entry<data>> | null) => {
     if (entries === null) return
-    let plainPath: string | null = null
     for (let i = 0; i < entries.length; i++) {
       let entry = entries[i]
-      consumeMatchWork(budget, 1)
-      if (!matchesProtocolAndPort(entry.patternParts, proto, url.port)) continue
-      if (
-        entry.patternParts.search.size > 0 &&
-        !matchSearch(url, entry.patternParts.search, budget)
-      ) {
-        continue
-      }
-      let program = entry.pathnameProgram!
-      let pMeta: ReadonlyArray<MatchParamMeta> | null
-      if (
-        !program.hasNonStructuralSep &&
-        (decodedPath === null || !decodedPath.anyNonStructuralSep)
-      ) {
-        if (plainPath === null)
-          plainPath = decodedPath === null ? rawPath.slice(1) : decodedPath.fullDecoded
-        pMeta = matchPartString(program, plainPath, budget)
-      } else {
-        let canonical = getCanonicalPath()
-        if (canonical === null) continue
-        let unitProg = ensureUnitProgram(entry.patternParts.pathname, program, ignoreCase)
-        pMeta = matchPartUnits(unitProg.tokens, unitProg.optionals, 'pathname', canonical, budget)
-      }
+      if (!entryMatchesUrl(entry, ctx)) continue
+      let pMeta = matchComplexPathname(entry, ctx)
       if (pMeta === null) continue
-      let hMeta = hostEntryFilter !== undefined ? hostEntryFilter(entry) : hostnameMeta
-      results.push({ match: buildMatch(url, entry, hMeta, pMeta), insertion: entry.insertion })
+      let hMeta = hostEntryFilter !== null ? hostEntryFilter(entry) : hostnameMeta
+      results.push({ match: buildMatch(ctx.url, entry, hMeta, pMeta), insertion: entry.insertion })
       onLeafBatch(false)
     }
   }
 
-  if (pathTrie.root !== null) {
-    if (decodedPath === null) {
-      let walk = (node: PathTrieNode<data>, pos: number, capDepth: number) => {
-        consumeMatchWork(budget, 1)
-        evalComplex(node.complex)
-        if (node.trailingWildcards !== null) emitLeaves(node.trailingWildcards, capDepth, pos, -1)
+  if (ctx.decodedPath === null) {
+    let rawPath = ctx.rawPath
+    let len = rawPath.length
+    let walk = (node: PathTrieNode<data>, pos: number, capDepth: number) => {
+      consumeMatchWork(ctx.budget, 1)
+      evalComplex(node.complex)
+      if (node.trailingWildcards !== null) emitLeaves(node.trailingWildcards, capDepth, pos, -1)
 
-        let len = rawPath.length
-        let slash = rawPath.indexOf('/', pos)
-        let segEnd = slash === -1 ? len : slash
-        let isLastSeg = slash === -1
-        let nextPos = isLastSeg ? len + 1 : slash + 1
+      let slash = rawPath.indexOf('/', pos)
+      let segEnd = slash === -1 ? len : slash
+      let isLastSeg = slash === -1
+      let nextPos = isLastSeg ? len + 1 : slash + 1
+      let segLen = segEnd - pos
 
-        let child = lookupPathStaticRaw(node, rawPath, pos, segEnd, segEnd - pos)
+      let child = lookupPathStaticRaw(node, rawPath, pos, segEnd, segLen)
+      if (child !== undefined) {
+        if (isLastSeg) {
+          emitLeaves(child.entries, capDepth, -1, -1)
+          evalComplex(child.complex)
+        } else {
+          walk(child, nextPos, capDepth)
+        }
+      }
+
+      if (segLen === 0 && node.optParam !== null) {
+        setCapFrame(capDepth, 2, pos, pos, -1)
+        if (isLastSeg) emitLeaves(node.optParam.entries, capDepth + 1, -1, -1)
+        else walk(node.optParam, nextPos, capDepth + 1)
+      } else if (
+        segLen > 0 &&
+        (node.param !== null || node.optParam !== null) &&
+        !hasDotInRange(rawPath, pos, segEnd)
+      ) {
+        setCapFrame(capDepth, 0, pos, segEnd, -1)
+        if (node.param !== null) {
+          if (isLastSeg) {
+            emitLeaves(node.param.entries, capDepth + 1, -1, -1)
+            evalComplex(node.param.complex)
+          } else {
+            walk(node.param, nextPos, capDepth + 1)
+          }
+        }
+        if (node.optParam !== null) {
+          if (isLastSeg) emitLeaves(node.optParam.entries, capDepth + 1, -1, -1)
+          else walk(node.optParam, nextPos, capDepth + 1)
+        }
+      }
+    }
+    walk(pathTrie.root, 1, 0)
+  } else {
+    let segs = ctx.decodedPath.segments
+    let walk = (node: PathTrieNode<data>, segIdx: number, capDepth: number) => {
+      consumeMatchWork(ctx.budget, 1)
+      evalComplex(node.complex)
+      if (node.trailingWildcards !== null) emitLeaves(node.trailingWildcards, capDepth, -1, segIdx)
+
+      let seg = segs[segIdx]
+      let isLastSeg = segIdx + 1 === segs.length
+
+      if (!seg.hasNonStructuralSep) {
+        let child = lookupPathStaticKey(node, seg.decoded)
         if (child !== undefined) {
           if (isLastSeg) {
             emitLeaves(child.entries, capDepth, -1, -1)
             evalComplex(child.complex)
           } else {
-            walk(child, nextPos, capDepth)
-          }
-        }
-
-        let segLen = segEnd - pos
-        if (segLen === 0 && node.optParam !== null) {
-          setCapFrame(capDepth, 2, pos, pos, -1)
-          if (isLastSeg) emitLeaves(node.optParam.entries, capDepth + 1, -1, -1)
-          else walk(node.optParam, nextPos, capDepth + 1)
-        } else if (
-          segLen > 0 &&
-          (node.param !== null || node.optParam !== null) &&
-          !hasDotInRange(rawPath, pos, segEnd)
-        ) {
-          setCapFrame(capDepth, 0, pos, segEnd, -1)
-          if (node.param !== null) {
-            if (isLastSeg) {
-              emitLeaves(node.param.entries, capDepth + 1, -1, -1)
-              evalComplex(node.param.complex)
-            } else {
-              walk(node.param, nextPos, capDepth + 1)
-            }
-          }
-          if (node.optParam !== null) {
-            if (isLastSeg) emitLeaves(node.optParam.entries, capDepth + 1, -1, -1)
-            else walk(node.optParam, nextPos, capDepth + 1)
+            walk(child, segIdx + 1, capDepth)
           }
         }
       }
-      walk(pathTrie.root, 1, 0)
-    } else {
-      let segs = decodedPath.segments
-      let walk = (node: PathTrieNode<data>, segIdx: number, capDepth: number) => {
-        consumeMatchWork(budget, 1)
-        evalComplex(node.complex)
-        if (node.trailingWildcards !== null)
-          emitLeaves(node.trailingWildcards, capDepth, -1, segIdx)
 
-        let seg = segs[segIdx]
-        let isLastSeg = segIdx + 1 === segs.length
-
-        if (!seg.hasNonStructuralSep) {
-          let child = lookupPathStaticKey(node, seg.decoded)
-          if (child !== undefined) {
-            if (isLastSeg) {
-              emitLeaves(child.entries, capDepth, -1, -1)
-              evalComplex(child.complex)
-            } else {
-              walk(child, segIdx + 1, capDepth)
-            }
+      if (seg.decoded.length === 0 && node.optParam !== null) {
+        setCapFrame(capDepth, 2, seg.encBegin, seg.encEnd, segIdx)
+        if (isLastSeg) emitLeaves(node.optParam.entries, capDepth + 1, -1, -1)
+        else walk(node.optParam, segIdx + 1, capDepth + 1)
+      } else if (
+        seg.decoded.length > 0 &&
+        !seg.hasStructuralDot &&
+        (node.param !== null || node.optParam !== null)
+      ) {
+        setCapFrame(capDepth, 0, seg.encBegin, seg.encEnd, segIdx)
+        if (node.param !== null) {
+          if (isLastSeg) {
+            emitLeaves(node.param.entries, capDepth + 1, -1, -1)
+            evalComplex(node.param.complex)
+          } else {
+            walk(node.param, segIdx + 1, capDepth + 1)
           }
         }
-
-        if (seg.decoded.length === 0 && node.optParam !== null) {
-          setCapFrame(capDepth, 2, seg.encBegin, seg.encEnd, segIdx)
+        if (node.optParam !== null) {
           if (isLastSeg) emitLeaves(node.optParam.entries, capDepth + 1, -1, -1)
           else walk(node.optParam, segIdx + 1, capDepth + 1)
-        } else if (
-          seg.decoded.length > 0 &&
-          !seg.hasStructuralDot &&
-          (node.param !== null || node.optParam !== null)
-        ) {
-          setCapFrame(capDepth, 0, seg.encBegin, seg.encEnd, segIdx)
-          if (node.param !== null) {
-            if (isLastSeg) {
-              emitLeaves(node.param.entries, capDepth + 1, -1, -1)
-              evalComplex(node.param.complex)
-            } else {
-              walk(node.param, segIdx + 1, capDepth + 1)
-            }
-          }
-          if (node.optParam !== null) {
-            if (isLastSeg) emitLeaves(node.optParam.entries, capDepth + 1, -1, -1)
-            else walk(node.optParam, segIdx + 1, capDepth + 1)
-          }
         }
       }
-      walk(pathTrie.root, 0, 0)
     }
+    walk(pathTrie.root, 0, 0)
   }
 
   if (pathTrie.suffixRoot !== null) {
-    if (decodedPath === null) {
-      let walk = (node: PathTrieNode<data>, endPos: number) => {
-        consumeMatchWork(budget, 1)
-        evalComplex(node.complex)
-        if (endPos < 1) return
-        let slash = rawPath.lastIndexOf('/', endPos - 1)
-        if (slash < 0) return
-        let segStart = slash + 1
-        let child = lookupPathStaticRaw(node, rawPath, segStart, endPos, endPos - segStart)
-        if (child !== undefined) walk(child, slash)
-        if (node.param !== null && endPos > segStart && !hasDotInRange(rawPath, segStart, endPos)) {
-          walk(node.param, slash)
-        }
-      }
-      walk(pathTrie.suffixRoot, rawPath.length)
-    } else {
-      let segs = decodedPath.segments
-      let walk = (node: PathTrieNode<data>, segIdx: number) => {
-        consumeMatchWork(budget, 1)
-        evalComplex(node.complex)
-        if (segIdx < 0) return
-        let seg = segs[segIdx]
-        if (!seg.hasNonStructuralSep) {
-          let child = lookupPathStaticKey(node, seg.decoded)
-          if (child !== undefined) walk(child, segIdx - 1)
-        }
-        if (node.param !== null && seg.decoded.length > 0 && !seg.hasStructuralDot) {
-          walk(node.param, segIdx - 1)
-        }
-      }
-      walk(pathTrie.suffixRoot, segs.length - 1)
-    }
+    walkSuffixTrie(pathTrie.suffixRoot, ctx, evalComplex)
   }
 }
 
-function searchDynamicHostTrieAll<data>(
-  root: HostTrieNode<data>,
-  lowerHostname: string,
-  url: URL,
-  proto: 'http:' | 'https:',
-  rawPath: string,
-  decodedPath: DecodedPathname | null,
-  results: Array<{ match: Match<string, data>; insertion: number }>,
-  budget: MatchWorkBudget,
-  ignoreCase: boolean,
-  onLeafBatch: (sorted: boolean) => void,
+function walkSuffixTrie<data>(
+  suffixRoot: PathTrieNode<data>,
+  ctx: MatchContext,
+  visitComplex: (entries: ReadonlyArray<Entry<data>> | null) => void,
 ): void {
+  if (ctx.decodedPath === null) {
+    let rawPath = ctx.rawPath
+    let walk = (node: PathTrieNode<data>, endPos: number) => {
+      consumeMatchWork(ctx.budget, 1)
+      visitComplex(node.complex)
+      if (endPos < 1) return
+      let slash = rawPath.lastIndexOf('/', endPos - 1)
+      if (slash < 0) return
+      let segStart = slash + 1
+      let child = lookupPathStaticRaw(node, rawPath, segStart, endPos, endPos - segStart)
+      if (child !== undefined) walk(child, slash)
+      if (node.param !== null && endPos > segStart && !hasDotInRange(rawPath, segStart, endPos)) {
+        walk(node.param, slash)
+      }
+    }
+    walk(suffixRoot, rawPath.length)
+  } else {
+    let segs = ctx.decodedPath.segments
+    let walk = (node: PathTrieNode<data>, segIdx: number) => {
+      consumeMatchWork(ctx.budget, 1)
+      visitComplex(node.complex)
+      if (segIdx < 0) return
+      let seg = segs[segIdx]
+      if (!seg.hasNonStructuralSep) {
+        let child = lookupPathStaticKey(node, seg.decoded)
+        if (child !== undefined) walk(child, segIdx - 1)
+      }
+      if (node.param !== null && seg.decoded.length > 0 && !seg.hasStructuralDot) {
+        walk(node.param, segIdx - 1)
+      }
+    }
+    walk(suffixRoot, segs.length - 1)
+  }
+}
+
+// ============================================================================
+// Dynamic & Complex Hostname Walkers (shared by `match()` and `matchAll()`)
+// ============================================================================
+
+function walkDynamicHostTrie<data>(
+  root: HostTrieNode<data>,
+  ctx: MatchContext,
+  visit: (
+    pathTrie: PathTrie<data>,
+    filter: (entry: Entry<data>) => ReadonlyArray<MatchParamMeta>,
+  ) => void,
+): void {
+  let lowerHostname = ctx.lowerHostname!
   let hostCapBegins: Array<number> = []
   let hostCapEnds: Array<number> = []
 
+  let makeFilter =
+    (
+      depth: number,
+      useWildcard: boolean,
+      wcEnd: number,
+    ): ((entry: Entry<data>) => ReadonlyArray<MatchParamMeta>) =>
+    (entry) =>
+      buildHostMetaFromCaptures(
+        lowerHostname,
+        entry.hostnameParamNames,
+        hostCapBegins,
+        hostCapEnds,
+        depth,
+        useWildcard ? entry.hostnameWildcardName : null,
+        wcEnd,
+      )
+
   let walk = (node: HostTrieNode<data>, segEnd: number) => {
-    consumeMatchWork(budget, 1)
+    consumeMatchWork(ctx.budget, 1)
 
     if (node.leadingWildcards !== null) {
-      let wcEnd = segEnd
-      let depth = hostCapBegins.length
-      searchPathTrieAll(
-        node.leadingWildcards,
-        url,
-        proto,
-        rawPath,
-        decodedPath,
-        emptyMeta,
-        results,
-        budget,
-        ignoreCase,
-        onLeafBatch,
-        (entry) =>
-          buildHostMetaFromCaptures(
-            lowerHostname,
-            entry.hostnameParamNames,
-            hostCapBegins,
-            hostCapEnds,
-            depth,
-            entry.hostnameWildcardName,
-            wcEnd,
-          ),
-      )
+      visit(node.leadingWildcards, makeFilter(hostCapBegins.length, true, segEnd))
     }
 
     let dot = segEnd === 0 ? -1 : lowerHostname.lastIndexOf('.', segEnd - 1)
@@ -2482,29 +1611,7 @@ function searchDynamicHostTrieAll<data>(
       if (child !== undefined) {
         if (isLeftmost) {
           if (child.pathTrie !== null) {
-            let depth = hostCapBegins.length
-            searchPathTrieAll(
-              child.pathTrie,
-              url,
-              proto,
-              rawPath,
-              decodedPath,
-              emptyMeta,
-              results,
-              budget,
-              ignoreCase,
-              onLeafBatch,
-              (entry) =>
-                buildHostMetaFromCaptures(
-                  lowerHostname,
-                  entry.hostnameParamNames,
-                  hostCapBegins,
-                  hostCapEnds,
-                  depth,
-                  null,
-                  -1,
-                ),
-            )
+            visit(child.pathTrie, makeFilter(hostCapBegins.length, false, -1))
           }
         } else {
           walk(child, dot)
@@ -2517,29 +1624,7 @@ function searchDynamicHostTrieAll<data>(
       hostCapEnds.push(segEnd)
       if (isLeftmost) {
         if (node.param.pathTrie !== null) {
-          let depth = hostCapBegins.length
-          searchPathTrieAll(
-            node.param.pathTrie,
-            url,
-            proto,
-            rawPath,
-            decodedPath,
-            emptyMeta,
-            results,
-            budget,
-            ignoreCase,
-            onLeafBatch,
-            (entry) =>
-              buildHostMetaFromCaptures(
-                lowerHostname,
-                entry.hostnameParamNames,
-                hostCapBegins,
-                hostCapEnds,
-                depth,
-                null,
-                -1,
-              ),
-          )
+          visit(node.param.pathTrie, makeFilter(hostCapBegins.length, false, -1))
         }
       } else {
         walk(node.param, dot)
@@ -2552,68 +1637,23 @@ function searchDynamicHostTrieAll<data>(
   walk(root, lowerHostname.length)
 }
 
-function searchComplexHostEntriesAll<data>(
+function forEachComplexHostMatch<data>(
   entries: ReadonlyArray<Entry<data>>,
-  lowerHostname: string,
-  url: URL,
-  proto: 'http:' | 'https:',
-  rawPath: string,
-  decodedPath: DecodedPathname | null,
-  results: Array<{ match: Match<string, data>; insertion: number }>,
-  budget: MatchWorkBudget,
-  ignoreCase: boolean,
-  onLeafBatch: (sorted: boolean) => void,
+  ctx: MatchContext,
+  visit: (
+    entry: Entry<data>,
+    hostnameMeta: ReadonlyArray<MatchParamMeta>,
+    pathnameMeta: ReadonlyArray<MatchParamMeta>,
+  ) => void,
 ): void {
-  let canonicalHost: CanonicalText | null | undefined = undefined
-  let canonicalPath: CanonicalText | null | undefined = undefined
-  let plainPath: string | null = null
-
   for (let i = 0; i < entries.length; i++) {
     let entry = entries[i]
-    consumeMatchWork(budget, 1)
-    if (!matchesProtocolAndPort(entry.patternParts, proto, url.port)) continue
-    if (
-      entry.patternParts.search.size > 0 &&
-      !matchSearch(url, entry.patternParts.search, budget)
-    ) {
-      continue
-    }
-
-    let hProg = entry.hostnameProgram!
-    let hMeta: ReadonlyArray<MatchParamMeta> | null
-    if (!hProg.hasNonStructuralSep) {
-      hMeta = matchPartString(hProg, lowerHostname, budget)
-    } else {
-      if (canonicalHost === undefined) {
-        canonicalHost = canonicalizeUrlPart(lowerHostname, 'hostname', { budget, ignoreCase: true })
-      }
-      if (canonicalHost === null) continue
-      let unitProg = ensureUnitProgram(entry.patternParts.hostname!, hProg, true)
-      hMeta = matchPartUnits(unitProg.tokens, unitProg.optionals, 'hostname', canonicalHost, budget)
-    }
+    if (!entryMatchesUrl(entry, ctx)) continue
+    let hMeta = matchComplexHostname(entry, ctx)
     if (hMeta === null) continue
-
-    let pProg = entry.pathnameProgram!
-    let pMeta: ReadonlyArray<MatchParamMeta> | null
-    if (!pProg.hasNonStructuralSep && (decodedPath === null || !decodedPath.anyNonStructuralSep)) {
-      if (plainPath === null)
-        plainPath = decodedPath === null ? rawPath.slice(1) : decodedPath.fullDecoded
-      pMeta = matchPartString(pProg, plainPath, budget)
-    } else {
-      if (canonicalPath === undefined) {
-        canonicalPath = canonicalizeUrlPart(url.pathname.slice(1), 'pathname', {
-          budget,
-          ignoreCase,
-        })
-      }
-      if (canonicalPath === null) continue
-      let unitProg = ensureUnitProgram(entry.patternParts.pathname, pProg, ignoreCase)
-      pMeta = matchPartUnits(unitProg.tokens, unitProg.optionals, 'pathname', canonicalPath, budget)
-    }
+    let pMeta = matchComplexPathname(entry, ctx)
     if (pMeta === null) continue
-
-    results.push({ match: buildMatch(url, entry, hMeta, pMeta), insertion: entry.insertion })
-    onLeafBatch(false)
+    visit(entry, hMeta, pMeta)
   }
 }
 
@@ -2623,26 +1663,27 @@ function searchComplexHostEntriesAll<data>(
 
 function resolveCandidatePathMeta<data>(
   c: CandidateMatch<data>,
-  rawPath: string,
-  decodedPath: DecodedPathname | null,
+  ctx: MatchContext,
 ): ReadonlyArray<MatchParamMeta> {
-  if (c.deferredLeaf === null) return c.pathnameMeta
-  return materializePendingPathMeta(
-    c.deferredLeaf,
-    c.deferredCaps,
-    c.deferredWildcardStart,
-    c.deferredWildcardDecodedSeg,
-    rawPath,
-    decodedPath,
+  let d = c.deferred
+  if (d === null) return c.pathnameMeta
+  let meta = materializePendingPathMeta(
+    d.leaf,
+    d.caps,
+    d.wildcardStart,
+    d.wildcardDecodedSeg,
+    ctx.rawPath,
+    ctx.decodedPath,
   )
+  c.pathnameMeta = meta
+  c.deferred = null
+  return meta
 }
 
 function pickBetterCandidate<data>(
   best: CandidateMatch<data> | null,
   candidate: CandidateMatch<data>,
-  lowerHostname: string | null,
-  rawPath: string,
-  decodedPath: DecodedPathname | null,
+  ctx: MatchContext,
 ): CandidateMatch<data> {
   if (best === null) return candidate
 
@@ -2652,14 +1693,19 @@ function pickBetterCandidate<data>(
   if (a.protocolRank !== b.protocolRank) return a.protocolRank > b.protocolRank ? candidate : best
   if (a.portRank !== b.portRank) return a.portRank > b.portRank ? candidate : best
 
-  if (lowerHostname !== null) {
-    let hostCmp = compareHostnameRanges(lowerHostname, candidate.hostnameMeta, best.hostnameMeta)
+  if (ctx.lowerHostname !== null) {
+    let hostCmp = compareHostnameRanges(
+      candidate.hostnameMeta,
+      best.hostnameMeta,
+      ctx.lowerHostname,
+    )
     if (hostCmp !== 0) return hostCmp > 0 ? candidate : best
   }
 
-  let aPathMeta = resolveCandidatePathMeta(candidate, rawPath, decodedPath)
-  let bPathMeta = resolveCandidatePathMeta(best, rawPath, decodedPath)
-  let pathCmp = comparePathnameRanges(aPathMeta, bPathMeta)
+  let pathCmp = comparePathnameRanges(
+    resolveCandidatePathMeta(candidate, ctx),
+    resolveCandidatePathMeta(best, ctx),
+  )
   if (pathCmp !== 0) return pathCmp > 0 ? candidate : best
 
   if (a.searchKeyValue !== b.searchKeyValue) {
@@ -2672,39 +1718,9 @@ function pickBetterCandidate<data>(
   return a.insertion < b.insertion ? candidate : best
 }
 
-function materializeStaticOriginlessMatch<data>(
-  url: URL,
-  leaf: PathLeaf<data>,
-): Match<string, data> {
-  let entry = leaf.entry
+function wildcardHostMeta(url: URL): ReadonlyArray<MatchParamMeta> {
   let decodedHostname = decodeHostname(url.hostname)
-  let params: Record<string, string | undefined> = {}
-  let names = entry.allCaptureNames
-  for (let i = 0; i < names.length; i++) params[names[i]] = undefined
-
-  return {
-    url,
-    pattern: entry.pattern,
-    data: entry.data,
-    params,
-    paramsMeta: {
-      hostname: [
-        { type: '*', name: '*', value: decodedHostname, begin: 0, end: decodedHostname.length },
-      ],
-      pathname: [],
-    },
-  }
-}
-
-function materializeCandidate<data>(
-  url: URL,
-  candidate: CandidateMatch<data>,
-  hostnameMeta: ReadonlyArray<MatchParamMeta>,
-  rawPath: string,
-  decodedPath: DecodedPathname | null,
-): Match<string, data> {
-  let pathnameMeta = resolveCandidatePathMeta(candidate, rawPath, decodedPath)
-  return buildMatch(url, candidate.entry, hostnameMeta, pathnameMeta)
+  return [{ type: '*', name: '*', value: decodedHostname, begin: 0, end: decodedHostname.length }]
 }
 
 function buildMatch<data>(
@@ -2741,21 +1757,67 @@ function snapshotPendingCaps(capDepth: number): Array<PendingCapture> | null {
   if (capDepth === 0) return null
   let result = new Array<PendingCapture>(capDepth)
   for (let i = 0; i < capDepth; i++) {
-    let t = capTypeStack[i]
     result[i] = {
-      type: t === 1 ? '*' : ':',
-      segStart: capBeginStack[i],
-      segEnd: capEndStack[i],
-      decodedSegIndex: capSegIdxStack[i],
-      omitted: t === 2,
+      segStart: capStacks.begin[i],
+      segEnd: capStacks.end[i],
+      decodedSegIndex: capStacks.segIdx[i],
+      omitted: capStacks.type[i] === 2,
     }
   }
   return result
 }
 
+function buildPathMetaFromStacks<data>(
+  leaf: PathLeaf<data>,
+  capDepth: number,
+  wildcardStart: number,
+  rawPath: string,
+): ReadonlyArray<MatchParamMeta> {
+  let wildcardName = leaf.wildcardName
+  if (capDepth === 0 && wildcardName === null) return emptyMeta
+
+  let paramNames = leaf.paramNames
+  let result: Array<MatchParamMeta> = []
+  let rawPosCursor = 1
+  let rawEncCursor = 0
+
+  for (let i = 0; i < capDepth; i++) {
+    if (capStacks.type[i] === 2) continue
+    let sBegin = capStacks.begin[i]
+    let sEnd = capStacks.end[i]
+    rawEncCursor += encodedPathnameLength(rawPath, rawPosCursor, sBegin)
+    let begin = rawEncCursor
+    rawEncCursor += encodedPathnameLength(rawPath, sBegin, sEnd)
+    let end = rawEncCursor
+    rawPosCursor = sEnd
+    result.push({
+      type: ':',
+      name: paramNames[i],
+      value: rawPath.slice(sBegin, sEnd),
+      begin,
+      end,
+    })
+  }
+
+  if (wildcardName !== null) {
+    rawEncCursor += encodedPathnameLength(rawPath, rawPosCursor, wildcardStart)
+    let begin = rawEncCursor
+    let end = begin + encodedPathnameLength(rawPath, wildcardStart, rawPath.length)
+    result.push({
+      type: '*',
+      name: wildcardName,
+      value: rawPath.slice(wildcardStart),
+      begin,
+      end,
+    })
+  }
+
+  return result
+}
+
 function materializePendingPathMeta<data>(
   leaf: PathLeaf<data>,
-  caps: Array<PendingCapture> | null,
+  caps: ReadonlyArray<PendingCapture> | null,
   wildcardStart: number,
   wildcardDecodedSeg: number,
   rawPath: string,
@@ -2776,36 +1838,24 @@ function materializePendingPathMeta<data>(
       if (c.omitted) continue
       let name = paramNames[i]
       if (isRaw) {
-        rawEncCursor += fastRawEncodedLength(rawPath, rawPosCursor, c.segStart)
+        rawEncCursor += encodedPathnameLength(rawPath, rawPosCursor, c.segStart)
         let begin = rawEncCursor
-        rawEncCursor += fastRawEncodedLength(rawPath, c.segStart, c.segEnd)
+        rawEncCursor += encodedPathnameLength(rawPath, c.segStart, c.segEnd)
         let end = rawEncCursor
         rawPosCursor = c.segEnd
-        result.push({
-          type: c.type,
-          name,
-          value: rawPath.slice(c.segStart, c.segEnd),
-          begin,
-          end,
-        })
+        result.push({ type: ':', name, value: rawPath.slice(c.segStart, c.segEnd), begin, end })
       } else {
         let seg = decodedPath!.segments[c.decodedSegIndex]
-        result.push({
-          type: c.type,
-          name,
-          value: seg.decoded,
-          begin: seg.encBegin,
-          end: seg.encEnd,
-        })
+        result.push({ type: ':', name, value: seg.decoded, begin: seg.encBegin, end: seg.encEnd })
       }
     }
   }
 
   if (wildcardName !== null) {
     if (isRaw) {
-      rawEncCursor += fastRawEncodedLength(rawPath, rawPosCursor, wildcardStart)
+      rawEncCursor += encodedPathnameLength(rawPath, rawPosCursor, wildcardStart)
       let begin = rawEncCursor
-      let end = begin + fastRawEncodedLength(rawPath, wildcardStart, rawPath.length)
+      let end = begin + encodedPathnameLength(rawPath, wildcardStart, rawPath.length)
       result.push({
         type: '*',
         name: wildcardName,
@@ -2814,20 +1864,13 @@ function materializePendingPathMeta<data>(
         end,
       })
     } else {
-      let segs = decodedPath!.segments
-      let begin = segs[wildcardDecodedSeg].encBegin
-      let end = decodedPath!.totalEncLen
-      let value = ''
-      for (let j = wildcardDecodedSeg; j < segs.length; j++) {
-        if (j > wildcardDecodedSeg) value += '/'
-        value += segs[j].decoded
-      }
+      let seg = decodedPath!.segments[wildcardDecodedSeg]
       result.push({
         type: '*',
         name: wildcardName,
-        value,
-        begin,
-        end,
+        value: decodedPath!.fullDecoded.slice(seg.decodedStart),
+        begin: seg.encBegin,
+        end: decodedPath!.totalEncLen,
       })
     }
   }
@@ -2846,7 +1889,6 @@ function buildHostMetaFromCaptures(
 ): ReadonlyArray<MatchParamMeta> {
   if (depth === 0 && leadingWildcardName === null) return emptyMeta
   let result: Array<MatchParamMeta> = []
-  // Emit left-to-right: leading wildcard first (at index 0), then param captures in reverse of RTL order
   if (leadingWildcardName !== null) {
     result.push({
       type: '*',
@@ -2890,10 +1932,12 @@ function decodeUrlPathname(
     let slash = rawPathname.indexOf('/', pos)
     let segEnd = slash === -1 ? len : slash
     let segBeginOffset = encOffset
+    let decodedStart = fullDecoded.length
 
     if (segEnd === pos) {
       segments.push({
         decoded: '',
+        decodedStart,
         hasStructuralDot: false,
         hasNonStructuralSep: false,
         encBegin: segBeginOffset,
@@ -2909,6 +1953,7 @@ function decodeUrlPathname(
         encOffset += encodedPathnameLength(decoded, 0, decoded.length)
         segments.push({
           decoded,
+          decodedStart,
           hasStructuralDot: hasDot,
           hasNonStructuralSep: false,
           encBegin: segBeginOffset,
@@ -2916,7 +1961,6 @@ function decodeUrlPathname(
         })
         fullDecoded += decoded
       } else {
-        // Split segment by structural '.' so encoded %2E / %2F are tracked accurately
         let decodedSeg = ''
         let segHasNonStructuralSep = false
         let dotStart = 0
@@ -2940,21 +1984,11 @@ function decodeUrlPathname(
               segHasNonStructuralSep = true
               anyNonStructuralSep = true
             }
-            // Compute canonical encoded length of data chars ('.' and '/' here are non-structural = 3)
+            // Non-structural '.' and '/' inside a decoded chunk encode as %2E / %2F (length 3)
+            encOffset += encodedPathnameLength(decoded, 0, decoded.length)
             for (let k = 0; k < decoded.length; k++) {
               let code = decoded.charCodeAt(k)
-              if (code === 46 || code === 47) {
-                encOffset += 3
-              } else if (code < 128) {
-                encOffset += plainAsciiLen1[code] === 1 ? 1 : 3
-              } else if (code >= 0xd800 && code <= 0xdbff && k + 1 < decoded.length) {
-                encOffset += 12
-                k += 1
-              } else if (code <= 0x7ff) {
-                encOffset += 6
-              } else {
-                encOffset += 9
-              }
+              if (code === 46 || code === 47) encOffset += 2
             }
             decodedSeg += decoded
           }
@@ -2966,6 +2000,7 @@ function decodeUrlPathname(
         }
         segments.push({
           decoded: decodedSeg,
+          decodedStart,
           hasStructuralDot: hasDot,
           hasNonStructuralSep: segHasNonStructuralSep,
           encBegin: segBeginOffset,
@@ -2982,25 +2017,7 @@ function decodeUrlPathname(
   }
 
   consumeMatchWork(budget, segments.length)
-  return {
-    segments,
-    fullDecoded,
-    totalEncLen: encOffset,
-    anyNonStructuralSep,
-  }
-}
-
-function fastRawEncodedLength(rawPath: string, start: number, end: number): number {
-  let len = 0
-  for (let i = start; i < end; i++) {
-    let code = rawPath.charCodeAt(i)
-    if (code < 128) {
-      len += plainAsciiLen1[code] === 1 ? 1 : 3
-    } else {
-      return len + encodedPathnameLength(rawPath, i, end)
-    }
-  }
-  return len
+  return { segments, fullDecoded, totalEncLen: encOffset, anyNonStructuralSep }
 }
 
 function hasEmptyPathSegment(rawPath: string): boolean {
@@ -3022,17 +2039,11 @@ function matchesProtocolAndPort(
 ): boolean {
   let expectedProto = parts.protocol
   if (expectedProto !== null && expectedProto !== 'http(s)') {
-    if (expectedProto === 'https') {
-      if (proto !== 'https:') return false
-    } else if (proto !== 'http:') {
-      return false
-    }
+    if (expectedProto === 'https' ? proto !== 'https:' : proto !== 'http:') return false
   }
 
   let expectedPort = parts.port
-  if (expectedPort === null) {
-    return parts.hostname === null || actualPort === ''
-  }
+  if (expectedPort === null) return parts.hostname === null || actualPort === ''
   if (
     (proto === 'http:' && expectedPort === '80') ||
     (proto === 'https:' && expectedPort === '443')
@@ -3072,30 +2083,17 @@ function matchSearch(
 }
 
 function collectAllCaptureNames(parts: RoutePatternParts): ReadonlyArray<string> {
-  let names: Array<string> | null = null
-  let seen: Set<string> | null = null
+  let seen = new Set<string>()
   let addPart = (part: PartPattern) => {
-    let tokens = part.tokens
-    for (let i = 0; i < tokens.length; i++) {
-      let tok = tokens[i]
+    for (let tok of part.tokens) {
       if ((tok.type === ':' || tok.type === '*') && tok.name !== '*') {
-        if (names === null) {
-          names = [tok.name]
-        } else if (names.length === 1 && seen === null) {
-          if (names[0] !== tok.name) names.push(tok.name)
-        } else {
-          if (seen === null) seen = new Set(names)
-          if (!seen.has(tok.name)) {
-            seen.add(tok.name)
-            names.push(tok.name)
-          }
-        }
+        seen.add(tok.name)
       }
     }
   }
   if (parts.hostname !== null) addPart(parts.hostname)
   addPart(parts.pathname)
-  return names ?? emptyStrings
+  return seen.size === 0 ? emptyStrings : Array.from(seen)
 }
 
 function utf8Size(value: string): number {
@@ -3117,59 +2115,11 @@ function utf8Size(value: string): number {
   return result
 }
 
-function serializedPartUtf8Size(part: PartPattern): number {
-  let size = 0
-  let tokens = part.tokens
-  for (let i = 0; i < tokens.length; i++) {
-    let tok = tokens[i]
-    if (tok.type === '(' || tok.type === ')' || tok.type === 'separator') {
-      size += 1
-    } else if (tok.type === ':' || tok.type === '*') {
-      size += tok.name === '*' ? 1 : 1 + utf8Size(tok.name)
-    } else if (tok.type === 'text') {
-      let text = tok.text
-      let len = text.length
-      for (let j = 0; j < len; j++) {
-        let code = text.charCodeAt(j)
-        if (code <= 0x7f) {
-          // Special chars : * ( ) \ are escaped with a leading '\'
-          size += code === 58 || code === 42 || code === 40 || code === 41 || code === 92 ? 2 : 1
-        } else if (code <= 0x7ff) {
-          size += 2
-        } else if (code >= 0xd800 && code <= 0xdbff && j + 1 < len) {
-          size += 4
-          j += 1
-        } else {
-          size += 3
-        }
-      }
-    }
-  }
-  return size
-}
-
-function serializedPatternUtf8Size(parts: RoutePatternParts): number {
-  let size = 0
-  if (parts.protocol !== null || parts.hostname !== null || parts.port !== null) {
-    if (parts.protocol !== null) size += parts.protocol.length
-    size += 3 // '://'
-    if (parts.hostname !== null) size += serializedPartUtf8Size(parts.hostname)
-    if (parts.port !== null && parts.port !== '') size += 1 + utf8Size(parts.port)
-  }
-  size += 1 + serializedPartUtf8Size(parts.pathname)
-  if (parts.search.size > 0) {
-    let searchStr = serializeSearch(parts)
-    if (searchStr.length > 0) size += 1 + utf8Size(searchStr)
-  }
-  return size
-}
-
 function createPathTrie<data>(): PathTrie<data> {
   return {
     staticMap: null,
     root: null,
     suffixRoot: null,
-    hasDynamic: false,
     hasOptParam: false,
     hasComplex: false,
     hasMixedOriginRank: false,
@@ -3219,9 +2169,7 @@ function lookupPathStaticRaw<data>(
       ? node.staticChild!
       : undefined
   }
-  let map = node.static
-  if (map === null) return undefined
-  return map.get(rawPath.slice(pos, segEnd))
+  return node.static?.get(rawPath.slice(pos, segEnd))
 }
 
 function lookupPathStaticKey<data>(
@@ -3232,9 +2180,7 @@ function lookupPathStaticKey<data>(
   if (singleKey !== null) {
     return key === singleKey ? node.staticChild! : undefined
   }
-  let map = node.static
-  if (map === null) return undefined
-  return map.get(key)
+  return node.static?.get(key)
 }
 
 function createPathTrieNode<data>(): PathTrieNode<data> {

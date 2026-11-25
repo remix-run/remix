@@ -1,4 +1,5 @@
-import { split, type Span } from './split.ts'
+import { split } from './split.ts'
+import type { Span } from './split.ts'
 import { createRoutePattern } from '../route-pattern.ts'
 import type {
   RoutePatternParts,
@@ -51,12 +52,20 @@ export function parsePart(
 
   let tokens: Array<Mutable<PartPatternToken>> = []
   let tokenIndices: Array<number> = []
-  let optionals: Map<number, number> | null = null
-  let hasParams = false
-
-  let i = start
-  let optionalStack: Array<{ tokenIndex: number; sourceIndex: number }> | null = null
+  let optionals = new Map<number, number>()
+  let optionalStack: Array<{ tokenIndex: number; sourceIndex: number }> = []
   let emptyOptionalIndex = -1
+  let i = start
+
+  function appendText(text: string, sourceIndex: number): void {
+    let lastToken = tokens[tokens.length - 1]
+    if (lastToken !== undefined && lastToken.type === 'text') {
+      lastToken.text += text
+    } else {
+      tokens.push({ type: 'text', text })
+      tokenIndices.push(sourceIndex)
+    }
+  }
 
   while (i < end) {
     let code = source.charCodeAt(i)
@@ -69,8 +78,6 @@ export function parsePart(
     }
 
     if (code === 40) {
-      // '('
-      if (optionalStack === null) optionalStack = []
       optionalStack.push({ tokenIndex: tokens.length, sourceIndex: i })
       tokens.push({ type: '(' })
       tokenIndices.push(i)
@@ -79,15 +86,13 @@ export function parsePart(
     }
 
     if (code === 41) {
-      // ')'
-      let optional = optionalStack?.pop()
+      let optional = optionalStack.pop()
       if (optional === undefined) {
         throw new ParseError('unmatched )', source, i)
       }
       if (optional.tokenIndex === tokens.length - 1 && emptyOptionalIndex === -1) {
         emptyOptionalIndex = optional.sourceIndex
       }
-      if (optionals === null) optionals = new Map()
       optionals.set(optional.tokenIndex, tokens.length)
       tokens.push({ type: ')' })
       tokenIndices.push(i)
@@ -95,47 +100,30 @@ export function parsePart(
       continue
     }
 
-    if (code === 58) {
-      // ':'
+    if (code === 58 || code === 42) {
       let nameStart = i + 1
       let nameEnd = readIdentifierEnd(source, nameStart, end)
-      if (nameEnd === nameStart) {
-        throw new ParseError('missing variable name', source, i)
+      if (code === 58) {
+        if (nameEnd === nameStart) {
+          throw new ParseError('missing variable name', source, i)
+        }
+        tokens.push({ type: ':', name: source.slice(nameStart, nameEnd) })
+      } else {
+        tokens.push({
+          type: '*',
+          name: nameEnd === nameStart ? '*' : source.slice(nameStart, nameEnd),
+        })
       }
-      tokens.push({ type: ':', name: source.slice(nameStart, nameEnd) })
       tokenIndices.push(i)
-      hasParams = true
-      i = nameEnd
-      continue
-    }
-
-    if (code === 42) {
-      // '*'
-      let nameStart = i + 1
-      let nameEnd = readIdentifierEnd(source, nameStart, end)
-      tokens.push({
-        type: '*',
-        name: nameEnd === nameStart ? '*' : source.slice(nameStart, nameEnd),
-      })
-      tokenIndices.push(i)
-      hasParams = true
       i = nameEnd
       continue
     }
 
     if (code === 92) {
-      // '\'
       if (i + 1 === end) {
         throw new ParseError('dangling escape', source, i)
       }
-      let escaped = source.slice(i + 1, i + 2)
-      let lastToken = tokens.length > 0 ? tokens[tokens.length - 1] : undefined
-      if (lastToken !== undefined && lastToken.type === 'text') {
-        lastToken.text += escaped
-      } else {
-        tokens.push({ type: 'text', text: escaped })
-        tokenIndices.push(i)
-      }
+      appendText(source.slice(i + 1, i + 2), i)
       i += 2
       continue
     }
@@ -149,40 +137,28 @@ export function parsePart(
       }
       i += 1
     }
-    let chunk = source.slice(textStart, i)
-    let lastToken = tokens.length > 0 ? tokens[tokens.length - 1] : undefined
-    if (lastToken !== undefined && lastToken.type === 'text') {
-      lastToken.text += chunk
-    } else {
-      tokens.push({ type: 'text', text: chunk })
-      tokenIndices.push(textStart)
-    }
+    appendText(source.slice(textStart, i), textStart)
   }
 
-  if (optionalStack !== null && optionalStack.length > 0) {
+  if (optionalStack.length > 0) {
     throw new ParseError('unmatched (', source, optionalStack[optionalStack.length - 1].sourceIndex)
   }
   if (emptyOptionalIndex !== -1) {
     throw new ParseError('empty optional', source, emptyOptionalIndex)
   }
 
-  let resolvedOptionals = optionals ?? emptyOptionals
-  if (hasParams) {
-    validateTokenGrammar(source, tokens, resolvedOptionals, tokenIndices)
-  }
-  if (resolvedOptionals.size >= 2) {
-    validateOptionalCaptureSchemas(source, tokens, resolvedOptionals, tokenIndices)
-  }
+  validateTokenGrammar(source, tokens, optionals, tokenIndices)
+  validateOptionalCaptureSchemas(source, tokens, optionals, tokenIndices)
 
-  return { tokens, optionals: resolvedOptionals, type: options.type }
+  return { tokens, optionals, type: options.type }
 }
 
 function readIdentifierEnd(source: string, start: number, end: number): number {
-  if (start >= end) return start
-  let first = source.charCodeAt(start)
-  if (!isIdentifierStart(first)) return start
+  if (start >= end || !isIdentifierStart(source.charCodeAt(start))) return start
   let i = start + 1
-  while (i < end && isIdentifierContinue(source.charCodeAt(i))) {
+  while (i < end) {
+    let code = source.charCodeAt(i)
+    if (!isIdentifierStart(code) && (code < 48 || code > 57)) break
     i += 1
   }
   return i
@@ -197,10 +173,6 @@ function isIdentifierStart(code: number): boolean {
   )
 }
 
-function isIdentifierContinue(code: number): boolean {
-  return isIdentifierStart(code) || (code >= 48 && code <= 57) // 0-9
-}
-
 function validateTokenGrammar(
   source: string,
   tokens: ReadonlyArray<PartPatternToken>,
@@ -210,18 +182,6 @@ function validateTokenGrammar(
   for (let index = 0; index < tokens.length; index++) {
     let token = tokens[index]
     if (token.type !== ':' && token.type !== '*') continue
-
-    let immediate = tokens[index + 1]
-    if (immediate === undefined || immediate.type === 'separator') continue
-    if (
-      token.type === ':' &&
-      (immediate.type === '*' || (immediate.type === 'text' && immediate.text.charCodeAt(0) === 46))
-    ) {
-      continue
-    }
-    if (token.type === '*' && (immediate.type === ':' || immediate.type === 'text')) {
-      continue
-    }
 
     for (let next of nextConsumingTokenIndices(tokens, optionals, index + 1)) {
       if (next === tokens.length) continue
@@ -256,8 +216,7 @@ function nextConsumingTokenIndices(
   let visited = new Set<number>()
 
   while (pending.length > 0) {
-    let index = pending.pop()
-    if (index === undefined) break
+    let index = pending.pop()!
     if (visited.has(index)) continue
     visited.add(index)
 
@@ -265,9 +224,7 @@ function nextConsumingTokenIndices(
     if (token === undefined) {
       result.add(tokens.length)
     } else if (token.type === '(') {
-      let end = optionals.get(index)
-      if (end === undefined) throw new Error('missing optional end')
-      pending.push(index + 1, end + 1)
+      pending.push(index + 1, optionals.get(index)! + 1)
     } else if (token.type === ')') {
       pending.push(index + 1)
     } else {
@@ -287,66 +244,57 @@ function validateOptionalCaptureSchemas(
   for (let [begin, end] of optionals) {
     let nextBegin = end + 1
     if (tokens[nextBegin]?.type !== '(') continue
-    let nextEnd = optionals.get(nextBegin)
-    if (nextEnd === undefined) continue
+    let nextEnd = optionals.get(nextBegin)!
 
-    let first = optionalStructure(tokens, begin + 1, end)
-    let second = optionalStructure(tokens, nextBegin + 1, nextEnd)
-    if (first.structure === second.structure && first.captures !== second.captures) {
+    if (hasAmbiguousOptionalCaptures(tokens, begin + 1, end, nextBegin + 1, nextEnd)) {
       throw new ParseError('ambiguous optional captures', source, tokenIndices[nextBegin])
     }
   }
 }
 
-function optionalStructure(
+function hasAmbiguousOptionalCaptures(
   tokens: ReadonlyArray<PartPatternToken>,
-  begin: number,
-  end: number,
-): { structure: string; captures: string } {
-  let structure = ''
-  let captures = ''
-  for (let i = begin; i < end; i++) {
-    let token = tokens[i]
-    if (token.type === ':' || token.type === '*') {
-      structure += token.type
-      captures += `${token.type}:${token.name}|`
-    } else if (token.type === 'text') {
-      structure += `t:${token.text}|`
-    } else {
-      structure += `${token.type}|`
+  aStart: number,
+  aEnd: number,
+  bStart: number,
+  bEnd: number,
+): boolean {
+  let len = aEnd - aStart
+  if (len !== bEnd - bStart) return false
+
+  let captureNamesDiffer = false
+  for (let i = 0; i < len; i++) {
+    let a = tokens[aStart + i]
+    let b = tokens[bStart + i]
+    if (a.type !== b.type) return false
+    if (a.type === 'text' && a.text !== (b as typeof a).text) return false
+    if ((a.type === ':' || a.type === '*') && a.name !== (b as typeof a).name) {
+      captureNamesDiffer = true
     }
   }
-  return { structure, captures }
+  return captureNamesDiffer
 }
 
 function parseProtocol(source: string, span: Span | null): RoutePatternParts['protocol'] {
   if (!span) return null
   let protocol = source.slice(...span)
-  if (protocol === '' || protocol === 'http' || protocol === 'https' || protocol === 'http(s)') {
-    return protocol === '' ? null : protocol
-  }
+  if (protocol === 'http' || protocol === 'https' || protocol === 'http(s)') return protocol
   throw new ParseError('invalid protocol', source, span[0])
 }
 
-function parseHostname(source: string, span: Span | null): RoutePatternParts['hostname'] | null {
+function parseHostname(source: string, span: Span | null): RoutePatternParts['hostname'] {
   if (!span) return null
   let part = parsePart(source, { span, type: 'hostname' })
-  if (isNamelessWildcard(part)) return null
+  if (part.tokens.length === 1 && part.tokens[0].type === '*' && part.tokens[0].name === '*') {
+    return null
+  }
   return part
-}
-
-function isNamelessWildcard(part: PartPattern): boolean {
-  if (part.tokens.length !== 1) return false
-  let token = part.tokens[0]
-  if (token.type !== '*') return false
-  return token.name === '*'
 }
 
 function parseSearch(source: string): RoutePatternParts['search'] {
   let constraints = new Map<string, Set<string>>()
 
-  let searchParams = new URLSearchParams(source)
-  for (let [key, value] of searchParams) {
+  for (let [key, value] of new URLSearchParams(source)) {
     let requiredValues = constraints.get(key)
     if (!requiredValues) {
       requiredValues = new Set()

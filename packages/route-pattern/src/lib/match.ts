@@ -43,9 +43,8 @@ export function createMatcher<source extends string>(
   matcher.add(pattern, undefined)
 
   return {
-    match(url: string | URL, options?: MatchOptions): Match<source, undefined> | null {
-      return matcher.match(url, options) as Match<source, undefined> | null
-    },
+    match: (url, matchOptions) =>
+      matcher.match(url, matchOptions) as Match<source, undefined> | null,
   }
 }
 
@@ -71,35 +70,22 @@ export type MultiMatcher<data = unknown> = {
  * @returns A matcher that can register multiple patterns with associated data
  */
 export function createMultiMatcher<data = unknown>(options?: MatcherOptions): MultiMatcher<data> {
-  return new TrieMatcher<data>(options)
-}
-
-class TrieMatcher<data = unknown> implements MultiMatcher<data> {
-  readonly ignoreCase: boolean
-  #trie: Trie<data>
-
-  constructor(options?: MatcherOptions) {
-    this.ignoreCase = options?.ignoreCase ?? false
-    this.#trie = new Trie<data>(options)
-  }
-
-  add(pattern: string | RoutePattern, data: data): void {
-    this.#trie.insert(pattern, data)
-  }
-
-  match(url: string | URL, options?: MatchOptions): Match<string, data> | null {
-    let parsedUrl = resolveURL(url, options)
-    return this.#trie.matchBest(parsedUrl)
-  }
-
-  matchAll(url: string | URL, options?: MatchOptions): Array<Match<string, data>> {
-    let parsedUrl = resolveURL(url, options)
-    return this.#trie.searchAll(parsedUrl)
+  let trie = new Trie<data>(options)
+  return {
+    ignoreCase: trie.ignoreCase,
+    add(pattern, data) {
+      trie.insert(pattern, data)
+    },
+    match(url, matchOptions) {
+      return trie.matchBest(resolveURL(url, matchOptions))
+    },
+    matchAll(url, matchOptions) {
+      return trie.searchAll(resolveURL(url, matchOptions))
+    },
   }
 }
 
 function resolveURL(url: string | URL, options?: MatchOptions): URL {
-  if (options === undefined) return typeof url === 'string' ? new URL(url) : url
-  let baseURL = options.baseURL === undefined ? undefined : new URL(options.baseURL)
-  return typeof url === 'string' ? new URL(url, baseURL) : url
+  if (typeof url !== 'string') return url
+  return options?.baseURL === undefined ? new URL(url) : new URL(url, new URL(options.baseURL))
 }
