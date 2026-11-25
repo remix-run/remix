@@ -327,7 +327,7 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/no
 <!-- Update with `pnpm run bench:update-readme` -->
 <!-- benchmarks:start -->
 
-Last updated: 2026-11-25T19:39:21.759Z
+Last updated: 2026-11-25T20:38:11.507Z
 
 Environment: Darwin 25.6.0, Apple M5 Pro, Node.js v24.18.0
 
@@ -339,9 +339,9 @@ Simple HTML response benchmarks.
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `node:http`               | `24.18.0` |     `46,663` |    `8.48ms` |     `9.57MB` |
-| `express`                 |   `5.2.1` |     `45,354` |    `8.72ms` |    `10.94MB` |
-| `remix/node-fetch-server` |   `1.0.1` |     `41,307` |   `10.23ms` |     `8.39MB` |
+| `node:http`               | `24.18.0` |     `46,574` |    `8.50ms` |     `9.55MB` |
+| `express`                 |   `5.2.1` |     `44,543` |    `8.88ms` |    `10.75MB` |
+| `remix/node-fetch-server` |   `1.0.1` |     `41,956` |   `10.96ms` |     `8.52MB` |
 
 ### Small Body
 
@@ -349,9 +349,9 @@ POST benchmarks that read the request method, headers, and a small body.
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `node:http`               | `24.18.0` |     `44,105` |    `8.97ms` |     `8.92MB` |
-| `express`                 |   `5.2.1` |     `39,837` |    `9.93ms` |     `9.50MB` |
-| `remix/node-fetch-server` |   `1.0.1` |     `34,708` |   `11.93ms` |     `6.95MB` |
+| `node:http`               | `24.18.0` |     `43,264` |    `9.14ms` |     `8.75MB` |
+| `express`                 |   `5.2.1` |     `39,863` |    `9.93ms` |     `9.50MB` |
+| `remix/node-fetch-server` |   `1.0.1` |     `35,262` |   `11.64ms` |     `7.06MB` |
 
 ### Large Body
 
@@ -359,9 +359,9 @@ POST benchmarks that read the request method, headers, and a 1 MB body.
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `remix/node-fetch-server` |   `1.0.1` |      `1,666` |  `275.68ms` |   `349.71KB` |
-| `express`                 |   `5.2.1` |      `1,620` |  `278.67ms` |   `403.41KB` |
-| `node:http`               | `24.18.0` |      `1,582` |  `278.15ms` |   `335.21KB` |
+| `express`                 |   `5.2.1` |      `1,516` |  `287.85ms` |   `377.61KB` |
+| `node:http`               | `24.18.0` |      `1,310` |  `313.36ms` |   `277.65KB` |
+| `remix/node-fetch-server` |   `1.0.1` |      `1,234` |  `314.62ms` |   `259.06KB` |
 
 <!-- benchmarks:end -->
 
