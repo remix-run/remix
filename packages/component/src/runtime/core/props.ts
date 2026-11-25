@@ -324,11 +324,22 @@ const HTML_RENAMES: Record<string, string> = {
   httpEquiv: 'http-equiv',
 }
 
+// React-style camelCase SVG props (e.g. strokeWidth, fillOpacity, stopColor) that correspond to
+// kebab-case SVG attributes. Canonical camelCase SVG attributes (viewBox, clipPathUnits,
+// stdDeviation, etc.) and standard kebab-case attributes do not match and pass through verbatim.
+const SVG_KEBAB_PROP =
+  /^(?:(?:stroke|fill|font|color|horiz|vert|overline|strikethrough|underline|unicode|v)[A-Z]|glyph[NO]|(?:marker(?:Start|Mid|End)|clip(?:Path|Rule))$)|(?:Baseline|Color|Opacity|Rendering|Spacing|Origin|Shift|Form|Rule|Background|Order|Events|Intent|Anchor|Decoration|Em|Effect|writingMode|capHeight|xHeight)$/
+
 export function normalizeAttributeName(name: string, isSvg: boolean): string {
   if (isSvg) {
-    // Pass standard SVG attribute names through as written. Only normalize legacy `xlinkHref` /
-    // `xlink:href` to SVG2 `href` and `className` to `class`.
-    return name === 'className' ? 'class' : name.replace(/^xlink(?:H|:h)/, 'h')
+    if (name === 'className') return 'class'
+    if (/^xlink(?:H|:h)/.test(name)) return 'href'
+    if (/^xml(?:Lang|Space|Base|nsXlink)$/.test(name)) {
+      return name.replace(/([A-Z])/, (_, c: string) => `:${c.toLowerCase()}`)
+    }
+    return SVG_KEBAB_PROP.test(name)
+      ? name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+      : name
   }
   if (name.startsWith('data-') || name.startsWith('aria-')) return name
   return Object.hasOwn(HTML_RENAMES, name) ? HTML_RENAMES[name] : name.toLowerCase()

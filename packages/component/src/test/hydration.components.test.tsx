@@ -268,8 +268,8 @@ describe('hydration', () => {
         <svg>
           <defs>
             <linearGradient id="grad1">
-              <stop offset="0%" stop-color="red" />
-              <stop offset="100%" stop-color="blue" />
+              <stop offset="0%" stopColor="red" />
+              <stop offset="100%" stopColor="blue" />
             </linearGradient>
           </defs>
           <rect fill="url(#grad1)" width="100" height="100" />
@@ -287,8 +287,8 @@ describe('hydration', () => {
         <svg>
           <defs>
             <linearGradient id="grad1">
-              <stop offset="0%" stop-color="red" />
-              <stop offset="100%" stop-color="blue" />
+              <stop offset="0%" stopColor="red" />
+              <stop offset="100%" stopColor="blue" />
             </linearGradient>
           </defs>
           <rect fill="url(#grad1)" width="100" height="100" />

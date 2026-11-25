@@ -42,14 +42,21 @@ describe('normalizeAttributeName', () => {
     expect(normalizeAttributeName('valueOf', false)).toBe('valueof')
   })
 
-  it('passes standard SVG attributes through and normalizes xlinkHref, xlink:href, and className', () => {
+  it('normalizes SVG attributes while preserving canonical camelCase and kebab-case names', () => {
     expect(normalizeAttributeName('viewBox', true)).toBe('viewBox')
-    expect(normalizeAttributeName('stroke-linecap', true)).toBe('stroke-linecap')
     expect(normalizeAttributeName('clipPathUnits', true)).toBe('clipPathUnits')
+    expect(normalizeAttributeName('stdDeviation', true)).toBe('stdDeviation')
+    expect(normalizeAttributeName('stroke-linecap', true)).toBe('stroke-linecap')
+    expect(normalizeAttributeName('strokeLinecap', true)).toBe('stroke-linecap')
+    expect(normalizeAttributeName('strokeWidth', true)).toBe('stroke-width')
+    expect(normalizeAttributeName('stopColor', true)).toBe('stop-color')
     expect(normalizeAttributeName('xlinkHref', true)).toBe('href')
     expect(normalizeAttributeName('xlink:href', true)).toBe('href')
     expect(normalizeAttributeName('className', true)).toBe('class')
+    expect(normalizeAttributeName('xmlLang', true)).toBe('xml:lang')
     expect(normalizeAttributeName('xml:lang', true)).toBe('xml:lang')
+    expect(normalizeAttributeName('xmlSpace', true)).toBe('xml:space')
+    expect(normalizeAttributeName('xmlnsXlink', true)).toBe('xmlns:xlink')
   })
 })
 

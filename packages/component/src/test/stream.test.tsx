@@ -1427,7 +1427,7 @@ describe('stream', () => {
     it('renders SVG with preserved viewBox and kebab-cased attributes', async () => {
       let stream = renderToStream(
         <svg viewBox="0 0 24 24" fill="none" className="icon">
-          <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
         </svg>,
       )
       let html = await drain(stream)
@@ -1452,10 +1452,10 @@ describe('stream', () => {
       )
     })
 
-    it('preserves xml:lang and xml:space as written', async () => {
+    it('renders xmlLang and xmlSpace as xml:lang and xml:space', async () => {
       let stream = renderToStream(
         <svg>
-          <text xml:lang="en" xml:space="preserve">
+          <text xmlLang="en" xmlSpace="preserve">
             Hi
           </text>
         </svg>,

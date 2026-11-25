@@ -13,7 +13,7 @@ describe('vnode rendering', () => {
 
       render(
         <svg viewBox="0 0 24 24" fill="none" class="icon">
-          <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          <path strokeLinecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
         </svg>,
       )
 
