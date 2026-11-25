@@ -64,6 +64,10 @@ describe('specificity', () => {
       it('ranks back-to-back wildcards with static content higher', () => {
         assertCompare(['https://*-*.com', 'https://*.com'], 'https://ab-cd.com', 1)
       })
+
+      it('ignores zero-length wildcard captures following another capture in the same label', () => {
+        assertCompare(['https://:sub*tail.com', 'https://:sub.com'], 'https://api.com', 0)
+      })
     })
 
     describe('pathname', () => {

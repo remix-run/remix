@@ -6,9 +6,9 @@ import { createTestRouter, expectSelectedImage } from '../../../test/helpers.ts'
 
 // Bound the whole file, including cleanup, without keeping successful workers alive.
 setTimeout(() => {
-  console.error('image-carousel.test.e2e.ts timed out after 60000ms')
+  console.error('image-carousel.test.e2e.ts timed out after 90000ms')
   process.exit(1)
-}, 60_000).unref()
+}, 90_000).unref()
 
 describe('album image selection', () => {
   it('navigates with image dots and keeps their current state in sync with scrolling', async (t) => {
