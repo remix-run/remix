@@ -7,7 +7,7 @@ import * as Specificity from '@remix-run/route-pattern/specificity'
 import { runMiddleware } from './middleware.ts'
 import type { AnyMiddleware, MiddlewareContext } from './middleware.ts'
 import { getRejectionReason, throwIfRequestAborted } from './request-abort.ts'
-import { getMatchUrl, mergeRouteParams, RequestContext } from './request-context.ts'
+import { getMatchUrl, RequestContext } from './request-context.ts'
 import type { ContextWithParams, requestContextTypes } from './request-context.ts'
 import { RequestMethods } from './request-methods.ts'
 import type { RequestMethod } from './request-methods.ts'
@@ -376,24 +376,19 @@ function extractSimplePathname(url: string): string | null {
 // has origin, search, optional, escape, or percent-encoded constraints that disable the static map.
 function classifyStaticRoute(pattern: RoutePattern): string | null | false {
   let parts = pattern.toJSON()
-  if (parts.protocol !== '' || parts.hostname !== '' || parts.port !== '' || parts.search !== '') {
+  if (parts.protocol || parts.hostname || parts.port || parts.search) {
     return false
   }
 
   let pathname = parts.pathname
-  for (let i = 0; i < pathname.length; i++) {
-    let c = pathname.charCodeAt(i)
-    if (c === 40 || c === 41 || c === 92 || c === 37 || c === 35 || c === 63) {
-      return false
-    }
+  if (/[()\\%#?]/.test(pathname)) {
+    return false
   }
-
-  if (pathname.indexOf(':') !== -1 || pathname.indexOf('*') !== -1) {
+  if (pathname.includes(':') || pathname.includes('*')) {
     return null
   }
-
   // Keep dot-segment paths out of the static map so raw unnormalized dot-segment URLs can never hit
-  if (pathname.startsWith('.') || pathname.indexOf('/.') !== -1) {
+  if (pathname.startsWith('.') || pathname.includes('/.')) {
     return null
   }
 
@@ -466,7 +461,6 @@ export function createRouter<
   // Exact static pathname fast path used when no origin/search/optional patterns are registered
   let canUseStaticMap = true
   let staticByMethod: Record<string, Map<string, RouteEntry>> = Object.create(null)
-  let anyStaticEntries: Array<[string, RouteEntry]> = []
   let anyStaticMap: Map<string, RouteEntry> | null = null
 
   function getAllMatcher(): MultiMatcher<MatchData> {
@@ -531,7 +525,7 @@ export function createRouter<
     return { kind: 'response', response: defaultHandler(context) }
   }
 
-  function matchStaticRoute(context: RequestContext): RouteEntry | undefined {
+  function matchStaticRoute(context: RequestContext, rawUrl: string | URL): RouteEntry | undefined {
     if (!canUseStaticMap || customMatcher != null) return undefined
 
     let method = context.method
@@ -543,13 +537,12 @@ export function createRouter<
       anyStaticMap
     if (staticMap === undefined || staticMap === null) return undefined
 
-    let rawUrl = getMatchUrl(context)
     let pathname: string | null
     if (typeof rawUrl === 'string') {
       pathname = extractSimplePathname(rawUrl)
     } else if (
       (rawUrl.protocol === 'https:' || rawUrl.protocol === 'http:') &&
-      rawUrl.pathname.indexOf('%') === -1
+      !rawUrl.pathname.includes('%')
     ) {
       pathname = rawUrl.pathname
     } else {
@@ -609,7 +602,7 @@ export function createRouter<
 
   function dispatchDirect(context: RequestContext): Promise<Response> {
     try {
-      let staticRoute = matchStaticRoute(context)
+      let staticRoute = matchStaticRoute(context, context.request.url)
       if (staticRoute !== undefined) {
         let headFallback = context.method === 'HEAD' && staticRoute.method === 'GET'
         if (staticRoute.middleware) {
@@ -648,7 +641,7 @@ export function createRouter<
 
     let promise = runMiddleware(middleware, context, (ctx) => {
       routeResolved = true
-      let staticRoute = matchStaticRoute(ctx)
+      let staticRoute = matchStaticRoute(ctx, getMatchUrl(ctx))
       if (staticRoute !== undefined) {
         headFallback = ctx.method === 'HEAD' && staticRoute.method === 'GET'
         return staticRoute.middleware
@@ -662,7 +655,7 @@ export function createRouter<
       }
 
       headFallback = resolved.headFallback
-      mergeRouteParams(ctx, resolved.params)
+      ctx.params = { ...ctx.params, ...resolved.params }
       return resolved.route.middleware
         ? runMiddleware(resolved.route.middleware, ctx, resolved.route.handler)
         : resolved.route.handler(ctx)
@@ -675,6 +668,13 @@ export function createRouter<
     }
 
     return promise.then((response) => (headFallback ? headResponse(response) : response))
+  }
+
+  function addStaticEntry(method: RequestMethod, path: string, entry: RouteEntry): void {
+    let map = (staticByMethod[method] ??= new Map())
+    if (!map.has(path)) {
+      map.set(path, entry)
+    }
   }
 
   function registerRoute(
@@ -712,17 +712,12 @@ export function createRouter<
         byMethod[registeredMethods[i]].add(pattern, entry)
       }
       if (canUseStaticMap && typeof staticPath === 'string') {
-        anyStaticEntries.push([staticPath, entry])
         anyStaticMap ??= new Map()
         if (!anyStaticMap.has(staticPath)) {
           anyStaticMap.set(staticPath, entry)
         }
         for (let i = 0; i < registeredMethods.length; i++) {
-          let m = registeredMethods[i]
-          let sMap = (staticByMethod[m] ??= new Map())
-          if (!sMap.has(staticPath)) {
-            sMap.set(staticPath, entry)
-          }
+          addStaticEntry(registeredMethods[i], staticPath, entry)
         }
       }
       return
@@ -742,25 +737,15 @@ export function createRouter<
       byMethod[method] = matcher
       registeredMethods.push(method)
 
-      if (canUseStaticMap && anyStaticEntries.length > 0) {
-        let sMap = new Map<string, RouteEntry>()
-        for (let i = 0; i < anyStaticEntries.length; i++) {
-          let [anyPath, anyEntry] = anyStaticEntries[i]
-          if (!sMap.has(anyPath)) {
-            sMap.set(anyPath, anyEntry)
-          }
-        }
-        staticByMethod[method] = sMap
+      if (canUseStaticMap && anyStaticMap !== null) {
+        staticByMethod[method] = new Map(anyStaticMap)
       }
     }
 
     matcher.add(pattern, entry)
 
     if (canUseStaticMap && typeof staticPath === 'string') {
-      let sMap = (staticByMethod[method] ??= new Map())
-      if (!sMap.has(staticPath)) {
-        sMap.set(staticPath, entry)
-      }
+      addStaticEntry(method, staticPath, entry)
     }
   }
 

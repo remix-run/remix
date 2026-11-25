@@ -185,20 +185,8 @@ export type ContextWithEntry<context, entry extends ContextEntry> = ContextWithE
   [entry]
 >
 
-let readMatchUrl: (context: RequestContext<any, any>) => string | URL
-let hasContextParams: (context: RequestContext<any, any>) => boolean
-
-// Internal helpers for router.ts to inspect lazy RequestContext fields without materializing them
-export function getMatchUrl(context: RequestContext<any, any>): string | URL {
-  return readMatchUrl(context)
-}
-
-export function mergeRouteParams(
-  context: RequestContext<any, any>,
-  params: Record<string, any>,
-): void {
-  context.params = hasContextParams(context) ? { ...context.params, ...params } : params
-}
+// Internal helper for router.ts to inspect `url` without eagerly parsing a `URL` instance
+export let getMatchUrl: (context: RequestContext<any, any>) => string | URL
 
 /**
  * A context object that contains information about the current request. Every request
@@ -223,6 +211,7 @@ export class RequestContext<
       method === 'OPTIONS'
         ? method
         : method.toUpperCase()
+    this.params = {} as params
     this.request = request
     this.#initialUrl = request.url
   }
@@ -247,18 +236,10 @@ export class RequestContext<
    */
   method: string
 
-  #params: params | undefined
-
   /**
    * Params that were parsed from the URL.
    */
-  get params(): params {
-    return (this.#params ??= {} as params)
-  }
-
-  set params(params: params) {
-    this.#params = params
-  }
+  params: params
 
   /**
    * The original request that was dispatched to the router.
@@ -435,13 +416,8 @@ export class RequestContext<
     return context.#url ?? context.#initialUrl
   }
 
-  static #hasParams(context: RequestContext<any, any>): boolean {
-    return context.#params !== undefined
-  }
-
   static {
-    readMatchUrl = RequestContext.#readMatchUrl
-    hasContextParams = RequestContext.#hasParams
+    getMatchUrl = RequestContext.#readMatchUrl
   }
 }
 
