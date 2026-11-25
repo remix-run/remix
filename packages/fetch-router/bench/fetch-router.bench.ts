@@ -1,6 +1,6 @@
 import { createRouter, type Middleware } from '@remix-run/fetch-router'
 
-import { benchRouter, generatePatterns, okResponse } from './scenarios.ts'
+import { benchRouter, createHandler, generatePatterns } from './scenarios.ts'
 
 await benchRouter('fetch-router', (scenario, verify) => {
   let middleware: Middleware[] = []
@@ -17,7 +17,7 @@ await benchRouter('fetch-router', (scenario, verify) => {
 
   let router = createRouter({ middleware })
   for (let pattern of generatePatterns(scenario.routeCount)) {
-    router.get(pattern, verify ? ({ params }) => Response.json(params) : () => okResponse)
+    router.get(pattern, verify ? ({ params }) => Response.json(params) : createHandler(scenario))
   }
   return (request) => router.fetch(request)
 })

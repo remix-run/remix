@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 
-import { benchRouter, generatePatterns, okResponse } from './scenarios.ts'
+import { benchRouter, createHandler, generatePatterns } from './scenarios.ts'
 
 await benchRouter('hono', (scenario, verify) => {
   let app = new Hono()
@@ -15,7 +15,10 @@ await benchRouter('hono', (scenario, verify) => {
   }
 
   for (let pattern of generatePatterns(scenario.routeCount)) {
-    app.get(pattern, verify ? (context) => Response.json(context.req.param()) : () => okResponse)
+    app.get(
+      pattern,
+      verify ? (context) => Response.json(context.req.param()) : createHandler(scenario),
+    )
   }
   return (request) => app.fetch(request)
 })
