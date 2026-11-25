@@ -1,4 +1,4 @@
-import type { RuntimeHostProps, VNodeParent } from './reconcile.ts'
+import type { RuntimeHostProps, VNodeParent } from './vdom.ts'
 
 export type ResourceNonces = Set<string>
 export type NonceManager = ReturnType<typeof createNonceManager>

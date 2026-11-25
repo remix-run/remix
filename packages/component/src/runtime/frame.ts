@@ -1,27 +1,45 @@
 import { getNonceManager, type ResourceNonces } from './nonce.ts'
-import { jsx } from './core/vnode.ts'
 import {
   Fragment,
-  Portal,
   FRAME_NODE,
+  invariant,
+  jsx,
+  Portal,
   PORTAL_NODE,
+  type ElementFunction,
+  type RemixElement,
+  type RemixNode,
+} from './vnode.ts'
+import type {
+  FrameContent,
+  FrameHandle,
+  FrameProps,
+  FrameReloadOptions,
+  FrameResolution,
+  Handle,
+  ReloadOrigin,
+  RenderFn,
+} from './component.ts'
+import {
   createComponentErrorEvent,
   createFrameHandle,
   createFrameReloadStartEvent,
+  createRangeRoot,
+  createRoot,
+  excludePortalRanges,
+  findContextFromAncestry,
   getComponentError,
-  type FrameContent,
-  type FrameProps,
-  type FrameResolution,
-  type Handle,
-  type RenderFn,
-  type ReloadOrigin,
-} from './component.ts'
-import { invariant } from './invariant.ts'
-import type { RemixElement, RemixNode } from './core/vnode.ts'
-import type { ElementFunction } from './element-function.ts'
-import type { FrameHandle, FrameReloadOptions } from './component.ts'
-import type { VirtualRoot } from './vdom.ts'
-import { createRangeRoot, createRoot, missingFrameRuntime } from './vdom.ts'
+  insertDomNode,
+  missingFrameRuntime,
+  remove,
+  type CommittedFrameNode,
+  type FrameNode,
+  type FrameNodeRenderer,
+  type HydrationCursor,
+  type ReconcileContext,
+  type VirtualRoot,
+  type VNodeParent,
+} from './vdom.ts'
 import {
   createFrameRuntime,
   disposeClientEntryBoundary,
@@ -43,18 +61,6 @@ import {
   type SharedFrameRuntime,
   type ReconciliationTracker,
 } from './frame-runtime.ts'
-import {
-  excludePortalRanges,
-  findContextFromAncestry,
-  insertDomNode,
-  remove,
-  type CommittedFrameNode,
-  type FrameNode,
-  type FrameNodeRenderer,
-  type HydrationCursor,
-  type ReconcileContext,
-  type VNodeParent,
-} from './reconcile.ts'
 import {
   collectNodeRange,
   diffElementAttributes,

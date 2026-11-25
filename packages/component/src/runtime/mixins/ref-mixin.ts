@@ -1,5 +1,5 @@
 import { createMixin, type MixinFactory } from './mixin.ts'
-import type { ElementProps } from '../core/vnode.ts'
+import type { ElementProps } from '../vnode.ts'
 
 /**
  * Callback invoked with the bound node and a lifetime signal.

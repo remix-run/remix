@@ -15,7 +15,7 @@ import {
   type FrameCommit,
   type ProcessClientEntryPreloads,
 } from './frame.ts'
-import { createScheduler } from './vdom.ts'
+import { createComponentErrorEvent, createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/stylesheet.ts'
 import type { ComponentErrorEvent, FrameHandle, Handle } from './component.ts'
 import {
@@ -37,7 +37,7 @@ import {
   type NavigationState,
 } from './navigation.ts'
 import { fetchFrame, isHtmlResponse, startPrefetching, type PrefetchFrame } from './prefetch.ts'
-import { createComponentErrorEvent, TypedEventTarget } from './component.ts'
+import { TypedEventTarget } from './vnode.ts'
 
 /**
  * Options for starting the client runtime with {@link run}.

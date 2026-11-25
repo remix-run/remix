@@ -20,7 +20,7 @@ import {
 import { render } from '../runtime/render.ts'
 import { renderToStream, renderToString } from '../server/stream.ts'
 import type { RunInit } from '../runtime/run.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 import { jsx } from '../jsx-runtime.ts'
 import { drain, renderNonceDocument } from './utils.ts'
 

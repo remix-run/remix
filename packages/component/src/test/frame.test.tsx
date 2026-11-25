@@ -2,17 +2,15 @@ import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock, type TestContext } from '@remix-run/test'
 import type { FrameHandle, FrameReloadStartEvent, Handle, RemixNode } from '../runtime/component.ts'
 import type { NavigationEvent } from '../runtime/navigation.ts'
-import { Fragment } from '../runtime/component.ts'
+import { Fragment, invariant, jsx } from '../runtime/vnode.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import { Frame, reloadFrameForNavigation } from '../runtime/frame.ts'
 import { run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import type { ResolveFrame } from '../runtime/frame-runtime.ts'
-import { invariant } from '../runtime/invariant.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
 import { css, navigate, on, updateUrl } from '../index.ts'
-import { jsx } from '../runtime/core/vnode.ts'
 import {
   drain,
   nextDomMutation,

@@ -5,7 +5,7 @@ import { navigate } from '../runtime/navigation.ts'
 import { updateUrl } from '../runtime/update-url.ts'
 import { run } from '../runtime/run.ts'
 import { Frame } from '../runtime/frame.ts'
-import { jsx } from '../runtime/core/vnode.ts'
+import { jsx } from '../runtime/vnode.ts'
 import type { FrameContent } from '../runtime/component.ts'
 
 describe('traversal scroll restoration', () => {

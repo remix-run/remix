@@ -2,9 +2,9 @@ import * as assert from '@remix-run/assert'
 import { expect } from '@remix-run/assert'
 import { describe, it, type TestContext } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { Fragment, invariant } from '../runtime/vnode.ts'
 import { createElement } from '../runtime/create-element.ts'
-import { Fragment, type Handle, type RemixNode } from '../runtime/component.ts'
+import type { Handle, RemixNode } from '../runtime/component.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {
@@ -957,6 +957,130 @@ describe('vnode rendering (keys)', () => {
         expect(document.activeElement).toBe(element)
         render([])
       }
+    })
+
+    it('keeps focus and selection when a keyed multi-node fragment moves', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      let item = (key: string) => (
+        <Fragment key={key}>
+          <label>{key}</label>
+          <input id={key} type="text" />
+        </Fragment>
+      )
+      render(['a', 'b', 'c'].map(item))
+      let input = getInput(container, 'a')
+      input.value = 'Hello World'
+      input.focus()
+      input.setSelectionRange(2, 7)
+
+      expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(2)
+      expect(input.selectionEnd).toBe(7)
+    })
+
+    it('restores focus and selection when a keyed multi-node fragment falls back to insertBefore', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let insertSpy = t.mock.method(container, 'insertBefore')
+      let item = (key: string) => (
+        <Fragment key={key}>
+          <label>{key}</label>
+          <input id={key} type="text" />
+        </Fragment>
+      )
+      render(['a', 'b', 'c'].map(item))
+      insertSpy.mock.resetCalls()
+      let input = getInput(container, 'a')
+      input.value = 'Hello World'
+      input.focus()
+      input.setSelectionRange(2, 7, 'backward')
+
+      expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(insertSpy.mock.callCount()).toBeGreaterThan(0)
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(2)
+      expect(input.selectionEnd).toBe(7)
+      expect(input.selectionDirection).toBe('backward')
+    })
+
+    it('restores focus on a descendant input and ancestor scroll when a moved container falls back', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let item = (key: string) => (
+        <div key={key} id={`box-${key}`} style={{ height: '40px', overflow: 'auto' }}>
+          <div style={{ height: '80px' }} />
+          <input id={key} type="text" />
+        </div>
+      )
+      render(['a', 'b', 'c'].map(item))
+      let box = container.querySelector('#box-a')
+      invariant(box instanceof HTMLDivElement)
+      let input = getInput(container, 'a')
+      input.value = 'Descendant'
+      input.focus()
+      input.setSelectionRange(1, 5)
+      box.scrollTop = 20
+
+      expectToMove(box, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(1)
+      expect(input.selectionEnd).toBe(5)
+      expect(box.scrollTop).toBe(20)
+    })
+
+    it('restores focus on a focusable SVG element when native moves are unavailable', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let item = (key: string) => (
+        <svg key={key} id={`svg-${key}`}>
+          <a id={key} href="#target" tabIndex={0}>
+            <text>{key}</text>
+          </a>
+        </svg>
+      )
+      render(['a', 'b', 'c'].map(item))
+      let svg = container.querySelector('#svg-a')
+      let link = container.querySelector('#a')
+      invariant(svg instanceof SVGSVGElement && link instanceof SVGAElement)
+      link.focus()
+      expect(document.activeElement).toBe(link)
+
+      expectToMove(svg, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(document.activeElement).toBe(link)
+    })
+
+    it('does not touch focus or selection during renders that do not move the focused element', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      render(
+        <div>
+          <input id="a" type="text" />
+          <span>0</span>
+        </div>,
+      )
+      let input = getInput(container, 'a')
+      input.value = 'typing'
+      input.focus()
+      input.setSelectionRange(1, 4)
+      let focusSpy = t.mock.method(input, 'focus')
+      let selectionSpy = t.mock.method(input, 'setSelectionRange')
+
+      render(
+        <div>
+          <input id="a" type="text" />
+          <span>1</span>
+        </div>,
+      )
+
+      expect(focusSpy).not.toHaveBeenCalled()
+      expect(selectionSpy).not.toHaveBeenCalled()
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(1)
+      expect(input.selectionEnd).toBe(4)
     })
   })
 })

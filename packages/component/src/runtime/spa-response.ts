@@ -1,4 +1,4 @@
-import type { RemixNode } from './core/vnode.ts'
+import type { RemixNode } from './vnode.ts'
 import { spaResponses } from './frame-runtime.ts'
 
 /**

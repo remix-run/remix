@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { getDefaultStyleManager } from '../style/stylesheet.ts'
 import { renderToString } from '../server/stream.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 import { css } from '../index.ts'
 
 describe('hydration', () => {

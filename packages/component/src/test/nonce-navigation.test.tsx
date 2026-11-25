@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it, type TestContext } from '@remix-run/test'
 
 import { Frame } from '../runtime/frame.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 import { renderToStream, renderToString } from '../server/stream.ts'
 import { drain, renderNonceDocument } from './utils.ts'
 
@@ -116,7 +116,7 @@ async function navigateUnderCsp(
   }
   let runHref = new URL('../runtime/run.ts', import.meta.url).href
   let frameHref = new URL('../runtime/frame.ts', import.meta.url).href
-  let jsxHref = new URL('../runtime/core/vnode.ts', import.meta.url).href
+  let jsxHref = new URL('../runtime/vnode.ts', import.meta.url).href
   let message = crypto.randomUUID()
   let responseHeaders =
     options.responseCsp === false

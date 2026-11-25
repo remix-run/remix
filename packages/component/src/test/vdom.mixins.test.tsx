@@ -3,7 +3,7 @@ import { describe, it } from '@remix-run/test'
 import { createElement } from '../runtime/create-element.ts'
 import { createRoot, createScheduler } from '../runtime/vdom.ts'
 import { createMixin, on, ref, unsafeHTML } from '../index.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 import type { Props } from '../index.ts'
 
