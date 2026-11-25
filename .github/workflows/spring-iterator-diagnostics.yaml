@@ -1,0 +1,143 @@
+name: Spring iterator diagnostics
+
+on:
+  push:
+    branches: [markdalgleish/spring-iterator-timeout]
+
+permissions:
+  contents: read
+
+jobs:
+  repeat:
+    name: WebKit runner history (${{ matrix.runner.name }}, batch ${{ matrix.batch }})
+    runs-on: macos-15
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - name: before-webkit-change
+            ref: 01e5b5d4c1d034642dc01274661f83c83b3c235f
+          - name: after-webkit-change
+            ref: 00c60072d1143fb9c4cae5029764cffbff06dbc0
+          - name: after-firefox-change
+            ref: 6c581960d3ec771f65660272c2d895cc8ccee52e
+          - name: current
+            ref: 7f25fa884c57dd746e46999c4faaf300c5c04ab0
+        batch: [1, 2]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: 7f25fa884c57dd746e46999c4faaf300c5c04ab0
+
+      - name: Apply diagnostics without changing the tested implementation
+        env:
+          DIAGNOSTIC_SHA: ${{ github.sha }}
+          RUNNER_SOURCE_SHA: ${{ matrix.runner.ref }}
+        run: |
+          git fetch --depth=1 origin "$DIAGNOSTIC_SHA"
+          git show "$DIAGNOSTIC_SHA:docs/ui/app/examples/animation/spring/iterator.example.test.browser.tsx" > docs/ui/app/examples/animation/spring/iterator.example.test.browser.tsx
+          git fetch --depth=1 origin "$RUNNER_SOURCE_SHA"
+          git restore --source="$RUNNER_SOURCE_SHA" --worktree -- packages/test/src
+          git diff --stat
+          git diff -- packages/test/src > "$RUNNER_TEMP/runner-source.diff"
+
+      - uses: pnpm/action-setup@v6
+      - uses: ./.github/actions/setup-node-pnpm-cache
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @remix-run/component exec playwright install webkit
+
+      - name: Record environment
+        run: |
+          git rev-parse HEAD
+          sw_vers
+          sysctl hw.ncpu hw.memsize
+          node --version
+          pnpm --filter @remix-run/component exec playwright --version
+
+      - name: Replay interaction reproduction with process telemetry
+        shell: bash
+        env:
+          CI: 'true'
+          CAPTURE_STACKS: 'false'
+        run: |
+          mkdir -p "$RUNNER_TEMP/spring-diagnostics"
+          cp "$RUNNER_TEMP/runner-source.diff" "$RUNNER_TEMP/spring-diagnostics/runner-source.diff"
+          top -l 0 -s 1 -n 30 -o cpu -stats pid,ppid,command,cpu,mem,state,threads,time > "$RUNNER_TEMP/spring-diagnostics/top.log" 2>&1 &
+          top_pid=$!
+          vm_stat 1 > "$RUNNER_TEMP/spring-diagnostics/vm-stat.log" 2>&1 &
+          vm_pid=$!
+          trap 'kill "$top_pid" "$vm_pid" 2>/dev/null || true' EXIT
+          cat > "$RUNNER_TEMP/spring-watch.py" <<'PYTHON'
+          import os, subprocess, sys
+          from pathlib import Path
+          root = Path(sys.argv[1])
+          repetition = sys.argv[2]
+          sampled = False
+          samples = []
+          for line in sys.stdin:
+              print(line, end='', flush=True)
+              if os.environ.get('CAPTURE_STACKS') != 'true' or sampled or 'Spring frame pause' not in line:
+                  continue
+              sampled = True
+              processes = subprocess.check_output(['ps', '-axo', 'pid=,ppid=,command='], text=True)
+              (root / f'processes-{repetition}.log').write_text(processes)
+              for process in processes.splitlines():
+                  if 'WebContent' not in process:
+                      continue
+                  pid = process.split()[0]
+                  target = root / f'stack-{repetition}-{pid}.txt'
+                  with (root / f'procinfo-{repetition}-{pid}.txt').open('w') as output:
+                      subprocess.run(['sudo', '-n', 'launchctl', 'procinfo', pid], stdout=output, stderr=subprocess.STDOUT)
+                  with (root / f'sample-output-{repetition}-{pid}.txt').open('w') as output:
+                      samples.append(subprocess.Popen(['sudo', '-n', 'sample', pid, '4', '10', '-mayDie', '-file', str(target)], stdout=output, stderr=subprocess.STDOUT))
+          for process in samples:
+              process.wait()
+          PYTHON
+          set +e
+          (
+            interaction_failed=0
+            for repetition in {1..3}; do
+              DEBUG=pw:api,pw:browser pnpm --filter @remix-run/ui test src/test/dialog.test.e2e.ts src/test/focus-portal.test.e2e.ts --project webkit > "$RUNNER_TEMP/spring-diagnostics/interactions-$repetition.log" 2>&1
+              status=$?
+              echo "interactions $repetition $status" | tee -a "$RUNNER_TEMP/spring-diagnostics/interactions-results.txt"
+              if [ "$status" -ne 0 ]; then interaction_failed=1; fi
+            done
+            exit "$interaction_failed"
+          ) &
+          interaction_pid=$!
+          failed=0
+          for repetition in {1..8}; do
+            echo "::group::Spring repetition $repetition"
+            DEBUG=pw:browser pnpm --filter remix-ui-docs test app/examples/animation/spring/iterator.example.test.browser.tsx --project webkit --browser.echo 2>&1 | python3 "$RUNNER_TEMP/spring-watch.py" "$RUNNER_TEMP/spring-diagnostics" "$repetition" | tee "$RUNNER_TEMP/spring-diagnostics/spring-$repetition.log"
+            status=${PIPESTATUS[0]}
+            echo "spring $repetition $status" | tee -a "$RUNNER_TEMP/spring-diagnostics/results.txt"
+            if [ "$status" -ne 0 ]; then failed=1; fi
+            echo '::endgroup::'
+          done
+          wait "$interaction_pid"
+          if [ "$?" -ne 0 ]; then failed=1; fi
+          ps -axo pid,ppid,command > "$RUNNER_TEMP/spring-diagnostics/processes.log"
+          /usr/bin/log show --last 8m --style compact --predicate 'process == "DumpGPURestart" OR eventMessage CONTAINS[c] "GPU Restart" OR (process == "kernel" AND eventMessage CONTAINS[c] "GPU")' > "$RUNNER_TEMP/spring-diagnostics/gpu-events.log" 2>&1
+          python3 - "$RUNNER_TEMP/spring-diagnostics" <<'PYTHON'
+          import shutil, sys, time
+          from pathlib import Path
+          target = Path(sys.argv[1]) / 'reports'
+          target.mkdir()
+          for root in [Path('/Library/Logs/DiagnosticReports'), Path.home() / 'Library/Logs/DiagnosticReports']:
+              if not root.exists():
+                  continue
+              for report in root.rglob('*'):
+                  if not report.is_file() or time.time()-report.stat().st_mtime > 600:
+                      continue
+                  if any(name in report.name.lower() for name in ['gpu', 'webkit', 'windowserver']):
+                      shutil.copy2(report, target / report.name)
+          PYTHON
+          exit "$failed"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: spring-history-${{ matrix.runner.name }}-${{ matrix.batch }}
+          path: ${{ runner.temp }}/spring-diagnostics
+          retention-days: 7
