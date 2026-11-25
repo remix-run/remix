@@ -601,7 +601,7 @@ describe('Combobox', () => {
     let { container, root } = renderObservedCombobox(changes)
     let input = container.querySelector<HTMLInputElement>('input[type="text"]')
     let hiddenInput = container.querySelector<HTMLInputElement>('input[type="hidden"]')
-    let surface = container.querySelector<HTMLElement>('[popover]')
+    let surface = container.querySelector<HTMLElement>('[data-popover]')
     ok(input)
     ok(hiddenInput)
     ok(surface)
