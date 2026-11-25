@@ -1,6 +1,7 @@
-import type { PartPattern, PartPatternToken } from '../route-pattern.ts'
+import type { PartPattern } from '../route-pattern.ts'
 import type { MatchParamMeta } from './types.ts'
-import { consumeMatchWork, type MatchWorkBudget } from './limits.ts'
+import { consumeMatchWork } from './limits.ts'
+import type { MatchWorkBudget } from './limits.ts'
 
 export type Unit = {
   readonly value: string
@@ -20,15 +21,17 @@ type CompiledToken =
   | { readonly type: '('; readonly end: number }
   | { readonly type: ')' }
 
-type UnitCompiledToken =
-  | { readonly type: 'text'; readonly unit: Unit }
-  | { readonly type: 'separator'; readonly unit: Unit }
-  | Extract<PartPatternToken, { type: ':' | '*' | '(' | ')' }>
+export type UnitCompiledToken =
+  | { readonly type: 'unit'; readonly value: string; readonly structural: boolean }
+  | { readonly type: ':' | '*'; readonly name: string }
+  | { readonly type: '('; readonly end: number }
+  | { readonly type: ')' }
 
 export type PartProgram = {
+  readonly part: PartPattern
+  readonly ignoreCase: boolean
   readonly type: PartPattern['type']
   readonly tokens: ReadonlyArray<CompiledToken>
-  readonly captureNames: ReadonlyArray<string>
   readonly matchKind: 'static' | 'linear' | 'trailing-wildcard' | 'single-wildcard' | 'state'
   readonly hasNonStructuralSep: boolean
   readonly staticPrefix: string
@@ -36,8 +39,7 @@ export type PartProgram = {
   readonly requiredAnchors: ReadonlyArray<string>
   readonly minLen: Int32Array
   readonly maxLen: Float64Array
-  readonly unitTokens: ReadonlyArray<UnitCompiledToken> | null
-  readonly unitOptionals: ReadonlyMap<number, number> | null
+  unitTokens: ReadonlyArray<UnitCompiledToken> | null
 }
 
 type CaptureNode = {
@@ -56,29 +58,25 @@ type Solution = {
 const emptySolution: Solution = { captures: null, captureCount: 0 }
 const emptyMeta: ReadonlyArray<MatchParamMeta> = []
 
-// Encoded byte-length for ASCII code points in canonical pathname representation.
+// Canonical encoded length for ASCII code points in pathname representation.
 // Structural '/' and '.' have length 1; unreserved encodeURIComponent chars have length 1;
 // all other ASCII chars encode as %XX (length 3).
 const pathEncodedLenTable = new Uint8Array(128)
-pathEncodedLenTable.fill(3)
-for (let c = 48; c <= 57; c++) pathEncodedLenTable[c] = 1 // 0-9
-for (let c = 65; c <= 90; c++) pathEncodedLenTable[c] = 1 // A-Z
-for (let c = 97; c <= 122; c++) pathEncodedLenTable[c] = 1 // a-z
-pathEncodedLenTable[33] = 1 // !
-pathEncodedLenTable[39] = 1 // '
-pathEncodedLenTable[40] = 1 // (
-pathEncodedLenTable[41] = 1 // )
-pathEncodedLenTable[42] = 1 // *
-pathEncodedLenTable[45] = 1 // -
-pathEncodedLenTable[46] = 1 // . (structural)
-pathEncodedLenTable[47] = 1 // / (structural)
-pathEncodedLenTable[95] = 1 // _
-pathEncodedLenTable[126] = 1 // ~
+for (let c = 0; c < 128; c++) {
+  pathEncodedLenTable[c] = encodeURIComponent(String.fromCharCode(c)).length
+}
+pathEncodedLenTable[47] = 1 // '/' (structural)
 
 // Lookup table for non-structural ASCII chars (where '.' and '/' are encoded as %2E and %2F = 3).
 const dataEncodedLenTable = new Uint8Array(pathEncodedLenTable)
 dataEncodedLenTable[46] = 3
 dataEncodedLenTable[47] = 3
+
+function encodedCharLength(code: number, isSurrogate: boolean, table: Uint8Array): number {
+  if (isSurrogate) return 12
+  if (code < 128) return table[code]
+  return code <= 0x7ff ? 6 : 9
+}
 
 // Computes canonical encoded length for a pathname slice where all '/' and '.' are structural.
 export function encodedPathnameLength(text: string, start: number, end: number): number {
@@ -90,25 +88,21 @@ export function encodedPathnameLength(text: string, start: number, end: number):
     } else if (code >= 0xd800 && code <= 0xdbff && i + 1 < end) {
       len += 12
       i += 1
-    } else if (code <= 0x7ff) {
-      len += 6
     } else {
-      len += 9
+      len += code <= 0x7ff ? 6 : 9
     }
   }
   return len
 }
 
-function encodedDataCharLength(
-  code: number,
-  isSurrogate: boolean,
-  type: PartPattern['type'],
-): number {
-  if (type === 'hostname') return isSurrogate ? 2 : 1
-  if (isSurrogate) return 12
-  if (code < 128) return dataEncodedLenTable[code]
-  if (code <= 0x7ff) return 6
-  return 9
+export function decodePercentChunk(chunk: string, strict: boolean): string | null {
+  if (chunk.indexOf('%') === -1) return chunk
+  try {
+    return decodeURIComponent(chunk)
+  } catch (error) {
+    if (!(error instanceof URIError)) throw error
+    return strict ? null : chunk
+  }
 }
 
 export function canonicalizePatternSegmentText(
@@ -126,20 +120,9 @@ export function canonicalizePatternSegmentText(
   let hasNonStructuralSep = false
   let start = 0
   for (let i = 0; i <= text.length; i++) {
-    if (i < text.length && text.charCodeAt(i) !== 46) continue // '.'
+    if (i < text.length && text.charCodeAt(i) !== 46) continue
     if (i > start) {
-      let chunk = text.slice(start, i)
-      let decoded: string
-      if (chunk.indexOf('%') !== -1) {
-        try {
-          decoded = decodeURIComponent(chunk)
-        } catch (error) {
-          if (!(error instanceof URIError)) throw error
-          decoded = chunk
-        }
-      } else {
-        decoded = chunk
-      }
+      let decoded = decodePercentChunk(text.slice(start, i), false)!
       if (ignoreCase) decoded = decoded.toLowerCase()
       if (
         !hasNonStructuralSep &&
@@ -149,9 +132,7 @@ export function canonicalizePatternSegmentText(
       }
       result += decoded
     }
-    if (i < text.length) {
-      result += '.'
-    }
+    if (i < text.length) result += '.'
     start = i + 1
   }
   return { text: result, hasNonStructuralSep }
@@ -163,13 +144,11 @@ export function compilePart(part: PartPattern, options?: { ignoreCase?: boolean 
 
   let tokens: Array<CompiledToken> = []
   let optionalStack: Array<number> = []
-  let captureNameSet = new Set<string>()
-  let captureNames: Array<string> = []
   let hasNonStructuralSep = false
 
   let appendStaticText = (str: string) => {
     if (str.length === 0) return
-    let last = tokens.length > 0 ? tokens[tokens.length - 1] : undefined
+    let last = tokens[tokens.length - 1]
     if (last !== undefined && last.type === 'text') {
       tokens[tokens.length - 1] = { type: 'text', text: last.text + str }
     } else {
@@ -189,26 +168,18 @@ export function compilePart(part: PartPattern, options?: { ignoreCase?: boolean 
       optionalStack.push(tokens.length)
       tokens.push({ type: '(', end: -1 })
     } else if (token.type === ')') {
-      let begin = optionalStack.pop()
-      if (begin === undefined) throw new Error('missing optional begin')
-      let closeIdx = tokens.length
-      tokens[begin] = { type: '(', end: closeIdx }
+      let begin = optionalStack.pop()!
+      tokens[begin] = { type: '(', end: tokens.length }
       tokens.push({ type: ')' })
     } else if (token.type === ':' || token.type === '*') {
       tokens.push(token)
-      if (token.name !== '*' && !captureNameSet.has(token.name)) {
-        captureNameSet.add(token.name)
-        captureNames.push(token.name)
-      }
     }
   }
 
-  // Compute staticPrefix, staticSuffix, requiredAnchors
-  let staticPrefix = tokens.length > 0 && tokens[0].type === 'text' ? tokens[0].text : ''
-  let staticSuffix =
-    tokens.length > 0 && tokens[tokens.length - 1].type === 'text'
-      ? (tokens[tokens.length - 1] as { type: 'text'; text: string }).text
-      : ''
+  let firstToken = tokens[0]
+  let lastToken = tokens[tokens.length - 1]
+  let staticPrefix = firstToken !== undefined && firstToken.type === 'text' ? firstToken.text : ''
+  let staticSuffix = lastToken !== undefined && lastToken.type === 'text' ? lastToken.text : ''
 
   let requiredAnchors: Array<string> = []
   let optionalDepth = 0
@@ -218,20 +189,14 @@ export function compilePart(part: PartPattern, options?: { ignoreCase?: boolean 
       optionalDepth += 1
     } else if (token.type === ')') {
       optionalDepth -= 1
-    } else if (token.type === 'text' && optionalDepth === 0) {
-      // Skip prefix (idx 0) and suffix (last idx) since they are checked directly with startsWith/endsWith
-      if (i > 0 && i < tokens.length - 1) {
-        requiredAnchors.push(token.text)
-      }
+    } else if (token.type === 'text' && optionalDepth === 0 && i > 0 && i < tokens.length - 1) {
+      requiredAnchors.push(token.text)
     }
   }
 
-  // Compute minLen and maxLen backwards
   let n = tokens.length
   let minLen = new Int32Array(n + 1)
   let maxLen = new Float64Array(n + 1)
-  minLen[n] = 0
-  maxLen[n] = 0
   for (let s = n - 1; s >= 0; s--) {
     let token = tokens[s]
     if (token.type === 'text') {
@@ -256,29 +221,19 @@ export function compilePart(part: PartPattern, options?: { ignoreCase?: boolean 
     }
   }
 
-  let matchKind = classifyMatchKind(tokens)
-
-  let unitTokens: Array<UnitCompiledToken> | null = null
-  let unitOptionals: Map<number, number> | null = null
-  if (hasNonStructuralSep) {
-    let compiledUnits = compileUnitTokens(part, ignoreCase)
-    unitTokens = compiledUnits.tokens
-    unitOptionals = compiledUnits.optionals
-  }
-
   return {
+    part,
+    ignoreCase,
     type: part.type,
     tokens,
-    captureNames,
-    matchKind,
+    matchKind: classifyMatchKind(tokens),
     hasNonStructuralSep,
     staticPrefix,
     staticSuffix,
     requiredAnchors,
     minLen,
     maxLen,
-    unitTokens,
-    unitOptionals,
+    unitTokens: hasNonStructuralSep ? compileUnitTokens(part, ignoreCase) : null,
   }
 }
 
@@ -296,12 +251,9 @@ function classifyMatchKind(tokens: ReadonlyArray<CompiledToken>): PartProgram['m
       paramCount += 1
     }
   }
-  if (starCount === 0) {
-    return paramCount === 0 ? 'static' : 'linear'
-  }
+  if (starCount === 0) return paramCount === 0 ? 'static' : 'linear'
   if (starCount === 1) {
     if (starIdx === tokens.length - 1) return 'trailing-wildcard'
-    // Single wildcard followed only by static text (exact unique split!)
     if (starIdx === tokens.length - 2 && tokens[tokens.length - 1].type === 'text') {
       return 'single-wildcard'
     }
@@ -309,56 +261,37 @@ function classifyMatchKind(tokens: ReadonlyArray<CompiledToken>): PartProgram['m
   return 'state'
 }
 
-function compileUnitTokens(
-  part: PartPattern,
-  ignoreCase: boolean,
-): { tokens: Array<UnitCompiledToken>; optionals: Map<number, number> } {
+function compileUnitTokens(part: PartPattern, ignoreCase: boolean): Array<UnitCompiledToken> {
   let tokens: Array<UnitCompiledToken> = []
-  let optionals = new Map<number, number>()
   let optionalStack: Array<number> = []
+  let sepChar = part.type === 'hostname' ? '.' : '/'
 
   for (let token of part.tokens) {
     if (token.type === 'text') {
-      let units = canonicalizeText(token.text, part.type, {
-        ignoreCase,
-        strict: false,
-        pattern: true,
-      })
-      if (units === null) throw new Error('pattern text canonicalization failed')
-      for (let unit of units.units) {
-        tokens.push({ type: 'text', unit })
+      let canonical = canonicalizeText(token.text, part.type, { ignoreCase, pattern: true })!
+      for (let unit of canonical.units) {
+        tokens.push({ type: 'unit', value: unit.value, structural: unit.structural })
       }
     } else if (token.type === 'separator') {
-      let value = part.type === 'hostname' ? '.' : '/'
-      tokens.push({
-        type: 'separator',
-        unit: { value, structural: true, begin: 0, end: value.length },
-      })
-    } else {
-      if (token.type === '(') optionalStack.push(tokens.length)
-      if (token.type === ')') {
-        let begin = optionalStack.pop()
-        if (begin === undefined) throw new Error('missing optional begin')
-        optionals.set(begin, tokens.length)
-      }
+      tokens.push({ type: 'unit', value: sepChar, structural: true })
+    } else if (token.type === '(') {
+      optionalStack.push(tokens.length)
+      tokens.push({ type: '(', end: -1 })
+    } else if (token.type === ')') {
+      let begin = optionalStack.pop()!
+      tokens[begin] = { type: '(', end: tokens.length }
+      tokens.push({ type: ')' })
+    } else if (token.type === ':' || token.type === '*') {
       tokens.push(token)
     }
   }
 
-  return { tokens, optionals }
+  return tokens
 }
 
-// Lazily compiles unit tokens when a URL has encoded separators (%2E/%2F).
-export function ensureUnitProgram(
-  part: PartPattern,
-  program: PartProgram,
-  ignoreCase: boolean,
-): { tokens: ReadonlyArray<UnitCompiledToken>; optionals: ReadonlyMap<number, number> } {
-  if (program.unitTokens !== null && program.unitOptionals !== null) {
-    return { tokens: program.unitTokens, optionals: program.unitOptionals }
-  }
-  let compiled = compileUnitTokens(part, ignoreCase)
-  return compiled
+// Lazily compiles and caches unit tokens when a URL has encoded separators (%2E/%2F).
+export function ensureUnitProgram(program: PartProgram): ReadonlyArray<UnitCompiledToken> {
+  return (program.unitTokens ??= compileUnitTokens(program.part, program.ignoreCase))
 }
 
 export function canonicalizeUrlPart(
@@ -367,46 +300,36 @@ export function canonicalizeUrlPart(
   options: { budget: MatchWorkBudget; ignoreCase?: boolean },
 ): CanonicalText | null {
   consumeMatchWork(options.budget, text.length)
-  return canonicalizeText(text, type, {
-    ignoreCase: options.ignoreCase,
-    strict: true,
-    pattern: false,
-  })
+  return canonicalizeText(text, type, { ignoreCase: options.ignoreCase, pattern: false })
 }
 
 function canonicalizeText(
   text: string,
   type: PartPattern['type'],
-  options: { ignoreCase?: boolean; strict: boolean; pattern: boolean },
+  options: { ignoreCase?: boolean; pattern: boolean },
 ): CanonicalText | null {
   let units: Array<Unit> = []
   let offset = 0
   let chunkStart = 0
   let checkSlash = type === 'pathname' && !options.pattern
   let ignoreCase = options.ignoreCase ?? false
+  let isHostname = type === 'hostname'
 
   let flushChunk = (end: number): boolean => {
     if (end <= chunkStart) return true
-    let chunk = text.slice(chunkStart, end)
-    let decoded: string
-    if (chunk.indexOf('%') !== -1) {
-      try {
-        decoded = decodeURIComponent(chunk)
-      } catch (error) {
-        if (!(error instanceof URIError)) throw error
-        if (options.strict) return false
-        decoded = chunk
-      }
-    } else {
-      decoded = chunk
-    }
+    let decoded = decodePercentChunk(text.slice(chunkStart, end), !options.pattern)
+    if (decoded === null) return false
     if (ignoreCase) decoded = decoded.toLowerCase()
     for (let i = 0; i < decoded.length; i++) {
       let code = decoded.charCodeAt(i)
       let isSurrogate = code >= 0xd800 && code <= 0xdbff && i + 1 < decoded.length
       let value = isSurrogate ? decoded.slice(i, i + 2) : decoded[i]
       if (isSurrogate) i += 1
-      let encLen = encodedDataCharLength(code, isSurrogate, type)
+      let encLen = isHostname
+        ? isSurrogate
+          ? 2
+          : 1
+        : encodedCharLength(code, isSurrogate, dataEncodedLenTable)
       units.push({ value, structural: false, begin: offset, end: offset + encLen })
       offset += encLen
     }
@@ -415,11 +338,9 @@ function canonicalizeText(
 
   for (let i = 0; i < text.length; i++) {
     let code = text.charCodeAt(i)
-    let structural = code === 46 || (checkSlash && code === 47) // '.' or '/'
-    if (!structural) continue
+    if (code !== 46 && (!checkSlash || code !== 47)) continue
     if (!flushChunk(i)) return null
-    let char = code === 46 ? '.' : '/'
-    units.push({ value: char, structural: true, begin: offset, end: offset + 1 })
+    units.push({ value: code === 46 ? '.' : '/', structural: true, begin: offset, end: offset + 1 })
     offset += 1
     chunkStart = i + 1
   }
@@ -428,33 +349,14 @@ function canonicalizeText(
   return { units, length: offset }
 }
 
-function isStructuralCode(code: number, isPathname: boolean): boolean {
-  return code === 46 || (isPathname && code === 47)
-}
-
 function scanNonStructuralEnd(input: string, pos: number, isPathname: boolean): number {
   let len = input.length
-  while (pos < len && !isStructuralCode(input.charCodeAt(pos), isPathname)) {
+  while (pos < len) {
+    let code = input.charCodeAt(pos)
+    if (code === 46 || (isPathname && code === 47)) break
     pos += 1
   }
   return pos
-}
-
-function makeStringParamMeta(
-  input: string,
-  type: ':' | '*',
-  name: string,
-  begin: number,
-  end: number,
-  isPathname: boolean,
-): MatchParamMeta {
-  let value = input.slice(begin, end)
-  if (!isPathname) {
-    return { type, name, value, begin, end }
-  }
-  let encBegin = encodedPathnameLength(input, 0, begin)
-  let encEnd = encBegin + encodedPathnameLength(input, begin, end)
-  return { type, name, value, begin: encBegin, end: encEnd }
 }
 
 // Matches a compiled PartProgram against a string where every '/' and '.' is structural.
@@ -470,36 +372,21 @@ export function matchPartString(
     return input === program.staticPrefix ? emptyMeta : null
   }
 
-  if (len < program.minLen[0] || len > program.maxLen[0]) {
+  if (
+    len < program.minLen[0] ||
+    len > program.maxLen[0] ||
+    (program.staticPrefix.length > 0 && !input.startsWith(program.staticPrefix)) ||
+    (program.staticSuffix.length > 0 && !input.endsWith(program.staticSuffix))
+  ) {
     consumeMatchWork(budget, 1)
     return null
   }
 
-  if (program.staticPrefix.length > 0 && !input.startsWith(program.staticPrefix)) {
-    consumeMatchWork(budget, 1)
-    return null
-  }
-  if (program.staticSuffix.length > 0 && !input.endsWith(program.staticSuffix)) {
-    consumeMatchWork(budget, 1)
-    return null
-  }
-
-  if (kind === 'linear') {
+  if (kind !== 'state') {
     consumeMatchWork(budget, program.tokens.length + len)
-    return matchLinearString(program, input)
+    return matchLinearOrSingleWildcard(program, input, kind)
   }
 
-  if (kind === 'trailing-wildcard') {
-    consumeMatchWork(budget, program.tokens.length + len)
-    return matchTrailingWildcardString(program, input)
-  }
-
-  if (kind === 'single-wildcard') {
-    consumeMatchWork(budget, program.tokens.length + len)
-    return matchSingleWildcardString(program, input)
-  }
-
-  // Required-anchors pre-check before running state matcher
   if (program.requiredAnchors.length > 0) {
     consumeMatchWork(budget, len + program.requiredAnchors.length)
     let searchPos = program.staticPrefix.length
@@ -515,17 +402,42 @@ export function matchPartString(
   return matchStateString(program, input, budget)
 }
 
-function matchLinearString(
+function matchLinearOrSingleWildcard(
   program: PartProgram,
   input: string,
+  kind: 'linear' | 'trailing-wildcard' | 'single-wildcard',
 ): ReadonlyArray<MatchParamMeta> | null {
   let isPathname = program.type === 'pathname'
   let tokens = program.tokens
+  let stopIdx =
+    kind === 'linear'
+      ? tokens.length
+      : kind === 'trailing-wildcard'
+        ? tokens.length - 1
+        : tokens.length - 2
+  let maxEnd =
+    kind === 'single-wildcard' ? input.length - program.staticSuffix.length : input.length
+
   let pos = 0
-  let len = input.length
+  let curIdx = 0
+  let curEncOffset = 0
   let captures: Array<MatchParamMeta> = []
 
-  for (let i = 0; i < tokens.length; i++) {
+  let pushCapture = (type: ':' | '*', name: string, begin: number, end: number) => {
+    let value = input.slice(begin, end)
+    if (!isPathname) {
+      captures.push({ type, name, value, begin, end })
+      return
+    }
+    curEncOffset += encodedPathnameLength(input, curIdx, begin)
+    let encBegin = curEncOffset
+    curEncOffset += encodedPathnameLength(input, begin, end)
+    let encEnd = curEncOffset
+    curIdx = end
+    captures.push({ type, name, value, begin: encBegin, end: encEnd })
+  }
+
+  for (let i = 0; i < stopIdx; i++) {
     let token = tokens[i]
     if (token.type === 'text') {
       if (!input.startsWith(token.text, pos)) return null
@@ -534,76 +446,16 @@ function matchLinearString(
       let begin = pos
       pos = scanNonStructuralEnd(input, pos, isPathname)
       if (pos === begin) return null
-      captures.push(makeStringParamMeta(input, ':', token.name, begin, pos, isPathname))
+      pushCapture(':', token.name, begin, pos)
     } else {
-      throw new Error(`unexpected linear token: ${token.type}`)
+      throw new Error(`unexpected ${kind} token: ${token.type}`)
     }
   }
 
-  return pos === len ? captures : null
-}
-
-function matchTrailingWildcardString(
-  program: PartProgram,
-  input: string,
-): ReadonlyArray<MatchParamMeta> | null {
-  let isPathname = program.type === 'pathname'
-  let tokens = program.tokens
-  let lastIdx = tokens.length - 1
-  let pos = 0
-  let captures: Array<MatchParamMeta> = []
-
-  for (let i = 0; i < lastIdx; i++) {
-    let token = tokens[i]
-    if (token.type === 'text') {
-      if (!input.startsWith(token.text, pos)) return null
-      pos += token.text.length
-    } else if (token.type === ':') {
-      let begin = pos
-      pos = scanNonStructuralEnd(input, pos, isPathname)
-      if (pos === begin) return null
-      captures.push(makeStringParamMeta(input, ':', token.name, begin, pos, isPathname))
-    } else {
-      throw new Error(`unexpected trailing-wildcard token: ${token.type}`)
-    }
-  }
-
-  let star = tokens[lastIdx] as { type: '*'; name: string }
-  captures.push(makeStringParamMeta(input, '*', star.name, pos, input.length, isPathname))
-  return captures
-}
-
-function matchSingleWildcardString(
-  program: PartProgram,
-  input: string,
-): ReadonlyArray<MatchParamMeta> | null {
-  let isPathname = program.type === 'pathname'
-  let tokens = program.tokens
-  let starIdx = tokens.length - 2
-  let suffixToken = tokens[tokens.length - 1] as { type: 'text'; text: string }
-  let suffixStart = input.length - suffixToken.text.length
-  if (suffixStart < 0 || !input.endsWith(suffixToken.text)) return null
-
-  let pos = 0
-  let captures: Array<MatchParamMeta> = []
-  for (let i = 0; i < starIdx; i++) {
-    let token = tokens[i]
-    if (token.type === 'text') {
-      if (!input.startsWith(token.text, pos)) return null
-      pos += token.text.length
-    } else if (token.type === ':') {
-      let begin = pos
-      pos = scanNonStructuralEnd(input, pos, isPathname)
-      if (pos === begin || pos > suffixStart) return null
-      captures.push(makeStringParamMeta(input, ':', token.name, begin, pos, isPathname))
-    } else {
-      throw new Error(`unexpected single-wildcard token: ${token.type}`)
-    }
-  }
-
-  if (pos > suffixStart) return null
-  let star = tokens[starIdx] as { type: '*'; name: string }
-  captures.push(makeStringParamMeta(input, '*', star.name, pos, suffixStart, isPathname))
+  if (kind === 'linear') return pos === input.length ? captures : null
+  if (pos > maxEnd) return null
+  let star = tokens[stopIdx] as { type: '*'; name: string }
+  pushCapture('*', star.name, pos, maxEnd)
   return captures
 }
 
@@ -629,14 +481,7 @@ function matchStateString(
   let flatMemo: Array<Solution | null | undefined> | null =
     totalCells <= 4096 ? new Array<Solution | null | undefined>(totalCells) : null
   let sparseMemo: Map<number, Solution | null> | null = flatMemo === null ? new Map() : null
-  let hostnameOrder: Array<number> | null | undefined = isPathname ? null : undefined
-
-  let getHostnameOrder = (): ReadonlyArray<number> | null => {
-    if (hostnameOrder === undefined) {
-      hostnameOrder = hostnameStringPositions(input)
-    }
-    return hostnameOrder
-  }
+  let hostnameOrder = isPathname ? null : buildHostnameOrder(len, (i) => input.charCodeAt(i) === 46)
 
   let solve = (state: number, pos: number): Solution | null => {
     let rem = len - pos
@@ -644,13 +489,8 @@ function matchStateString(
     if (state === n) return pos === len ? emptySolution : null
 
     let key = state * stride + pos
-    if (flatMemo !== null) {
-      let cached = flatMemo[key]
-      if (cached !== undefined) return cached
-    } else {
-      let cached = sparseMemo!.get(key)
-      if (cached !== undefined) return cached
-    }
+    let cached = flatMemo !== null ? flatMemo[key] : sparseMemo!.get(key)
+    if (cached !== undefined) return cached
 
     consumeMatchWork(budget, 1)
     let token = tokens[state]
@@ -659,32 +499,24 @@ function matchStateString(
     if (token.type === ')') {
       result = solve(state + 1, pos)
     } else if (token.type === '(') {
-      let omitted = solve(token.end + 1, pos)
-      let included = solve(state + 1, pos)
-      if (omitted === null) {
-        result = included
-      } else if (included === null) {
-        result = omitted
-      } else {
-        result = betterSolution(len, getHostnameOrder(), omitted, included, budget, pos)
-      }
+      result = betterSolution(
+        len,
+        hostnameOrder,
+        solve(token.end + 1, pos),
+        solve(state + 1, pos),
+        budget,
+        pos,
+      )
     } else if (token.type === 'text') {
-      if (input.startsWith(token.text, pos)) {
-        result = solve(state + 1, pos + token.text.length)
-      } else {
-        result = null
-      }
+      result = input.startsWith(token.text, pos) ? solve(state + 1, pos + token.text.length) : null
     } else if (token.type === ':') {
       let end = scanNonStructuralEnd(input, pos, isPathname)
       consumeMatchWork(budget, end - pos)
-      if (end === pos) {
-        result = null
-      } else {
-        let suffix = solve(state + 1, end)
-        result = prependCapture(suffix, { type: ':', name: token.name, begin: pos, end })
-      }
+      result =
+        end === pos
+          ? null
+          : prependCapture(solve(state + 1, end), { type: ':', name: token.name, begin: pos, end })
     } else {
-      // '*'
       let maxEnd = len - minLen[state + 1]
       let nextToken = tokens[state + 1]
       if (nextToken === undefined) {
@@ -692,65 +524,55 @@ function matchStateString(
           captures: { type: '*', name: token.name, begin: pos, end: len, next: null },
           captureCount: 1,
         }
-      } else if (nextToken.type === 'text') {
-        let best: Solution | null = null
-        let endPos = input.indexOf(nextToken.text, pos)
-        while (endPos !== -1 && endPos <= maxEnd) {
-          consumeMatchWork(budget, 1)
-          let tail = solve(state + 2, endPos + nextToken.text.length)
-          if (tail !== null) {
-            let candidate = prependCapture(tail, {
-              type: '*',
-              name: token.name,
-              begin: pos,
-              end: endPos,
-            })!
-            if (isPathname) {
-              // Earliest static continuation strictly beats any later wildcard split in pathname.
-              best = candidate
-              break
-            }
-            best =
-              best === null
-                ? candidate
-                : betterSolution(len, getHostnameOrder(), candidate, best, budget, pos)
-          }
-          endPos = input.indexOf(nextToken.text, endPos + 1)
-        }
-        result = best
       } else {
         let best: Solution | null = null
-        for (let endPos = pos; endPos <= maxEnd; endPos++) {
-          consumeMatchWork(budget, 1)
-          let tail = solve(state + 1, endPos)
-          if (tail !== null) {
-            let candidate = prependCapture(tail, {
-              type: '*',
-              name: token.name,
-              begin: pos,
-              end: endPos,
-            })!
-            best =
-              best === null
-                ? candidate
-                : betterSolution(len, getHostnameOrder(), candidate, best, budget, pos)
+        if (nextToken.type === 'text') {
+          let endPos = input.indexOf(nextToken.text, pos)
+          while (endPos !== -1 && endPos <= maxEnd) {
+            consumeMatchWork(budget, 1)
+            let tail = solve(state + 2, endPos + nextToken.text.length)
+            if (tail !== null) {
+              let candidate = prependCapture(tail, {
+                type: '*',
+                name: token.name,
+                begin: pos,
+                end: endPos,
+              })!
+              if (isPathname) {
+                // Earliest static continuation strictly beats any later wildcard split in pathname.
+                best = candidate
+                break
+              }
+              best = betterSolution(len, hostnameOrder, candidate, best, budget, pos)
+            }
+            endPos = input.indexOf(nextToken.text, endPos + 1)
+          }
+        } else {
+          for (let endPos = pos; endPos <= maxEnd; endPos++) {
+            consumeMatchWork(budget, 1)
+            let tail = solve(state + 1, endPos)
+            if (tail !== null) {
+              let candidate = prependCapture(tail, {
+                type: '*',
+                name: token.name,
+                begin: pos,
+                end: endPos,
+              })!
+              best = betterSolution(len, hostnameOrder, candidate, best, budget, pos)
+            }
           }
         }
         result = best
       }
     }
 
-    if (flatMemo !== null) {
-      flatMemo[key] = result
-    } else {
-      sparseMemo!.set(key, result)
-    }
+    if (flatMemo !== null) flatMemo[key] = result
+    else sparseMemo!.set(key, result)
     return result
   }
 
   let solution = solve(0, 0)
-  if (solution === null) return null
-  return materializeStringCaptures(input, solution.captures, isPathname)
+  return solution === null ? null : materializeStringCaptures(input, solution.captures, isPathname)
 }
 
 function matchStateStringBottomUp(
@@ -768,7 +590,7 @@ function matchStateStringBottomUp(
   consumeMatchWork(budget, (n + 1) * stride)
 
   let solutions = new Array<Solution | null>((n + 1) * stride).fill(null)
-  let hostnameOrder = isPathname ? null : hostnameStringPositions(input)
+  let hostnameOrder = isPathname ? null : buildHostnameOrder(len, (i) => input.charCodeAt(i) === 46)
 
   for (let pos = len; pos >= 0; pos--) {
     let rem = len - pos
@@ -782,9 +604,14 @@ function matchStateStringBottomUp(
       if (token.type === ')') {
         solutions[cell] = solutions[(state + 1) * stride + pos]
       } else if (token.type === '(') {
-        let omitted = solutions[(token.end + 1) * stride + pos]
-        let included = solutions[(state + 1) * stride + pos]
-        solutions[cell] = betterSolution(len, hostnameOrder, omitted, included, budget, pos)
+        solutions[cell] = betterSolution(
+          len,
+          hostnameOrder,
+          solutions[(token.end + 1) * stride + pos],
+          solutions[(state + 1) * stride + pos],
+          budget,
+          pos,
+        )
       } else if (token.type === 'text') {
         solutions[cell] = input.startsWith(token.text, pos)
           ? solutions[(state + 1) * stride + pos + token.text.length]
@@ -795,34 +622,23 @@ function matchStateStringBottomUp(
         let suffix = end === pos ? null : solutions[(state + 1) * stride + end]
         solutions[cell] = prependCapture(suffix, { type: ':', name: token.name, begin: pos, end })
       } else {
-        let consumed: Solution | null = null
-        if (pos < len) {
-          let next = solutions[cell + 1]
-          if (next !== null) {
-            let capture = next.captures
-            if (capture === null || capture.type !== '*' || capture.name !== token.name) {
-              throw new Error('invalid wildcard continuation')
-            }
-            consumed = {
-              captures: { ...capture, begin: pos },
-              captureCount: next.captureCount,
-            }
-          }
-        }
-        let exited = prependCapture(solutions[(state + 1) * stride + pos], {
-          type: '*',
-          name: token.name,
-          begin: pos,
-          end: pos,
-        })
-        solutions[cell] = betterSolution(len, hostnameOrder, consumed, exited, budget, pos)
+        solutions[cell] = solveWildcardCell(
+          solutions,
+          cell,
+          state,
+          pos,
+          len,
+          stride,
+          token.name,
+          hostnameOrder,
+          budget,
+        )
       }
     }
   }
 
   let solution = solutions[0]
-  if (solution === null) return null
-  return materializeStringCaptures(input, solution.captures, isPathname)
+  return solution === null ? null : materializeStringCaptures(input, solution.captures, isPathname)
 }
 
 function materializeStringCaptures(
@@ -836,28 +652,16 @@ function materializeStringCaptures(
   let curEncOffset = 0
   for (let capture: CaptureNode | null = captures; capture !== null; capture = capture.next) {
     let value = input.slice(capture.begin, capture.end)
-    if (!isPathname) {
-      result.push({
-        type: capture.type,
-        name: capture.name,
-        value,
-        begin: capture.begin,
-        end: capture.end,
-      })
-    } else {
+    let begin = capture.begin
+    let end = capture.end
+    if (isPathname) {
       curEncOffset += encodedPathnameLength(input, curIdx, capture.begin)
-      let encBegin = curEncOffset
+      begin = curEncOffset
       curEncOffset += encodedPathnameLength(input, capture.begin, capture.end)
-      let encEnd = curEncOffset
+      end = curEncOffset
       curIdx = capture.end
-      result.push({
-        type: capture.type,
-        name: capture.name,
-        value,
-        begin: encBegin,
-        end: encEnd,
-      })
     }
+    result.push({ type: capture.type, name: capture.name, value, begin, end })
   }
   return result
 }
@@ -865,7 +669,6 @@ function materializeStringCaptures(
 // Unit-level matcher for patterns or URLs with non-structural encoded separators (%2E / %2F).
 export function matchPartUnits(
   tokens: ReadonlyArray<UnitCompiledToken>,
-  optionals: ReadonlyMap<number, number>,
   type: PartPattern['type'],
   input: CanonicalText,
   budget: MatchWorkBudget,
@@ -874,7 +677,13 @@ export function matchPartUnits(
   let inputLength = input.units.length
   consumeMatchWork(budget, stateCount * (inputLength + 1))
 
-  let hostnameOrder = type === 'hostname' ? hostnameUnitPositions(input.units) : null
+  let hostnameOrder =
+    type === 'hostname'
+      ? buildHostnameOrder(
+          inputLength,
+          (i) => input.units[i].structural && input.units[i].value === '.',
+        )
+      : null
   let stride = inputLength + 1
   let solutions = new Array<Solution | null>(stateCount * stride).fill(null)
 
@@ -887,35 +696,22 @@ export function matchPartUnits(
 
       if (token.type === ')') {
         solutions[cell] = solutions[(state + 1) * stride + position]
-        continue
-      }
-
-      if (token.type === '(') {
-        let end = optionals.get(state)
-        if (end === undefined) throw new Error('missing optional end')
-        let omitted = solutions[(end + 1) * stride + position]
-        let included = solutions[(state + 1) * stride + position]
+      } else if (token.type === '(') {
         solutions[cell] = betterSolution(
           inputLength,
           hostnameOrder,
-          omitted,
-          included,
+          solutions[(token.end + 1) * stride + position],
+          solutions[(state + 1) * stride + position],
           budget,
           position,
         )
-        continue
-      }
-
-      if (token.type === 'text' || token.type === 'separator') {
+      } else if (token.type === 'unit') {
         let unit = input.units[position]
         solutions[cell] =
-          unit !== undefined && unitsEqual(unit, token.unit)
+          unit !== undefined && unit.value === token.value && unit.structural === token.structural
             ? solutions[(state + 1) * stride + position + 1]
             : null
-        continue
-      }
-
-      if (token.type === ':') {
+      } else if (token.type === ':') {
         let end = position
         while (end < inputLength && !input.units[end].structural) {
           consumeMatchWork(budget, 1)
@@ -923,44 +719,24 @@ export function matchPartUnits(
         }
         let suffix = end === position ? null : solutions[(state + 1) * stride + end]
         solutions[cell] = prependCapture(suffix, {
-          type: token.type,
+          type: ':',
           name: token.name,
           begin: position,
           end,
         })
-        continue
+      } else {
+        solutions[cell] = solveWildcardCell(
+          solutions,
+          cell,
+          state,
+          position,
+          inputLength,
+          stride,
+          token.name,
+          hostnameOrder,
+          budget,
+        )
       }
-
-      if (token.type !== '*') throw new Error(`unexpected token: ${token.type}`)
-
-      let consumed: Solution | null = null
-      if (position < inputLength) {
-        let next = solutions[cell + 1]
-        if (next !== null) {
-          let capture = next.captures
-          if (capture === null || capture.type !== '*' || capture.name !== token.name) {
-            throw new Error('invalid wildcard continuation')
-          }
-          consumed = {
-            captures: { ...capture, begin: position },
-            captureCount: next.captureCount,
-          }
-        }
-      }
-      let exited = prependCapture(solutions[(state + 1) * stride + position], {
-        type: token.type,
-        name: token.name,
-        begin: position,
-        end: position,
-      })
-      solutions[cell] = betterSolution(
-        inputLength,
-        hostnameOrder,
-        consumed,
-        exited,
-        budget,
-        position,
-      )
     }
   }
 
@@ -968,27 +744,50 @@ export function matchPartUnits(
   if (solution === null) return null
   let result: Array<MatchParamMeta> = []
   for (let capture = solution.captures; capture !== null; capture = capture.next) {
-    result.push(toUnitMatchParamMeta(input, capture))
+    let value = ''
+    for (let p = capture.begin; p < capture.end; p++) {
+      value += input.units[p].value
+    }
+    result.push({
+      type: capture.type,
+      name: capture.name,
+      value,
+      begin: offsetAt(input, capture.begin),
+      end: offsetAt(input, capture.end),
+    })
   }
   return result
 }
 
-function toUnitMatchParamMeta(input: CanonicalText, capture: CaptureNode): MatchParamMeta {
-  let value = ''
-  for (let position = capture.begin; position < capture.end; position++) {
-    value += input.units[position].value
+function solveWildcardCell(
+  solutions: ReadonlyArray<Solution | null>,
+  cell: number,
+  state: number,
+  pos: number,
+  inputLength: number,
+  stride: number,
+  name: string,
+  hostnameOrder: ReadonlyArray<number> | null,
+  budget: MatchWorkBudget,
+): Solution | null {
+  let consumed: Solution | null = null
+  if (pos < inputLength) {
+    let next = solutions[cell + 1]
+    if (next !== null) {
+      let capture = next.captures
+      if (capture === null || capture.type !== '*' || capture.name !== name) {
+        throw new Error('invalid wildcard continuation')
+      }
+      consumed = { captures: { ...capture, begin: pos }, captureCount: next.captureCount }
+    }
   }
-  return {
-    type: capture.type,
-    name: capture.name,
-    value,
-    begin: offsetAt(input, capture.begin),
-    end: offsetAt(input, capture.end),
-  }
-}
-
-function unitsEqual(a: Unit, b: Unit): boolean {
-  return a.value === b.value && a.structural === b.structural
+  let exited = prependCapture(solutions[(state + 1) * stride + pos], {
+    type: '*',
+    name,
+    begin: pos,
+    end: pos,
+  })
+  return betterSolution(inputLength, hostnameOrder, consumed, exited, budget, pos)
 }
 
 function prependCapture(
@@ -1013,15 +812,9 @@ function betterSolution(
 ): Solution | null {
   if (preferred === null) return alternative
   if (alternative === null) return preferred
-  let comparison = compareSolutions(
-    inputLength,
-    hostnameOrder,
-    preferred,
-    alternative,
-    budget,
-    startPos,
-  )
-  return comparison >= 0 ? preferred : alternative
+  return compareSolutions(inputLength, hostnameOrder, preferred, alternative, budget, startPos) >= 0
+    ? preferred
+    : alternative
 }
 
 function compareSolutions(
@@ -1038,12 +831,8 @@ function compareSolutions(
     let pos = startPos
     while (aCap !== null || bCap !== null) {
       consumeMatchWork(budget, 1)
-      while (aCap !== null && (aCap.end <= pos || aCap.begin === aCap.end)) {
-        aCap = aCap.next
-      }
-      while (bCap !== null && (bCap.end <= pos || bCap.begin === bCap.end)) {
-        bCap = bCap.next
-      }
+      while (aCap !== null && (aCap.end <= pos || aCap.begin === aCap.end)) aCap = aCap.next
+      while (bCap !== null && (bCap.end <= pos || bCap.begin === bCap.end)) bCap = bCap.next
       if (aCap === null && bCap === null) break
       if (aCap === null) return 1
       if (bCap === null) return -1
@@ -1088,24 +877,11 @@ function encodeSpecificity(
   return encoding
 }
 
-function hostnameStringPositions(input: string): Array<number> {
+function buildHostnameOrder(length: number, isDot: (index: number) => boolean): Array<number> {
   let result: Array<number> = []
-  let end = input.length
-  for (let i = input.length - 1; i >= 0; i--) {
-    if (input.charCodeAt(i) === 46) {
-      for (let j = i + 1; j < end; j++) result.push(j)
-      end = i
-    }
-  }
-  for (let i = 0; i < end; i++) result.push(i)
-  return result
-}
-
-function hostnameUnitPositions(input: ReadonlyArray<Unit>): Array<number> {
-  let result: Array<number> = []
-  let end = input.length
-  for (let i = input.length - 1; i >= 0; i--) {
-    if (input[i].structural && input[i].value === '.') {
+  let end = length
+  for (let i = length - 1; i >= 0; i--) {
+    if (isDot(i)) {
       for (let j = i + 1; j < end; j++) result.push(j)
       end = i
     }
@@ -1115,6 +891,5 @@ function hostnameUnitPositions(input: ReadonlyArray<Unit>): Array<number> {
 }
 
 function offsetAt(input: CanonicalText, position: number): number {
-  if (position === input.units.length) return input.length
-  return input.units[position].begin
+  return position === input.units.length ? input.length : input.units[position].begin
 }

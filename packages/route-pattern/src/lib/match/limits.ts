@@ -50,10 +50,6 @@ export type MatchWorkBudget = {
   actual: number
 }
 
-export function createMatchWorkBudget(maximum: number): MatchWorkBudget {
-  return { maximum, actual: 0 }
-}
-
 export function consumeMatchWork(budget: MatchWorkBudget, count: number): void {
   let actual = budget.actual + count
   if (actual > budget.maximum) {
