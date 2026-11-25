@@ -1,0 +1,82 @@
+name: Spring iterator diagnostics
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  repeat:
+    if: github.head_ref == 'markdalgleish/spring-iterator-timeout'
+    name: WebKit (${{ matrix.revision.name }}, batch ${{ matrix.batch }})
+    runs-on: macos-15
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        revision:
+          - name: main
+            sha: b244d9286db99efa3ec6382b2ce44e3550a5cb9d
+          - name: failing-dialog-head
+            sha: 7f25fa884c57dd746e46999c4faaf300c5c04ab0
+        batch: [1, 2]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ matrix.revision.sha }}
+
+      - name: Apply diagnostics without changing the tested implementation
+        env:
+          DIAGNOSTIC_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch --depth=1 origin "$DIAGNOSTIC_SHA"
+          git show "$DIAGNOSTIC_SHA:docs/ui/app/examples/animation/spring/iterator.example.test.browser.tsx" > docs/ui/app/examples/animation/spring/iterator.example.test.browser.tsx
+          git diff --stat
+
+      - uses: pnpm/action-setup@v6
+      - uses: ./.github/actions/setup-node-pnpm-cache
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @remix-run/component exec playwright install webkit
+
+      - name: Record environment
+        run: |
+          git rev-parse HEAD
+          sw_vers
+          sysctl hw.ncpu hw.memsize
+          node --version
+          pnpm --filter @remix-run/component exec playwright --version
+
+      - name: Repeat isolated and overlapping workspace tests
+        shell: bash
+        env:
+          CI: 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/spring-diagnostics"
+          failed=0
+          set +e
+          for repetition in {1..10}; do
+            echo "::group::Isolated repetition $repetition"
+            pnpm --filter remix-ui-docs test app/examples/animation/spring/iterator.example.test.browser.tsx --project webkit 2>&1 | tee "$RUNNER_TEMP/spring-diagnostics/isolated-$repetition.log"
+            status=${PIPESTATUS[0]}
+            echo "isolated $repetition $status" | tee -a "$RUNNER_TEMP/spring-diagnostics/results.txt"
+            if [ "$status" -ne 0 ]; then failed=1; fi
+            echo '::endgroup::'
+          done
+          for repetition in {1..3}; do
+            echo "::group::Overlapping workspace repetition $repetition"
+            pnpm --recursive --no-sort --workspace-concurrency=4 --stream --filter ./docs/ui --filter ./packages/ui run test --type browser --type e2e 2>&1 | tee "$RUNNER_TEMP/spring-diagnostics/workspaces-$repetition.log"
+            status=${PIPESTATUS[0]}
+            echo "workspaces $repetition $status" | tee -a "$RUNNER_TEMP/spring-diagnostics/results.txt"
+            if [ "$status" -ne 0 ]; then failed=1; fi
+            echo '::endgroup::'
+          done
+          exit "$failed"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: spring-${{ matrix.revision.name }}-${{ matrix.batch }}
+          path: ${{ runner.temp }}/spring-diagnostics
+          retention-days: 7
