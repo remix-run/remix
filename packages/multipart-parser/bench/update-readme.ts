@@ -12,7 +12,6 @@ const benchmarkEnd = '<!-- benchmarks:end -->'
 const runtimeCommands: Record<string, string[]> = {
   node: ['node', 'runner.ts', '--json'],
   bun: ['bun', 'run', 'runner.ts', '--json'],
-  deno: ['deno', 'run', '--allow-sys', 'runner.ts', '--json'],
 }
 
 interface RunnerOutput {
@@ -20,7 +19,7 @@ interface RunnerOutput {
   results: Record<string, Record<string, string>>
 }
 
-let runtimes = (process.env.BENCH_RUNTIMES ?? 'node,bun,deno').split(',')
+let runtimes = (process.env.BENCH_RUNTIMES ?? 'node,bun').split(',')
 let lines = [
   `Last updated: ${new Date().toISOString().slice(0, 10)}`,
   '',

@@ -217,7 +217,7 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/mu
 
 ## Benchmarks
 
-`multipart-parser` operates on streams of data and rarely buffers in common usage, so it stays fast for multipart payloads of any size. The tables below compare the average time to parse each message, plus or minus one standard deviation, with [`multipasta`](https://github.com/tim-smart/multipasta), [`busboy`](https://github.com/mscdex/busboy), and [`@fastify/busboy`](https://github.com/fastify/busboy) on Node.js, Bun, and Deno. Small files are 1 KB and large files are 10 to 50 MB, with 100 MB across the five large files. Adversarial files are filled with sequences that almost match the boundary, which forces extra work during boundary search. Lower is better.
+`multipart-parser` operates on streams of data and rarely buffers in common usage, so it stays fast for multipart payloads of any size. The tables below compare the average time to parse each message, plus or minus one standard deviation, with [`multipasta`](https://github.com/tim-smart/multipasta), [`busboy`](https://github.com/mscdex/busboy), and [`@fastify/busboy`](https://github.com/fastify/busboy) on Node.js and Bun. Small files are 1 KB and large files are 10 to 50 MB, with 100 MB across the five large files. Adversarial files are filled with sequences that almost match the boundary, which forces extra work during boundary search. Lower is better.
 
 To run the benchmarks and update these results:
 
@@ -226,7 +226,7 @@ pnpm run bench
 pnpm run bench:update-readme
 ```
 
-Set `BENCH_RUNTIMES`, such as `BENCH_RUNTIMES=node,bun`, to update the results for a subset of runtimes.
+Set `BENCH_RUNTIMES`, such as `BENCH_RUNTIMES=bun`, to update the results for one runtime.
 
 <!-- benchmarks:start -->
 
@@ -257,17 +257,6 @@ Versions: `multipart-parser@1.1.2`, `multipasta@0.2.5`, `busboy@1.6.0`, `@fastif
 | 5 large files               |     4.89 ms ± 0.08 |            5.11 ms ± 0.10 | 6.85 ms ± 0.51 | 23.33 ms ± 0.94 |    5.85 ms ± 0.35 |
 | 1 large file (adversarial)  |     0.34 ms ± 0.01 |            0.38 ms ± 0.02 | 0.62 ms ± 0.27 |  0.86 ms ± 0.02 |    0.41 ms ± 0.02 |
 | 5 large files (adversarial) |     3.38 ms ± 0.21 |            3.69 ms ± 0.25 | 4.90 ms ± 0.40 |  8.95 ms ± 0.54 |    4.10 ms ± 0.34 |
-
-### Deno 2.9.6
-
-| Message                     | `multipart-parser` | `multipart-parser/future` |   `multipasta` |        `busboy` | `@fastify/busboy` |
-| --------------------------- | -----------------: | ------------------------: | -------------: | --------------: | ----------------: |
-| 1 small file                |     0.01 ms ± 0.02 |            0.02 ms ± 0.04 | 0.01 ms ± 0.05 |  0.03 ms ± 0.17 |    0.03 ms ± 0.09 |
-| 1 large file                |    10.88 ms ± 0.24 |           10.35 ms ± 0.65 | 0.73 ms ± 0.03 |  2.12 ms ± 0.13 |   13.53 ms ± 1.23 |
-| 100 small files             |     0.14 ms ± 0.01 |            0.17 ms ± 0.02 | 0.10 ms ± 0.01 |  0.14 ms ± 0.02 |    0.48 ms ± 0.13 |
-| 5 large files               |   108.76 ms ± 1.39 |           97.34 ms ± 1.78 | 7.19 ms ± 0.10 | 20.87 ms ± 0.20 |  123.61 ms ± 0.43 |
-| 1 large file (adversarial)  |    17.12 ms ± 0.12 |           17.02 ms ± 0.11 | 0.68 ms ± 0.09 |  1.08 ms ± 0.02 |   17.29 ms ± 0.18 |
-| 5 large files (adversarial) |   174.43 ms ± 3.28 |          170.42 ms ± 0.77 | 6.92 ms ± 0.23 | 10.86 ms ± 0.12 |  172.93 ms ± 0.98 |
 
 <!-- benchmarks:end -->
 

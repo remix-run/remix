@@ -293,7 +293,6 @@ function printResults(results: BenchmarkResults) {
 
 function getRuntime(): string {
   if (typeof Bun !== 'undefined') return `Bun ${Bun.version}`
-  if (typeof Deno !== 'undefined') return `Deno ${Deno.version.deno}`
   return `Node.js ${process.version}`
 }
 
