@@ -885,7 +885,8 @@ type AppContext = MiddlewareContext<typeof middleware>
 #### Error Handling and Aborted Requests
 
 - wrap `router.fetch()` in a try/catch to handle errors
-- `AbortError` is thrown when a request is aborted
+- when `request.signal` aborts, the router stops running middleware and handlers and rejects with the abort reason once work already in progress settles
+- pass `context.request.signal` to `fetch()`, database queries, and other work that should stop when the client disconnects
 
 #### Content Negotiation
 
@@ -1013,14 +1014,15 @@ Average time to dispatch one request compared with [Hono](https://hono.dev). Han
 
 | Scenario                       | `fetch-router` |  `hono` |
 | ------------------------------ | -------------: | ------: |
-| Static route, 100 routes       |         284 ns | 83.2 ns |
-| One param, 100 routes          |         500 ns |  380 ns |
-| One param, 1,000 routes        |         500 ns | 1.97 µs |
-| Not found, 1,000 routes        |        1.38 µs | 1.81 µs |
-| 3 sync middleware, 100 routes  |         473 ns |  408 ns |
-| 3 async middleware, 100 routes |        1.06 µs |  484 ns |
+| Static route, 100 routes       |         273 ns | 72.7 ns |
+| One param, 100 routes          |         465 ns |  362 ns |
+| One param, 1,000 routes        |         462 ns | 1.89 µs |
+| Not found, 1,000 routes        |        1.30 µs | 1.72 µs |
+| Async handler, 100 routes      |         300 ns |  173 ns |
+| 3 sync middleware, 100 routes  |         440 ns |  374 ns |
+| 3 async middleware, 100 routes |         613 ns |  448 ns |
 
-Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `fetch-router@1.0.1` (`8a8adc7b70`), and `hono@4.13.22`.
+Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `fetch-router@1.0.1` (`7178c88d3e`), and `hono@4.13.22`.
 
 <!-- benchmarks:end -->
 
