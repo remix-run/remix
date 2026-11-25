@@ -16,6 +16,24 @@ describe('Spring iterator example', () => {
     let started = performance.now()
     let samples: { phase: string; time: number; x: number; width: number; transform: string }[] = []
 
+    let frames: { name: string; requested: number; fired: number; timestamp: number }[] = []
+    let heartbeats: number[] = []
+    let requestFrame = window.requestAnimationFrame.bind(window)
+    t.mock.method(window, 'requestAnimationFrame', (callback: FrameRequestCallback) => {
+      let requested = performance.now() - started
+      return requestFrame((timestamp) => {
+        frames.push({
+          name: callback.name,
+          requested,
+          fired: performance.now() - started,
+          timestamp,
+        })
+        callback(timestamp)
+      })
+    })
+    let heartbeat = setInterval(() => heartbeats.push(performance.now() - started), 100)
+    t.after(() => clearInterval(heartbeat))
+
     async function expectPosition(phase: string, check: () => void) {
       let target = track
       assert.ok(target)
@@ -34,12 +52,18 @@ describe('Spring iterator example', () => {
         throw new Error(
           `Spring position diagnostics: ${JSON.stringify({
             phase,
+            startedAt: performance.timeOrigin + started,
             reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
             visibility: document.visibilityState,
             connected: target.isConnected,
             previousDisabled: previous.disabled,
             nextDisabled: next.disabled,
+            frameBounds: window.frameElement?.getBoundingClientRect().toJSON(),
+            parentVisibility: window.parent.document.visibilityState,
+            focused: document.hasFocus(),
             samples,
+            frames,
+            heartbeats,
           })}`,
           { cause: error },
         )
@@ -65,5 +89,9 @@ describe('Spring iterator example', () => {
       assert.ok(Math.abs(x() + track.clientWidth) < 1),
     )
     assert.equal(next.disabled, false)
+    console.log(
+      'Spring diagnostics passed:',
+      JSON.stringify({ startedAt: performance.timeOrigin + started, samples, frames, heartbeats }),
+    )
   })
 })
