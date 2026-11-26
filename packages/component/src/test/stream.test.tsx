@@ -768,6 +768,47 @@ describe('stream', () => {
       })
       expect(html).toBe('<div>https://example.com/dashboard</div>')
     })
+
+    it('returns a stable id when read repeatedly on the same component during SSR', async () => {
+      function Field(handle: Handle) {
+        let setupId = handle.id
+        return () => (
+          <div>
+            <label htmlFor={setupId}>Name</label>
+            <input id={handle.id} />
+          </div>
+        )
+      }
+
+      let html = await renderToString(<Field />)
+      let forMatch = html.match(/for="([^"]+)"/)
+      let idMatch = html.match(/id="([^"]+)"/)
+      expect(forMatch?.[1]).toBeTruthy()
+      expect(forMatch?.[1]).toBe(idMatch?.[1])
+    })
+
+    it('warns on handle.update() during SSR setup and throws during SSR render', async (t) => {
+      let warnSpy = t.mock.method(console, 'warn', () => {})
+
+      function SetupUpdate(handle: Handle) {
+        void handle.update()
+        return () => <span>ok</span>
+      }
+
+      expect(await renderToString(<SetupUpdate />)).toBe('<span>ok</span>')
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+
+      function RenderUpdate(handle: Handle) {
+        return () => {
+          void handle.update()
+          return <span>bad</span>
+        }
+      }
+
+      await expect(renderToString(<RenderUpdate />)).rejects.toThrow(
+        'Cannot call handle.update() while RenderUpdate is running its render function',
+      )
+    })
   })
 
   describe('special props', () => {
@@ -879,6 +920,35 @@ describe('stream', () => {
       )
 
       expect(html).toBe('<div data-value="ok" aria-label="Example"></div>')
+    })
+
+    it('handles null-prototype props, null-prototype style objects, null style, and inherited class', async () => {
+      let nullStyle = Object.assign(Object.create(null), {
+        backgroundColor: '#fff',
+        padding: '8px',
+      })
+      let nullProps = Object.assign(Object.create(null), {
+        className: 'b',
+        class: 'a',
+        style: nullStyle,
+        'data-ok': 'yes',
+      })
+      let inheritedClassProps = Object.assign(Object.create({ class: 'inherited' }), {
+        className: 'own',
+        style: null,
+      })
+
+      let html = await renderToString(
+        <>
+          {createElement('div', nullProps)}
+          {createElement('span', inheritedClassProps)}
+        </>,
+      )
+
+      expect(html).toBe(
+        '<div class="a b" style="background-color: #fff; padding: 8px;" data-ok="yes"></div>' +
+          '<span class="own"></span>',
+      )
     })
 
     it('blocks javascript URLs in executable URL attributes', async () => {

@@ -222,15 +222,25 @@ export function camelToKebab(str: string): string {
 }
 
 export function serializeStyleObject(style: Record<string, unknown>): string {
-  let parts: string[] = []
-  for (let [key, value] of Object.entries(style)) {
-    let cssValue =
-      typeof value === 'boolean'
-        ? undefined
-        : Array.isArray(value)
-          ? value.join(', ')
-          : normalizeCssValue(key, value)
-    if (cssValue !== undefined) parts.push(`${camelToKebab(key)}: ${cssValue};`)
+  let proto = Object.getPrototypeOf(style)
+  let isPlain = proto === Object.prototype || proto === null
+  let out = ''
+  for (let key in style) {
+    if (!isPlain && !Object.hasOwn(style, key)) continue
+    let value = style[key]
+    if (value == null || typeof value === 'boolean') continue
+    let cssValue: string | undefined
+    if (typeof value === 'string') {
+      cssValue = value
+    } else if (Array.isArray(value)) {
+      cssValue = value.join(', ')
+    } else {
+      cssValue = normalizeCssValue(key, value)
+    }
+    if (cssValue !== undefined) {
+      let prop = camelToKebab(key)
+      out += (out ? ' ' : '') + prop + ': ' + cssValue + ';'
+    }
   }
-  return parts.join(' ')
+  return out
 }

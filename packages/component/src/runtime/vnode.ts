@@ -159,11 +159,19 @@ export function isRemixElement(node: unknown): node is RemixElement {
 
 function normalizeElementProps(props: ElementProps | null | undefined): ElementProps {
   if (!props) return {}
-  if (!('mix' in props)) return props
-
   let mix = props.mix
-  if (Array.isArray(mix) && mix.length > 0 && mix.every((item) => item && !Array.isArray(item))) {
-    return props
+  if (mix === undefined) {
+    if (!('mix' in props)) return props
+  } else if (Array.isArray(mix) && mix.length > 0) {
+    let allFlat = true
+    for (let i = 0; i < mix.length; i++) {
+      let item = mix[i]
+      if (!item || Array.isArray(item)) {
+        allFlat = false
+        break
+      }
+    }
+    if (allFlat) return props
   }
 
   let { mix: _mix, ...rest } = props
@@ -263,25 +271,37 @@ interface NormalizedUnsafeHTMLProps extends Record<string, unknown> {
 export function normalizeUnsafeHTMLProps(
   props: Record<string, unknown>,
 ): NormalizedUnsafeHTMLProps {
-  invariant(
-    props.outerHTML === undefined,
-    'Invalid outerHTML prop: outerHTML is not supported on host elements',
-  )
-
-  let normalized: NormalizedUnsafeHTMLProps | undefined
-  for (let name of ['innerHTML', 'srcDoc', 'srcdoc'] as const) {
-    let value = props[name]
-    if (value === undefined) continue
-    let html = UnsafeHTMLValue.read(value)
-    invariant(
-      html !== undefined,
-      `Invalid ${name} prop: expected a value created with unsafeHTML()`,
-    )
-    normalized ??= { ...props }
-    normalized[name] = html
+  if (props.outerHTML !== undefined) {
+    invariant(false, 'Invalid outerHTML prop: outerHTML is not supported on host elements')
   }
 
-  return normalized ?? props
+  let rawInner = props.innerHTML
+  let rawSrcDoc = props.srcDoc
+  let rawSrcdoc = props.srcdoc
+  if (rawInner === undefined && rawSrcDoc === undefined && rawSrcdoc === undefined) {
+    return props
+  }
+
+  let normalized: NormalizedUnsafeHTMLProps = { ...props }
+  if (rawInner !== undefined) {
+    let html = UnsafeHTMLValue.read(rawInner)
+    invariant(
+      html !== undefined,
+      'Invalid innerHTML prop: expected a value created with unsafeHTML()',
+    )
+    normalized.innerHTML = html
+  }
+  if (rawSrcDoc !== undefined) {
+    let html = UnsafeHTMLValue.read(rawSrcDoc)
+    invariant(html !== undefined, 'Invalid srcDoc prop: expected a value created with unsafeHTML()')
+    normalized.srcDoc = html
+  }
+  if (rawSrcdoc !== undefined) {
+    let html = UnsafeHTMLValue.read(rawSrcdoc)
+    invariant(html !== undefined, 'Invalid srcdoc prop: expected a value created with unsafeHTML()')
+    normalized.srcdoc = html
+  }
+  return normalized
 }
 
 type TypedEventListener<eventMap> = {
