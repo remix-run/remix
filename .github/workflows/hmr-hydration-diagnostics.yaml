@@ -1,0 +1,29 @@
+name: HMR hydration timeout diagnostics
+
+on:
+  push:
+    branches:
+      - markdalgleish/hmr-client-entry-hydration-timeout
+
+permissions:
+  contents: read
+
+jobs:
+  webkit:
+    name: WebKit workload (${{ matrix.trial }})
+    runs-on: macos-15
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        trial: [1, 2, 3]
+    env:
+      HMR_TRACE: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: ./.github/actions/setup-node-pnpm-cache
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @remix-run/component exec playwright install webkit
+      - name: Run existing WebKit workspace workload
+        run: pnpm test:browser
