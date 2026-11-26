@@ -1,4 +1,3 @@
-import { measureSync } from '../../../scripts/hmr-performance-metrics.ts'
 import { registerHooks } from 'node:module'
 import { isAbsolute, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -36,9 +35,7 @@ registerHooks({
     let canonicalUrl = getCanonicalUrl(url)
     let transformedSource = transformSource(canonicalUrl, source)
     transformedSource = rewriteInvalidatedImports(canonicalUrl, transformedSource)
-    let hmrAnalysis = measureSync('node-hmr-analysis', canonicalUrl, transformedSource.length, () =>
-      analyzeNodeHmrSource(canonicalUrl, transformedSource),
-    )
+    let hmrAnalysis = analyzeNodeHmrSource(canonicalUrl, transformedSource)
 
     if (!hmrAnalysis.usesImportMetaHot) {
       reportModuleUpdate(canonicalUrl, {

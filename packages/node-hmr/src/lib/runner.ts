@@ -1,4 +1,3 @@
-import { snapshot } from '../../../../scripts/hmr-performance-metrics.ts'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import type { Stats } from 'node:fs'
@@ -278,7 +277,6 @@ export function createHmrSupervisor(options: {
   }
 
   function spawnChild() {
-    snapshot('supervisor:spawn-start')
     moduleStore.reset()
     browserWatchedFileRefCountsByRuntime = new Map()
     browserWatchedFilePaths = new Set()
@@ -304,7 +302,6 @@ export function createHmrSupervisor(options: {
     )
 
     state = { status: 'starting', child: nextChild }
-    snapshot('supervisor:spawned', { child: nextChild.pid })
 
     nextChild.on('message', (message: unknown) => {
       if (getChild() !== nextChild) return
@@ -333,9 +330,7 @@ export function createHmrSupervisor(options: {
     if (state.status !== 'restart-scheduled') return
     let { child } = state
     state = { status: 'restarting', child }
-    snapshot('supervisor:stop-start', { child: child?.pid })
     await stopChild(child, { force: false, signal: 'SIGTERM' })
-    snapshot('supervisor:stop-end', { child: child?.pid })
     if (state.status !== 'restarting') return
     spawnChild()
   }
@@ -968,14 +963,6 @@ export function createHmrSupervisor(options: {
 
   function resolveReadyWaiters(options: { force?: boolean } = {}): void {
     if (!options.force && !isReady()) return
-    if (readyWaiters.length > 0)
-      snapshot('supervisor:ready', {
-        status: state.status,
-        startingWatchers: startingDirectoryWatchers.size,
-        activeFlushes: activeWatchEventFlushCount,
-        pendingUpdates: pendingHotUpdateCount,
-        acceptedUpdates: acceptedHotUpdateCount,
-      })
 
     let waiters = readyWaiters
     readyWaiters = []

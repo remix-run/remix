@@ -1,4 +1,3 @@
-import { measureSync } from '../../../../scripts/hmr-performance-metrics.ts'
 import { transformSync, type OxcError, type TransformOptions } from 'oxc-transform'
 import { getTsconfig, type TsConfigResult } from 'get-tsconfig'
 import * as path from 'node:path'
@@ -25,27 +24,25 @@ type TsconfigTransformCompilerOptionsIssue = {
 }
 
 export function transformModule(filePath: string, source: string): string {
-  return measureSync('node-tsx', filePath, source.length, () => {
-    let compilerOptions = getTsconfigCompilerOptions(filePath)
-    let result = transformSync(filePath, source, {
-      lang: getLanguage(filePath),
-      sourceType: getSourceType(filePath, source),
-      sourcemap: true,
-      ...getJsxTransformOptions(filePath, compilerOptions),
-    })
-
-    if (result.errors.length > 0) {
-      throw createTransformError(result.errors)
-    }
-
-    if (result.map == null) {
-      return result.code
-    }
-
-    return `${result.code}\n//# sourceMappingURL=data:application/json;base64,${Buffer.from(
-      JSON.stringify(result.map),
-    ).toString('base64')}`
+  let compilerOptions = getTsconfigCompilerOptions(filePath)
+  let result = transformSync(filePath, source, {
+    lang: getLanguage(filePath),
+    sourceType: getSourceType(filePath, source),
+    sourcemap: true,
+    ...getJsxTransformOptions(filePath, compilerOptions),
   })
+
+  if (result.errors.length > 0) {
+    throw createTransformError(result.errors)
+  }
+
+  if (result.map == null) {
+    return result.code
+  }
+
+  return `${result.code}\n//# sourceMappingURL=data:application/json;base64,${Buffer.from(
+    JSON.stringify(result.map),
+  ).toString('base64')}`
 }
 
 function createTransformError(errors: OxcError[]): SyntaxError {
