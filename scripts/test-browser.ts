@@ -40,7 +40,9 @@ if (selectedWorkspaces.length === 0) {
   process.exit(0)
 }
 
-const args = ['--recursive', '--no-sort', '--workspace-concurrency=4', '--stream']
+// This script runs on 3-vCPU macOS runners, and each workspace already starts one test worker
+// per CPU. Running more workspaces at once oversubscribes the runner and causes e2e timeouts.
+const args = ['--recursive', '--no-sort', '--workspace-concurrency=2', '--stream']
 for (let workspace of selectedWorkspaces) {
   args.push('--filter', `./${workspace.dir}`)
 }

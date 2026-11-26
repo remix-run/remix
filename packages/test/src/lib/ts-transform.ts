@@ -1,4 +1,4 @@
-import { transform } from 'esbuild'
+import { transform, transformSync, type TransformOptions } from 'esbuild'
 import { getTsconfig, type TsConfigResult } from 'get-tsconfig'
 import * as path from 'node:path'
 
@@ -21,16 +21,23 @@ export async function transformTypeScript(
   source: string,
   filePath: string,
 ): Promise<{ code: string }> {
-  let loader: 'ts' | 'tsx' = filePath.endsWith('.tsx') ? 'tsx' : 'ts'
+  let result = await transform(source, getTransformOptions(filePath))
+  return { code: result.code }
+}
 
+// Synchronous variant for in-thread module hooks registered with `module.registerHooks()`.
+export function transformTypeScriptSync(source: string, filePath: string): { code: string } {
+  return { code: transformSync(source, getTransformOptions(filePath)).code }
+}
+
+function getTransformOptions(filePath: string): TransformOptions {
   let tsConfig = getTsconfig(path.dirname(filePath), 'tsconfig.json', tsconfigCache)
 
-  let result = await transform(source, {
-    loader,
+  return {
+    loader: filePath.endsWith('.tsx') ? 'tsx' : 'ts',
     sourcemap: 'inline',
     sourcesContent: true,
     sourcefile: filePath,
     tsconfigRaw: { compilerOptions: tsConfig?.config.compilerOptions ?? {} },
-  })
-  return { code: result.code }
+  }
 }

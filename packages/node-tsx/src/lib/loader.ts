@@ -11,13 +11,9 @@ import {
 } from './request.ts'
 import { transformModule } from './transform.ts'
 
-type RegisterHooksOptions = Parameters<typeof registerHooks>[0]
-
-const scopedState: { namespace?: string } = {}
-
-export function initialize(data?: { namespace?: string }): void {
-  scopedState.namespace = data?.namespace
-}
+type ModuleHooks = Parameters<typeof registerHooks>[0]
+type LoadHook = NonNullable<ModuleHooks['load']>
+type ResolveHook = NonNullable<ModuleHooks['resolve']>
 
 /**
  * Transforms `.ts`, `.tsx`, and `.jsx` modules into runnable JavaScript for Node's `load` hook API.
@@ -27,12 +23,7 @@ export function initialize(data?: { namespace?: string }): void {
  * @param nextLoad Continuation for delegating to the next registered hook.
  * @returns The transformed module source for supported TypeScript/JSX files, or the delegated result.
  */
-export const load: NonNullable<RegisterHooksOptions['load']> = (url, context, nextLoad) => {
-  let namespace = scopedState.namespace
-  if (namespace != null && getNamespace(url) !== namespace) {
-    return nextLoad(url, context)
-  }
-
+export const load: LoadHook = (url, context, nextLoad) => {
   if (url.startsWith('file:')) {
     let filePath = fileURLToPath(url)
     if (isTransformableFile(filePath)) {
@@ -48,36 +39,34 @@ export const load: NonNullable<RegisterHooksOptions['load']> = (url, context, ne
   return nextLoad(url, context)
 }
 
-export const resolve: NonNullable<RegisterHooksOptions['resolve']> = (
-  specifier,
-  context,
-  nextResolve,
-) => {
-  let namespace = scopedState.namespace
-  if (namespace == null) {
-    return nextResolve(specifier, context)
-  }
-
-  let scopedRequest = parseScopedSpecifier(specifier)
-  let requestNamespace =
-    scopedRequest?.namespace ?? getNamespace(specifier) ?? getNamespace(context.parentURL)
-
-  if (requestNamespace !== namespace) {
-    return nextResolve(specifier, context)
-  }
-
-  let resolved = nextResolve(scopedRequest?.specifier ?? specifier, {
-    ...context,
-    parentURL: scopedRequest?.parentURL ?? context.parentURL,
-  })
-
-  if (resolved.format === 'builtin' || !resolved.url.startsWith('file:')) {
-    return resolved
-  }
-
+export function createScopedHooks(namespace: string): { load: LoadHook; resolve: ResolveHook } {
   return {
-    ...resolved,
-    url: appendNamespaceToUrl(resolved.url, namespace),
+    load(url, context, nextLoad) {
+      return getNamespace(url) === namespace ? load(url, context, nextLoad) : nextLoad(url, context)
+    },
+    resolve(specifier, context, nextResolve) {
+      let scopedRequest = parseScopedSpecifier(specifier)
+      let requestNamespace =
+        scopedRequest?.namespace ?? getNamespace(specifier) ?? getNamespace(context.parentURL)
+
+      if (requestNamespace !== namespace) {
+        return nextResolve(specifier, context)
+      }
+
+      let resolved = nextResolve(scopedRequest?.specifier ?? specifier, {
+        ...context,
+        parentURL: scopedRequest?.parentURL ?? context.parentURL,
+      })
+
+      if (resolved.format === 'builtin' || !resolved.url.startsWith('file:')) {
+        return resolved
+      }
+
+      return {
+        ...resolved,
+        url: appendNamespaceToUrl(resolved.url, namespace),
+      }
+    },
   }
 }
 
