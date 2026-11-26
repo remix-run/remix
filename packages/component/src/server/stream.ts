@@ -10,6 +10,7 @@ import type {
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
   createFrameHandle,
+  EXEC_URL_ATTR,
   getSelectValues,
   isAllowedHostPropName,
   normalizeAttributeName,
@@ -224,6 +225,9 @@ interface RenderContext {
   documentSegments: DocumentSegments
   onError: (error: unknown) => void
   parentHandle?: SsrComponentHandle
+  frameSrc: string
+  topFrameSrc: string
+  frameState?: SsrFrameState
   styleCache?: Map<string, { selector: string; css: string }>
   resolveFrame: (
     src: string,
@@ -272,16 +276,13 @@ function getTextEncoder(): TextEncoder {
   return (sharedTextEncoder ??= new TextEncoder())
 }
 
-let defaultSsrFrameState: SsrFrameState | undefined
-function getDefaultSsrFrameState(): SsrFrameState {
-  return (defaultSsrFrameState ??= createSsrFrameState('', ''))
+function getFrameState(context: RenderContext): SsrFrameState {
+  return (context.frameState ??= createSsrFrameState(context.frameSrc, context.topFrameSrc))
 }
 
 const MAX_BUFFERED_HTML_LENGTH = 64 * 1024
 // UTF-8 needs at most three bytes per UTF-16 code unit.
 let htmlEncodingBuffer: Uint8Array | undefined
-
-const EXEC_URL_ATTRS = new Set(['href', 'src', 'action', 'formaction', 'xlink:href'])
 
 interface HtmlAttrMeta {
   skip: boolean
@@ -297,22 +298,37 @@ function getHtmlAttrMeta(key: string): HtmlAttrMeta {
   let cached = htmlAttrMetaCache.get(key)
   if (cached !== undefined) return cached
 
-  let skip = SSR_OMITTED_PROPS.has(key) || !isAllowedHostPropName(key)
+  let omitted = SSR_OMITTED_PROPS.has(key)
+  let allowed = !omitted && isAllowedHostPropName(key)
+  let skip = !allowed
   let name = skip ? '' : normalizeAttributeName(key, false)
   let meta: HtmlAttrMeta = {
     skip,
     name,
-    isUrl: !skip && EXEC_URL_ATTRS.has(name),
+    isUrl: !skip && EXEC_URL_ATTR.has(name),
     isBoolish: !skip && shouldStringifyBooleanAttribute(name),
   }
-  if (htmlAttrMetaCache.size < MAX_ATTR_META_CACHE) {
+  // Only cache valid or omitted host prop names so arbitrary invalid keys cannot evict hot entries.
+  if (allowed || omitted) {
+    if (htmlAttrMetaCache.size >= MAX_ATTR_META_CACHE) {
+      let oldest = htmlAttrMetaCache.keys().next()
+      if (!oldest.done) htmlAttrMetaCache.delete(oldest.value)
+    }
     htmlAttrMetaCache.set(key, meta)
   }
   return meta
 }
 
 function fastSanitizeUrl(tag: string, attrName: string, isUrl: boolean, value: unknown): unknown {
-  if (!isUrl && !(attrName === 'data' && (tag === 'object' || tag === 'OBJECT'))) {
+  if (
+    !isUrl &&
+    !(
+      attrName.length === 4 &&
+      (attrName === 'data' || attrName.toLowerCase() === 'data') &&
+      tag.length === 6 &&
+      (tag === 'object' || tag.toLowerCase() === 'object')
+    )
+  ) {
     return value
   }
   let str = String(value)
@@ -367,7 +383,7 @@ function getStyleLayerName(selector: string, layer: string = REMIX_UI_STYLE_LAYE
 
 const SSR_OMITTED_PROPS = new Set(['children', 'mix', 'key', 'animate', 'innerHTML', 'on'])
 
-// Bit 1: self-closing (void) tags. Bit 2: tags needing special SSR handling.
+// 1 = self-closing (void) tags, 0 = non-void tags needing special SSR handling.
 const SPECIAL_TAGS: Record<string, number> = Object.assign(Object.create(null), {
   area: 1,
   base: 1,
@@ -376,22 +392,22 @@ const SPECIAL_TAGS: Record<string, number> = Object.assign(Object.create(null), 
   embed: 1,
   hr: 1,
   img: 1,
-  input: 3,
+  input: 1,
   link: 1,
   meta: 1,
   param: 1,
   source: 1,
   track: 1,
   wbr: 1,
-  html: 2,
-  head: 2,
-  body: 2,
-  svg: 2,
-  foreignObject: 2,
-  textarea: 2,
-  option: 2,
-  select: 2,
-  script: 2,
+  html: 0,
+  head: 0,
+  body: 0,
+  svg: 0,
+  foreignObject: 0,
+  textarea: 0,
+  option: 0,
+  select: 0,
+  script: 0,
 })
 
 const ssrSignal = Object.freeze({
@@ -422,7 +438,10 @@ const ssrSignal = Object.freeze({
 }) as AbortSignal
 
 function createRenderContext(
-  options: RenderToStreamOptions | RenderToStringOptions | undefined,
+  frameSrc: string,
+  topFrameSrc: string,
+  resolveFrame: RenderContext['resolveFrame'],
+  nonce: string | undefined,
   signal: AbortSignal,
   onError: (error: unknown) => void,
 ): RenderContext {
@@ -432,12 +451,13 @@ function createRenderContext(
     elementDepth: 0,
     documentSegments: {},
     onError,
-    resolveFrame:
-      (options as RenderToStreamOptions | undefined)?.resolveFrame ?? defaultResolveFrame,
+    frameSrc,
+    topFrameSrc,
+    resolveFrame,
     signal,
     flushKind: 'fragment',
     serverIdCounter: 0,
-    nonce: options?.nonce,
+    nonce,
   }
 }
 
@@ -455,17 +475,16 @@ export function renderToStream(
   let onError = options?.onError ?? ((error) => console.error(error))
   let currentFrameSrc = normalizeFrameSrc(options?.frameSrc ?? options?.topFrameSrc)
   let topFrameSrc = normalizeFrameSrc(options?.topFrameSrc ?? currentFrameSrc)
-  let rootFrameState =
-    currentFrameSrc === '' && topFrameSrc === ''
-      ? getDefaultSsrFrameState()
-      : createSsrFrameState(currentFrameSrc, topFrameSrc)
   let renderAbortController: AbortController | undefined
   let signal = options?.signal
   let cancelled = false
   let cancelReason: unknown
 
   let context = createRenderContext(
-    options,
+    currentFrameSrc,
+    topFrameSrc,
+    options?.resolveFrame ?? defaultResolveFrame,
+    options?.nonce,
     signal ? (renderAbortController = new AbortController()).signal : ssrSignal,
     onError,
   )
@@ -500,7 +519,7 @@ export function renderToStream(
           return
         }
         let root: SsrBuffer = { html: '', segments: null }
-        buildSegment(node, context, rootFrameState, root)
+        buildSegment(node, context, root)
         // Await in document order so the first rejecting frame determines the error.
         if (context.blockingFrames) {
           for (let frame of context.blockingFrames) await frame
@@ -519,10 +538,10 @@ export function renderToStream(
         if (closeIfCancelled(controller, context)) return
         controller.enqueue(bytes)
 
-        let hasTails = !!context.blockingFrameTails && context.blockingFrameTails.length > 0
-        let hasPending = !!context.pendingFrames && context.pendingFrames.length > 0
-        if (hasTails) {
-          let tails = streamByteStreams(context.blockingFrameTails!, controller, context)
+        let blockingTails = context.blockingFrameTails
+        let hasPending = context.pendingFrames !== undefined && context.pendingFrames.length > 0
+        if (blockingTails !== undefined && blockingTails.length > 0) {
+          let tails = streamByteStreams(blockingTails, controller, context)
           if (hasPending) {
             await Promise.all([tails, streamPendingFrames(context, controller)])
           } else {
@@ -552,10 +571,6 @@ export function renderToStream(
 }
 
 function encodeHtml(html: string): Uint8Array {
-  if (typeof Buffer === 'function') {
-    let buf = Buffer.from(html, 'utf8')
-    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
-  }
   let encoder = getTextEncoder()
   if (html.length > MAX_BUFFERED_HTML_LENGTH) return encoder.encode(html)
 
@@ -706,12 +721,7 @@ async function resolveFrameHtml(
   return splitFirstChunk(input)
 }
 
-function buildSegment(
-  node: RemixNode,
-  context: RenderContext,
-  frameState: SsrFrameState,
-  output: SsrBuffer,
-): void {
+function buildSegment(node: RemixNode, context: RenderContext, output: SsrBuffer): void {
   if (typeof node === 'string') {
     if (context.optionText !== undefined) context.optionText += node
     output.html += escapeTextContent(node)
@@ -730,7 +740,7 @@ function buildSegment(
 
   if (Array.isArray(node)) {
     for (let i = 0; i < node.length; i++) {
-      buildSegment(node[i], context, frameState, output)
+      buildSegment(node[i], context, output)
     }
     return
   }
@@ -745,16 +755,16 @@ function buildSegment(
       }
 
       if (type === 'head') {
-        buildHeadElementSegment(type, props, context, frameState, output)
+        buildHeadElementSegment(type, props, context, output)
       } else {
-        buildElementSegment(type, props, context, frameState, output)
+        buildElementSegment(type, props, context, output)
       }
       return
     }
 
     if (type === Fragment) {
       let children = props.children
-      if (children != null) buildSegment(children, context, frameState, output)
+      if (children != null) buildSegment(children, context, output)
       return
     }
 
@@ -762,21 +772,17 @@ function buildSegment(
       if (type === ImportMap) {
         pushSegment(output, buildImportMapSegment(props, context))
       } else if (isFrameComponent(type)) {
-        pushSegment(output, buildFrameSegment(node, context, frameState))
+        pushSegment(output, buildFrameSegment(node, context))
       } else if (isEntry(type)) {
-        buildEntrySegment(type, props, context, frameState, output)
+        buildEntrySegment(type, props, context, output)
       } else {
-        buildComponentSegment(type, props, context, undefined, frameState, output)
+        buildComponentSegment(type, props, context, undefined, output)
       }
     }
   }
 }
 
-function buildFrameSegment(
-  node: RemixElement,
-  context: RenderContext,
-  frameState: SsrFrameState,
-): FrameSegment {
+function buildFrameSegment(node: RemixElement, context: RenderContext): FrameSegment {
   let props = node.props
   let frameId = randomId('f')
 
@@ -796,16 +802,16 @@ function buildFrameSegment(
 
   if (props.loading === 'lazy') {
     let fallbackBuf: SsrBuffer = { html: '', segments: null }
-    buildSegment(props.fallback, context, frameState, fallbackBuf)
+    buildSegment(props.fallback, context, fallbackBuf)
     seg.content = fallbackBuf
     return seg
   }
 
-  let resolveFrameContext = getResolveFrameContext(frameState, context.nonce)
+  let resolveFrameContext = getResolveFrameContext(getFrameState(context), context.nonce)
   let nonBlocking = !!props.fallback
   if (nonBlocking) {
     let fallbackBuf: SsrBuffer = { html: '', segments: null }
-    buildSegment(props.fallback, context, frameState, fallbackBuf)
+    buildSegment(props.fallback, context, fallbackBuf)
     seg.content = fallbackBuf
     let framePromise = Promise.resolve(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
@@ -833,11 +839,25 @@ function buildFrameSegment(
   return seg
 }
 
+function assertSelectInnerHtmlAllowed(
+  tag: string,
+  props: ElementProps,
+  context: RenderContext,
+): void {
+  if (tag === 'select' || tag === 'optgroup') {
+    invariant(
+      tag === 'select'
+        ? props.value == null && props.defaultValue == null
+        : context.selectValues === undefined,
+      'select value and defaultValue require options rendered as JSX children, not through select or optgroup innerHTML',
+    )
+  }
+}
+
 function buildElementSegment(
   tag: string,
   props: any,
   context: RenderContext,
-  frameState: SsrFrameState,
   output: SsrBuffer,
 ): void {
   let tagFlags = SPECIAL_TAGS[tag]
@@ -845,30 +865,17 @@ function buildElementSegment(
 
   // Fast path: ordinary non-SVG HTML element with no special tag behavior.
   if (tagFlags === undefined && !currentIsSvg) {
-    let resolved =
-      props.outerHTML !== undefined ||
-      props.innerHTML !== undefined ||
-      props.srcDoc !== undefined ||
-      props.srcdoc !== undefined
-        ? normalizeUnsafeHTMLProps(props)
-        : props
+    let resolved = normalizeUnsafeHTMLProps(props)
     let innerHTML = resolved.innerHTML
     let finalProps =
-      resolved.mix !== undefined
-        ? resolveSsrMixedProps(tag, resolved, context, frameState)
-        : resolved
+      resolved.mix !== undefined ? resolveSsrMixedProps(tag, resolved, context) : resolved
 
     output.html += '<' + tag
     appendAttributes(tag, finalProps, false, undefined, output)
     output.html += '>'
 
     if (innerHTML !== undefined) {
-      if (tag === 'optgroup' && context.selectValues !== undefined) {
-        invariant(
-          false,
-          'select value and defaultValue require options rendered as JSX children, not through select or optgroup innerHTML',
-        )
-      }
+      assertSelectInnerHtmlAllowed(tag, finalProps, context)
       output.html += innerHTML + '</' + tag + '>'
       return
     }
@@ -877,7 +884,7 @@ function buildElementSegment(
     if (children != null) {
       let trackDepth = context.documentSegments.depth !== undefined
       if (trackDepth) context.elementDepth++
-      buildSegment(children, context, frameState, output)
+      buildSegment(children, context, output)
       if (trackDepth) context.elementDepth--
     }
     output.html += '</' + tag + '>'
@@ -888,7 +895,7 @@ function buildElementSegment(
   let innerHTML = normalizedProps.innerHTML
   let mixedProps =
     normalizedProps.mix !== undefined
-      ? resolveSsrMixedProps(tag, normalizedProps, context, frameState)
+      ? resolveSsrMixedProps(tag, normalizedProps, context)
       : normalizedProps
   // Determine namespace context for the current element and its children
   currentIsSvg = currentIsSvg || tag === 'svg'
@@ -899,7 +906,7 @@ function buildElementSegment(
   }
 
   if (!currentIsSvg && tag === 'option' && context.selectValues !== undefined) {
-    buildSelectedOptionSegment(mixedProps, context, frameState, output)
+    buildSelectedOptionSegment(mixedProps, context, output)
     return
   }
 
@@ -913,7 +920,7 @@ function buildElementSegment(
           !currentIsSvg && tag === 'select' ? SELECT_VALUE_PROPS : undefined,
         )
 
-  if (tagFlags !== undefined && (tagFlags & 1) !== 0) {
+  if (tagFlags === 1) {
     output.html += `<${tag}${attrs} />`
     return
   }
@@ -924,14 +931,7 @@ function buildElementSegment(
       : undefined
 
   if (innerHTML !== undefined) {
-    if (!currentIsSvg && (tag === 'select' || tag === 'optgroup')) {
-      invariant(
-        tag === 'select'
-          ? mixedProps.value == null && mixedProps.defaultValue == null
-          : context.selectValues === undefined,
-        'select value and defaultValue require options rendered as JSX children, not through select or optgroup innerHTML',
-      )
-    }
+    if (!currentIsSvg) assertSelectInnerHtmlAllowed(tag, mixedProps, context)
     if (documentElement) {
       pushSegment(output, documentElement.open)
       output.html += innerHTML
@@ -978,7 +978,7 @@ function buildElementSegment(
         (mixedProps.value != null && !Array.isArray(value))
     }
     context.elementDepth++
-    buildSegment(children, context, frameState, output)
+    buildSegment(children, context, output)
     context.elementDepth--
     context.selectValues = previousSelectValues
     context.selectScalar = previousSelectScalar
@@ -995,7 +995,6 @@ function buildElementSegment(
 function buildSelectedOptionSegment(
   props: ElementProps,
   context: RenderContext,
-  frameState: SsrFrameState,
   output: SsrBuffer,
 ): void {
   invariant(
@@ -1007,7 +1006,7 @@ function buildSelectedOptionSegment(
   context.elementDepth++
   let childBuf: SsrBuffer = { html: '', segments: null }
   if (props.innerHTML === undefined) {
-    buildSegment(props.children, context, frameState, childBuf)
+    buildSegment(props.children, context, childBuf)
   } else {
     childBuf.html = props.innerHTML
   }
@@ -1133,7 +1132,6 @@ function buildHeadElementSegment(
   tag: string,
   props: any,
   context: RenderContext,
-  frameState: SsrFrameState,
   output: SsrBuffer,
 ): void {
   let attrs = renderAttributes(tag, props, false)
@@ -1143,7 +1141,7 @@ function buildHeadElementSegment(
   let previousInsideHead = context.insideHead
   context.insideHead = true
   context.elementDepth++
-  if (props.children != null) buildSegment(props.children, context, frameState, output)
+  if (props.children != null) buildSegment(props.children, context, output)
   context.elementDepth--
   context.insideHead = previousInsideHead
   pushSegment(output, head.close)
@@ -1177,13 +1175,11 @@ function appendAttributes(
   excludedProps: Set<string> | undefined,
   output: SsrBuffer,
 ): void {
-  let proto = Object.getPrototypeOf(props)
-  let isPlain = proto === Object.prototype || proto === null
   let emittedClass = false
   let html = output.html
 
   for (let key in props) {
-    if (!isPlain && !Object.hasOwn(props, key)) continue
+    if (!Object.hasOwn(props, key)) continue
     if (key === 'children' || key === 'mix' || key === 'key') continue
 
     let value = props[key]
@@ -1193,7 +1189,7 @@ function appendAttributes(
       if (emittedClass) continue
       emittedClass = true
       let otherKey = key === 'class' ? 'className' : 'class'
-      let otherVal = isPlain || Object.hasOwn(props, otherKey) ? props[otherKey] : undefined
+      let otherVal = Object.hasOwn(props, otherKey) ? props[otherKey] : undefined
       let merged: unknown
       if (otherVal === undefined || otherVal === null) {
         merged = value
@@ -1244,7 +1240,7 @@ function appendAttributes(
     } else {
       if (SSR_OMITTED_PROPS.has(key) || !isAllowedHostPropName(key)) continue
       attrName = normalizeAttributeName(key, true)
-      isUrl = EXEC_URL_ATTRS.has(attrName.toLowerCase())
+      isUrl = EXEC_URL_ATTR.has(attrName.toLowerCase())
       isBoolish = shouldStringifyBooleanAttribute(attrName)
     }
 
@@ -1285,7 +1281,6 @@ function resolveSsrMixedProps(
   hostType: string,
   initialProps: ElementProps,
   context: RenderContext,
-  frameState: SsrFrameState,
 ): ElementProps {
   let mix = initialProps.mix
   if (!mix) return initialProps
@@ -1305,7 +1300,7 @@ function resolveSsrMixedProps(
 
   return composeMixedProps(hostType, initialProps, (descriptor, _index, mixinProps) => {
     if (isBrowserOnlyMixinDescriptor(descriptor)) return undefined
-    let runner = resolveSsrMixinRunner(hostType, descriptor, context, frameState)
+    let runner = resolveSsrMixinRunner(hostType, descriptor, context)
     if (!runner) return undefined
     // Unlike the client runtime, a throwing mixin is isolated here so a
     // single bad mixin cannot take down the whole stream.
@@ -1322,11 +1317,10 @@ function resolveSsrMixinRunner(
   hostType: string,
   descriptor: { type?: unknown; args?: readonly unknown[] },
   context: RenderContext,
-  frameState: SsrFrameState,
 ): ((...args: unknown[]) => unknown) | null {
   if (typeof descriptor.type !== 'function') return null
   try {
-    let handle = createSsrMixinHandle(hostType, descriptor, context, frameState)
+    let handle = createSsrMixinHandle(hostType, descriptor, context)
     let runner = descriptor.type(handle, hostType)
     if (typeof runner !== 'function') return null
     return runner
@@ -1340,7 +1334,6 @@ function createSsrMixinHandle(
   hostType: string,
   _descriptor: { type?: unknown },
   context: RenderContext,
-  frameState: SsrFrameState,
 ) {
   // Context lookups read the shared render context, so capture the parent before it moves on.
   let parentHandle = context.parentHandle
@@ -1364,7 +1357,7 @@ function createSsrMixinHandle(
       },
     },
     frame: createFrameHandle({
-      src: frameState.frame.src,
+      src: context.frameState ? context.frameState.frame.src : context.frameSrc,
       $runtime: {
         styleCache: getStyleCache(context),
       },
@@ -1382,46 +1375,27 @@ function createSsrMixinHandle(
   }
 }
 
-class SsrComponentContext {
-  #owner: SsrComponentHandle
-
-  constructor(owner: SsrComponentHandle) {
-    this.#owner = owner
-  }
-
-  set(value: unknown): void {
-    this.#owner.setContextValue(value)
-  }
-
-  get(providerType: ElementType | symbol): unknown {
-    if (typeof providerType !== 'function') return undefined
-    return this.#owner.lookupParentContext(providerType)
-  }
-}
-
-class SsrComponentHandle {
+class SsrComponentHandle implements Handle<ElementProps, unknown> {
   props: ElementProps
   #type: ElementFunction
   #parent: SsrComponentHandle | undefined
   #contextValue: unknown = undefined
   #renderContext: RenderContext
-  #frameState: SsrFrameState
   #id: string | undefined
   #phase: 'setup' | 'render' | 'idle' = 'setup'
-  #context: SsrComponentContext | undefined
+  #context: Handle<ElementProps, unknown>['context'] | undefined
+  #update: (() => Promise<AbortSignal>) | undefined
 
   constructor(
     type: ElementFunction,
     props: ElementProps,
     renderContext: RenderContext,
-    frameState: SsrFrameState,
     explicitId: string | undefined,
   ) {
     this.#type = type
     this.props = props
     this.#parent = renderContext.parentHandle
     this.#renderContext = renderContext
-    this.#frameState = frameState
     this.#id = explicitId
   }
 
@@ -1430,23 +1404,47 @@ class SsrComponentHandle {
   }
 
   get frame(): FrameHandle {
-    return this.#frameState.frame
+    return getFrameState(this.#renderContext).frame
   }
 
   get frames(): Handle['frames'] {
-    return this.#frameState.frames
+    return getFrameState(this.#renderContext).frames
   }
 
   get signal(): AbortSignal {
     return ssrSignal
   }
 
-  get context(): SsrComponentContext {
-    return (this.#context ??= new SsrComponentContext(this))
+  get context(): Handle<ElementProps, unknown>['context'] {
+    return (this.#context ??= {
+      set: (value: unknown) => {
+        this.#contextValue = value
+      },
+      get: ((providerType: ElementType | symbol) =>
+        typeof providerType === 'function'
+          ? this.#parent?.lookupContext(providerType)
+          : undefined) as Handle<ElementProps, unknown>['context']['get'],
+    })
   }
 
-  setContextValue(value: unknown): void {
-    this.#contextValue = value
+  get update(): () => Promise<AbortSignal> {
+    return (this.#update ??= () => {
+      let name = this.#type.name || 'Anonymous'
+      if (this.#phase === 'setup') {
+        console.warn(
+          `Ignored handle.update() while ${name} is running its setup function. The initial render includes setup changes.`,
+        )
+        // Never resolves on the server so post-commit `.then()` callbacks do not run during SSR.
+        return new Promise<AbortSignal>(() => {})
+      }
+      let when =
+        this.#phase !== 'idle'
+          ? `while ${name} is running its ${this.#phase} function`
+          : `before ${name}'s initial render commits`
+      throw new Error(
+        `Cannot call handle.update() ${when}. Call it from an event handler or handle.queueTask() instead.`,
+      )
+    })
   }
 
   lookupContext(providerType: Function): unknown {
@@ -1458,10 +1456,6 @@ class SsrComponentHandle {
       current = current.#parent
     }
     return undefined
-  }
-
-  lookupParentContext(providerType: Function): unknown {
-    return this.#parent?.lookupContext(providerType)
   }
 
   renderOnce(): RemixNode {
@@ -1480,23 +1474,6 @@ class SsrComponentHandle {
   }
 
   queueTask(): void {}
-
-  update(): Promise<AbortSignal> {
-    let name = this.#type.name || 'Anonymous'
-    if (this.#phase === 'setup') {
-      console.warn(
-        `Ignored handle.update() while ${name} is running its setup function. The initial render includes setup changes.`,
-      )
-      return Promise.resolve(ssrSignal)
-    }
-    let when =
-      this.#phase !== 'idle'
-        ? `while ${name} is running its ${this.#phase} function`
-        : `before ${name}'s initial render commits`
-    throw new Error(
-      `Cannot call handle.update() ${when}. Call it from an event handler or handle.queueTask() instead.`,
-    )
-  }
 }
 
 function isElementFunction(value: unknown): value is ElementFunction {
@@ -1512,14 +1489,13 @@ function buildComponentSegment(
   props: any,
   context: RenderContext,
   componentId: string | undefined,
-  frameState: SsrFrameState,
   output: SsrBuffer,
 ): void {
-  let handle = new SsrComponentHandle(type, props, context, frameState, componentId)
+  let handle = new SsrComponentHandle(type, props, context, componentId)
   let renderedNode = handle.renderOnce()
   let previousParent = context.parentHandle
   context.parentHandle = handle
-  buildSegment(renderedNode, context, frameState, output)
+  buildSegment(renderedNode, context, output)
   context.parentHandle = previousParent
 }
 
@@ -1532,7 +1508,7 @@ const SERIALIZATION_TAGS = [
   ESCAPED_OBJECT,
 ]
 
-function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFrameState) {
+function createHydrationPropsReplacer(context: RenderContext) {
   let escapedObjects = new WeakMap<object, { [ESCAPED_OBJECT]: Record<string, unknown> }>()
   let escapedContents = new WeakSet<object>()
 
@@ -1576,7 +1552,7 @@ function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFra
 
     // Component function: render synchronously, then unwrap its result
     if (isElementFunction(type)) {
-      let handle = new SsrComponentHandle(type, props, context, frameState, 'SERIALIZED')
+      let handle = new SsrComponentHandle(type, props, context, 'SERIALIZED')
       let renderedNode = handle.renderOnce()
       let previousParent = context.parentHandle
       context.parentHandle = handle
@@ -1636,15 +1612,15 @@ function buildEntrySegment(
   type: EntryComponent,
   props: any,
   context: RenderContext,
-  frameState: SsrFrameState,
   output: SsrBuffer,
 ): void {
   let instanceId = randomId('h')
   output.html += `<!--${createHydrationStartMarker(instanceId)}-->`
-  buildComponentSegment(type, props, context, instanceId, frameState, output)
+  // Copy props for the server handle so mutations during SSR cannot alter serialized entry props.
+  buildComponentSegment(type, { ...props }, context, instanceId, output)
 
   // Store hydration data in context for aggregation
-  let replacer = createHydrationPropsReplacer(context, frameState)
+  let replacer = createHydrationPropsReplacer(context)
   let propsJson = JSON.stringify(props, replacer)
   if (propsJson === undefined) throw new TypeError('Client entry props must serialize to JSON')
   ;(context.unresolvedHydrationData ??= new Map()).set(instanceId, {
@@ -2377,14 +2353,18 @@ export async function renderToString(
   node: RemixNode,
   options?: RenderToStringOptions,
 ): Promise<string> {
-  let context = createRenderContext(options, ssrSignal, (error) => {
-    throw error
-  })
+  let context = createRenderContext(
+    '',
+    '',
+    defaultResolveFrame,
+    options?.nonce,
+    ssrSignal,
+    (error) => {
+      throw error
+    },
+  )
   let root: SsrBuffer = { html: '', segments: null }
-  buildSegment(node, context, getDefaultSsrFrameState(), root)
-  if (context.blockingFrames) {
-    for (let frame of context.blockingFrames) await frame
-  }
+  buildSegment(node, context, root)
   if (context.unresolvedHydrationData && context.unresolvedHydrationData.size > 0) {
     await resolveClientEntries(context)
     validateClientEntriesForHydration(context)

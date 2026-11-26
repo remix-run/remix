@@ -222,11 +222,9 @@ export function camelToKebab(str: string): string {
 }
 
 export function serializeStyleObject(style: Record<string, unknown>): string {
-  let proto = Object.getPrototypeOf(style)
-  let isPlain = proto === Object.prototype || proto === null
   let out = ''
   for (let key in style) {
-    if (!isPlain && !Object.hasOwn(style, key)) continue
+    if (!Object.hasOwn(style, key)) continue
     let value = style[key]
     if (value == null || typeof value === 'boolean') continue
     let cssValue: string | undefined
