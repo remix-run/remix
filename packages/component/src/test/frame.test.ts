@@ -2934,6 +2934,109 @@ describe('frames', () => {
       frame.dispose()
     }
   })
+
+  it('loads a non-HTML document navigation as its own document', async (t) => {
+    document.documentElement.innerHTML =
+      '<head><title>Initial</title></head><body><main>Initial</main></body>'
+    let navigate = mockDocumentNavigation(t)
+    let src = new URL('/screenshot.webp', document.location.href).href
+    let response = new Response('RIFF....WEBP', { headers: { 'Content-Type': 'image/webp' } })
+    let frame = createTestFrame(document, { src, resolveFrame: () => response })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await reloadFrameForNavigation(frame.handle).finished
+
+    expect(navigate).toHaveBeenCalledTimes(1)
+    expect(navigate.mock.calls[0]?.arguments[0]).toBe(src)
+    expect(navigate.mock.calls[0]?.arguments[1]).toEqual({
+      history: 'replace',
+      info: 'remix-document-reload',
+    })
+    expect(response.bodyUsed).toBe(true)
+    expect(document.title).toBe('Initial')
+    expect(document.querySelector('main')?.textContent).toBe('Initial')
+  })
+
+  it('loads the redirected destination when a redirect ends at a non-HTML response', async (t) => {
+    document.documentElement.innerHTML = '<head></head><body><main>Initial</main></body>'
+    let navigate = mockDocumentNavigation(t)
+    let destination = new URL('/invoices/3.pdf', document.location.href).href
+    let response = new Response('%PDF-1.7', { headers: { 'Content-Type': 'application/pdf' } })
+    Object.defineProperties(response, {
+      redirected: { value: true },
+      url: { value: destination },
+    })
+    let frame = createTestFrame(document, {
+      src: new URL('/export?id=3', document.location.href).href,
+      resolveFrame: () => response,
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await reloadFrameForNavigation(frame.handle).finished
+
+    expect(navigate).toHaveBeenCalledTimes(1)
+    expect(navigate.mock.calls[0]?.arguments[0]).toBe(destination)
+    expect(document.querySelector('main')?.textContent).toBe('Initial')
+  })
+
+  it('renders document responses a resolver labeled text/plain', async (t) => {
+    document.documentElement.innerHTML = '<head></head><body><main>Initial</main></body>'
+    let navigate = mockDocumentNavigation(t)
+    let frame = createTestFrame(document, {
+      // The Response constructor applies `text/plain` to every string body, so a resolver that
+      // builds its own response from HTML must keep rendering into the page.
+      resolveFrame: () => new Response(markerlessDocument),
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await reloadFrameForNavigation(frame.handle).finished
+
+    expect(navigate).not.toHaveBeenCalled()
+    expect(document.querySelector('main')?.textContent).toBe('Next')
+  })
+
+  it('renders non-HTML responses resolved for a named frame', async (t) => {
+    let navigate = mockDocumentNavigation(t)
+    let root = document.createElement('div')
+    root.innerHTML = '<p>Initial</p>'
+    document.body.append(root)
+    let frame = createTestFrame(root, {
+      name: 'report',
+      src: new URL('/report.pdf', document.location.href).href,
+      resolveFrame: () =>
+        new Response('<p>Report</p>', { headers: { 'Content-Type': 'application/pdf' } }),
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await frame.handle.reload()
+
+    expect(navigate).not.toHaveBeenCalled()
+    expect(root.textContent).toBe('Report')
+  })
+
+  it('renders a non-HTML response to a document form submission', async (t) => {
+    document.documentElement.innerHTML = '<head></head><body><main>Initial</main></body>'
+    let navigate = mockDocumentNavigation(t)
+    let frame = createTestFrame(document, {
+      resolveFrame: () =>
+        new Response(
+          '<!doctype html><html><head></head><body><main>Submitted</main></body></html>',
+          { headers: { 'Content-Type': 'application/pdf' } },
+        ),
+    })
+    t.after(() => frame.dispose())
+
+    await frame.ready()
+    await reloadFrameForNavigation(frame.handle, { method: 'POST', formData: new FormData() })
+      .finished
+
+    expect(navigate).not.toHaveBeenCalled()
+    expect(document.querySelector('main')?.textContent).toBe('Submitted')
+  })
 })
 
 function mockDocumentNavigation(t: TestContext) {
