@@ -988,7 +988,7 @@ export function createHmrSupervisor(options: {
   }
 
   function ready(): Promise<void> {
-    trace('ready:called')
+    if (!isReady()) trace('ready:blocked')
     if (isReady()) return Promise.resolve()
 
     return new Promise((resolvePromise) => {
@@ -997,7 +997,6 @@ export function createHmrSupervisor(options: {
   }
 
   function resolveReadyWaiters(options: { force?: boolean } = {}): void {
-    if (readyWaiters.length > 0) trace('resolveReadyWaiters:check')
     if (!options.force && !isReady()) return
     if (readyWaiters.length > 0) trace('resolveReadyWaiters:resolved')
 
