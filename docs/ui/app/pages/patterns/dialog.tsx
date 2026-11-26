@@ -188,8 +188,8 @@ export default function DialogPage(handle: Handle<PageProps>) {
       <Section id="toasts" title="Stacking with other patterns">
         <p>
           The stacking of dialogs with other patterns from Remix UI is handled automatically. Follow
-          the <a href="/#stacking">stacking and overlays guidance</a> to configure its initial{' '}
-          <code>z-index</code> and to place notifications and custom DOM content above dialogs.
+          the <a href="/#stacking">stacking and overlays guidance</a> to keep portaled dialogs above
+          app content and place notifications and custom DOM content above dialogs.
         </p>
         <Example id="stacking-example" example={stacking} />
       </Section>

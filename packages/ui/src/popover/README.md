@@ -111,7 +111,7 @@ Wrap the surface in `popover.Portal` to render in the document body and escape c
 
 Style visibility with `[data-open]` and entrance/exit motion with `[data-state="open"]` or `[data-state="closed"]`. The surface keeps `data-open`, stacking order, and its scroll lock until finite exit animations finish. Reopening supersedes a pending close. Native `:popover-open`, `beforetoggle`, and `toggle` no longer apply. React to your controlled `open` state and use `handle.queueTask()` for DOM work after rendering. Opening and closing do not invoke native popover methods.
 
-Dialogs, menus, selects, comboboxes, and popovers share stacking and dismissal order. Set `--rmx-layer-base` on the document root to offset all participating overlays relative to other application content. Portals avoid ancestor stacking contexts; arbitrary external widgets still need to respect a modal dialog's focus and inert boundaries.
+Dialogs, menus, selects, comboboxes, and popovers share stacking and dismissal order. Wrap app content in an element with `css({ isolation: 'isolate' })` so popups portaled to `document.body` appear above the app's z-index layers. For other layering setups, `--rmx-layer-base` can optionally raise the stack. It defaults to `0`. Portals avoid ancestor stacking contexts; arbitrary external widgets still need to respect a modal dialog's focus and inert boundaries.
 
 ## Surface context
 
