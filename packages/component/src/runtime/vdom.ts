@@ -1196,17 +1196,12 @@ export function reconcileVNodes(
   }
 
   let { frame } = context
-  let svg =
-    node.kind === 'host'
-      ? node.type === 'svg'
-        ? true
-        : node.type === 'foreignObject'
-          ? false
-          : vParent._svg
-      : vParent._svg
+  // `svg` is this node's own namespace. A foreignObject stays an SVG element; only its children
+  // switch back to HTML, so the context passed down is tracked separately in `_svg`.
+  let svg = node.kind === 'host' && node.type === 'svg' ? true : vParent._svg
   let linked = node as unknown as MountedNodeBase
   linked._parent = vParent
-  linked._svg = svg
+  linked._svg = node.kind === 'host' && node.type === 'foreignObject' ? false : svg
 
   if (!curr && cursor) {
     let hydrationNode = nextHydrationNode(

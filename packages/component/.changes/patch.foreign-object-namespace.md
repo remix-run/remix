@@ -1,0 +1,1 @@
+Fix `<foreignObject>` being created in the HTML namespace in the browser, which left everything inside it unrendered. The element itself is now created as an SVG element and only its children switch to the HTML namespace, matching server rendering. Hydrating server-rendered `<foreignObject>` markup also adopts the existing element instead of reporting a tag mismatch.

@@ -1,0 +1,1 @@
+`<foreignObject>` rendered with `remix/component` in the browser is now created in the SVG namespace, so its HTML children render inside the SVG. Hydrating server-rendered `<foreignObject>` markup also adopts the existing element.
