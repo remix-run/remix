@@ -1865,6 +1865,439 @@ export function Component() {
   })
 })
 
+describe('component HMR evaluation failures', () => {
+  it('keeps rejected browser edits out of children mounted by retained setup callbacks', async (t) => {
+    let source = `export function Child() {
+  let label = 'working'
+  return () => <output>{label}</output>
+}
+export function Component(handle) {
+  handle.props.actions.mountChild = (childHandle) => Child(childHandle)
+  return () => <main>parent</main>
+}`
+    let host = createModuleHost(t)
+    let module = await host.load(source)
+    let Child = getComponent(module, 'Child')
+    let actions: { mountChild?: ComponentFunction } = {}
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { actions } }
+    getComponent(module, 'Component')(handle)
+    let mountChild = actions.mountChild
+    assert.ok(mountChild)
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    await assert.rejects(
+      host.update(`${source.replace('working', 'rejected')}\nthrow new Error("rejected edit")`),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>recovered</output>')
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await assert.rejects(
+      host.update(
+        `${source.replace('working', 'rejected again')}\nthrow new Error("rejected edit")`,
+      ),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await host.update(source.replace('working', 'final'))
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>final</output>')
+    assert.deepEqual(host.messages, [])
+  })
+
+  it('keeps rejected server edits out of retained component references', async (t) => {
+    let source = `export function Child() {
+  let label = 'working'
+  return () => <output>{label}</output>
+}
+export function Component(handle) {
+  handle.props.actions.mountChild = (childHandle) => Child(childHandle)
+  return () => <main>parent</main>
+}`
+    let host = createModuleHost(t, transformComponentsForServer)
+    let module = await host.load(source)
+    let Child = getComponent(module, 'Child')
+    let actions: { mountChild?: ComponentFunction } = {}
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { actions } }
+    getComponent(module, 'Component')(handle)
+    let mountChild = actions.mountChild
+    assert.ok(mountChild)
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    await assert.rejects(
+      host.update(`${source.replace('working', 'rejected')}\nthrow new Error("rejected edit")`),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>recovered</output>')
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await assert.rejects(
+      host.update(
+        `${source.replace('working', 'rejected again')}\nthrow new Error("rejected edit")`,
+      ),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await host.update(source.replace('working', 'final'))
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>final</output>')
+    assert.deepEqual(host.messages, [])
+  })
+
+  it('keeps asynchronously rejected browser edits out of retained component references', async (t) => {
+    let source = `export function Child() {
+  let label = 'working'
+  return () => <output>{label}</output>
+}
+export function Component(handle) {
+  handle.props.actions.mountChild = (childHandle) => Child(childHandle)
+  return () => <main>parent</main>
+}`
+    let host = createModuleHost(t)
+    let module = await host.load(source)
+    let Child = getComponent(module, 'Child')
+    let actions: { mountChild?: ComponentFunction } = {}
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { actions } }
+    getComponent(module, 'Component')(handle)
+    let mountChild = actions.mountChild
+    assert.ok(mountChild)
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    await assert.rejects(
+      host.update(
+        `${source.replace('working', 'rejected')}\nawait Promise.reject(new Error("rejected edit"))`,
+      ),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>recovered</output>')
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await assert.rejects(
+      host.update(
+        `${source.replace('working', 'rejected again')}\nawait Promise.reject(new Error("rejected edit"))`,
+      ),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await host.update(source.replace('working', 'final'))
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>final</output>')
+    assert.deepEqual(host.messages, [])
+  })
+
+  it('keeps asynchronously rejected server edits out of retained component references', async (t) => {
+    let source = `export function Child() {
+  let label = 'working'
+  return () => <output>{label}</output>
+}
+export function Component(handle) {
+  handle.props.actions.mountChild = (childHandle) => Child(childHandle)
+  return () => <main>parent</main>
+}`
+    let host = createModuleHost(t, transformComponentsForServer)
+    let module = await host.load(source)
+    let Child = getComponent(module, 'Child')
+    let actions: { mountChild?: ComponentFunction } = {}
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { actions } }
+    getComponent(module, 'Component')(handle)
+    let mountChild = actions.mountChild
+    assert.ok(mountChild)
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    await assert.rejects(
+      host.update(
+        `${source.replace('working', 'rejected')}\nawait Promise.reject(new Error("rejected edit"))`,
+      ),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>recovered</output>')
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await assert.rejects(
+      host.update(
+        `${source.replace('working', 'rejected again')}\nawait Promise.reject(new Error("rejected edit"))`,
+      ),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await host.update(source.replace('working', 'final'))
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>final</output>')
+    assert.deepEqual(host.messages, [])
+  })
+
+  it('preserves a retained named client-entry self-reference after browser evaluation rejects', async (t) => {
+    let source = `import { clientEntry } from '@remix-run/component'
+export const Component = clientEntry(import.meta.url, (function decorate(component) {
+  return (handle) => component(handle)
+})(function Self(handle) {
+  handle.props.actions.mountSelf = (nextHandle) => Self(nextHandle)
+  return () => <output>working</output>
+}))`
+    let host = createModuleHost(t)
+    let Component = getComponent(await host.load(source), 'Component')
+    let actions: Record<string, (...args: unknown[]) => unknown> = {}
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { actions } }
+    Component(handle)
+    let mountSelf = actions.mountSelf
+    await assert.rejects(
+      host.update(`${source.replace('working', 'rejected')}
+await Promise.reject(new Error('rejected self edit'))`),
+      /rejected self edit/,
+    )
+    let render = mountSelf({ ...handle })
+    assert.ok(typeof render === 'function')
+    assert.equal(await renderToString(render()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    render = mountSelf({ ...handle })
+    assert.ok(typeof render === 'function')
+    assert.equal(await renderToString(render()), '<output>recovered</output>')
+  })
+
+  it('preserves a retained named client-entry self-reference after server evaluation rejects', async (t) => {
+    let source = `import { clientEntry } from '@remix-run/component'
+export const Component = clientEntry(import.meta.url, (function decorate(component) {
+  return (handle) => component(handle)
+})(function Self(handle) {
+  handle.props.actions.mountSelf = (nextHandle) => Self(nextHandle)
+  return () => <output>working</output>
+}))`
+    let host = createModuleHost(t, transformComponentsForServer)
+    let Component = getComponent(await host.load(source), 'Component')
+    let actions: Record<string, (...args: unknown[]) => unknown> = {}
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { actions } }
+    Component(handle)
+    let mountSelf = actions.mountSelf
+    await assert.rejects(
+      host.update(`${source.replace('working', 'rejected')}
+await Promise.reject(new Error('rejected self edit'))`),
+      /rejected self edit/,
+    )
+    let render = mountSelf({ ...handle })
+    assert.ok(typeof render === 'function')
+    assert.equal(await renderToString(render()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    render = mountSelf({ ...handle })
+    assert.ok(typeof render === 'function')
+    assert.equal(await renderToString(render()), '<output>recovered</output>')
+  })
+
+  it('isolates replacements while top-level await is pending and tracks old-wrapper mounts', async (t) => {
+    let source = `export function Component() {
+  return () => <output>working</output>
+}`
+    let host = createModuleHost(t)
+    let Component = getComponent(await host.load(source), 'Component')
+    let entered = Promise.withResolvers<unknown>()
+    let gate = Promise.withResolvers<void>()
+    host.data.entered = entered.resolve
+    host.data.gate = gate.promise
+    let updating = host.update(`${source.replace('working', 'pending')}
+import.meta.hot.data.entered(Component)
+await import.meta.hot.data.gate`)
+    let Pending = getComponent({ Component: await entered.promise }, 'Component')
+    let first = new AbortController()
+    let second = new AbortController()
+    t.after(() => {
+      first.abort()
+      second.abort()
+    })
+    let retainedRender = Component({ signal: first.signal, props: {} })
+    let pendingRender = Pending({ signal: second.signal, props: {} })
+    assert.equal(await renderToString(retainedRender()), '<output>working</output>')
+    assert.equal(await renderToString(pendingRender()), '<output>pending</output>')
+    gate.resolve()
+    await updating
+    assert.equal(await renderToString(retainedRender()), '<output>pending</output>')
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(retainedRender()), '<output>recovered</output>')
+    assert.equal(await renderToString(pendingRender()), '<output>recovered</output>')
+  })
+
+  it('keeps server replacements private while top-level await is pending', async (t) => {
+    let source = `export function Component() {
+  return () => <output>working</output>
+}`
+    let host = createModuleHost(t, transformComponentsForServer)
+    let Component = getComponent(await host.load(source), 'Component')
+    let entered = Promise.withResolvers<unknown>()
+    let gate = Promise.withResolvers<void>()
+    host.data.entered = entered.resolve
+    host.data.gate = gate.promise
+    let updating = host.update(`${source.replace('working', 'pending')}
+import.meta.hot.data.entered(Component)
+await import.meta.hot.data.gate`)
+    let Pending = getComponent({ Component: await entered.promise }, 'Component')
+    let handle = { signal: new AbortController().signal, props: {} }
+    assert.equal(await renderToString(Component(handle)()), '<output>working</output>')
+    assert.equal(await renderToString(Pending(handle)()), '<output>pending</output>')
+    gate.reject(new Error('await rejected'))
+    await assert.rejects(updating, /await rejected/)
+    assert.equal(await renderToString(Component(handle)()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Component(handle)()), '<output>recovered</output>')
+  })
+
+  it('tracks instances created during the initial asynchronous module evaluation', async (t) => {
+    let host = createModuleHost(t)
+    let entered = Promise.withResolvers<unknown>()
+    let gate = Promise.withResolvers<void>()
+    host.data.entered = entered.resolve
+    host.data.gate = gate.promise
+    let source = `export function Component() {
+  return () => <output>initial</output>
+}`
+    let loading = host.load(`${source}
+import.meta.hot.data.entered(Component)
+await import.meta.hot.data.gate`)
+    let Component = getComponent({ Component: await entered.promise }, 'Component')
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let render = Component({ signal: controller.signal, props: {} })
+    assert.equal(await renderToString(render()), '<output>initial</output>')
+    gate.resolve()
+    await loading
+    await host.update(source.replace('initial', 'updated'))
+    assert.equal(await renderToString(render()), '<output>updated</output>')
+  })
+
+  it('preserves browser calls to hoisted components before their declaration', async (t) => {
+    let source = `if (import.meta.hot.data.mount) import.meta.hot.data.mount(Component)
+export function Component() {
+  return () => <output>working</output>
+}`
+    let host = createModuleHost(t)
+    await host.load(source)
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let render: (() => RemixNode) | undefined
+    host.data.mount = (component: unknown) => {
+      let Component = getComponent({ Component: component }, 'Component')
+      render = Component({ signal: controller.signal, props: {} })
+    }
+    await host.update(source.replace('working', 'updated'))
+    assert.ok(render)
+    assert.equal(await renderToString(render()), '<output>updated</output>')
+  })
+
+  it('preserves server calls to hoisted components before their declaration', async (t) => {
+    let source = `if (import.meta.hot.data.mount) import.meta.hot.data.mount(Component)
+export function Component() {
+  return () => <output>working</output>
+}`
+    let host = createModuleHost(t, transformComponentsForServer)
+    await host.load(source)
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let render: (() => RemixNode) | undefined
+    host.data.mount = (component: unknown) => {
+      let Component = getComponent({ Component: component }, 'Component')
+      render = Component({ signal: controller.signal, props: {} })
+    }
+    await host.update(source.replace('working', 'updated'))
+    assert.ok(render)
+    assert.equal(await renderToString(render()), '<output>working</output>')
+  })
+
+  it('keeps a successful dependency update when its importer rejects', async (t) => {
+    let dependency = createModuleHost(t)
+    let source = `export function Component() {
+  return () => <output>working</output>
+}`
+    let Child = getComponent(await dependency.load(source), 'Component')
+    let importer = createModuleHost(t)
+    let Parent = getComponent(await importer.load(source), 'Component')
+    importer.data.updateDependency = () =>
+      dependency.update(source.replace('working', 'dependency updated'))
+    await assert.rejects(
+      importer.update(`${source.replace('working', 'importer rejected')}
+await import.meta.hot.data.updateDependency()
+throw new Error('importer rejected')`),
+      /importer rejected/,
+    )
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: {} }
+    assert.equal(await renderToString(Child(handle)()), '<output>dependency updated</output>')
+    assert.equal(await renderToString(Parent({ ...handle })()), '<output>working</output>')
+  })
+
+  it('publishes successfully evaluated browser modules even when component setup later throws', async (t) => {
+    let source = `export function Component() {
+  return () => <output>working</output>
+}`
+    let host = createModuleHost(t)
+    let Component = getComponent(await host.load(source), 'Component')
+    await host.update(
+      source.replace('return () =>', 'throw new Error("setup error"); return () =>'),
+    )
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: {} }
+    assert.throws(() => Component(handle), /setup error/)
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Component(handle)()), '<output>recovered</output>')
+  })
+
+  it('publishes successfully evaluated server modules even when rendering later throws', async (t) => {
+    let source = `export function Component() {
+  return () => <output>working</output>
+}`
+    let host = createModuleHost(t, transformComponentsForServer)
+    let Component = getComponent(await host.load(source), 'Component')
+    await host.update(
+      source.replace('<output>working</output>', '{ throw new Error("render error") }'),
+    )
+    let handle = { signal: new AbortController().signal, props: {} }
+    assert.throws(() => Component(handle)(), /render error/)
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Component(handle)()), '<output>recovered</output>')
+  })
+
+  it('does not publish a partial module when evaluation fails between component declarations', async (t) => {
+    let source = `export function First() {
+  return () => <output>first</output>
+}
+// failure here
+export function Component() {
+  return () => <output>second</output>
+}`
+    let host = createModuleHost(t)
+    let module = await host.load(source)
+    await assert.rejects(
+      host.update(
+        source
+          .replace('first', 'rejected')
+          .replace('// failure here', 'throw new Error("between declarations")'),
+      ),
+      /between declarations/,
+    )
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: {} }
+    assert.equal(
+      await renderToString(getComponent(module, 'First')(handle)()),
+      '<output>first</output>',
+    )
+    assert.equal(
+      await renderToString(getComponent(module, 'Component')({ ...handle })()),
+      '<output>second</output>',
+    )
+  })
+})
+
 async function createComponent(
   t: TestContext,
   source: string,
@@ -1911,7 +2344,7 @@ function createModuleHost(
 ) {
   let moduleUrl = `/test/component-${++nextModuleId}.${lang}`
   let revision = 0
-  let data = {}
+  let data: Record<string, unknown> = {}
   let acceptCallbacks: Array<(module: unknown) => void> = []
   let messages: string[] = []
   let prefix = `data:text/javascript;component-hmr=${nextModuleId},`
@@ -1957,6 +2390,7 @@ function createModuleHost(
   }
 
   return {
+    data,
     messages,
     load,
     async update(source: string) {

@@ -185,6 +185,16 @@ console.log('AFTER_COMPONENTS')`
     assertPosition(result, 'getComponentHandleForHmr', { source: null, line: null, column: null })
     assertPosition(result, 'getCurrentComponentForHmr', { source: null, line: null, column: null })
     assertPosition(result, 'registerComponentForHmr', { source: null, line: null, column: null })
+    assertPosition(result, 'let __remixComponentHmrWrapper_Counter__', {
+      source: null,
+      line: null,
+      column: null,
+    })
+    assertPosition(result, 'commitComponentModuleForHmr', {
+      source: null,
+      line: null,
+      column: null,
+    })
   })
 
   it('leaves generated server wrappers and registration unmapped', () => {
@@ -195,6 +205,16 @@ console.log('AFTER_COMPONENTS')`
     assertMapped(result, source, serverOptions.moduleUrl, 'SERVER_BODY')
     assertPosition(result, 'getCurrentComponentForHmr', { source: null, line: null, column: null })
     assertPosition(result, 'registerComponentForHmr', { source: null, line: null, column: null })
+    assertPosition(result, 'let __remixComponentHmrWrapper_Counter__', {
+      source: null,
+      line: null,
+      column: null,
+    })
+    assertPosition(result, 'commitComponentModuleForHmr', {
+      source: null,
+      line: null,
+      column: null,
+    })
   })
 
   it('maps browser parameter defaults in the setup signature', () => {
@@ -222,6 +242,16 @@ console.log('AFTER_ENTRY')`
     assertMapped(result, source, serverOptions.moduleUrl, 'AFTER_ENTRY')
     assertPosition(result, 'getCurrentComponentForHmr', { source: null, line: null, column: null })
     assertPosition(result, 'registerComponentForHmr', { source: null, line: null, column: null })
+    assertPosition(result, 'let __remixComponentHmrWrapper_Counter__', {
+      source: null,
+      line: null,
+      column: null,
+    })
+    assertPosition(result, 'commitComponentModuleForHmr', {
+      source: null,
+      line: null,
+      column: null,
+    })
   })
 
   it('maps hoisted function bodies without mapping synthetic var declarations', () => {
