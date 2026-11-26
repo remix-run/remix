@@ -2121,7 +2121,7 @@ const BOOLEANISH_ATTR = new Set([
   'symmetric',
 ])
 const UNSAFE_PROP = /^on|[\0\t\n\f\r "'/>=]/i
-const EXEC_URL_ATTR = new Set(['href', 'src', 'action', 'formaction', 'xlink:href'])
+export const EXEC_URL_ATTR = new Set(['href', 'src', 'action', 'formaction', 'xlink:href'])
 const BLOCKED_JS_URL =
   "javascript:throw new Error('Remix has blocked a javascript: URL as a security precaution.')"
 const VENDOR_STYLE_PREFIX = /^(?:-?(?:webkit|moz|ms|o)-|(?:[Ww]ebkit|[Mm]oz|[Mm]s|[Oo])(?=[A-Z]))/
@@ -2462,7 +2462,7 @@ export function shouldStringifyBooleanAttribute(name: string): boolean {
   )
 }
 
-export function getMergedClassName(props: ElementProps): string | undefined {
+function getMergedClassName(props: ElementProps): string | undefined {
   let classAttr = typeof props.class === 'string' ? props.class : ''
   let className = typeof props.className === 'string' ? props.className : ''
   return classAttr && className ? `${classAttr} ${className}` : classAttr || className || undefined

@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import type { Handle, RemixNode } from '../runtime/component.ts'
+import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
 import { createMixin, createRoot, css, on, unsafeHTML } from '../index.ts'
 import { createElement } from '../runtime/create-element.ts'
 
@@ -768,6 +768,144 @@ describe('stream', () => {
       })
       expect(html).toBe('<div>https://example.com/dashboard</div>')
     })
+
+    it('returns a stable id when read repeatedly on the same component during SSR', async () => {
+      function Field(handle: Handle) {
+        let setupId = handle.id
+        return () => (
+          <div>
+            <label htmlFor={setupId}>Name</label>
+            <input id={handle.id} />
+          </div>
+        )
+      }
+
+      let html = await renderToString(<Field />)
+      let forMatch = html.match(/for="([^"]+)"/)
+      let idMatch = html.match(/id="([^"]+)"/)
+      expect(forMatch?.[1]).toBeTruthy()
+      expect(forMatch?.[1]).toBe(idMatch?.[1])
+    })
+
+    it('warns on handle.update() during SSR setup and throws during SSR render', async (t) => {
+      let warnSpy = t.mock.method(console, 'warn', () => {})
+
+      function SetupUpdate(handle: Handle) {
+        let { update } = handle
+        void update()
+        return () => <span>ok</span>
+      }
+
+      expect(await renderToString(<SetupUpdate />)).toBe('<span>ok</span>')
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+
+      function RenderUpdate(handle: Handle) {
+        let { update } = handle
+        return () => {
+          void update()
+          return <span>bad</span>
+        }
+      }
+
+      await expect(renderToString(<RenderUpdate />)).rejects.toThrow(
+        'Cannot call handle.update() while RenderUpdate is running its render function',
+      )
+    })
+
+    it('isolates handle.props mutations on reused elements across renders', async () => {
+      function MutateProps(handle: Handle<{ label: string; count?: number }>) {
+        handle.props.count = (handle.props.count ?? 0) + 1
+        return () => (
+          <span>
+            {handle.props.label}:{handle.props.count}
+          </span>
+        )
+      }
+
+      let element = <MutateProps label="item" />
+      expect(await renderToString(element)).toBe('<span>item:1</span>')
+      expect(await renderToString(element)).toBe('<span>item:1</span>')
+    })
+
+    it('isolates handle.frame across separate renders and supports destructured context methods', async () => {
+      function Provider(handle: Handle<{ children?: RemixNode }, string>) {
+        let { set } = handle.context
+        set('ok')
+        return () => handle.props.children
+      }
+
+      function Consumer(handle: Handle) {
+        let { get } = handle.context
+        let value = get(Provider)
+        return () => <span>{value}</span>
+      }
+
+      let frames: FrameHandle[] = []
+      function MutateFrame(handle: Handle) {
+        frames.push(handle.frame)
+        handle.frame.src = '/mutated'
+        return () => (
+          <Provider>
+            <Consumer />
+          </Provider>
+        )
+      }
+
+      expect(await renderToString(<MutateFrame />)).toBe('<span>ok</span>')
+      expect(await renderToString(<MutateFrame />)).toBe('<span>ok</span>')
+      expect(frames.length).toBe(2)
+      expect(frames[0]).not.toBe(frames[1])
+
+      let seenSrc: string | undefined
+      function ReadFrame(handle: Handle) {
+        seenSrc = handle.frame.src
+        return () => <span />
+      }
+      await renderToString(<ReadFrame />)
+      expect(seenSrc).toBe('')
+    })
+
+    it('keeps client entry serialized props isolated if the component mutates handle.props during SSR', async () => {
+      let MutatingEntry = clientEntry(
+        '/js/mutating.js#MutatingEntry',
+        function MutatingEntry(handle: Handle<{ label: string; extra?: number }>) {
+          handle.props.extra = 123
+          return () => <span>{handle.props.label}</span>
+        },
+      )
+
+      let html = await renderToString(<MutatingEntry label="hello" />)
+      let data = parseRmxDataFromHtml(html)
+      let [, entry] = getSingleEntry(data.h)
+      expect(entry.props).toEqual({ label: 'hello' })
+    })
+
+    it('rejects non-lazy frames in renderToString even if options carries resolveFrame', async () => {
+      let options = {
+        nonce: 'abc',
+        resolveFrame: () => '<div>should not run</div>',
+      }
+
+      await expect(renderToString(<Frame src="/panel" />, options)).rejects.toThrow(
+        'No resolveFrame provided',
+      )
+    })
+
+    it('renders document body innerHTML with head resources and hydration data', async () => {
+      let html = await renderToString(
+        <html>
+          <head>
+            <title>Doc</title>
+          </head>
+          <body innerHTML={unsafeHTML('<main>raw</main>')} />
+        </html>,
+        { nonce: 'n1' },
+      )
+
+      expect(html).toBe(
+        '<html><head><title>Doc</title><meta name="rmx-nonce" content="" nonce="n1"></head><body><main>raw</main></body></html>',
+      )
+    })
   })
 
   describe('special props', () => {
@@ -881,6 +1019,48 @@ describe('stream', () => {
       expect(html).toBe('<div data-value="ok" aria-label="Example"></div>')
     })
 
+    it('handles null-prototype props, null-prototype style objects, null style, and inherited class', async () => {
+      let nullStyle = Object.assign(Object.create(null), {
+        backgroundColor: '#fff',
+        padding: '8px',
+      })
+      let nullProps = Object.assign(Object.create(null), {
+        className: 'b',
+        class: 'a',
+        style: nullStyle,
+        'data-ok': 'yes',
+      })
+      let inheritedClassProps = Object.assign(Object.create({ class: 'inherited' }), {
+        className: 'own',
+        style: null,
+      })
+
+      let html = await renderToString(
+        <>
+          {createElement('div', nullProps)}
+          {createElement('span', inheritedClassProps)}
+        </>,
+      )
+
+      expect(html).toBe(
+        '<div class="a b" style="background-color: #fff; padding: 8px;" data-ok="yes"></div>' +
+          '<span class="own"></span>',
+      )
+    })
+
+    it('emits standalone class after other attributes and preserves className position', async () => {
+      let html = await renderToString(
+        <>
+          <a class="nav-link" href="/api/" />
+          <div className="panel" data-panel="before" />
+        </>,
+      )
+
+      expect(html).toBe(
+        '<a href="/api/" class="nav-link"></a><div class="panel" data-panel="before"></div>',
+      )
+    })
+
     it('blocks javascript URLs in executable URL attributes', async () => {
       let html = await drain(
         renderToStream(
@@ -895,6 +1075,7 @@ describe('stream', () => {
               {createElement('a', { id: 'svg-link', HREF: 'javascript:alert(1)' })}
             </svg>
             <object id="object" data="javascript:alert(1)" />
+            {createElement('Object', { id: 'object-mixed', data: 'javascript:alert(1)' })}
           </>,
         ),
       )
@@ -917,6 +1098,9 @@ describe('stream', () => {
         blockedJavaScriptUrl,
       )
       expect(shelf.content.querySelector('#object')?.getAttribute('data')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(shelf.content.querySelector('#object-mixed')?.getAttribute('data')).toBe(
         blockedJavaScriptUrl,
       )
     })

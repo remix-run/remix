@@ -159,11 +159,19 @@ export function isRemixElement(node: unknown): node is RemixElement {
 
 function normalizeElementProps(props: ElementProps | null | undefined): ElementProps {
   if (!props) return {}
-  if (!('mix' in props)) return props
-
   let mix = props.mix
-  if (Array.isArray(mix) && mix.length > 0 && mix.every((item) => item && !Array.isArray(item))) {
-    return props
+  if (mix === undefined) {
+    if (!('mix' in props)) return props
+  } else if (Array.isArray(mix) && mix.length > 0) {
+    let allFlat = true
+    for (let i = 0; i < mix.length; i++) {
+      let item = mix[i]
+      if (!item || Array.isArray(item)) {
+        allFlat = false
+        break
+      }
+    }
+    if (allFlat) return props
   }
 
   let { mix: _mix, ...rest } = props
@@ -260,6 +268,8 @@ interface NormalizedUnsafeHTMLProps extends Record<string, unknown> {
  * @returns Host props with opaque raw-HTML values replaced by their strings.
  * @internal
  */
+const UNSAFE_HTML_PROPS = ['innerHTML', 'srcDoc', 'srcdoc'] as const
+
 export function normalizeUnsafeHTMLProps(
   props: Record<string, unknown>,
 ): NormalizedUnsafeHTMLProps {
@@ -268,8 +278,12 @@ export function normalizeUnsafeHTMLProps(
     'Invalid outerHTML prop: outerHTML is not supported on host elements',
   )
 
-  let normalized: NormalizedUnsafeHTMLProps | undefined
-  for (let name of ['innerHTML', 'srcDoc', 'srcdoc'] as const) {
+  if (props.innerHTML === undefined && props.srcDoc === undefined && props.srcdoc === undefined) {
+    return props
+  }
+
+  let normalized: NormalizedUnsafeHTMLProps = { ...props }
+  for (let name of UNSAFE_HTML_PROPS) {
     let value = props[name]
     if (value === undefined) continue
     let html = UnsafeHTMLValue.read(value)
@@ -277,11 +291,10 @@ export function normalizeUnsafeHTMLProps(
       html !== undefined,
       `Invalid ${name} prop: expected a value created with unsafeHTML()`,
     )
-    normalized ??= { ...props }
     normalized[name] = html
   }
 
-  return normalized ?? props
+  return normalized
 }
 
 type TypedEventListener<eventMap> = {
