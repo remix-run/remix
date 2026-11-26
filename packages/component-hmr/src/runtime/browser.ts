@@ -1,5 +1,7 @@
+import { getComponentModuleInvalidationMessage } from '../lib/module-boundary.ts'
 import {
   callComponentRenderForHmr,
+  commitComponentModuleForHmr,
   clearComponentHmrState,
   getComponentHandleForHmr,
   getComponentHmrState,
@@ -7,6 +9,7 @@ import {
   registerComponentForHmr,
   registerComponentInstanceForHmr,
   registerComponentRenderForHmr,
+  retainComponentHmrBinding,
   setupComponentForHmr,
   updateComponentModuleForHmr,
 } from '../lib/browser-runtime.ts'
@@ -17,7 +20,9 @@ import {
  * This is an internal protocol surface for transformed modules, not an application API.
  */
 export const __componentHmrBrowserRuntime__ = {
+  getComponentModuleInvalidationMessage,
   callComponentRenderForHmr,
+  commitComponentModuleForHmr,
   clearComponentHmrState,
   getComponentHandleForHmr,
   getComponentHmrState,
@@ -25,6 +30,7 @@ export const __componentHmrBrowserRuntime__ = {
   registerComponentForHmr,
   registerComponentInstanceForHmr,
   registerComponentRenderForHmr,
+  retainComponentHmrBinding,
   setupComponentForHmr,
   updateComponentModuleForHmr,
 }

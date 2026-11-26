@@ -1394,5 +1394,180 @@ describe('Matcher', () => {
         ],
       )
     })
+
+    it('breaks ties by insertion order between omitted optional base paths and static routes', () => {
+      let optFirst = createMultiMatcher<string>()
+      optFirst.add('/api/resource/3(/:version)', 'opt')
+      optFirst.add('/api/resource/3', 'static')
+      assert.equal(optFirst.match('https://example.com/api/resource/3')?.data, 'opt')
+      assert.deepEqual(optFirst.match('https://example.com/api/resource/3')?.params, {
+        version: undefined,
+      })
+      assert.deepEqual(
+        optFirst.matchAll('https://example.com/api/resource/3').map((m) => m.data),
+        ['opt', 'static'],
+      )
+
+      let staticFirst = createMultiMatcher<string>()
+      staticFirst.add('/api/resource/3', 'static')
+      staticFirst.add('/api/resource/3(/:version)', 'opt')
+      assert.equal(staticFirst.match('https://example.com/api/resource/3')?.data, 'static')
+      assert.deepEqual(
+        staticFirst.matchAll('https://example.com/api/resource/3').map((m) => m.data),
+        ['static', 'opt'],
+      )
+    })
+
+    it('breaks ties by insertion order between omitted leading optional params and empty static segments', () => {
+      let optFirst = createMultiMatcher<string>()
+      optFirst.add('(:locale)/start', 'opt')
+      optFirst.add('//start', 'static')
+      assert.equal(optFirst.match('https://example.com//start')?.data, 'opt')
+      assert.deepEqual(optFirst.match('https://example.com//start')?.params, { locale: undefined })
+
+      let staticFirst = createMultiMatcher<string>()
+      staticFirst.add('//start', 'static')
+      staticFirst.add('(:locale)/start', 'opt')
+      assert.equal(staticFirst.match('https://example.com//start')?.data, 'static')
+    })
+
+    it('matches leading optional param with trailing wildcard and respects separator boundaries', () => {
+      let matcher = createMultiMatcher<string>()
+      matcher.add('(:locale)/enterprise/*', 'enterprise')
+
+      assert.deepEqual(matcher.match('https://example.com/uk/enterprise/a/b')?.params, {
+        locale: 'uk',
+      })
+      assert.deepEqual(matcher.match('https://example.com//enterprise/a/b')?.params, {
+        locale: undefined,
+      })
+      assert.deepEqual(matcher.match('https://example.com/uk/enterprise/')?.params, {
+        locale: 'uk',
+      })
+      assert.equal(matcher.match('https://example.com/uk/enterprise'), null)
+    })
+
+    it('handles duplicate-shape dynamic routes with different param names in match and matchAll', () => {
+      let matcher = createMultiMatcher<string>()
+      matcher.add('/resource/:first', 'first')
+      matcher.add('/resource/:second', 'second')
+      matcher.add('https://:tenant0.myapp.com/admin', 't0')
+      matcher.add('https://:tenant1.myapp.com/admin', 't1')
+
+      let pathMatches = matcher.matchAll('https://example.com/resource/123')
+      assert.deepEqual(
+        pathMatches.map((m) => [m.data, m.params]),
+        [
+          ['first', { first: '123' }],
+          ['second', { second: '123' }],
+        ],
+      )
+
+      let hostBest = matcher.match('https://acme.myapp.com/admin')
+      assert.equal(hostBest?.data, 't0')
+      assert.deepEqual(hostBest?.params, { tenant0: 'acme' })
+
+      let hostMatches = matcher.matchAll('https://acme.myapp.com/admin')
+      assert.deepEqual(
+        hostMatches.map((m) => [m.data, m.params]),
+        [
+          ['t0', { tenant0: 'acme' }],
+          ['t1', { tenant1: 'acme' }],
+        ],
+      )
+    })
+
+    it('matches leading-wildcard suffix-indexed patterns with encoded segments', () => {
+      let matcher = createMultiMatcher<string>()
+      matcher.add('/*prefix/middle/50/suffix', 'mid50')
+      matcher.add('/*tenant/api/*version/resources/:id', 'res')
+
+      assert.deepEqual(matcher.match('https://example.com/a%2Fb/middle/50/suffix')?.params, {
+        prefix: 'a/b',
+      })
+      assert.deepEqual(matcher.match('https://example.com/t1/api/v2/resources/doc%2E1')?.params, {
+        tenant: 't1',
+        version: 'v2',
+        id: 'doc.1',
+      })
+    })
+
+    it('matches static patterns with non-structural encoded dots and escaped slashes', () => {
+      let matcher = createMultiMatcher<string>()
+      matcher.add('/files/a%2Eb', 'encoded-dot')
+      matcher.add('/files/a\\/b', 'escaped-slash')
+
+      assert.equal(matcher.match('https://example.com/files/a%2Eb')?.data, 'encoded-dot')
+      assert.equal(matcher.match('https://example.com/files/a.b'), null)
+      assert.equal(matcher.match('https://example.com/files/a%2Fb')?.data, 'escaped-slash')
+      assert.equal(matcher.match('https://example.com/files/a/b'), null)
+    })
+
+    it('computes canonical paramsMeta offsets when unencoded path-safe special ASCII precedes a param', () => {
+      let matcher = createMultiMatcher<null>()
+      matcher.add('/packages/@scope+name/:pkg', null)
+
+      let match = matcher.match('https://example.com/packages/@scope+name/@remix')
+      assert.deepEqual(match?.params, { pkg: '@remix' })
+      // "packages/" (9) + "%40scope%2Bname" (3+5+3+4=15) + "/" (1) = 25; "%40remix" = 8 -> end 33
+      assert.deepEqual(match?.paramsMeta.pathname, [
+        { type: ':', name: 'pkg', value: '@remix', begin: 25, end: 33 },
+      ])
+    })
+
+    it('compares specificity and insertion order when param and optional-param branches both exist', () => {
+      let optMoreSpecific = createMultiMatcher<string>()
+      optMoreSpecific.add('(:locale)/start', 'opt-static')
+      optMoreSpecific.add('/:a/:b', 'two-params')
+      assert.equal(optMoreSpecific.match('https://example.com/uk/start')?.data, 'opt-static')
+
+      let tieOptFirst = createMultiMatcher<string>()
+      tieOptFirst.add('(:locale)/start', 'opt')
+      tieOptFirst.add('/:locale/start', 'param')
+      assert.equal(tieOptFirst.match('https://example.com/uk/start')?.data, 'opt')
+
+      let tieParamFirst = createMultiMatcher<string>()
+      tieParamFirst.add('/:locale/start', 'param')
+      tieParamFirst.add('(:locale)/start', 'opt')
+      assert.equal(tieParamFirst.match('https://example.com/uk/start')?.data, 'param')
+    })
+
+    it('matches patterns with more than 256 variable segments', () => {
+      let count = 300
+      let pattern = '/' + Array.from({ length: count }, (_, i) => `:p${i}`).join('/')
+      let pathname = '/' + Array.from({ length: count }, (_, i) => `v${i}`).join('/')
+      let matcher = createMultiMatcher<string>()
+      matcher.add(pattern, 'deep')
+
+      let match = matcher.match(`https://example.com${pathname}`)
+      assert.equal(match?.data, 'deep')
+      assert.equal(match?.params.p0, 'v0')
+      assert.equal(match?.params.p256, 'v256')
+      assert.equal(match?.params.p299, 'v299')
+    })
+
+    it('matches very large multi-optional patterns iteratively without overflowing the call stack', () => {
+      let count = 200
+      let pattern = '/root'
+      let pathname = '/root'
+      for (let i = 0; i < count; i++) {
+        pattern += `(/s${i})`
+        if (i % 2 === 0) pathname += `/s${i}`
+      }
+      let matcher = createMultiMatcher<null>()
+      matcher.add(pattern, null)
+
+      assert.ok(matcher.match(`https://example.com${pathname}`))
+    })
+
+    it('preserves undefined keys for omitted optional params when another param name repeats', () => {
+      let matcher = createMultiMatcher<null>()
+      matcher.add('/:a/:a(/:b)', null)
+
+      let match = matcher.match('https://example.com/x/y')
+      assert.ok(match)
+      assert.deepEqual(match.params, { a: 'y', b: undefined })
+      assert.equal(Object.hasOwn(match.params, 'b'), true)
+    })
   })
 })

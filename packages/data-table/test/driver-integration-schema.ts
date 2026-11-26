@@ -10,6 +10,7 @@ type DriverIntegrationSchemaStatements = {
 
 const mysqlSchemaStatements: DriverIntegrationSchemaStatements = {
   drop: [
+    'drop table if exists settings',
     'drop table if exists tasks',
     'drop table if exists projects',
     'drop table if exists accounts',
@@ -39,12 +40,19 @@ const mysqlSchemaStatements: DriverIntegrationSchemaStatements = {
       '  state varchar(32) not null',
       ')',
     ].join('\n'),
+    'create table settings (id int primary key, data json null, enabled boolean null, at datetime(3) null)',
   ],
-  reset: ['delete from tasks', 'delete from projects', 'delete from accounts'],
+  reset: [
+    'delete from settings',
+    'delete from tasks',
+    'delete from projects',
+    'delete from accounts',
+  ],
 }
 
 const postgresSchemaStatements: DriverIntegrationSchemaStatements = {
   drop: [
+    'drop table if exists settings',
     'drop table if exists tasks',
     'drop table if exists projects',
     'drop table if exists accounts',
@@ -74,12 +82,19 @@ const postgresSchemaStatements: DriverIntegrationSchemaStatements = {
       '  state text not null',
       ')',
     ].join('\n'),
+    'create table settings (id integer primary key, data jsonb, enabled boolean, at timestamptz)',
   ],
-  reset: ['delete from tasks', 'delete from projects', 'delete from accounts'],
+  reset: [
+    'delete from settings',
+    'delete from tasks',
+    'delete from projects',
+    'delete from accounts',
+  ],
 }
 
 const sqliteSchemaStatements: DriverIntegrationSchemaStatements = {
   drop: [
+    'drop table if exists settings',
     'drop table if exists tasks',
     'drop table if exists projects',
     'drop table if exists accounts',
@@ -109,8 +124,14 @@ const sqliteSchemaStatements: DriverIntegrationSchemaStatements = {
       '  state text not null',
       ')',
     ].join('\n'),
+    'create table settings (id integer primary key, data text, enabled boolean, at text)',
   ],
-  reset: ['delete from tasks', 'delete from projects', 'delete from accounts'],
+  reset: [
+    'delete from settings',
+    'delete from tasks',
+    'delete from projects',
+    'delete from accounts',
+  ],
 }
 
 export async function setupDriverIntegrationSchema(

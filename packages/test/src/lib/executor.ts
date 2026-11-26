@@ -3,6 +3,10 @@ import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
 import type { SerializedOnlyPattern } from './config.ts'
 
+// Test code may replace global timers before hooks or subsequent deadlines run.
+const realSetTimeout = globalThis.setTimeout.bind(globalThis)
+const realClearTimeout = globalThis.clearTimeout.bind(globalThis)
+
 type PendingMeta = boolean | string
 
 interface RunnableOptions {
@@ -38,6 +42,7 @@ type RunTestsE2EOptions = Omit<CreateTestContextE2EOptions, 'addE2ECoverageEntri
 
 export interface RunTestsOptions extends Partial<RunTestsE2EOptions> {
   only?: SerializedOnlyPattern[]
+  onHistoryQuotaExceeded?: (testName: string) => Promise<void>
 }
 
 export async function runTests(options?: RunTestsOptions): Promise<TestResults> {
@@ -77,6 +82,29 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
 
   let hasOnly = hasOnlyPatterns || hasOnlySuites || hasOnlyTests
 
+  async function backOffHistoryQuota(
+    error: unknown,
+    name: string,
+    abortController?: AbortController,
+  ): Promise<boolean> {
+    if (
+      !options?.onHistoryQuotaExceeded ||
+      typeof error !== 'object' ||
+      error === null ||
+      !('name' in error) ||
+      error.name !== 'SecurityError' ||
+      !('message' in error) ||
+      typeof error.message !== 'string' ||
+      !/^Attempt to use history\.(?:pushState|replaceState)\(\) more than \d+ times per 10 seconds$/.test(
+        error.message,
+      )
+    )
+      return false
+    abortController?.abort(error)
+    await options.onHistoryQuotaExceeded(name)
+    return true
+  }
+
   for (let suite of suites) {
     let suiteHasOnlyTests = suite.tests.some((test) => test.only)
 
@@ -107,7 +135,14 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
     if (suite.beforeAll) {
       let startTime = performance.now()
       try {
-        await runLifecycleHooks('beforeAll', suite.beforeAll)
+        await runLifecycleHooks(
+          'beforeAll',
+          suite.beforeAll,
+          undefined,
+          undefined,
+          false,
+          (error) => backOffHistoryQuota(error, getFullTestName(suite.name, 'beforeAll')),
+        )
       } catch (error) {
         results.tests.push(
           createFailedHookResult('beforeAll', suite.name, error, performance.now() - startTime),
@@ -146,48 +181,78 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
         status: 'passed',
         duration: 0,
       }
-      let testError: unknown
-      let afterEachError: unknown
-      let cleanupError: Error | undefined
-      let testFailed = false
-      let afterEachFailed = false
+      for (let attempt = 0; attempt < 2; attempt++) {
+        let retry = false
+        let testError: unknown
+        let afterEachError: unknown
+        let cleanupError: Error | undefined
+        let testFailed = false
+        let afterEachFailed = false
 
-      let testAbortController = new AbortController()
-      let { testContext, cleanup } = createTestContext({
-        signal: testAbortController.signal,
-        e2e: createE2EOptions(options, (e) => e2eCoverageEntries.push(e)),
-      })
+        let testAbortController = new AbortController()
+        let { testContext, cleanup } = createTestContext({
+          signal: testAbortController.signal,
+          e2e: createE2EOptions(options, (e) => e2eCoverageEntries.push(e)),
+        })
 
-      try {
-        if (suite.beforeEach) {
-          await runLifecycleHooks('beforeEach', suite.beforeEach, testAbortController, test.signal)
-        }
-
-        await runRunnable(
-          'Test',
-          () => test.fn(testContext),
-          test,
-          testAbortController,
-          test.signal,
-        )
-      } catch (error) {
-        testFailed = true
-        testError = error
-      } finally {
         try {
-          await cleanup()
+          if (suite.beforeEach) {
+            await runLifecycleHooks(
+              'beforeEach',
+              suite.beforeEach,
+              testAbortController,
+              test.signal,
+            )
+          }
+
+          await runRunnable(
+            'Test',
+            () => test.fn(testContext),
+            test,
+            testAbortController,
+            test.signal,
+          )
         } catch (error) {
-          cleanupError = createHookFailure('cleanup', error)
-        }
-        if (suite.afterEach) {
+          testFailed = true
+          testError = error
+          retry =
+            (await backOffHistoryQuota(
+              error,
+              getFullTestName(suite.name, test.name),
+              testAbortController,
+            )) &&
+            attempt === 0 &&
+            !test.signal?.aborted
+        } finally {
           try {
-            await runLifecycleHooks('afterEach', suite.afterEach, undefined, undefined, true)
+            await cleanup()
           } catch (error) {
-            afterEachFailed = true
-            afterEachError = error
+            let errors: unknown[] = error instanceof AggregateError ? error.errors : [error]
+            for (let cause of errors) {
+              if (
+                await backOffHistoryQuota(
+                  cause,
+                  getFullTestName(suite.name, `${test.name} cleanup`),
+                )
+              )
+                break
+            }
+            cleanupError = createHookFailure('cleanup', error)
+          }
+          if (suite.afterEach) {
+            try {
+              await runLifecycleHooks('afterEach', suite.afterEach, undefined, undefined, true)
+            } catch (error) {
+              await backOffHistoryQuota(
+                error,
+                getFullTestName(suite.name, `${test.name} afterEach`),
+              )
+              afterEachFailed = true
+              afterEachError = error
+            }
           }
         }
-
+        if (retry && !cleanupError && !afterEachFailed) continue
         if (testFailed || cleanupError || afterEachFailed) {
           result.status = 'failed'
           result.error = createTestError(
@@ -202,6 +267,7 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
 
         result.duration = performance.now() - startTime
         results.tests.push(result)
+        break
       }
     }
 
@@ -210,6 +276,7 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
       try {
         await runLifecycleHooks('afterAll', suite.afterAll, undefined, undefined, true)
       } catch (error) {
+        await backOffHistoryQuota(error, getFullTestName(suite.name, 'afterAll'))
         results.tests.push(
           createFailedHookResult('afterAll', suite.name, error, performance.now() - startTime),
         )
@@ -313,10 +380,21 @@ async function runLifecycleHooks(
   abortController?: AbortController,
   inheritedSignal?: AbortSignal,
   reverse = false,
+  backOffHistoryQuota?: (error: unknown) => Promise<boolean>,
 ): Promise<void> {
   let orderedHooks = reverse ? [...hooks].reverse() : hooks
   for (let hook of orderedHooks) {
-    await runRunnable(hookName, hook.fn, hook, abortController, inheritedSignal, hook.signal)
+    try {
+      await runRunnable(hookName, hook.fn, hook, abortController, inheritedSignal, hook.signal)
+    } catch (error) {
+      if (!(await backOffHistoryQuota?.(error))) throw error
+      try {
+        await runRunnable(hookName, hook.fn, hook, abortController, inheritedSignal, hook.signal)
+      } catch (error) {
+        await backOffHistoryQuota?.(error)
+        throw error
+      }
+    }
   }
 }
 
@@ -357,7 +435,7 @@ async function runRunnable(
   let timeoutPromise =
     timeout && timeout > 0
       ? new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => {
+          timeoutId = realSetTimeout(() => {
             let error = createTimeoutError(label, timeout)
             reject(error)
             abortController?.abort(error)
@@ -372,7 +450,7 @@ async function runRunnable(
       ...(timeoutPromise ? [timeoutPromise] : []),
     ])
   } finally {
-    if (timeoutId) clearTimeout(timeoutId)
+    if (timeoutId !== undefined) realClearTimeout(timeoutId)
     for (let cleanup of abortCleanups) cleanup()
   }
 }

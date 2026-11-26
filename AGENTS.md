@@ -34,6 +34,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 
 - **Locality**: write for the next reader, who may be an agent. Keep code that changes together in one place so understanding or editing a piece of UI does not require jumping between a use and its definition.
 - **Indirection**: do not introduce a name, constant, helper, type, or file solely to hold a single use. Each extraction adds a lookup for readers and context for agents. Extract when there is actual reuse or a separate responsibility. Exported types and public API shapes are not single uses.
+- **Module granularity**: do not create standalone files for small utilities, even when shared. Each browser ESM module can add a network request. Keep helpers in an existing owning module that needs them and is already loaded by their callers; keep dependencies acyclic. Extract a standalone module only when enough related functionality has accumulated to justify its own responsibility and the additional request.
 - **Imports**: use `import type { X }` and `export type { X }`; include `.ts` extensions
 - **Variables**: use `let` for locals, `const` for module scope, never `var`
 - **Functions**: use regular functions by default; use arrow functions for callbacks; use concise arrow bodies when they only return an expression
@@ -42,6 +43,10 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 - **Generics**: use descriptive lowercase names like `source`, `pattern`, or `method`
 - **Comments**: add non-JSDoc comments only when behavior is surprising or non-obvious
 - **Formatting**: Oxfmt with `printWidth: 100`, no semicolons, single quotes, spaces not tabs
+
+## Browser Support
+
+For browser-facing changes, preserve the minimum versions and navigation fallback policy in [the browser support decision](decisions/010-browser-support.md). Use feature detection and graceful degradation wherever possible, preferring native implementations when available and preserving core interactions when they are missing. Raising the baseline requires an explicit decision.
 
 ## Component Styling
 
@@ -53,6 +58,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 
 - **Tests run from source**: no build step required
 - **Test structure**: do not generate tests inside `describe()` with loops or conditionals; it breaks per-test IDE execution
+- **No time-based tests**: never sleep or wait a fixed duration; await a deterministic signal or use `t.useFakeTimers()`. See the Determinism section of the `write-tests` skill
 - **Test guidance**: use the `write-tests` skill when adding, refactoring, or reviewing tests, fixtures, test scripts, or test-only dependencies
 - **Docs and examples**: if you change a public API, update the related docs, JSDoc, README examples, and tests in the same change
 - **README/install conventions**: use `npm i remix` in install snippets and import from `remix`, not `@remix-run/*`

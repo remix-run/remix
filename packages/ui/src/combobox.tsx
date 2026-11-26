@@ -1,3 +1,5 @@
+import { SurfacePortalOwner } from './lib/focus-boundary.tsx'
+import { FocusPortal } from './lib/focus-portal.tsx'
 import {
   attrs,
   createMixin,
@@ -83,6 +85,7 @@ export interface ComboboxOptionOptions {
 }
 
 interface ComboboxContextValue {
+  readonly inputNode: HTMLInputElement | undefined
   readonly activeId: string | undefined
   readonly disabled: boolean
   readonly filterText: string
@@ -632,6 +635,9 @@ function ComboboxProvider(
   }
 
   handle.context.set({
+    get inputNode() {
+      return inputRef
+    },
     get activeId() {
       return activeId
     },
@@ -783,6 +789,11 @@ const inputMixin: MixinFactory<HTMLInputElement, [], ElementProps> = createMixin
       void context.setInputText(event.currentTarget.value)
     }),
     on('keydown', (event) => {
+      // Safari may end composition before delivering the confirming keydown.
+      if (event.isComposing || event.keyCode === 229) {
+        return
+      }
+
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault()
@@ -830,6 +841,9 @@ const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
   ElementProps
 >((handle) => {
   let context = getComboboxContext(handle)
+  let scoped = handle.context.get(PopoverContext)
+  if (!context || scoped?.owner !== context)
+    throw new Error('combobox.popover() requires a matching combobox.PopoverContext ancestor')
 
   return () => {
     handle.queueTask(() => context.syncPopoverMinWidth())
@@ -901,6 +915,32 @@ const optionMixin: MixinFactory<HTMLElement, [options: ComboboxOptionOptions], E
   })
 
 export const Context = ComboboxProvider
+
+/** Content and focus boundaries for one combobox popup. */
+export interface ComboboxPopoverContextProps {
+  /** One element with `combobox.popover()` and its content. */
+  children?: RemixNode
+}
+
+/**
+ * Renders focus guards beside a combobox popup at its DOM destination.
+ * Required around `combobox.popover()` within the same `combobox.Context` instance.
+ * Place it inside `combobox.Portal` when the popup is portaled.
+ * @param handle Popup content and the owning combobox context.
+ * @returns The popup content with declarative focus boundaries.
+ */
+export function PopoverContext(
+  handle: Handle<ComboboxPopoverContextProps, { owner: ComboboxContextValue }>,
+): () => RemixNode {
+  let owner = handle.context.get(ComboboxProvider)
+  if (!owner) throw new Error('combobox.PopoverContext requires a combobox.Context ancestor')
+  handle.context.set({ owner })
+  return () => (
+    <SurfacePortalOwner owner={owner} surfaceOwner={handle.context.get(popover.Context)}>
+      <popover.SurfaceContext>{handle.props.children}</popover.SurfaceContext>
+    </SurfacePortalOwner>
+  )
+}
 export const hiddenInput = hiddenInputMixin
 export const input = inputMixin
 export const list = listMixin
@@ -912,4 +952,36 @@ export function onComboboxChange<target extends HTMLElement>(
   captureBoolean?: boolean,
 ): ReturnType<typeof on<target, typeof COMBOBOX_CHANGE_EVENT>> {
   return on(COMBOBOX_CHANGE_EVENT, handler, captureBoolean)
+}
+
+/** Options for rendering the combobox surface outside its authored DOM ancestors. */
+export interface ComboboxPortalProps {
+  /** Surface content rendered at the destination. */
+  children?: RemixNode
+  /** Destination in the same document. Defaults to its body. Changing it remounts the content. */
+  container?: HTMLElement | null
+}
+
+/**
+ * Portals one combobox surface while coordinating its focus navigation.
+ * Keep its matching surface context inside this component. Omit it for inline rendering.
+ * The origin and container must be in the document light DOM.
+ * @param handle Surface content, destination, and the owning combobox context.
+ * @returns The transported content with its origin focus boundaries.
+ */
+export function Portal(handle: Handle<ComboboxPortalProps>): () => RemixNode {
+  let owner = handle.context.get(ComboboxProvider)
+  if (!owner) throw new Error('combobox.Portal requires a combobox.Context ancestor')
+  return () => (
+    <FocusPortal
+      componentName="combobox.Portal"
+      owner={owner}
+      open={() => owner.isOpen}
+      reference={() => owner.inputNode}
+      mode={'virtual'}
+      container={handle.props.container}
+    >
+      {handle.props.children}
+    </FocusPortal>
+  )
 }

@@ -117,6 +117,7 @@ jobs:
   test_ubuntu:
     name: test (ubuntu-latest)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -130,10 +131,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Get Playwright Version
+      - name: Get Playwright version and runner image
         id: playwright-version
         shell: bash
-        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: |
+          echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:?Runner image is required}" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright Browsers
         id: cache-browsers
@@ -142,7 +145,7 @@ jobs:
         with:
           path: |
             ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.image }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
@@ -154,6 +157,7 @@ jobs:
   test_bun:
     name: test (bun, ubuntu-latest)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -170,10 +174,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Get Playwright Version
+      - name: Get Playwright version and runner image
         id: playwright-version
         shell: bash
-        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: |
+          echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:?Runner image is required}" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright Browsers
         id: cache-browsers
@@ -182,7 +188,7 @@ jobs:
         with:
           path: |
             ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.image }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
@@ -194,6 +200,7 @@ jobs:
   test_windows:
     name: test (windows-latest)
     runs-on: windows-2025
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -207,10 +214,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Get Playwright Version
+      - name: Get Playwright version and runner image
         id: playwright-version
         shell: bash
-        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: |
+          echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:?Runner image is required}" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright Browsers
         id: cache-browsers
@@ -218,18 +227,21 @@ jobs:
         continue-on-error: true
         with:
           path: ~/AppData/Local/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.image }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/component exec playwright install --with-deps chromium firefox
 
+      # Keep dependency ordering on Windows. The unsorted `pnpm test` schedule overlaps the
+      # browser-heavy workspaces, which overloads this runner and times out e2e navigations.
       - name: Run tests
-        run: pnpm test
+        run: pnpm --recursive --workspace-concurrency=4 --stream run test
 
   test_webkit_macos:
     name: test (WebKit, macOS)
     runs-on: macos-15
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -243,10 +255,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Get Playwright Version
+      - name: Get Playwright version and runner image
         id: playwright-version
         shell: bash
-        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: |
+          echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:?Runner image is required}" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright Browsers
         id: cache-browsers
@@ -254,11 +268,16 @@ jobs:
         continue-on-error: true
         with:
           path: ~/Library/Caches/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.image }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install WebKit
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/component exec playwright install webkit
+
+      - name: Run WebKit runner regressions
+        env:
+          REMIX_TEST_WEBKIT: '1'
+        run: pnpm --filter @remix-run/test run test src/test/browser-history-backoff.test.ts --type server --only WebKit
 
       - name: Run WebKit tests
         run: pnpm test:browser

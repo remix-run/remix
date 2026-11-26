@@ -8,7 +8,6 @@ Keep the provider, trigger, popover, list, option, and hidden-input relationship
 
 ```tsx
 import type { Handle } from 'remix/component'
-import * as popover from '@remix-run/ui/popover'
 import * as select from '@remix-run/ui/select'
 import { listStyle, optionStyle, surfaceStyle, triggerStyle } from './select.styles'
 
@@ -24,7 +23,7 @@ function IssueTypeSelect() {
       <button mix={[triggerStyle, select.trigger()]} type="button">
         <SelectValue />
       </button>
-      <popover.Context>
+      <select.PopoverContext>
         <div mix={[surfaceStyle, select.popover()]}>
           <div mix={[listStyle, select.list()]}>
             <div mix={[optionStyle, select.option({ label: 'Bug', value: 'bug' })]}>Bug</div>
@@ -33,7 +32,7 @@ function IssueTypeSelect() {
             </div>
           </div>
         </div>
-      </popover.Context>
+      </select.PopoverContext>
       <input mix={select.hiddenInput()} />
     </select.Context>
   )
@@ -81,11 +80,20 @@ Listen for committed-value changes on the select root or an ancestor:
 - `SelectChangeEvent`: event with `value`, `label`, and `optionId`.
 - `SelectContextProps`: provider props for select composition.
 
+### `select.PopoverContext`
+
+Wrap the element with `select.popover()` in `select.PopoverContext` within the same `select.Context` instance. Keep this wrapper inside `select.Portal` when portaled, or omit the Portal for inline rendering.
+
+`SelectPopoverContextProps` accepts the popup surface as `children`.
+
+This component supplies the popup provider, so consumers do not need a separate `popover.Context`.
+
 ## Behavior Notes
 
 - `defaultLabel` is displayed before selection settles. `defaultValue` selects the matching option without replacing the trigger label until a new selection commits.
 - The option `label` is the committed display label and event label. The host's children are the rendered option contents.
 - Click, `ArrowDown`, and `ArrowUp` open the popup. Focus moves into the list and Escape restores focus to the trigger through popover behavior.
+- Tab closes the popup and continues through the form, including when the surface is inline. Shift+Tab continues backwards using the browser's native navigation rules. A portaled surface uses `select.Portal` to return navigation to its origin.
 - Reopening highlights the current selected value.
 - The popup minimum width syncs to the trigger width before opening.
 - Closed-trigger typeahead selects a matching option immediately and supports option `textValue`.
@@ -93,3 +101,7 @@ Listen for committed-value changes on the select root or an ancestor:
 - Selecting the already-selected value updates state but does not dispatch a change event.
 - `SelectChangeEvent` bubbles from the trigger when a trigger exists. It includes `value`, `label`, and `optionId`.
 - Passing `name` to `Context` and applying `hiddenInput()` to an input lets the selected value participate in `FormData`. Disabled selects disable the trigger and hidden input.
+
+## Portal
+
+`select.Portal` renders the surface in the document body and coordinates focus with its originating controls. Pass `container` to choose another element in the same document's light DOM. `select.Portal` must be declared outside a shadow root and use a container outside shadow roots. Keep `select.PopoverContext` inside it. You can omit the Portal for inline rendering while keeping the surface context.

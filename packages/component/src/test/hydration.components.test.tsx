@@ -4,7 +4,7 @@ import type { Handle, RemixNode } from '../runtime/component.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 import { on, ref, unsafeHTML } from '../index.ts'
 
 describe('hydration', () => {
@@ -123,6 +123,25 @@ describe('hydration', () => {
       // Both should be adopted
       expect(container.querySelector('.outer')).toBe(existingOuter)
       expect(container.querySelector('.inner')).toBe(existingInner)
+    })
+
+    it('adopts nonempty text rendered by a root client entry', async () => {
+      let Entry = clientEntry('/text.js#TextEntry', function TextEntry() {
+        return () => 'Hello'
+      })
+
+      let html = await renderToString(<Entry />)
+      container.innerHTML = html
+      let serverText = container.firstChild?.nextSibling
+      invariant(serverText instanceof Text)
+
+      let root = createRoot(container)
+      root.render(<Entry />)
+      root.flush()
+
+      expect(container.innerHTML).toBe(html)
+      expect(container.firstChild?.nextSibling).toBe(serverText)
+      root.dispose()
     })
 
     it('hydrates component with state preservation', async () => {
@@ -320,6 +339,7 @@ describe('hydration', () => {
     })
 
     it('hydrates, updates, and removes unitless inline styles', async () => {
+      let supportsMaskBoxImageWidth = CSS.supports('-webkit-mask-box-image-width', '2')
       let layout = {
         display: '-webkit-box',
         webkitBoxOrient: 'vertical',
@@ -347,7 +367,9 @@ describe('hydration', () => {
       expect(div.style.marginTop).toBe('8px')
       expect(getComputedStyle(div).animationIterationCount).toBe('2')
       expect(getComputedStyle(div).borderImageSlice).toBe('3')
-      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe(
+        supportsMaskBoxImageWidth ? '2' : '',
+      )
       expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
       expect(div.getBoundingClientRect().height).toBe(40)
 
@@ -361,7 +383,9 @@ describe('hydration', () => {
       expect(div.style.marginTop).toBe('8px')
       expect(getComputedStyle(div).animationIterationCount).toBe('2')
       expect(getComputedStyle(div).borderImageSlice).toBe('3')
-      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe(
+        supportsMaskBoxImageWidth ? '2' : '',
+      )
       expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
       expect(div.getBoundingClientRect().height).toBe(40)
 
@@ -388,7 +412,9 @@ describe('hydration', () => {
       expect(div.style.marginTop).toBe('12px')
       expect(getComputedStyle(div).animationIterationCount).toBe('3')
       expect(getComputedStyle(div).borderImageSlice).toBe('4')
-      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('3')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe(
+        supportsMaskBoxImageWidth ? '3' : '',
+      )
       expect(getComputedStyle(div).shapeImageThreshold).toBe('0.75')
       expect(div.getBoundingClientRect().height).toBe(20)
 
@@ -404,7 +430,9 @@ describe('hydration', () => {
       expect(div.style.marginTop).toBe('')
       expect(getComputedStyle(div).animationIterationCount).toBe('1')
       expect(getComputedStyle(div).borderImageSlice).toBe('100%')
-      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('auto')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe(
+        supportsMaskBoxImageWidth ? 'auto' : '',
+      )
       expect(getComputedStyle(div).shapeImageThreshold).toBe('0')
       expect(div.getBoundingClientRect().height).toBe(50)
       root.dispose()

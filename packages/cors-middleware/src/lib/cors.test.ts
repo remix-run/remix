@@ -513,4 +513,20 @@ describe('cors middleware', () => {
     assert.ok(vary.has('Accept-Encoding'))
     assert.ok(vary.has('Origin'))
   })
+
+  it('keeps the spelling of an existing response Vary header when merging', async () => {
+    let router = createRouter({
+      middleware: [cors({ origin: '*', credentials: true })],
+    })
+
+    router.get('/', () => new Response('ok', { headers: { Vary: 'Cookie' } }))
+
+    let response = await router.fetch('https://remix.run/', {
+      headers: {
+        Origin: 'https://example.com',
+      },
+    })
+
+    assert.equal(response.headers.get('Vary'), 'Cookie, Origin')
+  })
 })

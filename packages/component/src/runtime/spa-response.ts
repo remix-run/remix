@@ -1,13 +1,5 @@
-import type { FrameContent, FrameResolution } from './component.ts'
-import type { RemixNode } from './core/vnode.ts'
-import { getResponseNonce } from './nonce.ts'
-
-type SPAResponseData = {
-  node: RemixNode
-  redirectedTo?: string
-}
-
-let spaResponses: WeakMap<Response, SPAResponseData> | undefined
+import type { RemixNode } from './vnode.ts'
+import { spaResponses } from './frame-runtime.ts'
 
 /**
  * Creates and finalizes responses carrying renderable Remix nodes for the SPA runtime.
@@ -27,8 +19,7 @@ export const spaResponse = {
     }
 
     let response = new Response(null, init)
-    let responses = (spaResponses ??= new WeakMap())
-    responses.set(response, { node })
+    spaResponses.set(response, { node })
     return response
   },
 
@@ -41,7 +32,7 @@ export const spaResponse = {
    * @throws {TypeError} When the response was not created by `spaResponse.create()`.
    */
   finalize(response: Response, redirectedTo?: string): Response {
-    let data = getSpaResponseData(response)
+    let data = spaResponses.get(response)
     if (!data) throw new TypeError('Expected a Remix SPA response')
 
     if (redirectedTo === undefined) {
@@ -51,29 +42,4 @@ export const spaResponse = {
     }
     return response
   },
-}
-
-function getSpaResponseData(response: Response): SPAResponseData | undefined {
-  return spaResponses?.get(response)
-}
-
-export async function unwrapFrameResolution(
-  resolution: FrameResolution,
-): Promise<{ content: FrameContent; redirectedTo?: string; nonce?: string }> {
-  if (!(resolution instanceof Response)) return { content: resolution }
-
-  let data = getSpaResponseData(resolution)
-  if (data) {
-    return {
-      content: data.node,
-      redirectedTo: data.redirectedTo,
-    }
-  }
-
-  let content = resolution.body ?? (await resolution.text())
-  return {
-    content,
-    nonce: getResponseNonce(resolution),
-    redirectedTo: resolution.redirected && resolution.url ? resolution.url : undefined,
-  }
 }

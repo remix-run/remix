@@ -172,6 +172,27 @@ describe('registerDismissableLayer', () => {
     expect(dismissed).toBe(2)
   })
 
+  it('lets live-region controls receive clicks without dismissing the layer', () => {
+    let clicked = 0
+    let dismissed = 0
+    let toast = document.createElement('div')
+    toast.setAttribute('role', 'status')
+    let action = document.createElement('button')
+    toast.append(action)
+    document.body.append(toast)
+    action.addEventListener('click', () => clicked++)
+    register({ onDismiss: () => dismissed++ })
+
+    click(action)
+    expect(clicked).toBe(1)
+    expect(dismissed).toBe(0)
+
+    toast.removeAttribute('role')
+    click(action)
+    expect(clicked).toBe(1)
+    expect(dismissed).toBe(1)
+  })
+
   it('treats extra inside targets and shadow descendants as inside the layer', () => {
     let dismissed = 0
     let anchor = document.createElement('button')

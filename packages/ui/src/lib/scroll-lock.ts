@@ -1,6 +1,7 @@
 type ScrollLockState = {
   count: number
-  stylesheet: CSSStyleSheet
+  documentOverflow: string
+  documentScrollbarGutter: string
   scrollX: number
   scrollY: number
 }
@@ -26,20 +27,19 @@ export function lockScroll(targetDocument: Document | undefined = globalThis.doc
         : 0
     let computedScrollbarGutter = view.getComputedStyle(documentElement).scrollbarGutter
 
-    // An adopted stylesheet survives DOM diffs of `<html>` that would drop inline styles. The
-    // declarations are `!important` so the lock still beats app styles and inline `overflow`,
-    // as the previous inline style did.
-    let stylesheet = new view.CSSStyleSheet()
-    stylesheet.replaceSync(
-      `@layer rmx { :root { overflow: hidden !important;${
-        scrollbarWidth > 0 && computedScrollbarGutter === 'auto'
-          ? ' scrollbar-gutter: stable !important;'
-          : ''
-      } } }`,
-    )
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet]
+    state = {
+      count: 0,
+      documentOverflow: documentElement.style.overflow,
+      documentScrollbarGutter: documentElement.style.scrollbarGutter,
+      scrollX,
+      scrollY,
+    }
 
-    state = { count: 0, stylesheet, scrollX, scrollY }
+    documentElement.style.overflow = 'hidden'
+    if (scrollbarWidth > 0 && computedScrollbarGutter === 'auto') {
+      documentElement.style.scrollbarGutter = 'stable'
+    }
+
     scrollLocks.set(document, state)
   }
 
@@ -66,9 +66,8 @@ export function lockScroll(targetDocument: Document | undefined = globalThis.doc
 
     scrollLocks.delete(document)
 
-    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
-      (stylesheet) => stylesheet !== currentState.stylesheet,
-    )
+    documentElement.style.overflow = currentState.documentOverflow
+    documentElement.style.scrollbarGutter = currentState.documentScrollbarGutter
     view.scrollTo(currentState.scrollX, currentState.scrollY)
   }
 }

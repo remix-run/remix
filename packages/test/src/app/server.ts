@@ -24,6 +24,8 @@ const browserResolver = new ResolverFactory({
   tsconfig: 'auto',
 })
 
+type ScriptCache = Map<string, { version: string; code: string }>
+
 export async function startServer(
   browserFiles: string[],
   options: { only?: SerializedOnlyPattern[] } = {},
@@ -70,7 +72,7 @@ function isAddressInfo(address: ReturnType<http.Server['address']>): address is 
 
 function createRequestHandler(
   browserFiles: string[],
-  options: { only?: SerializedOnlyPattern[] } = {},
+  options: { only?: SerializedOnlyPattern[] },
 ): (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void> {
   let rootDir = getBrowserTestRootDir()
   let srcDir = IS_RUNNING_FROM_SRC
@@ -87,6 +89,7 @@ function createRequestHandler(
   }
 
   let testPaths = browserFiles.map((f) => filePathToUrl(f, rootDir)!)
+  let scriptCache: ScriptCache = new Map()
 
   return async (req, res) => {
     let url = new URL(req.url ?? '/', 'http://localhost')
@@ -97,7 +100,19 @@ function createRequestHandler(
     }
 
     if (url.pathname === '/') {
-      let setupJson = JSON.stringify({ testPaths, baseDir: process.cwd(), only: options.only })
+      let file = url.searchParams.get('file')
+      if (file !== null && !testPaths.includes(file)) {
+        sendText(res, 404, 'Unknown test file')
+        return
+      }
+      // WebKit navigates separately for each file. Only a dashboard load starts a fresh run.
+      if (file === null) scriptCache = new Map()
+
+      let setupJson = JSON.stringify({
+        testPaths: file === null ? testPaths : [file],
+        baseDir: process.cwd(),
+        only: options.only,
+      })
       let body =
         `<script type="application/json" id="test-setup">` +
         `${escapeJsonForScript(setupJson)}` +
@@ -118,7 +133,10 @@ function createRequestHandler(
       let filePath = urlPathToFilePath(url.pathname, rootDir)
       if (filePath) {
         try {
-          await serveScript(res, filePath, url.pathname, rootDir)
+          let code = await getScriptCode(res, filePath, url.pathname, rootDir, scriptCache)
+          if (code === undefined) return
+          res.writeHead(200, { 'Content-Type': 'application/javascript' })
+          res.end(code)
           return
         } catch (error) {
           logError(`Error serving ${url.pathname}`, error)
@@ -152,12 +170,13 @@ function urlPathToFilePath(urlPath: string, rootDir: string): string | null {
 const TS_EXTS = new Set(['.ts', '.tsx', '.mts', '.cts'])
 const JS_EXTS = new Set(['.js', '.mjs', '.cjs', '.jsx'])
 
-async function serveScript(
+async function getScriptCode(
   res: http.ServerResponse,
   filePath: string,
   urlPath: string,
   rootDir: string,
-): Promise<void> {
+  cache: ScriptCache,
+): Promise<string | undefined> {
   let ext = path.extname(filePath)
   let isTs = TS_EXTS.has(ext)
   let isJs = JS_EXTS.has(ext)
@@ -165,6 +184,12 @@ async function serveScript(
     sendText(res, 400, `Unsupported script extension "${ext}" for ${urlPath}`)
     return
   }
+
+  // Sample before reading so an edit during compilation invalidates this entry on the next request.
+  let { dev, ino, size, mtimeNs, ctimeNs } = await fsp.stat(filePath, { bigint: true })
+  let version = `${dev}:${ino}:${size}:${mtimeNs}:${ctimeNs}`
+  let cached = cache.get(filePath)
+  if (cached?.version === version) return cached.code
 
   let source = await fsp.readFile(filePath, 'utf-8')
   let code: string
@@ -189,8 +214,8 @@ async function serveScript(
     return
   }
 
-  res.writeHead(200, { 'Content-Type': 'application/javascript' })
-  res.end(code)
+  cache.set(filePath, { version, code })
+  return code
 }
 
 // Rewrite every import/export specifier in the (already-transformed) source so

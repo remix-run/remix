@@ -29,6 +29,7 @@ import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
 import { hashContent } from './fingerprint.ts'
 import type { ModuleLoader } from './loaders.ts'
+import { isNoEntityError } from './fs-errors.ts'
 
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
 
@@ -134,7 +135,6 @@ async function emitWatchEvent(
   let chokidarWatcher = getInternalChokidarWatcher(assetServer)
   assert.ok(chokidarWatcher)
   chokidarWatcher.emit(event, getWatchEventFilePath(filePath))
-  await new Promise((resolve) => setTimeout(resolve, 25))
 }
 
 function createTestBrowserHmrChannel(): BrowserHmrChannel {
@@ -159,15 +159,6 @@ function getWatchEventFilePath(filePath: string): string {
 
 function getBrowserHmrWatchedFilePath(filePath: string): string {
   return normalizeWindowsPath(getWatchEventFilePath(filePath))
-}
-
-function isNoEntityError(error: unknown): error is NodeJS.ErrnoException {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }
 
 async function getCompiledCodeAndSourceMap(
@@ -507,6 +498,7 @@ describe('asset-server', () => {
     let response = await get(assetServer, '/assets/app/entry.ts')
     assert.ok(response)
     assert.equal(response.headers.get('Cache-Control'), 'no-cache')
+    assert.equal(response.headers.get('Vary'), null)
     assert.ok(response.headers.get('ETag'))
 
     let notModified = await get(assetServer, '/assets/app/entry.ts', {
@@ -691,7 +683,9 @@ describe('asset-server', () => {
   })
 
   it('picks up source file changes without watch mode', async () => {
-    await write(dir, 'app/content/value.txt', 'hello\n')
+    let filePath = await write(dir, 'app/content/value.txt', 'hello\n')
+    // Same-size writes can share an mtime on filesystems with coarse timestamp resolution.
+    await fs.utimes(filePath, 1, 1)
     let assetServer = createTestServer(dir, {
       files: {
         extensions: ['.txt'],
@@ -705,6 +699,7 @@ describe('asset-server', () => {
     assert.equal(await firstResponse.text(), 'hello\n')
 
     await write(dir, 'app/content/value.txt', 'world\n')
+    await fs.utimes(filePath, 2, 2)
 
     let secondResponse = await get(assetServer, '/assets/app/content/value.txt')
     assert.ok(secondResponse)
@@ -2438,11 +2433,13 @@ describe('asset-server', () => {
   })
 
   it('updates source file fingerprints when source files change without watch mode', async () => {
-    await write(
+    let filePath = await write(
       dir,
       'app/images/logo.svg',
       '<svg xmlns="http://www.w3.org/2000/svg"><title>hello</title></svg>\n',
     )
+    // Same-size writes can share an mtime on filesystems with coarse timestamp resolution.
+    await fs.utimes(filePath, 1, 1)
     let assetServer = createTestServer(dir, {
       files: {
         extensions: ['.svg'],
@@ -2460,6 +2457,7 @@ describe('asset-server', () => {
       'app/images/logo.svg',
       '<svg xmlns="http://www.w3.org/2000/svg"><title>world</title></svg>\n',
     )
+    await fs.utimes(filePath, 2, 2)
 
     let secondHref = await assetServer.getHref('app/images/logo.svg')
     assert.notEqual(secondHref, firstHref)
@@ -4193,6 +4191,54 @@ describe('asset-server', () => {
     ])
   })
 
+  it('preserves first evaluation through implementation modules after nested imports are rewritten', async () => {
+    await writeJson(dir, 'app/package.json', { sideEffects: ['./shared.ts', './other.ts'] })
+    await write(dir, 'app/entry.ts', 'import { value } from "./barrel.ts"\nconsole.log(value)')
+    await write(
+      dir,
+      'app/barrel.ts',
+      ['export { unused } from "./unused.ts"', 'export { value } from "./value.ts"'].join('\n'),
+    )
+    await write(
+      dir,
+      'app/unused.ts',
+      'import { shared } from "./shared-barrel.ts"\nexport const unused = shared',
+    )
+    await write(
+      dir,
+      'app/value.ts',
+      [
+        'import "./other.ts"',
+        'import { shared } from "./shared-barrel.ts"',
+        'export const value = shared',
+      ].join('\n'),
+    )
+    await write(
+      dir,
+      'app/shared-barrel.ts',
+      ['export { shared } from "./shared.ts"', 'export { extra } from "./extra.ts"'].join('\n'),
+    )
+    await write(dir, 'app/shared.ts', 'globalThis.order = ["shared"]\nexport let shared = 1')
+    await write(dir, 'app/other.ts', 'globalThis.order.push("other")')
+    await write(dir, 'app/extra.ts', 'export const extra = "extra"')
+    let assetServer = createTestServer(dir)
+
+    let body = await (await getByFile(assetServer, 'app/entry.ts'))!.text()
+
+    assert.match(body, /import "\/assets\/app\/shared\.ts"/)
+    assert.ok(
+      getLineAndColumn(body, '/assets/app/shared.ts').line <
+        getLineAndColumn(body, '/assets/app/value.ts').line,
+    )
+    assert.doesNotMatch(body, /barrel|unused|extra/)
+    assert.deepEqual(await assetServer.getPreloads('app/entry.ts'), [
+      '/assets/app/entry.ts',
+      '/assets/app/shared.ts',
+      '/assets/app/value.ts',
+      '/assets/app/other.ts',
+    ])
+  })
+
   it('rewrites repeated imports together in re-export dependency order', async () => {
     await writeJson(dir, 'app/package.json', { sideEffects: false })
     await write(
@@ -5265,6 +5311,119 @@ describe('asset-server', () => {
     }
   })
 
+  it('accounts for injected HMR setup code in external source maps', async (t) => {
+    let source = 'console.log("ASSETS_ONLY");\nif (import.meta.hot) import.meta.hot.accept();\n'
+    await write(dir, 'app/entry.js', source)
+    let assetServer = createWatchedTestServer(dir, {
+      hmr: createTestBrowserHmrChannel,
+      sourceMaps: 'external',
+    })
+    t.after(() => assetServer.close())
+
+    let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(assetServer, 'app/entry.js')
+    let consumer = new SourceMapConsumer(sourceMap)
+    let generated = getLineAndColumn(compiledCode, 'console.log')
+
+    assert.equal(generated.line, 3)
+    assert.deepEqual(consumer.originalPositionFor(generated), {
+      source: '/assets/app/entry.js',
+      line: 1,
+      column: 0,
+      name: null,
+    })
+    assert.deepEqual(sourceMap.sourcesContent, [source])
+    assert.equal(consumer.originalPositionFor({ line: 1, column: 0 }).source, null)
+    assert.equal(consumer.originalPositionFor({ line: 2, column: 0 }).source, null)
+  })
+
+  it('accounts for injected HMR setup code in inline source maps', async (t) => {
+    let source = 'console.log("ASSETS_ONLY");\nif (import.meta.hot) import.meta.hot.accept();\n'
+    await write(dir, 'app/entry.js', source)
+    let assetServer = createWatchedTestServer(dir, {
+      hmr: createTestBrowserHmrChannel,
+      sourceMaps: 'inline',
+    })
+    t.after(() => assetServer.close())
+
+    let response = await get(assetServer, '/assets/app/entry.js')
+    assert.ok(response)
+    let compiledCode = await response.text()
+    let sourceMap = decodeInlineSourceMap(compiledCode) as RawSourceMap
+    let consumer = new SourceMapConsumer(sourceMap)
+    let generated = getLineAndColumn(compiledCode, 'console.log')
+
+    assert.equal(generated.line, 3)
+    assert.deepEqual(consumer.originalPositionFor(generated), {
+      source: '/assets/app/entry.js',
+      line: 1,
+      column: 0,
+      name: null,
+    })
+    assert.deepEqual(sourceMap.sourcesContent, [source])
+    assert.equal(consumer.originalPositionFor({ line: 1, column: 0 }).source, null)
+    assert.equal(consumer.originalPositionFor({ line: 2, column: 0 }).source, null)
+  })
+
+  it('accounts for injected HMR setup code in source maps with loaders and minification', async (t) => {
+    let source = [
+      'import { value } from "./dep.ts"',
+      'console.log(value)',
+      'if (import.meta.hot) import.meta.hot.accept()',
+      '',
+    ].join('\n')
+    await write(dir, 'app/entry.ts', source)
+    await write(dir, 'app/dep.ts', 'export let value: number = 1')
+    let assetServer = createWatchedTestServer(dir, {
+      hmr: createTestBrowserHmrChannel,
+      minify: true,
+      scripts: {
+        loaders: [createPrependModuleLoader('console.debug("loader")\n')],
+      },
+      sourceMaps: 'external',
+    })
+    t.after(() => assetServer.close())
+
+    let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(assetServer, 'app/entry.ts')
+    let consumer = new SourceMapConsumer(sourceMap)
+    let original = consumer.originalPositionFor(getLineAndColumn(compiledCode, 'console.log'))
+    let expected = getLineAndColumn(source, 'console.log')
+
+    assert.equal(original.source, '/assets/app/entry.ts')
+    assert.equal(original.line, expected.line)
+    assert.equal(original.column, expected.column)
+    assert.equal(
+      consumer.originalPositionFor(getLineAndColumn(compiledCode, 'console.debug')).source,
+      null,
+    )
+    assert.deepEqual(sourceMap.sourcesContent, [source])
+  })
+
+  it('accounts for injected HMR setup code in source maps after rewriting dependency accepts', async (t) => {
+    let source = [
+      'import { value } from "./dep.ts"',
+      'console.log(value)',
+      'if (import.meta.hot) import.meta.hot.accept("./dep.ts", () => {})',
+      '',
+    ].join('\n')
+    await write(dir, 'app/entry.ts', source)
+    await write(dir, 'app/dep.ts', 'export let value = 1')
+    let assetServer = createWatchedTestServer(dir, {
+      hmr: createTestBrowserHmrChannel,
+      sourceMaps: 'external',
+    })
+    t.after(() => assetServer.close())
+
+    let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(assetServer, 'app/entry.ts')
+    let consumer = new SourceMapConsumer(sourceMap)
+    let original = consumer.originalPositionFor(getLineAndColumn(compiledCode, 'console.log'))
+    let expected = getLineAndColumn(source, 'console.log')
+
+    assert.match(compiledCode, /accept\("\/assets\/app\/dep\.ts"/)
+    assert.equal(original.source, '/assets/app/entry.ts')
+    assert.equal(original.line, expected.line)
+    assert.equal(original.column, expected.column)
+  })
+
   it('supports inline source maps with absolute source paths', async () => {
     let entryPath = await write(dir, 'app/entry.ts', 'export const entry: number = 1')
     let assetServer = createTestServer(dir, {
@@ -6219,8 +6378,10 @@ describe('asset-server', () => {
         let eventsResponse = await get(assetServer, '/assets/__remix_hmr/events')
         assert.equal(eventsResponse, null)
 
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
+        let webKitHeaders = { 'User-Agent': 'AppleWebKit/605.1.15 Safari/605.1.15' }
+        let entryResponse = await get(assetServer, '/assets/app/entry.ts', webKitHeaders)
         assert.ok(entryResponse)
+        assert.equal(entryResponse.headers.get('Vary'), '*')
         let entryBody = await entryResponse.text()
 
         assert.match(entryBody, /from "\/assets\/__remix_hmr\/client\.js"/)
@@ -6228,12 +6389,50 @@ describe('asset-server', () => {
           entryBody,
           /import\.meta\.hot = __remixCreateHotContext\("\/assets\/app\/entry\.ts"\)/,
         )
+
+        let etag = entryResponse.headers.get('ETag')
+        assert.ok(etag)
+        let notModified = await get(assetServer, '/assets/app/entry.ts', {
+          ...webKitHeaders,
+          'If-None-Match': etag,
+        })
+        assert.ok(notModified)
+        assert.equal(notModified.status, 304)
+        assert.equal(notModified.headers.get('Vary'), '*')
+
+        let chromeHeaders = { 'User-Agent': 'AppleWebKit/537.36 Chrome/153.0.0.0 Safari/537.36' }
+        let chromeEntry = await get(assetServer, '/assets/app/entry.ts', chromeHeaders)
+        assert.ok(chromeEntry)
+        assert.equal(chromeEntry.status, 200)
+        assert.equal(chromeEntry.headers.get('Vary'), 'User-Agent, Accept-Encoding')
+
+        let chromeNotModified = await get(assetServer, '/assets/app/entry.ts', {
+          ...chromeHeaders,
+          'If-None-Match': etag,
+        })
+        assert.ok(chromeNotModified)
+        assert.equal(chromeNotModified.status, 304)
+        assert.equal(chromeNotModified.headers.get('Vary'), 'User-Agent, Accept-Encoding')
       } finally {
         await assetServer.close()
       }
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
+  })
+
+  it('keeps ordinary script cache headers when the HMR channel factory opts out', async (t) => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    let assetServer = createWatchedTestServer(dir, { hmr: async () => undefined })
+    t.after(() => assetServer.close())
+
+    let response = await get(assetServer, '/assets/app/entry.ts', {
+      'User-Agent': 'AppleWebKit/605.1.15 Safari/605.1.15',
+    })
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('Cache-Control'), 'no-cache')
+    assert.equal(response.headers.get('Vary'), null)
   })
 
   it('hot updates optimized barrel import graph changes while keeping CSS updates hot', async () => {
@@ -7288,7 +7487,6 @@ describe('asset-server', () => {
         let chokidarWatcher = getInternalChokidarWatcher(assetServer)
         assert.ok(chokidarWatcher)
         chokidarWatcher.emit('unlink', logoWatchPath)
-        await Promise.resolve()
 
         let after = await get(assetServer, '/assets/app/styles/app.css')
         assert.ok(after)
@@ -10962,6 +11160,28 @@ describe('asset-server', () => {
     assert.equal(receivedError.code, 'IMPORT_RESOLUTION_FAILED')
     assert.match(receivedError.message, /Failed to resolve import/)
     assert.match(receivedError.message, /"\.\/missing\.css"/)
+  })
+
+  it('calls onError for CSS imports that traverse through a file', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      '@import "./theme.css/dark.css";\nbody { color: red; }\n',
+    )
+    await write(dir, 'app/styles/theme.css', 'body { color: blue; }\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'IMPORT_RESOLUTION_FAILED')
+    assert.match(receivedError.message, /"\.\/theme\.css\/dark\.css"/)
   })
 
   it('calls onError for unsupported CSS url dependencies when files are not configured', async () => {

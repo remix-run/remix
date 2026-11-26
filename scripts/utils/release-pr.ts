@@ -57,7 +57,7 @@ function generateHeader(): string {
   return [
     'This PR is managed by the [`release-pr`](https://github.com/remix-run/remix/blob/main/.github/workflows/release-pr.yaml) workflow. ' +
       'Do not edit it manually. ' +
-      'See [CONTRIBUTING.md](https://github.com/remix-run/remix/blob/main/CONTRIBUTING.md#releases) for more.',
+      'See [MAINTAINING.md](https://github.com/remix-run/remix/blob/main/MAINTAINING.md#releases) for more.',
   ].join('\n')
 }
 

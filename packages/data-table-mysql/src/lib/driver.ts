@@ -1,4 +1,5 @@
 import type {
+  ColumnDefinition,
   DataManipulationOperation,
   DataManipulationRequest,
   DataManipulationResult,
@@ -21,7 +22,7 @@ import type {
   RowDataPacket,
 } from 'mysql2/promise'
 
-import { compileMysqlOperation } from './sql-compiler.ts'
+import { compileMysqlOperation, quoteIdentifier } from './sql-compiler.ts'
 
 type TransactionState = {
   connection: MysqlTransactionConnection
@@ -105,6 +106,20 @@ export class MysqlDatabaseDriver implements DatabaseDriver<'mysql'> {
   }
 
   /**
+   * Decodes `boolean` columns, which MySQL stores as `tinyint(1)` and mysql2 returns as numbers.
+   * @param value Value read from the database.
+   * @param column Definition of the column the value was read from.
+   * @returns The decoded value.
+   */
+  decodeValue(value: unknown, column: ColumnDefinition): unknown {
+    if (column.type === 'boolean' && (typeof value === 'number' || typeof value === 'bigint')) {
+      return Number(value) !== 0
+    }
+
+    return value
+  }
+
+  /**
    * Executes a mysql data-manipulation request.
    * @param request Request to execute.
    * @returns Execution result.
@@ -121,7 +136,8 @@ export class MysqlDatabaseDriver implements DatabaseDriver<'mysql'> {
     let statements = this.compileSql(request.operation)
     let statement = statements[0]
     let client = this.#resolveClient(request.transaction)
-    let [result] = await client.query(statement.text, statement.values)
+    // An empty values array keeps mysql2 from scanning the formatted SQL for named placeholders.
+    let [result] = await client.query(formatStatement(client, statement), [])
 
     if (isRowsResult(result)) {
       let rows = normalizeRows(result)
@@ -137,7 +153,7 @@ export class MysqlDatabaseDriver implements DatabaseDriver<'mysql'> {
 
     return {
       affectedRows: header.affectedRows,
-      insertId: normalizeInsertId(request.operation.kind, request.operation, header),
+      insertId: normalizeInsertId(request.operation, header),
     }
   }
 
@@ -605,6 +621,103 @@ function destroyMysqlConnection(connection: MysqlTransactionConnection): void {
   void connection.end().catch(() => undefined)
 }
 
+// mysql2 replaces every `?` in the text, including ones inside quoted strings and comments, and
+// expands arrays and plain objects into SQL. Bind each placeholder outside quotes and comments as
+// exactly one escaped value instead.
+function formatStatement(client: MysqlQueryable, statement: SqlStatement): string {
+  let { text, values } = statement
+  let output = ''
+  let index = 0
+  let valueIndex = 0
+
+  while (index < text.length) {
+    let char = text[index]
+
+    if (char === '?') {
+      if (valueIndex >= values.length) {
+        throw new TypeError('MySQL statement has more placeholders than values')
+      }
+
+      let value = values[valueIndex]
+
+      // mysql2 escapes Buffers as bytes but expands other typed arrays like plain objects.
+      if (ArrayBuffer.isView(value) && !Buffer.isBuffer(value)) {
+        value = Buffer.from(value.buffer, value.byteOffset, value.byteLength)
+      } else if (
+        value !== null &&
+        typeof value === 'object' &&
+        !(value instanceof Date) &&
+        !Buffer.isBuffer(value)
+      ) {
+        throw new TypeError('MySQL object parameters must be Date or typed array instances')
+      } else if (typeof value === 'number' && !Number.isFinite(value)) {
+        throw new TypeError('MySQL number parameters must be finite')
+      }
+
+      // mysql2 quotes bigints as strings, which MySQL compares to integers as doubles.
+      output += typeof value === 'bigint' ? value.toString() : client.escape(value)
+      valueIndex += 1
+      index += 1
+      continue
+    }
+
+    let end = index + 1
+
+    if (char === "'" || char === '"' || char === '`') {
+      end = scanQuoted(text, index, char)
+    } else if (
+      // `--` starts a comment only before a space, a control character, or the end of the text.
+      char === '#' ||
+      (text.startsWith('--', index) && !(text.charCodeAt(index + 2) > 32))
+    ) {
+      let lineEnd = text.indexOf('\n', index)
+      end = lineEnd === -1 ? text.length : lineEnd
+    } else if (text.startsWith('/*!', index)) {
+      // MySQL runs the contents of executable comments, so keep scanning them as SQL.
+      end = index + 3
+    } else if (text.startsWith('/*', index)) {
+      let commentEnd = text.indexOf('*/', index + 2)
+      end = commentEnd === -1 ? text.length : commentEnd + 2
+    }
+
+    output += text.slice(index, end)
+    index = end
+  }
+
+  if (valueIndex !== values.length) {
+    throw new TypeError('MySQL statement has more values than placeholders')
+  }
+
+  return output
+}
+
+function scanQuoted(text: string, start: number, quote: string): number {
+  let index = start + 1
+
+  while (index < text.length) {
+    let char = text[index]
+
+    // Backticked identifiers have no backslash escapes.
+    if (char === '\\' && quote !== '`') {
+      index += 2
+      continue
+    }
+
+    if (char === quote) {
+      if (text[index + 1] === quote) {
+        index += 2
+        continue
+      }
+
+      return index + 1
+    }
+
+    index += 1
+  }
+
+  return text.length
+}
+
 async function runWithMysqlMigrationLock<result>(
   connection: MysqlTransactionConnection,
   name: string,
@@ -729,11 +842,10 @@ function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unk
 }
 
 function normalizeInsertId(
-  kind: DataManipulationRequest['operation']['kind'],
   operation: DataManipulationRequest['operation'],
   header: MysqlQueryResultHeader,
 ): unknown {
-  if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
+  if (!isInsertOperation(operation)) {
     return undefined
   }
 
@@ -742,14 +854,6 @@ function normalizeInsertId(
   }
 
   return header.insertId
-}
-
-function quoteIdentifier(value: string): string {
-  return '`' + value.replace(/`/g, '``') + '`'
-}
-
-function isInsertOperationKind(kind: DataManipulationRequest['operation']['kind']): boolean {
-  return kind === 'insert' || kind === 'insertMany' || kind === 'upsert'
 }
 
 function isInsertOperation(

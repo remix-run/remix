@@ -1,3 +1,4 @@
+import { css } from 'remix/component'
 import type { Handle, RemixNode } from 'remix/component'
 
 import { button } from './button.ts'
@@ -28,7 +29,7 @@ export interface DocsShellProps {
 
 export function DocsShell(handle: Handle<DocsShellProps>) {
   return () => (
-    <>
+    <div mix={css({ isolation: 'isolate' })}>
       <a href="#main-content" mix={skipLinkCss}>
         Skip to content
       </a>
@@ -87,7 +88,7 @@ export function DocsShell(handle: Handle<DocsShellProps>) {
       </main>
       {handle.props.footer}
       <DocsShellBehavior navigationName={handle.props.navigationName} />
-    </>
+    </div>
   )
 }
 

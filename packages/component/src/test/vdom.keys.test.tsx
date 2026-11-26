@@ -1,11 +1,44 @@
+import * as assert from '@remix-run/assert'
 import { expect } from '@remix-run/assert'
-import { describe, it } from '@remix-run/test'
+import { describe, it, type TestContext } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/invariant.ts'
-import { Fragment, type Handle } from '../runtime/component.ts'
+import { Fragment, invariant } from '../runtime/vnode.ts'
+import { createElement } from '../runtime/create-element.ts'
+import type { Handle, RemixNode } from '../runtime/component.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {
+    it('keeps unkeyed matches in order after missing a child type', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      root.render(
+        <>
+          <b key="kept" />
+          <span />
+          <i />
+          <span />
+        </>,
+      )
+      let [keyed, skipped, italic, span] = Array.from(container.children)
+
+      root.render(
+        <>
+          <b key="kept" />
+          <em />
+          <i />
+          <span />
+          <span />
+        </>,
+      )
+      let children = container.children
+      expect(children[0]).toBe(keyed)
+      expect(children[1].localName).toBe('em')
+      expect(children[2]).toBe(italic)
+      expect(children[3]).toBe(span)
+      expect(children[4].localName).toBe('span')
+      expect(skipped.parentNode).toBe(null)
+    })
+
     it('appends keyed component before non-keyed sibling', () => {
       let container = document.createElement('div')
       let root = createRoot(container)
@@ -304,6 +337,246 @@ describe('vnode rendering (keys)', () => {
     })
   })
 
+  describe('keyed insertions', () => {
+    function Empty(_handle: Handle<{ value: string }>) {
+      return () => null
+    }
+
+    // The value 'empty' renders a keyed component with no DOM
+    function List(handle: Handle<{ values: string[] }>) {
+      return () => (
+        <ul>
+          {handle.props.values.map((value) =>
+            value === 'empty' ? <Empty key={value} value={value} /> : <li key={value}>{value}</li>,
+          )}
+        </ul>
+      )
+    }
+
+    function renderAndCountInsertions(
+      root: ReturnType<typeof createRoot>,
+      list: Element,
+      values: string[],
+    ): { added: number; removed: number } {
+      let observer = new MutationObserver(() => {})
+      observer.observe(list, { childList: true })
+      root.render(<List values={values} />)
+      let records = observer.takeRecords()
+      observer.disconnect()
+      return {
+        added: records.reduce((count, record) => count + record.addedNodes.length, 0),
+        removed: records.reduce((count, record) => count + record.removedNodes.length, 0),
+      }
+    }
+
+    it('inserts restored keyed children once at their final position', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let all = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+      root.render(<List values={all.filter((value) => Number(value) % 2 === 0)} />)
+      let list = container.querySelector('ul')
+      invariant(list)
+      expect(list.textContent).toBe('02468')
+
+      expect(renderAndCountInsertions(root, list, all)).toEqual({ added: 5, removed: 0 })
+      expect(list.textContent).toBe('0123456789')
+    })
+
+    it('inserts new keyed children once when existing children also move', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'b', 'c', 'd']} />)
+      let list = container.querySelector('ul')
+      invariant(list)
+
+      // d moves to the front, x and y are new
+      let counts = renderAndCountInsertions(root, list, ['d', 'x', 'a', 'b', 'y', 'c'])
+      expect(list.textContent).toBe('dxabyc')
+      expect(counts).toEqual({ added: 3, removed: 1 })
+    })
+
+    it('inserts new keyed children before the next stable child that renders DOM', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'b', 'empty', 'c']} />)
+      let list = container.querySelector('ul')
+      invariant(list)
+
+      // b moves to the end, x is new and the stable child after it renders no DOM
+      let counts = renderAndCountInsertions(root, list, ['a', 'x', 'empty', 'c', 'b'])
+      expect(list.textContent).toBe('axcb')
+      expect(counts).toEqual({ added: 2, removed: 1 })
+    })
+  })
+
+  describe('keyed children that change their DOM', () => {
+    function List(handle: Handle<{ values: string[]; fragment: string[] }>) {
+      return () => (
+        <ul>
+          {handle.props.values.map((value) =>
+            value === 'f' ? (
+              <Fragment key="f">
+                {handle.props.fragment.map((child) => (
+                  <li key={child}>{child}</li>
+                ))}
+              </Fragment>
+            ) : (
+              <li key={value}>{value}</li>
+            ),
+          )}
+        </ul>
+      )
+    }
+
+    it('inserts new fragment children inside the fragment when siblings follow it', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'f', 'b']} fragment={['1']} />)
+      expect(container.textContent).toBe('a1b')
+
+      root.render(<List values={['a', 'f', 'b']} fragment={['1', '2']} />)
+      expect(container.textContent).toBe('a12b')
+    })
+
+    it('keeps new fragment children with the fragment when other siblings move', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'f', 'b', 'c']} fragment={['1']} />)
+      expect(container.textContent).toBe('a1bc')
+
+      root.render(<List values={['a', 'f', 'c', 'b']} fragment={['1', '2']} />)
+      expect(container.textContent).toBe('a12cb')
+    })
+
+    it('inserts children into an empty fragment before the siblings that follow it', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'f', 'b']} fragment={[]} />)
+      expect(container.textContent).toBe('ab')
+
+      root.render(<List values={['a', 'f', 'b']} fragment={['1']} />)
+      expect(container.textContent).toBe('a1b')
+    })
+
+    it('keeps siblings when a fragment at the end of the list loses all its children', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<List values={['a', 'f']} fragment={['1']} />)
+      expect(container.textContent).toBe('a1')
+
+      root.render(<List values={['a', 'f']} fragment={[]} />)
+      expect(container.textContent).toBe('a')
+    })
+
+    it('places a keyed component that starts rendering DOM while its siblings move', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function Maybe(handle: Handle<{ show: boolean }>) {
+        return () => (handle.props.show ? <li>g</li> : null)
+      }
+
+      function Items(handle: Handle<{ show: boolean; order: string[]; fragment: string[] }>) {
+        return () => (
+          <ul>
+            {handle.props.order.map((key) =>
+              key === 'g' ? (
+                <Maybe key="g" show={handle.props.show} />
+              ) : key === 'f' ? (
+                <Fragment key="f">
+                  {handle.props.fragment.map((child) => (
+                    <li key={child}>{child}</li>
+                  ))}
+                </Fragment>
+              ) : (
+                <li key={key}>{key}</li>
+              ),
+            )}
+          </ul>
+        )
+      }
+
+      root.render(<Items show={false} order={['g', 'f', 'c']} fragment={['2']} />)
+      expect(container.textContent).toBe('2c')
+
+      // f moves ahead of g and gains a child before its old first child, so g's
+      // old next sibling no longer marks where g belongs
+      root.render(<Items show={true} order={['f', 'g', 'c']} fragment={['1', '2']} />)
+      expect(container.textContent).toBe('12gc')
+    })
+
+    it('places a component inside a fragment that starts rendering DOM while siblings move', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function Maybe(handle: Handle<{ show: boolean }>) {
+        return () => (handle.props.show ? <li>g</li> : null)
+      }
+
+      function Items(handle: Handle<{ show: boolean; order: string[]; fragment: string[] }>) {
+        return () => (
+          <ul>
+            {handle.props.order.map((key) =>
+              key === 'e' ? (
+                <Fragment key="e">
+                  <li>x</li>
+                  <Maybe show={handle.props.show} />
+                </Fragment>
+              ) : (
+                <Fragment key="f">
+                  {handle.props.fragment.map((child) => (
+                    <li key={child}>{child}</li>
+                  ))}
+                </Fragment>
+              ),
+            )}
+          </ul>
+        )
+      }
+
+      root.render(<Items show={false} order={['e', 'f']} fragment={['2']} />)
+      expect(container.textContent).toBe('x2')
+
+      // f moves ahead of e and gains a child before its old first child, so the
+      // sibling after e in the old order no longer marks where e ends
+      root.render(<Items show={true} order={['f', 'e']} fragment={['1', '2']} />)
+      expect(container.textContent).toBe('12xg')
+    })
+
+    it('renders a keyed component that starts rendering DOM while a later sibling is removed', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      function Maybe(handle: Handle<{ show: boolean }>) {
+        return () => (handle.props.show ? <li>g</li> : null)
+      }
+
+      function Items(handle: Handle<{ show: boolean; values: string[] }>) {
+        return () => (
+          <ul>
+            <Maybe key="g" show={handle.props.show} />
+            {handle.props.values.map((value) => (
+              <li key={value}>{value}</li>
+            ))}
+          </ul>
+        )
+      }
+
+      root.render(<Items show={false} values={['b', 'j']} />)
+      expect(container.textContent).toBe('bj')
+
+      root.render(<Items show={true} values={['j']} />)
+      expect(container.textContent).toBe('gj')
+    })
+  })
+
   describe('key semantics', () => {
     it('replaces nodes when keys match but type differs', () => {
       let container = document.createElement('div')
@@ -518,4 +791,329 @@ describe('vnode rendering (keys)', () => {
       expect(buttons.length).toBe(2)
     })
   })
+
+  describe('state-preserving keyed moves', () => {
+    it(
+      'preserves focus and custom element lifecycles when a keyed component moves',
+      { skip: typeof Element.prototype.moveBefore !== 'function' },
+      (t) => {
+        let { render, container } = createConnectedRoot(t)
+        class Widget extends HTMLElement {
+          events: string[] = []
+          connectedCallback() {
+            this.events.push('connected')
+          }
+          disconnectedCallback() {
+            this.events.push('disconnected')
+          }
+        }
+        customElements.define('rmx-keyed-legacy-move', Widget)
+        customElements.define(
+          'rmx-keyed-native-move',
+          class extends Widget {
+            connectedMoveCallback() {
+              this.events.push('moved')
+            }
+          },
+        )
+        function Card(handle: Handle<{ children: RemixNode }>) {
+          return () => <section>{handle.props.children}</section>
+        }
+        let card = (
+          <Card key="a">
+            {createElement('rmx-keyed-native-move', { tabIndex: 0 })}
+            {createElement('rmx-keyed-legacy-move', {})}
+          </Card>
+        )
+        let b = <span key="b">B</span>
+        let c = <span key="c">C</span>
+        render([b, c, card])
+        let native = container.querySelector('rmx-keyed-native-move')
+        let legacy = container.querySelector('rmx-keyed-legacy-move')
+        invariant(native instanceof Widget && legacy instanceof Widget)
+        native.focus()
+        native.addEventListener('blur', () => native.events.push('blurred'), { signal: t.signal })
+
+        render([card, b, c])
+
+        expect(container.firstElementChild).toBe(native.parentNode)
+        expect(document.activeElement).toBe(native)
+        expect(native.events).toEqual(['connected', 'moved'])
+        expect(legacy.events).toEqual(['connected', 'disconnected', 'connected'])
+      },
+    )
+  })
+
+  describe('focus and selection across keyed moves', () => {
+    it('restores focus and selection on a moved input when native moves are unavailable', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let item = (key: string) => <input key={key} id={key} type="text" />
+      render(['a', 'b', 'c'].map(item))
+      let input = getInput(container, 'a')
+      input.value = 'Hello World'
+      input.focus()
+      input.setSelectionRange(6, 11)
+
+      expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(6)
+      expect(input.selectionEnd).toBe(11)
+    })
+
+    it('restores ancestor scroll after focus handlers run during a keyed move', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      container.style.cssText = 'height: 40px; overflow: auto; overflow-anchor: none'
+      let item = (key: string) => (
+        <input key={key} id={key} style={{ display: 'block', height: '60px' }} />
+      )
+      render(['a', 'b', 'c'].map(item))
+      let input = getInput(container, 'a')
+      input.focus()
+      container.scrollTop = 10
+      let restored = false
+      input.addEventListener('focus', () => {
+        restored = true
+        container.scrollTop = 50
+      })
+
+      expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(restored).toBe(true)
+      expect(container.scrollTop).toBe(10)
+    })
+
+    it('keeps focus and selection on a textarea that a keyed reorder moves', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      let item = (key: string) => <textarea key={key} id={key} />
+      render(['a', 'b', 'c'].map(item))
+      let textarea = container.querySelector('#a')
+      invariant(textarea instanceof HTMLTextAreaElement)
+      textarea.value = 'Hello\nWorld\nTest'
+      textarea.focus()
+      textarea.setSelectionRange(6, 11)
+
+      expectToMove(textarea, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(document.activeElement).toBe(textarea)
+      expect(textarea.selectionStart).toBe(6)
+      expect(textarea.selectionEnd).toBe(11)
+    })
+
+    it('keeps the selection for every text-like input type', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      for (let type of ['search', 'tel', 'url', 'password']) {
+        let item = (key: string) => createElement('input', { key, id: key, type })
+        render(['a', 'b', 'c'].map(item))
+        let input = getInput(container, 'a')
+        input.value = 'test value'
+        input.focus()
+        input.setSelectionRange(0, 4)
+
+        expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+        expect(document.activeElement).toBe(input)
+        expect(input.selectionStart).toBe(0)
+        expect(input.selectionEnd).toBe(4)
+        render([])
+      }
+    })
+
+    it('keeps focus on inputs that do not support text selection', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      for (let type of ['email', 'number', 'checkbox', 'range']) {
+        let item = (key: string) => createElement('input', { key, id: key, type })
+        render(['a', 'b', 'c'].map(item))
+        let input = getInput(container, 'a')
+        input.focus()
+
+        expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+        expect(document.activeElement).toBe(input)
+        render([])
+      }
+    })
+
+    it('keeps focus on focusable and contentEditable elements that a keyed reorder moves', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      let item = (key: string) =>
+        key === 'editable' ? (
+          <div key={key} id={key} contentEditable="true">
+            Hello World
+          </div>
+        ) : (
+          <div key={key} id={key} tabIndex={-1} />
+        )
+      for (let focused of ['focusable', 'editable']) {
+        render([focused, 'b', 'c'].map(item))
+        let element = container.querySelector(`#${focused}`)
+        invariant(element instanceof HTMLElement)
+        element.focus()
+
+        expectToMove(element, () => render(['b', 'c', focused].map(item)))
+
+        expect(document.activeElement).toBe(element)
+        render([])
+      }
+    })
+
+    it('keeps focus and selection when a keyed multi-node fragment moves', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      let item = (key: string) => (
+        <Fragment key={key}>
+          <label>{key}</label>
+          <input id={key} type="text" />
+        </Fragment>
+      )
+      render(['a', 'b', 'c'].map(item))
+      let input = getInput(container, 'a')
+      input.value = 'Hello World'
+      input.focus()
+      input.setSelectionRange(2, 7)
+
+      expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(2)
+      expect(input.selectionEnd).toBe(7)
+    })
+
+    it('restores focus and selection when a keyed multi-node fragment falls back to insertBefore', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let insertSpy = t.mock.method(container, 'insertBefore')
+      let item = (key: string) => (
+        <Fragment key={key}>
+          <label>{key}</label>
+          <input id={key} type="text" />
+        </Fragment>
+      )
+      render(['a', 'b', 'c'].map(item))
+      insertSpy.mock.resetCalls()
+      let input = getInput(container, 'a')
+      input.value = 'Hello World'
+      input.focus()
+      input.setSelectionRange(2, 7, 'backward')
+
+      expectToMove(input, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(insertSpy.mock.callCount()).toBeGreaterThan(0)
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(2)
+      expect(input.selectionEnd).toBe(7)
+      expect(input.selectionDirection).toBe('backward')
+    })
+
+    it('restores focus on a descendant input and ancestor scroll when a moved container falls back', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let item = (key: string) => (
+        <div key={key} id={`box-${key}`} style={{ height: '40px', overflow: 'auto' }}>
+          <div style={{ height: '80px' }} />
+          <input id={key} type="text" />
+        </div>
+      )
+      render(['a', 'b', 'c'].map(item))
+      let box = container.querySelector('#box-a')
+      invariant(box instanceof HTMLDivElement)
+      let input = getInput(container, 'a')
+      input.value = 'Descendant'
+      input.focus()
+      input.setSelectionRange(1, 5)
+      box.scrollTop = 20
+
+      expectToMove(box, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(1)
+      expect(input.selectionEnd).toBe(5)
+      expect(box.scrollTop).toBe(20)
+    })
+
+    it('restores focus on a focusable SVG element when native moves are unavailable', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      Object.defineProperty(container, 'moveBefore', { value: undefined })
+      let item = (key: string) => (
+        <svg key={key} id={`svg-${key}`}>
+          <a id={key} href="#target" tabIndex={0}>
+            <text>{key}</text>
+          </a>
+        </svg>
+      )
+      render(['a', 'b', 'c'].map(item))
+      let svg = container.querySelector('#svg-a')
+      let link = container.querySelector('#a')
+      invariant(svg instanceof SVGSVGElement && link instanceof SVGAElement)
+      link.focus()
+      expect(document.activeElement).toBe(link)
+
+      expectToMove(svg, () => render(['b', 'c', 'a'].map(item)))
+
+      expect(document.activeElement).toBe(link)
+    })
+
+    it('does not touch focus or selection during renders that do not move the focused element', (t) => {
+      let { render, container } = createConnectedRoot(t)
+      render(
+        <div>
+          <input id="a" type="text" />
+          <span>0</span>
+        </div>,
+      )
+      let input = getInput(container, 'a')
+      input.value = 'typing'
+      input.focus()
+      input.setSelectionRange(1, 4)
+      let focusSpy = t.mock.method(input, 'focus')
+      let selectionSpy = t.mock.method(input, 'setSelectionRange')
+
+      render(
+        <div>
+          <input id="a" type="text" />
+          <span>1</span>
+        </div>,
+      )
+
+      expect(focusSpy).not.toHaveBeenCalled()
+      expect(selectionSpy).not.toHaveBeenCalled()
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(1)
+      expect(input.selectionEnd).toBe(4)
+    })
+  })
 })
+
+function createConnectedRoot(t: TestContext) {
+  let container = document.createElement('div')
+  document.body.append(container)
+  let root = createRoot(container)
+  t.after(() => {
+    root.dispose()
+    container.remove()
+  })
+  return { container, render: (node: RemixNode) => root.render(node) }
+}
+
+function getInput(container: HTMLElement, id: string): HTMLInputElement {
+  let input = container.querySelector(`#${id}`)
+  invariant(input instanceof HTMLInputElement)
+  return input
+}
+
+// Moving a focused element out of the DOM and back drops its focus and selection, which is what
+// the scheduler restores. Which element a keyed reorder moves is the reconciler's choice, so fail
+// loudly if it stops moving this one instead of letting the test pass without testing restoration.
+function expectToMove(element: Element, update: () => void): void {
+  let parent = element.parentNode
+  invariant(parent)
+  let observer = new MutationObserver(() => {})
+  observer.observe(parent, { childList: true })
+  update()
+  let records = observer.takeRecords()
+  observer.disconnect()
+  let moved = records.some((record) => Array.from(record.removedNodes).includes(element))
+  assert.ok(moved, 'Expected the update to move the focused element. Reorder the keys so it does.')
+  expect(element.isConnected).toBe(true)
+}

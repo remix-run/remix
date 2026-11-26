@@ -258,7 +258,7 @@ If you want a handler to receive every request method at a given URL instead, re
 
 #### HEAD Requests
 
-Routes registered for `GET` also serve `HEAD` requests. The `GET` handler runs as usual, and the router strips the body from its response, so a `HEAD` request observes the same status and headers as the equivalent `GET` request.
+Routes registered for `GET` also serve `HEAD` requests. The `GET` handler runs as usual, and the router strips the body from its response after router middleware runs, so middleware and the client observe the same status and headers as for the equivalent `GET` request.
 
 ```ts
 let router = createRouter()
@@ -885,7 +885,8 @@ type AppContext = MiddlewareContext<typeof middleware>
 #### Error Handling and Aborted Requests
 
 - wrap `router.fetch()` in a try/catch to handle errors
-- `AbortError` is thrown when a request is aborted
+- when `request.signal` aborts, the router stops running middleware and handlers and rejects with the abort reason once work already in progress settles, even if that work fails with its own error
+- pass `context.request.signal` to `fetch()`, database queries, and other work that should stop when the client disconnects
 
 #### Content Negotiation
 
@@ -1003,6 +1004,27 @@ describe('blog routes', () => {
 ```
 
 No special test harness or mocking required! Just use `fetch()` like you would in production.
+
+## Benchmarks
+
+Average time to dispatch one request compared with [Hono](https://hono.dev). Handlers return a pre-created `Response`, so results measure routing and middleware overhead. Lower is better.
+
+<!-- Update with `pnpm run bench:update-readme` -->
+<!-- benchmarks:start -->
+
+| Scenario                       | `fetch-router` |  `hono` |
+| ------------------------------ | -------------: | ------: |
+| Static route, 100 routes       |         122 ns | 72.5 ns |
+| One param, 100 routes          |         501 ns |  355 ns |
+| One param, 1,000 routes        |         496 ns | 1.89 µs |
+| Not found, 1,000 routes        |        1.42 µs | 1.74 µs |
+| Async handler, 100 routes      |         148 ns |  173 ns |
+| 3 sync middleware, 100 routes  |         239 ns |  376 ns |
+| 3 async middleware, 100 routes |         419 ns |  446 ns |
+
+Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `fetch-router@1.0.1` (`c3be074e61`), and `hono@4.13.22`.
+
+<!-- benchmarks:end -->
 
 ## Related Packages
 

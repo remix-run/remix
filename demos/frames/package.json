@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=24.3.0"
+    "node": ">=24.3.0",
+    "bun": ">=1.4.3"
   },
   "dependencies": {
     "remix": "workspace:*"
@@ -16,7 +17,7 @@
   "scripts": {
     "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
     "start": "node --import remix/node-tsx server.ts",
-    "test": "NODE_ENV=test remix test",
+    "test": "remix test",
     "typecheck": "tsc --noEmit"
   }
 }

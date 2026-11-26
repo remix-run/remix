@@ -6,6 +6,7 @@ import { createRoot, on, type Handle, type RemixNode } from '@remix-run/componen
 import * as popover from './popover.ts'
 import * as menu from './menu.tsx'
 import type { PopoverHideRequest } from './popover.ts'
+import { settle } from './test/settle.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
 
@@ -71,19 +72,6 @@ function key(target: HTMLElement, keyValue: string) {
   return event
 }
 
-async function settle(root: ReturnType<typeof createRoot>) {
-  root.flush()
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        resolve()
-      })
-    })
-  })
-  await Promise.resolve()
-  root.flush()
-}
-
 function PopoverHarness(handle: Handle<RenderPopoverOptions>) {
   let open = false
 
@@ -110,35 +98,37 @@ function PopoverHarness(handle: Handle<RenderPopoverOptions>) {
         Anchor
       </button>
 
-      <div
-        id="surface"
-        mix={popover.surface({
-          closeOnAnchorClick: handle.props.closeOnAnchorClick,
-          open,
-          onHide(request) {
-            handle.props.onHide?.(request)
+      <popover.SurfaceContext>
+        <div
+          id="surface"
+          mix={popover.surface({
+            closeOnAnchorClick: handle.props.closeOnAnchorClick,
+            open,
+            onHide(request) {
+              handle.props.onHide?.(request)
 
-            if (handle.props.closeOnHide === false) {
-              return
-            }
+              if (handle.props.closeOnHide === false) {
+                return
+              }
 
-            closePopover()
-          },
-          restoreFocusOnHide: handle.props.restoreFocusOnHide,
-        })}
-      >
-        {handle.props.withShowFocus ? (
-          <button id="show-focus" mix={popover.focusOnShow()}>
-            Focus on show
+              closePopover()
+            },
+            restoreFocusOnHide: handle.props.restoreFocusOnHide,
+          })}
+        >
+          {handle.props.withShowFocus ? (
+            <button id="show-focus" mix={popover.focusOnShow()}>
+              Focus on show
+            </button>
+          ) : null}
+
+          <button id="inside-close" mix={on('click', closePopover)}>
+            Close from inside
           </button>
-        ) : null}
 
-        <button id="inside-close" mix={on('click', closePopover)}>
-          Close from inside
-        </button>
-
-        <button id="inside">Inside</button>
-      </div>
+          <button id="inside">Inside</button>
+        </div>
+      </popover.SurfaceContext>
 
       <button id="outside">Outside</button>
     </popover.Context>
@@ -159,51 +149,55 @@ function NestedPopovers(handle: Handle<{ onChildHide?(request?: PopoverHideReque
           void handle.update()
         })}
       />
-      <div
-        id="parent-surface"
-        mix={popover.surface({
-          open: parentOpen,
-          onHide() {
-            parentOpen = false
-            void handle.update()
-          },
-        })}
-      >
-        <popover.Context>
-          <button
-            id="child-anchor"
-            mix={[
-              popover.anchor({ placement: 'bottom-start' }),
-              on('click', () => {
-                childOpen = true
-                void handle.update()
-              }),
-            ]}
-          />
-          <div
-            id="child-surface"
-            mix={popover.surface({
-              open: childOpen,
-              onHide(request) {
-                handle.props.onChildHide?.(request)
-                childOpen = false
-                void handle.update()
-              },
-            })}
-          >
-            <button id="child-inside">Child</button>
+      <popover.SurfaceContext>
+        <div
+          id="parent-surface"
+          mix={popover.surface({
+            open: parentOpen,
+            onHide() {
+              parentOpen = false
+              void handle.update()
+            },
+          })}
+        >
+          <popover.Context>
             <button
-              id="close-parent"
-              mix={on('click', () => {
-                parentOpen = false
-                void handle.update()
-              })}
-            >
-              Close parent
-            </button>
-          </div>
-        </popover.Context>
-      </div>
+              id="child-anchor"
+              mix={[
+                popover.anchor({ placement: 'bottom-start' }),
+                on('click', () => {
+                  childOpen = true
+                  void handle.update()
+                }),
+              ]}
+            />
+            <popover.SurfaceContext>
+              <div
+                id="child-surface"
+                mix={popover.surface({
+                  open: childOpen,
+                  onHide(request) {
+                    handle.props.onChildHide?.(request)
+                    childOpen = false
+                    void handle.update()
+                  },
+                })}
+              >
+                <button id="child-inside">Child</button>
+                <button
+                  id="close-parent"
+                  mix={on('click', () => {
+                    parentOpen = false
+                    void handle.update()
+                  })}
+                >
+                  Close parent
+                </button>
+              </div>
+            </popover.SurfaceContext>
+          </popover.Context>
+        </div>
+      </popover.SurfaceContext>
       <button id="outside">Outside</button>
     </popover.Context>
   )
@@ -217,42 +211,46 @@ function PopoverInMenu(handle: Handle) {
       <button id="menu-trigger" mix={menu.trigger()}>
         Actions
       </button>
-      <div id="menu-surface" mix={menu.popover()}>
-        <div id="menu-list" mix={menu.list()}>
-          <button id="rename-item" mix={menu.item({ name: 'rename', label: 'Rename' })}>
-            Rename
-          </button>
-          <button id="save-item" mix={menu.item({ name: 'save', label: 'Save' })}>
-            Save
-          </button>
-          <popover.Context>
-            <button
-              id="popover-anchor"
-              mix={[
-                popover.anchor({ placement: 'bottom-start' }),
-                on('click', () => {
-                  open = true
-                  void handle.update()
-                }),
-              ]}
-            >
-              Edit
+      <menu.PopoverContext>
+        <div id="menu-surface" mix={menu.popover()}>
+          <div id="menu-list" mix={menu.list()}>
+            <button id="rename-item" mix={menu.item({ name: 'rename', label: 'Rename' })}>
+              Rename
             </button>
-            <div
-              id="popover-surface"
-              mix={popover.surface({
-                open,
-                onHide() {
-                  open = false
-                  void handle.update()
-                },
-              })}
-            >
-              <input id="popover-input" />
-            </div>
-          </popover.Context>
+            <button id="save-item" mix={menu.item({ name: 'save', label: 'Save' })}>
+              Save
+            </button>
+            <popover.Context>
+              <button
+                id="popover-anchor"
+                mix={[
+                  popover.anchor({ placement: 'bottom-start' }),
+                  on('click', () => {
+                    open = true
+                    void handle.update()
+                  }),
+                ]}
+              >
+                Edit
+              </button>
+              <popover.SurfaceContext>
+                <div
+                  id="popover-surface"
+                  mix={popover.surface({
+                    open,
+                    onHide() {
+                      open = false
+                      void handle.update()
+                    },
+                  })}
+                >
+                  <input id="popover-input" />
+                </div>
+              </popover.SurfaceContext>
+            </popover.Context>
+          </div>
         </div>
-      </div>
+      </menu.PopoverContext>
     </menu.Context>
   )
 }
@@ -265,6 +263,26 @@ afterEach(() => {
 
   roots = []
   document.body.innerHTML = ''
+})
+
+describe('popover.SurfaceContext', () => {
+  it('renders inactive focus boundaries outside a modal scope', async () => {
+    let { container, root } = renderApp(
+      <popover.Context>
+        <button mix={popover.anchor({})}>Open</button>
+        <popover.SurfaceContext>
+          <div data-popup mix={popover.surface({ open: true, onHide() {} })}>
+            <input />
+          </div>
+        </popover.SurfaceContext>
+      </popover.Context>,
+    )
+    await settle(root)
+    let guards = Array.from(container.querySelectorAll<HTMLElement>('[data-rmx-focus-guard]'))
+    expect(guards.length).toBe(2)
+    expect(guards.every((node) => node.tabIndex === -1)).toBe(true)
+    expect(container.querySelector('[data-popup]')?.hasAttribute('data-open')).toBe(true)
+  })
 })
 
 describe('popover', () => {
@@ -280,7 +298,7 @@ describe('popover', () => {
     await settle(root)
     expect(surface.hasAttribute('data-open')).toBe(true)
     expect(surface.getAttribute('data-state')).toBe('closed')
-    expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
+    expect(document.documentElement.style.overflow).toBe('hidden')
     click(anchor)
     await settle(root)
     animation.finish()
@@ -343,14 +361,14 @@ describe('popover', () => {
     expect(surface.style.position).toBe('fixed')
     expect(surface.style.top).toBe('70px')
     expect(surface.style.left).toBe('100px')
-    expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
+    expect(document.documentElement.style.overflow).toBe('hidden')
     expect(document.body.style.position).toBe('')
     expect(document.body.style.overflow).toBe('')
 
     click(insideClose)
     await settle(root)
 
-    expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
+    expect(document.documentElement.style.overflow).toBe('')
   })
 
   it('moves focus to the registered show target when opening', async () => {
@@ -574,7 +592,7 @@ describe('popover', () => {
 
     expect(isPopoverOpen(parent)).toBe(false)
     expect(isPopoverOpen(child)).toBe(false)
-    expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
+    expect(document.documentElement.style.overflow).toBe('')
     expect(requests).toEqual([undefined])
 
     click(getById(container, 'open-parent'))
@@ -586,7 +604,7 @@ describe('popover', () => {
     expect(isPopoverOpen(child)).toBe(true)
     click(getById(container, 'close-parent'))
     await settle(root)
-    expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
+    expect(document.documentElement.style.overflow).toBe('')
     expect(requests).toEqual([undefined, undefined])
   })
 
@@ -599,7 +617,7 @@ describe('popover', () => {
 
     root.render(null)
     root.flush()
-    expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
+    expect(document.documentElement.style.overflow).toBe('')
     expect(key(document.body, 'Escape').defaultPrevented).toBe(false)
   })
 
@@ -617,7 +635,7 @@ describe('popover', () => {
     expect(isPopoverOpen(getById(container, 'popover-surface'))).toBe(true)
   })
 
-  it('keeps keyboard navigation and typeahead within the nested popover', async () => {
+  it('keeps keyboard navigation and typeahead within the nested popover', async (t) => {
     let { container, root } = renderApp(<PopoverInMenu />)
     click(getById(container, 'menu-trigger'))
     await settle(root)
@@ -637,7 +655,7 @@ describe('popover', () => {
     await settle(root)
 
     expect(isPopoverOpen(getById(container, 'menu-surface'))).toBe(true)
-    expect(document.activeElement).toBe(getById(container, 'rename-item'))
+    await t.waitFor(() => expect(document.activeElement).toBe(getById(container, 'rename-item')))
   })
 
   it('keeps the popover open when a pointer gesture starts inside and ends outside', async () => {
@@ -684,6 +702,6 @@ describe('popover', () => {
     key(document.body, 'Escape')
 
     expect(onHide).not.toHaveBeenCalled()
-    expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
+    expect(document.documentElement.style.overflow).toBe('')
   })
 })

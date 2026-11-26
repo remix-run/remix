@@ -1,4 +1,4 @@
-export { jsx, jsxDEV, jsxs } from './runtime/core/vnode.ts'
+export { Fragment, jsx, jsxDEV, jsxs } from './runtime/vnode.ts'
 export type {
   ElementProps,
   ElementType,
@@ -6,5 +6,4 @@ export type {
   RemixElement,
   RemixNode,
   Renderable,
-} from './runtime/core/vnode.ts'
-export { Fragment } from './runtime/component.ts'
+} from './runtime/vnode.ts'

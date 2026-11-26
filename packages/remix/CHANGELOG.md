@@ -2,6 +2,157 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.3.0
+
+### Minor Changes
+
+- Customize frame fetching and rendering with `defaultResolveFrame` from `remix/component`. Its `{ fetch, commit }` overrides let apps manage cached responses and animate navigations, including followed redirects. Resolvers receive the original `navigationType` and `from` history entry; `commit` receives the resolved destination, and `commitFrame()` waits for rendering and navigation completion. See the record store demo for [traversal caching](https://github.com/remix-run/remix/tree/main/demos/record-store#frames) and [album cover transitions](https://github.com/remix-run/remix/tree/main/demos/record-store#ui). ([#12249](https://github.com/remix-run/remix/pull/12249))
+
+- Follow frame navigations with `rmx:navigation` from `remix/component`: listen on a source link or form for contextual pending UI, or on `window` in capture mode for links, forms, programmatic navigation, and Back/Forward. The event exposes the initiating `element` (null without a source), optional submission details, initial browser destination `to`, requested `frameSrc`, and named `frameTarget`, and one completion promise through redirects, scroll, and focus. ([#12183](https://github.com/remix-run/remix/pull/12183))
+
+- Load below-the-fold content as it approaches the viewport with `<Frame loading="lazy" fallback={<p>Loading…</p>} />` from `remix/component`. Lazy loading observes elements rendered by the fallback. Lazy frames render their fallback on the server and load in the browser, while eager loading remains the default. ([#12229](https://github.com/remix-run/remix/pull/12229))
+
+- Follow frame reloads with `FrameReloadStartEvent` from `remix/component`, carrying request and origin details aligned with `frame.reload()`. Its `element` is an `HTMLAnchorElement`, `HTMLAreaElement`, `SVGAElement`, `HTMLFormElement`, or `null`. Its `finished` promise follows the `Promise<AbortSignal>` contract of `frame.reload()`, and descendant frames track their own completion. ([#12183](https://github.com/remix-run/remix/pull/12183))
+
+- Multiple selects in `remix/component` accept arrays in `value` and `defaultValue`. Use `value={[]}` to clear the current selection, or `defaultValue={[]}` to start with nothing selected. ([#12338](https://github.com/remix-run/remix/pull/12338))
+
+- Pass anchors to `prefetch()` from `remix/component` to use their navigation destinations and cancel stale prefetches when links change or disconnect. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/README.md#prefetching) for usage. ([#12277](https://github.com/remix-run/remix/pull/12277))
+
+- Customize prefetching with `defaultPrefetch` from `remix/component`, including nested frame selection by loading mode. See [Prefetching](https://github.com/remix-run/remix/blob/main/packages/component/README.md#prefetching) for usage. ([#12277](https://github.com/remix-run/remix/pull/12277))
+
+- Reflect locally rendered state in the URL with `updateUrl()` from `remix/component`, without fetching, rendering, or changing scroll and focus. Replace the current entry or push a new one. ([#12110](https://github.com/remix-run/remix/pull/12110))
+
+- `remix/data-table` query builder rows now have the same JavaScript shape on every adapter: `json()` columns are serialized on write and parsed on read, `boolean()` columns read as `true` or `false`, and `timestamp()` columns read as `Date` objects. Arrays interpolated into `sql` expand into `in` lists. See the [`data-table` changelog](https://github.com/remix-run/remix/blob/main/packages/data-table/CHANGELOG.md) for details. ([#12337](https://github.com/remix-run/remix/pull/12337))
+
+- `remix/data-table/sql-helpers` now includes shared SQL clause compilers, such as `compilePredicate()` and `compileWhereClause()`, for building custom `data-table` adapters. See the [`data-table` changelog](https://github.com/remix-run/remix/blob/main/packages/data-table/CHANGELOG.md) for details. ([#12276](https://github.com/remix-run/remix/pull/12276))
+
+- `t.useFakeTimers()` from `remix/test` now also fakes `Date`, `performance.now()`, `setImmediate()`, and `AbortSignal.timeout()`, starting at the Unix epoch unless you pass a `now` option, so wall-clock code can be tested by advancing the fake clock. ([#12203](https://github.com/remix-run/remix/pull/12203))
+
+- Added mocking support for data properties, getters, and setters in `remix/test` (`t.mock.property()`, `t.mock.getter()`, and `t.mock.setter()`), with automatic restoration after test cleanup. Exported `MockTracker` as the shared type for standalone and test-context mocks. ([#12225](https://github.com/remix-run/remix/pull/12225))
+
+- Added `TestFn` and `TestMeta` exports from `remix/test` for reusable test callbacks and metadata. ([#12226](https://github.com/remix-run/remix/pull/12226))
+
+- Add new `t.waitFor()` API to wait for asynchronous state in tests using `remix/test`. ([#12224](https://github.com/remix-run/remix/pull/12224))
+
+### Patch Changes
+
+- Fix `remix/assets` CSS `@import` resolution failing with a raw `ENOTDIR` error when an import path passes through a file, such as `@import "./theme.css/dark.css"`. These imports now report `IMPORT_RESOLUTION_FAILED`, matching script imports and other missing CSS imports. ([#12282](https://github.com/remix-run/remix/pull/12282))
+
+- Apps created with `remix new` on Windows can run `npm run dev` and `npm start` again. The generated scripts used `cross-env-shell`, which failed with `ERR_INVALID_MODULE_SPECIFIER` on Windows. See the [`@remix-run/cli` changelog](https://github.com/remix-run/remix/blob/main/packages/cli/CHANGELOG.md) to update the scripts in an existing app. ([#12338](https://github.com/remix-run/remix/pull/12338))
+
+- Fixes for frames and client navigation in `remix/component`: ([#12274](https://github.com/remix-run/remix/pull/12274))
+  - A client-rendered `<Frame>` keeps showing its current content when its `src` changes while nested frames or client entries are still loading. Previously it could remount and flash its `fallback` before the new source resolved.
+  - `reloadStart` and `reloadComplete` frame events fire as one pair per reload. Re-entering `frame.reload()`, or a reload that took over one inherited from an ancestor frame, previously dispatched unmatched or early events.
+  - Safari restores the saved scroll position on back and forward navigations when the destination's frames render immediately, instead of keeping the position of the page being left.
+  - Server-rendered frames keep multibyte characters intact when `resolveFrame` returns a stream that splits a UTF-8 character across chunks. Previously those characters were replaced with `U+FFFD`.
+
+  See the [`@remix-run/component` changelog](https://github.com/remix-run/remix/blob/main/packages/component/CHANGELOG.md) for details.
+
+- Form controls in `remix/component` keep what visitors do before they hydrate. Text typed and checkboxes or radios toggled before a control's client entry hydrates are no longer overwritten by the server-rendered `value` or `checked`. Instead, the edit is replayed as `input` and `change` events once the handlers attach. Replayed events have `event.isTrusted` set to `false` and run at hydration time, so a handler that submits a form, saves a draft, or starts a request does so as soon as the control hydrates. Values the browser restores into a form, such as on reload or a Back/Forward navigation not served from the back/forward cache, count as edits too. Add `autocomplete="off"` to a control to opt it out of browser form restoration. ([#12338](https://github.com/remix-run/remix/pull/12338))
+
+  `<select>` initialization now follows the same precedence on the server, on client mount, and during hydration: `value`, then the initial `defaultValue`, then option `selected`.
+
+  See the [`@remix-run/component` changelog](https://github.com/remix-run/remix/blob/main/packages/component/CHANGELOG.md) for details.
+
+- Navigation, focus, and prefetching fixes in `remix/component`: ([#12338](https://github.com/remix-run/remix/pull/12338))
+  - A link click, form submission, or `navigate()` call that interrupts a navigation before its page renders now replaces that navigation's history entry, so Back returns to the page the visitor saw. Links and GET forms with `data-rmx-history="replace"` also replace the entry before their navigation commits in browsers that support it.
+  - Focus stays where it was when a frame navigation fails, such as a form submission whose response is a 5xx page. Previously focus moved to `<body>`.
+  - Viewport prefetching waits 150ms after scrolling stops and pauses while the document is hidden. Links that are visible without a scroll, such as on page load, still prefetch right away. Default prefetching also waits for idle time before parsing downloaded HTML.
+
+  See the [`@remix-run/component` changelog](https://github.com/remix-run/remix/blob/main/packages/component/CHANGELOG.md) for details.
+
+- `createScheduler()` from `remix/component` no longer accepts its unused third `styles` argument. Passing it had no effect, so runtime behavior is unchanged, but TypeScript calls with three arguments now fail to type-check. Call `createScheduler(document, errorTarget)` instead. See the [`@remix-run/component` changelog](https://github.com/remix-run/remix/blob/main/packages/component/CHANGELOG.md) for details. ([#12310](https://github.com/remix-run/remix/pull/12310))
+
+- Rendering fixes and improvements in `remix/component`: ([#12338](https://github.com/remix-run/remix/pull/12338))
+  - List updates no longer put DOM in the wrong place, remove siblings, or throw `NotFoundError` when a keyed `<Fragment>` gains children, a component switches from `null` to DOM while siblings move, or a trailing `<Fragment>` loses its children. New keyed children are inserted once at their final position, so custom elements no longer run `connectedCallback` twice.
+  - Mixins that listen for `beforeUpdate` or `commit`, such as `animateLayout()` from `@remix-run/ui`, now scale linearly with the number of mounted elements instead of quadratically.
+  - The browser runtime loads fewer modules: pages that hydrate with `run()` load 23 component modules instead of 35, and `updateUrl()` and `spaResponse` load only in apps that import them.
+  - `clientEntry()` no longer fails with "Type instantiation is excessively deep and possibly infinite" for props that mix `SerializableObject` with other serializable values, such as a `FormSubmission`.
+
+  See the [`@remix-run/component` changelog](https://github.com/remix-run/remix/blob/main/packages/component/CHANGELOG.md) for details.
+
+- Fix `remix/data-table/mysql` upserts with a separate `update` object writing values into the wrong columns. ([#12276](https://github.com/remix-run/remix/pull/12276))
+
+- `remix/data-table/sqlite` binds `Date` parameters as UTC strings in SQLite's `current_timestamp` format. Previously, writing a `timestamp()` column, including the default `created_at` and `updated_at` values, could fail or shift the remaining parameters in Node.js. See the [`data-table-sqlite` changelog](https://github.com/remix-run/remix/blob/main/packages/data-table-sqlite/CHANGELOG.md) for details. ([#12338](https://github.com/remix-run/remix/pull/12338))
+
+- Every `remix/data-table` adapter now binds each query parameter as exactly one value. In raw SQL, serialize JSON with `JSON.stringify()` and write one placeholder per `IN` list item; the query builder serializes `json()` column values for you. See the [`data-table`](https://github.com/remix-run/remix/blob/main/packages/data-table/CHANGELOG.md), [`data-table-mysql`](https://github.com/remix-run/remix/blob/main/packages/data-table-mysql/CHANGELOG.md), and [`data-table-sqlite`](https://github.com/remix-run/remix/blob/main/packages/data-table-sqlite/CHANGELOG.md) changelogs for adapter-specific changes. ([#12335](https://github.com/remix-run/remix/pull/12335))
+
+- Nested `sql` composition in `remix/data-table` now requires fragments created by `sql` or `rawSql` from the same loaded copy of the package. Other statement objects are passed as parameter values. See the [`data-table` changelog](https://github.com/remix-run/remix/blob/main/packages/data-table/CHANGELOG.md) for migration examples. ([#12332](https://github.com/remix-run/remix/pull/12332))
+
+- Development fixes: ([#12338](https://github.com/remix-run/remix/pull/12338))
+  - Barrel file import optimization in `remix/assets` no longer downloads unused modules in nested import graphs.
+  - HMR with `remix/component-hmr` no longer throws a `ReferenceError` when a component's setup creates a callback that uses a setup variable declared after it.
+  - Under `t.useFakeTimers()` in `remix/test`, `clearTimeout()` and `clearInterval()` cancel real timers created before fake timers were enabled, timer callbacks receive extra arguments, timer handles in Node support `unref()` and `refresh()`, and test and hook timeouts no longer stall.
+
+- Fix `remix/headers` `Accept`, `Accept-Encoding` and `Accept-Language` weights when several header entries match a value. `getWeight()`, `accepts()` and `getPreferred()` now prefer an exact entry, then the most specific matching range, as RFC 9110 requires. Previously the highest-weighted match won, so `Accept-Encoding: gzip;q=0, *` reported `gzip` as acceptable and `Accept-Language: en;q=0, en-US` reported `en` as acceptable. ([#12297](https://github.com/remix-run/remix/pull/12297))
+
+  `Accept-Language` ranges now match by full subtag prefix, so `zh-Hant-TW` no longer matches `zh-Hant-CN`.
+
+  `AcceptEncoding#accepts('identity')` now returns `false` when the header refuses `identity` with `identity;q=0`, or with `*;q=0` and no `identity` entry. It still returns `true` when `identity` is not mentioned.
+
+- `Vary` from `remix/headers` keeps header names as they were first given, so `compression()` and `cors()` no longer rewrite `Vary: Cookie` to `Vary: cookie`. Safari only varies its cache on cookies when the name is spelled `Cookie`, so the lowercased value could let it reuse a private response for a different session. `Vary: *` is also preserved instead of becoming an invalid value like `Vary: *, Accept-Encoding`, and `CacheControl.from()` no longer drops directives whose names aren't lowercase, such as `No-Store`. ([#12338](https://github.com/remix-run/remix/pull/12338))
+
+- The rendering, interactivity, and animation guides keep single-use `css()` styles beside their elements and explain when to name shared styles or variant maps. ([#12193](https://github.com/remix-run/remix/pull/12193))
+
+- `remix/node-fetch-server` now validates the request host for every handler. Hosts with a path, query, fragment, userinfo, whitespace, or control characters, from the `host` option, a trusted forwarding header, HTTP/2 `:authority`, or `Host`, make `createRequest()` throw and make `createRequestListener()` respond with `400 Bad Request` unless `onError` returns a response. An invalid trusted `X-Forwarded-Host` is now rejected instead of falling back to `Host`. See the [`@remix-run/node-fetch-server` changelog](https://github.com/remix-run/remix/blob/main/packages/node-fetch-server/CHANGELOG.md) for details. ([#12338](https://github.com/remix-run/remix/pull/12338))
+
+- Fixes for dev servers using `remix/node-hmr`: ([#12198](https://github.com/remix-run/remix/pull/12198))
+  - Requests no longer hang and file changes are no longer missed after some hot updates and restarts, and file watcher errors are logged instead of crashing the server.
+  - Changing files while the previous server process is still shutting down no longer starts an extra server process that keeps running in the background.
+
+  See the [`@remix-run/node-hmr` changelog](https://github.com/remix-run/remix/blob/main/packages/node-hmr/CHANGELOG.md) for the specific cases.
+
+- Validate native form submissions with `remix/data-schema/experimental/form`, including restorable values and grouped errors on failure while omitting sensitive values and files. Inspect schemas and reuse typed fields through `getSchemaMetadata()` from `remix/data-schema/experimental`. These experimental exports may change or be removed in patch releases. ([#12206](https://github.com/remix-run/remix/pull/12206))
+
+- `context.render()` from `remix/middleware/render` no longer responds with `200` when a component throws while rendering the page shell. The middleware now waits for the first chunk of HTML, so shell errors reject `router.fetch()` for `GET` and `HEAD` requests and the server can respond with a `500`. ([#12338](https://github.com/remix-run/remix/pull/12338))
+
+- Fix `remix/response/compress` `compressResponse()` returning `406 Not Acceptable` when the client lists only encodings the server does not support, such as `Accept-Encoding: gzip` with `encodings: ['br']`. An unlisted `identity` encoding is acceptable, so the response is now sent uncompressed. Responses are still rejected when the client refuses `identity` with `identity;q=0` or `*;q=0`. ([#12297](https://github.com/remix-run/remix/pull/12297))
+
+- Fixes for `remix/router`: ([#12338](https://github.com/remix-run/remix/pull/12338))
+  - Responses that resolve after their request was aborted have their bodies cancelled, so streaming work behind them, such as rendering a frame, stops.
+  - Router middleware sees the full `GET` response when a `GET` route serves a `HEAD` request. The body is now stripped after middleware runs.
+  - Inline `{ middleware, handler }` controller actions type their handler with their own action middleware.
+  - `RouterContext` and `MiddlewareContext` keep the types of the other middleware when the array contains a conditional entry like `...(isDev ? [logger()] : [])`.
+
+  See the [`@remix-run/fetch-router` changelog](https://github.com/remix-run/remix/blob/main/packages/fetch-router/CHANGELOG.md) for details.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.3`](https://github.com/remix-run/remix/releases/tag/assets@1.0.3)
+  - [`async-context-middleware@1.0.1`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@1.0.1)
+  - [`auth@1.0.2`](https://github.com/remix-run/remix/releases/tag/auth@1.0.2)
+  - [`auth-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/auth-middleware@1.0.2)
+  - [`cli@1.0.3`](https://github.com/remix-run/remix/releases/tag/cli@1.0.3)
+  - [`component@1.3.0`](https://github.com/remix-run/remix/releases/tag/component@1.3.0)
+  - [`component-hmr@1.0.2`](https://github.com/remix-run/remix/releases/tag/component-hmr@1.0.2)
+  - [`compression-middleware@1.0.3`](https://github.com/remix-run/remix/releases/tag/compression-middleware@1.0.3)
+  - [`cookie@1.0.3`](https://github.com/remix-run/remix/releases/tag/cookie@1.0.3)
+  - [`cop-middleware@1.0.1`](https://github.com/remix-run/remix/releases/tag/cop-middleware@1.0.1)
+  - [`cors-middleware@1.0.3`](https://github.com/remix-run/remix/releases/tag/cors-middleware@1.0.3)
+  - [`csp-middleware@1.0.1`](https://github.com/remix-run/remix/releases/tag/csp-middleware@1.0.1)
+  - [`csrf-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@1.0.2)
+  - [`data-schema@1.0.1`](https://github.com/remix-run/remix/releases/tag/data-schema@1.0.1)
+  - [`data-table@1.1.0`](https://github.com/remix-run/remix/releases/tag/data-table@1.1.0)
+  - [`data-table-mysql@1.1.0`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@1.1.0)
+  - [`data-table-postgres@1.0.1`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@1.0.1)
+  - [`data-table-sqlite@1.1.0`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@1.1.0)
+  - [`fetch-proxy@1.0.3`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@1.0.3)
+  - [`fetch-router@1.0.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@1.0.1)
+  - [`form-data-middleware@1.1.2`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@1.1.2)
+  - [`form-data-parser@1.1.2`](https://github.com/remix-run/remix/releases/tag/form-data-parser@1.1.2)
+  - [`headers@1.1.1`](https://github.com/remix-run/remix/releases/tag/headers@1.1.1)
+  - [`logger-middleware@1.0.1`](https://github.com/remix-run/remix/releases/tag/logger-middleware@1.0.1)
+  - [`method-override-middleware@1.0.1`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@1.0.1)
+  - [`multipart-parser@1.1.2`](https://github.com/remix-run/remix/releases/tag/multipart-parser@1.1.2)
+  - [`multiple-import-maps-polyfill@1.0.2`](https://github.com/remix-run/remix/releases/tag/multiple-import-maps-polyfill@1.0.2)
+  - [`node-fetch-server@1.0.1`](https://github.com/remix-run/remix/releases/tag/node-fetch-server@1.0.1)
+  - [`node-hmr@1.0.1`](https://github.com/remix-run/remix/releases/tag/node-hmr@1.0.1)
+  - [`render-middleware@1.1.1`](https://github.com/remix-run/remix/releases/tag/render-middleware@1.1.1)
+  - [`response@1.0.3`](https://github.com/remix-run/remix/releases/tag/response@1.0.3)
+  - [`session-middleware@1.0.3`](https://github.com/remix-run/remix/releases/tag/session-middleware@1.0.3)
+  - [`spa@1.0.3`](https://github.com/remix-run/remix/releases/tag/spa@1.0.3)
+  - [`static-middleware@1.0.3`](https://github.com/remix-run/remix/releases/tag/static-middleware@1.0.3)
+  - [`test@1.2.0`](https://github.com/remix-run/remix/releases/tag/test@1.2.0)
+
 ## v3.2.0
 
 ### Minor Changes

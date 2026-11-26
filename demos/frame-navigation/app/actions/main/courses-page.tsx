@@ -78,7 +78,8 @@ export function MainCoursesPage(handle: Handle<MainCoursesPageProps>) {
               gap: '0.75rem',
             })}
           >
-            <CourseFilterInput query={query} />
+            {/* A fresh snapshot distinguishes server renders with the same query from local edits. */}
+            <CourseFilterInput filter={{ query }} />
             <button
               type="submit"
               mix={css({

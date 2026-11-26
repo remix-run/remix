@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "The Remix web framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -21,7 +21,8 @@
   ],
   "type": "module",
   "engines": {
-    "node": ">=24.3.0"
+    "node": ">=24.3.0",
+    "bun": ">=1.4.3"
   },
   "exports": {
     ".": {

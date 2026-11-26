@@ -1,0 +1,1 @@
+Render children into the document body or a custom container with the new `Portal` component from `remix/component`. In server-rendered apps, portals must be nested within a client entry to render their content. Pages that don't use `Portal` don't download its renderer.

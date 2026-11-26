@@ -23,7 +23,7 @@ Then follow [Getting Started](/start-here/) for a tour of what you just created.
 Remix is designed so people and coding agents can trace how an app works: standard Web APIs, explicit updates and ordinary source modules. To help agents get the details right, Remix provides a [`remix` skill](https://github.com/remix-run/remix/blob/main/.agents/skills/remix/SKILL.md). It teaches an agent Remix's mental model and conventions, and tells it to read the documentation installed in `node_modules/remix` rather than rely on memory of older Remix versions.
 
 - **Installed docs.** The `remix` package ships `INDEX.md`, the [guides](/start-here/) as Markdown, and each module's README and source. An agent can search them by task or export, for example `grep -i 'session' node_modules/remix/INDEX.md`.
-- **Markdown pages.** Every guide and API page here is also available as Markdown by adding `.md` to its URL, for example [`/start-here.md`](/start-here.md).
+- **Markdown pages.** Every guide and API page here is also available as Markdown by adding `.md` to its URL, for example [`/start-here.md`](/start-here.md). This page is at [`/index.md`](/index.md).
 - **Starter apps.** Apps created with `npx remix new` include the skill, so agents can use it without extra setup. For an existing app, copy [`.agents/skills/remix`](https://github.com/remix-run/remix/tree/main/.agents/skills/remix) into the project.
 
 When you ask an agent to change a Remix app, point it at the skill and the relevant guide, and ask it to follow the existing patterns in your code.

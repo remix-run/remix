@@ -61,11 +61,15 @@ function StatusSelect() {
   return () => (
     <select.Context defaultLabel="Status">
       <button type="button" mix={select.trigger()} />
-      <div mix={select.popover()}>
-        <div mix={select.list()}>
-          <div mix={select.option({ label: 'Open', value: 'open' })}>Open</div>
-        </div>
-      </div>
+      <select.Portal>
+        <select.PopoverContext>
+          <div mix={select.popover()}>
+            <div mix={select.list()}>
+              <div mix={select.option({ label: 'Open', value: 'open' })}>Open</div>
+            </div>
+          </div>
+        </select.PopoverContext>
+      </select.Portal>
     </select.Context>
   )
 }
@@ -192,8 +196,8 @@ distinguish authored options from host props.
 
 Keep imperative DOM work near the owner of the relevant ref.
 
-- `popover.surface()` owns `showPopover()`, `hidePopover()`, outside click,
-  focus restoration, anchoring, and scroll locking.
+- `popover.surface()` owns surface visibility, outside clicks, focus restoration,
+  anchoring, and scroll locking.
 - `select.popover()` and `combobox.popover()` own popup min-width syncing because
   they know their trigger/input refs.
 - `listbox` owns option scrolling and selection flash.

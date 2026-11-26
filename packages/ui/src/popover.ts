@@ -1,5 +1,7 @@
+import { FocusPortal } from './lib/focus-portal.tsx'
 import {
   attrs,
+  createElement,
   createMixin,
   css,
   type ElementProps,
@@ -8,7 +10,13 @@ import {
   type RemixNode,
 } from '@remix-run/component'
 import { anchor as positionAnchor, type AnchorOptions, type AnchorTarget } from './anchor.ts'
-import { registerDismissableLayer } from './lib/dismissable-layer.ts'
+import { getActiveElement, SurfaceBoundary } from './lib/focus-boundary.tsx'
+import {
+  getDismissableLayerBranch,
+  registerDismissableLayer,
+  notifyModalExemptRegionsOfScopeClose,
+  isInModalExemptRegion,
+} from './lib/dismissable-layer.ts'
 import { finishAnimations } from './lib/finish-animations.ts'
 import { lockScroll } from './lib/scroll-lock.ts'
 
@@ -39,6 +47,28 @@ function PopoverProvider(handle: Handle<PopoverProps, PopoverContext>): () => Re
   })
 
   return () => handle.props.children
+}
+
+/** Content and focus boundaries for one popup surface. */
+export interface PopoverSurfaceContextProps {
+  /** One element with `popover.surface()` and its content. */
+  children?: RemixNode
+}
+
+/**
+ * Provides the required boundary for one `popover.surface()` within the same `popover.Context`.
+ * Its focus guards coordinate portaled Tab navigation and containment in a focus-trapping dialog.
+ * Place it at the popup's DOM destination, inside `popover.Portal` when portaled.
+ * @param handle Popup content and its popover context.
+ * @returns The popup content with declarative focus boundaries.
+ */
+export function SurfaceContext(
+  handle: Handle<PopoverSurfaceContextProps, { owner: PopoverContext }>,
+): () => RemixNode {
+  let owner = handle.context.get(PopoverProvider)
+  if (!owner) throw new Error('popover.SurfaceContext requires a popover.Context ancestor')
+  handle.context.set({ owner })
+  return () => createElement(SurfaceBoundary, { owner }, handle.props.children)
 }
 
 export type PopoverSurfaceOptions = {
@@ -82,8 +112,20 @@ const surfaceMixin: MixinFactory<HTMLElement, [options: PopoverSurfaceOptions], 
     let disposeLayer = () => {}
     let currentOptions: PopoverSurfaceOptions
     let context = handle.context.get(PopoverProvider)
+    let boundary = handle.context.get(SurfaceBoundary)
+    let scoped = handle.context.get(SurfaceContext)
+    if (!context || scoped?.owner !== context || boundary?.owner !== context)
+      throw new Error('popover.surface() requires a matching popover.SurfaceContext ancestor')
 
-    function cleanup() {
+    function cleanup(node: HTMLElement) {
+      // Preserve the return path before removing this popup from its owner's layer branch.
+      notifyModalExemptRegionsOfScopeClose(
+        node,
+        getDismissableLayerBranch(node),
+        context.hideFocusTarget ??
+          context.anchor?.source ??
+          (context.anchor?.target instanceof HTMLElement ? context.anchor.target : null),
+      )
       disposeLayer()
       cleanupAnchor()
       unlockScroll()
@@ -91,11 +133,12 @@ const surfaceMixin: MixinFactory<HTMLElement, [options: PopoverSurfaceOptions], 
 
     handle.queueTask((node, signal) => {
       context.surface = node
+      boundary.registerSurface(node, signal)
 
       signal.addEventListener('abort', () => {
         transition++
         node.removeAttribute('data-open')
-        cleanup()
+        cleanup(node)
         if (context.surface === node) {
           context.surface = null
         }
@@ -126,7 +169,7 @@ const surfaceMixin: MixinFactory<HTMLElement, [options: PopoverSurfaceOptions], 
             onParentClose() {
               transition++
               node.removeAttribute('data-open')
-              cleanup()
+              cleanup(node)
               // A parent can close before a child portal has committed its new options.
               queueMicrotask(() => {
                 if (!signal.aborted && currentOptions.open) currentOptions.onHide()
@@ -153,8 +196,13 @@ const surfaceMixin: MixinFactory<HTMLElement, [options: PopoverSurfaceOptions], 
           function finishClose() {
             if (signal.aborted || currentTransition !== transition) return
             node.removeAttribute('data-open')
-            cleanup()
-            if (currentOptions.restoreFocusOnHide !== false) context.hideFocusTarget?.focus()
+            cleanup(node)
+            if (
+              currentOptions.restoreFocusOnHide !== false &&
+              boundary.portal?.restoreFocus !== false &&
+              !isInModalExemptRegion(node.ownerDocument, getActiveElement(node.ownerDocument))
+            )
+              context.hideFocusTarget?.focus()
           }
           let finished = finishAnimations([node])
           if (finished) void finished.then(finishClose)
@@ -199,3 +247,40 @@ export const anchor = anchorMixin
 export const surface = surfaceMixin
 export const focusOnHide = focusOnHideMixin
 export const focusOnShow = focusOnShowMixin
+
+/** Options for rendering the popover surface outside its authored DOM ancestors. */
+export interface PopoverPortalProps {
+  /** Surface content rendered at the destination. */
+  children?: RemixNode
+  /** Destination in the same document. Defaults to its body. Changing it remounts the content. */
+  container?: HTMLElement | null
+}
+
+/**
+ * Portals one popover surface while coordinating its focus navigation.
+ * Keep its matching surface context inside this component. Omit it for inline rendering.
+ * The origin and container must be in the document light DOM.
+ * Non-modal Tab order follows this component's declaration position. Place it beside
+ * the trigger when popup content should follow the trigger in sequential navigation.
+ * @param handle Surface content, destination, and the owning popover context.
+ * @returns The transported content with its origin focus boundaries.
+ */
+export function Portal(handle: Handle<PopoverPortalProps>): () => RemixNode {
+  let owner = handle.context.get(PopoverProvider)
+  if (!owner) throw new Error('popover.Portal requires a popover.Context ancestor')
+  return () =>
+    createElement(
+      FocusPortal,
+      {
+        componentName: 'popover.Portal',
+        owner,
+        open: () => owner.surface?.getAttribute('data-state') === 'open',
+        reference: () =>
+          owner.anchor?.source ??
+          (owner.anchor?.target instanceof HTMLElement ? owner.anchor.target : null),
+        mode: 'navigate',
+        container: handle.props.container,
+      },
+      handle.props.children,
+    )
+}

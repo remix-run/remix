@@ -1,7 +1,12 @@
 import * as assert from 'remix/assert'
 import { createTestServer } from 'remix/node-fetch-server/test'
 import { describe, it } from 'remix/test'
+import type { TestContext } from 'remix/test'
 import { router } from './router.ts'
+
+async function waitForHydration(page: Awaited<ReturnType<TestContext['serve']>>) {
+  await page.locator('html[data-test-hydrated]').waitFor({ state: 'attached' })
+}
 
 describe('Live examples in the docs site', () => {
   it('hydrates examples with working pointer interaction, keyboard dismissal and focus restoration', async (t) => {
@@ -13,7 +18,6 @@ describe('Live examples in the docs site', () => {
       else process.env.NODE_ENV = nodeEnv
     })
     let page = await t.serve(await createTestServer(router.fetch))
-    page.setDefaultTimeout(5000)
     let errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     page.on('console', (message) => {
@@ -22,6 +26,7 @@ describe('Live examples in the docs site', () => {
 
     await page.setViewportSize({ width: 390, height: 720 })
     await page.goto('/patterns/accordion/')
+    await waitForHydration(page)
     let source = page.locator('#basic .docs-demo-source')
     let code = source.locator('.docs-demo-source-code')
     let disclosure = source.getByRole('button', { name: 'Show code', exact: true })
@@ -73,6 +78,7 @@ describe('Live examples in the docs site', () => {
     )
 
     await page.goto('/patterns/popover/')
+    await waitForHydration(page)
     let popover = page.locator('#basic .docs-demo-preview')
     let trigger = popover.getByRole('button', { name: 'Filter pull requests' })
     await trigger.click()
@@ -89,7 +95,6 @@ describe('Live examples in the docs site', () => {
   })
   it('opens API details with the keyboard and follows type links without JavaScript', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
-    page.setDefaultTimeout(5000)
     await page.route('**/*', (route) =>
       route.request().resourceType() === 'script' ? route.abort() : route.continue(),
     )
@@ -190,7 +195,6 @@ describe('Live examples in the docs site', () => {
 
   it('navigates to API parts and shares entries below the sticky navigation', async (t) => {
     let page = await t.serve(await createTestServer(router.fetch))
-    page.setDefaultTimeout(5000)
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.route('**/*', (route) =>
       route.request().resourceType() === 'script' ? route.abort() : route.continue(),
@@ -221,11 +225,20 @@ describe('Live examples in the docs site', () => {
     assert.ok(summary)
     assert.ok(summary.y >= header.y + header.height + 16)
 
-    await page.unroute('**/*')
-    await page.reload()
+    // WebKit does not reliably restart previously blocked modules on reload.
+    await page.close()
+    page = await t.serve(await createTestServer(router.fetch))
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/patterns/listbox/#ref-members-matchSearchText')
+    await waitForHydration(page)
+    outline = page.locator('#docs-secondary-navigation')
+    entry = page.locator('#ref-members-matchSearchText')
+    header = await page.getByRole('banner').boundingBox()
+    assert.ok(header)
     await entry.waitFor({ state: 'visible' })
     await page.setViewportSize({ width: 390, height: 720 })
     await page.goto('/patterns/listbox/')
+    await waitForHydration(page)
     let toggle = page.getByRole('button', { name: 'On this page', exact: true })
     await toggle.click()
     await outline.getByRole('link', { name: 'option()', exact: true }).click()
@@ -240,6 +253,7 @@ describe('Live examples in the docs site', () => {
     })
 
     await page.goto('/patterns/listbox/#context-options-onSelectSettled')
+    await waitForHydration(page)
     let callback = page.locator('#context-options-onSelectSettled')
     await callback.waitFor({ state: 'visible' })
     summary = await callback.locator('..').locator('summary').boundingBox()

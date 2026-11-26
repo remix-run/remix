@@ -40,34 +40,41 @@ const anatomyCode = await highlightSource(`
     >
       Trigger text
     </button>
-    <div
-      mix={[
-        menu.popover(),
-        css({
-          '&[data-open]': {},
-          '&[data-state="open"]': {},
-          '&[data-state="closed"]': {},
-          '&[data-close-animation="none"]': {},
-        }),
-      ]}
-    >
-      <div mix={menu.list()}>
+    <menu.Portal>
+      <menu.PopoverContext>
         <div
           mix={[
-            menu.item({
-              name: 'action-name',
+            menu.popover(),
+            menu.onMenuSelect((event) => {
+              runAction(event.item.name)
             }),
             css({
-              '&[data-highlighted]': {},
-              '&[aria-disabled]': {},
-              '&[data-menu-flash]': {},
+              '&[data-open]': {},
+              '&[data-state="open"]': {},
+              '&[data-state="closed"]': {},
+              '&[data-close-animation="none"]': {},
             }),
           ]}
         >
-          Item text
+          <div mix={menu.list()}>
+            <div
+              mix={[
+                menu.item({
+                  name: 'action-name',
+                }),
+                css({
+                  '&[data-highlighted]': {},
+                  '&[aria-disabled]': {},
+                  '&[data-menu-flash]': {},
+                }),
+              ]}
+            >
+              Item text
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </menu.PopoverContext>
+    </menu.Portal>
   </menu.Context>
 `)
 
@@ -109,44 +116,57 @@ const submenuAnatomyCode = await highlightSource(`
     >
       Submenu trigger text
     </div>
-    <div
-      mix={[
-        menu.popover(),
-        css({
-          '&[data-open]': {},
-          '&[data-state="open"]': {},
-          '&[data-state="closed"]': {},
-          '&[data-menu-submenu]': {},
-          '&[data-close-animation="none"]': {},
-        }),
-      ]}
-    >
-      <div mix={menu.list()}>
-        <div mix={menu.item({
-          name: 'child-action-name',
-        })}>
-          Child item text
+    <menu.Portal>
+      <menu.PopoverContext>
+        <div
+          mix={[
+            menu.popover(),
+            menu.onMenuSelect((event) => {
+              runAction(event.item.name)
+            }),
+            css({
+              '&[data-open]': {},
+              '&[data-state="open"]': {},
+              '&[data-state="closed"]': {},
+              '&[data-menu-submenu]': {},
+              '&[data-close-animation="none"]': {},
+            }),
+          ]}
+        >
+          <div mix={menu.list()}>
+            <div
+              mix={menu.item({
+                name: 'child-action-name',
+              })}
+            >
+              Child item text
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </menu.PopoverContext>
+    </menu.Portal>
   </menu.Context>
 `)
 
 const actionsCode = await highlightSource(`
-  <Portal>
-    <div mix={[
-      menu.popover(),
-      menu.onMenuSelect((event) => {
-        if (event.item.name === 'copy') {
-          copySelection()
-        }
-      }),
-    ]}>
-      <div mix={menu.list()}>
-        <div mix={menu.item({ name: 'copy' })}>Copy</div>
+  <menu.Portal>
+    <menu.PopoverContext>
+      <div
+        mix={[
+          menu.popover(),
+          menu.onMenuSelect((event) => {
+            if (event.item.name === 'copy') {
+              copySelection()
+            }
+          }),
+        ]}
+      >
+        <div mix={menu.list()}>
+          <div mix={menu.item({ name: 'copy' })}>Copy</div>
+        </div>
       </div>
-    </div>
-  </Portal>
+    </menu.PopoverContext>
+  </menu.Portal>
 `)
 
 const labelsCode = await highlightSource(`
@@ -344,10 +364,40 @@ export default function MenuPage(handle: Handle<PageProps>) {
           contextmenu or keyboard context-menu shortcuts. Adds the same ID and ARIA attributes as
           trigger(). Does not add tabIndex.
         </p>
+        <h3 id="portal-reference">Portal</h3>
+        <p>
+          Use <code>menu.Portal</code> to render outside clipping ancestors. Keep{' '}
+          <code>menu.PopoverContext</code> inside it. Omit the Portal for inline rendering.
+        </p>
+        <ApiTable id="portal-options" label="Prop" defaults>
+          <ApiEntry name="children" type="RemixNode">
+            The surface context and its content.
+          </ApiEntry>
+          <ApiEntry name="container" type="HTMLElement | null" defaultValue="document.body">
+            Destination in the same document. Changing it remounts the content and resets its local
+            state.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="portal-types">
+          <ApiEntry id="type-MenuPortalProps" name="MenuPortalProps" type="type">
+            Children and container props accepted by menu.Portal.
+          </ApiEntry>
+        </ApiTable>
+        <h3 id="popover-context-reference">PopoverContext</h3>
+        <p>
+          Wrap the element with <code>menu.popover()</code> in <code>menu.PopoverContext</code>{' '}
+          within the same <code>menu.Context</code>. Keep it inside{' '}
+          <a href="#portal-reference">menu.Portal</a> when portaled.
+        </p>
+        <ApiTable id="popover-context-options" label="Option">
+          <ApiEntry name="children" type="RemixNode">
+            One popup surface and its content.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="popover-reference">popover()</h3>
         <p>
           Creates an ordinary floating surface. Root and submenu surfaces coordinate stacking,
-          dismissal and focus. Use a Portal to escape clipping ancestors.
+          dismissal and focus. Use menu.Portal to escape clipping ancestors.
         </p>
         <ApiTable id="popover-attributes" label="Attribute" typeLabel="Value">
           <ApiEntry name="data-popover" type="present">
@@ -511,6 +561,13 @@ export default function MenuPage(handle: Handle<PageProps>) {
         </p>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable id="types-types">
+          <ApiEntry
+            id="type-MenuPopoverContextProps"
+            name="MenuPopoverContextProps"
+            type="interface"
+          >
+            Children accepted by PopoverContext.
+          </ApiEntry>
           <ApiEntry id="type-MenuProviderProps" name="MenuProviderProps" type="interface">
             <p>Provider children and label.</p>
             <CodeBlock html={typeDefinitions.MenuProviderProps} />

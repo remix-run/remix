@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { Handle } from '../runtime/component.ts'
 import { createRangeRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 import { on } from '../index.ts'
 
 describe('createRangeRoot', () => {
@@ -440,6 +440,76 @@ describe('createRangeRoot', () => {
   })
 
   describe('boundary handling', () => {
+    it('keeps a hydration retry inside the range', (t) => {
+      t.mock.method(console, 'error', () => {})
+      let container = document.createElement('div')
+      container.innerHTML = '<!--start--><em></em><!--end--><span>Outside</span>'
+      let outside = container.lastChild
+      let root = createRangeRoot([container.childNodes[0], container.childNodes[2]])
+
+      root.render(<span>Inside</span>)
+      expect(container.innerHTML).toBe(
+        '<!--start--><em></em><span>Inside</span><!--end--><span>Outside</span>',
+      )
+
+      root.dispose()
+      expect(container.lastChild).toBe(outside)
+    })
+
+    it('leaves an element used as the end boundary in place on a hydration retry', (t) => {
+      t.mock.method(console, 'error', () => {})
+      let container = document.createElement('div')
+      container.innerHTML = '<!--start--><em></em><!--ignored--><span>End</span>'
+      let end = container.childNodes[3]
+      let root = createRangeRoot([container.childNodes[0], end])
+
+      root.render(<span>Inside</span>)
+      expect(container.innerHTML).toBe(
+        '<!--start--><em></em><!--ignored--><span>Inside</span><span>End</span>',
+      )
+
+      root.dispose()
+      expect(container.lastChild).toBe(end)
+    })
+
+    it('stops merging adjacent server text at a text boundary', () => {
+      let container = document.createElement('div')
+      let start = document.createComment('start')
+      let end = document.createTextNode('B')
+      container.append(start, 'A', end, 'C')
+      let root = createRangeRoot([start, end])
+
+      root.render('ABC')
+      expect(container.textContent).toBe('ABCBC')
+
+      root.dispose()
+      expect(start.nextSibling).toBe(end)
+      expect(container.textContent).toBe('BC')
+    })
+
+    it('keeps an empty string inside the range after skipping comments', () => {
+      let container = document.createElement('div')
+      container.innerHTML = '<!--start--><!--ignored--><!--end--><footer>Outside</footer>'
+
+      let start = container.childNodes[0]
+      let end = container.childNodes[2]
+      let footer = container.querySelector('footer')
+      invariant(footer)
+
+      let root = createRangeRoot([start, end])
+      root.render('')
+      root.flush()
+
+      root.render(<p>Inside</p>)
+      root.flush()
+
+      expect(container.innerHTML).toBe(
+        '<!--start--><!--ignored--><p>Inside</p><!--end--><footer>Outside</footer>',
+      )
+      expect(container.querySelector('footer')).toBe(footer)
+      root.dispose()
+    })
+
     it('throws when start and end markers do not share a parent node', () => {
       let containerA = document.createElement('div')
       let containerB = document.createElement('div')
@@ -530,6 +600,43 @@ describe('createRangeRoot', () => {
   })
 
   describe('stateful components', () => {
+    it('inserts a previously empty component before the end of its range after a keyed reorder', async (t) => {
+      let container = document.createElement('div')
+      let start = document.createComment('start')
+      let end = document.createComment('end')
+      let outside = document.createElement('aside')
+      container.append(start, end, outside)
+      let root = createRangeRoot([start, end])
+      t.after(() => root.dispose())
+
+      let show: (() => Promise<AbortSignal>) | undefined
+      function Item(handle: Handle<{ label: string }>) {
+        let visible = false
+        show = () => {
+          visible = true
+          return handle.update()
+        }
+        return () =>
+          visible ? (
+            <>
+              <b>{handle.props.label}</b>
+              <b>two</b>
+            </>
+          ) : null
+      }
+      let row = <span key="row">row</span>
+      let item = <Item key="item" label="one" />
+      root.render([item, row])
+      root.render([row, item])
+      invariant(show)
+      await show()
+
+      expect(container.innerHTML).toBe(
+        '<!--start--><span>row</span><b>one</b><b>two</b><!--end--><aside></aside>',
+      )
+      expect(container.lastChild).toBe(outside)
+    })
+
     it('maintains component state across renders', () => {
       let container = document.createElement('div')
       let start = document.createComment('start')

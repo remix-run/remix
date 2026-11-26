@@ -9,44 +9,76 @@ export const meta = {
   title: 'Dialog',
   slug: 'dialog',
   category: 'patterns',
-  description: 'Custom dialogs with focus management, nested dismissal and app-owned markup.',
+  description:
+    'Modal and non-modal dialogs with focus management, cancelable dismissal and nesting support.',
   importPath: '@remix-run/ui/dialog',
 } satisfies PageMeta
 
 const basic = await loadExample('dialog/basic')
+const nonModal = await loadExample('dialog/non-modal')
+const trapFocus = await loadExample('dialog/trap-focus')
+const nested = await loadExample('dialog/nested')
+const preventingDismissal = await loadExample('dialog/preventing-dismissal')
+const imperative = await loadExample('dialog/imperative')
+const initialFocus = await loadExample('dialog/initial-focus')
+const stacking = await loadExample('dialog/stacking')
 const anatomyCode = await highlightSource(`
   import * as dialog from '@remix-run/ui/dialog'
-  import { Portal } from '@remix-run/ui/portal'
   import { css } from 'remix/component'
 
   <dialog.Context>
-    <button mix={dialog.trigger()}>Trigger text</button>
-    <Portal>
-      <div mix={[dialog.backdrop(), css({
-        '&[data-state="open"]': {},
-        '&[data-state="closed"]': {},
-      })]} />
-      <section mix={[dialog.surface(), css({
-        '&[data-state="open"]': {},
-        '&[data-state="closed"]': {},
-        '&[data-nested]': {},
-      })]}>
-        <h2 mix={dialog.title()}>Dialog title</h2>
-        <p mix={dialog.description()}>Dialog description</p>
-        <input aria-label="Field label" mix={dialog.focusOnShow()} />
-        <button mix={dialog.close()}>Close</button>
-      </section>
-    </Portal>
+    <button
+      mix={[
+        dialog.trigger(),
+        css({
+          '&[data-state="open"]': {},
+          '&[data-state="closed"]': {},
+        }),
+      ]}
+    >
+      Trigger text
+    </button>
+    <dialog.Portal>
+      <div
+        mix={[
+          dialog.backdrop(),
+          css({
+            '&[data-nested]': {},
+            '&[data-state="open"]': {},
+            '&[data-state="closed"]': {},
+          }),
+        ]}
+      />
+      <dialog.SurfaceContext>
+        <section
+          mix={[
+            dialog.surface(),
+            dialog.onDialogChange((event) => {
+              handleOpenChange(event.open)
+            }),
+            css({
+              '&[data-state="open"]': {},
+              '&[data-state="closed"]': {},
+              '&[data-nested]': {},
+              '&[data-child-dialog-open]': {},
+              scale: 'calc(1 - var(--dialog-open-descendant-depth) * <scale-step>)',
+              translate: '0 calc(var(--dialog-open-descendant-depth) * <offset-step>)',
+            }),
+          ]}
+        >
+          <h2 mix={dialog.title()}>Dialog title</h2>
+          <p mix={dialog.description()}>Dialog description</p>
+          <input aria-label="Field label" mix={dialog.focusOnShow()} />
+          <button mix={dialog.close()}>Close</button>
+        </section>
+      </dialog.SurfaceContext>
+    </dialog.Portal>
   </dialog.Context>
 `)
 const controlledCode = await highlightSource(`
   <dialog.Context
     open={open}
-    onOpenChange={(nextOpen, event) => {
-      if (!nextOpen && hasUnsavedChanges) {
-        event.preventDefault()
-        return
-      }
+    onOpenChange={(nextOpen) => {
       open = nextOpen
       handle.update()
     }}
@@ -54,7 +86,11 @@ const controlledCode = await highlightSource(`
     {children}
   </dialog.Context>
 `)
-
+const defaultOpenCode = await highlightSource(`
+  <dialog.Context defaultOpen>
+    {/* Dialog parts */}
+  </dialog.Context>
+`)
 const typeDefinitions = {
   DialogModal: await highlightSource(`type DialogModal = boolean | 'trap-focus'`),
   DialogFocusTarget: await highlightSource(`type DialogFocusTarget =
@@ -83,27 +119,79 @@ export default function DialogPage(handle: Handle<PageProps>) {
       <Section id="anatomy" title="Anatomy">
         <CodeBlock html={anatomyCode} />
       </Section>
-      <Section id="state" title="State and dismissal">
+      <Section id="state" title="State">
         <p>
-          Use <code>defaultOpen</code> for uncontrolled state, or supply <code>open</code> and
-          accept changes through <code>onOpenChange</code>. A change request is cancelable. Closing
-          waits for finite surface and backdrop animations before releasing focus and scroll
-          locking.
+          For controlled state, supply <code>open</code> and accept changes through{' '}
+          <code>onOpenChange</code>.
         </p>
         <CodeBlock html={controlledCode} />
+        <p>
+          To begin with an uncontrolled dialog open, supply <code>defaultOpen</code>.
+        </p>
+        <CodeBlock html={defaultOpenCode} />
       </Section>
-      <Section id="composition" title="Nesting and placement">
+      <Section id="initial-focus" title="Initial focus">
         <p>
-          Put a child dialog context inside its parent's surface. Escape and outside clicks dismiss
-          the topmost dialog, menu, select, combobox or popover first. Release Escape before
-          dismissing the next layer. Closing an owner also closes its nested layers.
+          Apply <code>focusOnShow()</code> to choose which control receives focus when the dialog
+          opens. For example, focus Cancel so pressing Enter immediately does not confirm an action.
+        </p>
+        <Example id="initial-focus-example" example={initialFocus} />
+      </Section>
+      <Section id="unsaved-changes" title="Preventing dismissal">
+        <p>
+          Closing requests are cancelable. Call <code>event.preventDefault()</code> in{' '}
+          <code>onOpenChange</code> or an <code>onDialogChange()</code> listener to keep the dialog
+          open, for example when there are unsaved changes.
+        </p>
+        <Example id="preventing-dismissal-example" example={preventingDismissal} />
+      </Section>
+      <Section id="non-modal" title="Non-modal">
+        <p>
+          Use <code>{'modal={false}'}</code> when the dialog and page should both remain
+          interactive. Set <code>{'closeOnOutsideClick={false}'}</code> to keep the dialog open
+          while interacting with the page.
+        </p>
+        <Example id="non-modal-example" example={nonModal} />
+      </Section>
+      <Section id="imperative" title="Imperative control">
+        <p>
+          Use the context's <code>ref</code> to open or close a dialog from your own event handlers.
+          Pass the opening control to <code>show(opener)</code> so focus returns to it when the
+          dialog closes.
+        </p>
+        <Example id="imperative-example" example={imperative} />
+      </Section>
+      <Section id="trap-focus" title="Focus trapping without blocking pointers">
+        <p>
+          <code>modal="trap-focus"</code> keeps focus inside the dialog while allowing page
+          scrolling and outside pointer interaction.
         </p>
         <p>
-          Surfaces are ordinary DOM elements. Use <code>Portal</code> to escape clipping and
-          transformed ancestors. Apply theme variables and typography to the portaled content. The
-          shared stack puts each backdrop below its dialog. Set <code>--rmx-layer-base</code>
-          on the document root to offset the stack relative to application chrome.
+          This mode still hides background content from assistive technology. Choose non-modal
+          behavior when keyboard and screen reader users need to move freely between both areas.
         </p>
+        <Example id="trap-focus-example" example={trapFocus} />
+      </Section>
+      <Section id="composition" title="Nesting">
+        <p>
+          Put a child dialog context inside its parent's surface. Use{' '}
+          <code>--dialog-open-descendant-depth</code>
+          to scale or offset dialogs behind it. The front dialog has depth 0, its parent has 1, and
+          the next parent has 2.
+        </p>
+        <p>
+          This example renders a backdrop for each dialog and uses <code>data-nested</code> to make
+          nested backdrops transparent. It also styles the dialogs behind the front one.
+        </p>
+        <Example id="nested-example" example={nested} />
+      </Section>
+      <Section id="toasts" title="Stacking with other patterns">
+        <p>
+          The stacking of dialogs with other patterns from Remix UI is handled automatically. Follow
+          the <a href="/#stacking">stacking and overlays guidance</a> to keep portaled dialogs above
+          app content and place notifications and custom DOM content above dialogs.
+        </p>
+        <Example id="stacking-example" example={stacking} />
       </Section>
       <Section id="accessibility" title="Accessibility">
         <p>
@@ -151,13 +239,44 @@ export default function DialogPage(handle: Handle<PageProps>) {
             Receives a stable ref with readonly open, show(trigger?) and close().
           </ApiEntry>
         </ApiTable>
+        <h3 id="portal-reference">Portal</h3>
+        <p>
+          Use <code>dialog.Portal</code> to render outside clipping ancestors. Keep{' '}
+          <code>dialog.SurfaceContext</code> inside it. Omit the Portal for inline rendering.
+        </p>
+        <ApiTable id="portal-options" label="Prop" defaults>
+          <ApiEntry name="children" type="RemixNode">
+            The surface context and its content.
+          </ApiEntry>
+          <ApiEntry name="container" type="HTMLElement | null" defaultValue="document.body">
+            Destination in the same document. Changing it remounts the content and resets its local
+            state.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="portal-types">
+          <ApiEntry id="type-DialogPortalProps" name="DialogPortalProps" type="type">
+            Children and container props accepted by dialog.Portal.
+          </ApiEntry>
+        </ApiTable>
+        <h3 id="surface-context-reference">SurfaceContext</h3>
+        <p>
+          Wrap the element with <code>dialog.surface()</code> in <code>dialog.SurfaceContext</code>{' '}
+          within the same <code>dialog.Context</code>. Keep it inside{' '}
+          <a href="#portal-reference">dialog.Portal</a> when portaled.
+        </p>
+        <ApiTable id="surface-context-options" label="Option">
+          <ApiEntry name="children" type="RemixNode">
+            One dialog surface and its content.
+          </ApiEntry>
+        </ApiTable>
         <h3 id="parts-reference">Role mixins</h3>
         <ApiTable id="parts" label="Mixin">
           <ApiEntry name="trigger()" type="button mixin">
             Toggles state and records the opener. Disabled buttons do not toggle.
           </ApiEntry>
           <ApiEntry name="surface(options?)" type="element mixin">
-            Registers one dialog surface, applies role and labeling, and manages focus.
+            Registers one dialog surface within SurfaceContext, applies role and labeling, and
+            manages focus.
           </ApiEntry>
           <ApiEntry name="backdrop()" type="element mixin">
             Registers an optional fixed backdrop beside the surface.
@@ -175,16 +294,32 @@ export default function DialogPage(handle: Handle<PageProps>) {
         <h3 id="focus-reference">Surface focus options</h3>
         <ApiTable id="focus-options" label="Option">
           <ApiEntry name="initialFocus, finalFocus" type="DialogFocusTarget">
-            Accept an element, boolean, null or a callback returning a target. False disables
-            automatic focus movement; true, null and undefined use the defaults.
+            <p>
+              Accept an element, boolean, null or a callback returning a target. Use{' '}
+              <code>initialFocus</code> to choose where focus moves on opening and{' '}
+              <code>finalFocus</code> to choose where it moves on closing. The{' '}
+              <code>focusOnShow()</code> and <code>focusOnHide()</code> mixins register these
+              targets without element references.
+            </p>
+            <p>
+              Set <code>initialFocus: false</code> when your own code handles opening focus. Set{' '}
+              <code>finalFocus: false</code> when your closing action handles focus or navigates
+              away. These options skip automatic focus movement without disabling modal focus
+              trapping. True, null and undefined use the defaults.
+            </p>
+            <p>
+              By default, closing returns focus to the opener. Choose a different{' '}
+              <code>finalFocus</code> target when the opener disappears or the next task is
+              elsewhere, such as focusing an item created by the dialog.
+            </p>
           </ApiEntry>
         </ApiTable>
         <h3 id="events-reference">DialogChangeEvent</h3>
         <p>
           <code>onDialogChange(handler, captureBoolean?)</code> listens for{' '}
           <code>rmx:dialog-change</code> on the surface's DOM ancestors. With a portal, attach the
-          listener inside it or use the context callback. Call <code>preventDefault()</code> to veto
-          a request.
+          listener inside it or use <code>onOpenChange</code> on <code>dialog.Context</code>. Call{' '}
+          <code>preventDefault()</code> to veto a request.
         </p>
         <ApiTable id="event-properties" label="Property">
           <ApiEntry name="open" type="boolean">
@@ -215,6 +350,13 @@ export default function DialogPage(handle: Handle<PageProps>) {
             <p>Imperative access to state and opening or closing requests.</p>
             <CodeBlock html={typeDefinitions.DialogRef} />
           </ApiEntry>
+          <ApiEntry
+            id="type-DialogSurfaceContextProps"
+            name="DialogSurfaceContextProps"
+            type="type"
+          >
+            Children accepted by SurfaceContext.
+          </ApiEntry>
           <ApiEntry id="type-DialogContextProps" name="DialogContextProps" type="type">
             State, interaction callbacks and children accepted by Context.
           </ApiEntry>
@@ -231,7 +373,15 @@ export default function DialogPage(handle: Handle<PageProps>) {
             Surface and backdrop visibility, including exit motion.
           </ApiEntry>
           <ApiEntry name="data-nested" type="present | absent">
-            Identifies a nested surface.
+            Identifies surfaces and backdrops whose dialog has a parent dialog.
+          </ApiEntry>
+          <ApiEntry name="data-child-dialog-open" type="present | absent">
+            Identifies a surface with an open nested dialog above it.
+          </ApiEntry>
+          <ApiEntry name="--dialog-open-descendant-depth" type="number" defaultValue="0">
+            Depth of open descendant dialogs. The front dialog is 0, its parent is 1, and the next
+            parent is 2. It follows the deepest open child branch. Closing starts moving the parent
+            forward immediately. Other popup types and unrelated dialogs do not affect this value.
           </ApiEntry>
         </ApiTable>
       </Section>

@@ -25,7 +25,7 @@ Return a route-specific `404` page when the action understands what is missing. 
 
 ## Report streaming render failures {#streaming-render-errors}
 
-Pass `onError` and `request.signal` to `renderToStream()`. Root and blocking-render failures report the error and reject the stream. A later non-blocking frame or streamed frame-tail failure is reported while the already-rendered fallback remains. After body bytes are sent, the server cannot replace the response with a new error page.
+Pass `onError` and `request.signal` to `renderToStream()`. Root and blocking-render failures report the error and reject the stream. A later non-blocking frame or streamed frame-tail failure is reported while the already-rendered fallback remains. After body bytes are sent, the server cannot replace the response with a new error page. With the `render()` middleware, root and blocking-render failures reject `router.fetch()`, so the server boundary can respond with a `500`. Only middleware that runs before `render()` sees that rejection, and responses whose body is replaced or transformed after rendering only report the error to `onError`.
 
 ## Own frame-resolution failures {#frame-resolution-errors}
 
@@ -37,7 +37,7 @@ The value returned by `run()` emits `error` events for hydration, component, sch
 
 ## Treat request aborts as cancellation {#aborts-request-signal-and-the-router}
 
-The router rejects with `request.signal.reason` when a request aborts. Pass the signal into database, fetch, upload, and rendering work when those APIs support it, and let the Node adapter drop responses after the client disconnects instead of logging an expected abort as a server failure.
+When a request aborts, the router stops running middleware and handlers and rejects with `request.signal.reason` once work already in progress settles. It does not interrupt that work, so pass the signal into database, fetch, upload, and rendering work when those APIs support it, and let the Node adapter drop responses after the client disconnects instead of logging an expected abort as a server failure.
 
 ## Match component cleanup to the work's lifetime {#cancellation-in-components-with-handle-signal}
 

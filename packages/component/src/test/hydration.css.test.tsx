@@ -1,8 +1,9 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
-import { createRoot, resetStyleState } from '../runtime/vdom.ts'
+import { createRoot } from '../runtime/vdom.ts'
+import { getDefaultStyleManager } from '../style/stylesheet.ts'
 import { renderToString } from '../server/stream.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 import { css } from '../index.ts'
 
 describe('hydration', () => {
@@ -20,7 +21,7 @@ describe('hydration', () => {
   describe('css mixin hydration', () => {
     afterEach(() => {
       // Reset the global style manager state between tests
-      resetStyleState()
+      getDefaultStyleManager().dispose()
     })
 
     it('hydrates element with css mixin and adopts server style', async () => {
@@ -67,6 +68,7 @@ describe('hydration', () => {
     })
 
     it('hydrates, updates, and removes unitless generated styles', async () => {
+      let supportsMaskBoxImageWidth = CSS.supports('-webkit-mask-box-image-width', '2')
       let layout = {
         display: '-webkit-box',
         webkitBoxOrient: 'vertical',
@@ -94,7 +96,9 @@ describe('hydration', () => {
       expect(getComputedStyle(div).marginTop).toBe('8px')
       expect(getComputedStyle(div).animationIterationCount).toBe('2')
       expect(getComputedStyle(div).borderImageSlice).toBe('3')
-      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe(
+        supportsMaskBoxImageWidth ? '2' : '',
+      )
       expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
       expect(div.getBoundingClientRect().height).toBe(40)
 
@@ -108,7 +112,9 @@ describe('hydration', () => {
       expect(getComputedStyle(div).marginTop).toBe('8px')
       expect(getComputedStyle(div).animationIterationCount).toBe('2')
       expect(getComputedStyle(div).borderImageSlice).toBe('3')
-      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('2')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe(
+        supportsMaskBoxImageWidth ? '2' : '',
+      )
       expect(getComputedStyle(div).shapeImageThreshold).toBe('0.25')
       expect(div.getBoundingClientRect().height).toBe(40)
 
@@ -137,7 +143,9 @@ describe('hydration', () => {
       expect(getComputedStyle(div).marginTop).toBe('12px')
       expect(getComputedStyle(div).animationIterationCount).toBe('3')
       expect(getComputedStyle(div).borderImageSlice).toBe('4')
-      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('3')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe(
+        supportsMaskBoxImageWidth ? '3' : '',
+      )
       expect(getComputedStyle(div).shapeImageThreshold).toBe('0.75')
       expect(div.getBoundingClientRect().height).toBe(20)
 
@@ -153,7 +161,9 @@ describe('hydration', () => {
       expect(getComputedStyle(div).marginTop).toBe('0px')
       expect(getComputedStyle(div).animationIterationCount).toBe('1')
       expect(getComputedStyle(div).borderImageSlice).toBe('100%')
-      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe('auto')
+      expect(getComputedStyle(div).getPropertyValue('-webkit-mask-box-image-width')).toBe(
+        supportsMaskBoxImageWidth ? 'auto' : '',
+      )
       expect(getComputedStyle(div).shapeImageThreshold).toBe('0')
       expect(div.getBoundingClientRect().height).toBe(50)
       root.dispose()

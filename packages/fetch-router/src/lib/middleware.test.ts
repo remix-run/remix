@@ -148,4 +148,58 @@ describe('runMiddleware', () => {
       await runMiddleware(middleware, context, handler)
     }, new Error('Middleware error!'))
   })
+
+  it('does not leak an unhandled rejection when middleware calls next() and short-circuits', async () => {
+    let middleware = [
+      (_: any, next: NextFunction) => {
+        void next()
+        return new Response('Short-circuit')
+      },
+    ]
+    let context = mockContext('https://remix.run')
+    let handler = () => {
+      throw new Error('Downstream boom')
+    }
+
+    let response = await runMiddleware(middleware, context, handler)
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Short-circuit')
+  })
+
+  it('does not leak an unhandled rejection when async middleware calls next() and returns another response after awaiting', async () => {
+    let middleware = [
+      async (_: any, next: NextFunction) => {
+        void next()
+        await Promise.resolve()
+        return new Response('Async short-circuit')
+      },
+    ]
+    let context = mockContext('https://remix.run')
+    let handler = async () => {
+      throw new Error('Async downstream boom')
+    }
+
+    let response = await runMiddleware(middleware, context, handler)
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Async short-circuit')
+  })
+
+  it('does not overwrite the first next() promise when a second next() call is caught', async () => {
+    let middleware = [
+      async (_: any, next: NextFunction) => {
+        await next()
+        try {
+          await next()
+        } catch {
+          // ignore duplicate next() error
+        }
+      },
+    ] as any
+    let context = mockContext('https://remix.run')
+    let handler = () => new Response('Downstream OK')
+
+    let response = await runMiddleware(middleware, context, handler)
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Downstream OK')
+  })
 })

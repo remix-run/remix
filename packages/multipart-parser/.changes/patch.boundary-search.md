@@ -1,0 +1,1 @@
+Speed up multipart boundary search on Bun, which now uses native `Buffer.indexOf` like Node.js, and on runtimes without a global `Buffer`, such as Deno, which now use a Knuth–Morris–Pratt search. Bun 1.4.3 is now the minimum supported Bun version.

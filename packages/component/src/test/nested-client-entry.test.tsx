@@ -3,7 +3,7 @@ import { afterEach, describe, it } from '@remix-run/test'
 import { createMixin, on } from '../index.ts'
 import { clientEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 import { run } from '../runtime/run.ts'
 import { renderToStream } from '../server/stream.ts'
 import { drain } from './utils.ts'
@@ -61,6 +61,7 @@ async function expectDeferredRemoval(nestedEntry: boolean) {
   let removal = Promise.withResolvers<void>()
   let beforeRemoveCalls = 0
   let removeCalls = 0
+  let removed = Promise.withResolvers<void>()
   let hideInner = () => {}
   let withDeferredRemove = createMixin((handle) => {
     handle.addEventListener('beforeRemove', (event) => {
@@ -69,6 +70,7 @@ async function expectDeferredRemoval(nestedEntry: boolean) {
     })
     handle.addEventListener('remove', () => {
       removeCalls++
+      removed.resolve()
     })
     return () => {}
   })
@@ -108,7 +110,6 @@ async function expectDeferredRemoval(nestedEntry: boolean) {
 
     hideInner()
     app.flush()
-    await Promise.resolve()
     let pendingRemoval = {
       beforeRemoveCalls,
       removeCalls,
@@ -116,13 +117,12 @@ async function expectDeferredRemoval(nestedEntry: boolean) {
     }
 
     removal.resolve()
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await removed.promise
     expect(pendingRemoval).toEqual({ beforeRemoveCalls: 1, removeCalls: 0, retained: true })
     expect(removeCalls).toBe(1)
     expect(document.getElementById('deferred-remove')).toBe(null)
   } finally {
     removal.resolve()
-    await new Promise((resolve) => setTimeout(resolve, 0))
     app.dispose()
   }
 }

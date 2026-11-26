@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 import type { Handle } from '../runtime/component.ts'
 
 describe('vnode rendering', () => {
@@ -58,22 +58,21 @@ describe('vnode rendering', () => {
       let root = createRoot(container)
 
       let capturedSignal: AbortSignal | undefined
-      let capturedUpdate = () => {}
+      let capturedUpdate = async () => {}
       function App(handle: Handle) {
-        capturedUpdate = () => {
+        capturedUpdate = () =>
           handle.update().then((signal) => {
             capturedSignal = signal
           })
-        }
         return () => null
       }
 
       root.render(<App />)
       root.flush()
 
-      capturedUpdate()
+      let updated = capturedUpdate()
       root.flush()
-      await Promise.resolve()
+      await updated
       invariant(capturedSignal)
       let firstSignal = capturedSignal
       expect(firstSignal.aborted).toBe(false)
@@ -110,22 +109,21 @@ describe('vnode rendering', () => {
       let root = createRoot(container)
 
       let capturedSignal: AbortSignal | undefined
-      let capturedUpdate = () => {}
+      let capturedUpdate = async () => {}
       function App(handle: Handle) {
-        capturedUpdate = () => {
+        capturedUpdate = () =>
           handle.update().then((signal) => {
             capturedSignal = signal
           })
-        }
         return () => null
       }
 
       root.render(<App />)
       root.flush()
 
-      capturedUpdate()
+      let updated = capturedUpdate()
       root.flush()
-      await Promise.resolve()
+      await updated
       invariant(capturedSignal)
       expect(capturedSignal.aborted).toBe(false)
 

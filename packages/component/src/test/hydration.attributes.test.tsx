@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import { link } from '../index.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 
 describe('hydration', () => {
   let container: HTMLDivElement
@@ -238,7 +238,7 @@ describe('hydration', () => {
       expect(getComputedStyle(existingMath).getPropertyValue('math-style')).toBe('compact')
     })
 
-    it('hydrates SVG xlinkHref as xlink:href', async () => {
+    it('hydrates SVG xlinkHref as href', async () => {
       let html = await renderToString(
         <svg>
           <use xlinkHref="#icon-star" />
@@ -258,7 +258,39 @@ describe('hydration', () => {
       root.flush()
 
       expect(container.querySelector('use')).toBe(existingUse)
-      expect(existingUse.getAttributeNS('http://www.w3.org/1999/xlink', 'href')).toBe('#icon-star')
+      expect(existingUse.getAttribute('href')).toBe('#icon-star')
+    })
+
+    it('hydrates and updates SVG xlinkTitle in the XLink namespace', async () => {
+      let XLINK_NS = 'http://www.w3.org/1999/xlink'
+      let html = await renderToString(
+        <svg>
+          <use href="#one" xlinkTitle="One" />
+        </svg>,
+      )
+      container.innerHTML = html
+
+      let existingUse = container.querySelector('use')
+      invariant(existingUse)
+      expect(existingUse.getAttributeNS(XLINK_NS, 'title')).toBe('One')
+
+      let root = createRoot(container)
+      root.render(
+        <svg>
+          <use href="#one" xlinkTitle="One" />
+        </svg>,
+      )
+      root.flush()
+      expect(container.querySelector('use')).toBe(existingUse)
+
+      root.render(
+        <svg>
+          <use href="#one" xlinkTitle="Two" />
+        </svg>,
+      )
+      root.flush()
+      expect(existingUse.getAttributeNS(XLINK_NS, 'title')).toBe('Two')
+      expect(existingUse.attributes.length).toBe(2)
     })
 
     it('hydrates SVG viewBox with preserved case', async () => {

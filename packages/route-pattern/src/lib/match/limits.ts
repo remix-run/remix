@@ -50,14 +50,12 @@ export type MatchWorkBudget = {
   actual: number
 }
 
-export function createMatchWorkBudget(maximum: number): MatchWorkBudget {
-  return { maximum, actual: 0 }
-}
-
 export function consumeMatchWork(budget: MatchWorkBudget, count: number): void {
   let actual = budget.actual + count
-  if (!Number.isSafeInteger(actual)) actual = Number.MAX_SAFE_INTEGER
-  checkMatcherLimit('maxMatchWork', budget.maximum, actual)
+  if (actual > budget.maximum) {
+    if (!Number.isSafeInteger(actual)) actual = Number.MAX_SAFE_INTEGER
+    throw new MatcherResourceError({ limit: 'maxMatchWork', maximum: budget.maximum, actual })
+  }
   budget.actual = actual
 }
 

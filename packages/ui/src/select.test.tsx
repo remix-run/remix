@@ -6,6 +6,8 @@ import { createRoot, on, type Handle, type Props, type RemixNode } from '@remix-
 import * as popover from '@remix-run/ui/popover'
 import { onSelectChange, SelectChangeEvent } from './select.tsx'
 import * as select from './select.tsx'
+import { holdAnimationFrames } from './test/animation-frames.ts'
+import { settle } from './test/settle.ts'
 
 const flashDurationMs = 60
 const defaultLabelSwapDelayMs = 75
@@ -50,11 +52,11 @@ function TestSelect(
         <button id={id} type={type ?? 'button'} mix={[select.trigger(), mix]}>
           <SelectLabel />
         </button>
-        <popover.Context>
+        <select.PopoverContext>
           <div mix={select.popover()}>
             <div mix={select.list()}>{children}</div>
           </div>
-        </popover.Context>
+        </select.PopoverContext>
         {name && <input mix={select.hiddenInput()} />}
       </select.Context>
     )
@@ -129,25 +131,6 @@ function key(target: HTMLElement, key: string) {
   target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }))
 }
 
-async function settle(root: ReturnType<typeof createRoot>) {
-  await Promise.resolve()
-  root.flush()
-  await Promise.resolve()
-  root.flush()
-}
-
-async function settleFrames(root: ReturnType<typeof createRoot>) {
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        resolve()
-      })
-    })
-  })
-
-  await settle(root)
-}
-
 async function openSelect(
   container: HTMLElement,
   root: ReturnType<typeof createRoot>,
@@ -161,14 +144,14 @@ async function openSelect(
     click(trigger)
   }
 
-  await settleFrames(root)
+  await settle(root)
 }
 
 async function finishCloseTransition(surface: HTMLElement) {
-  await Promise.resolve()
+  await timers.advanceAsync(0)
   surface.dispatchEvent(new TransitionEvent('transitionrun', { propertyName: 'opacity' }))
   surface.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }))
-  await Promise.resolve()
+  await timers.advanceAsync(0)
 }
 
 let timers!: FakeTimers
@@ -179,6 +162,7 @@ async function finishSelectUpdate(
   root: ReturnType<typeof createRoot>,
   labelSwapDelayMs = defaultLabelSwapDelayMs,
 ) {
+  await timers.advanceAsync(0)
   await timers.advanceAsync(flashDurationMs)
   await finishCloseTransition(surface)
   await settle(root)
@@ -241,13 +225,13 @@ describe('Select', () => {
         <button type="button" mix={select.trigger()}>
           <SelectValue />
         </button>
-        <popover.Context>
+        <select.PopoverContext>
           <div mix={select.popover()}>
             <div mix={select.list()}>
               <Indirection />
             </div>
           </div>
-        </popover.Context>
+        </select.PopoverContext>
       </select.Context>,
     )
     let trigger = getTrigger(container)
@@ -300,6 +284,7 @@ describe('Select', () => {
   })
 
   it('supports a custom label swap delay on the primitive context', async (t) => {
+    holdAnimationFrames(t)
     let { container, root } = renderApp(
       <TestSelect
         defaultLabel="Select a framework"
@@ -324,6 +309,7 @@ describe('Select', () => {
     let react = getOptionByText(container, 'React')
     click(react)
     await settle(root)
+    await timers.advanceAsync(0)
     await timers.advanceAsync(flashDurationMs)
     await finishCloseTransition(surface)
     await settle(root)
@@ -364,7 +350,7 @@ describe('Select', () => {
     expect(document.activeElement).toBe(list)
 
     key(list, 'Escape')
-    await settleFrames(root)
+    await settle(root)
 
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
     expect(surface.matches('[data-open]')).toBe(false)
@@ -391,27 +377,29 @@ describe('Select', () => {
             Open filters
           </button>
 
-          <div
-            id="outer-surface"
-            mix={popover.surface({
-              open,
-              onHide() {
-                open = false
-                void handle.update()
-              },
-            })}
-          >
-            <TestSelect
-              id="grouping"
-              defaultLabel="No grouping"
-              defaultValue="none"
-              mix={popover.focusOnShow()}
+          <popover.SurfaceContext>
+            <div
+              id="outer-surface"
+              mix={popover.surface({
+                open,
+                onHide() {
+                  open = false
+                  void handle.update()
+                },
+              })}
             >
-              <TestOption label="No grouping" value="none" />
-              <TestOption label="Status" value="status" />
-              <TestOption label="Priority" value="priority" />
-            </TestSelect>
-          </div>
+              <TestSelect
+                id="grouping"
+                defaultLabel="No grouping"
+                defaultValue="none"
+                mix={popover.focusOnShow()}
+              >
+                <TestOption label="No grouping" value="none" />
+                <TestOption label="Status" value="status" />
+                <TestOption label="Priority" value="priority" />
+              </TestSelect>
+            </div>
+          </popover.SurfaceContext>
         </popover.Context>
       )
     }
@@ -422,7 +410,7 @@ describe('Select', () => {
 
     outerTrigger.focus()
     click(outerTrigger)
-    await settleFrames(root)
+    await settle(root)
 
     expect(document.activeElement).toBe(selectTrigger)
   })
@@ -502,7 +490,7 @@ describe('Select', () => {
     expect(staging.getAttribute('data-highlighted')).toBe('true')
 
     key(list, 'Escape')
-    await settleFrames(root)
+    await settle(root)
 
     expect(document.activeElement).toBe(trigger)
 

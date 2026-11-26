@@ -1,70 +1,32 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { raceRequestAbort } from './request-abort.ts'
+import { throwIfRequestAborted } from './request-abort.ts'
 
-describe('raceRequestAbort', () => {
-  it('resolves when promise resolves before abort', async () => {
+describe('throwIfRequestAborted', () => {
+  it('leaves the response alone when the request has not aborted', async () => {
     let controller = new AbortController()
-    let request = new Request('https://remix.run', { signal: controller.signal })
-    let promise = Promise.resolve('success')
-
-    let result = await raceRequestAbort(promise, request)
-
-    assert.equal(result, 'success')
+    let response = new Response('ok')
+    throwIfRequestAborted(controller.signal, response)
+    assert.equal(await response.text(), 'ok')
   })
 
-  it('rejects when promise rejects before abort', async () => {
+  it('throws the abort reason when the request has aborted', () => {
     let controller = new AbortController()
-    let request = new Request('https://remix.run', { signal: controller.signal })
-    let promise = Promise.reject(new Error('failed'))
+    let reason = new Error('Request cancelled')
+    controller.abort(reason)
 
-    await assert.rejects(
-      async () => {
-        await raceRequestAbort(promise, request)
-      },
-      (error: any) => {
-        assert.equal(error.message, 'failed')
-        return true
-      },
-    )
+    assert.throws(() => throwIfRequestAborted(controller.signal), reason)
   })
 
-  it('throws AbortError when signal is already aborted', async () => {
+  it('cancels the body of a response that arrives after the request aborted', async () => {
     let controller = new AbortController()
-    let request = new Request('https://remix.run', { signal: controller.signal })
-    let promise = Promise.resolve('success')
+    let reason = new Error('Request cancelled')
+    let cancelled = Promise.withResolvers<unknown>()
+    let response = new Response(new ReadableStream({ cancel: cancelled.resolve }))
+    controller.abort(reason)
 
-    controller.abort()
-
-    await assert.rejects(
-      async () => {
-        await raceRequestAbort(promise, request)
-      },
-      (error: any) => {
-        assert.equal(error.name, 'AbortError')
-        assert.ok(error instanceof DOMException)
-        return true
-      },
-    )
-  })
-
-  it('throws AbortError when signal is aborted during promise execution', async () => {
-    let controller = new AbortController()
-    let request = new Request('https://remix.run', { signal: controller.signal })
-    let promise = new Promise<string>(() => {})
-    let result = raceRequestAbort(promise, request)
-
-    controller.abort()
-
-    await assert.rejects(
-      async () => {
-        await result
-      },
-      (error: any) => {
-        assert.equal(error.name, 'AbortError')
-        return true
-      },
-    )
+    assert.throws(() => throwIfRequestAborted(controller.signal, response), reason)
+    assert.equal(await cancelled.promise, reason)
   })
 })

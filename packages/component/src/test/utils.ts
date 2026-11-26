@@ -1,6 +1,6 @@
 import type { TestContext } from '@remix-run/test'
 
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 import { stripFlushMarkers } from '../runtime/stream-protocol.ts'
 
 export type Assert<T extends true> = T
@@ -16,8 +16,9 @@ export async function drain(stream: ReadableStream<Uint8Array>): Promise<string>
   while (true) {
     let { done, value } = await reader.read()
     if (done) break
-    html += decoder.decode(value)
+    html += decoder.decode(value, { stream: true })
   }
+  html += decoder.decode()
 
   return stripFlushMarkers(html)
 }
@@ -67,4 +68,65 @@ export function withResolvers<T = unknown>(): [
 ] {
   let { promise, resolve, reject } = Promise.withResolvers<T>()
   return [promise, resolve, reject]
+}
+
+// Collects unhandled rejections for the rest of the test. Browsers report unhandled rejections in
+// the order the promises were rejected, so the returned function resolves once every rejection
+// made before the call has been reported.
+export function trackUnhandledRejections(t: TestContext): () => Promise<unknown[]> {
+  let reasons: unknown[] = []
+  let sentinels = new Map<unknown, () => void>()
+  let controller = new AbortController()
+  t.after(() => controller.abort())
+  window.addEventListener(
+    'unhandledrejection',
+    (event) => {
+      event.preventDefault()
+      let resolve = sentinels.get(event.reason)
+      if (resolve) resolve()
+      else reasons.push(event.reason)
+    },
+    { signal: controller.signal },
+  )
+  return async () => {
+    let sentinel = new Error('Unhandled rejection sentinel')
+    let { promise, resolve } = Promise.withResolvers<void>()
+    sentinels.set(sentinel, resolve)
+    void Promise.reject(sentinel)
+    await promise
+    return reasons
+  }
+}
+
+const domMutations: MutationObserverInit = {
+  attributes: true,
+  characterData: true,
+  childList: true,
+  subtree: true,
+}
+
+// Resolves once the DOM satisfies `predicate`, re-checking after each DOM mutation.
+export function waitForDom(predicate: () => boolean, root: Node = document): Promise<void> {
+  if (predicate()) return Promise.resolve()
+
+  return new Promise((resolve) => {
+    let observer = new MutationObserver(() => {
+      if (!predicate()) return
+      observer.disconnect()
+      resolve()
+    })
+    observer.observe(root, domMutations)
+  })
+}
+
+// Mutation observer callbacks run in creation order, so once this observer sees the next DOM
+// mutation, every observer the runtime created earlier has already handled the same records.
+export function nextDomMutation(root: Node = document): Promise<void> {
+  return new Promise((resolve) => {
+    let observer = new MutationObserver(() => {
+      observer.disconnect()
+      resolve()
+    })
+    observer.observe(root, domMutations)
+  })
 }

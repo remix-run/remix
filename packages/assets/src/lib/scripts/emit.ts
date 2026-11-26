@@ -1,19 +1,15 @@
 import MagicString from 'magic-string'
+import type { RawSourceMap } from 'source-map-js'
 
 import {
   createAssetServerCompilationError,
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
-import { formatFingerprintedPathname, hashContent } from '../fingerprint.ts'
+import { createEmittedAsset, formatFingerprintedPathname } from '../fingerprint.ts'
+import type { EmittedAsset } from '../fingerprint.ts'
 import type { ResolvedModule } from './resolve.ts'
 import { composeSourceMaps, replaceSourceMapMappings } from '../source-maps.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
-
-export type EmittedAsset = {
-  content: string
-  etag: string
-  fingerprint: string
-}
 
 export type EmittedModule = {
   code: EmittedAsset
@@ -47,15 +43,16 @@ export async function emitResolvedModule(
   },
 ): Promise<EmitResult> {
   try {
-    let rewriteResult = rewriteImports(resolvedModule, options)
-    let finalCode = prependHmrContext(resolvedModule, rewriteResult.code, options)
-    let sourceMap = rewriteResult.sourceMap
-      ? await createEmittedAsset(rewriteResult.sourceMap)
-      : null
+    let { code: finalCode, sourceMap: finalSourceMap } = prependHmrContext(
+      resolvedModule,
+      rewriteImports(resolvedModule, options),
+      options,
+    )
+    let sourceMap = finalSourceMap ? await createEmittedAsset(finalSourceMap) : null
 
-    if (rewriteResult.sourceMap) {
+    if (finalSourceMap) {
       if (options.sourceMaps === 'inline') {
-        let encoded = Buffer.from(rewriteResult.sourceMap).toString('base64')
+        let encoded = Buffer.from(finalSourceMap).toString('base64')
         finalCode += `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
       } else if (options.sourceMaps === 'external') {
         finalCode += `\n//# sourceMappingURL=${formatFingerprintedPathname(
@@ -211,31 +208,29 @@ function getGeneratedOffset(
 
 function prependHmrContext(
   resolvedModule: ResolvedModule,
-  code: string,
+  result: { code: string; sourceMap: string | null },
   options: {
     hmrClientPathname?: string
   },
-): string {
-  if (!options.hmrClientPathname || !resolvedModule.hmr.usesImportMetaHot) return code
+): { code: string; sourceMap: string | null } {
+  if (!options.hmrClientPathname || !resolvedModule.hmr.usesImportMetaHot) return result
 
-  return (
+  let prefix =
     `import { createHotContext as __remixCreateHotContext } from ${JSON.stringify(
       options.hmrClientPathname,
     )};\n` +
     `import.meta.hot = __remixCreateHotContext(${JSON.stringify(
       resolvedModule.stableUrlPathname,
-    )});\n` +
-    code
-  )
-}
-
-async function createEmittedAsset(content: string): Promise<EmittedAsset> {
-  let fingerprint = await hashContent(content)
-  return {
-    content,
-    etag: `W/"${fingerprint}"`,
-    fingerprint,
+    )});\n`
+  let sourceMap = result.sourceMap
+  if (sourceMap) {
+    let map = JSON.parse(sourceMap) as RawSourceMap
+    // Each semicolon adds an unmapped generated line for one of the two HMR statements.
+    map.mappings = ';;' + map.mappings
+    sourceMap = JSON.stringify(map)
   }
+
+  return { code: prefix + result.code, sourceMap }
 }
 
 function toEmitError(error: unknown, identityPath: string): AssetServerCompilationError {

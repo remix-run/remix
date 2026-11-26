@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/ui",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "description": "Headless, accessible UI primitives and animation utilities for Remix components",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -70,15 +70,15 @@
       "types": "./src/tabs.ts",
       "default": "./src/tabs.ts"
     },
+    "./toast": {
+      "types": "./src/toast.tsx",
+      "default": "./src/toast.tsx"
+    },
     "./toggle": {
       "types": "./src/toggle.ts",
       "default": "./src/toggle.ts"
     },
-    "./package.json": "./package.json",
-    "./portal": {
-      "types": "./src/portal.tsx",
-      "default": "./src/portal.tsx"
-    }
+    "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
@@ -126,28 +126,29 @@
         "types": "./dist/tabs.d.ts",
         "default": "./dist/tabs.js"
       },
+      "./toast": {
+        "types": "./dist/toast.d.ts",
+        "default": "./dist/toast.js"
+      },
       "./toggle": {
         "types": "./dist/toggle.d.ts",
         "default": "./dist/toggle.js"
       },
-      "./package.json": "./package.json",
-      "./portal": {
-        "types": "./dist/portal.d.ts",
-        "default": "./dist/portal.js"
-      }
+      "./package.json": "./package.json"
     }
   },
   "dependencies": {
     "@remix-run/component": "workspace:^",
-    "@remix-run/data-schema": "workspace:*",
+    "@remix-run/data-schema": "workspace:^",
     "tabbable": "^6.3.0"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@remix-run/assets": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
-    "esbuild": "^0.27.1",
     "playwright": "catalog:",
     "typescript": "catalog:"
   },

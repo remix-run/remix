@@ -873,6 +873,25 @@ export function number(): Schema<unknown, number> {
   })
 }
 
+function setOutputProperty<value>(
+  output: Record<PropertyKey, value>,
+  key: PropertyKey,
+  value: value,
+) {
+  if (typeof key === 'string' && key !== '__proto__') {
+    output[key] = value
+    return
+  }
+
+  // Define the property directly with the same attributes as an ordinary assignment.
+  Object.defineProperty(output, key, {
+    value,
+    enumerable: true,
+    writable: true,
+    configurable: true,
+  })
+}
+
 type ObjectOptions = {
   unknownKeys?: 'strip' | 'passthrough' | 'error'
 }
@@ -916,7 +935,7 @@ export function object<shape extends ObjectShape>(
         issues.push(...result.issues)
       } else {
         if (Object.prototype.hasOwnProperty.call(input, key) || result.value !== undefined) {
-          outputValues[key] = result.value
+          setOutputProperty(outputValues, key, result.value)
         }
       }
     }
@@ -932,7 +951,7 @@ export function object<shape extends ObjectShape>(
         }
 
         if (unknownKeys === 'passthrough') {
-          outputValues[key] = input[key]
+          setOutputProperty(outputValues, key, input[key])
         } else {
           let issue = createIssueFromContext(context, {
             code: 'object.unknown_key',
@@ -1037,7 +1056,7 @@ export function record<keyInput, keyOutput extends PropertyKey, valueInput, valu
         continue
       }
 
-      outputValues[keyResult.value] = valueResult.value
+      setOutputProperty(outputValues, keyResult.value, valueResult.value)
     }
 
     if (issues.length > 0) {

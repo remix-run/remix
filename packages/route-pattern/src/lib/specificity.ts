@@ -1,6 +1,8 @@
 import type { RoutePatternParts } from './route-pattern.ts'
 import type { Match } from './match/types.ts'
-import { decodeHostname } from './match/decode.ts'
+import { decodeHostname } from './match/punycode.ts'
+
+type Ranges = ReadonlyArray<Match['paramsMeta']['pathname'][number]>
 
 /**
  * Returns true if match `a` is less specific than match `b`.
@@ -42,7 +44,9 @@ export function equal(a: Match, b: Match): boolean {
  * @param b the second match to compare
  * @returns negative if `a` is less specific, positive if more specific, 0 if equal
  */
-export const ascending = (a: Match, b: Match): number => compare(a, b)
+export function ascending(a: Match, b: Match): number {
+  return compare(a, b)
+}
 
 /**
  * Comparator function for sorting matches from most specific to least specific.
@@ -51,7 +55,9 @@ export const ascending = (a: Match, b: Match): number => compare(a, b)
  * @param b the second match to compare
  * @returns positive if `a` is less specific, negative if more specific, 0 if equal
  */
-export const descending = (a: Match, b: Match): number => compare(a, b) * -1
+export function descending(a: Match, b: Match): number {
+  return compare(a, b) * -1
+}
 
 /**
  * Compare two matches by specificity.
@@ -62,41 +68,30 @@ export const descending = (a: Match, b: Match): number => compare(a, b) * -1
  * @returns -1 if `a` is less specific, 1 if `a` is more specific, 0 if tied.
  */
 export function compare(a: Match, b: Match): -1 | 0 | 1 {
-  if (a.url.href !== b.url.href) {
+  if (a.url !== b.url && a.url.href !== b.url.href) {
     throw new Error(`Cannot compare matches for different URLs: ${a.url.href} vs ${b.url.href}`)
   }
   let aParts = a.pattern._parts
   let bParts = b.pattern._parts
 
-  let protocolResult = compareProtocol(aParts.protocol, bParts.protocol)
-  if (protocolResult !== 0) return protocolResult
-
-  let portResult = comparePort(aParts.port, bParts.port)
-  if (portResult !== 0) return portResult
-
-  let hostname = decodeHostname(a.url.hostname)
-
-  let hostnameResult = compareHostname(hostname, a.paramsMeta.hostname, b.paramsMeta.hostname)
-  if (hostnameResult !== 0) return hostnameResult
-
-  let pathnameResult = comparePathname(a.paramsMeta.pathname, b.paramsMeta.pathname)
-  if (pathnameResult !== 0) return pathnameResult
-
-  let searchResult = compareSearch(aParts.search, bParts.search)
-  if (searchResult !== 0) return searchResult
-
-  return 0
+  return (
+    compareProtocol(aParts.protocol, bParts.protocol) ||
+    comparePort(aParts.port, bParts.port) ||
+    compareHostnameRanges(a.paramsMeta.hostname, b.paramsMeta.hostname, () =>
+      decodeHostname(a.url.hostname),
+    ) ||
+    comparePathnameRanges(a.paramsMeta.pathname, b.paramsMeta.pathname) ||
+    compareSearch(aParts.search, bParts.search)
+  )
 }
 
 function compareProtocol(
   a: RoutePatternParts['protocol'],
   b: RoutePatternParts['protocol'],
 ): -1 | 0 | 1 {
-  let aSpecificity = a === 'http' || a === 'https' ? 1 : 0
-  let bSpecificity = b === 'http' || b === 'https' ? 1 : 0
-  if (aSpecificity > bSpecificity) return 1
-  if (aSpecificity < bSpecificity) return -1
-  return 0
+  let aSpec = a === 'http' || a === 'https' ? 1 : 0
+  let bSpec = b === 'http' || b === 'https' ? 1 : 0
+  return aSpec > bSpec ? 1 : aSpec < bSpec ? -1 : 0
 }
 
 function comparePort(a: RoutePatternParts['port'], b: RoutePatternParts['port']): -1 | 0 | 1 {
@@ -105,58 +100,72 @@ function comparePort(a: RoutePatternParts['port'], b: RoutePatternParts['port'])
   return 0
 }
 
-function compareHostname(
-  hostname: string,
-  a: Match['paramsMeta']['hostname'],
-  b: Match['paramsMeta']['hostname'],
+export function compareHostnameRanges(
+  a: Ranges,
+  b: Ranges,
+  hostnameOrGetter: string | (() => string),
 ): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
-  if (a.length === 0 && b.length > 0) return 1
-  if (a.length > 0 && b.length === 0) return -1
-
-  // Encoding of hostname chars: 0 = static, 1 = variable (:), 2 = wildcard (*)
-  // Note: `Int8Array` defaults to 0 for all indices not explicitly set.
-
-  let aEncoding = new Int8Array(hostname.length)
-  for (let range of a) {
-    aEncoding.fill(range.type === ':' ? 1 : 2, range.begin, range.end)
+  if (a.length === 0) return 1
+  if (b.length === 0) return -1
+  if (
+    a.length === 1 &&
+    b.length === 1 &&
+    a[0].type === b[0].type &&
+    a[0].begin === b[0].begin &&
+    a[0].end === b[0].end
+  ) {
+    return 0
   }
 
-  let bEncoding = new Int8Array(hostname.length)
-  for (let range of b) {
-    bEncoding.fill(range.type === ':' ? 1 : 2, range.begin, range.end)
-  }
+  let hostname = typeof hostnameOrGetter === 'string' ? hostnameOrGetter : hostnameOrGetter()
 
-  // Build segments right-to-left: desc order by begin
-  let segments: Array<{ begin: number; end: number }> = []
-  let end = hostname.length
-  for (let i = hostname.length - 1; i >= 0; i--) {
-    if (hostname[i] === '.') {
-      segments.push({ begin: i + 1, end })
-      end = i
+  // Compare labels right-to-left, and characters within each label left-to-right.
+  let segEnd = hostname.length
+  while (true) {
+    let dot = segEnd === 0 ? -1 : hostname.lastIndexOf('.', segEnd - 1)
+    let cmp = compareRangeSlice(a, b, dot + 1, segEnd)
+    if (cmp !== 0) return cmp
+    if (dot === -1) return 0
+    segEnd = dot
+  }
+}
+
+function compareRangeSlice(a: Ranges, b: Ranges, segBegin: number, segEnd: number): -1 | 0 | 1 {
+  let aIndex = 0
+  let bIndex = 0
+  let pos = segBegin
+
+  while (pos < segEnd) {
+    while (aIndex < a.length && (a[aIndex].end <= pos || a[aIndex].begin === a[aIndex].end)) {
+      aIndex += 1
     }
-  }
-  segments.push({ begin: 0, end }) // leftmost segment
-
-  for (let segment of segments) {
-    for (let j = segment.begin; j < segment.end; j++) {
-      if (aEncoding[j] < bEncoding[j]) return 1 // a is more specific
-      if (aEncoding[j] > bEncoding[j]) return -1 // b is more specific
+    while (bIndex < b.length && (b[bIndex].end <= pos || b[bIndex].begin === b[bIndex].end)) {
+      bIndex += 1
     }
+
+    let aRange = aIndex < a.length && a[aIndex].begin < segEnd ? a[aIndex] : undefined
+    let bRange = bIndex < b.length && b[bIndex].begin < segEnd ? b[bIndex] : undefined
+
+    if (aRange === undefined && bRange === undefined) return 0
+
+    let aActive = aRange !== undefined && aRange.begin <= pos
+    let bActive = bRange !== undefined && bRange.begin <= pos
+
+    let aSpec = aActive ? (aRange!.type === ':' ? 1 : 2) : 0
+    let bSpec = bActive ? (bRange!.type === ':' ? 1 : 2) : 0
+    if (aSpec < bSpec) return 1
+    if (aSpec > bSpec) return -1
+
+    let nextA = aRange === undefined ? segEnd : aActive ? aRange.end : aRange.begin
+    let nextB = bRange === undefined ? segEnd : bActive ? bRange.end : bRange.begin
+    pos = nextA < nextB ? nextA : nextB
   }
 
   return 0
 }
 
-function comparePathname(
-  a: Match['paramsMeta']['pathname'],
-  b: Match['paramsMeta']['pathname'],
-): -1 | 0 | 1 {
-  if (a.length === 0 && b.length === 0) return 0
-  if (a.length === 0 && b.length > 0) return 1
-  if (a.length > 0 && b.length === 0) return -1
-
-  let i = 0
+export function comparePathnameRanges(a: Ranges, b: Ranges): -1 | 0 | 1 {
   let aIndex = 0
   let bIndex = 0
 
@@ -164,22 +173,19 @@ function comparePathname(
     let aRange = a[aIndex]
     let bRange = b[bIndex]
 
-    if (aRange === undefined) return 1 // a is fully static from here
-    if (bRange === undefined) return -1 // b is fully static from here
+    if (aRange === undefined) return 1
+    if (bRange === undefined) return -1
 
-    // Skip to the minimum begin of the two current ranges
-    i = Math.min(aRange.begin, bRange.begin)
+    let i = aRange.begin < bRange.begin ? aRange.begin : bRange.begin
 
-    if (i < aRange.begin) return 1 // a has static content at i
-    if (i < bRange.begin) return -1 // b has static content at i
+    if (i < aRange.begin) return 1
+    if (i < bRange.begin) return -1
 
-    if (aRange.type === ':' && bRange.type === '*') return 1 // a is more specific
-    if (aRange.type === '*' && bRange.type === ':') return -1 // b is more specific
+    if (aRange.type === ':' && bRange.type === '*') return 1
+    if (aRange.type === '*' && bRange.type === ':') return -1
 
-    let minEnd = Math.min(aRange.end, bRange.end)
-    i = minEnd
+    i = aRange.end < bRange.end ? aRange.end : bRange.end
 
-    // Advance range indices if we've reached their ends
     if (i >= aRange.end) aIndex += 1
     if (i >= bRange.end) bIndex += 1
   }
@@ -187,32 +193,22 @@ function comparePathname(
   return 0
 }
 
-function compareSearch(a: RoutePatternParts['search'], b: RoutePatternParts['search']): -1 | 0 | 1 {
-  let aSpecificity = searchSpecificity(a)
-  let bSpecificity = searchSpecificity(b)
-
-  if (aSpecificity.keyValue > bSpecificity.keyValue) return 1
-  if (aSpecificity.keyValue < bSpecificity.keyValue) return -1
-
-  if (aSpecificity.key > bSpecificity.key) return 1
-  if (aSpecificity.key < bSpecificity.key) return -1
-
-  return 0
+function countSearch(search: RoutePatternParts['search']): [keyValue: number, keyOnly: number] {
+  let keyValue = 0
+  let keyOnly = 0
+  for (let constraint of search.values()) {
+    if (constraint.size === 0) keyOnly += 1
+    else keyValue += constraint.size
+  }
+  return [keyValue, keyOnly]
 }
 
-function searchSpecificity(constraints: RoutePatternParts['search']): {
-  key: number
-  keyValue: number
-} {
-  let specificity = { key: 0, keyValue: 0 }
+function compareSearch(a: RoutePatternParts['search'], b: RoutePatternParts['search']): -1 | 0 | 1 {
+  if (a.size === 0 && b.size === 0) return 0
+  let [aKeyValue, aKey] = countSearch(a)
+  let [bKeyValue, bKey] = countSearch(b)
 
-  for (let constraint of constraints.values()) {
-    if (constraint.size === 0) {
-      specificity.key += 1
-      continue
-    }
-    specificity.keyValue += constraint.size
-  }
-
-  return specificity
+  if (aKeyValue !== bKeyValue) return aKeyValue > bKeyValue ? 1 : -1
+  if (aKey !== bKey) return aKey > bKey ? 1 : -1
+  return 0
 }

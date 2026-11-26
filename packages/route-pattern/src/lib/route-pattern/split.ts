@@ -34,54 +34,42 @@ export function split(source: string): SplitResult {
   }
 
   let solidusIndex = source.indexOf('://')
-
   if (solidusIndex === -1) {
     result.pathname = pathnameSpan(source, 0, source.length)
     return result
   }
 
-  let slashIndex = source.indexOf('/')
-  if (slashIndex === solidusIndex + 1) {
-    slashIndex = source.indexOf('/', solidusIndex + 3)
-  }
-
-  if (slashIndex === -1) {
-    result.protocol = span(0, solidusIndex)
-    let host = span(solidusIndex + 3, source.length)
-    if (host) {
-      let { hostname, port } = hostSpans(source, host)
-      result.hostname = hostname
-      result.port = port
-    }
-    return result
-  }
-
-  if (slashIndex < solidusIndex) {
+  let firstSlash = source.indexOf('/')
+  if (firstSlash !== -1 && firstSlash < solidusIndex) {
     result.pathname = pathnameSpan(source, 0, source.length)
     return result
   }
 
+  let slashIndex = source.indexOf('/', solidusIndex + 3)
+  let hostEnd = slashIndex === -1 ? source.length : slashIndex
+
   result.protocol = span(0, solidusIndex)
-  let host = span(solidusIndex + 3, slashIndex)
+  let host = span(solidusIndex + 3, hostEnd)
   if (host) {
     let { hostname, port } = hostSpans(source, host)
     result.hostname = hostname
     result.port = port
   }
-  result.pathname = pathnameSpan(source, slashIndex, source.length)
+  if (slashIndex !== -1) {
+    result.pathname = pathnameSpan(source, slashIndex, source.length)
+  }
   return result
 }
 
 function span(start: number, end: number): Span | null {
-  if (start === end) return null
-  return [start, end]
+  return start === end ? null : [start, end]
 }
 
 function hostSpans(source: string, host: Span): { hostname: Span | null; port: Span | null } {
-  let lastColonIndex = source.slice(0, host[1]).lastIndexOf(':')
-  if (lastColonIndex === -1 || lastColonIndex < host[0]) return { hostname: host, port: null }
+  let lastColonIndex = source.lastIndexOf(':', host[1] - 1)
+  if (lastColonIndex < host[0]) return { hostname: host, port: null }
 
-  if (source.slice(lastColonIndex + 1, host[1]).match(/^\d+$/)) {
+  if (/^\d+$/.test(source.slice(lastColonIndex + 1, host[1]))) {
     return { hostname: span(host[0], lastColonIndex), port: span(lastColonIndex + 1, host[1]) }
   }
   return { hostname: host, port: null }

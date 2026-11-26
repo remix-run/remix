@@ -2,7 +2,7 @@ import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
-import { invariant } from '../runtime/invariant.ts'
+import { invariant } from '../runtime/vnode.ts'
 
 describe('hydration', () => {
   let container: HTMLDivElement
@@ -86,6 +86,37 @@ describe('hydration', () => {
 
       expect(container.querySelector('div')).toBe(existingDiv)
       expect(existingDiv.textContent).toBe('')
+    })
+
+    it('keeps an empty string child in place when it later renders an element', async () => {
+      let text = ''
+      function view() {
+        return (
+          <div>
+            <header>header</header>
+            {text && <p>{text}</p>}
+            <footer>footer</footer>
+          </div>
+        )
+      }
+      container.innerHTML = await renderToString(view())
+
+      let existingFooter = container.querySelector('footer')
+      invariant(existingFooter)
+
+      let root = createRoot(container)
+      root.render(view())
+      root.flush()
+
+      expect(container.querySelector('footer')).toBe(existingFooter)
+
+      text = 'string'
+      root.render(view())
+      root.flush()
+
+      expect(container.innerHTML).toBe(
+        '<div><header>header</header><p>string</p><footer>footer</footer></div>',
+      )
     })
 
     it('handles undefined children as empty text', async () => {

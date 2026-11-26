@@ -164,12 +164,19 @@ function mountTests(host: HTMLElement, setup: TestsSetup): void {
 
   void (async () => {
     for (let testFile of setup.testPaths) {
-      let fileResults = await runInIframe(testFile, setup.only)
-      await fetch('/file-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fileResults),
-      })
+      let fileResults: FileResults
+      if (new URLSearchParams(location.search).has('runFiles')) {
+        let response = await fetch(`/run-file?${new URLSearchParams({ file: testFile })}`)
+        if (!response.ok) throw new Error(`Failed to run test file: ${testFile}`)
+        fileResults = await response.json()
+      } else {
+        fileResults = await runInDocument(testFile, setup.only)
+        await fetch('/file-results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fileResults),
+        })
+      }
       totals.passed += fileResults.passed
       totals.failed += fileResults.failed
       totals.skipped += fileResults.skipped
@@ -183,30 +190,52 @@ function mountTests(host: HTMLElement, setup: TestsSetup): void {
   })()
 }
 
-function runInIframe(
+function runInDocument(
   testFile: string,
   only: SerializedOnlyPattern[] | undefined,
 ): Promise<FileResults> {
   return new Promise((resolve) => {
-    let iframe = document.createElement('iframe')
+    let runnerParams = new URLSearchParams(location.search)
     let params = new URLSearchParams({ file: testFile })
+    if (runnerParams.has('historyBackoff')) params.set('historyBackoff', '1')
     if (only) params.set('only', JSON.stringify(only))
-    iframe.src = `/iframe?${params}`
-    // Make the iframe as big so we don't get unintentional scrolling in test UIs
-    let parentBody = iframe.contentWindow?.document.body
-    iframe.width = Math.max(parentBody?.scrollWidth ?? 0, 800).toString()
-    iframe.height = Math.max(Math.round((parentBody?.scrollHeight ?? 0) / 2), 400).toString()
-    // Earlier files' results render ahead of an appended iframe and push it out of view, where
-    // WebKit throttles its timers, so the running file goes first.
-    document.body.prepend(iframe)
+    let iframe: HTMLIFrameElement | undefined
+    let testWindow: Window | null
+    if (runnerParams.get('isolation') === 'window') {
+      params.set('isolation', 'window')
+      testWindow = window.open(`/iframe?${params}`, '_blank', 'width=800,height=400')
+      if (!testWindow) {
+        fail({ message: 'Could not open the browser test window' })
+        return
+      }
+      window.addEventListener('pagehide', closeTestWindow, { once: true })
+    } else {
+      iframe = document.createElement('iframe')
+      iframe.src = `/iframe?${params}`
+      iframe.width = '800'
+      iframe.height = '400'
+      // Earlier results can push an appended iframe out of view, where WebKit throttles timers.
+      document.body.prepend(iframe)
+      testWindow = iframe.contentWindow
+    }
+
+    function closeTestWindow() {
+      testWindow?.close()
+    }
 
     function onMessage(event: MessageEvent) {
-      if (event.source !== iframe.contentWindow) return
+      if (event.source !== testWindow || event.origin !== location.origin) return
+      let type = event.data?.type
+      if (type !== 'test-results' && type !== 'test-error') return
       window.removeEventListener('message', onMessage)
-      // Hide instead of remove so when coverage is enabled the iframe remains attached
-      // so V8 retains its scripts and Playwright can collect coverage at run end.
-      iframe.style.display = 'none'
-      if (event.data.type === 'test-results') {
+      if (iframe) {
+        // Keep the iframe attached so V8 retains its scripts for coverage at run end.
+        iframe.style.display = 'none'
+      } else {
+        window.removeEventListener('pagehide', closeTestWindow)
+        closeTestWindow()
+      }
+      if (type === 'test-results') {
         let { passed, failed, skipped, todo, tests } = event.data.results as TestResults
         resolve({
           passed,
@@ -216,24 +245,27 @@ function runInIframe(
           tests: tests.map((t) => ({ ...t, filePath: testFile })),
         })
       } else {
-        let { message, stack } = event.data.error
-        resolve({
-          passed: 0,
-          failed: 1,
-          skipped: 0,
-          todo: 0,
-          tests: [
-            {
-              name: '',
-              suiteName: testFile,
-              filePath: testFile,
-              status: 'failed',
-              error: { message, stack },
-              duration: 0,
-            },
-          ],
-        })
+        fail(event.data.error)
       }
+    }
+
+    function fail(error: { message: string; stack?: string }) {
+      resolve({
+        passed: 0,
+        failed: 1,
+        skipped: 0,
+        todo: 0,
+        tests: [
+          {
+            name: '',
+            suiteName: testFile,
+            filePath: testFile,
+            status: 'failed',
+            error,
+            duration: 0,
+          },
+        ],
+      })
     }
 
     window.addEventListener('message', onMessage)

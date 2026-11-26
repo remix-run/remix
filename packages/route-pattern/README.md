@@ -2,6 +2,8 @@
 
 Type-safe URL matching and href generation for JavaScript. `route-pattern` supports path variables, wildcards, optionals, search constraints, and full-URL patterns with predictable ranking.
 
+Existing JavaScript routers tend to force a tradeoff between expressiveness, cold-start cost, and runtime speed: regex-based matchers like `path-to-regexp` scale linearly as routes grow, while pathname-only radix trees like `find-my-way` omit full-URL matching, arbitrary optional groups, and deterministic specificity ranking and pay higher cold-start costs. `route-pattern` is built on a segment-level trie and bounded-state matcher so you get a richer full-URL grammar with fast cold starts, hot-path throughput alongside `find-my-way`, and protection against regex backtracking and exponential optional blowup (see the [benchmarks](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench)).
+
 ## Features
 
 - **Type-safe** - Infer params from patterns for compile-time correctness
@@ -63,7 +65,7 @@ createHref('http(s)://:region.cdn.com/assets/*file.:ext', {
 | `remix/route-pattern/join`        | Combine two patterns into one. Override protocol, hostname, port. Join pathnames. Merge search constraints.                            |
 | `remix/route-pattern/specificity` | Rank matches by [specificity](#ranking-matches-by-specificity).                                                                        |
 
-For in-depth reference, visit the [`route-pattern` API docs](https://docs.remix.run/route-pattern/)
+For in-depth reference, visit the [`route-pattern` API docs](https://docs.remix.run/api/route-pattern/)
 
 Examples in this README use `remix/route-pattern/*` imports. The same APIs are also available from the direct package entrypoints: `@remix-run/route-pattern`, `@remix-run/route-pattern/href`, `@remix-run/route-pattern/match`, `@remix-run/route-pattern/join`, and `@remix-run/route-pattern/specificity`.
 
@@ -334,6 +336,8 @@ Common failures include missing required params, nameless wildcards, invalid hos
 
 Hostname params reject URL structural characters, including backslashes. Hostname variables also reject dots; hostname wildcards allow dots to span labels.
 
+Pathname variables that produce a standalone `.` or `..` segment throw with `error.details.type === 'invalid-pathname-variable'`. A dot can still appear within a larger segment, such as a filename with an extension.
+
 Pathname wildcards preserve internal slashes and dotted filenames, but reject standalone `.` and `..` segments with `error.details.type === 'invalid-pathname-wildcard'`. Generated pathnames have exactly one leading slash, including when the wildcard value starts with slashes. This normalization also applies to absolute URLs and happens before generating a relative href with `baseURL`.
 
 **Note:** optional groups without params are included in the generated href:
@@ -415,7 +419,36 @@ apiUser.toString()
 
 ## Benchmarks
 
-Benchmarks live in [`bench/`](./bench/).
+Average time compared with [`find-my-way`](https://github.com/delvedor/find-my-way) and [`path-to-regexp`](https://github.com/pillarjs/path-to-regexp) on pathname patterns all three support, plus production patterns from Shopify that `find-my-way` can't represent. Lower is better. More benchmarks live in [`bench/`](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench).
+
+<!-- Update with `pnpm run bench:update-readme` -->
+<!-- benchmarks:start -->
+
+### Matching
+
+Matching one URL with a matcher built ahead of time, as in a long-running server.
+
+| Routes          | `route-pattern` | `find-my-way` | `path-to-regexp` |
+| --------------- | --------------: | ------------: | ---------------: |
+| 100             |          175 ns |        129 ns |          1.45 µs |
+| 1,000           |          188 ns |        139 ns |          43.8 µs |
+| 5,000           |          192 ns |        138 ns |           284 µs |
+| 2,506 (Shopify) |          208 ns |           n/a |          52.0 µs |
+
+### Building and matching
+
+Building a matcher and matching one URL, as in a cold start.
+
+| Routes          | `route-pattern` | `find-my-way` | `path-to-regexp` |
+| --------------- | --------------: | ------------: | ---------------: |
+| 100             |         43.7 µs |        245 µs |           106 µs |
+| 1,000           |          455 µs |       4.94 ms |          1.26 ms |
+| 5,000           |         2.37 ms |       81.7 ms |          10.5 ms |
+| 2,506 (Shopify) |         1.55 ms |           n/a |          3.99 ms |
+
+Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `route-pattern@1.0.0` (`8a8adc7b70`), `find-my-way@9.3.0`, and `path-to-regexp@8.4.2`.
+
+<!-- benchmarks:end -->
 
 ## Related Work
 

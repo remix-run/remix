@@ -1,10 +1,11 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type { RemixNode } from './core/vnode.ts'
-import { jsx } from './core/vnode.ts'
+import { jsx, unsafeHTML, type RemixNode } from './vnode.ts'
 import { Frame } from './frame.ts'
-import { toVNode } from './reconcile.ts'
+import type { PortalProps } from './component.ts'
+import { Portal } from './portal.ts'
+import { toVNode } from './vdom.ts'
 import type {
   CommittedComponentNode,
   CommittedFrameNode,
@@ -15,7 +16,7 @@ import type {
   HostNode,
   VNodeInput,
   VNodeParent,
-} from './reconcile.ts'
+} from './vdom.ts'
 
 type Equal<left, right> =
   (<value>() => value extends left ? 1 : 2) extends <value>() => value extends right ? 1 : 2
@@ -29,9 +30,13 @@ function expectType<condition extends true>(): void {}
 describe('VNode lifecycle types', () => {
   it('keeps node-kind resources on their owning variants', () => {
     expectType<
-      Equal<VNodeInput['kind'], 'empty' | 'text' | 'fragment' | 'host' | 'component' | 'frame'>
+      Equal<
+        VNodeInput['kind'],
+        'empty' | 'text' | 'fragment' | 'host' | 'component' | 'frame' | 'portal'
+      >
     >()
     expectType<Equal<HostNode['props']['children'], RemixNode | undefined>>()
+    expectType<Equal<PortalProps['container'], HTMLElement | undefined>>()
     expectType<Equal<HostNode['props']['innerHTML'], string | undefined>>()
     expectType<Equal<HasKey<HostNode, '_dom'>, false>>()
     expectType<Equal<HasKey<ComponentNode, '_handle'>, false>>()
@@ -72,6 +77,29 @@ describe('VNode lifecycle types', () => {
       /Invalid innerHTML prop: expected a value created with unsafeHTML\(\)/,
     )
     assert.throws(() => toVNode(jsx('div', { mix: {} })), /Invalid mix prop/)
+  })
+
+  it('validates nested host children before a render starts', () => {
+    assert.throws(() => toVNode([{}]), /Unexpected RemixNode/)
+    assert.throws(
+      () => toVNode(jsx('div', { children: [jsx('p', {}), [{}]] })),
+      /Invalid host children/,
+    )
+  })
+
+  it('validates children even when raw HTML or a Portal defers their rendering', () => {
+    assert.throws(
+      () => toVNode(jsx('div', { innerHTML: unsafeHTML(''), children: {} })),
+      /Invalid host children/,
+    )
+    assert.throws(() => toVNode(jsx(Portal, { children: {} })), /Invalid host children/)
+  })
+
+  it('rejects a null Portal destination instead of using the body', () => {
+    assert.throws(
+      () => toVNode(jsx(Portal, { container: null })),
+      /Portal container must be an HTMLElement/,
+    )
   })
 
   it('converts built-in Frame elements into frame variants', () => {

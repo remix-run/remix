@@ -1,16 +1,15 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import type { Handle, RemixNode } from '../runtime/component.ts'
+import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
 import { createMixin, createRoot, css, on, unsafeHTML } from '../index.ts'
 import { createElement } from '../runtime/create-element.ts'
 
 import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import type { SerializableObject } from '../runtime/client-entries.ts'
-import { drain, readChunks, withResolvers } from './utils.ts'
-import { Fragment } from '../runtime/component.ts'
+import { drain, readChunks, trackUnhandledRejections, withResolvers } from './utils.ts'
+import { Fragment, invariant } from '../runtime/vnode.ts'
 import { Frame } from '../runtime/frame.ts'
-import { invariant } from '../runtime/invariant.ts'
 
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
 const flushMarkerPattern = /<!--\s*rmx:flush\s+(?:document|fragment)\s*-->/g
@@ -365,6 +364,7 @@ describe('stream', () => {
         return chunk
       })
 
+      // The microtask budget is the contract: awaiting each of the 1000 nodes would exceed it.
       for (let index = 0; index < 20; index++) await Promise.resolve()
       expect(ready).toBe(true)
       let chunk = await firstChunk
@@ -768,6 +768,144 @@ describe('stream', () => {
       })
       expect(html).toBe('<div>https://example.com/dashboard</div>')
     })
+
+    it('returns a stable id when read repeatedly on the same component during SSR', async () => {
+      function Field(handle: Handle) {
+        let setupId = handle.id
+        return () => (
+          <div>
+            <label htmlFor={setupId}>Name</label>
+            <input id={handle.id} />
+          </div>
+        )
+      }
+
+      let html = await renderToString(<Field />)
+      let forMatch = html.match(/for="([^"]+)"/)
+      let idMatch = html.match(/id="([^"]+)"/)
+      expect(forMatch?.[1]).toBeTruthy()
+      expect(forMatch?.[1]).toBe(idMatch?.[1])
+    })
+
+    it('warns on handle.update() during SSR setup and throws during SSR render', async (t) => {
+      let warnSpy = t.mock.method(console, 'warn', () => {})
+
+      function SetupUpdate(handle: Handle) {
+        let { update } = handle
+        void update()
+        return () => <span>ok</span>
+      }
+
+      expect(await renderToString(<SetupUpdate />)).toBe('<span>ok</span>')
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+
+      function RenderUpdate(handle: Handle) {
+        let { update } = handle
+        return () => {
+          void update()
+          return <span>bad</span>
+        }
+      }
+
+      await expect(renderToString(<RenderUpdate />)).rejects.toThrow(
+        'Cannot call handle.update() while RenderUpdate is running its render function',
+      )
+    })
+
+    it('isolates handle.props mutations on reused elements across renders', async () => {
+      function MutateProps(handle: Handle<{ label: string; count?: number }>) {
+        handle.props.count = (handle.props.count ?? 0) + 1
+        return () => (
+          <span>
+            {handle.props.label}:{handle.props.count}
+          </span>
+        )
+      }
+
+      let element = <MutateProps label="item" />
+      expect(await renderToString(element)).toBe('<span>item:1</span>')
+      expect(await renderToString(element)).toBe('<span>item:1</span>')
+    })
+
+    it('isolates handle.frame across separate renders and supports destructured context methods', async () => {
+      function Provider(handle: Handle<{ children?: RemixNode }, string>) {
+        let { set } = handle.context
+        set('ok')
+        return () => handle.props.children
+      }
+
+      function Consumer(handle: Handle) {
+        let { get } = handle.context
+        let value = get(Provider)
+        return () => <span>{value}</span>
+      }
+
+      let frames: FrameHandle[] = []
+      function MutateFrame(handle: Handle) {
+        frames.push(handle.frame)
+        handle.frame.src = '/mutated'
+        return () => (
+          <Provider>
+            <Consumer />
+          </Provider>
+        )
+      }
+
+      expect(await renderToString(<MutateFrame />)).toBe('<span>ok</span>')
+      expect(await renderToString(<MutateFrame />)).toBe('<span>ok</span>')
+      expect(frames.length).toBe(2)
+      expect(frames[0]).not.toBe(frames[1])
+
+      let seenSrc: string | undefined
+      function ReadFrame(handle: Handle) {
+        seenSrc = handle.frame.src
+        return () => <span />
+      }
+      await renderToString(<ReadFrame />)
+      expect(seenSrc).toBe('')
+    })
+
+    it('keeps client entry serialized props isolated if the component mutates handle.props during SSR', async () => {
+      let MutatingEntry = clientEntry(
+        '/js/mutating.js#MutatingEntry',
+        function MutatingEntry(handle: Handle<{ label: string; extra?: number }>) {
+          handle.props.extra = 123
+          return () => <span>{handle.props.label}</span>
+        },
+      )
+
+      let html = await renderToString(<MutatingEntry label="hello" />)
+      let data = parseRmxDataFromHtml(html)
+      let [, entry] = getSingleEntry(data.h)
+      expect(entry.props).toEqual({ label: 'hello' })
+    })
+
+    it('rejects non-lazy frames in renderToString even if options carries resolveFrame', async () => {
+      let options = {
+        nonce: 'abc',
+        resolveFrame: () => '<div>should not run</div>',
+      }
+
+      await expect(renderToString(<Frame src="/panel" />, options)).rejects.toThrow(
+        'No resolveFrame provided',
+      )
+    })
+
+    it('renders document body innerHTML with head resources and hydration data', async () => {
+      let html = await renderToString(
+        <html>
+          <head>
+            <title>Doc</title>
+          </head>
+          <body innerHTML={unsafeHTML('<main>raw</main>')} />
+        </html>,
+        { nonce: 'n1' },
+      )
+
+      expect(html).toBe(
+        '<html><head><title>Doc</title><meta name="rmx-nonce" content="" nonce="n1"></head><body><main>raw</main></body></html>',
+      )
+    })
   })
 
   describe('special props', () => {
@@ -881,6 +1019,48 @@ describe('stream', () => {
       expect(html).toBe('<div data-value="ok" aria-label="Example"></div>')
     })
 
+    it('handles null-prototype props, null-prototype style objects, null style, and inherited class', async () => {
+      let nullStyle = Object.assign(Object.create(null), {
+        backgroundColor: '#fff',
+        padding: '8px',
+      })
+      let nullProps = Object.assign(Object.create(null), {
+        className: 'b',
+        class: 'a',
+        style: nullStyle,
+        'data-ok': 'yes',
+      })
+      let inheritedClassProps = Object.assign(Object.create({ class: 'inherited' }), {
+        className: 'own',
+        style: null,
+      })
+
+      let html = await renderToString(
+        <>
+          {createElement('div', nullProps)}
+          {createElement('span', inheritedClassProps)}
+        </>,
+      )
+
+      expect(html).toBe(
+        '<div class="a b" style="background-color: #fff; padding: 8px;" data-ok="yes"></div>' +
+          '<span class="own"></span>',
+      )
+    })
+
+    it('emits standalone class after other attributes and preserves className position', async () => {
+      let html = await renderToString(
+        <>
+          <a class="nav-link" href="/api/" />
+          <div className="panel" data-panel="before" />
+        </>,
+      )
+
+      expect(html).toBe(
+        '<a href="/api/" class="nav-link"></a><div class="panel" data-panel="before"></div>',
+      )
+    })
+
     it('blocks javascript URLs in executable URL attributes', async () => {
       let html = await drain(
         renderToStream(
@@ -889,8 +1069,13 @@ describe('stream', () => {
             <img id="image" alt="" src={'\u0000 \tJ\na\rv\ta\ns\rc\tr\ni\tp\tt:alert(1)'} />
             <form id="form" action="javascript:alert(1)" />
             {createElement('button', { id: 'button', formaction: 'javascript:alert(1)' })}
-            <svg>{createElement('use', { id: 'use', 'xlink:href': 'javascript:alert(1)' })}</svg>
+            <svg>
+              {createElement('use', { id: 'use', 'xlink:href': 'javascript:alert(1)' })}
+              {createElement('use', { id: 'use-mixed', 'xlink:Href': 'javascript:alert(1)' })}
+              {createElement('a', { id: 'svg-link', HREF: 'javascript:alert(1)' })}
+            </svg>
             <object id="object" data="javascript:alert(1)" />
+            {createElement('Object', { id: 'object-mixed', data: 'javascript:alert(1)' })}
           </>,
         ),
       )
@@ -905,10 +1090,17 @@ describe('stream', () => {
       expect(shelf.content.querySelector('#button')?.getAttribute('formaction')).toBe(
         blockedJavaScriptUrl,
       )
-      expect(shelf.content.querySelector('#use')?.getAttribute('xlink:href')).toBe(
+      expect(shelf.content.querySelector('#use')?.getAttribute('href')).toBe(blockedJavaScriptUrl)
+      expect(shelf.content.querySelector('#use-mixed')?.getAttribute('href')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(shelf.content.querySelector('#svg-link')?.getAttribute('href')).toBe(
         blockedJavaScriptUrl,
       )
       expect(shelf.content.querySelector('#object')?.getAttribute('data')).toBe(
+        blockedJavaScriptUrl,
+      )
+      expect(shelf.content.querySelector('#object-mixed')?.getAttribute('data')).toBe(
         blockedJavaScriptUrl,
       )
     })
@@ -1027,14 +1219,15 @@ describe('stream', () => {
       )
     })
 
-    it('handles namespaced xlinkHref to xlink:href', async () => {
+    it('normalizes xlinkHref and xlink:href to href', async () => {
       let stream = renderToStream(
         <svg>
           <use xlinkHref="#icon-star" />
+          <use xlink:href="#icon-moon" />
         </svg>,
       )
       let html = await drain(stream)
-      expect(html).toBe('<svg><use xlink:href="#icon-star"></use></svg>')
+      expect(html).toBe('<svg><use href="#icon-star"></use><use href="#icon-moon"></use></svg>')
     })
 
     it("lowercases camelCase attributes that don't need special handling", async () => {
@@ -1122,7 +1315,7 @@ describe('stream', () => {
       expect(html).toBe(
         '<input disabled value="0" title="A &amp; &quot;B&quot;" />' +
           '<div contenteditable="true" draggable="false"></div>' +
-          '<svg preserveAlpha="false" focusable="true"><use xlink:href="#safe"></use></svg>',
+          '<svg preserveAlpha="false" focusable="true"><use href="#safe"></use></svg>',
       )
     })
 
@@ -1462,6 +1655,18 @@ describe('stream', () => {
       )
       let html = await drain(stream)
       expect(html).toBe('<svg><text xml:lang="en" xml:space="preserve">Hi</text></svg>')
+    })
+
+    it('renders camelCase xlink attributes other than href with the xlink prefix', async () => {
+      let stream = renderToStream(
+        <svg>
+          <use href="#one" xlinkTitle="One" xlinkShow="new" xlinkActuate="onRequest" />
+        </svg>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<svg><use href="#one" xlink:title="One" xlink:show="new" xlink:actuate="onRequest"></use></svg>',
+      )
     })
 
     it('renders canonical camelCase unit attributes for SVG filters and gradients', async () => {
@@ -4439,6 +4644,35 @@ describe('stream', () => {
   })
 
   describe('frames', () => {
+    it('renders lazy frame fallbacks without resolving or streaming their content', async () => {
+      let requests: string[] = []
+      let html = await drain(
+        renderToStream(
+          <>
+            <Frame name="later" src="/lazy" loading="lazy" fallback={<p>Later</p>} />
+            <Frame src="/empty" loading="lazy" fallback={<></>} />
+            <Frame src="/eager" loading="eager" />
+          </>,
+          {
+            resolveFrame(src) {
+              requests.push(src)
+              return '<p>Loaded</p>'
+            },
+          },
+        ),
+      )
+
+      expect(requests).toEqual(['/eager'])
+      expect(html).toContain('<p>Later</p>')
+      expect(html).toContain('<p>Loaded</p>')
+      expect(html).not.toContain('<template')
+      expect(Object.values(parseRmxDataFromHtml(html).f)).toEqual([
+        { status: 'lazy', fallback: true, name: 'later', src: '/lazy' },
+        { status: 'lazy', fallback: true, src: '/empty' },
+        { status: 'resolved', src: '/eager' },
+      ])
+    })
+
     it('adds frame scripts for non-blocking frames', async () => {
       // Test non-blocking frame (with fallback)
       let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
@@ -4521,6 +4755,47 @@ describe('stream', () => {
       expect(result).not.toContain('<!DOCTYPE')
       expect(result).not.toContain('</template><div id="resolved">')
       expect(resolvedTemplate?.innerHTML).toContain('<div id="resolved">Resolved</div>')
+    })
+
+    it('keeps multibyte characters split across frame stream chunks', async () => {
+      let bytes = new TextEncoder().encode('<p>café</p>')
+      let split = bytes.indexOf(0xc3) + 1
+      let stream = renderToStream(<Frame src="/x" />, {
+        resolveFrame() {
+          return new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(bytes.slice(0, split))
+              controller.enqueue(bytes.slice(split))
+              controller.close()
+            },
+          })
+        },
+      })
+      let result = await drain(stream)
+
+      // Only the first chunk renders inside the frame; later chunks follow as raw bytes.
+      expect(result).toContain('<p>caf<!-- /rmx:f -->')
+      expect(result).toContain('é</p>')
+      expect(result).not.toContain('\uFFFD')
+    })
+
+    it('keeps multibyte characters that start in a leading whitespace chunk', async () => {
+      let bytes = new TextEncoder().encode(' é<p>Resolved</p>')
+      let stream = renderToStream(<Frame src="/x" />, {
+        resolveFrame() {
+          return new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(bytes.slice(0, 2))
+              controller.enqueue(bytes.slice(2))
+              controller.close()
+            },
+          })
+        },
+      })
+      let result = await drain(stream)
+
+      expect(result).toContain('é<p>Resolved</p>')
+      expect(result).not.toContain('\uFFFD')
     })
 
     it('adds frame scripts for blocking frames', async () => {
@@ -4952,50 +5227,40 @@ describe('stream', () => {
       expect(done.done).toBe(true)
     })
 
-    it('cancels all blocking frames without unhandled rejections', async () => {
+    it('cancels all blocking frames without unhandled rejections', async (t) => {
       let controller = new AbortController()
       let errors: unknown[] = []
       let [frameOne, , rejectFrameOne] = withResolvers<string>()
       let [frameTwo, , rejectFrameTwo] = withResolvers<string>()
-      let unhandledRejections: unknown[] = []
-      let onUnhandledRejection = (event: PromiseRejectionEvent) => {
-        event.preventDefault()
-        unhandledRejections.push(event.reason)
-      }
-      window.addEventListener('unhandledrejection', onUnhandledRejection)
+      let flushUnhandledRejections = trackUnhandledRejections(t)
 
-      try {
-        let stream = renderToStream(
-          <div>
-            <Frame src="/fragments/one" />
-            <Frame src="/fragments/two" />
-          </div>,
-          {
-            onError(error) {
-              errors.push(error)
-            },
-            resolveFrame(src) {
-              return src === '/fragments/one' ? frameOne : frameTwo
-            },
-            signal: controller.signal,
+      let stream = renderToStream(
+        <div>
+          <Frame src="/fragments/one" />
+          <Frame src="/fragments/two" />
+        </div>,
+        {
+          onError(error) {
+            errors.push(error)
           },
-        )
+          resolveFrame(src) {
+            return src === '/fragments/one' ? frameOne : frameTwo
+          },
+          signal: controller.signal,
+        },
+      )
 
-        let reader = stream.getReader()
-        let read = reader.read()
+      let reader = stream.getReader()
+      let read = reader.read()
 
-        let abortError = new DOMException('This operation was aborted', 'AbortError')
-        controller.abort(abortError)
-        rejectFrameOne(abortError)
-        rejectFrameTwo(abortError)
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      controller.abort(abortError)
+      rejectFrameOne(abortError)
+      rejectFrameTwo(abortError)
 
-        await expect(read).resolves.toEqual({ done: true, value: undefined })
-        await new Promise((resolve) => setTimeout(resolve, 50))
-        expect(errors).toEqual([])
-        expect(unhandledRejections).toEqual([])
-      } finally {
-        window.removeEventListener('unhandledrejection', onUnhandledRejection)
-      }
+      await expect(read).resolves.toEqual({ done: true, value: undefined })
+      expect(await flushUnhandledRejections()).toEqual([])
+      expect(errors).toEqual([])
     })
 
     it('cancels non-blocking frame rendering when signal aborts without calling onError', async () => {
@@ -5155,6 +5420,7 @@ describe('stream', () => {
     })
 
     it('renders descendant frames returned from resolveFrame', async () => {
+      let [childReleased, releaseChild] = withResolvers<void>()
       async function resolveFrame(src: string) {
         if (src === '/parent') {
           // Parent frame returns content containing a child frame
@@ -5168,8 +5434,8 @@ describe('stream', () => {
           )
         }
         if (src === '/child') {
-          // Simulate async loading of child
-          await new Promise((resolve) => setTimeout(resolve, 10))
+          // The child resolves only after the parent template has streamed
+          await childReleased
           return '<article>Child Content</article>'
         }
         return '<div></div>'
@@ -5215,6 +5481,7 @@ describe('stream', () => {
       expect(parentTemplate).toContain('</template>')
 
       // Third chunk should contain child's resolved content
+      releaseChild()
       let thirdChunk = await chunks.next()
       expect(thirdChunk.done).toBe(false)
       let childTemplate = thirdChunk.value
@@ -5391,6 +5658,7 @@ describe('stream', () => {
     })
 
     it('handles mixed blocking and non-blocking descendant frames', async () => {
+      let [nonBlockingChildReleased, releaseNonBlockingChild] = withResolvers<void>()
       async function resolveFrame(src: string) {
         if (src === '/parent') {
           // Blocking parent returns content with both blocking and non-blocking children
@@ -5406,8 +5674,8 @@ describe('stream', () => {
           return '<div>Blocking Child</div>'
         }
         if (src === '/non-blocking-child') {
-          // Simulate async
-          await new Promise((resolve) => setTimeout(resolve, 10))
+          // The non-blocking child resolves only after the first chunk has streamed
+          await nonBlockingChildReleased
           return '<div>Non-blocking Child</div>'
         }
         return '<div></div>'
@@ -5441,6 +5709,7 @@ describe('stream', () => {
       expect(Object.values<any>(data.f).some((v) => v.status === 'resolved')).toBe(true)
 
       // Second chunk has non-blocking child resolved
+      releaseNonBlockingChild()
       let secondChunk = await chunks.next()
       console.log('\n\nsecond:\n', secondChunk.value)
       // IDs are local within the returned fragment stream.
@@ -5576,21 +5845,10 @@ describe('stream', () => {
         ),
       )
 
-      // Expect no new chunk yet because the child is blocking
-      let chunkArrived = false
-      let nextChunkPromise = chunks.next().then((result) => {
-        chunkArrived = true
-        return result
-      })
-
-      await Promise.resolve()
-      expect(chunkArrived).toBe(false)
-
-      // Now resolve the blocking child
       resolveChild('<article>Child Content</article>')
 
-      // Next chunk should now contain the parent's template with the child's resolved content
-      let second = await nextChunkPromise
+      // The next chunk contains the parent's template only with the child's resolved content
+      let second = await chunks.next()
       expect(second.done).toBe(false)
       let parentTemplate = second.value!
       expect(parentTemplate).toContain('<template id="f')

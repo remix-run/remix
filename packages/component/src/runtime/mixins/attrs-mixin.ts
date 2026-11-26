@@ -1,7 +1,6 @@
-import { createMixin } from './mixin.ts'
-import type { ElementProps } from '../core/vnode.ts'
+import { createMixin, renderMixinElement } from './mixin.ts'
+import type { ElementProps } from '../vnode.ts'
 import type { MixinDescriptor } from './mixin.ts'
-import { createElement } from '../create-element.ts'
 
 const attrsMixin = createMixin<Element, [defaults: ElementProps], ElementProps>(
   (handle) => (defaults, props) => {
@@ -13,7 +12,7 @@ const attrsMixin = createMixin<Element, [defaults: ElementProps], ElementProps>(
       nextProps[key] = defaults[key]
     }
 
-    return nextProps === props ? handle.element : createElement(handle.element, nextProps)
+    return nextProps === props ? handle.element : renderMixinElement(handle.element, nextProps)
   },
 )
 

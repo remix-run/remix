@@ -1,88 +1,24 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { SourceMapConsumer } from 'source-map-js/source-map.js'
+import type { TestContext } from '@remix-run/test'
+import { registerHooks } from 'node:module'
+import { transformSync } from 'oxc-transform'
+import type { Handle, RemixNode } from '@remix-run/component'
+import { parseSync } from 'oxc-parser'
+import { jsx } from '@remix-run/component/jsx-runtime'
+import { renderToString } from '@remix-run/component/server'
 
 import { transformComponentsForBrowser, transformComponentsForServer } from './transform.ts'
 
-const updatedExportsCheckStatement = `let __remixComponentHmrInvalidationMessage__ = (() => {
-  let __remixComponentHmrPreviousExportNames__ = Object.keys(__remixComponentHmrPreviousExports__);
-  for (let name of __remixComponentHmrPreviousExportNames__) {
-    if (!Object.prototype.hasOwnProperty.call(module, name)) {
-      return 'Updated component module removed export "' + name + '"';
-    }
-  }
-  for (let name of Object.keys(module)) {
-    if (!Object.prototype.hasOwnProperty.call(__remixComponentHmrPreviousExports__, name)) {
-      return 'Updated component module added export "' + name + '"';
-    }
-  }
-  for (let name of __remixComponentHmrPreviousExportNames__) {
-    if (__remixComponentHmrComponentNames__.includes(name)) continue;
-    if (__remixComponentHmrPreviousExports__[name] !== module[name]) {
-      return 'Updated component module changed non-component export "' + name + '"';
-    }
-  }
-  return null;
-})();`
-
 describe('transformComponentsForBrowser', () => {
-  it('rewrites exported PascalCase function components into HMR wrappers', () => {
-    let result = transformComponentsForBrowser(
-      `export function Counter() {
+  it('supports exported PascalCase function components', async (t) => {
+    let source = `export function Counter() {
   return ({ count }) => <button>{count}</button>
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.deepEqual(result.componentNames, ['Counter'])
-    assert.equal(
-      getGeneratedComponentImplementation(result.code, 'Counter'),
-      `function __remixComponentHmrImpl_Counter__() {
-  let __remixComponentHmrHandle__ = __remixComponentHmr__.getComponentHandleForHmr(arguments[0], "/app/Counter.tsx", "Counter");
-  let __s__ = __remixComponentHmr__.getComponentHmrState(__remixComponentHmrHandle__);
-  if (__remixComponentHmr__.setupComponentForHmr(__remixComponentHmrHandle__, __s__, "/app/Counter.tsx", "Counter", "<setup-hash>", (__s__) => {
-
-  }, Counter)) {
-    return () => null;
-  }
-  __remixComponentHmr__.registerComponentRenderForHmr(__remixComponentRefresh__, "/app/Counter.tsx", "Counter", __remixComponentHmrHandle__, ({ count }) => <button>{count}</button>, Counter);
-  return function () {
-    return __remixComponentHmr__.callComponentRenderForHmr(__remixComponentHmrHandle__, ...arguments);
-  };
-}`,
-    )
-    assert.equal(
-      getGeneratedImports(result.code),
-      `import { __componentHmrBrowserRuntime__ as __remixComponentHmr__ } from "@remix-run/component-hmr/runtime/browser";
-import * as __remixComponentRefresh__ from "@remix-run/component/dev/refresh";`,
-    )
-    assert.equal(
-      getGeneratedPublicWrapper(result.code, 'Counter'),
-      `export function Counter() {
-  return __remixComponentHmr__.getCurrentComponentForHmr("/app/Counter.tsx", "Counter").apply(undefined, arguments);
-}`,
-    )
-    assert.match(
-      result.code,
-      /__remixComponentHmr__\.registerComponentForHmr\(__remixComponentRefresh__, "\/app\/Counter\.tsx", "Counter", __remixComponentHmrImpl_Counter__, "[^"]+", Counter\);/,
-    )
-    assert.equal(
-      getGeneratedComponentNames(result.code),
-      `let __remixComponentHmrComponentNames__ = ["Counter"];`,
-    )
-    assert.equal(
-      getGeneratedPreviousExports(result.code),
-      `let __remixComponentHmrPreviousExports__ = {
-  "Counter": Counter,
-};`,
-    )
-    assert.equal(getGeneratedUpdatedExportsCheck(result.code), updatedExportsCheckStatement)
-    assert.equal(
-      getGeneratedComponentModuleUpdate(result.code),
-      `__remixComponentHmr__.updateComponentModuleForHmr(__remixComponentRefresh__, "/app/Counter.tsx", module);`,
-    )
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    await fixture.update(source.replace('{count}', '{count * 2}'))
+    assert.equal(await fixture.render({ count: 3 }), '<button>6</button>')
   })
 
   it('derives browser runtime imports from the import source', () => {
@@ -95,11 +31,10 @@ import * as __remixComponentRefresh__ from "@remix-run/component/dev/refresh";`,
     )
 
     assert.equal(result.transformed, true)
-    assert.equal(
-      getGeneratedImports(result.code),
-      `import { __componentHmrBrowserRuntime__ as __remixComponentHmr__ } from "remix/component-hmr/runtime/browser";
-import * as __remixComponentRefresh__ from "remix/component/dev/refresh";`,
-    )
+    assert.deepEqual(getImportSources(result.code), [
+      'remix/component-hmr/runtime/browser',
+      'remix/component/dev/refresh',
+    ])
   })
 
   it('supports custom browser runtime import sources', () => {
@@ -112,124 +47,94 @@ import * as __remixComponentRefresh__ from "remix/component/dev/refresh";`,
     )
 
     assert.equal(result.transformed, true)
-    assert.equal(
-      getGeneratedImports(result.code),
-      `import { __componentHmrBrowserRuntime__ as __remixComponentHmr__ } from "@acme/remix/component-hmr/runtime/browser";
-import * as __remixComponentRefresh__ from "@acme/remix/component/dev/refresh";`,
-    )
+    assert.deepEqual(getImportSources(result.code), [
+      '@acme/remix/component-hmr/runtime/browser',
+      '@acme/remix/component/dev/refresh',
+    ])
   })
 
-  it('generates source maps for transformed browser modules', () => {
-    let source = `export function Counter() {
-  return () => <button>Count</button>
-}
-`
-    let result = transformComponentsForBrowser(source, {
-      importSource: '@remix-run',
-      moduleUrl: '/app/Counter.tsx',
-      sourceMap: true,
-    })
-
-    assert.equal(result.transformed, true)
-    assertSourceMapPosition(result.map, result.code, source, '<button>Count</button>')
-  })
-
-  it('hoists setup variables into persistent HMR state', () => {
-    let result = transformComponentsForBrowser(
-      `export function Counter() {
+  it('preserves setup variables across HMR updates', async (t) => {
+    let source = `export function Counter(handle) {
   let count = 0
+  handle.props.actions.setCount = (nextValue) => {
+    count = nextValue
+  }
   return () => <button>{count}</button>
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    let setCount = fixture.actions.setCount
 
-    assert.equal(result.transformed, true)
-    assert.equal(
-      getGeneratedComponentImplementation(result.code, 'Counter'),
-      `function __remixComponentHmrImpl_Counter__() {
-  let __remixComponentHmrHandle__ = __remixComponentHmr__.getComponentHandleForHmr(arguments[0], "/app/Counter.tsx", "Counter");
-  let __s__ = __remixComponentHmr__.getComponentHmrState(__remixComponentHmrHandle__);
-  if (__remixComponentHmr__.setupComponentForHmr(__remixComponentHmrHandle__, __s__, "/app/Counter.tsx", "Counter", "<setup-hash>", (__s__) => {
-    __s__.count = 0;
-  }, Counter)) {
-    return () => null;
-  }
-  __remixComponentHmr__.registerComponentRenderForHmr(__remixComponentRefresh__, "/app/Counter.tsx", "Counter", __remixComponentHmrHandle__, () => <button>{__s__.count}</button>, Counter);
-  return function () {
-    return __remixComponentHmr__.callComponentRenderForHmr(__remixComponentHmrHandle__, ...arguments);
-  };
-}`,
-    )
+    setCount(5)
+
+    await fixture.update(source.replace('{count}', '{count * 2}'))
+    assert.equal(await fixture.render(), '<button>10</button>')
+
+    setCount(9)
+    assert.equal(await fixture.render(), '<button>18</button>')
   })
 
-  it('preserves a setup function declaration passed as a JSX prop', () => {
-    let result = transformComponentsForBrowser(
-      `export function LandingEnhancements() {
+  it('preserves a setup function declaration passed as a JSX prop', async (t) => {
+    let source = `function LandingNav(handle) {
+  return () => handle.props.onJump(2)
+}
+export function LandingEnhancements(handle) {
   let preset = 0
   function jumpToPreset(index) {
-    preset = index
+    return (preset = index)
   }
-  return () => <LandingNav onJump={jumpToPreset} />
+  handle.props.actions.readPreset = () => preset
+  return () => <output>{<LandingNav onJump={jumpToPreset} />}</output>
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/LandingEnhancements.tsx' },
+`
+    let fixture = await createComponent(t, source, 'LandingEnhancements')
+    let readPreset = fixture.actions.readPreset
+    await fixture.update(
+      source.replace('onJump={jumpToPreset}', 'onJump={(index) => jumpToPreset(index * 2)}'),
     )
-
-    let implementation = getGeneratedComponentImplementation(result.code, 'LandingEnhancements')
-    assert.match(
-      implementation,
-      /function jumpToPreset\(index\) \{[\s\S]*__s__\.preset = index[\s\S]*__s__\.jumpToPreset = jumpToPreset;/,
-    )
-    assert.match(implementation, /<LandingNav onJump=\{__s__\.jumpToPreset\} \/>/)
+    assert.equal(await fixture.render(), '<output>4</output>')
+    assert.equal(readPreset(), 4)
   })
 
-  it('preserves a setup function declaration invoked by render', () => {
-    let result = transformComponentsForBrowser(
-      `export function Counter() {
+  it('preserves a setup function declaration invoked by render', async (t) => {
+    let source = `export function Counter(handle) {
   let count = 1
   function getLabel() {
     return \`Count: \${count}\`
   }
+  handle.props.actions.setCount = (nextValue) => {
+    count = nextValue
+  }
   return () => <p>{getLabel()}</p>
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    let implementation = getGeneratedComponentImplementation(result.code, 'Counter')
-    assert.match(
-      implementation,
-      /function getLabel\(\) \{[\s\S]*return `Count: \$\{__s__\.count\}`[\s\S]*__s__\.getLabel = getLabel;/,
-    )
-    assert.match(implementation, /<p>\{__s__\.getLabel\(\)\}<\/p>/)
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    fixture.actions.setCount(5)
+    await fixture.update(source.replace('{getLabel()}', '{getLabel().toUpperCase()}'))
+    assert.equal(await fixture.render(), '<p>COUNT: 5</p>')
   })
 
-  it('preserves a hoisted setup function declaration after the render return', () => {
-    let result = transformComponentsForBrowser(
-      `export function Counter(handle) {
+  it('preserves a hoisted setup function declaration after the render return', async (t) => {
+    let source = `export function Counter(handle) {
   let count = 0
-  return () => <button onClick={increment}>Count: {count}</button>
+  return () => {
+    handle.props.actions.increment = increment
+    return <output>{count}</output>
+  }
   function increment() {
     count++
-    handle.update()
   }
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    let implementation = getGeneratedComponentImplementation(result.code, 'Counter')
-    assert.match(
-      implementation,
-      /function increment\(\) \{[\s\S]*__s__\.count\+\+[\s\S]*__s__\.increment = increment;/,
-    )
-    assert.match(implementation, /onClick=\{__s__\.increment\}/)
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    await fixture.update(source.replace('= increment', '= () => { increment(); increment() }'))
+    await fixture.render()
+    fixture.actions.increment()
+    assert.equal(await fixture.render(), '<output>2</output>')
   })
 
-  it('keeps a var initializer ahead of a hoisted function declaration after return', () => {
-    let result = transformComponentsForBrowser(
-      `export function Component() {
+  it('lets a var initializer override a function declaration after return', async (t) => {
+    let source = `export function Component() {
   var handler = () => 'assigned'
   return () => handler()
 
@@ -237,25 +142,18 @@ import * as __remixComponentRefresh__ from "@acme/remix/component/dev/refresh";`
     return 'declaration'
   }
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Component.tsx' },
-    )
+`
+    let fixture = await createComponent(t, source, 'Component', 'jsx')
+    assert.equal(await fixture.render(), 'assigned')
 
-    let implementation = getGeneratedComponentImplementation(result.code, 'Component')
-    assert.match(
-      implementation,
-      /__s__\.handler = handler;[\s\S]*__s__\.handler = \(\) => 'assigned';/,
+    await fixture.update(
+      source.replace('return () => handler()', 'return () => handler().toUpperCase()'),
     )
-    assert.match(
-      implementation,
-      /__remixComponentHmrHandle__, \(\) => __s__\.handler\(\), Component\)/,
-    )
-    assert.equal(implementation.match(/__s__\.handler = handler;/g)?.length, 1)
+    assert.equal(await fixture.render(), 'ASSIGNED')
   })
 
-  it('does not clear a hoisted function with an uninitialized var declaration', () => {
-    let result = transformComponentsForBrowser(
-      `export function Component() {
+  it('does not clear a hoisted function with an uninitialized var declaration', async (t) => {
+    let source = `export function Component() {
   var handler
   return () => handler()
 
@@ -263,18 +161,18 @@ import * as __remixComponentRefresh__ from "@acme/remix/component/dev/refresh";`
     return 'declaration'
   }
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Component.tsx' },
-    )
+`
+    let fixture = await createComponent(t, source, 'Component', 'jsx')
+    assert.equal(await fixture.render(), 'declaration')
 
-    let implementation = getGeneratedComponentImplementation(result.code, 'Component')
-    assert.match(implementation, /__s__\.handler = handler;/)
-    assert.doesNotMatch(implementation, /__s__\.handler = undefined;/)
+    await fixture.update(
+      source.replace('return () => handler()', 'return () => handler().toUpperCase()'),
+    )
+    assert.equal(await fixture.render(), 'DECLARATION')
   })
 
-  it('rewrites assignments after an uninitialized var without losing the hoisted function', () => {
-    let result = transformComponentsForBrowser(
-      `export function Component() {
+  it('supports assignments after an uninitialized var with a shared function binding', async (t) => {
+    let source = `export function Component() {
   var handler
   handler = () => 'assigned'
   return () => handler()
@@ -283,63 +181,63 @@ import * as __remixComponentRefresh__ from "@acme/remix/component/dev/refresh";`
     return 'declaration'
   }
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Component.tsx' },
-    )
+`
+    let fixture = await createComponent(t, source, 'Component', 'jsx')
+    assert.equal(await fixture.render(), 'assigned')
 
-    let implementation = getGeneratedComponentImplementation(result.code, 'Component')
-    assert.match(
-      implementation,
-      /__s__\.handler = handler;[\s\S]*__s__\.handler = \(\) => 'assigned'/,
+    await fixture.update(
+      source.replace('return () => handler()', 'return () => handler().toUpperCase()'),
     )
-    assert.doesNotMatch(implementation, /__s__\.handler = undefined;/)
+    assert.equal(await fixture.render(), 'ASSIGNED')
   })
 
-  it('preserves var assignment order when the function declaration precedes the render return', () => {
-    let result = transformComponentsForBrowser(
-      `export function Component() {
+  it('preserves var assignment order when the function declaration precedes the render return', async (t) => {
+    let source = `export function Component() {
   var handler = () => 'assigned'
   function handler() {
     return 'declaration'
   }
   return () => handler()
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Component.tsx' },
-    )
+`
+    let fixture = await createComponent(t, source, 'Component', 'jsx')
+    assert.equal(await fixture.render(), 'assigned')
 
-    let implementation = getGeneratedComponentImplementation(result.code, 'Component')
-    assert.match(
-      implementation,
-      /__s__\.handler = handler;[\s\S]*__s__\.handler = \(\) => 'assigned';/,
+    await fixture.update(
+      source.replace('return () => handler()', 'return () => handler().toUpperCase()'),
     )
-    assert.equal(implementation.match(/__s__\.handler = handler;/g)?.length, 1)
+    assert.equal(await fixture.render(), 'ASSIGNED')
   })
 
-  it('preserves multiple setup function declarations referenced by render', () => {
-    let result = transformComponentsForBrowser(
-      `export function Greeting() {
+  it('preserves multiple setup function declarations referenced by render', async (t) => {
+    let source = `export function Greeting(handle) {
+  let greeting = 'Hello'
+  let name = 'Ada'
   function getGreeting() {
-    return 'Hello'
+    return greeting
   }
   function getName() {
-    return 'Ada'
+    return name
   }
-  return () => <p>{getGreeting()}, {getName()}</p>
+  handle.props.actions.setState = (values) => {
+    greeting = values.greeting
+    name = values.name
+  }
+  return () => (
+    <p>
+      {getGreeting()}, {getName()}
+    </p>
+  )
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Greeting.tsx' },
-    )
-
-    let implementation = getGeneratedComponentImplementation(result.code, 'Greeting')
-    assert.match(implementation, /__s__\.getGreeting = getGreeting;/)
-    assert.match(implementation, /__s__\.getName = getName;/)
-    assert.match(implementation, /<p>\{__s__\.getGreeting\(\)\}, \{__s__\.getName\(\)\}<\/p>/)
+`
+    let fixture = await createComponent(t, source, 'Greeting')
+    fixture.actions.setState({ greeting: 'Hi', name: 'Grace' })
+    await fixture.update(source.replace('{getGreeting()}', '{getGreeting().toUpperCase()}'))
+    assert.equal(await fixture.render(), '<p>HI, Grace</p>')
   })
 
-  it('does not preserve setup function declarations that render does not reference', () => {
-    let result = transformComponentsForBrowser(
-      `export function Counter() {
+  it('supports setup-only function declarations', async (t) => {
+    let source = `export function Counter() {
   let count = 0
   function initialize() {
     count = 1
@@ -347,36 +245,34 @@ import * as __remixComponentRefresh__ from "@acme/remix/component/dev/refresh";`
   initialize()
   return () => <p>{count}</p>
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    assert.equal(await fixture.render(), '<p>1</p>')
 
-    let implementation = getGeneratedComponentImplementation(result.code, 'Counter')
-    assert.match(implementation, /function initialize\(\)/)
-    assert.doesNotMatch(implementation, /__s__\.initialize =/)
-    assert.match(implementation, /initialize\(\)/)
+    await fixture.update(source.replace('{count}', '{count * 2}'))
+    assert.equal(await fixture.render(), '<p>2</p>')
   })
 
-  it('rewrites setup variables used as JSX element names', () => {
-    let result = transformComponentsForBrowser(
-      `export function Parent() {
-  let Child = () => <span>Child</span>
-  return () => <Child />
+  it('supports setup variables used as JSX element names', async (t) => {
+    let source = `export function Parent(handle) {
+  let Child = (child) => () => <span>{child.props.label ?? 'Child'}:initial</span>
+  handle.props.actions.setChild = (label) => {
+    Child = (child) => () => <span>{child.props.label ?? 'Child'}:{label}</span>
+  }
+  return () => <output>{<Child />}</output>
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Parent.tsx' },
-    )
-
-    let implementation = getGeneratedComponentImplementation(result.code, 'Parent')
-    assert.match(implementation, /__s__\.Child = \(\) => <span>Child<\/span>;/)
-    assert.match(implementation, /\(\) => <__s__\.Child \/>/)
+`
+    let fixture = await createComponent(t, source, 'Parent')
+    fixture.actions.setChild('retained')
+    await fixture.update(source.replace('<Child />', '<Child label="Edited" />'))
+    assert.equal(await fixture.render(), '<output><span>Edited:retained</span></output>')
   })
 
-  it('preserves setup runtime declarations used as JSX element names or render values', () => {
-    let result = transformComponentsForBrowser(
-      `export function Parent() {
-  function Child() {
-    return () => <span>Child</span>
+  it('preserves setup runtime declarations used as JSX element names or render values', async (t) => {
+    let source = `export function Parent(handle) {
+  let count = 1
+  function Child(handle) {
+    return () => <span>{handle.props.title}</span>
   }
   class Model {
     label = 'Ready'
@@ -384,432 +280,821 @@ import * as __remixComponentRefresh__ from "@acme/remix/component/dev/refresh";`
   enum Status {
     Ready = 'ready',
   }
-  return () => <Child title={new Model().label + Status.Ready} />
+  let original = { Child, Model, Status }
+  handle.props.actions.setCount = (nextValue) => {
+    count = nextValue
+  }
+  return () => (
+    <output>
+      {<Child title={new Model().label + Status.Ready + count} />}:
+      {String(
+        Child === original.Child &&
+          Model === original.Model &&
+          Status === original.Status,
+      )}
+    </output>
+  )
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Parent.tsx' },
+`
+    let fixture = await createComponent(t, source, 'Parent')
+    fixture.actions.setCount(5)
+    await fixture.update(
+      source.replace(
+        'new Model().label + Status.Ready + count',
+        'new Model().label.toUpperCase() + Status.Ready + count * 2',
+      ),
     )
-
-    let implementation = getGeneratedComponentImplementation(result.code, 'Parent')
-    assert.match(implementation, /__s__\.Child = Child;/)
-    assert.match(implementation, /__s__\.Model = Model;/)
-    assert.match(implementation, /__s__\.Status = Status;/)
-    assert.match(
-      implementation,
-      /<__s__\.Child title=\{new __s__\.Model\(\)\.label \+ __s__\.Status\.Ready\} \/>/,
-    )
+    assert.equal(await fixture.render(), '<output><span>READYready10</span>:true</output>')
   })
 
-  it('hoists destructured setup variables into persistent HMR state', () => {
-    let result = transformComponentsForBrowser(
-      `export function Counter() {
+  it('preserves destructured setup variables across HMR updates', async (t) => {
+    let source = `export function Counter(handle) {
   let model = { count: 1 }
   let { count } = model
+  handle.props.actions.setCount = (nextValue) => {
+    count = nextValue
+  }
   return () => <button>{count}</button>
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.equal(
-      getGeneratedComponentImplementation(result.code, 'Counter'),
-      `function __remixComponentHmrImpl_Counter__() {
-  let __remixComponentHmrHandle__ = __remixComponentHmr__.getComponentHandleForHmr(arguments[0], "/app/Counter.tsx", "Counter");
-  let __s__ = __remixComponentHmr__.getComponentHmrState(__remixComponentHmrHandle__);
-  if (__remixComponentHmr__.setupComponentForHmr(__remixComponentHmrHandle__, __s__, "/app/Counter.tsx", "Counter", "<setup-hash>", (__s__) => {
-    __s__.model = { count: 1 };
-    {
-      let { count } = __s__.model;
-      __s__.count = count;
-    }
-  }, Counter)) {
-    return () => null;
-  }
-  __remixComponentHmr__.registerComponentRenderForHmr(__remixComponentRefresh__, "/app/Counter.tsx", "Counter", __remixComponentHmrHandle__, () => <button>{__s__.count}</button>, Counter);
-  return function () {
-    return __remixComponentHmr__.callComponentRenderForHmr(__remixComponentHmrHandle__, ...arguments);
-  };
-}`,
-    )
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    fixture.actions.setCount(5)
+    await fixture.update(source.replace('{count}', '{count * 2}'))
+    assert.equal(await fixture.render(), '<button>10</button>')
   })
 
-  it('rewrites setup expressions that reference previously hoisted variables', () => {
-    let result = transformComponentsForBrowser(
-      `export function Counter() {
+  it('supports setup expressions that reference previously declared variables', async (t) => {
+    let source = `export function Counter(handle) {
   let count = 0
   let next = count + 1
   count += 1
   let model = { count }
   let { value, ...rest } = model
-  return () => <button title={value}>{count}{next}{rest.count}</button>
-}
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.equal(
-      getGeneratedComponentImplementation(result.code, 'Counter'),
-      `function __remixComponentHmrImpl_Counter__() {
-  let __remixComponentHmrHandle__ = __remixComponentHmr__.getComponentHandleForHmr(arguments[0], "/app/Counter.tsx", "Counter");
-  let __s__ = __remixComponentHmr__.getComponentHmrState(__remixComponentHmrHandle__);
-  if (__remixComponentHmr__.setupComponentForHmr(__remixComponentHmrHandle__, __s__, "/app/Counter.tsx", "Counter", "<setup-hash>", (__s__) => {
-    __s__.count = 0;
-    __s__.next = __s__.count + 1;
-    __s__.count += 1
-    __s__.model = { count: __s__.count };
-    {
-      let { value, ...rest } = __s__.model;
-      __s__.value = value;
-      __s__.rest = rest;
-    }
-  }, Counter)) {
-    return () => null;
+  handle.props.actions.setState = (values) => {
+    count = values.count
+    next = values.next
+    rest.count = values.restCount
   }
-  __remixComponentHmr__.registerComponentRenderForHmr(__remixComponentRefresh__, "/app/Counter.tsx", "Counter", __remixComponentHmrHandle__, () => <button title={__s__.value}>{__s__.count}{__s__.next}{__s__.rest.count}</button>, Counter);
-  return function () {
-    return __remixComponentHmr__.callComponentRenderForHmr(__remixComponentHmrHandle__, ...arguments);
-  };
-}`,
+  return () => (
+    <output>
+      {count}:{next}:{rest.count}
+    </output>
+  )
+}
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    assert.equal(await fixture.render(), '<output>1:1:1</output>')
+
+    fixture.actions.setState({ count: 5, next: 6, restCount: 7 })
+    await fixture.update(
+      source.replace('{count}:{next}:{rest.count}', '{count + next + rest.count}'),
     )
+    assert.equal(await fixture.render(), '<output>18</output>')
   })
 
-  it('rewrites setup binding pattern expressions that reference previously hoisted variables', () => {
-    let result = transformComponentsForBrowser(
-      `export function Counter() {
+  it('supports setup binding pattern expressions that reference previously declared variables', async (t) => {
+    let source = `export function Counter(handle) {
   let count = 1
   let key = 'value'
   let model = { [key]: 2 }
-  let { [key]: value = count } = model
+  let { [key]: value = count, missing = count } = model
   let [first = count] = []
-  return () => <button>{value}{first}</button>
-}
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.equal(
-      getGeneratedComponentImplementation(result.code, 'Counter'),
-      `function __remixComponentHmrImpl_Counter__() {
-  let __remixComponentHmrHandle__ = __remixComponentHmr__.getComponentHandleForHmr(arguments[0], "/app/Counter.tsx", "Counter");
-  let __s__ = __remixComponentHmr__.getComponentHmrState(__remixComponentHmrHandle__);
-  if (__remixComponentHmr__.setupComponentForHmr(__remixComponentHmrHandle__, __s__, "/app/Counter.tsx", "Counter", "<setup-hash>", (__s__) => {
-    __s__.count = 1;
-    __s__.key = 'value';
-    __s__.model = { [__s__.key]: 2 };
-    {
-      let { [__s__.key]: value = __s__.count } = __s__.model;
-      __s__.value = value;
-    }
-    {
-      let [first = __s__.count] = [];
-      __s__.first = first;
-    }
-  }, Counter)) {
-    return () => null;
+  handle.props.actions.setState = (values) => {
+    value = values.value
+    first = values.first
   }
-  __remixComponentHmr__.registerComponentRenderForHmr(__remixComponentRefresh__, "/app/Counter.tsx", "Counter", __remixComponentHmrHandle__, () => <button>{__s__.value}{__s__.first}</button>, Counter);
-  return function () {
-    return __remixComponentHmr__.callComponentRenderForHmr(__remixComponentHmrHandle__, ...arguments);
-  };
-}`,
-    )
+  return () => (
+    <button>
+      {value}:{missing}:{first}
+    </button>
+  )
+}
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    assert.equal(await fixture.render(), '<button>2:1:1</button>')
+
+    fixture.actions.setState({ value: 7, first: 8 })
+    await fixture.update(source.replace('{value}:{missing}:{first}', '{value + missing + first}'))
+    assert.equal(await fixture.render(), '<button>16</button>')
   })
 
-  it('does not rewrite setup bindings that shadow previously hoisted variables', () => {
-    let result = transformComponentsForBrowser(
-      `export function Counter() {
+  it('supports setup closures that reference variables declared later', async (t) => {
+    let source = `export function Component(handle) {
+  let read = () => value
+  let value = 1
+  handle.props.actions.setValue = (nextValue) => {
+    value = nextValue
+  }
+  return () => <output>{String(read())}</output>
+}
+`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('String(read())', 'String(read() * 2)'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('preserves setup bindings that shadow previously declared variables', async (t) => {
+    let source = `export function Counter(handle) {
   let value = 'outer'
   function read(value) {
     let inner = value
     return inner
   }
+  let blockResult
   if (value) {
     let value = 'block'
-    read(value)
+    blockResult = read(value)
   }
   let result = read(value)
-  return () => <button>{value}{result}</button>
-}
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.equal(
-      getGeneratedComponentImplementation(result.code, 'Counter'),
-      `function __remixComponentHmrImpl_Counter__() {
-  let __remixComponentHmrHandle__ = __remixComponentHmr__.getComponentHandleForHmr(arguments[0], "/app/Counter.tsx", "Counter");
-  let __s__ = __remixComponentHmr__.getComponentHmrState(__remixComponentHmrHandle__);
-  if (__remixComponentHmr__.setupComponentForHmr(__remixComponentHmrHandle__, __s__, "/app/Counter.tsx", "Counter", "<setup-hash>", (__s__) => {
-    __s__.value = 'outer';
-    function read(value) {
-        let inner = value
-        return inner
-      }
-    if (__s__.value) {
-        let value = 'block'
-        read(value)
-      }
-    __s__.result = read(__s__.value);
-  }, Counter)) {
-    return () => null;
+  handle.props.actions.setValue = (nextValue) => {
+    value = nextValue
   }
-  __remixComponentHmr__.registerComponentRenderForHmr(__remixComponentRefresh__, "/app/Counter.tsx", "Counter", __remixComponentHmrHandle__, () => <button>{__s__.value}{__s__.result}</button>, Counter);
-  return function () {
-    return __remixComponentHmr__.callComponentRenderForHmr(__remixComponentHmrHandle__, ...arguments);
-  };
-}`,
-    )
+  return () => (
+    <button>
+      {value}
+      {result}
+      {blockResult}
+    </button>
+  )
+}
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    fixture.actions.setValue('retained')
+    await fixture.update(source.replace('{value}', '{value.toUpperCase()}'))
+    assert.equal(await fixture.render(), '<button>RETAINEDouterblock</button>')
   })
 
-  it('does not rewrite render bindings that shadow setup variables', () => {
-    let result = transformComponentsForBrowser(
-      `export function Counter() {
+  it('preserves render bindings that shadow setup variables', async (t) => {
+    let source = `export function Counter(handle) {
+  let getOuter = () => count
   let count = 0
-  return ({ count }) => {
+  handle.props.actions.setCount = (nextValue) => {
+    count = nextValue
+  }
+  return ({ count = 1 } = {}) => {
     let next = count + 1
-    return <button>{next}</button>
+    return (
+      <button>
+        {next}:{getOuter()}
+      </button>
+    )
   }
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.equal(
-      getGeneratedComponentImplementation(result.code, 'Counter'),
-      `function __remixComponentHmrImpl_Counter__() {
-  let __remixComponentHmrHandle__ = __remixComponentHmr__.getComponentHandleForHmr(arguments[0], "/app/Counter.tsx", "Counter");
-  let __s__ = __remixComponentHmr__.getComponentHmrState(__remixComponentHmrHandle__);
-  if (__remixComponentHmr__.setupComponentForHmr(__remixComponentHmrHandle__, __s__, "/app/Counter.tsx", "Counter", "<setup-hash>", (__s__) => {
-    __s__.count = 0;
-  }, Counter)) {
-    return () => null;
-  }
-  __remixComponentHmr__.registerComponentRenderForHmr(__remixComponentRefresh__, "/app/Counter.tsx", "Counter", __remixComponentHmrHandle__, ({ count }) => {
-    let next = count + 1
-    return <button>{next}</button>
-  }, Counter);
-  return function () {
-    return __remixComponentHmr__.callComponentRenderForHmr(__remixComponentHmrHandle__, ...arguments);
-  };
-}`,
-    )
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    fixture.actions.setCount(5)
+    await fixture.update(source.replace('let next = count + 1', 'let next = count * 3'))
+    assert.equal(await fixture.render(), '<button>3:5</button>')
   })
 
-  it('does not rewrite render class declarations that shadow setup variables', () => {
-    let result = transformComponentsForBrowser(
-      `export function Parent() {
-  let Child = () => <span>Setup child</span>
+  it('preserves render class declarations that shadow setup variables', async (t) => {
+    let source = `export function Parent(handle) {
+  let getOuter = () => Child
+  let Child = 'setup'
+  handle.props.actions.setChild = (nextValue) => {
+    Child = nextValue
+  }
   return () => {
     class Child {
       static label = 'Render child'
     }
-    return <p>{Child.label}</p>
+    return (
+      <p>
+        {Child.label}:{getOuter()}
+      </p>
+    )
   }
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Parent.tsx' },
-    )
-
-    let implementation = getGeneratedComponentImplementation(result.code, 'Parent')
-    assert.match(implementation, /class Child/)
-    assert.match(implementation, /<p>\{Child\.label\}<\/p>/)
-    assert.doesNotMatch(implementation, /<p>\{__s__\.Child\.label\}<\/p>/)
+`
+    let fixture = await createComponent(t, source, 'Parent')
+    fixture.actions.setChild('retained')
+    await fixture.update(source.replace("'Render child'", "'Edited child'"))
+    assert.equal(await fixture.render(), '<p>Edited child:retained</p>')
   })
 
-  it('rewrites PascalCase function components with separate named exports', () => {
-    let result = transformComponentsForBrowser(
-      `function Counter() {
-  return ({ count }) => jsx('button', { children: count })
+  it('retains function-scoped setup vars declared in nested blocks', async (t) => {
+    let source = `export function Component(handle) {
+  if (true) { var value = 1 }
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => <output>{value}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{value}', '{value * 2}'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('keeps parameter defaults separate from body vars after the render return', async (t) => {
+    let source = `export function Component(handle, value = 1, read = () => value) {
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => <output>{value}:{read()}</output>
+  var value = (() => { throw new Error('unreachable initializer') })()
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{value}:{read()}', '{value * 2}:{read()}'))
+    assert.equal(await fixture.render(), '<output>10:1</output>')
+  })
+
+  it('retains vars from unreachable destructuring and loops without running initializers', async (t) => {
+    let source = `export function Component(handle) {
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => <output>{String(value)}:{String(rest)}:{String(loop)}</output>
+  var { [missing()]: value = missing(), ...rest } = missing()
+  for (var loop of missing()) { throw new Error('unreachable loop') }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('String(value)', 'String(value * 2)'))
+    assert.equal(await fixture.render(), '<output>10:undefined:undefined</output>')
+  })
+
+  it('preserves lexical loop bindings in refreshed renders', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 1
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => {
+    let values = []
+    for (let value of [2, 3]) values.push(value)
+    return <output>{value}:{values.join(',')}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{value}:', '{value * 2}:'))
+    assert.equal(await fixture.render(), '<output>10:2,3</output>')
+  })
+
+  it('preserves destructured catch bindings in refreshed renders', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 1
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => {
+    let caught
+    try { throw { value: 'caught' } } catch ({ value }) { caught = value }
+    return <output>{value}:{caught}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{value}:', '{value * 2}:'))
+    assert.equal(await fixture.render(), '<output>10:caught</output>')
+  })
+
+  it('resolves function-scoped render vars declared in nested blocks', async (t) => {
+    let source = `export function Component() {
+  let value = 'setup'
+  return () => {
+    let before = value
+    if (true) { var value = 'render' }
+    return <output>{String(before)}:{value}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('{value}</output>', '{value.toUpperCase()}</output>'))
+    assert.equal(await fixture.render(), '<output>undefined:RENDER</output>')
+  })
+
+  it('resolves switch discriminants outside the case lexical scope', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 1
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => {
+    switch (value) {
+      case 5:
+        let value = 'inner'
+        return <output>{value}</output>
+    }
+  }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{value}</output>', '{value.toUpperCase()}</output>'))
+    assert.equal(await fixture.render(), '<output>INNER</output>')
+  })
+
+  it('keeps named function expression self-bindings after reassignment', async (t) => {
+    let source = `export function Component(handle) {
+  let read = function read() { return read }
+  let original = read
+  handle.props.actions.replace = () => { read = () => null }
+  return () => <output>v1:{String(original() === original)}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.replace()
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:true</output>')
+  })
+
+  it('keeps named class expression self-bindings after reassignment', async (t) => {
+    let source = `export function Component(handle) {
+  let Model = class Model { static read() { return Model } }
+  let Original = Model
+  handle.props.actions.replace = () => { Model = class {} }
+  return () => <output>v1:{String(Original.read() === Original)}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.replace()
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:true</output>')
+  })
+
+  it('preserves readonly setup bindings in refreshed assignments', async (t) => {
+    let source = `export function Component(handle) {
+  const value = 1
+  return () => {
+    try {
+      return <output>{value}</output>
+    } catch (error) {
+      return <output>{error.name}</output>
+    }
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('{value}', '{value = 2}'))
+    assert.equal(await fixture.render(), '<output>TypeError</output>')
+  })
+
+  it('preserves shorthand destructuring assignment keys and defaults', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 1
+  return () => {
+    handle.props.actions.assign = () => { ({ value = 7 } = {}) }
+    return <output>v1:{value}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    await fixture.render()
+    fixture.actions.assign()
+    assert.equal(await fixture.render(), '<output>v2:7</output>')
+  })
+
+  it('preserves bare, optional and tagged call receivers', async (t) => {
+    let source = `export function Component() {
+  function read() { return this === undefined ? 'bare' : 'receiver' }
+  return () => <output>v1:{read()}:{read?.()}:{read\`tag\`}</output>
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:bare:bare:bare</output>')
+  })
+
+  it('preserves inferred arrow function names in refreshed assignments', async (t) => {
+    let source = `export function Component() {
+  let read
+  return () => {
+    read = () => 1
+    return <output>v1:{read.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:read</output>')
+  })
+
+  it('infers class names before static initialization in refreshed logical assignments', async (t) => {
+    let source = `export function Component() {
+  let Model
+  return () => {
+    Model ||= class { static initial = this.name }
+    return <output>v1:{Model.initial}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:Model</output>')
+  })
+
+  it('preserves inferred names in refreshed destructuring defaults', async (t) => {
+    let source = `export function Component() {
+  let read
+  return () => {
+    ;({ read = () => 1 } = {})
+    return <output>v1:{read.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:read</output>')
+  })
+
+  it('executes nested arrow assignments after a render update', async (t) => {
+    let source = `export function Component() {
+  let outer, inner
+  return () => {
+    outer = () => inner = () => 1
+    return <output>v1:{outer()()}:{outer.name}:{inner.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:1:outer:inner</output>')
+  })
+
+  it('infers nested class names before static initialization after a render update', async (t) => {
+    let source = `export function Component() {
+  let outer, Inner
+  return () => {
+    outer ||= () => Inner ||= class { static label = this.name }
+    return <output>v1:{outer().label}:{outer.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:Inner:outer</output>')
+  })
+
+  it('executes nested assignments in destructuring defaults after a render update', async (t) => {
+    let source = `export function Component() {
+  let outer, inner
+  return () => {
+    ;[outer = () => inner = () => 1] = []
+    return <output>v1:{outer()()}:{outer.name}:{inner.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:1:outer:inner</output>')
+  })
+
+  it('ignores type-only this parameters while retaining setup state after an update', async (t) => {
+    let source = `export function Component(this: void, handle) {
+  let value = 1
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => <output>{value}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{value}', '{value * 2}'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('shares default parameter objects with setup callbacks after an update', async (t) => {
+    let source = `export function Component(handle, model = { value: 1 }, read = () => model.value) {
+  handle.props.actions.setValue = (next) => { model.value = next }
+  return () => <output>{model.value}:{read()}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{model.value}', '{model.value * 2}'))
+    assert.equal(await fixture.render(), '<output>10:5</output>')
+  })
+
+  it('retains array parameter rest values shared with setup callbacks', async (t) => {
+    let source = `export function Component(handle, [first, ...rest] = [0, 1]) {
+  handle.props.actions.setValue = (next) => { rest[0] = next }
+  return () => <output>{rest[0]}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{rest[0]}', '{rest[0] * 2}'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('retains object parameter rest values shared with setup callbacks', async (t) => {
+    let source = `export function Component(handle, { value, ...rest } = { value: 0, count: 1 }) {
+  handle.props.actions.setValue = (next) => { rest.count = next }
+  return () => <output>{rest.count}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{rest.count}', '{rest.count * 2}'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('shares refreshed render assignments with setup callbacks for rest parameters', async (t) => {
+    let source = `export function Component(handle, ...rest) {
+  handle.props.actions.setRest = (next) => { rest = [next] }
+  handle.props.actions.read = () => rest[0]
+  return () => {
+    rest[0] += 1
+    return <output>{rest[0]}:{handle.props.actions.read()}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setRest(5)
+    await fixture.update(source.replace('rest[0] += 1', 'rest[0] += 2'))
+    assert.equal(await fixture.render(), '<output>7:7</output>')
+  })
+
+  it('keeps nested function parameter arguments separate from component arguments', async (t) => {
+    let source = `export function Component(handle) {
+  return () => {
+    function read(value = arguments[1]) { return value }
+    return <output>v1:{String(read(undefined, 7))}:{String(arguments[0] === handle)}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:7:true</output>')
+  })
+
+  it('retains named component self-bindings shared with setup and parameter defaults', async (t) => {
+    let source = `export const Component = function Self(handle, read = () => Self) {
+  handle.props.actions.readSelf = () => Self
+  return () => <output>v1:{String(Self === read())}:{String(Self === handle.props.actions.readSelf())}</output>
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:true:true</output>')
+  })
+
+  it('preserves readonly named component self-bindings in refreshed assignments', async (t) => {
+    let source = `export const Component = function Self(handle) {
+  return () => {
+    try {
+      return <output>{Self.name}</output>
+    } catch (error) {
+      return <output>{error.name}</output>
+    }
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('{Self.name}', '{Self = null}'))
+    assert.equal(await fixture.render(), '<output>TypeError</output>')
+  })
+
+  it('preserves companions and multiple components in shared declarations', async (t) => {
+    let source = `export const before = 'before', Component = function (handle) {
+  let value = 1
+  handle.props.actions.setValue = (next) => { value = next }
+  return () => <output>v1:{before}:{value}:{after}:{Other.name}</output>
+}, after = 'after', Other = function () { return () => <span>other</span> }
+`
+    let fixture = await createComponent(t, source)
+    let other = await createComponent(t, source, 'Other')
+    fixture.actions.setValue(5)
+    let updated = source.replace('v1:', 'v2:').replace('>other<', '>edited<')
+    await fixture.update(updated)
+    await other.update(updated)
+    assert.equal(await fixture.render(), '<output>v2:before:5:after:Other</output>')
+    assert.equal(await other.render(), '<span>edited</span>')
+  })
+
+  it('avoids collisions with generated runtime, state and setter names', async (t) => {
+    let source = `let __remixComponentHmr__ = 'module'
+export const __remixComponentHmrPreviousExports__ = 'exports'
+export function Component() {
+  let __remixComponentHmrState__ = 1
+  let __remixComponentHmrNext__ = 2
+  return () => {
+    __remixComponentHmrNext__ += __remixComponentHmrState__
+    return <output>{__remixComponentHmr__}:{__remixComponentHmrNext__}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(
+      source.replace('+= __remixComponentHmrState__', '+= __remixComponentHmrState__ * 2'),
+    )
+    assert.equal(await fixture.render(), '<output>module:4</output>')
+  })
+
+  it('accepts render updates when a module binding shadows Object', async (t) => {
+    let source = `let Object = null
+export function Component() {
+  let value = 1
+  return () => <output>v1:{value}</output>
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:1</output>')
+  })
+
+  it('retains bindings and tracked exports named __proto__', async (t) => {
+    let source = `export const __proto__ = 'stable'
+export function Component(handle) {
+  let __proto__ = 1
+  handle.props.actions.setValue = (next) => { __proto__ = next }
+  return () => <output>{__proto__}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{__proto__}', '{__proto__ * 2}'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('evaluates destructured parameter getters once across render updates', async (t) => {
+    let source = `let calls = 0
+export function Component(handle, { value } = { get value() {
+  handle.props.actions.onDefault?.()
+  return ++calls
+} }) {
+  handle.props.actions.onDefault = () => { throw new Error('default evaluated after setup') }
+  return () => <output>v1:{value}</output>
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:1</output>')
+  })
+
+  it('shares component arguments reassigned by refreshed renders with setup callbacks', async (t) => {
+    let source = `export function Component(handle) {
+  handle.props.actions.read = () => arguments[0].props.actions
+  return () => {
+    arguments[0] = { props: { actions: 'original' } }
+    return <output>{handle.props.actions.read()}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace("actions: 'original'", "actions: 'updated'"))
+    assert.equal(await fixture.render(), '<output>updated</output>')
+  })
+
+  it('retains named client entry self-bindings shared with parameter defaults', async (t) => {
+    let source = `import { clientEntry } from '@remix-run/component'
+export const Component = clientEntry(import.meta.url, function Self(handle, read = () => Self) {
+  handle.props.actions.read = () => Self
+  return () => <output>v1:{String(read() === Self)}:{String(handle.props.actions.read() === Self)}</output>
+})`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:true:true</output>')
+  })
+
+  it('retains the inner self-binding of client entries wrapped by helpers', async (t) => {
+    let source = `import { clientEntry } from '@remix-run/component'
+function countCalls(component) {
+  component.calls = 0
+  return function Wrapped(handle) {
+    component.calls++
+    return component(handle)
+  }
+}
+export const Component = clientEntry(import.meta.url, countCalls(function Self() {
+  return () => <output>v1:{Self.calls}</output>
+}))`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:1</output>')
+  })
+
+  it('retains parameters that shadow the exported component name', async (t) => {
+    let source = `export function Component(handle, Component = 1) {
+  handle.props.actions.setValue = (next) => { Component = next }
+  return () => <output>{Component}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('{Component}', '{Component * 2}'))
+    assert.equal(await fixture.render(), '<output>10</output>')
+  })
+
+  it('preserves own properties in shorthand objects named __proto__', async (t) => {
+    let source = `export function Component(handle) {
+  let __proto__ = 1
+  handle.props.actions.setValue = (next) => { __proto__ = next }
+  return () => {
+    let object = { __proto__ }
+    return <output>v1:{String(Object.hasOwn(object, '__proto__'))}:{object.__proto__}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:true:5</output>')
+  })
+
+  it('preserves inferred names and bare receivers through TypeScript expressions', async (t) => {
+    let source = `export function Component(handle) {
+  let read: (() => boolean) | undefined
+  return () => {
+    handle.props.actions.assign = () => { read = (function () { return this === undefined }) satisfies (() => boolean) }
+    return <output>v1:{read?.name}:{String((read as (() => boolean) | undefined)?.())}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    await fixture.render()
+    fixture.actions.assign()
+    assert.equal(await fixture.render(), '<output>v2:read:true</output>')
+  })
+
+  it('preserves inferred function names through asserted assignment targets', async (t) => {
+    let source = `export function Component() {
+  let read: (() => void) | undefined
+  return () => {
+    (read as (() => void)) = () => {}
+    return <output>v1:{read?.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:read</output>')
+  })
+
+  it('infers class names before static initialization through non-null assignment targets', async (t) => {
+    let source = `export function Component() {
+  let Model: { label: string } | undefined
+  return () => {
+    Model! ||= class { static label = this.name }
+    return <output>v1:{Model?.label}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:Model</output>')
+  })
+
+  it('preserves inferred names through TypeScript instantiation expressions', async (t) => {
+    let source = `export function Component() {
+  let read
+  return () => {
+    read = (function <T>() {})<string>
+    return <output>v1:{read.name}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:read</output>')
+  })
+
+  it('supports PascalCase function components with separate named exports', async (t) => {
+    let source = `import { jsx } from '@remix-run/component/jsx-runtime'
+function Counter(handle) {
+  let value = 1
+  handle.props.actions.setValue = (nextValue) => {
+    value = nextValue
+  }
+  return ({ count = value } = {}) => (
+    jsx('button', { children: count })
+  )
 }
 export {
   Counter
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.deepEqual(result.componentNames, ['Counter'])
-    assert.equal(
-      getGeneratedPublicWrapper(result.code, 'Counter'),
-      `function Counter() {
-  return __remixComponentHmr__.getCurrentComponentForHmr("/app/Counter.tsx", "Counter").apply(undefined, arguments);
-}`,
-    )
-    assert.equal(
-      getGeneratedNamedExports(result.code),
-      `export {
-  Counter
-}`,
-    )
-    assert.equal(
-      getGeneratedComponentNames(result.code),
-      `let __remixComponentHmrComponentNames__ = ["Counter"];`,
-    )
-    assert.equal(
-      getGeneratedPreviousExports(result.code),
-      `let __remixComponentHmrPreviousExports__ = {
-  "Counter": Counter,
-};`,
-    )
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    fixture.actions.setValue(5)
+    await fixture.update(source.replace('children: count', 'children: count * 2'))
+    assert.equal(await fixture.render(), '<button>10</button>')
   })
 
-  it('rewrites exported client entry function components', () => {
-    let result = transformComponentsForBrowser(
-      `export const Counter = clientEntry(import.meta.url, function Counter(handle) {
+  it('preserves client entry setup variables across HMR updates', async (t) => {
+    let source = `import { jsx } from '@remix-run/component/jsx-runtime'
+import { clientEntry } from '@remix-run/component'
+export const Counter = clientEntry(import.meta.url, function Counter(handle) {
+  let label = 'Initial'
   let count = 0
-  return () => jsx('button', { children: count })
-})
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.deepEqual(result.componentNames, ['Counter'])
-    assert.equal(
-      getGeneratedComponentImplementation(result.code, 'Counter'),
-      `function __remixComponentHmrImpl_Counter__(handle) {
-  let __remixComponentHmrHandle__ = __remixComponentHmr__.getComponentHandleForHmr(arguments[0], "/app/Counter.tsx", "Counter");
-  let __s__ = __remixComponentHmr__.getComponentHmrState(__remixComponentHmrHandle__);
-  if (__remixComponentHmr__.setupComponentForHmr(__remixComponentHmrHandle__, __s__, "/app/Counter.tsx", "Counter", "<setup-hash>", (__s__) => {
-    __s__.count = 0;
-  }, Counter)) {
-    return () => null;
+  handle.props.actions.setState = (values) => {
+    label = values.label
+    count = values.count
   }
-  __remixComponentHmr__.registerComponentRenderForHmr(__remixComponentRefresh__, "/app/Counter.tsx", "Counter", __remixComponentHmrHandle__, () => jsx('button', { children: __s__.count }), Counter);
-  return function () {
-    return __remixComponentHmr__.callComponentRenderForHmr(__remixComponentHmrHandle__, ...arguments);
-  };
-}`,
-    )
-    assert.equal(
-      getGeneratedPublicWrapper(result.code, 'Counter'),
-      `export const Counter = clientEntry(import.meta.url, function Counter(handle) {
-  return __remixComponentHmr__.getCurrentComponentForHmr("/app/Counter.tsx", "Counter").apply(undefined, arguments);
-})`,
-    )
-    assert.match(
-      result.code,
-      /__remixComponentHmr__\.registerComponentForHmr\(__remixComponentRefresh__, "\/app\/Counter\.tsx", "Counter", __remixComponentHmrImpl_Counter__, "[^"]+", Counter\);/,
-    )
-    assert.equal(
-      getGeneratedComponentNames(result.code),
-      `let __remixComponentHmrComponentNames__ = ["Counter"];`,
-    )
-    assert.equal(
-      getGeneratedPreviousExports(result.code),
-      `let __remixComponentHmrPreviousExports__ = {
-  "Counter": Counter,
-};`,
-    )
-  })
-
-  it('hoists client entry setup variables into persistent HMR state', () => {
-    let result = transformComponentsForBrowser(
-      `export const Counter = clientEntry(import.meta.url, function Counter(handle) {
-  let label = "Initial"
-  let count = 0
   return () => jsx('button', { children: label + count })
 })
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.equal(
-      getGeneratedComponentImplementation(result.code, 'Counter'),
-      `function __remixComponentHmrImpl_Counter__(handle) {
-  let __remixComponentHmrHandle__ = __remixComponentHmr__.getComponentHandleForHmr(arguments[0], "/app/Counter.tsx", "Counter");
-  let __s__ = __remixComponentHmr__.getComponentHmrState(__remixComponentHmrHandle__);
-  if (__remixComponentHmr__.setupComponentForHmr(__remixComponentHmrHandle__, __s__, "/app/Counter.tsx", "Counter", "<setup-hash>", (__s__) => {
-    __s__.label = "Initial";
-    __s__.count = 0;
-  }, Counter)) {
-    return () => null;
-  }
-  __remixComponentHmr__.registerComponentRenderForHmr(__remixComponentRefresh__, "/app/Counter.tsx", "Counter", __remixComponentHmrHandle__, () => jsx('button', { children: __s__.label + __s__.count }), Counter);
-  return function () {
-    return __remixComponentHmr__.callComponentRenderForHmr(__remixComponentHmrHandle__, ...arguments);
-  };
-}`,
-    )
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    fixture.actions.setState({ label: 'Retained', count: 5 })
+    await fixture.update(source.replace('label + count', 'label.toUpperCase() + count * 2'))
+    assert.equal(await fixture.render(), '<button>RETAINED10</button>')
   })
 
-  it('rewrites client entry function components with separate named exports', () => {
-    let result = transformComponentsForBrowser(
-      `const Counter = clientEntry(import.meta.url, function Counter(handle) {
+  it('supports client entry function components with separate named exports', async (t) => {
+    let source = `import { jsx } from '@remix-run/component/jsx-runtime'
+import { clientEntry } from '@remix-run/component'
+const Counter = clientEntry(import.meta.url, function Counter(handle) {
   let count = 0
+  handle.props.actions.setCount = (nextValue) => {
+    count = nextValue
+  }
   return () => jsx('button', { children: count })
 })
 export {
   Counter
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.deepEqual(result.componentNames, ['Counter'])
-    assert.equal(
-      getGeneratedPublicWrapper(result.code, 'Counter'),
-      `const Counter = clientEntry(import.meta.url, function Counter(handle) {
-  return __remixComponentHmr__.getCurrentComponentForHmr("/app/Counter.tsx", "Counter").apply(undefined, arguments);
-})`,
-    )
-    assert.equal(
-      getGeneratedNamedExports(result.code),
-      `export {
-  Counter
-}`,
-    )
-    assert.equal(
-      getGeneratedComponentNames(result.code),
-      `let __remixComponentHmrComponentNames__ = ["Counter"];`,
-    )
-    assert.equal(
-      getGeneratedPreviousExports(result.code),
-      `let __remixComponentHmrPreviousExports__ = {
-  "Counter": Counter,
-};`,
-    )
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    fixture.actions.setCount(5)
+    await fixture.update(source.replace('children: count', 'children: count * 2'))
+    assert.equal(await fixture.render(), '<button>10</button>')
   })
 
-  it('rewrites client entry function components wrapped by transform helpers', () => {
-    let result = transformComponentsForBrowser(
-      `const Counter = clientEntry(import.meta.url, __name(function Counter2(handle) {
-  let count = 0
-  return () => jsx('button', { children: count })
-}, "Counter"))
+  it('supports client entry function components wrapped by transform helpers', async (t) => {
+    let source = `function __name(fn, name) {
+  Object.defineProperty(fn, 'name', { value: name })
+  return fn
+}
+import { jsx } from '@remix-run/component/jsx-runtime'
+import { clientEntry } from '@remix-run/component'
+const Counter = clientEntry(
+  import.meta.url,
+  __name(function Counter2(handle) {
+    let count = 0
+    handle.props.actions.setCount = (nextValue) => {
+      count = nextValue
+    }
+    return () => jsx('button', { children: count })
+  }, 'Counter'),
+)
 export {
   Counter
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.deepEqual(result.componentNames, ['Counter'])
-    assert.equal(
-      getGeneratedPublicWrapper(result.code, 'Counter'),
-      `const Counter = clientEntry(import.meta.url, __name(function Counter2(handle) {
-  return __remixComponentHmr__.getCurrentComponentForHmr("/app/Counter.tsx", "Counter").apply(undefined, arguments);
-}, "Counter"))`,
-    )
-    assert.equal(
-      getGeneratedComponentNames(result.code),
-      `let __remixComponentHmrComponentNames__ = ["Counter"];`,
-    )
-    assert.equal(
-      getGeneratedPreviousExports(result.code),
-      `let __remixComponentHmrPreviousExports__ = {
-  "Counter": Counter,
-};`,
-    )
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    fixture.actions.setCount(5)
+    await fixture.update(source.replace('children: count', 'children: count * 2'))
+    assert.equal(await fixture.render(), '<button>10</button>')
   })
 
   it('does not transform aliased component exports', () => {
@@ -862,57 +1147,28 @@ export const Counter = Math.random() > 0.5 ? CounterA : CounterB
     assert.equal(result.code, source)
   })
 
-  it('tracks unsupported component-like exports as non-component exports', () => {
-    let result = transformComponentsForBrowser(
-      `function CounterA() {
-  return () => <button>A</button>
-}
-
-function CounterB() {
-  return () => <button>B</button>
-}
-
-export const Selected = Math.random() > 0.5 ? CounterA : CounterB
-
-export function Counter() {
-  return () => <button>Count</button>
-}
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.deepEqual(result.componentNames, ['Counter'])
-    assert.equal(
-      getGeneratedPreviousExports(result.code),
-      `let __remixComponentHmrPreviousExports__ = {
-  "Selected": Selected,
-  "Counter": Counter,
-};`,
-    )
-    assert.equal(getGeneratedUpdatedExportsCheck(result.code), updatedExportsCheckStatement)
+  it('tracks unsupported component-like exports as non-component exports', async (t) => {
+    let host = createModuleHost(t, transformComponentsForBrowser)
+    let source = `function First() { return () => 'first' }
+function Second() { return () => 'second' }
+export const Selected = true ? First : Second
+${plainComponentSource}`
+    await host.load(source)
+    await host.update(source.replace("'Count'", "'Updated'"))
+    assert.deepEqual(host.messages, [
+      'Updated component module changed non-component export "Selected"',
+    ])
   })
 
-  it('transforms component modules with non-component tracked exports', () => {
-    let result = transformComponentsForBrowser(
-      `export const loader = () => new Response('ok')
-
-export function Counter() {
-  return () => <button>Count</button>
+  it('transforms component modules with non-component tracked exports', async (t) => {
+    let source = `export const value = 1
+export function Counter(handle) {
+  return () => <button>{value}</button>
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.deepEqual(result.componentNames, ['Counter'])
-    assert.equal(
-      getGeneratedPreviousExports(result.code),
-      `let __remixComponentHmrPreviousExports__ = {
-  "loader": loader,
-  "Counter": Counter,
-};`,
-    )
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    await fixture.update(source.replace('{value}', '{value * 2}'))
+    assert.equal(await fixture.render(), '<button>2</button>')
   })
 
   it('does not transform component modules with re-exported runtime values', () => {
@@ -931,86 +1187,260 @@ export { loader } from './loader.ts'
     assert.equal(result.code, source)
   })
 
-  it('rejects updates with incompatible tracked exports', () => {
-    let result = transformComponentsForBrowser(
-      `export function Counter() {
-  return () => <button>Count</button>
-}
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.equal(getGeneratedUpdatedExportsCheck(result.code), updatedExportsCheckStatement)
+  it('invalidates while evaluating an added component export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForBrowser)
+    await host.load(plainComponentSource)
+    await host.load(`${plainComponentSource}\nexport function Added() { return () => null }`)
+    assert.deepEqual(host.messages, ['Updated component module changed its exports'])
   })
 
-  it('allows component modules with type-only exports', () => {
-    let result = transformComponentsForBrowser(
-      `export interface CounterProps {
+  it('invalidates while evaluating a removed component export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForBrowser)
+    await host.load(`${plainComponentSource}\nexport function Removed() { return () => null }`)
+    await host.load(plainComponentSource)
+    assert.deepEqual(host.messages, ['Updated component module changed its exports'])
+  })
+
+  it('invalidates an added non-component export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForBrowser)
+    await host.load(plainComponentSource)
+    await host.update(`${plainComponentSource}\nexport const value = true`)
+    assert.deepEqual(host.messages, ['Updated component module added export "value"'])
+  })
+
+  it('invalidates a removed non-component export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForBrowser)
+    await host.load(`${plainComponentSource}\nexport const value = true`)
+    await host.update(plainComponentSource)
+    assert.deepEqual(host.messages, ['Updated component module removed export "value"'])
+  })
+
+  it('invalidates a changed non-component primitive export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForBrowser)
+    await host.load(`${plainComponentSource}\nexport const value = true`)
+    await host.update(`${plainComponentSource}\nexport const value = false`)
+    assert.deepEqual(host.messages, [
+      'Updated component module changed non-component export "value"',
+    ])
+  })
+
+  it('invalidates a recreated non-component object export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForBrowser)
+    let source = `${plainComponentSource}\nexport const value = {}`
+    await host.load(source)
+    await host.update(source)
+    assert.deepEqual(host.messages, [
+      'Updated component module changed non-component export "value"',
+    ])
+  })
+
+  it('invalidates an update that recreates a non-component function export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForBrowser)
+    let source = `export const loader = () => new Response('ok')
+export function Component() {
+  return () => 'Count'
+}`
+    await host.load(source)
+    await host.update(source.replace("'Count'", "'Updated'"))
+    assert.deepEqual(host.messages, [
+      'Updated component module changed non-component export "loader"',
+    ])
+  })
+
+  it('allows component modules with type-only exports', async (t) => {
+    let source = `export interface Model {
   count: number
 }
-
-export function Counter() {
-  return ({ count }: CounterProps) => <button>{count}</button>
+export function Counter(handle) {
+  let model: Model = { count: 1 }
+  handle.props.actions.setCount = (nextValue) => {
+    model = { count: nextValue }
+  }
+  return () => <button>{model.count}</button>
 }
-`,
-      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
-    )
+`
+    let fixture = await createComponent(t, source, 'Counter')
+    fixture.actions.setCount(5)
+    await fixture.update(source.replace('{model.count}', '{model.count * 2}'))
+    assert.equal(await fixture.render(), '<button>10</button>')
+  })
 
+  it('reports supported component export names separately from other exports', () => {
+    let result = transformComponentsForBrowser(
+      `import { clientEntry } from '@remix-run/component'
+export function Component() {
+  return () => 'plain'
+}
+export const Entry = clientEntry(import.meta.url, function Entry() {
+  return () => 'entry'
+})
+export const Selected = true ? Component : Entry
+export function loader() {
+  return new Response('ok')
+}
+export interface Props {
+  count: number
+}`,
+      { importSource: '@remix-run', moduleUrl: '/app/Component.tsx' },
+    )
     assert.equal(result.transformed, true)
-    assert.deepEqual(result.componentNames, ['Counter'])
+    assert.deepEqual(result.componentNames, ['Component', 'Entry'])
+  })
+
+  it('accepts updates retaining the same imported non-component object', async (t) => {
+    let source = `import * as component from '@remix-run/component'
+export { component as stable }
+export function Component(handle) {
+  return () => <output>v1:{1}</output>
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('{1}', '{2}').replaceAll('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:2</output>')
+  })
+
+  it('preserves super receivers in refreshed class methods', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 1
+  handle.props.actions.setValue = (nextValue) => {
+    value = nextValue
+  }
+  return () => {
+    class Base {
+      read() {
+        return this.offset + value
+      }
+    }
+    class Derived extends Base {
+      offset = 1
+      read() {
+        return super.read()
+      }
+    }
+    return <output>v1:{new Derived().read()}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(
+      source
+        .replace(
+          '<output>v1:{new Derived().read()}</output>',
+          '<output>v1:{new Derived().read() * 2}</output>',
+        )
+        .replaceAll('v1:', 'v2:'),
+    )
+    assert.equal(await fixture.render(), '<output>v2:12</output>')
+  })
+
+  it('shares computed getter and setter writes with retained setup bindings', async (t) => {
+    let source = `export function Component(handle) {
+  let key = 'current'
+  let value = 1
+  handle.props.actions.setValue = (nextValue) => {
+    value = nextValue
+  }
+  handle.props.actions.readValue = () => value
+  return () => {
+    let reader = {
+      get [key]() {
+        return value
+      },
+      set [key](next) {
+        value = next
+      },
+    }
+    reader[key] += 1
+    return <output>v1:{reader[key]}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    let readValue = fixture.actions.readValue
+    fixture.actions.setValue(5)
+    await fixture.update(
+      source.replace('reader[key] += 1', 'reader[key] += 2').replaceAll('v1:', 'v2:'),
+    )
+    assert.equal(await fixture.render(), '<output>v2:7</output>')
+    assert.equal(readValue(), 7)
+  })
+
+  it('preserves shadowed bindings in setup initializer callbacks', async (t) => {
+    let source = `export function Component(handle) {
+  let argument = 1
+  let read = (read) => read
+  let local = () => {
+    let local = 2
+    return local
+  }
+  handle.props.actions.setArgument = (nextValue) => {
+    argument = nextValue
+  }
+  return () => <output>v1:{String(read(argument) + local())}</output>
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setArgument(3)
+    await fixture.update(
+      source
+        .replace('read(argument) + local()', 'read(argument) * local()')
+        .replaceAll('v1:', 'v2:'),
+    )
+    assert.equal(await fixture.render(), '<output>v2:6</output>')
+  })
+
+  it('writes array destructuring assignments to retained bindings after updates', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 0
+  handle.props.actions.readValue = () => value
+  return () => {
+    ;[value] = [2]
+    return <output>v1:{String(value)}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    let readValue = fixture.actions.readValue
+    await fixture.update(source.replace('[value] = [2]', '[value] = [4]').replaceAll('v1:', 'v2:'))
+    assert.equal(await fixture.render(), '<output>v2:4</output>')
+    assert.equal(readValue(), 4)
+  })
+
+  it('retains JSX member expression component bindings across updates', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 1
+  let UI = { value: (handle) => () => <span>{handle.props.value}</span> }
+  handle.props.actions.setValue = (nextValue) => {
+    value = nextValue
+  }
+  return () => {
+    return <output>v1:{<UI.value value={value} />}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setValue(5)
+    await fixture.update(
+      source
+        .replace(
+          '<output>v1:{<UI.value value={value} />}</output>',
+          '<output>v1:{<UI.value value={value * 2} />}</output>',
+        )
+        .replaceAll('v1:', 'v2:'),
+    )
+    assert.equal(await fixture.render(), '<output>v2:<span>10</span></output>')
   })
 })
 
 describe('transformComponentsForServer', () => {
-  it('rewrites exported PascalCase function components into stateless HMR wrappers', () => {
-    let result = transformComponentsForServer(
-      `export function Counter(handle) {
+  it('supports exported PascalCase function components without retaining setup state', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    let source = `export function Counter() {
   let count = 0
-  return () => <button>{count}</button>
-}
-`,
-      { importSource: '@remix-run', moduleUrl: 'file:///app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.deepEqual(result.componentNames, ['Counter'])
-    assert.equal(
-      getGeneratedComponentImplementation(result.code, 'Counter'),
-      `function __remixComponentHmrImpl_Counter__(handle) {
-  let count = 0
-  return () => <button>{count}</button>
-}`,
-    )
-    assert.equal(
-      getGeneratedImports(result.code),
-      `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from "@remix-run/component-hmr/runtime/server";`,
-    )
-    assert.equal(
-      getGeneratedPublicWrapper(result.code, 'Counter'),
-      `export function Counter(handle) {
-  return __remixComponentHmr__.getCurrentComponentForHmr("file:///app/Counter.tsx", "Counter").apply(undefined, arguments);
-}`,
-    )
-    assert.match(
-      result.code,
-      /__remixComponentHmr__\.registerComponentForHmr\("file:\/\/\/app\/Counter\.tsx", "Counter", __remixComponentHmrImpl_Counter__\);/,
-    )
-    assert.equal(result.code.includes('getComponentHmrState'), false)
-    assert.equal(result.code.includes('setupComponentForHmr'), false)
-    assert.equal(result.code.includes('__remixComponentRefresh__'), false)
-    assert.equal(
-      getGeneratedComponentNames(result.code),
-      `let __remixComponentHmrComponentNames__ = ["Counter"];`,
-    )
-    assert.equal(
-      getGeneratedPreviousExports(result.code),
-      `let __remixComponentHmrPreviousExports__ = {
-  "Counter": Counter,
-};`,
-    )
-    assert.equal(getGeneratedUpdatedExportsCheck(result.code), updatedExportsCheckStatement)
-    assert.equal(getGeneratedComponentModuleUpdate(result.code), null)
+  return () => <button>v1:{++count}</button>
+}`
+    let Counter = getComponent(await host.load(source), 'Counter')
+    assert.equal(await renderToString(jsx(Counter, {})), '<button>v1:1</button>')
+    assert.equal(await renderToString(jsx(Counter, {})), '<button>v1:1</button>')
+    await host.update(source.replace('v1:', 'v2:').replace('++count', '++count * 2'))
+    assert.equal(await renderToString(jsx(Counter, {})), '<button>v2:2</button>')
+    assert.equal(await renderToString(jsx(Counter, {})), '<button>v2:2</button>')
+    assert.deepEqual(host.messages, [])
   })
 
   it('derives server runtime imports from the import source', () => {
@@ -1023,10 +1453,7 @@ describe('transformComponentsForServer', () => {
     )
 
     assert.equal(result.transformed, true)
-    assert.equal(
-      getGeneratedImports(result.code),
-      `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from "remix/component-hmr/runtime/server";`,
-    )
+    assert.deepEqual(getImportSources(result.code), ['remix/component-hmr/runtime/server'])
   })
 
   it('supports custom server runtime import sources', () => {
@@ -1039,65 +1466,67 @@ describe('transformComponentsForServer', () => {
     )
 
     assert.equal(result.transformed, true)
-    assert.equal(
-      getGeneratedImports(result.code),
-      `import { __componentHmrServerRuntime__ as __remixComponentHmr__ } from "@acme/remix/component-hmr/runtime/server";`,
-    )
+    assert.deepEqual(getImportSources(result.code), ['@acme/remix/component-hmr/runtime/server'])
   })
 
-  it('generates source maps for transformed server modules', () => {
-    let source = `export function Counter() {
-  return () => <button>Count</button>
+  it('supports exported client entry function components without retaining setup state', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    let source = `import { clientEntry } from '@remix-run/component'
+export const Counter = clientEntry(import.meta.url, function Counter() {
+  let count = 0
+  return () => <button>v1:{++count}</button>
+})`
+    let Counter = getComponent(await host.load(source), 'Counter')
+    assert.match(await renderToString(jsx(Counter, {})), /<button>v1:1<\/button>/)
+    assert.match(await renderToString(jsx(Counter, {})), /<button>v1:1<\/button>/)
+    await host.update(source.replace('v1:', 'v2:').replace('++count', '++count * 2'))
+    assert.match(await renderToString(jsx(Counter, {})), /<button>v2:2<\/button>/)
+    assert.match(await renderToString(jsx(Counter, {})), /<button>v2:2<\/button>/)
+    assert.deepEqual(host.messages, [])
+  })
+
+  it('preserves named component self-bindings on the server after an update', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    let source = `export const Component = function Self(handle, read = () => Self) {
+  return () => <output>v1:{String(Self === read())}:{Self.name}</output>
+}`
+    let Component = getComponent(await host.load(source), 'Component')
+    await host.update(source.replace('v1:', 'v2:'))
+    assert.equal(await renderToString(jsx(Component, {})), '<output>v2:true:Self</output>')
+  })
+
+  it('preserves the inner self-binding of wrapped client entries on the server', async (t) => {
+    let source = `import { clientEntry } from '@remix-run/component'
+function countCalls(component) {
+  component.calls = 0
+  return function Wrapped(handle) {
+    component.calls++
+    return component(handle)
+  }
 }
-`
-    let result = transformComponentsForServer(source, {
-      importSource: '@remix-run',
-      moduleUrl: 'file:///app/Counter.tsx',
-      sourceMap: true,
-    })
-
-    assert.equal(result.transformed, true)
-    assertSourceMapPosition(result.map, result.code, source, '<button>Count</button>')
+export const Component = clientEntry(import.meta.url, countCalls(function Self() {
+  return () => <output>v1:{Self.calls}</output>
+}))`
+    let host = createModuleHost(t, transformComponentsForServer)
+    await host.load(source)
+    let Component = getComponent(await host.update(source.replace('v1:', 'v2:')), 'Component')
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let render = Component({ signal: controller.signal, props: {} })
+    assert.equal(await renderToString(render()), '<output>v2:1</output>')
   })
 
-  it('rewrites exported client entry function components without hoisting setup state', () => {
-    let result = transformComponentsForServer(
-      `export const Counter = clientEntry(import.meta.url, function Counter(handle) {
-  let count = 0
-  return () => jsx('button', { children: count })
-})
-`,
-      { importSource: '@remix-run', moduleUrl: 'file:///app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.deepEqual(result.componentNames, ['Counter'])
+  it('evaluates server parameter defaults once per setup after an update', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    let source = `export function Component(handle, value = ++handle.props.counter.value) {
+  return () => <output>v1:{value}:{handle.props.counter.value}</output>
+}`
+    let Component = getComponent(await host.load(source), 'Component')
+    await host.update(source.replace('v1:', 'v2:'))
     assert.equal(
-      getGeneratedComponentImplementation(result.code, 'Counter'),
-      `function __remixComponentHmrImpl_Counter__(handle) {
-  let count = 0
-  return () => jsx('button', { children: count })
-}`,
+      await renderToString(jsx(Component, { counter: { value: 0 } })),
+      '<output>v2:1:1</output>',
     )
-    assert.equal(
-      getGeneratedPublicWrapper(result.code, 'Counter'),
-      `export const Counter = clientEntry(import.meta.url, function Counter(handle) {
-  return __remixComponentHmr__.getCurrentComponentForHmr("file:///app/Counter.tsx", "Counter").apply(undefined, arguments);
-})`,
-    )
-    assert.equal(
-      getGeneratedComponentNames(result.code),
-      `let __remixComponentHmrComponentNames__ = ["Counter"];`,
-    )
-    assert.equal(
-      getGeneratedPreviousExports(result.code),
-      `let __remixComponentHmrPreviousExports__ = {
-  "Counter": Counter,
-};`,
-    )
-    assert.equal(getGeneratedUpdatedExportsCheck(result.code), updatedExportsCheckStatement)
-    assert.equal(getGeneratedComponentModuleUpdate(result.code), null)
-    assert.equal(result.code.includes('__s__.count'), false)
   })
 
   it('does not transform non-component functions', () => {
@@ -1114,292 +1543,875 @@ describe('transformComponentsForServer', () => {
     assert.equal(result.code, source)
   })
 
-  it('transforms component modules with non-component tracked exports', () => {
-    let result = transformComponentsForServer(
-      `export const loader = () => new Response('ok')
-
+  it('transforms component modules with non-component tracked exports', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    let source = `import * as component from '@remix-run/component'
+export { component as stable }
 export function Counter() {
-  return () => <button>Count</button>
-}
-`,
-      { importSource: '@remix-run', moduleUrl: 'file:///app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.deepEqual(result.componentNames, ['Counter'])
-    assert.equal(
-      getGeneratedPreviousExports(result.code),
-      `let __remixComponentHmrPreviousExports__ = {
-  "loader": loader,
-  "Counter": Counter,
-};`,
-    )
+  return () => 'Count'
+}`
+    let Counter = getComponent(await host.load(source), 'Counter')
+    await host.update(source.replace("'Count'", "'Updated'"))
+    assert.deepEqual(host.messages, [])
+    assert.equal(await renderToString(jsx(Counter, {})), 'Updated')
   })
 
-  it('rejects updates with incompatible tracked exports', () => {
-    let result = transformComponentsForServer(
-      `export function Counter() {
-  return () => <button>Count</button>
-}
-`,
-      { importSource: '@remix-run', moduleUrl: 'file:///app/Counter.tsx' },
-    )
-
-    assert.equal(result.transformed, true)
-    assert.equal(getGeneratedUpdatedExportsCheck(result.code), updatedExportsCheckStatement)
+  it('invalidates while evaluating an added component export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    await host.load(plainComponentSource)
+    await host.load(`${plainComponentSource}\nexport function Added() { return () => null }`)
+    assert.deepEqual(host.messages, ['Updated component module changed its exports'])
   })
 
-  it('allows component modules with type-only exports', () => {
-    let result = transformComponentsForServer(
-      `export type CounterProps = {
+  it('invalidates while evaluating a removed component export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    await host.load(`${plainComponentSource}\nexport function Removed() { return () => null }`)
+    await host.load(plainComponentSource)
+    assert.deepEqual(host.messages, ['Updated component module changed its exports'])
+  })
+
+  it('invalidates an added non-component export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    await host.load(plainComponentSource)
+    await host.update(`${plainComponentSource}\nexport const value = true`)
+    assert.deepEqual(host.messages, ['Updated component module added export "value"'])
+  })
+
+  it('invalidates a removed non-component export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    await host.load(`${plainComponentSource}\nexport const value = true`)
+    await host.update(plainComponentSource)
+    assert.deepEqual(host.messages, ['Updated component module removed export "value"'])
+  })
+
+  it('invalidates a changed non-component primitive export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    await host.load(`${plainComponentSource}\nexport const value = true`)
+    await host.update(`${plainComponentSource}\nexport const value = false`)
+    assert.deepEqual(host.messages, [
+      'Updated component module changed non-component export "value"',
+    ])
+  })
+
+  it('invalidates a recreated non-component object export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    let source = `${plainComponentSource}\nexport const value = {}`
+    await host.load(source)
+    await host.update(source)
+    assert.deepEqual(host.messages, [
+      'Updated component module changed non-component export "value"',
+    ])
+  })
+
+  it('invalidates an update that recreates a non-component function export', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    let source = `export const loader = () => new Response('ok')
+export function Component() {
+  return () => 'Count'
+}`
+    await host.load(source)
+    await host.update(source.replace("'Count'", "'Updated'"))
+    assert.deepEqual(host.messages, [
+      'Updated component module changed non-component export "loader"',
+    ])
+  })
+
+  it('allows component modules with type-only exports', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    let source = `export type CounterProps = {
   count: number
 }
 
-export function Counter() {
-  return ({ count }: CounterProps) => <button>{count}</button>
-}
-`,
-      { importSource: '@remix-run', moduleUrl: 'file:///app/Counter.tsx' },
-    )
+export function Counter(handle) {
+  let props: CounterProps = handle.props
+  return () => <button>v1:{props.count}</button>
+}`
+    let Counter = getComponent(await host.load(source), 'Counter')
+    assert.equal(await renderToString(jsx(Counter, { count: 2 })), '<button>v1:2</button>')
+    await host.update(source.replace('v1:', 'v2:').replace('props.count}', 'props.count * 3}'))
+    assert.equal(await renderToString(jsx(Counter, { count: 2 })), '<button>v2:6</button>')
+    assert.deepEqual(host.messages, [])
+  })
 
+  it('reports supported component export names separately from other exports', () => {
+    let result = transformComponentsForServer(
+      `import { clientEntry } from '@remix-run/component'
+export function Component() {
+  return () => 'plain'
+}
+export const Entry = clientEntry(import.meta.url, function Entry() {
+  return () => 'entry'
+})
+export const Selected = true ? Component : Entry
+export function loader() {
+  return new Response('ok')
+}
+export type Props = { count: number }`,
+      { importSource: '@remix-run', moduleUrl: '/app/Component.tsx' },
+    )
     assert.equal(result.transformed, true)
-    assert.deepEqual(result.componentNames, ['Counter'])
+    assert.deepEqual(result.componentNames, ['Component', 'Entry'])
   })
 })
 
-function assertSourceMapPosition(
-  sourceMap: string | null,
-  generatedSource: string,
-  originalSource: string,
-  search: string,
-): void {
-  assert.ok(sourceMap)
-  let consumer = new SourceMapConsumer(JSON.parse(sourceMap))
-  let generated = getLineAndColumn(generatedSource, search)
-  let expected = getLineAndColumn(originalSource, search)
-  let original = consumer.originalPositionFor(generated)
-
-  assert.equal(original.line, expected.line)
-  assert.equal(original.column, expected.column)
-}
-
-function getGeneratedComponentImplementation(code: string, componentName: string): string {
-  let implementationName = `__remixComponentHmrImpl_${componentName}__`
-  let start = code.indexOf(`function ${implementationName}`)
-  assert.notEqual(start, -1)
-
-  let end = findFirstIndex(
-    [
-      `\nexport function ${componentName}`,
-      `\nfunction ${componentName}`,
-      `\nexport const ${componentName}`,
-      `\nconst ${componentName}`,
-    ],
-    code,
-    start,
-  )
-  assert.notEqual(end, -1)
-
-  return code.slice(start, end).replace(/"[^"]+", \(__s__\) => \{/, `"<setup-hash>", (__s__) => {`)
-}
-
-function getGeneratedImports(code: string): string {
-  let end = code.indexOf('\nfunction __remixComponentHmrImpl_')
-  assert.notEqual(end, -1)
-
-  return code.slice(0, end)
-}
-
-function getGeneratedPublicWrapper(code: string, componentName: string): string {
-  let implementationStart = code.indexOf(`function __remixComponentHmrImpl_${componentName}__`)
-  assert.notEqual(implementationStart, -1)
-
-  let start = findFirstIndex(
-    [
-      `\nexport function ${componentName}`,
-      `\nfunction ${componentName}`,
-      `\nexport const ${componentName}`,
-      `\nconst ${componentName}`,
-    ],
-    code,
-    implementationStart,
-  )
-  assert.notEqual(start, -1)
-
-  let end = findFirstIndex(
-    [`\n__remixComponentHmr__.registerComponentForHmr`, `\nexport {\n`],
-    code,
-    start + 1,
-  )
-  assert.notEqual(end, -1)
-
-  return code.slice(start + 1, end)
-}
-
-function getGeneratedPreviousExports(code: string): string {
-  let prefix = 'let __remixComponentHmrPreviousExports__ = '
-  let start = code.indexOf(prefix)
-  assert.notEqual(start, -1)
-
-  let end = code.indexOf(';\n  import.meta.hot.accept', start)
-  assert.notEqual(end, -1)
-
-  return code.slice(start, end + 1)
-}
-
-function getGeneratedNamedExports(code: string): string {
-  let start = code.indexOf('\nexport {\n')
-  assert.notEqual(start, -1)
-
-  let end = code.indexOf('\n}', start)
-  assert.notEqual(end, -1)
-
-  return code.slice(start + 1, end + 2)
-}
-
-function getGeneratedComponentNames(code: string): string {
-  let match = /let __remixComponentHmrComponentNames__ = [^;]+;/.exec(code)
-  assert.ok(match)
-
-  return match[0]
-}
-
-function getGeneratedUpdatedExportsCheck(code: string): string {
-  let prefix = 'let __remixComponentHmrInvalidationMessage__ = '
-  let start = code.indexOf(prefix)
-  assert.notEqual(start, -1)
-
-  let end = findFirstIndex(
-    [
-      `;\n      if (__remixComponentHmrInvalidationMessage__)`,
-      `;\n    if (__remixComponentHmrInvalidationMessage__)`,
-    ],
-    code,
-    start,
-  )
-  assert.notEqual(end, -1)
-
-  return code.slice(start, end + 1)
-}
-
-function getGeneratedComponentModuleUpdate(code: string): string | null {
-  let match = /__remixComponentHmr__\.updateComponentModuleForHmr\([^;]+;/.exec(code)
-  return match?.[0] ?? null
-}
-
-function findFirstIndex(needles: readonly string[], haystack: string, fromIndex: number): number {
-  let firstIndex = -1
-
-  for (let needle of needles) {
-    let index = haystack.indexOf(needle, fromIndex)
-    if (index !== -1 && (firstIndex === -1 || index < firstIndex)) {
-      firstIndex = index
-    }
-  }
-
-  return firstIndex
-}
-
-function getLineAndColumn(source: string, search: string): { column: number; line: number } {
-  let index = source.indexOf(search)
-  assert.notEqual(index, -1)
-
-  let lines = source.slice(0, index).split('\n')
-  return {
-    column: lines.at(-1)?.length ?? 0,
-    line: lines.length,
-  }
+function getImportSources(code: string): string[] {
+  return parseSync('component.tsx', code, { sourceType: 'module' })
+    .program.body.filter((node) => node.type === 'ImportDeclaration')
+    .map((node) => node.source.value)
 }
 
 describe('server client-entry boundary compatibility', () => {
-  it('invalidates while evaluating an added or removed client entry', () => {
-    assertClientEntryStatusChanges(transformComponentsForServer)
+  it('invalidates while evaluating an added or removed client entry', async (t) => {
+    await assertClientEntryStatusChanges(t, transformComponentsForServer)
   })
 
-  it('accepts repeated render-only edits with unchanged entry status', () => {
-    assertClientEntryRenderEdits(transformComponentsForServer)
+  it('accepts repeated render-only edits with unchanged entry status', async (t) => {
+    for (let initial of [plainComponentSource, clientEntryComponentSource]) {
+      let host = createModuleHost(t, transformComponentsForServer)
+      let Component = getComponent(await host.load(initial), 'Component')
+      assert.match(await renderToString(jsx(Component, {})), /Count/)
+      for (let label of ['One', 'Two', 'Three']) {
+        await host.update(initial.replace("'Count'", JSON.stringify(label)))
+        assert.deepEqual(host.messages, [])
+        assert.match(await renderToString(jsx(Component, {})), new RegExp(label))
+      }
+    }
   })
 
-  it('accepts an unchanged module containing plain and client-entry components', () => {
-    let data = {}
-    let source = `${plainComponentSource}\n${clientEntryComponentSource.replaceAll('Counter', 'Other')}`
-    assert.deepEqual(evaluateBoundary(transformComponentsForServer, source, data), [])
-    assert.deepEqual(evaluateBoundary(transformComponentsForServer, source, data), [])
+  it('renders updated plain and client-entry components from the same module', async (t) => {
+    let host = createModuleHost(t, transformComponentsForServer)
+    let source = `import { clientEntry } from '@remix-run/component'
+export const Other = clientEntry(import.meta.url, function Other() {
+  return () => <span>entry:Count</span>
+})
+export function Component() {
+  return () => (
+    <main>
+      plain:Count
+      <Other />
+    </main>
+  )
+}`
+    let module = await host.load(source)
+    await host.update(source.replaceAll('Count', 'Updated'))
+    let after = await renderToString(jsx(getComponent(module, 'Component'), {}))
+    assert.match(after, /plain:Updated/)
+    assert.match(after, /<span>entry:Updated<\/span>/)
+    assert.deepEqual(host.messages, [])
   })
 })
 
 describe('browser client-entry boundary compatibility', () => {
-  it('invalidates while evaluating an added or removed client entry', () => {
-    assertClientEntryStatusChanges(transformComponentsForBrowser)
-  })
-
-  it('accepts repeated render-only edits with unchanged entry status', () => {
-    assertClientEntryRenderEdits(transformComponentsForBrowser)
-  })
-
-  it('accepts an unchanged module containing plain and client-entry components', () => {
-    let data = {}
-    let source = `${plainComponentSource}\n${clientEntryComponentSource.replaceAll('Counter', 'Other')}`
-    assert.deepEqual(evaluateBoundary(transformComponentsForBrowser, source, data), [])
-    assert.deepEqual(evaluateBoundary(transformComponentsForBrowser, source, data), [])
+  it('invalidates while evaluating an added or removed client entry', async (t) => {
+    await assertClientEntryStatusChanges(t, transformComponentsForBrowser)
   })
 })
 
-const plainComponentSource = `export function Counter() { return () => 'Count' }`
-const clientEntryComponentSource = `export const Counter = clientEntry(import.meta.url, function Counter() { return () => 'Count' })`
+const plainComponentSource = `export function Component() {
+  return () => 'Count'
+}`
+const clientEntryComponentSource = `import { clientEntry } from '@remix-run/component'
+export const Component = clientEntry(import.meta.url, function Component() {
+  return () => 'Count'
+})`
 
-function assertClientEntryStatusChanges(transform: typeof transformComponentsForServer): void {
+async function assertClientEntryStatusChanges(
+  t: TestContext,
+  transform: typeof transformComponentsForServer,
+): Promise<void> {
   for (let [before, after] of [
     [plainComponentSource, clientEntryComponentSource],
     [clientEntryComponentSource, plainComponentSource],
   ]) {
-    let data = {}
-    assert.deepEqual(evaluateBoundary(transform, before, data), [])
-    assert.deepEqual(evaluateBoundary(transform, after, data), [
-      'Updated component module changed its client entries',
-    ])
+    let host = createModuleHost(t, transform)
+    await host.load(before)
+    // Invalidation must happen during module evaluation, before calling the accept handler.
+    await host.load(after)
+    assert.deepEqual(host.messages, ['Updated component module changed its client entries'])
   }
 }
 
-function assertClientEntryRenderEdits(transform: typeof transformComponentsForServer): void {
-  for (let initial of [plainComponentSource, clientEntryComponentSource]) {
-    let data = {}
-    for (let label of ['One', 'Two', 'Three']) {
-      assert.deepEqual(
-        evaluateBoundary(transform, initial.replace("'Count'", JSON.stringify(label)), data),
-        [],
-      )
-    }
-  }
-}
+describe('browser component HMR updates', () => {
+  it('does not rerun setup for render-only updates', async (t) => {
+    let source = `export function Component(handle) {
+  handle.props.actions.createdInSetup = () => 'setup'
+  return () => <output>v1</output>
+}`
+    let fixture = await createComponent(t, source)
+    let createdInSetup = fixture.actions.createdInSetup
+    assert.equal(createdInSetup(), 'setup')
+    await fixture.update(source.replace('v1', 'v2'))
+    await fixture.update(source.replace('v1', 'v3'))
+    assert.equal(fixture.actions.createdInSetup, createdInSetup)
+  })
 
-function evaluateBoundary(
-  transform: typeof transformComponentsForServer,
-  source: string,
-  data: object,
-): string[] {
-  let result = transform(source, { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' })
-  assert.equal(result.transformed, true)
-  let index = result.code.indexOf('if (import.meta.hot) {')
-  assert.notEqual(index, -1)
-  let messages: string[] = []
-  let hot = {
-    data,
-    accept() {},
-    invalidate(message: string) {
-      messages.push(message)
+  it('shares initializer captures and render assignments across repeated updates', async (t) => {
+    let source = `export function Component(handle) {
+  let model = {
+    count: 0,
+    increment() {
+      model.count++
     },
   }
-  // Execute the generated module-evaluation boundary check, before acceptance.
-  new Function(
-    'hot',
-    'Counter',
-    'Other',
-    result.code.slice(index).replaceAll('import.meta.hot', 'hot'),
-  )(
-    hot,
-    () => {},
-    () => {},
+  handle.props.actions.originalIncrement = model.increment
+  return () => {
+    handle.props.actions.increment = model.increment
+    handle.props.actions.reset = () => {
+      model = { ...model, count: 10 }
+    }
+    return <output>v1:{model.count}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.render()
+    fixture.actions.increment()
+    await fixture.update(source.replace('v1:', 'v2:').replace('{model.count}', '{model.count * 2}'))
+    assert.equal(await fixture.render(), '<output>v2:2</output>')
+    fixture.actions.reset()
+    fixture.actions.increment()
+    assert.equal(await fixture.render(), '<output>v2:22</output>')
+    await fixture.update(source.replace('v1:', 'v3:').replace('{model.count}', '{model.count * 3}'))
+    assert.equal(await fixture.render(), '<output>v3:33</output>')
+    fixture.actions.originalIncrement()
+    assert.equal(await fixture.render(), '<output>v3:36</output>')
+  })
+
+  it('runs abort callbacks registered before their setup binding after an update', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 1
+  handle.signal.addEventListener('abort', () => reset())
+  let reset = () => {
+    handle.props.actions.readValue = () => value
+  }
+  handle.props.actions.setValue = (nextValue) => {
+    value = nextValue
+  }
+  return () => <output>v1:{value}</output>
+}`
+    let fixture = await createComponent(t, source)
+    await fixture.update(source.replace('v1:', 'v2:'))
+    fixture.actions.setValue(9)
+    fixture.close()
+    assert.equal(fixture.actions.readValue(), 9)
+  })
+
+  it('updates retained spread attributes inside JSX fragments', async (t) => {
+    let source = `export function Component(handle) {
+  let props = { placeholder: 'initial' }
+  handle.props.actions.setProps = (nextProps) => {
+    props = nextProps
+  }
+  return () => (
+    <>
+      <input {...props} />
+      {/* comment */}
+    </>
   )
-  return messages
+}`
+    let fixture = await createComponent(t, source)
+    fixture.actions.setProps({ placeholder: 'retained' })
+    await fixture.update(
+      source.replace('<input {...props} />', '<input {...props} title="updated" />'),
+    )
+    assert.equal(await fixture.render(), '<input placeholder="retained" title="updated" />')
+  })
+
+  it('refreshes asynchronous callbacks containing dynamic imports', async (t) => {
+    let source = `export function Component(handle) {
+  let value = 1
+  handle.props.actions.readValue = () => value
+  return () => {
+    handle.props.actions.add = async () => {
+      let module = await import('@remix-run/component', { with: value > 0 ? {} : {} })
+      if (module.createRoot) value += 1
+    }
+    return <output>v1:{value}</output>
+  }
+}`
+    let fixture = await createComponent(t, source)
+    let readValue = fixture.actions.readValue
+    await fixture.update(source.replace('v1:', 'v2:').replace('value += 1', 'value += 3'))
+    await fixture.render()
+    await fixture.actions.add()
+    assert.equal(await fixture.render(), '<output>v2:4</output>')
+    assert.equal(readValue(), 4)
+  })
+
+  it('updates mixed plain and client-entry components through repeated edits', async (t) => {
+    let source = `import { clientEntry } from '@remix-run/component'
+export const Child = clientEntry(import.meta.url, function Child(handle) {
+  return () => <span>child:{handle.props.value}</span>
+})
+export function Component() {
+  let value = 1
+  return () => <output>v1:parent:{value}</output>
+}`
+    let host = createModuleHost(t)
+    let module = await host.load(source)
+    let Child = getComponent(module, 'Child')
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { value: 2 } }
+    let parent = getComponent(module, 'Component')(handle)
+    let child: unknown = Child({ ...handle })
+    assert.ok(typeof child === 'function')
+    await host.update(source.replace('v1:', 'v2:').replace('child:', 'updated child:'))
+    assert.equal(await renderToString(parent()), '<output>v2:parent:1</output>')
+    assert.equal(await renderToString(child()), '<span>updated child:2</span>')
+    await host.update(source.replace('v1:', 'v3:').replace('parent:', 'updated parent:'))
+    assert.equal(await renderToString(parent()), '<output>v3:updated parent:1</output>')
+    assert.equal(await renderToString(child()), '<span>child:2</span>')
+    assert.deepEqual(host.messages, [])
+  })
+})
+
+describe('component HMR evaluation failures', () => {
+  it('keeps rejected browser edits out of children mounted by retained setup callbacks', async (t) => {
+    let source = `export function Child() {
+  let label = 'working'
+  return () => <output>{label}</output>
+}
+export function Component(handle) {
+  handle.props.actions.mountChild = (childHandle) => Child(childHandle)
+  return () => <main>parent</main>
+}`
+    let host = createModuleHost(t)
+    let module = await host.load(source)
+    let Child = getComponent(module, 'Child')
+    let actions: { mountChild?: ComponentFunction } = {}
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { actions } }
+    getComponent(module, 'Component')(handle)
+    let mountChild = actions.mountChild
+    assert.ok(mountChild)
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    await assert.rejects(
+      host.update(`${source.replace('working', 'rejected')}\nthrow new Error("rejected edit")`),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>recovered</output>')
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await assert.rejects(
+      host.update(
+        `${source.replace('working', 'rejected again')}\nthrow new Error("rejected edit")`,
+      ),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await host.update(source.replace('working', 'final'))
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>final</output>')
+    assert.deepEqual(host.messages, [])
+  })
+
+  it('keeps rejected server edits out of retained component references', async (t) => {
+    let source = `export function Child() {
+  let label = 'working'
+  return () => <output>{label}</output>
+}
+export function Component(handle) {
+  handle.props.actions.mountChild = (childHandle) => Child(childHandle)
+  return () => <main>parent</main>
+}`
+    let host = createModuleHost(t, transformComponentsForServer)
+    let module = await host.load(source)
+    let Child = getComponent(module, 'Child')
+    let actions: { mountChild?: ComponentFunction } = {}
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { actions } }
+    getComponent(module, 'Component')(handle)
+    let mountChild = actions.mountChild
+    assert.ok(mountChild)
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    await assert.rejects(
+      host.update(`${source.replace('working', 'rejected')}\nthrow new Error("rejected edit")`),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>recovered</output>')
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await assert.rejects(
+      host.update(
+        `${source.replace('working', 'rejected again')}\nthrow new Error("rejected edit")`,
+      ),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await host.update(source.replace('working', 'final'))
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>final</output>')
+    assert.deepEqual(host.messages, [])
+  })
+
+  it('keeps asynchronously rejected browser edits out of retained component references', async (t) => {
+    let source = `export function Child() {
+  let label = 'working'
+  return () => <output>{label}</output>
+}
+export function Component(handle) {
+  handle.props.actions.mountChild = (childHandle) => Child(childHandle)
+  return () => <main>parent</main>
+}`
+    let host = createModuleHost(t)
+    let module = await host.load(source)
+    let Child = getComponent(module, 'Child')
+    let actions: { mountChild?: ComponentFunction } = {}
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { actions } }
+    getComponent(module, 'Component')(handle)
+    let mountChild = actions.mountChild
+    assert.ok(mountChild)
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    await assert.rejects(
+      host.update(
+        `${source.replace('working', 'rejected')}\nawait Promise.reject(new Error("rejected edit"))`,
+      ),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>recovered</output>')
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await assert.rejects(
+      host.update(
+        `${source.replace('working', 'rejected again')}\nawait Promise.reject(new Error("rejected edit"))`,
+      ),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await host.update(source.replace('working', 'final'))
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>final</output>')
+    assert.deepEqual(host.messages, [])
+  })
+
+  it('keeps asynchronously rejected server edits out of retained component references', async (t) => {
+    let source = `export function Child() {
+  let label = 'working'
+  return () => <output>{label}</output>
+}
+export function Component(handle) {
+  handle.props.actions.mountChild = (childHandle) => Child(childHandle)
+  return () => <main>parent</main>
+}`
+    let host = createModuleHost(t, transformComponentsForServer)
+    let module = await host.load(source)
+    let Child = getComponent(module, 'Child')
+    let actions: { mountChild?: ComponentFunction } = {}
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { actions } }
+    getComponent(module, 'Component')(handle)
+    let mountChild = actions.mountChild
+    assert.ok(mountChild)
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    await assert.rejects(
+      host.update(
+        `${source.replace('working', 'rejected')}\nawait Promise.reject(new Error("rejected edit"))`,
+      ),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>working</output>')
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Child({ ...handle })()), '<output>recovered</output>')
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await assert.rejects(
+      host.update(
+        `${source.replace('working', 'rejected again')}\nawait Promise.reject(new Error("rejected edit"))`,
+      ),
+      /rejected edit/,
+    )
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>recovered</output>')
+    await host.update(source.replace('working', 'final'))
+    assert.equal(await renderToString(mountChild({ ...handle })()), '<output>final</output>')
+    assert.deepEqual(host.messages, [])
+  })
+
+  it('preserves a retained named client-entry self-reference after browser evaluation rejects', async (t) => {
+    let source = `import { clientEntry } from '@remix-run/component'
+export const Component = clientEntry(import.meta.url, (function decorate(component) {
+  return (handle) => component(handle)
+})(function Self(handle) {
+  handle.props.actions.mountSelf = (nextHandle) => Self(nextHandle)
+  return () => <output>working</output>
+}))`
+    let host = createModuleHost(t)
+    let Component = getComponent(await host.load(source), 'Component')
+    let actions: Record<string, (...args: unknown[]) => unknown> = {}
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { actions } }
+    Component(handle)
+    let mountSelf = actions.mountSelf
+    await assert.rejects(
+      host.update(`${source.replace('working', 'rejected')}
+await Promise.reject(new Error('rejected self edit'))`),
+      /rejected self edit/,
+    )
+    let render = mountSelf({ ...handle })
+    assert.ok(typeof render === 'function')
+    assert.equal(await renderToString(render()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    render = mountSelf({ ...handle })
+    assert.ok(typeof render === 'function')
+    assert.equal(await renderToString(render()), '<output>recovered</output>')
+  })
+
+  it('preserves a retained named client-entry self-reference after server evaluation rejects', async (t) => {
+    let source = `import { clientEntry } from '@remix-run/component'
+export const Component = clientEntry(import.meta.url, (function decorate(component) {
+  return (handle) => component(handle)
+})(function Self(handle) {
+  handle.props.actions.mountSelf = (nextHandle) => Self(nextHandle)
+  return () => <output>working</output>
+}))`
+    let host = createModuleHost(t, transformComponentsForServer)
+    let Component = getComponent(await host.load(source), 'Component')
+    let actions: Record<string, (...args: unknown[]) => unknown> = {}
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: { actions } }
+    Component(handle)
+    let mountSelf = actions.mountSelf
+    await assert.rejects(
+      host.update(`${source.replace('working', 'rejected')}
+await Promise.reject(new Error('rejected self edit'))`),
+      /rejected self edit/,
+    )
+    let render = mountSelf({ ...handle })
+    assert.ok(typeof render === 'function')
+    assert.equal(await renderToString(render()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    render = mountSelf({ ...handle })
+    assert.ok(typeof render === 'function')
+    assert.equal(await renderToString(render()), '<output>recovered</output>')
+  })
+
+  it('isolates replacements while top-level await is pending and tracks old-wrapper mounts', async (t) => {
+    let source = `export function Component() {
+  return () => <output>working</output>
+}`
+    let host = createModuleHost(t)
+    let Component = getComponent(await host.load(source), 'Component')
+    let entered = Promise.withResolvers<unknown>()
+    let gate = Promise.withResolvers<void>()
+    host.data.entered = entered.resolve
+    host.data.gate = gate.promise
+    let updating = host.update(`${source.replace('working', 'pending')}
+import.meta.hot.data.entered(Component)
+await import.meta.hot.data.gate`)
+    let Pending = getComponent({ Component: await entered.promise }, 'Component')
+    let first = new AbortController()
+    let second = new AbortController()
+    t.after(() => {
+      first.abort()
+      second.abort()
+    })
+    let retainedRender = Component({ signal: first.signal, props: {} })
+    let pendingRender = Pending({ signal: second.signal, props: {} })
+    assert.equal(await renderToString(retainedRender()), '<output>working</output>')
+    assert.equal(await renderToString(pendingRender()), '<output>pending</output>')
+    gate.resolve()
+    await updating
+    assert.equal(await renderToString(retainedRender()), '<output>pending</output>')
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(retainedRender()), '<output>recovered</output>')
+    assert.equal(await renderToString(pendingRender()), '<output>recovered</output>')
+  })
+
+  it('keeps server replacements private while top-level await is pending', async (t) => {
+    let source = `export function Component() {
+  return () => <output>working</output>
+}`
+    let host = createModuleHost(t, transformComponentsForServer)
+    let Component = getComponent(await host.load(source), 'Component')
+    let entered = Promise.withResolvers<unknown>()
+    let gate = Promise.withResolvers<void>()
+    host.data.entered = entered.resolve
+    host.data.gate = gate.promise
+    let updating = host.update(`${source.replace('working', 'pending')}
+import.meta.hot.data.entered(Component)
+await import.meta.hot.data.gate`)
+    let Pending = getComponent({ Component: await entered.promise }, 'Component')
+    let handle = { signal: new AbortController().signal, props: {} }
+    assert.equal(await renderToString(Component(handle)()), '<output>working</output>')
+    assert.equal(await renderToString(Pending(handle)()), '<output>pending</output>')
+    gate.reject(new Error('await rejected'))
+    await assert.rejects(updating, /await rejected/)
+    assert.equal(await renderToString(Component(handle)()), '<output>working</output>')
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Component(handle)()), '<output>recovered</output>')
+  })
+
+  it('tracks instances created during the initial asynchronous module evaluation', async (t) => {
+    let host = createModuleHost(t)
+    let entered = Promise.withResolvers<unknown>()
+    let gate = Promise.withResolvers<void>()
+    host.data.entered = entered.resolve
+    host.data.gate = gate.promise
+    let source = `export function Component() {
+  return () => <output>initial</output>
+}`
+    let loading = host.load(`${source}
+import.meta.hot.data.entered(Component)
+await import.meta.hot.data.gate`)
+    let Component = getComponent({ Component: await entered.promise }, 'Component')
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let render = Component({ signal: controller.signal, props: {} })
+    assert.equal(await renderToString(render()), '<output>initial</output>')
+    gate.resolve()
+    await loading
+    await host.update(source.replace('initial', 'updated'))
+    assert.equal(await renderToString(render()), '<output>updated</output>')
+  })
+
+  it('preserves browser calls to hoisted components before their declaration', async (t) => {
+    let source = `if (import.meta.hot.data.mount) import.meta.hot.data.mount(Component)
+export function Component() {
+  return () => <output>working</output>
+}`
+    let host = createModuleHost(t)
+    await host.load(source)
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let render: (() => RemixNode) | undefined
+    host.data.mount = (component: unknown) => {
+      let Component = getComponent({ Component: component }, 'Component')
+      render = Component({ signal: controller.signal, props: {} })
+    }
+    await host.update(source.replace('working', 'updated'))
+    assert.ok(render)
+    assert.equal(await renderToString(render()), '<output>updated</output>')
+  })
+
+  it('preserves server calls to hoisted components before their declaration', async (t) => {
+    let source = `if (import.meta.hot.data.mount) import.meta.hot.data.mount(Component)
+export function Component() {
+  return () => <output>working</output>
+}`
+    let host = createModuleHost(t, transformComponentsForServer)
+    await host.load(source)
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let render: (() => RemixNode) | undefined
+    host.data.mount = (component: unknown) => {
+      let Component = getComponent({ Component: component }, 'Component')
+      render = Component({ signal: controller.signal, props: {} })
+    }
+    await host.update(source.replace('working', 'updated'))
+    assert.ok(render)
+    assert.equal(await renderToString(render()), '<output>working</output>')
+  })
+
+  it('keeps a successful dependency update when its importer rejects', async (t) => {
+    let dependency = createModuleHost(t)
+    let source = `export function Component() {
+  return () => <output>working</output>
+}`
+    let Child = getComponent(await dependency.load(source), 'Component')
+    let importer = createModuleHost(t)
+    let Parent = getComponent(await importer.load(source), 'Component')
+    importer.data.updateDependency = () =>
+      dependency.update(source.replace('working', 'dependency updated'))
+    await assert.rejects(
+      importer.update(`${source.replace('working', 'importer rejected')}
+await import.meta.hot.data.updateDependency()
+throw new Error('importer rejected')`),
+      /importer rejected/,
+    )
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: {} }
+    assert.equal(await renderToString(Child(handle)()), '<output>dependency updated</output>')
+    assert.equal(await renderToString(Parent({ ...handle })()), '<output>working</output>')
+  })
+
+  it('publishes successfully evaluated browser modules even when component setup later throws', async (t) => {
+    let source = `export function Component() {
+  return () => <output>working</output>
+}`
+    let host = createModuleHost(t)
+    let Component = getComponent(await host.load(source), 'Component')
+    await host.update(
+      source.replace('return () =>', 'throw new Error("setup error"); return () =>'),
+    )
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: {} }
+    assert.throws(() => Component(handle), /setup error/)
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Component(handle)()), '<output>recovered</output>')
+  })
+
+  it('publishes successfully evaluated server modules even when rendering later throws', async (t) => {
+    let source = `export function Component() {
+  return () => <output>working</output>
+}`
+    let host = createModuleHost(t, transformComponentsForServer)
+    let Component = getComponent(await host.load(source), 'Component')
+    await host.update(
+      source.replace('<output>working</output>', '{ throw new Error("render error") }'),
+    )
+    let handle = { signal: new AbortController().signal, props: {} }
+    assert.throws(() => Component(handle)(), /render error/)
+    await host.update(source.replace('working', 'recovered'))
+    assert.equal(await renderToString(Component(handle)()), '<output>recovered</output>')
+  })
+
+  it('does not publish a partial module when evaluation fails between component declarations', async (t) => {
+    let source = `export function First() {
+  return () => <output>first</output>
+}
+// failure here
+export function Component() {
+  return () => <output>second</output>
+}`
+    let host = createModuleHost(t)
+    let module = await host.load(source)
+    await assert.rejects(
+      host.update(
+        source
+          .replace('first', 'rejected')
+          .replace('// failure here', 'throw new Error("between declarations")'),
+      ),
+      /between declarations/,
+    )
+    let controller = new AbortController()
+    t.after(() => controller.abort())
+    let handle = { signal: controller.signal, props: {} }
+    assert.equal(
+      await renderToString(getComponent(module, 'First')(handle)()),
+      '<output>first</output>',
+    )
+    assert.equal(
+      await renderToString(getComponent(module, 'Component')({ ...handle })()),
+      '<output>second</output>',
+    )
+  })
+})
+
+async function createComponent(
+  t: TestContext,
+  source: string,
+  componentName = 'Component',
+  lang: 'tsx' | 'jsx' = 'tsx',
+) {
+  let host = createModuleHost(t, transformComponentsForBrowser, lang)
+  let actions: Record<string, (...args: unknown[]) => unknown> = {}
+  let controller = new AbortController()
+  t.after(() => controller.abort())
+  let Component = getComponent(await host.load(source), componentName)
+  let render = Component({ signal: controller.signal, props: { actions } })
+  return {
+    actions,
+    close: () => controller.abort(),
+    render: (...args: unknown[]) => renderToString(render(...args)),
+    async update(next: string) {
+      await host.update(next)
+      assert.deepEqual(host.messages, [])
+    },
+  }
+}
+
+type ComponentFunction = (
+  handle: Pick<Handle<Record<string, unknown>>, 'signal' | 'props'>,
+) => (...args: unknown[]) => RemixNode
+
+type HotContext = {
+  data: Record<string, unknown>
+  accept(callback: (module: unknown) => void): void
+  invalidate(message: string): void
+}
+
+declare global {
+  var __componentHmrTestHot: HotContext | undefined
+}
+
+let nextModuleId = 0
+
+function createModuleHost(
+  t: TestContext,
+  transform = transformComponentsForBrowser,
+  lang: 'tsx' | 'jsx' = 'tsx',
+) {
+  let moduleUrl = `/test/component-${++nextModuleId}.${lang}`
+  let revision = 0
+  let data: Record<string, unknown> = {}
+  let acceptCallbacks: Array<(module: unknown) => void> = []
+  let messages: string[] = []
+  let prefix = `data:text/javascript;component-hmr=${nextModuleId},`
+  let hooks = registerHooks({
+    resolve(specifier, context, next) {
+      // Resolve the in-memory module's package imports from this package.
+      if (context.parentURL?.startsWith(prefix)) {
+        return next(specifier, { ...context, parentURL: import.meta.url })
+      }
+      return next(specifier, context)
+    },
+  })
+  t.after(() => hooks.deregister())
+
+  async function load(source: string): Promise<unknown> {
+    let result = transform(source, { importSource: '@remix-run', moduleUrl })
+    assert.ok(result.transformed, 'Expected a component HMR boundary')
+    let compiled = transformSync(moduleUrl, result.code, {
+      lang,
+      sourceType: 'module',
+      jsx: { runtime: 'automatic', importSource: '@remix-run/component' },
+    })
+    assert.deepEqual(compiled.errors, [])
+    let nextAcceptCallbacks: typeof acceptCallbacks = []
+    globalThis.__componentHmrTestHot = {
+      data,
+      accept(callback) {
+        nextAcceptCallbacks.push(callback)
+      },
+      invalidate(message) {
+        messages.push(message)
+      },
+    }
+    try {
+      let code = `import.meta.hot = globalThis.__componentHmrTestHot;\n${compiled.code}\n//# sourceURL=component-hmr-${nextModuleId}-${revision++}.mjs`
+      let module: unknown = await import(prefix + encodeURIComponent(code))
+      assert.ok(nextAcceptCallbacks.length > 0, 'Expected a self-accepting module')
+      acceptCallbacks = nextAcceptCallbacks
+      return module
+    } finally {
+      globalThis.__componentHmrTestHot = undefined
+    }
+  }
+
+  return {
+    data,
+    messages,
+    load,
+    async update(source: string) {
+      let previousCallbacks = acceptCallbacks
+      assert.ok(previousCallbacks.length > 0, 'Load a module before updating')
+      let module = await load(source)
+      for (let callback of previousCallbacks) {
+        await callback(module)
+      }
+      return module
+    },
+  }
+}
+
+function getComponent(module: unknown, name: string) {
+  assert.ok(typeof module === 'object' && module !== null)
+  let component: unknown = Reflect.get(module, name)
+  assert.ok(isComponent(component), `Expected an exported ${name} component`)
+  return component
+}
+
+function isComponent(value: unknown): value is ComponentFunction {
+  return typeof value === 'function'
 }

@@ -2,6 +2,12 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- `createRequest()` and `createRequestListener()` now validate the request host for every handler, including handlers that take no arguments. The effective host, whether it comes from the `host` option, a trusted `Forwarded` or `X-Forwarded-Host` header, HTTP/2 `:authority`, or `Host`, must be a hostname or bracketed IPv6 address with an optional port. Values with a path, query, fragment, userinfo, whitespace, or control characters, such as `example.com/../admin` or `user@example.com`, make `createRequest()` throw. `createRequestListener()` passes the error to `onError` and responds with `400 Bad Request` unless `onError` returns a response. An invalid trusted `X-Forwarded-Host` is rejected instead of falling back to `Host`. ([#12331](https://github.com/remix-run/remix/pull/12331))
+
 ## v1.0.0
 
 ### Major Changes

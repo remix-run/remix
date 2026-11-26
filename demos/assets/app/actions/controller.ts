@@ -24,6 +24,8 @@ export default createController(routes, {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>remix/assets demo</title>
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
     <link rel="stylesheet" href="${escapeHtml(styleUrl)}">
     <script type="importmap">${serializeImportMap(importMap)}</script>
     ${preloads.map((preloadHref) => `<link rel="modulepreload" href="${escapeHtml(preloadHref)}">`).join('\n    ')}

@@ -2,6 +2,37 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.3
+
+### Patch Changes
+
+- The starter app keeps single-use styles and helpers beside the JSX that uses them, and the bundled Remix skill favors keeping related code together. ([#12171](https://github.com/remix-run/remix/pull/12171))
+
+- New apps created with `remix new` on Windows can run `npm run dev` and `npm start` again. The generated scripts used `cross-env-shell`, which rewrote `--import remix/node-tsx` to `--import remix\node-tsx` on Windows and failed with `ERR_INVALID_MODULE_SPECIFIER`. Windows scripts now use `cross-env` instead. ([#12320](https://github.com/remix-run/remix/pull/12320))
+
+  Apps generated on Windows with an earlier version can update their `package.json` scripts the same way:
+
+  ```diff
+   "scripts": {
+  -  "dev": "cross-env-shell NODE_ENV=development \"node --watch --import remix/node-tsx server.ts\"",
+  -  "hmr": "cross-env-shell NODE_ENV=development \"node hmr.ts\"",
+  -  "start": "cross-env-shell NODE_ENV=production \"node --import remix/node-tsx server.ts\"",
+  -  "test": "cross-env-shell NODE_ENV=test \"remix test\""
+  +  "dev": "cross-env NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+  +  "hmr": "cross-env NODE_ENV=development node hmr.ts",
+  +  "start": "cross-env NODE_ENV=production node --import remix/node-tsx server.ts",
+  +  "test": "cross-env NODE_ENV=test remix test"
+   }
+  ```
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.3`](https://github.com/remix-run/remix/releases/tag/assets@1.0.3)
+  - [`data-table@1.1.0`](https://github.com/remix-run/remix/releases/tag/data-table@1.1.0)
+  - [`data-table-mysql@1.1.0`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@1.1.0)
+  - [`data-table-postgres@1.0.1`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@1.0.1)
+  - [`data-table-sqlite@1.1.0`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@1.1.0)
+  - [`test@1.2.0`](https://github.com/remix-run/remix/releases/tag/test@1.2.0)
+
 ## v1.0.2
 
 ### Patch Changes

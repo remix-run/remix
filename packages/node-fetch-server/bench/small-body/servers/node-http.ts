@@ -4,15 +4,15 @@ import * as stream from 'node:stream'
 const PORT = process.env.PORT || 3000
 
 let server = http.createServer(async (req, res) => {
-  console.log(`method: ${req.method ?? 'GET'}`)
-
+  let method = req.method ?? 'GET'
+  let headerBytes = 0
   for (let [key, value] of Object.entries(req.headers)) {
     if (Array.isArray(value)) {
       for (let item of value) {
-        console.log(`${key}: ${item}`)
+        headerBytes += key.length + item.length
       }
     } else if (value != null) {
-      console.log(`${key}: ${value}`)
+      headerBytes += key.length + value.length
     }
   }
 
@@ -20,18 +20,19 @@ let server = http.createServer(async (req, res) => {
   for await (let chunk of req) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
   }
-  console.log(`body: ${Buffer.concat(chunks).toString()}`)
+  let body = Buffer.concat(chunks).toString()
+  let html = `<html><body><h1>${method} ${headerBytes} ${body.length}</h1></body></html>`
 
   res.writeHead(200, { 'Content-Type': 'text/html' })
 
-  let body = new stream.Readable({
+  let responseBody = new stream.Readable({
     read() {
-      this.push('<html><body><h1>Hello, world!</h1></body></html>')
+      this.push(html)
       this.push(null)
     },
   })
 
-  body.pipe(res)
+  responseBody.pipe(res)
 })
 
 server.listen(PORT)

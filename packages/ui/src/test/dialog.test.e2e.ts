@@ -1,63 +1,154 @@
-import { createServer } from 'node:http'
-import { fileURLToPath } from 'node:url'
-import { build } from 'esbuild'
+import * as path from 'node:path'
 import { expect } from '@remix-run/assert'
+import { createAssetServer } from '@remix-run/assets'
+import { createTestServer } from '@remix-run/node-fetch-server/test'
 import { describe, it, type TestContext } from '@remix-run/test'
 
 async function openFixture(
   t: TestContext,
-  options: { modal?: boolean; confirm?: boolean; detached?: boolean } = {},
+  options: {
+    modal?: boolean | 'trap-focus'
+    confirm?: boolean
+    detached?: boolean
+    native?: boolean
+    bare?: boolean
+    open?: boolean
+  } = {},
 ) {
-  let result = await build({
-    entryPoints: [fileURLToPath(new URL('./dialog.fixture.tsx', import.meta.url))],
-    bundle: true,
-    write: false,
-    format: 'esm',
-    platform: 'browser',
-    target: 'esnext',
-    jsx: 'automatic',
-    jsxImportSource: '@remix-run/component',
+  let assets = createAssetServer({
+    rootDir: path.resolve(import.meta.dirname, '../..'),
+    basePath: '/assets',
+    mounts: { packages: '..', npm: '../../node_modules' },
+    allowFiles: ['src/**'],
+    allowPackages: ['@remix-run/component', '@remix-run/data-schema', 'tabbable'],
+    watch: false,
   })
-  let script = result.outputFiles[0].text
-  let server = createServer((request, response) => {
-    response.setHeader(
-      'Content-Type',
-      request.url === '/fixture.js' ? 'text/javascript' : 'text/html',
-    )
-    response.end(
-      request.url === '/fixture.js'
-        ? script
-        : `<!doctype html><html><head><style>
+  t.after(() => assets.close())
+  let entry = await assets.getScriptEntry(path.join(import.meta.dirname, 'dialog.fixture.tsx'))
+  let page = await t.serve(
+    await createTestServer(async (request) => {
+      let assetResponse = await assets.fetch(request)
+      if (assetResponse) return assetResponse
+      return new Response(
+        `<!doctype html><html><head><style>
       [role="dialog"] { inset: 0; margin: auto; height: max-content; background: white; width: min(28rem, calc(100vw - 4rem)); max-height: calc(100dvh - 4rem); overflow: auto; padding: 1rem; }
       [data-testid$="backdrop"] { position: fixed; inset: 0; margin: 0; width: auto; height: auto; border: 0; background: #0008; }
       [data-popover] { background: white; border: 1px solid black; padding: 8px; }
       button, input { margin: .25rem; }
-    </style></head><body><script type="module" src="/fixture.js"></script></body></html>`,
-    )
-  })
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
-  let address = server.address()
-  if (!address || typeof address === 'string') throw new Error('No test server address')
-  let page = await t.serve({
-    baseUrl: `http://127.0.0.1:${address.port}`,
-    async close() {
-      server.closeAllConnections()
-      await new Promise<void>((resolve, reject) =>
-        server.close((error) => (error ? reject(error) : resolve())),
+    </style><script type="importmap">${JSON.stringify(entry.importMap)}</script></head>
+    <body><script type="module" src="${entry.href}"></script></body></html>`,
+        { headers: { 'Content-Type': 'text/html' } },
       )
-    },
-  })
+    }),
+  )
   let params = new URLSearchParams()
   if (options.modal === false) params.set('modal', 'false')
+  if (options.modal === 'trap-focus') params.set('modal', 'trap-focus')
+  if (options.native) params.set('native', 'true')
+  if (options.bare) params.set('bare', 'true')
   if (options.confirm) params.set('confirm', 'true')
   if (options.detached) params.set('detached', 'true')
   await page.goto(`/?${params}`)
-  await page.locator('#trigger').click()
-  await page.locator('[data-testid="dialog"][data-open]').waitFor()
+  if (options.open !== false) {
+    await page.locator('#trigger').click()
+    await page.locator('[data-testid="dialog"][data-open]').waitFor()
+  }
   return page
 }
 
 describe('dialog browser interactions', () => {
+  it('contains keyboard focus and restores focus after a real Escape press', async (t) => {
+    let page = await openFixture(t)
+    expect(await page.locator('#name').evaluate((node) => node === document.activeElement)).toBe(
+      true,
+    )
+    await page.locator('#outside').evaluate((node) => node.focus())
+    expect(await page.locator('#outside').evaluate((node) => node === document.activeElement)).toBe(
+      false,
+    )
+    await page.locator('#name').focus()
+    await page.keyboard.press('Shift+Tab')
+    expect(await page.locator('#outside').evaluate((node) => node === document.activeElement)).toBe(
+      false,
+    )
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Escape')
+    await page.locator('[data-testid="dialog"][data-open]').waitFor({ state: 'hidden' })
+    expect(await page.locator('#trigger').evaluate((node) => node === document.activeElement)).toBe(
+      true,
+    )
+  })
+
+  it('preserves native interior Tab navigation while keeping the modal boundary', async (t) => {
+    let page = await openFixture(t, { native: true, open: false })
+    await page.locator('#native-start').focus()
+    await page.keyboard.press('Tab')
+    let nativeTarget = await page.evaluate(() =>
+      document.activeElement?.id.replace('native-', 'scope-'),
+    )
+    await page.locator('#trigger').click()
+    await page.locator('[data-testid="dialog"][data-open]').waitFor()
+    await page.locator('#scope-start').focus()
+    await page.keyboard.press('Tab')
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe(nativeTarget)
+    await page.locator('#scope-end').focus()
+    await page.keyboard.press('Tab')
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('scope-start')
+    expect(await page.evaluate(() => document.hasFocus())).toBe(true)
+  })
+  it('lets native Tab reach guards from either end instead of intercepting calculated endpoints', async (t) => {
+    let page = await openFixture(t, { bare: true })
+    await page.evaluate(() => {
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Tab') {
+          document.body.dataset.tabPrevented = String(event.defaultPrevented)
+        }
+      })
+      document.addEventListener(
+        'focus',
+        (event) => {
+          if (
+            event.target instanceof HTMLElement &&
+            event.target.hasAttribute('data-rmx-focus-guard')
+          ) {
+            document.body.dataset.guardReached = 'true'
+          }
+        },
+        true,
+      )
+    })
+    await page.locator('#scope-end').focus()
+    await page.keyboard.press('Tab')
+    expect(await page.locator('body').getAttribute('data-tab-prevented')).toBe('false')
+    expect(await page.locator('body').getAttribute('data-guard-reached')).toBe('true')
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('scope-start')
+    await page.locator('body').evaluate((node) => delete node.dataset.guardReached)
+    await page.keyboard.press('Shift+Tab')
+    expect(await page.locator('body').getAttribute('data-tab-prevented')).toBe('false')
+    expect(await page.locator('body').getAttribute('data-guard-reached')).toBe('true')
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('scope-end')
+    expect(await page.evaluate(() => document.hasFocus())).toBe(true)
+  })
+
+  it('contains Tab when native navigation skips the final buttons', async (t) => {
+    let page = await openFixture(t, { bare: true })
+    await page.locator('#scope-middle').focus()
+    await page.keyboard.press('Tab')
+    expect(
+      await page
+        .locator('[data-testid="dialog"]')
+        .evaluate((node) => node.contains(document.activeElement)),
+    ).toBe(true)
+    expect(await page.evaluate(() => document.hasFocus())).toBe(true)
+    await page.keyboard.press('Tab')
+    expect(
+      await page
+        .locator('[data-testid="dialog"]')
+        .evaluate((node) => node.contains(document.activeElement)),
+    ).toBe(true)
+    expect(await page.evaluate(() => document.hasFocus())).toBe(true)
+  })
+
   it('escapes transformed clipping ancestors through ordinary DOM portals', async (t) => {
     let page = await openFixture(t)
     await page.locator('#app').evaluate((node) => {
@@ -141,28 +232,6 @@ describe('dialog browser interactions', () => {
     await page
       .locator('[data-testid="dialog"][data-open]')
       .waitFor({ state: 'hidden', timeout: 2000 })
-  })
-
-  it('contains keyboard focus and restores focus after a real Escape press', async (t) => {
-    let page = await openFixture(t)
-    expect(await page.locator('#name').evaluate((node) => node === document.activeElement)).toBe(
-      true,
-    )
-    await page.locator('#outside').evaluate((node) => node.focus())
-    expect(await page.locator('#outside').evaluate((node) => node === document.activeElement)).toBe(
-      false,
-    )
-    await page.locator('#name').focus()
-    await page.keyboard.press('Shift+Tab')
-    expect(await page.locator('#outside').evaluate((node) => node === document.activeElement)).toBe(
-      false,
-    )
-    await page.keyboard.press('Tab')
-    await page.keyboard.press('Escape')
-    await page.locator('[data-testid="dialog"][data-open]').waitFor({ state: 'hidden' })
-    expect(await page.locator('#trigger').evaluate((node) => node === document.activeElement)).toBe(
-      true,
-    )
   })
 
   it('closes nested dialogs one at a time with Escape', async (t) => {
@@ -249,6 +318,26 @@ describe('dialog browser interactions', () => {
     await page.locator('[data-testid="dialog"][data-open]').waitFor({ state: 'hidden' })
   })
 
+  it('crosses detached popup boundaries without tabbing into the background', async (t) => {
+    let page = await openFixture(t, { modal: 'trap-focus', detached: true })
+    await page.locator('#popover-trigger').click()
+    await page.locator('#popup-input').focus()
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Tab')
+    expect(
+      await page.evaluate(() => {
+        let target = document.activeElement
+        return !!target?.closest('[data-testid="dialog"], [data-testid="popover"]')
+      }),
+    ).toBe(true)
+    expect(await page.evaluate(() => document.hasFocus())).toBe(true)
+    await page.locator('#popup-input').focus()
+    await page.keyboard.press('Shift+Tab')
+    expect(
+      await page.evaluate(() => !!document.activeElement?.closest('[data-testid="dialog"]')),
+    ).toBe(true)
+  })
+
   it('dismisses a select before its containing dialog', async (t) => {
     let page = await openFixture(t)
     await page.locator('#select-trigger').click()
@@ -314,5 +403,36 @@ describe('dialog browser interactions', () => {
     await page.locator('[data-testid="dialog"][data-open]').waitFor()
     await page.keyboard.press('Escape')
     await page.locator('[data-testid="dialog"][data-open]').waitFor({ state: 'hidden' })
+  })
+
+  it('scrolls guard-directed focus into view in an overflowing dialog', async (t) => {
+    let page = await openFixture(t, { native: true })
+    await page.locator('[data-testid="dialog"]').evaluate((node) => {
+      node.style.height = '120px'
+      let last = node.querySelector<HTMLElement>('#scope-end')
+      if (!last) throw new Error('Missing last control')
+      last.style.cssText = 'display: block; margin-top: 600px'
+    })
+    await page.locator('#scope-start').focus()
+    await page.keyboard.press('Shift+Tab')
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('scope-end')
+    await page.waitForFunction(() => {
+      let node = document.querySelector('[data-testid="dialog"]')
+      if (!(node instanceof HTMLElement)) return false
+      let last = node.querySelector('#scope-end')
+      return (
+        node.scrollTop > 0 &&
+        !!last &&
+        last.getBoundingClientRect().bottom <= node.getBoundingClientRect().bottom + 1
+      )
+    })
+    await page.keyboard.press('Tab')
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('scope-start')
+    await page.waitForFunction(() => {
+      let node = document.querySelector('[data-testid="dialog"]')
+      if (!(node instanceof HTMLElement)) return false
+      let first = node.querySelector('#scope-start')
+      return !!first && first.getBoundingClientRect().top >= node.getBoundingClientRect().top
+    })
   })
 })

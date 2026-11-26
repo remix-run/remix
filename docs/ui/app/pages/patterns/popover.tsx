@@ -41,27 +41,31 @@ const anatomyCode = await highlightSource(`
     >
       Trigger text
     </button>
-    <div
-      id="popover-content"
-      role="dialog"
-      aria-label="Popover label"
-      tabIndex={-1}
-      mix={[
-        popover.surface({
-          open,
-          onHide: hide,
-        }),
-        popover.focusOnShow(),
-        css({
-          '&[data-open]': {},
-          '&[data-state="open"]': {},
-          '&[data-state="closed"]': {},
-          '&:focus-visible': {},
-        }),
-      ]}
-    >
-      Popover content
-    </div>
+    <popover.Portal>
+      <popover.SurfaceContext>
+        <div
+          id="popover-content"
+          role="dialog"
+          aria-label="Popover label"
+          tabIndex={-1}
+          mix={[
+            popover.surface({
+              open,
+              onHide: hide,
+            }),
+            popover.focusOnShow(),
+            css({
+              '&[data-open]': {},
+              '&[data-state="open"]': {},
+              '&[data-state="closed"]': {},
+              '&:focus-visible': {},
+            }),
+          ]}
+        >
+          Popover content
+        </div>
+      </popover.SurfaceContext>
+    </popover.Portal>
   </popover.Context>
 `)
 
@@ -84,23 +88,24 @@ const anchorInteractionCode = await highlightSource(`
 `)
 
 const portalCode = await highlightSource(`
-  import { Portal } from '@remix-run/ui/portal'
   import * as popover from '@remix-run/ui/popover'
 
   <popover.Context>
     <button mix={popover.anchor({ placement: 'bottom-start' })}>Filters</button>
-    <Portal>
-      <div mix={popover.surface({ open, onHide })}>
-        Filter controls
-      </div>
-    </Portal>
+    <popover.Portal>
+      <popover.SurfaceContext>
+        <div mix={popover.surface({ open, onHide })}>
+          Filter controls
+        </div>
+      </popover.SurfaceContext>
+    </popover.Portal>
   </popover.Context>
 `)
 
 const focusCode = await highlightSource(`
   <>
     <button mix={popover.focusOnHide()}>Open filters</button>
-    <div
+    <popover.SurfaceContext><div
       mix={popover.surface({
         open,
         onHide,
@@ -108,12 +113,12 @@ const focusCode = await highlightSource(`
       })}
     >
       <input aria-label="Filter files" mix={popover.focusOnShow()} />
-    </div>
+    </div></popover.SurfaceContext>
   </>
 `)
 
 const motionCode = await highlightSource(`
-  <div
+  <popover.SurfaceContext><div
     mix={[
       popover.surface({
         open,
@@ -133,7 +138,7 @@ const motionCode = await highlightSource(`
         },
       }),
     ]}
-  />
+  /></popover.SurfaceContext>
 `)
 
 const accessibilityCode = await highlightSource(`
@@ -141,7 +146,7 @@ const accessibilityCode = await highlightSource(`
     <button aria-expanded={open} aria-controls="file-filters">
       Filters
     </button>
-    <div
+    <popover.SurfaceContext><div
       id="file-filters"
       role="dialog"
       aria-label="File filters"
@@ -149,7 +154,7 @@ const accessibilityCode = await highlightSource(`
         open,
         onHide,
       })}
-    />
+    /></popover.SurfaceContext>
   </>
 `)
 
@@ -214,19 +219,17 @@ export default function PopoverPage(handle: Handle<PageProps>) {
         <CodeBlock html={positionCode} />
         <h3 id="portals">Portals and stacking</h3>
         <p>
-          Wrap the surface in <code>Portal</code> to render it under the document body and escape
-          clipping, transforms and stacking contexts on its authored ancestors. An optional{' '}
+          Wrap the surface in <code>popover.Portal</code> to render it under the document body and
+          escape clipping, transforms and stacking contexts on its authored ancestors. An optional{' '}
           <code>container</code> selects another element in the same document. Component context,
           frame and child state are preserved. DOM events and inherited styles follow the
           destination, so apply local theme variables and typography to the surface too.
         </p>
         <CodeBlock html={portalCode} />
         <p>
-          Inline surfaces are supported where ancestors do not constrain them. Remix overlays share
-          visual stacking and dismissal order. Set <code>--rmx-layer-base</code> on a common
-          ancestor such as the document root to offset their z-index as a group. Ordinary
-          third-party overlays can appear above them with z-index, but do not automatically join a
-          dialog's focus or dismissal coordination.
+          Inline surfaces are supported where ancestors do not constrain them. See{' '}
+          <a href="/#stacking">stacking and overlays</a> for ordering popovers relative to dialogs
+          and other application content.
         </p>
       </Section>
       <Section id="focus" title="Focus targets">
@@ -255,12 +258,49 @@ export default function PopoverPage(handle: Handle<PageProps>) {
         </p>
         <CodeBlock html={accessibilityCode} />
       </Section>
+      <Section id="surface-context" title="Surface context">
+        <p>
+          Wrap the element with <code>popover.surface()</code> in{' '}
+          <code>popover.SurfaceContext</code> within the same <code>popover.Context</code>. Keep it
+          inside <a href="#portal-reference">popover.Portal</a> when portaled, or omit the Portal
+          for inline rendering.
+        </p>
+        <CodeBlock html={portalCode} />
+      </Section>
       <Section id="api-reference" title="API reference">
         <h3 id="context-reference">Context</h3>
         <p>
           Provides <code>PopoverContext</code> for one floating surface. Only accepts{' '}
           <code>children</code>.
         </p>
+        <h3 id="portal-reference">Portal</h3>
+        <p>
+          Use <code>popover.Portal</code> to render outside clipping ancestors. Keep{' '}
+          <code>popover.SurfaceContext</code> inside it. Omit the Portal for inline rendering.
+        </p>
+        <ApiTable id="portal-options" label="Prop" defaults>
+          <ApiEntry name="children" type="RemixNode">
+            The surface context and its content.
+          </ApiEntry>
+          <ApiEntry name="container" type="HTMLElement | null" defaultValue="document.body">
+            Destination in the same document. Changing it remounts the content and resets its local
+            state.
+          </ApiEntry>
+        </ApiTable>
+        <ApiTable id="portal-types">
+          <ApiEntry id="type-PopoverPortalProps" name="PopoverPortalProps" type="type">
+            Children and container props accepted by popover.Portal.
+          </ApiEntry>
+        </ApiTable>
+        <h3 id="surface-context-reference">SurfaceContext</h3>
+        <p>
+          Required wrapper for the element with <code>popover.surface()</code>.
+        </p>
+        <ApiTable id="surface-context-options" label="Option">
+          <ApiEntry name="children" type="RemixNode">
+            One popup surface and its content.
+          </ApiEntry>
+        </ApiTable>
         <ApiTable id="context-state" label="Provided member">
           <ApiEntry name="anchor" type="{ target: AnchorTarget, options: AnchorOptions } | null">
             Registered positioning target.
@@ -323,6 +363,13 @@ export default function PopoverPage(handle: Handle<PageProps>) {
         </ApiTable>
         <h3 id="types-reference">Exported types</h3>
         <ApiTable id="types-types">
+          <ApiEntry
+            id="type-PopoverSurfaceContextProps"
+            name="PopoverSurfaceContextProps"
+            type="type"
+          >
+            Children accepted by SurfaceContext.
+          </ApiEntry>
           <ApiEntry id="type-PopoverProps" name="PopoverProps" type="type">
             <p>Provider children.</p>
             <CodeBlock html={typeDefinitions.PopoverProps} />

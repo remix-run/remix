@@ -1,5 +1,12 @@
-import { assertRemixNodes, jsx, normalizeChildren } from './core/vnode.ts'
-import type { ElementProps, ElementType, RemixElement } from './core/vnode.ts'
+import {
+  invariant,
+  isRemixNode,
+  jsx,
+  normalizeChildren,
+  type ElementProps,
+  type ElementType,
+  type RemixElement,
+} from './vnode.ts'
 
 /**
  * Creates a Remix virtual element from a JSX-like call signature.
@@ -20,7 +27,7 @@ export function createElement(
       console.error(new Error('mixin elements must not receive children'))
     }
   } else {
-    assertRemixNodes(children)
+    invariant(children.every(isRemixNode), 'Invalid child node')
     nextProps.children = normalizeChildren(children)
   }
 

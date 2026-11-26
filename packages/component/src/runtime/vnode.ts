@@ -1,0 +1,644 @@
+import type * as dom from './dom.d.ts'
+import type { FragmentProps, Handle, PortalProps, RenderFn } from './component.ts'
+
+export type ElementFunction = ((...args: never[]) => unknown) & { readonly name?: string }
+
+export type Key = string | number | bigint
+
+/**
+ * Any valid element type accepted by JSX or {@link import('./create-element.ts').createElement}.
+ * - `string` for host elements (e.g., 'div')
+ * - `Function` for user components
+ */
+export type ElementType = string | Function
+
+/**
+ * Generic bag of props passed to elements/components.
+ * Consumers should define specific prop types on their components; this is the
+ * renderer's normalized shape used throughout reconciler/SSR code.
+ */
+export type ElementProps = Record<string, any>
+
+/**
+ * A virtual element produced by JSX or {@link import('./create-element.ts').createElement}
+ * describing UI. Carries an internal symbol brand that distinguishes it from plain data.
+ */
+export interface RemixElement {
+  /** Host tag or component function for the element. */
+  type: ElementType
+  /** Normalized props for the element. */
+  props: ElementProps
+  /** Optional reconciliation key. */
+  key?: any
+  /** Internal brand used to distinguish Remix elements at runtime. */
+  [REMIX_ELEMENT]: true
+  /** Serialization tag for Remix elements. */
+  $rmx: true
+}
+
+/**
+ * Any single value Remix can render. Booleans render as empty text.
+ */
+export type Renderable = RemixElement | string | number | bigint | boolean | null | undefined
+
+/**
+ * Anything that Remix can render, including nested arrays of renderable values.
+ * This mirrors how JSX spreads children into arrays (e.g. when using `map`)
+ * and how our reconciler flattens children at runtime.
+ *
+ * Particularly useful for `props.children`.
+ *
+ * ```tsx
+ * function MyComponent(handle: Handle<{ children: RemixNode }>) {}
+ * ```
+ */
+export type RemixNode = Renderable | RemixNode[]
+
+type PreviousMixDepth = [0, 0, 1, 2, 3, 4]
+type FalsyMixValue = false | 0 | 0n | '' | null | undefined
+type NullableMixValue<mix> = mix | FalsyMixValue
+type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix
+type NormalizeMixLeaf<mix> = Exclude<MixLeaf<mix>, FalsyMixValue>
+type NestedMixValue<mix, depth extends number = 4> = depth extends 0
+  ? NullableMixValue<mix> | ReadonlyArray<NullableMixValue<mix>>
+  : NullableMixValue<mix> | ReadonlyArray<NestedMixValue<mix, PreviousMixDepth[depth]>>
+
+type NormalizeMixProp<props> = props extends { mix?: infer mix }
+  ? Omit<props, 'mix'> & {
+      mix?: Array<NormalizeMixLeaf<mix>>
+    }
+  : props
+
+type ExpandMixProp<props> = props extends { mix?: infer mix }
+  ? Omit<props, 'mix'> & {
+      mix?: NestedMixValue<NormalizeMixLeaf<mix>>
+    }
+  : props
+
+type MixinElementType = ((
+  handle: { update(): Promise<AbortSignal> },
+  setup: unknown,
+) => (props: any) => RemixElement) & {
+  __rmxMixinElementType: string
+}
+
+/**
+ * Get the props for a specific element type.
+ *
+ * @example
+ * interface MyButtonProps extends Props<"button"> {
+ *   size: "sm" | "md" | "lg"
+ * }
+ */
+export type Props<T extends keyof JSX.IntrinsicElements> = NormalizeMixProp<
+  JSX.IntrinsicElements[T]
+>
+
+/**
+ * Creates a Remix virtual element.
+ *
+ * @param type Host tag or component function.
+ * @param props Element props.
+ * @param key Optional reconciliation key.
+ * @returns A Remix virtual element.
+ */
+export function jsx(type: ElementType, props: ElementProps, key?: any): RemixElement {
+  return {
+    [REMIX_ELEMENT]: true,
+    $rmx: true,
+    key,
+    props: normalizeElementProps(props),
+    type,
+  }
+}
+
+export { jsx as jsxDEV, jsx as jsxs }
+
+// Shared across module instances, and enumerable so element spreads retain their identity.
+const REMIX_ELEMENT = Symbol.for('remix.element')
+export const MIXIN_RUNTIME = Symbol.for('remix.mixinRuntime')
+export const DIRECT_EVENT = Symbol.for('remix.directEvent')
+export let defaultMixinDriver: unknown
+export let activeSchedulerUpdateParents: ParentNode[] | undefined
+
+export type ComponentStalenessCheck = (type: Function) => boolean
+export let componentStalenessCheck: ComponentStalenessCheck | null = null
+export const roots = new Set<{ reconcile(): void }>()
+
+export function setComponentStalenessCheck(check: ComponentStalenessCheck): void {
+  componentStalenessCheck = check
+}
+
+export function setDefaultMixinDriver(driver: unknown): void {
+  defaultMixinDriver = driver
+}
+
+export function setActiveSchedulerUpdateParents(parents: ParentNode[] | undefined): void {
+  activeSchedulerUpdateParents = parents
+}
+
+export function isMixinDescriptor(
+  value: unknown,
+): value is { type: (...args: any[]) => unknown; args: readonly unknown[] } {
+  if (!value || typeof value !== 'object' || isRemixElement(value)) return false
+  let descriptor = value as { type?: unknown; args?: unknown }
+  return typeof descriptor.type === 'function' && Array.isArray(descriptor.args)
+}
+
+export function isRemixElement(node: unknown): node is RemixElement {
+  return (
+    typeof node === 'object' &&
+    node !== null &&
+    (node as Partial<RemixElement>)[REMIX_ELEMENT] === true &&
+    (typeof (node as RemixElement).type === 'string' ||
+      typeof (node as RemixElement).type === 'function') &&
+    typeof (node as RemixElement).props === 'object' &&
+    (node as RemixElement).props !== null
+  )
+}
+
+function normalizeElementProps(props: ElementProps | null | undefined): ElementProps {
+  if (!props) return {}
+  let mix = props.mix
+  if (mix === undefined) {
+    if (!('mix' in props)) return props
+  } else if (Array.isArray(mix) && mix.length > 0) {
+    let allFlat = true
+    for (let i = 0; i < mix.length; i++) {
+      let item = mix[i]
+      if (!item || Array.isArray(item)) {
+        allFlat = false
+        break
+      }
+    }
+    if (allFlat) return props
+  }
+
+  let { mix: _mix, ...rest } = props
+  let normalized = Array.isArray(mix) ? mix.flat(Infinity).filter(Boolean) : mix ? [mix] : []
+  if (normalized.length) rest.mix = normalized
+  return rest
+}
+
+export type EmptyChild = boolean | null | undefined
+export type PrimitiveChild = string | number | bigint
+
+export function isEmptyChild(value: unknown): value is EmptyChild {
+  return value == null || typeof value === 'boolean'
+}
+
+export function isPrimitiveChild(value: unknown): value is PrimitiveChild {
+  let type = typeof value
+  return type === 'string' || type === 'number' || type === 'bigint'
+}
+
+export function normalizeChildren(children: readonly RemixNode[]): RemixNode[] {
+  return children.some(Array.isArray)
+    ? ((children as unknown[]).flat(Infinity) as RemixNode[])
+    : (children as RemixNode[])
+}
+
+export function isRemixNode(value: unknown): value is RemixNode {
+  return (
+    isEmptyChild(value) ||
+    isPrimitiveChild(value) ||
+    isRemixElement(value) ||
+    (Array.isArray(value) && value.every(isRemixNode))
+  )
+}
+
+/**
+ * Use this when framework code is incorrect, indicating an internal bug rather
+ * than application code error.
+ *
+ * @param assertion The value to check for truthiness
+ * @param message Optional message to include in the error
+ */
+export function invariant(assertion: any, message?: string): asserts assertion {
+  let prefix = 'Framework invariant'
+  if (assertion) return
+  throw new Error(message ? `${prefix}: ${message}` : prefix)
+}
+
+class UnsafeHTMLValue {
+  #value: string
+
+  constructor(value: string) {
+    this.#value = value
+  }
+
+  static read(value: unknown): string | undefined {
+    return value instanceof UnsafeHTMLValue ? value.#value : undefined
+  }
+}
+
+/**
+ * An opaque value that Remix may insert into an element without HTML escaping.
+ *
+ * Create values with {@link unsafeHTML}. Remix does not sanitize or otherwise modify the HTML.
+ */
+export type UnsafeHTML = UnsafeHTMLValue
+
+/**
+ * Explicitly allows a string to be inserted into an element as raw HTML.
+ *
+ * This function does not sanitize or otherwise modify the HTML. Only pass trusted content or
+ * content that your application has already sanitized.
+ *
+ * @param value The raw HTML string to allow.
+ * @returns An opaque value accepted by raw-HTML props such as `innerHTML` and iframe
+ * `srcDoc`/`srcdoc`.
+ */
+export function unsafeHTML(value: string): UnsafeHTML {
+  let result = new UnsafeHTMLValue(value)
+  Object.freeze(result)
+  return result
+}
+
+interface NormalizedUnsafeHTMLProps extends Record<string, unknown> {
+  innerHTML?: string
+  srcDoc?: string
+  srcdoc?: string
+}
+
+/**
+ * Validates and unwraps every host prop that can cause the browser to parse raw HTML.
+ *
+ * @param props The authored host props to normalize.
+ * @returns Host props with opaque raw-HTML values replaced by their strings.
+ * @internal
+ */
+const UNSAFE_HTML_PROPS = ['innerHTML', 'srcDoc', 'srcdoc'] as const
+
+export function normalizeUnsafeHTMLProps(
+  props: Record<string, unknown>,
+): NormalizedUnsafeHTMLProps {
+  invariant(
+    props.outerHTML === undefined,
+    'Invalid outerHTML prop: outerHTML is not supported on host elements',
+  )
+
+  if (props.innerHTML === undefined && props.srcDoc === undefined && props.srcdoc === undefined) {
+    return props
+  }
+
+  let normalized: NormalizedUnsafeHTMLProps = { ...props }
+  for (let name of UNSAFE_HTML_PROPS) {
+    let value = props[name]
+    if (value === undefined) continue
+    let html = UnsafeHTMLValue.read(value)
+    invariant(
+      html !== undefined,
+      `Invalid ${name} prop: expected a value created with unsafeHTML()`,
+    )
+    normalized[name] = html
+  }
+
+  return normalized
+}
+
+type TypedEventListener<eventMap> = {
+  [key in keyof eventMap]: (event: eventMap[key]) => void
+}
+
+/**
+ * An `EventTarget` subclass with typed event maps.
+ */
+export class TypedEventTarget<eventMap> extends EventTarget {}
+
+/**
+ * Interface surface for {@link TypedEventTarget} with typed listener overloads.
+ */
+export interface TypedEventTarget<eventMap> {
+  /**
+   * Adds a listener for a typed event name from the event map.
+   *
+   * @param type Event name to listen for.
+   * @param listener Listener to invoke when the event fires.
+   * @param options Listener registration options.
+   */
+  addEventListener<type extends Extract<keyof eventMap, string>>(
+    type: type,
+    listener: TypedEventListener<eventMap>[type],
+    options?: AddEventListenerOptions,
+  ): void
+  /**
+   * Adds a listener using the standard untyped `EventTarget` signature.
+   *
+   * @param type Event name to listen for.
+   * @param listener Listener to invoke when the event fires.
+   * @param options Listener registration options.
+   */
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ): void
+  /**
+   * Removes a listener for a typed event name from the event map.
+   *
+   * @param type Event name to stop listening for.
+   * @param listener Previously registered listener.
+   * @param options Listener removal options.
+   */
+  removeEventListener<type extends Extract<keyof eventMap, string>>(
+    type: type,
+    listener: TypedEventListener<eventMap>[type],
+    options?: EventListenerOptions,
+  ): void
+  /**
+   * Removes a listener using the standard untyped `EventTarget` signature.
+   *
+   * @param type Event name to stop listening for.
+   * @param listener Previously registered listener.
+   * @param options Listener removal options.
+   */
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: EventListenerOptions,
+  ): void
+}
+
+// Marks the built-in `Frame` and `Portal` components. The symbol properties hold their client node
+// renderers, so the reconciler and server renderer can recognize and render them without importing
+// the frame or portal runtime.
+export const FRAME_NODE = Symbol('FrameNode')
+export const PORTAL_NODE = Symbol('PortalNode')
+
+/**
+ * Built-in component used to group children without adding a host element.
+ *
+ * @param handle Component handle for the fragment instance.
+ * @returns A placeholder render function handled by the reconciler.
+ */
+export function Fragment(handle: Handle<FragmentProps>): RenderFn {
+  void handle
+  return () => null // reconciler renders
+}
+
+// The server and the client entry decoder share this identity before the portal renderer loads.
+export function Portal(handle: Handle<PortalProps>): RenderFn {
+  void handle
+  return () => null
+}
+
+declare global {
+  namespace JSX {
+    export interface IntrinsicAttributes {
+      key?: any
+    }
+
+    type Element = RemixElement
+
+    type ElementType =
+      // host elements
+      | keyof IntrinsicElements
+      // Factory component
+      | ((handle: Handle<any, any>) => RenderFn)
+      // Mixin element used internally by mixin render callbacks
+      | MixinElementType
+
+    type ElementChildrenAttribute = {
+      children: any
+    }
+
+    export interface ElementAttributesProperty {
+      props: any
+    }
+
+    type LibraryManagedAttributes<component, props> = component extends MixinElementType
+      ? ExpandMixProp<Parameters<ReturnType<component>>[0]>
+      : component extends () => RenderFn
+        ? ExpandMixProp<Record<string, never>>
+        : props extends { props: infer P }
+          ? ExpandMixProp<P>
+          : component extends (handle: Handle<infer P, any>) => RenderFn
+            ? // Handles typed without a props member still use signature inference.
+              ExpandMixProp<P>
+            : ExpandMixProp<props>
+
+    export interface IntrinsicSVGElements {
+      svg: dom.SVGProps<SVGSVGElement>
+      animate: dom.SVGProps<SVGAnimateElement>
+      circle: dom.SVGProps<SVGCircleElement>
+      animateMotion: dom.SVGProps<SVGAnimateMotionElement>
+      animateTransform: dom.SVGProps<SVGAnimateTransformElement>
+      clipPath: dom.SVGProps<SVGClipPathElement>
+      defs: dom.SVGProps<SVGDefsElement>
+      desc: dom.SVGProps<SVGDescElement>
+      ellipse: dom.SVGProps<SVGEllipseElement>
+      feBlend: dom.SVGProps<SVGFEBlendElement>
+      feColorMatrix: dom.SVGProps<SVGFEColorMatrixElement>
+      feComponentTransfer: dom.SVGProps<SVGFEComponentTransferElement>
+      feComposite: dom.SVGProps<SVGFECompositeElement>
+      feConvolveMatrix: dom.SVGProps<SVGFEConvolveMatrixElement>
+      feDiffuseLighting: dom.SVGProps<SVGFEDiffuseLightingElement>
+      feDisplacementMap: dom.SVGProps<SVGFEDisplacementMapElement>
+      feDistantLight: dom.SVGProps<SVGFEDistantLightElement>
+      feDropShadow: dom.SVGProps<SVGFEDropShadowElement>
+      feFlood: dom.SVGProps<SVGFEFloodElement>
+      feFuncA: dom.SVGProps<SVGFEFuncAElement>
+      feFuncB: dom.SVGProps<SVGFEFuncBElement>
+      feFuncG: dom.SVGProps<SVGFEFuncGElement>
+      feFuncR: dom.SVGProps<SVGFEFuncRElement>
+      feGaussianBlur: dom.SVGProps<SVGFEGaussianBlurElement>
+      feImage: dom.SVGProps<SVGFEImageElement>
+      feMerge: dom.SVGProps<SVGFEMergeElement>
+      feMergeNode: dom.SVGProps<SVGFEMergeNodeElement>
+      feMorphology: dom.SVGProps<SVGFEMorphologyElement>
+      feOffset: dom.SVGProps<SVGFEOffsetElement>
+      fePointLight: dom.SVGProps<SVGFEPointLightElement>
+      feSpecularLighting: dom.SVGProps<SVGFESpecularLightingElement>
+      feSpotLight: dom.SVGProps<SVGFESpotLightElement>
+      feTile: dom.SVGProps<SVGFETileElement>
+      feTurbulence: dom.SVGProps<SVGFETurbulenceElement>
+      filter: dom.SVGProps<SVGFilterElement>
+      foreignObject: dom.SVGProps<SVGForeignObjectElement>
+      g: dom.SVGProps<SVGGElement>
+      image: dom.SVGProps<SVGImageElement>
+      line: dom.SVGProps<SVGLineElement>
+      linearGradient: dom.SVGProps<SVGLinearGradientElement>
+      marker: dom.SVGProps<SVGMarkerElement>
+      mask: dom.SVGProps<SVGMaskElement>
+      metadata: dom.SVGProps<SVGMetadataElement>
+      mpath: dom.SVGProps<SVGMPathElement>
+      path: dom.SVGProps<SVGPathElement>
+      pattern: dom.SVGProps<SVGPatternElement>
+      polygon: dom.SVGProps<SVGPolygonElement>
+      polyline: dom.SVGProps<SVGPolylineElement>
+      radialGradient: dom.SVGProps<SVGRadialGradientElement>
+      rect: dom.SVGProps<SVGRectElement>
+      set: dom.SVGProps<SVGSetElement>
+      stop: dom.SVGProps<SVGStopElement>
+      switch: dom.SVGProps<SVGSwitchElement>
+      symbol: dom.SVGProps<SVGSymbolElement>
+      text: dom.SVGProps<SVGTextElement>
+      textPath: dom.SVGProps<SVGTextPathElement>
+      tspan: dom.SVGProps<SVGTSpanElement>
+      use: dom.SVGProps<SVGUseElement>
+      view: dom.SVGProps<SVGViewElement>
+    }
+
+    export interface IntrinsicMathMLElements {
+      annotation: dom.AnnotationMathMLProps<MathMLElement>
+      'annotation-xml': dom.AnnotationXmlMathMLProps<MathMLElement>
+      /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/maction */
+      maction: dom.MActionMathMLProps<MathMLElement>
+      math: dom.MathMathMLProps<MathMLElement>
+      /** This feature is non-standard. See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/menclose  */
+      menclose: dom.MEncloseMathMLProps<MathMLElement>
+      merror: dom.MErrorMathMLProps<MathMLElement>
+      /** @deprecated See https://developer.mozilla.org/en-US/docs/Web/MathML/Element/mfenced */
+      mfenced: dom.MFencedMathMLProps<MathMLElement>
+      mfrac: dom.MFracMathMLProps<MathMLElement>
+      mi: dom.MiMathMLProps<MathMLElement>
+      mmultiscripts: dom.MmultiScriptsMathMLProps<MathMLElement>
+      mn: dom.MNMathMLProps<MathMLElement>
+      mo: dom.MOMathMLProps<MathMLElement>
+      mover: dom.MOverMathMLProps<MathMLElement>
+      mpadded: dom.MPaddedMathMLProps<MathMLElement>
+      mphantom: dom.MPhantomMathMLProps<MathMLElement>
+      mprescripts: dom.MPrescriptsMathMLProps<MathMLElement>
+      mroot: dom.MRootMathMLProps<MathMLElement>
+      mrow: dom.MRowMathMLProps<MathMLElement>
+      ms: dom.MSMathMLProps<MathMLElement>
+      mspace: dom.MSpaceMathMLProps<MathMLElement>
+      msqrt: dom.MSqrtMathMLProps<MathMLElement>
+      mstyle: dom.MStyleMathMLProps<MathMLElement>
+      msub: dom.MSubMathMLProps<MathMLElement>
+      msubsup: dom.MSubsupMathMLProps<MathMLElement>
+      msup: dom.MSupMathMLProps<MathMLElement>
+      mtable: dom.MTableMathMLProps<MathMLElement>
+      mtd: dom.MTdMathMLProps<MathMLElement>
+      mtext: dom.MTextMathMLProps<MathMLElement>
+      mtr: dom.MTrMathMLProps<MathMLElement>
+      munder: dom.MUnderMathMLProps<MathMLElement>
+      munderover: dom.MUnderMathMLProps<MathMLElement>
+      semantics: dom.SemanticsMathMLProps<MathMLElement>
+    }
+
+    export interface IntrinsicHTMLElements {
+      a: dom.AccessibleAnchorHTMLProps<HTMLAnchorElement>
+      abbr: dom.HTMLProps<HTMLElement>
+      address: dom.HTMLProps<HTMLElement>
+      area: dom.AccessibleAreaHTMLProps<HTMLAreaElement>
+      article: dom.ArticleHTMLProps<HTMLElement>
+      aside: dom.AsideHTMLProps<HTMLElement>
+      audio: dom.AudioHTMLProps<HTMLAudioElement>
+      b: dom.HTMLProps<HTMLElement>
+      base: dom.BaseHTMLProps<HTMLBaseElement>
+      bdi: dom.HTMLProps<HTMLElement>
+      bdo: dom.HTMLProps<HTMLElement>
+      big: dom.HTMLProps<HTMLElement>
+      blockquote: dom.BlockquoteHTMLProps<HTMLQuoteElement>
+      body: dom.HTMLProps<HTMLBodyElement>
+      br: dom.BrHTMLProps<HTMLBRElement>
+      button: dom.ButtonHTMLProps<HTMLButtonElement>
+      canvas: dom.CanvasHTMLProps<HTMLCanvasElement>
+      caption: dom.CaptionHTMLProps<HTMLTableCaptionElement>
+      cite: dom.HTMLProps<HTMLElement>
+      code: dom.HTMLProps<HTMLElement>
+      col: dom.ColHTMLProps<HTMLTableColElement>
+      colgroup: dom.ColgroupHTMLProps<HTMLTableColElement>
+      data: dom.DataHTMLProps<HTMLDataElement>
+      datalist: dom.DataListHTMLProps<HTMLDataListElement>
+      dd: dom.DdHTMLProps<HTMLElement>
+      del: dom.DelHTMLProps<HTMLModElement>
+      details: dom.DetailsHTMLProps<HTMLDetailsElement>
+      dfn: dom.HTMLProps<HTMLElement>
+      dialog: dom.DialogHTMLProps<HTMLDialogElement>
+      div: dom.HTMLProps<HTMLDivElement>
+      dl: dom.DlHTMLProps<HTMLDListElement>
+      dt: dom.DtHTMLProps<HTMLElement>
+      em: dom.HTMLProps<HTMLElement>
+      embed: dom.EmbedHTMLProps<HTMLEmbedElement>
+      fieldset: dom.FieldsetHTMLProps<HTMLFieldSetElement>
+      figcaption: dom.FigcaptionHTMLProps<HTMLElement>
+      figure: dom.HTMLProps<HTMLElement>
+      footer: dom.FooterHTMLProps<HTMLElement>
+      form: dom.FormHTMLProps<HTMLFormElement>
+      h1: dom.HeadingHTMLProps<HTMLHeadingElement>
+      h2: dom.HeadingHTMLProps<HTMLHeadingElement>
+      h3: dom.HeadingHTMLProps<HTMLHeadingElement>
+      h4: dom.HeadingHTMLProps<HTMLHeadingElement>
+      h5: dom.HeadingHTMLProps<HTMLHeadingElement>
+      h6: dom.HeadingHTMLProps<HTMLHeadingElement>
+      head: dom.HeadHTMLProps<HTMLHeadElement>
+      header: dom.HeaderHTMLProps<HTMLElement>
+      hgroup: dom.HTMLProps<HTMLElement>
+      hr: dom.HrHTMLProps<HTMLHRElement>
+      html: dom.HtmlHTMLProps<HTMLHtmlElement>
+      i: dom.HTMLProps<HTMLElement>
+      iframe: dom.IframeHTMLProps<HTMLIFrameElement>
+      img: dom.AccessibleImgHTMLProps<HTMLImageElement>
+      input: dom.AccessibleInputHTMLProps<HTMLInputElement>
+      ins: dom.InsHTMLProps<HTMLModElement>
+      kbd: dom.HTMLProps<HTMLElement>
+      keygen: dom.KeygenHTMLProps<HTMLUnknownElement>
+      label: dom.LabelHTMLProps<HTMLLabelElement>
+      legend: dom.LegendHTMLProps<HTMLLegendElement>
+      li: dom.LiHTMLProps<HTMLLIElement>
+      link: dom.LinkHTMLProps<HTMLLinkElement>
+      main: dom.MainHTMLProps<HTMLElement>
+      map: dom.MapHTMLProps<HTMLMapElement>
+      mark: dom.HTMLProps<HTMLElement>
+      marquee: dom.MarqueeHTMLProps<HTMLMarqueeElement>
+      menu: dom.MenuHTMLProps<HTMLMenuElement>
+      menuitem: dom.HTMLProps<HTMLUnknownElement>
+      meta: dom.MetaHTMLProps<HTMLMetaElement>
+      meter: dom.MeterHTMLProps<HTMLMeterElement>
+      nav: dom.NavHTMLProps<HTMLElement>
+      noscript: dom.NoScriptHTMLProps<HTMLElement>
+      object: dom.ObjectHTMLProps<HTMLObjectElement>
+      ol: dom.OlHTMLProps<HTMLOListElement>
+      optgroup: dom.OptgroupHTMLProps<HTMLOptGroupElement>
+      option: dom.OptionHTMLProps<HTMLOptionElement>
+      output: dom.OutputHTMLProps<HTMLOutputElement>
+      p: dom.HTMLProps<HTMLParagraphElement>
+      param: dom.ParamHTMLProps<HTMLParamElement>
+      picture: dom.PictureHTMLProps<HTMLPictureElement>
+      pre: dom.HTMLProps<HTMLPreElement>
+      progress: dom.ProgressHTMLProps<HTMLProgressElement>
+      q: dom.QuoteHTMLProps<HTMLQuoteElement>
+      rp: dom.HTMLProps<HTMLElement>
+      rt: dom.HTMLProps<HTMLElement>
+      ruby: dom.HTMLProps<HTMLElement>
+      s: dom.HTMLProps<HTMLElement>
+      samp: dom.HTMLProps<HTMLElement>
+      script: dom.ScriptHTMLProps<HTMLScriptElement>
+      search: dom.SearchHTMLProps<HTMLElement>
+      section: dom.HTMLProps<HTMLElement>
+      select: dom.AccessibleSelectHTMLProps<HTMLSelectElement>
+      slot: dom.SlotHTMLProps<HTMLSlotElement>
+      small: dom.HTMLProps<HTMLElement>
+      source: dom.SourceHTMLProps<HTMLSourceElement>
+      span: dom.HTMLProps<HTMLSpanElement>
+      strong: dom.HTMLProps<HTMLElement>
+      style: dom.StyleHTMLProps<HTMLStyleElement>
+      sub: dom.HTMLProps<HTMLElement>
+      summary: dom.HTMLProps<HTMLElement>
+      sup: dom.HTMLProps<HTMLElement>
+      table: dom.TableHTMLProps<HTMLTableElement>
+      tbody: dom.HTMLProps<HTMLTableSectionElement>
+      td: dom.TdHTMLProps<HTMLTableCellElement>
+      template: dom.TemplateHTMLProps<HTMLTemplateElement>
+      textarea: dom.TextareaHTMLProps<HTMLTextAreaElement>
+      tfoot: dom.HTMLProps<HTMLTableSectionElement>
+      th: dom.ThHTMLProps<HTMLTableCellElement>
+      thead: dom.HTMLProps<HTMLTableSectionElement>
+      time: dom.TimeHTMLProps<HTMLTimeElement>
+      title: dom.TitleHTMLProps<HTMLTitleElement>
+      tr: dom.HTMLProps<HTMLTableRowElement>
+      track: dom.TrackHTMLProps<HTMLTrackElement>
+      u: dom.UlHTMLProps<HTMLElement>
+      ul: dom.HTMLProps<HTMLUListElement>
+      var: dom.HTMLProps<HTMLElement>
+      video: dom.VideoHTMLProps<HTMLVideoElement>
+      wbr: dom.WbrHTMLProps<HTMLElement>
+    }
+
+    export interface IntrinsicElements
+      extends IntrinsicSVGElements, IntrinsicMathMLElements, IntrinsicHTMLElements {}
+  }
+}

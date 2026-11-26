@@ -1,4 +1,15 @@
-import { contains } from './contains.ts'
+export function containsIncludingShadowRoots(container: Element, target: Node | null): boolean {
+  while (target) {
+    if (container.contains(target)) return true
+    let root = target.getRootNode()
+    target = isShadowRoot(root) ? root.host : null
+  }
+  return false
+}
+
+function isShadowRoot(node: Node): node is ShadowRoot {
+  return node.nodeType === 11 && 'host' in node
+}
 
 type DismissableLayerOptions = {
   getParent?(): Node | null
@@ -22,6 +33,10 @@ type DismissableLayer = {
   styles: Map<HTMLElement, string>
 }
 
+/** Matches announcement regions, which stay available and interactive behind open layers. */
+export const liveRegionSelector =
+  '[aria-live]:not([aria-live="off"]), [role="alert"], [role="status"], [role="log"]'
+
 const documents = new WeakMap<Document, ReturnType<typeof createDocumentLayers>>()
 const observers = new WeakMap<Document, Set<() => void>>()
 
@@ -34,7 +49,7 @@ export function getDismissableLayerBranch(node: HTMLElement): HTMLElement[] {
     for (let layer of layers) {
       if (
         (layer.parent && branch.has(layer.parent.node)) ||
-        [...branch].some((owner) => contains(owner, layer.node))
+        [...branch].some((owner) => containsIncludingShadowRoots(owner, layer.node))
       ) {
         branch.add(layer.node)
       }
@@ -54,6 +69,79 @@ export function observeDismissableLayers(document: Document, callback: () => voi
     callbacks.delete(callback)
     if (callbacks.size === 0) observers.delete(document)
   }
+}
+
+type ModalExemptRegion = {
+  node: HTMLElement
+  onScopeClose?(branch: HTMLElement[], returnTarget: Element | false | null): void
+}
+
+const modalExemptRegions = new WeakMap<Document, Set<ModalExemptRegion>>()
+const modalExemptRegionObservers = new WeakMap<
+  Document,
+  Set<(node: HTMLElement, registered: boolean) => void>
+>()
+
+// These regions stay available outside modal containment. Closing an originating layer
+// notifies them so controls such as notifications can update their return-focus target.
+export function registerModalExemptRegion(region: ModalExemptRegion): () => void {
+  let doc = region.node.ownerDocument
+  let registered = modalExemptRegions.get(doc)
+  if (!registered) {
+    registered = new Set()
+    modalExemptRegions.set(doc, registered)
+  }
+  registered.add(region)
+  notifyModalExemptRegionObservers(doc, region.node, true)
+  return () => {
+    registered.delete(region)
+    if (registered.size === 0) modalExemptRegions.delete(doc)
+    notifyModalExemptRegionObservers(doc, region.node, false)
+  }
+}
+
+export function getModalExemptRegions(doc: Document): HTMLElement[] {
+  return Array.from(modalExemptRegions.get(doc) ?? [], ({ node }) => node).filter(
+    (node) => node.isConnected,
+  )
+}
+
+export function isInModalExemptRegion(doc: Document, target: Node | null): boolean {
+  return getModalExemptRegions(doc).some((node) => containsIncludingShadowRoots(node, target))
+}
+
+export function notifyModalExemptRegionsOfScopeClose(
+  scope: HTMLElement,
+  branch: HTMLElement[],
+  returnTarget: Element | false | null,
+): void {
+  for (let region of modalExemptRegions.get(scope.ownerDocument) ?? []) {
+    region.onScopeClose?.(branch, returnTarget)
+  }
+}
+
+export function observeModalExemptRegions(
+  doc: Document,
+  callback: (node: HTMLElement, registered: boolean) => void,
+): () => void {
+  let registered = modalExemptRegionObservers.get(doc)
+  if (!registered) {
+    registered = new Set()
+    modalExemptRegionObservers.set(doc, registered)
+  }
+  registered.add(callback)
+  return () => {
+    registered.delete(callback)
+    if (registered.size === 0) modalExemptRegionObservers.delete(doc)
+  }
+}
+
+function notifyModalExemptRegionObservers(
+  doc: Document,
+  node: HTMLElement,
+  registered: boolean,
+): void {
+  for (let callback of modalExemptRegionObservers.get(doc) ?? []) callback(node, registered)
 }
 
 function updateLayerOrder(layers: DismissableLayer[]) {
@@ -87,10 +175,18 @@ function eventNodes(event: Event, document: Document): Node[] {
   return event.composedPath().filter((target): target is Node => target instanceof NodeConstructor)
 }
 
+function isInLiveRegion(event: Event, document: Document): boolean {
+  return eventNodes(event, document).some(
+    (node) => node.nodeType === Node.ELEMENT_NODE && (node as Element).matches(liveRegionSelector),
+  )
+}
+
 function isInside(layer: DismissableLayer, event: Event): boolean {
   let branch = getDismissableLayerBranch(layer.node)
   return eventNodes(event, layer.node.ownerDocument).some(
-    (target) => branch.some((node) => contains(node, target)) || layer.options.isInside?.(target),
+    (target) =>
+      branch.some((node) => containsIncludingShadowRoots(node, target)) ||
+      layer.options.isInside?.(target),
   )
 }
 
@@ -124,17 +220,21 @@ function createDocumentLayers(document: Document) {
     let origin = pointerOrigin
     clearPointerOrigin()
     let layer = layers.at(-1)
+    let interaction = eventNodes(event, document).some((target) =>
+      isInModalExemptRegion(document, target),
+    )
     if (
       !layer ||
       event.button !== 0 ||
       (origin && (origin.layer !== layer || origin.inside)) ||
       isInside(layer, event) ||
+      (isInLiveRegion(event, document) && !interaction) ||
       layer.options.dismissOnOutsideClick?.() === false
     ) {
       return
     }
 
-    if (layer.options.stopOutsideClickPropagation?.() !== false) {
+    if (!interaction && layer.options.stopOutsideClickPropagation?.() !== false) {
       event.stopPropagation()
     }
     layer.options.onDismiss({
@@ -206,8 +306,8 @@ export function registerDismissableLayer(
     let target = child.options.getParent?.() ?? child.node
     let parent: DismissableLayer | undefined
     for (let candidate of layers) {
-      if (candidate === child || !contains(candidate.node, target)) continue
-      if (parent && !contains(parent.node, candidate.node)) continue
+      if (candidate === child || !containsIncludingShadowRoots(candidate.node, target)) continue
+      if (parent && !containsIncludingShadowRoots(parent.node, candidate.node)) continue
       let ancestor: DismissableLayer | undefined = candidate
       while (ancestor && ancestor !== child) ancestor = ancestor.parent
       if (!ancestor) parent = candidate

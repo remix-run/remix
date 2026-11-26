@@ -1,0 +1,1 @@
+Fix a boolean attribute given an empty string, such as `disabled: ""` from an untyped attribute object, being removed at hydration. The server rendered `disabled=""`, but the browser set the `disabled` property to `""`, which is false, so a control disabled in the server HTML became enabled without a warning.

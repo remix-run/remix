@@ -464,6 +464,15 @@ hydrates. When two `css(...)` styles on one element set the same property, their
 doesn't decide which one wins, so
 [put variants behind a selector in a single style](../src/component/README.md#combining-styles).
 
+Each `css(...)` style also gets its own
+[cascade layer](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer), ordered by when the page
+first inserts it. A later layer wins regardless of selector specificity, and a parent's style is
+usually inserted before its children's. That means a nested selector in a parent's style, such as
+`"&:hover .title"`, can't override a property the child's own style sets. Put that state selector in
+the child's style instead. In the card below, the card's style changes the title color because the
+title's style doesn't set `color`, while the button sets its own background and reacts to the
+hovered card with `":where(article:hover) &"`.
+
 During server rendering, Remix collects generated rules, deduplicates them, and inserts their
 `<style data-rmx-style>` tags into the document head. A server-rendered page does not wait for browser
 JavaScript to receive its component styles.
@@ -498,15 +507,12 @@ function ProductCard(handle: Handle<Product>) {
         color: "light-dark(#151515, #f4f4f5)",
         boxShadow: "0 12px 32px light-dark(rgb(15 17 21 / 0.08), rgb(0 0 0 / 0.4))",
         transition: "transform 180ms ease, box-shadow 180ms ease",
-        // Hovering the card restyles the title and button inside its child components.
+        // Hovering the card restyles the title inside its child component.
         "&:hover": {
           boxShadow: "0 18px 44px light-dark(rgb(15 17 21 / 0.14), rgb(0 0 0 / 0.6))",
           transform: "translateY(-3px)",
           "& .title": {
             color: "light-dark(#d83a5a, #ff6b88)",
-          },
-          "& button": {
-            backgroundColor: "#b8324d",
           },
         },
         "@media (max-width: 560px)": {
@@ -607,6 +613,11 @@ function AddToCartButton() {
         fontWeight: "700",
         padding: "0.7rem 1rem",
         transition: "background-color 180ms ease, transform 120ms ease",
+        // The button sets its own background, so it reacts to the hovered card itself. A rule in
+        // the card's style can't override a property this style sets.
+        ":where(article:hover) &": {
+          backgroundColor: "#b8324d",
+        },
         "&:active": {
           transform: "scale(0.98)",
         },
@@ -637,8 +648,8 @@ function HeadphonesIcon() {
 
 A [cascade layer](https://developer.mozilla.org/en-US/docs/Web/CSS/@layer) is a named group of CSS
 rules declared with `@layer`. The order of layers decides which rules win, before selector
-specificity is compared. Generated `css(...)` rules live in the `rmx` layer. If your app uses its
-own layers, declare the complete order once:
+specificity is compared. Generated `css(...)` rules live in the `rmx` layer, with each style in its
+own sublayer. If your app uses its own layers, declare the complete order once:
 
 ```css filename=app/actions/public/app.css
 @layer base, rmx, app;

@@ -35,10 +35,104 @@ async function type(field: HTMLInputElement, text: string): Promise<void> {
     }
     field.dispatchEvent(new KeyboardEvent('keyup', { key: char, bubbles: true }))
   }
-  await Promise.resolve()
+  await controlledRestore()
+}
+
+// Controlled restores run in a microtask queued while the event dispatches, so a microtask queued
+// after the dispatch runs once they have finished.
+function controlledRestore(): Promise<void> {
+  return new Promise((resolve) => queueMicrotask(resolve))
 }
 
 describe('vdom controlled props', () => {
+  it('only attaches control listeners when a returning input becomes controlled', async (t) => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    let removal = Promise.withResolvers<void>()
+    t.after(() => {
+      root.dispose()
+      removal.resolve()
+    })
+    let persist = createMixin((handle) => {
+      handle.addEventListener('beforeRemove', (event) => event.persistNode(() => removal.promise))
+      return () => handle.element
+    })
+    function field(value?: string) {
+      return <input key="field" value={value} mix={persist()} />
+    }
+    root.render(field())
+    let input = container.querySelector('input')
+    if (!input) throw new Error('Missing input')
+    let add = t.mock.method(input, 'addEventListener')
+    input.value = 'draft'
+
+    root.render(null)
+    root.render(field())
+    root.flush()
+    expect(container.firstChild).toBe(input)
+    expect(input.value).toBe('draft')
+    let listeners = add.mock.calls.map((call) => call.arguments[0])
+    expect(listeners).not.toContain('input')
+    expect(listeners).not.toContain('change')
+
+    root.render(null)
+    root.render(field('saved'))
+    root.flush()
+    expect(container.firstChild).toBe(input)
+    input.value = 'edit'
+    input.dispatchEvent(new Event('change'))
+    await controlledRestore()
+    expect(input.value).toBe('saved')
+  })
+
+  it('restores controlled checked supplied as an empty string', async (t) => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => root.dispose())
+    let attrs: Record<string, unknown> = { checked: '' }
+    root.render(<input type="checkbox" {...attrs} />)
+    root.flush()
+
+    let input = container.querySelector('input')
+    if (!input) throw new Error('Missing checkbox')
+    expect(input.checked).toBe(true)
+
+    input.checked = false
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+    await controlledRestore()
+
+    expect(input.checked).toBe(true)
+  })
+
+  it('keeps empty-string selected options as form reset defaults', (t) => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+    t.after(() => root.dispose())
+    let attrs: Record<string, unknown> = { selected: '' }
+    root.render(
+      <form>
+        <select>
+          <option value="a">A</option>
+          <option value="b" {...attrs}>
+            B
+          </option>
+        </select>
+      </form>,
+    )
+    root.flush()
+
+    let form = container.querySelector('form')
+    let select = container.querySelector('select')
+    if (!form || !select) throw new Error('Missing form controls')
+    expect(select.value).toBe('b')
+
+    select.value = 'a'
+    form.reset()
+
+    expect(select.value).toBe('b')
+    expect(select.options[1].defaultSelected).toBe(true)
+  })
+
   it('restores controlled array values after an option component updates itself', (t) => {
     let container = document.createElement('div')
     let root = createRoot(container)
@@ -345,8 +439,7 @@ describe('vdom controlled props', () => {
     let input = container.querySelector('input') as HTMLInputElement
     input.value = 'hello123'
     input.dispatchEvent(new Event('input', { bubbles: true }))
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(input.value).toBe('hello')
   })
 
@@ -359,8 +452,7 @@ describe('vdom controlled props', () => {
     let input = container.querySelector('input') as HTMLInputElement
     input.checked = false
     input.dispatchEvent(new Event('change', { bubbles: true }))
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(input.checked).toBe(true)
   })
 
@@ -453,8 +545,7 @@ describe('vdom controlled props', () => {
     expect(output.textContent).toBe('1:helloa')
 
     await type(input, '1')
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(input.value).toBe('helloa')
     expect(output.textContent).toBe('1:helloa')
 
@@ -490,20 +581,20 @@ describe('vdom controlled props', () => {
     let input = container.querySelector('input') as HTMLInputElement
     input.value = 'helloa'
     input.dispatchEvent(new Event('input', { bubbles: true }))
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(input.value).toBe('helloa')
   })
 
   it('does not control value/checked when prop value is undefined', async () => {
     let container = document.createElement('div')
     let root = createRoot(container)
-    root.render(
+    let fields = (
       <>
         <input id="text" value={undefined} />
         <input id="check" type="checkbox" checked={undefined} />
-      </>,
+      </>
     )
+    root.render(fields)
     root.flush()
 
     let text = container.querySelector('#text') as HTMLInputElement
@@ -514,10 +605,20 @@ describe('vdom controlled props', () => {
     check.checked = true
     check.dispatchEvent(new Event('change', { bubbles: true }))
 
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
+    root.render(fields)
     expect(text.value).toBe('user typed')
     expect(check.checked).toBe(true)
+
+    let cleared: Record<string, unknown> = { value: null, checked: null }
+    root.render(
+      <>
+        <input id="text" {...cleared} />
+        <input id="check" type="checkbox" {...cleared} />
+      </>,
+    )
+    expect(text.value).toBe('')
+    expect(check.checked).toBe(false)
   })
 
   it('restores controlled value on native change for select when no update happens', async () => {
@@ -535,8 +636,7 @@ describe('vdom controlled props', () => {
     select.value = 'a'
     select.dispatchEvent(new Event('change', { bubbles: true }))
 
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(select.value).toBe('b')
   })
 
@@ -573,8 +673,7 @@ describe('vdom controlled props', () => {
 
     select.value = 'beta'
     select.dispatchEvent(new Event('input', { bubbles: true }))
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     select.dispatchEvent(new Event('change', { bubbles: true }))
     root.flush()
 
@@ -595,8 +694,7 @@ describe('vdom controlled props', () => {
     input.value = 'post-dispose'
     input.dispatchEvent(new Event('input', { bubbles: true }))
     input.dispatchEvent(new Event('change', { bubbles: true }))
-    await Promise.resolve()
-    await Promise.resolve()
+    await controlledRestore()
     expect(input.value).toBe('post-dispose')
   })
 })

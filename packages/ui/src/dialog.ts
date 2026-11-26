@@ -1,5 +1,7 @@
+import { FocusPortal } from './lib/focus-portal.tsx'
 import {
   attrs,
+  createElement,
   createMixin,
   css,
   on,
@@ -11,8 +13,13 @@ import {
   type MixinHandle,
   type RemixNode,
 } from '@remix-run/component'
-import { activateFocusScope } from './dialog/focus.ts'
-import { registerDismissableLayer } from './lib/dismissable-layer.ts'
+import { getActiveElement, SurfaceBoundary } from './lib/focus-boundary.tsx'
+import { activateFocusScope } from './lib/focus-scope.ts'
+import {
+  getDismissableLayerBranch,
+  registerDismissableLayer,
+  isInModalExemptRegion,
+} from './lib/dismissable-layer.ts'
 import { finishAnimations } from './lib/finish-animations.ts'
 import { lockScroll } from './lib/scroll-lock.ts'
 
@@ -104,6 +111,7 @@ type DialogContextValue = {
   readonly open: boolean
   readonly modal: DialogModal
   readonly nested: boolean
+  readonly openDescendantDepth: number
   readonly parentSurface: HTMLElement | null
   readonly closeOnEscape: boolean
   readonly closeOnOutsideClick: boolean
@@ -122,6 +130,9 @@ type DialogContextValue = {
   request(open: boolean, reason: DialogChangeReason, event?: Event, trigger?: HTMLElement): boolean
   complete(open: boolean): void
   syncBackdrop(): void
+  setOpenChildDepth(child: DialogContextValue, depth: number): void
+  syncNesting(): void
+  updateNestingStyles(): void
 }
 
 function DialogProvider(handle: Handle<DialogContextProps, DialogContextValue>): () => RemixNode {
@@ -129,6 +140,7 @@ function DialogProvider(handle: Handle<DialogContextProps, DialogContextValue>):
   let initialized = false
   let uncontrolledOpen = false
   let hasOpened = false
+  let openChildDepths = new Map<DialogContextValue, number>()
 
   function getOpen() {
     if (!initialized) {
@@ -150,6 +162,9 @@ function DialogProvider(handle: Handle<DialogContextProps, DialogContextValue>):
     },
     get nested() {
       return !!parent
+    },
+    get openDescendantDepth() {
+      return getOpen() ? Math.max(0, ...openChildDepths.values()) : 0
     },
     get closeOnEscape() {
       return handle.props.closeOnEscape !== false
@@ -192,11 +207,26 @@ function DialogProvider(handle: Handle<DialogContextProps, DialogContextValue>):
       return true
     },
     syncBackdrop() {},
+    setOpenChildDepth(child, depth) {
+      if ((openChildDepths.get(child) ?? 0) === depth) return
+      if (depth === 0) openChildDepths.delete(child)
+      else openChildDepths.set(child, depth)
+      context.syncNesting()
+    },
+    syncNesting() {
+      context.updateNestingStyles()
+      parent?.setOpenChildDepth(
+        context,
+        context.open && context.surface ? context.openDescendantDepth + 1 : 0,
+      )
+    },
+    updateNestingStyles() {},
     complete(open) {
       handle.props.onOpenChangeComplete?.(open)
     },
   }
   handle.context.set(context)
+  handle.signal.addEventListener('abort', () => parent?.setOpenChildDepth(context, 0))
   handle.queueTask(() => {
     handle.props.ref?.({
       get open() {
@@ -213,8 +243,27 @@ function DialogProvider(handle: Handle<DialogContextProps, DialogContextValue>):
   return () => {
     if (hasOpened && parent && !parent.open) uncontrolledOpen = false
     hasOpened ||= getOpen()
+    handle.queueTask(() => context.syncNesting())
     return handle.props.children
   }
+}
+
+/** Content and focus boundaries for one dialog surface. */
+export interface DialogSurfaceContextProps {
+  /** One element with `dialog.surface()`, rendered between declarative focus guards. */
+  children?: RemixNode
+}
+
+/**
+ * Renders focus guards beside a dialog surface at its DOM destination.
+ * Place it inside `dialog.Portal` when the surface is portaled.
+ * @param handle Surface content and the owning dialog context.
+ * @returns The surface content with declarative focus boundaries.
+ */
+export function SurfaceContext(handle: Handle<DialogSurfaceContextProps>): () => RemixNode {
+  let owner = handle.context.get(DialogProvider)
+  if (!owner) throw new Error('dialog.SurfaceContext requires a dialog.Context ancestor')
+  return () => createElement(SurfaceBoundary, { owner }, handle.props.children)
 }
 
 function getDialogContext(handle: MixinHandle) {
@@ -261,9 +310,14 @@ function resolveFocus(target: DialogFocusTarget | undefined): HTMLElement | fals
 const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], ElementProps> =
   createMixin<HTMLElement, [options?: DialogSurfaceOptions], ElementProps>((handle) => {
     let context = getDialogContext(handle)
+    let boundary = handle.context.get(SurfaceBoundary)
+    if (!boundary || boundary.owner !== context)
+      throw new Error('dialog.surface() requires a dialog.SurfaceContext ancestor')
+    let surfaceLifetime = new AbortController()
     let previousOpen = false
     let transition = 0
     let surfaceNode: HTMLElement | null = null
+    let previousOpenDescendantDepth = ''
     let layer: ReturnType<typeof registerDismissableLayer> | undefined
     let focusScope: ReturnType<typeof activateFocusScope> | undefined
     let activeModal: DialogModal | undefined
@@ -271,15 +325,27 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
     let latestOptions: DialogSurfaceOptions = {}
     let previouslyFocused: HTMLElement | null = null
 
+    context.updateNestingStyles = () => {
+      if (!surfaceNode) return
+      surfaceNode.style.setProperty(
+        '--dialog-open-descendant-depth',
+        String(context.openDescendantDepth),
+      )
+      surfaceNode.toggleAttribute('data-child-dialog-open', context.openDescendantDepth > 0)
+    }
+
     context.syncBackdrop = () => {
       if (surfaceNode?.hasAttribute('data-open')) context.backdrop?.setAttribute('data-open', '')
       layer?.update()
     }
 
     function release() {
+      // Layer disposal removes portaled descendants from the ownership tree.
+      let closingBranch = surfaceNode ? getDismissableLayerBranch(surfaceNode) : []
       layer?.dispose()
       layer = undefined
       focusScope?.dispose({
+        closingBranch,
         restoreFocus:
           context.closingReason !== 'focus-out' &&
           !(context.modal === false && context.closingReason === 'outside-click'),
@@ -307,6 +373,7 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
       }
       let openingEvent = context.openingEvent
       let touch = openingEvent instanceof PointerEvent && openingEvent.pointerType === 'touch'
+      let explicitReturnFocus = false
       focusScope = activateFocusScope(node, {
         modal: context.modal,
         initialFocus: initial
@@ -314,11 +381,12 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
             context.showFocusTarget ??
             (touch ? node : null))
           : false,
-        returnFocus: () =>
-          resolveFocus(latestOptions.finalFocus) ??
-          context.hideFocusTarget ??
-          context.trigger ??
-          previouslyFocused,
+        returnFocus() {
+          let target = resolveFocus(latestOptions.finalFocus) ?? context.hideFocusTarget
+          explicitReturnFocus = target != null
+          return target ?? context.trigger ?? previouslyFocused
+        },
+        hasExplicitReturnFocus: () => explicitReturnFocus,
         getBackdrop: () => context.backdrop,
         onFocusOutside(event) {
           if (event.target instanceof Node && context.isTrigger(event.target)) return
@@ -330,18 +398,29 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
     handle.addEventListener('insert', ({ node }) => {
       if (context.surface && context.surface !== node)
         throw new Error('dialog.Context supports one dialog.surface()')
+      surfaceLifetime = new AbortController()
       context.surface = node
       surfaceNode = node
+      previousOpenDescendantDepth = node.style.getPropertyValue('--dialog-open-descendant-depth')
+      context.syncNesting()
+      boundary.registerSurface(node, surfaceLifetime.signal)
     })
     handle.addEventListener('remove', () => {
+      surfaceLifetime.abort()
       transition++
       let node = surfaceNode
       surfaceNode = null
       if (!node) return
       hide(node)
+      if (previousOpenDescendantDepth)
+        node.style.setProperty('--dialog-open-descendant-depth', previousOpenDescendantDepth)
+      else node.style.removeProperty('--dialog-open-descendant-depth')
+      node.removeAttribute('data-child-dialog-open')
       if (context.surface === node) {
         context.surface = null
         context.syncBackdrop = () => {}
+        context.updateNestingStyles = () => {}
+        context.syncNesting()
       }
     })
 
@@ -363,8 +442,7 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
         }
         if (open && !focusScope) {
           // Capture the opener before revealing content or applying initial focus.
-          let active = node.ownerDocument.activeElement
-          while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement
+          let active = getActiveElement(node.ownerDocument)
           previouslyFocused = active instanceof HTMLElement ? active : null
         }
         if (open && (changed || focusScope) && context.backdrop) {
@@ -385,7 +463,9 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
               dismissOnEscape: () => context.open && context.closeOnEscape,
               dismissOnOutsideClick: () => context.open && context.closeOnOutsideClick,
               stopOutsideClickPropagation: () => context.modal === true,
-              isInside: (target) => context.isTrigger(target),
+              isInside: (target) =>
+                context.isTrigger(target) ||
+                (context.modal !== false && isInModalExemptRegion(node.ownerDocument, target)),
               onDismiss(request) {
                 context.request(false, request.reason, request.event)
               },
@@ -416,8 +496,10 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
           'aria-describedby': props['aria-describedby'] ?? context.descriptionId,
           'data-state': open ? 'open' : 'closed',
           'data-nested': context.nested ? '' : undefined,
+          'data-child-dialog-open': context.openDescendantDepth > 0 ? '' : undefined,
         }),
         css({
+          '--dialog-open-descendant-depth': String(context.openDescendantDepth),
           position: 'fixed',
           zIndex: 'calc(var(--rmx-layer-base, 0) + var(--rmx-layer-order, 0))',
           '&:not([data-open])': { display: 'none' },
@@ -436,6 +518,7 @@ const backdropMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
     attrs({
       'aria-hidden': 'true',
       'data-state': context.open ? 'open' : 'closed',
+      'data-nested': context.nested ? '' : undefined,
     }),
     css({
       position: 'fixed',
@@ -516,9 +599,16 @@ const focusOnHideMixin = createMixin<HTMLElement, []>(
 export const Context = DialogProvider
 /** Adapts a native button to open or toggle its dialog. */
 export const trigger = triggerMixin
-/** Adapts an app-owned element to the dialog surface. */
+/**
+ * Adapts an element to the dialog surface.
+ * Exposes `--dialog-open-descendant-depth` as the depth of open descendant dialogs,
+ * starting at zero, and `data-child-dialog-open` when that depth is non-zero.
+ */
 export const surface = surfaceMixin
-/** Registers an optional, app-styled backdrop below the surface. */
+/**
+ * Registers an optional, app-styled backdrop below the surface.
+ * Exposes `data-nested` when its dialog has a parent dialog.
+ */
 export const backdrop = backdropMixin
 /** Adapts a native button to request closing its dialog. */
 export const close = closeMixin
@@ -545,4 +635,39 @@ export function onDialogChange<target extends HTMLElement>(
   captureBoolean?: boolean,
 ): ReturnType<typeof on<target, typeof DIALOG_CHANGE_EVENT>> {
   return on(DIALOG_CHANGE_EVENT, handler, captureBoolean)
+}
+
+/** Options for rendering the dialog surface outside its authored DOM ancestors. */
+export interface DialogPortalProps {
+  /** Surface content rendered at the destination. */
+  children?: RemixNode
+  /** Destination in the same document. Defaults to its body. Changing it remounts the content. */
+  container?: HTMLElement | null
+}
+
+/**
+ * Portals one dialog surface while coordinating its focus navigation.
+ * Keep its matching surface context inside this component. Omit it for inline rendering.
+ * The origin and container must be in the document light DOM.
+ * Non-modal Tab order follows this component's declaration position. Place it beside
+ * the trigger when popup content should follow the trigger in sequential navigation.
+ * @param handle Surface content, destination, and the owning dialog context.
+ * @returns The transported content with its origin focus boundaries.
+ */
+export function Portal(handle: Handle<DialogPortalProps>): () => RemixNode {
+  let owner = handle.context.get(DialogProvider)
+  if (!owner) throw new Error('dialog.Portal requires a dialog.Context ancestor')
+  return () =>
+    createElement(
+      FocusPortal,
+      {
+        componentName: 'dialog.Portal',
+        owner,
+        open: () => owner.open,
+        reference: () => owner.trigger ?? owner.triggers.values().next().value,
+        mode: owner.modal === false ? 'navigate' : 'trap',
+        container: handle.props.container,
+      },
+      handle.props.children,
+    )
 }

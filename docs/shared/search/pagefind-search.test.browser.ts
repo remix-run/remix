@@ -30,13 +30,17 @@ describe('Pagefind search behavior', () => {
       dialog.removeAttribute('open')
       dialog.dispatchEvent(new Event('close'))
     }
-    Reflect.set(modal, 'open', () => dialog.setAttribute('open', ''))
+    let opening = Promise.withResolvers<void>()
+    Reflect.set(modal, 'open', () => {
+      dialog.setAttribute('open', '')
+      opening.resolve()
+    })
     Reflect.set(modal, 'close', closeModal)
 
     let stopSearch = startPagefindSearch()
     t.after(stopSearch)
     fullTrigger.click()
-    await Promise.resolve()
+    await opening.promise
 
     assert.equal(dialog.open, true)
     assert.equal(fullTrigger.getAttribute('aria-controls'), dialog.id)
@@ -45,8 +49,9 @@ describe('Pagefind search behavior', () => {
     assert.equal(fullTrigger.getAttribute('aria-expanded'), 'false')
     assert.equal(document.activeElement, fullTrigger)
 
+    opening = Promise.withResolvers<void>()
     compactTrigger.click()
-    await Promise.resolve()
+    await opening.promise
 
     assert.equal(dialog.open, true)
     assert.equal(compactTrigger.getAttribute('aria-expanded'), 'true')

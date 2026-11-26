@@ -1,15 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <defs>
-    <linearGradient id="bg" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#3b82f6" />
-      <stop offset="1" stop-color="#1d4ed8" />
-    </linearGradient>
-  </defs>
-  <rect x="8" y="8" width="48" height="48" rx="14" fill="url(#bg)" />
-  <path
-    d="M24 30a8 8 0 1 1 16 0v2h2a2 2 0 0 1 2 2v10a6 6 0 0 1-6 6H26a6 6 0 0 1-6-6V34a2 2 0 0 1 2-2h2v-2Zm4 2h8v-2a4 4 0 1 0-8 0v2Z"
-    fill="white"
-  />
-  <circle cx="32" cy="39" r="3" fill="#93c5fd" />
-  <path d="M32 42v4" stroke="#93c5fd" stroke-linecap="round" stroke-width="2.5" />
+<svg width="144" height="144" viewBox="0 0 144 144" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="144" height="144" rx="72" fill="black"/>
+<g clip-path="url(#clip0_2008_2428)">
+<path d="M102.763 51.2382L102.762 51.2391V51.2401C113.767 51.2402 121.369 56.1787 119.744 62.2714L118.643 66.3973C117.017 72.4901 106.778 77.4286 95.7734 77.4286H94.6475L117.765 92.5868H80.6504L61.9629 78.163C61.2148 77.6833 60.3465 77.4286 59.459 77.4286H28.2197L31.1631 66.3954H85.8799C87.9367 66.3954 89.8519 65.4721 90.1562 64.3329H90.1572C90.4613 63.1935 89.0394 62.2694 86.9814 62.2694H32.2646L35.207 51.2382H102.763ZM54.1865 81.2362C55.2231 81.2363 55.9785 82.2245 55.71 83.2303L53.2139 92.5858H24.1768L27.2041 81.2362H54.1865Z" fill="white"/>
+</g>
+<defs>
+<clipPath id="clip0_2008_2428">
+<rect width="96" height="41.5862" fill="white" transform="translate(24 51.2069)"/>
+</clipPath>
+</defs>
 </svg>

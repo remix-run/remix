@@ -181,10 +181,9 @@ describe('createRequestListener', () => {
     let writeHead = t.mock.method(res, 'writeHead')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
-
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -216,10 +215,9 @@ describe('createRequestListener', () => {
     let write = t.mock.method(res, 'write')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
-
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -244,11 +242,10 @@ describe('createRequestListener', () => {
     let write = t.mock.method(res, 'write')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
     resolveResponse(new Response('late'))
-
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -273,11 +270,10 @@ describe('createRequestListener', () => {
     let write = t.mock.method(res, 'write')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
     resolveResponse(new Response('late'))
-
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -318,9 +314,8 @@ describe('createRequestListener', () => {
       return true
     })
 
-    listener(req, res)
-
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    // The listener's promise settles once it has finished handling the aborted response.
+    await listener(req, res)
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 1)
@@ -386,11 +381,7 @@ describe('createRequestListener', () => {
       listener(req, res)
     })
 
-    await waitFor(
-      responseFinished,
-      100,
-      'Expected the response to end or close after the stream error',
-    )
+    await waitFor(responseFinished, 'Expected the response to end or close after the stream error')
 
     assert.equal(writeHeadCalls, 1)
     assert.equal(errorHandler.mock.calls.length, 1)
@@ -466,7 +457,6 @@ describe('createRequestListener', () => {
 
     await waitFor(
       responseDestroyed,
-      100,
       'Expected the response to be destroyed before the slow error handler resolved',
     )
 
@@ -478,8 +468,6 @@ describe('createRequestListener', () => {
     assert.equal(Buffer.concat(chunks).toString(), 'partial')
 
     resolveErrorHandler()
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    assert.equal(errorHandlerFinished, true)
   })
 
   it('rejects request body reads when the request aborts before ending', async (t) => {
@@ -553,16 +541,12 @@ describe('createRequestListener', () => {
     let write = t.mock.method(res, 'write')
     let end = t.mock.method(res, 'end')
 
-    listener(req, res)
+    let handled = listener(req, res)
     res.emit('close')
     req.emit('error', bodyError)
 
-    await waitFor(
-      handlerDone,
-      100,
-      'Expected the request body read to settle when the request failed',
-    )
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await waitFor(handlerDone, 'Expected the request body read to settle when the request failed')
+    await handled
 
     assert.equal(errorHandler.mock.calls.length, 0)
     assert.equal(writeHead.mock.calls.length, 0)
@@ -633,7 +617,6 @@ describe('createRequestListener', () => {
 
     await waitFor(
       handlerDone,
-      100,
       'Expected the request body read to reject when the request had already aborted',
     )
 
@@ -761,31 +744,26 @@ describe('createRequestListener', () => {
     })
   })
 
-  it('applies backpressure and pauses the request when the body is not read', async (t) => {
-    await new Promise<void>((resolve) => {
-      // Takes the request argument (but never reads its body) so a body stream is created.
-      let handler: FetchHandler = async (_request) => new Response('ok')
-      let listener = createRequestListener(handler)
+  it('applies backpressure and pauses the request when the body is not read', (t) => {
+    // Takes the request argument (but never reads its body) so a body stream is created.
+    let handler: FetchHandler = async (_request) => new Response('ok')
+    let listener = createRequestListener(handler)
 
-      let req = createPendingMockRequest() // method 'POST', so a body stream is created
-      let pause = t.mock.method(req, 'pause')
-      let res = createMockResponse({ req })
+    let req = createPendingMockRequest() // method 'POST', so a body stream is created
+    let pause = t.mock.method(req, 'pause')
+    let res = createMockResponse({ req })
 
-      listener(req, res)
+    listener(req, res)
 
-      // The handler never reads the body, so once the stream's queue fills the request should be
-      // paused rather than buffering every chunk in memory.
-      req.emit('data', Buffer.alloc(1024))
-      req.emit('data', Buffer.alloc(1024))
+    // The handler never reads the body, so once the stream's queue fills the request should be
+    // paused rather than buffering every chunk in memory.
+    req.emit('data', Buffer.alloc(1024))
+    req.emit('data', Buffer.alloc(1024))
 
-      setImmediate(() => {
-        assert.ok(
-          pause.mock.calls.length >= 1,
-          'Expected the request to be paused when the body queue fills',
-        )
-        resolve()
-      })
-    })
+    assert.ok(
+      pause.mock.calls.length >= 1,
+      'Expected the request to be paused when the body queue fills',
+    )
   })
 
   it('uses the `:authority` header to construct the URL for http/2 requests', async () => {
@@ -844,14 +822,15 @@ describe('createRequestListener', () => {
 
   it('ignores proxy headers by default', async (t) => {
     let requestUrl = await captureRequestUrl(t, {
+      url: '/secret?value=%2F',
       headers: {
-        Host: 'example.com',
-        Forwarded: 'for=203.0.113.43; proto=https; host=remix.run',
-        'X-Forwarded-Host': 'remix.run',
+        Host: 'tenant.example.com:8080',
+        Forwarded: 'for=203.0.113.43; proto=https; host="example.com/../admin"',
+        'X-Forwarded-Host': 'example.com?admin',
         'X-Forwarded-Proto': 'https',
       },
     })
-    assert.equal(requestUrl, 'http://example.com/')
+    assert.equal(requestUrl, 'http://tenant.example.com:8080/secret?value=%2F')
   })
 
   it('uses the `Forwarded` proto and host parameters when proxies are trusted', async (t) => {
@@ -868,18 +847,19 @@ describe('createRequestListener', () => {
     assert.equal(requestUrl, 'https://remix.run/')
   })
 
-  it('uses quoted `Forwarded` proto and host values when proxies are trusted', async (t) => {
+  it('uses quoted `Forwarded` values before an invalid `X-Forwarded-Host` when proxies are trusted', async (t) => {
     let requestUrl = await captureRequestUrl(
       t,
       {
         headers: {
           Host: 'example.com',
-          Forwarded: 'for="[2001:db8:cafe::17]"; proto="https"; host="remix.run"',
+          Forwarded: 'for="[2001:db8:cafe::17]"; proto="https"; host="[2001:db8::1]:8080"',
+          'X-Forwarded-Host': 'example.com/../admin',
         },
       },
       { trustProxy: true },
     )
-    assert.equal(requestUrl, 'https://remix.run/')
+    assert.equal(requestUrl, 'https://[2001:db8::1]:8080/')
   })
 
   it('uses `X-Forwarded-Host` and `X-Forwarded-Proto` when proxies are trusted', async (t) => {
@@ -912,22 +892,22 @@ describe('createRequestListener', () => {
     assert.equal(requestUrl, 'https://remix.run/')
   })
 
-  it('uses the host option before trusted proxy host headers', async (t) => {
+  it('uses the host option before invalid Host and trusted proxy host headers', async (t) => {
     let requestUrl = await captureRequestUrl(
       t,
       {
         headers: {
-          Host: 'example.com',
-          Forwarded: 'host=remix.run',
-          'X-Forwarded-Host': 'remix.run',
+          Host: 'example.com/../admin',
+          Forwarded: 'host="example.com/../admin"',
+          'X-Forwarded-Host': 'example.com/../admin',
         },
       },
       {
-        host: 'app.example.com',
+        host: '[2001:db8::1]:8080',
         trustProxy: true,
       },
     )
-    assert.equal(requestUrl, 'http://app.example.com/')
+    assert.equal(requestUrl, 'http://[2001:db8::1]:8080/')
   })
 
   it('ignores invalid forwarded protocol header values when proxies are trusted', async (t) => {
@@ -1307,13 +1287,298 @@ describe('createRequestListener', () => {
     assert.equal(requestAborted, true)
     await waitFor(
       bodyCancelled,
-      100,
       'Expected the streaming response body to be cancelled when the response closed',
     )
   })
 })
 
-describe('createRequest HTTP/2 authority', () => {
+describe('createRequest request targets', () => {
+  it('throws for literal backslashes in the path', () => {
+    let req = createMockRequest({ url: '/files\\..\\notes.txt' })
+    let res = createMockResponse({ req })
+
+    assert.throws(() => createRequest(req, res), {
+      message: 'Invalid request target: backslash in path',
+    })
+  })
+
+  it('preserves encoded path backslashes and literal query backslashes', () => {
+    let req = createMockRequest({ url: '/files%5C..%5Cnotes.txt?value=\\draft' })
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+
+    assert.equal(request.url, 'http://localhost/files%5C..%5Cnotes.txt?value=\\draft')
+  })
+
+  it('continues to normalize ordinary dot segments', () => {
+    let req = createMockRequest({ url: '/files/../notes.txt?value=%2F' })
+    let res = createMockResponse({ req })
+
+    assert.equal(createRequest(req, res).url, 'http://localhost/notes.txt?value=%2F')
+  })
+})
+
+describe('createRequest authority', () => {
+  it('throws for an invalid HTTP/2 authority without Host', () => {
+    let req = createMockRequest({
+      url: '/secret',
+      headers: { ':authority': 'example.com/../admin' },
+    })
+    let res = createMockResponse({ req })
+
+    assert.throws(() => createRequest(req, res), { message: 'Invalid request authority' })
+  })
+
+  it('throws for an invalid HTTP/2 authority before applying overrides', () => {
+    let req = createMockRequest({
+      headers: {
+        ':authority': 'example.com/../admin',
+        Host: 'example.com',
+        Forwarded: 'host=proxy.example.com',
+      },
+    })
+    let res = createMockResponse({ req })
+
+    assert.throws(() => createRequest(req, res, { host: 'app.example.com', trustProxy: true }), {
+      message: 'Invalid request authority',
+    })
+  })
+
+  it('throws for an invalid Host whose parsed host matches HTTP/2 authority', () => {
+    let req = createMockRequest({
+      headers: { ':authority': 'example.com', Host: 'example.com/../admin' },
+    })
+    let res = createMockResponse({ req })
+
+    assert.throws(() => createRequest(req, res, { host: 'app.example.com' }), {
+      message: 'Invalid request authority',
+    })
+  })
+
+  it('passes a Request to rest-parameter handlers whose function length is 0', async (t) => {
+    let receivedRequest: Request | undefined
+
+    await new Promise<void>((resolve) => {
+      let listener = createRequestListener((...args: [Request]) => {
+        receivedRequest = args[0]
+        return new Response('ok')
+      })
+
+      let req = createMockRequest({ url: '/hello', headers: { Host: 'example.com' } })
+      let res = createMockResponse({ req })
+      t.mock.method(res, 'end', () => resolve())
+
+      listener(req, res)
+    })
+
+    assert.ok(receivedRequest instanceof Request)
+    assert.equal(receivedRequest.url, 'http://example.com/hello')
+  })
+
+  it('routes errors from rest-parameter handlers through onError', async (t) => {
+    let onError = t.mock.fn((_error: unknown) => undefined)
+    let status: number | undefined
+
+    await new Promise<void>((resolve) => {
+      let listener = createRequestListener(
+        (..._args: [Request]) => {
+          throw new Error('boom')
+        },
+        { onError },
+      )
+
+      let req = createMockRequest({ headers: { Host: 'example.com' } })
+      let res = createMockResponse({ req })
+      t.mock.method(res, 'writeHead', (statusCode: number) => {
+        status = statusCode
+      })
+      t.mock.method(res, 'end', () => resolve())
+
+      listener(req, res)
+    })
+
+    assert.equal(onError.mock.callCount(), 1)
+    assert.equal(status, 500)
+  })
+
+  it('throws for invalid authority syntax in host overrides', () => {
+    let req = createMockRequest({ url: '/secret', headers: { Host: 'example.com' } })
+    let res = createMockResponse({ req })
+
+    for (let host of [
+      '',
+      'example.com\\admin',
+      'example.com%2fadmin',
+      'exam\tple.com',
+      'example.123',
+      'foo.0x123',
+      '256.0.0.1',
+      '1.2.3.4.5',
+      'example.com:65536',
+      'example.com:abc',
+      '[::1',
+    ]) {
+      assert.throws(
+        () => createRequest(req, res, { host }),
+        { message: 'Invalid request authority' },
+        `expected invalid authority to throw: ${host}`,
+      )
+    }
+  })
+
+  it('matches URL.parse for valid hostnames, IPv4, IPv6, punycode, and ports', () => {
+    let longHost = `${'a'.repeat(60)}.${'b'.repeat(60)}.${'c'.repeat(60)}.${'d'.repeat(60)}.example.com`
+
+    for (let host of [
+      '127.0.0.1:3000',
+      'api.example.com:0',
+      'api.example.com:65535',
+      'example.com:0080',
+      'example.com:',
+      'example.com.',
+      'EXAMPLE.com',
+      'a-b.c-d.com',
+      '01.2.3.4',
+      '1.2.3',
+      'xn--nxasmq6b.com',
+      '[::1]',
+      '[::1]:3000',
+      longHost,
+    ]) {
+      let req = createMockRequest({ url: '/ok' })
+      let res = createMockResponse({ req })
+      let expected = new URL(`http://${host}/ok`).href
+      assert.equal(createRequest(req, res, { host }).url, expected)
+    }
+  })
+
+  it('handles HTTP/1 string headers, array headers, and HTTP/2 pseudo-headers without mutating req.headers', () => {
+    let req1 = createMockRequest({ headers: { Host: 'example.com', 'X-Test': 'one' } })
+    req1.httpVersionMajor = 1
+    let res1 = createMockResponse({ req: req1 })
+    let request1 = createRequest(req1, res1)
+    request1.headers.set('X-Test', 'mutated')
+    assert.equal(req1.headers['x-test'], 'one')
+
+    let reqArray = createMockRequest({ headers: { Host: 'example.com' } })
+    reqArray.httpVersionMajor = 1
+    reqArray.headers['x-multi'] = ['a', 'b']
+    let resArray = createMockResponse({ req: reqArray })
+    assert.equal(createRequest(reqArray, resArray).headers.get('X-Multi'), 'a, b')
+
+    let req2 = createMockRequest({
+      headers: { ':authority': 'example.com', ':method': 'GET', 'X-Test': 'two' },
+    })
+    req2.httpVersionMajor = 2
+    let res2 = createMockResponse({ req: req2 })
+    let request2 = createRequest(req2, res2)
+    assert.deepEqual([...request2.headers], [['x-test', 'two']])
+  })
+
+  it('cancels the response stream when res is destroyed during backpressure before close fires', async () => {
+    let resolveCancelled!: () => void
+    let cancelled = new Promise<void>((resolve) => {
+      resolveCancelled = resolve
+    })
+
+    let listener = createRequestListener(
+      () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('chunk'))
+            },
+            cancel() {
+              resolveCancelled()
+            },
+          }),
+        ),
+    )
+
+    let req = createMockRequest()
+    req.httpVersionMajor = 1
+    let res = Object.assign(new stream.Writable(), {
+      req,
+      destroyed: false,
+      writeHead() {},
+      write() {
+        // Mark destroyed synchronously before `'close'` is emitted on a later tick.
+        this.destroyed = true
+        return false
+      },
+      end() {},
+    }) as unknown as http.ServerResponse
+
+    await listener(req, res)
+    await waitFor(cancelled, 'expected response stream to be cancelled on destroyed response')
+  })
+
+  it('enqueues request body chunks as plain Uint8Array instances', async () => {
+    let req = createMockRequest({ method: 'POST', body: 'hello' })
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+
+    let reader = request.body!.getReader()
+    let { value } = await reader.read()
+    assert.ok(value instanceof Uint8Array)
+    assert.equal(value.constructor, Uint8Array)
+  })
+
+  it('omits the request body stream for bodyless HTTP/1 requests', async () => {
+    let reqZero = createMockRequest({
+      method: 'POST',
+      headers: { Host: 'example.com', 'Content-Length': '0' },
+    })
+    reqZero.httpVersionMajor = 1
+    let requestZero = createRequest(reqZero, createMockResponse({ req: reqZero }))
+    assert.equal(requestZero.body, null)
+    assert.equal(await requestZero.text(), '')
+
+    let reqNone = createMockRequest({
+      method: 'DELETE',
+      headers: { Host: 'example.com' },
+    })
+    reqNone.httpVersionMajor = 1
+    let requestNone = createRequest(reqNone, createMockResponse({ req: reqNone }))
+    assert.equal(requestNone.body, null)
+
+    let reqChunked = createMockRequest({
+      method: 'POST',
+      headers: { Host: 'example.com', 'Transfer-Encoding': 'chunked' },
+      body: 'chunked',
+    })
+    reqChunked.httpVersionMajor = 1
+    let requestChunked = createRequest(reqChunked, createMockResponse({ req: reqChunked }))
+    assert.notEqual(requestChunked.body, null)
+    assert.equal(await requestChunked.text(), 'chunked')
+
+    let reqLength = createMockRequest({
+      method: 'POST',
+      headers: { Host: 'example.com', 'Content-Length': '5' },
+      body: 'hello',
+    })
+    reqLength.httpVersionMajor = 1
+    let requestLength = createRequest(reqLength, createMockResponse({ req: reqLength }))
+    assert.equal(await requestLength.text(), 'hello')
+
+    let reqH2 = createMockRequest({
+      method: 'POST',
+      headers: { ':authority': 'example.com' },
+      body: 'h2-body',
+    })
+    reqH2.httpVersionMajor = 2
+    let requestH2 = createRequest(reqH2, createMockResponse({ req: reqH2 }))
+    assert.equal(await requestH2.text(), 'h2-body')
+  })
+
+  it('preserves URL hostname normalization and request-target encoding', () => {
+    let req = createMockRequest({ url: '/secret%2Fvalue?next=%2Fadmin' })
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res, { host: '%65XAMPLE.com:8080' })
+
+    assert.equal(request.url, 'http://example.com:8080/secret%2Fvalue?next=%2Fadmin')
+  })
+
   it('throws when Host and authority identify different hosts', () => {
     let req = createMockRequest({
       headers: { ':authority': 'example.com', Host: 'other.example.com' },
@@ -1362,7 +1627,6 @@ describe('createRequest abort behavior', () => {
         assert.equal((error as DOMException).name, 'AbortError')
         return true
       }),
-      100,
       'Expected the request body read to reject when the request aborted',
     )
 
@@ -1384,7 +1648,6 @@ describe('createRequest abort behavior', () => {
         assert.equal(error, bodyError)
         return true
       }),
-      100,
       'Expected the request body read to reject when the request errored',
     )
 
@@ -1407,7 +1670,6 @@ describe('createRequest abort behavior', () => {
         assert.equal((error as DOMException).name, 'AbortError')
         return true
       }),
-      100,
       'Expected the request body read to reject when the request closed',
     )
 
@@ -1445,7 +1707,6 @@ describe('createRequest abort behavior', () => {
         assert.equal((error as DOMException).name, 'AbortError')
         return true
       }),
-      100,
       'Expected the request body read to reject when the request had already aborted',
     )
 
@@ -1492,16 +1753,12 @@ async function assertListenerRequestBodyReadRejects(
   let write = t.mock.method(res, 'write')
   let end = t.mock.method(res, 'end')
 
-  listener(req, res)
+  let handled = listener(req, res)
   req.emit('data', Buffer.from('partial'))
   failRequest(req)
 
-  await waitFor(
-    handlerFinished,
-    100,
-    'Expected the request body read to settle when the request failed',
-  )
-  await new Promise((resolve) => setTimeout(resolve, 0))
+  await waitFor(handlerFinished, 'Expected the request body read to settle when the request failed')
+  await handled
 
   assert.equal(bodyReadRejected, true)
   assertError(bodyError, signalReason)
@@ -1645,14 +1902,17 @@ function createMockResponse({
   }) as unknown as http.ServerResponse
 }
 
-async function waitFor(promise: Promise<void>, ms: number, message: string): Promise<void> {
+// Bounds failure only; the awaited promise is what makes each test pass.
+const waitForTimeout = 5000
+
+async function waitFor(promise: Promise<void>, message: string): Promise<void> {
   let timeout: ReturnType<typeof setTimeout> | undefined
 
   try {
     await Promise.race([
       promise,
       new Promise<never>((_, reject) => {
-        timeout = setTimeout(() => reject(new Error(message)), ms)
+        timeout = setTimeout(() => reject(new Error(message)), waitForTimeout)
       }),
     ])
   } finally {

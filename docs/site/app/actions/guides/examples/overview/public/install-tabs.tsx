@@ -1,4 +1,3 @@
-import * as popover from "@remix-run/ui/popover";
 import * as select from "@remix-run/ui/select";
 import { clientEntry, css, unsafeHTML } from "remix/component";
 import type { Handle } from "remix/component";
@@ -72,71 +71,68 @@ export const InstallTabs = clientEntry(
                 <SelectedLabel />
                 <ChevronDownIcon />
               </button>
-              <popover.Context>
-                <div
-                  mix={[
-                    select.popover(),
-                    css({
-                      margin: 0,
-                      padding: 0,
-                      overflow: "clip",
-                      minWidth: "8rem",
-                      border: "1px solid var(--rmx-color-border-subtle)",
-                      borderRadius: "var(--rmx-radius-md)",
-                      background: "var(--rmx-surface-lvl2)",
-                      color: "var(--rmx-color-text-primary)",
-                      boxShadow: "0 12px 32px #00000024",
-                      fontSize: "var(--rmx-font-size-sm)",
-                      opacity: 0,
-                      transition:
-                        "opacity 140ms ease, display 140ms allow-discrete, overlay 140ms allow-discrete",
-                      "&:popover-open": {
-                        opacity: 1,
-                        "@starting-style": {
-                          opacity: 0,
-                        },
-                      },
-                      "@media (prefers-reduced-motion: reduce)": {
-                        transition: "none",
-                      },
-                    }),
-                  ]}
-                >
+              <select.Portal>
+                <select.PopoverContext>
                   <div
-                    aria-label="Package managers"
                     mix={[
-                      select.list(),
+                      select.popover(),
                       css({
-                        display: "grid",
-                        outline: 0,
+                        margin: 0,
+                        padding: 0,
+                        overflow: "clip",
+                        minWidth: "8rem",
+                        border: "1px solid var(--rmx-color-border-subtle)",
+                        borderRadius: "var(--rmx-radius-md)",
+                        background: "var(--rmx-surface-lvl2)",
+                        color: "var(--rmx-color-text-primary)",
+                        boxShadow: "0 12px 32px #00000024",
+                        fontSize: "var(--rmx-font-size-sm)",
+                        opacity: 1,
+                        transition: "opacity 140ms ease",
+                        '&[data-state="closed"]': { opacity: 0 },
+                        "@starting-style": { opacity: 0 },
+                        "@media (prefers-reduced-motion: reduce)": {
+                          transition: "none",
+                        },
                       }),
                     ]}
                   >
-                    {panels.map((panel) => (
-                      <div
-                        key={panel.value}
-                        mix={[
-                          select.option({ label: panel.label, value: panel.value }),
-                          css({
-                            // The menu opens over the trigger, so match its inline padding to keep the label in place.
-                            // Same padding as the trigger, so the selected option covers the trigger exactly.
-                            padding: "var(--rmx-space-sm) var(--rmx-space-md)",
-                            cursor: "default",
-                            '&[data-highlighted="true"]': {
-                              background: activeBackground,
-                            },
-                            '&[aria-selected="true"]': {
-                              fontWeight: 600,
-                            },
-                          }),
-                        ]}
-                      >
-                        {panel.label}
-                      </div>
-                    ))}
+                    <div
+                      aria-label="Package managers"
+                      mix={[
+                        select.list(),
+                        css({
+                          display: "grid",
+                          outline: 0,
+                        }),
+                      ]}
+                    >
+                      {panels.map((panel) => (
+                        <div
+                          key={panel.value}
+                          mix={[
+                            select.option({ label: panel.label, value: panel.value }),
+                            css({
+                              // The menu opens over the trigger, so match its inline padding to keep the label in place.
+                              // Same padding as the trigger, so the selected option covers the trigger exactly.
+                              padding: "var(--rmx-space-sm) var(--rmx-space-md)",
+                              cursor: "default",
+                              '&[data-highlighted="true"]': {
+                                background: activeBackground,
+                              },
+                              '&[aria-selected="true"]': {
+                                fontWeight: 600,
+                              },
+                            }),
+                          ]}
+                        >
+                          {panel.label}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </popover.Context>
+                </select.PopoverContext>
+              </select.Portal>
             </select.Context>
           </div>
           {panels.map((panel) => (

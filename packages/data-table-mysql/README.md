@@ -34,6 +34,12 @@ let db = createMysqlDatabase({
 
 Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `mysql2/promise`.
 
+The driver reads `boolean` columns, which MySQL stores as `tinyint(1)`, as `true` or `false` in query builder results.
+
+Each query parameter represents one value. The driver accepts `Date`, `Buffer`, typed array, and `DataView` objects and rejects other objects, including arrays and mysql2 `raw()` or `toSqlString()` objects. It binds bigints as integers and rejects `NaN` and `Infinity`. The query builder serializes values written to `json()` columns; in raw SQL, pass `JSON.stringify(value)`. For an SQL `IN` list, use `inList(column, values)` in the query builder or supply one placeholder per item in raw SQL.
+
+The driver binds parameters itself instead of using mysql2's placeholder substitution. Question marks inside quoted strings, quoted identifiers, and comments are left as written, while placeholders inside `/*! ... */` executable comments are bound. mysql2's `??` identifier placeholder is not supported; quote identifiers in the SQL text instead. Binding assumes the default `sql_mode` string syntax, so `ANSI_QUOTES`, `NO_BACKSLASH_ESCAPES`, and a custom mysql2 `queryFormat` are not supported.
+
 ## Database Capabilities
 
 `data-table-mysql` reports this capability set by default:

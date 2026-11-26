@@ -2,6 +2,19 @@
 
 This is the changelog for [`render-middleware`](https://github.com/remix-run/remix/tree/main/packages/render-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v1.1.1
+
+### Patch Changes
+
+- Fix `context.render()` responding with `200` when a component throws while rendering the shell. The `render()` middleware now waits for the first chunk of HTML, so these errors reject `router.fetch()` for both `GET` and `HEAD` requests and the server can respond with a `500`. ([#12153](https://github.com/remix-run/remix/pull/12153))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.3`](https://github.com/remix-run/remix/releases/tag/assets@1.0.3)
+  - [`component@1.3.0`](https://github.com/remix-run/remix/releases/tag/component@1.3.0)
+  - [`csp-middleware@1.0.1`](https://github.com/remix-run/remix/releases/tag/csp-middleware@1.0.1)
+  - [`fetch-router@1.0.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@1.0.1)
+  - [`response@1.0.3`](https://github.com/remix-run/remix/releases/tag/response@1.0.3)
+
 ## v1.1.0
 
 ### Minor Changes

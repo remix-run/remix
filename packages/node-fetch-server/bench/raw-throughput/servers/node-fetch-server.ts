@@ -3,11 +3,13 @@ import { createRequestListener } from '@remix-run/node-fetch-server'
 
 const PORT = process.env.PORT || 3000
 
+const html = new TextEncoder().encode('<html><body><h1>Hello, world!</h1></body></html>')
+
 let server = http.createServer(
-  createRequestListener(() => {
+  createRequestListener((_request) => {
     let stream = new ReadableStream({
       start(controller) {
-        controller.enqueue('<html><body><h1>Hello, world!</h1></body></html>')
+        controller.enqueue(html)
         controller.close()
       },
     })

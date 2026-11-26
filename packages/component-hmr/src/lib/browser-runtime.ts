@@ -14,12 +14,15 @@ type ComponentHmrHandle = {
 }
 
 type ComponentEntry = {
+  key: string
+  committed: boolean
   handles: Set<ComponentHmrHandle>
   implementation: ComponentFunction
   setupHash: string
 }
 
 const components = new Map<string, ComponentEntry>()
+const registrations = new WeakMap<Function, ComponentEntry>()
 const componentKeys = new WeakMap<Function, string>()
 const componentState = new WeakMap<ComponentHmrHandle, ComponentHmrState>()
 const componentSetupHashes = new WeakMap<ComponentHmrHandle, Map<string, string>>()
@@ -39,25 +42,40 @@ export function registerComponentForHmr(
   installStalenessCheck(refresh)
 
   let key = getComponentKey(moduleUrl, componentName)
-  let existing = components.get(key)
-  if (existing && existing.setupHash !== setupHash) {
-    staleComponentKeys.add(key)
-  }
-
-  components.set(key, {
-    handles: existing?.handles ?? new Set(),
+  registrations.set(wrapper, {
+    key,
+    committed: false,
+    handles: new Set(),
     implementation,
     setupHash,
   })
   componentKeys.set(wrapper, key)
 }
 
+// Only publish after the module's authored code and generated accept boundary have evaluated.
+export function commitComponentModuleForHmr(wrappers: readonly Function[]): void {
+  for (let wrapper of wrappers) {
+    let component = registrations.get(wrapper)
+    if (!component || component.committed) continue
+    let existing = components.get(component.key)
+    if (existing) {
+      if (existing.setupHash !== component.setupHash) staleComponentKeys.add(component.key)
+      for (let handle of component.handles) existing.handles.add(handle)
+      component.handles = existing.handles
+    }
+    component.committed = true
+    components.set(component.key, component)
+  }
+}
+
 export function getCurrentComponentForHmr(
   moduleUrl: string,
   componentName: string,
+  wrapper?: Function,
 ): ComponentFunction {
   let key = getComponentKey(moduleUrl, componentName)
-  let component = components.get(key)
+  let registration = wrapper && registrations.get(wrapper)
+  let component = registration && !registration.committed ? registration : components.get(key)
   if (!component) {
     throw new Error(`[remix] Missing HMR component registration for ${key}`)
   }
@@ -82,6 +100,15 @@ export function getComponentHmrState(handle: ComponentHmrHandle): ComponentHmrSt
     componentState.set(handle, state)
   }
   return state
+}
+
+export function retainComponentHmrBinding(
+  state: ComponentHmrState,
+  name: string,
+  get: () => unknown,
+  set?: (value: unknown) => void,
+): void {
+  Object.defineProperty(state, name, { enumerable: true, configurable: true, get, set })
 }
 
 export function setupComponentForHmr(
@@ -113,12 +140,6 @@ export function setupComponentForHmr(
     return false
   }
 
-  if (Object.keys(state).length === 0) {
-    setup(state)
-    setupHashes.set(key, setupHash)
-    return false
-  }
-
   clearComponentHmrState(handle)
   setupHashes.delete(key)
   staleComponentKeys.add(key)
@@ -143,7 +164,8 @@ export function registerComponentRenderForHmr(
   componentKeys.set(wrapper, key)
   renderFunctions.set(handle, render)
 
-  let component = components.get(key)
+  let registration = registrations.get(wrapper)
+  let component = registration && !registration.committed ? registration : components.get(key)
   let wasTracked = component?.handles.has(handle) === true
   if (component) {
     component.handles.add(handle)
@@ -154,6 +176,7 @@ export function registerComponentRenderForHmr(
   handle.signal.addEventListener(
     'abort',
     () => {
+      component?.handles.delete(handle)
       components.get(key)?.handles.delete(handle)
       clearComponentHmrState(handle)
     },
