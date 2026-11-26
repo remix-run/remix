@@ -100,6 +100,12 @@ function isKeyframesAtRule(key: string): boolean {
   return /^@(?:-(?:webkit|moz|o)-)?keyframes/.test(key.toLowerCase())
 }
 
+// These at-rules take descriptors, not style rules. Nesting the element selector
+// inside them is invalid, so browsers drop the rule.
+function isDescriptorAtRule(key: string): boolean {
+  return /^@(?:property|font-face|counter-style|font-palette-values|page)(?![-\w])/i.test(key)
+}
+
 // Generate a hash for style objects to create unique class names.
 // Class names are content-addressed — a collision silently applies the wrong
 // styles — so use two independent 32-bit FNV-1a passes (~64 bits of hash
@@ -124,14 +130,15 @@ function styleToCss(styles: StyleObject, selector: string): string {
   let body = styleBodyToCss(styles, '  ', (key, record) => {
     if (!key.startsWith('@')) return nestedRuleToCss(key, record, '  ')
 
-    // Some at-rules (e.g., @media) scope declarations to the selector.
-    // Others (e.g., @function) must NOT include the selector in their body.
+    // Conditional group rules (for example @media) scope declarations to the selector.
+    // @function, @keyframes, and descriptor at-rules are invalid with that selector
+    // nested inside them, so they are emitted before the class rule.
     if (key.startsWith('@function')) {
       preludeAtRules.push(ruleToCss(key, indent(atRuleBodyToCss(record))))
     } else if (isKeyframesAtRule(key)) {
-      // Keyframes definitions must not be wrapped with the element selector.
-      // Emit them before the class rule so animations can be referenced.
       preludeAtRules.push(ruleToCss(key, indent(keyframesBodyToCss(record))))
+    } else if (isDescriptorAtRule(key)) {
+      preludeAtRules.push(ruleToCss(key, atRuleBodyToCss(record)))
     } else {
       // Default: keep at-rules nested with the element selector, even when empty
       let inner = styleToCss(record, selector) || ruleToCss(selector, '')
