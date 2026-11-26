@@ -11,6 +11,36 @@ const previews = categories.flatMap((category) => {
 })
 
 const installCode = await highlightSource('npm i remix @remix-run/ui', 'sh')
+const stackingCode = await highlightSource(
+  `
+  import { css } from 'remix/component'
+  import type { Handle, RemixNode } from 'remix/component'
+
+  function Document(handle: Handle<{ children: RemixNode }>) {
+    return () => (
+      <html lang="en">
+        <head>
+          <title>My app</title>
+        </head>
+        <body>
+          <div mix={css({ isolation: 'isolate' })}>
+            {handle.props.children}
+          </div>
+        </body>
+      </html>
+    )
+  }
+`,
+  'tsx',
+)
+const notificationStackingCode = await highlightSource(
+  `
+  .Notifications {
+    z-index: calc(var(--rmx-layer-base, 0) + 1000);
+  }
+`,
+  'css',
+)
 const configCode = await highlightSource(
   `
   {
@@ -77,9 +107,55 @@ export default function GettingStarted() {
             API.
           </p>
         </Section>
+        <Section id="stacking" title="Stacking and overlays">
+          <p>
+            Remix UI automatically assigns z-index values to <a href="/patterns/dialog/">dialogs</a>
+            , <a href="/patterns/popover/">popovers</a>, <a href="/patterns/menu/">menus</a>,{' '}
+            <a href="/patterns/select/">selects</a> and <a href="/patterns/combobox/">comboboxes</a>
+            . Backdrops sit below their dialogs, and nested popups appear above their parents. These
+            patterns also coordinate dismissal so Escape closes the active child before its parent.
+            Use the corresponding Portal component, such as <code>dialog.Portal</code> or{' '}
+            <code>popover.Portal</code>, when ancestors would clip a surface or create a stacking
+            context that constrains its z-index.
+          </p>
+          <p>
+            Wrap your app content in an element with <code>isolation: isolate</code>. This creates a
+            stacking context that keeps your app's z-index values together. A header with a high
+            z-index stays within that group, so it cannot cover dialogs and popups rendered outside
+            the wrapper.
+          </p>
+          <CodeBlock html={stackingCode} />
+          <p>
+            Dialogs and other patterns with popup content provide Portal components that render into{' '}
+            <code>document.body</code> by default, outside this wrapper. Keep custom portal
+            containers outside the wrapper too if they should appear above the app. Inline surfaces
+            and portals rendered inside the wrapper still share its stacking context.
+          </p>
+          <p>
+            For other layering setups, you can optionally set <code>--rmx-layer-base</code> on{' '}
+            <code>:root</code> to raise the dialog and popup stack above other content. It defaults
+            to <code>0</code>.
+          </p>
+          <p>
+            <a href="/patterns/toast/">Toast</a> leaves the notification region's z-index to your
+            styles. Use the same base variable with a larger offset so changing the base moves both
+            dialogs and notifications together. Here, <code>1000</code> reserves space above the
+            dialog and popup layers. This offset is an application styling choice.
+          </p>
+          <CodeBlock html={notificationStackingCode} />
+          <p>
+            <a href="/patterns/dialog/">Dialog</a> and <a href="/patterns/toast/">Toast</a> mixins
+            coordinate focus and dismissal automatically. Assigning a higher z-index to an unrelated
+            widget only changes its visual position. See{' '}
+            <a href="/patterns/dialog/#toasts">Stacking with other patterns</a> for a complete
+            example.
+          </p>
+        </Section>
         <Section id="explore" title="Explore the library">
           <p>
-            Explore patterns such as accordions, menus and tabs, or browse the animation utilities.
+            Explore patterns such as <a href="/patterns/accordion/">accordions</a>,{' '}
+            <a href="/patterns/menu/">menus</a> and <a href="/patterns/tabs/">tabs</a>, or browse
+            the animation utilities.
           </p>
           <div class="ui-preview-grid">
             {previews.map(({ category, page, Preview }) => (

@@ -6,11 +6,11 @@ import { element, enterText, input, key, mount, waitFor } from '../test-helpers.
 describe('Rich combobox example', () => {
   it('finds an airport by its visible name and commits its city label', async (t) => {
     let result = await mount(t, <Example />)
-    let search = input(result.container, '[role="combobox"]')
-    let value = input(result.container, 'input[type="hidden"]')
+    let search = input(document.body, '[role="combobox"]')
+    let value = input(document.body, 'input[type="hidden"]')
     assert.equal(
       element(
-        result.container,
+        document.body,
         `[id="${search.getAttribute('aria-describedby')}"]`,
       ).textContent?.trim(),
       'Search by city, airport name, or code.',
@@ -21,7 +21,7 @@ describe('Rich combobox example', () => {
       enterText(search, 'logan international')
     })
 
-    let boston = element(result.container, '[role="option"]:not([hidden])')
+    let boston = element(document.body, '[role="option"]:not([hidden])')
     assert.ok(boston.textContent?.includes('Boston (BOS)'))
     assert.equal(element(boston, 'mark').textContent, 'Logan International')
 
@@ -32,8 +32,8 @@ describe('Rich combobox example', () => {
 
   it('commits exact aliases on blur and preserves uncommitted matches on Escape', async (t) => {
     let result = await mount(t, <Example />)
-    let search = input(result.container, '[role="combobox"]')
-    let value = input(result.container, 'input[type="hidden"]')
+    let search = input(document.body, '[role="combobox"]')
+    let value = input(document.body, 'input[type="hidden"]')
     await result.act(() => {
       search.focus()
       enterText(search, 'massachusetts')
@@ -60,22 +60,22 @@ describe('Rich combobox example', () => {
 
   it('searches aliases and prevents choosing an unavailable airport', async (t) => {
     let result = await mount(t, <Example />)
-    let search = input(result.container, '[role="combobox"]')
-    let value = input(result.container, 'input[type="hidden"]')
+    let search = input(document.body, '[role="combobox"]')
+    let value = input(document.body, 'input[type="hidden"]')
     await result.act(() => {
       search.focus()
       enterText(search, 'EWR')
     })
-    let unavailable = element(result.container, '[role="option"]:not([hidden])')
+    let unavailable = element(document.body, '[role="option"]:not([hidden])')
     assert.equal(unavailable.getAttribute('aria-disabled'), 'true')
     await result.act(() => unavailable.click())
     assert.equal(value.value, '')
     await result.act(() => enterText(search, 'ord'))
-    let chicago = element(result.container, '[role="option"]:not([hidden])')
+    let chicago = element(document.body, '[role="option"]:not([hidden])')
     assert.ok(chicago.textContent?.includes('Chicago (ORD)'))
     assert.equal(element(chicago, 'mark').textContent, 'ORD')
     await result.act(() => enterText(search, 'Massachusetts'))
-    let boston = element(result.container, '[role="option"]:not([hidden])')
+    let boston = element(document.body, '[role="option"]:not([hidden])')
     assert.ok(boston.textContent?.includes('Boston (BOS)'))
     await result.act(() => boston.click())
     await waitFor(() => assert.equal(value.value, 'BOS'))

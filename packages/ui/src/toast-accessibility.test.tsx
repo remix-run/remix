@@ -438,7 +438,7 @@ describe('toast accessibility', () => {
     await result.act(() => key(document, 'F6'))
     let dismiss = element(region, 'button')
     await result.act(() => dismiss.focus())
-    let guards = region.querySelectorAll<HTMLElement>('[data-toast-focus-guard]')
+    let guards = region.querySelectorAll<HTMLElement>('[data-rmx-focus-guard]')
     assert.equal(guards.length, 2)
     await result.act(() => guards[1].focus())
     assert.equal(document.activeElement, origin)
@@ -461,7 +461,7 @@ describe('toast accessibility', () => {
       [...region.querySelectorAll('article')].map((node) => node.getAttribute('data-id')),
       ['newest', 'oldest'],
     )
-    let guards = region.querySelectorAll<HTMLElement>('[data-toast-focus-guard]')
+    let guards = region.querySelectorAll<HTMLElement>('[data-rmx-focus-guard]')
     assert.deepEqual(
       [...guards].map((node) => node.tabIndex),
       [0, -1, -1, 0],

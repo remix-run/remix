@@ -1,7 +1,7 @@
 {
   "$schema": "../../node_modules/remix/schema/remix.json",
   "test": {
-    "files": ["**/*.test.{ts,tsx}"],
+    "files": ["**/*.test.{ts,tsx}", "**/*.test.e2e.{ts,tsx}"],
     "browserFiles": ["**/*.test.{ts,tsx}"],
     "playwright": {
       "configFile": "./playwright.config.ts"

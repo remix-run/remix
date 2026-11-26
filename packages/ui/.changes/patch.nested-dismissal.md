@@ -1,0 +1,1 @@
+Escape and outside clicks now dismiss only the topmost popup in nested menus and dialogs. Keyboard input inside a nested popup no longer activates the parent menu, and closing a parent also closes its nested popups.

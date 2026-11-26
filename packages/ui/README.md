@@ -42,25 +42,29 @@ function ViewOptions(handle: Handle) {
       >
         View options
       </button>
-      <div
-        mix={[
-          popover.surface({
-            open,
-            onHide() {
-              open = false
-              handle.update()
-            },
-          }),
-          css({
-            background: 'white',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            padding: '8px',
-          }),
-        ]}
-      >
-        Panel content
-      </div>
+      <popover.Portal>
+        <popover.SurfaceContext>
+          <div
+            mix={[
+              popover.surface({
+                open,
+                onHide() {
+                  open = false
+                  handle.update()
+                },
+              }),
+              css({
+                background: 'white',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                padding: '8px',
+              }),
+            ]}
+          >
+            Panel content
+          </div>
+        </popover.SurfaceContext>
+      </popover.Portal>
     </popover.Context>
   )
 }
@@ -71,6 +75,7 @@ function ViewOptions(handle: Handle) {
 - [`@remix-run/ui/accordion`](https://github.com/remix-run/remix/blob/main/packages/ui/src/accordion/README.md)
 - [`@remix-run/ui/anchor`](https://github.com/remix-run/remix/blob/main/packages/ui/src/anchor/README.md)
 - [`@remix-run/ui/combobox`](https://github.com/remix-run/remix/blob/main/packages/ui/src/combobox/README.md)
+- [`@remix-run/ui/dialog`](https://github.com/remix-run/remix/blob/main/packages/ui/src/dialog/README.md)
 - [`@remix-run/ui/form`](https://github.com/remix-run/remix/blob/main/packages/ui/src/form/README.md)
 - [`@remix-run/ui/listbox`](https://github.com/remix-run/remix/blob/main/packages/ui/src/listbox/README.md)
 - [`@remix-run/ui/menu`](https://github.com/remix-run/remix/blob/main/packages/ui/src/menu/README.md)

@@ -16,6 +16,7 @@ import ReducedMotionPage, { meta as reducedMotion } from '../pages/animation/red
 import SpringPage, { meta as spring } from '../pages/animation/spring.tsx'
 import TweenPage, { meta as tween } from '../pages/animation/tween.tsx'
 import ComboboxPage, { meta as combobox } from '../pages/patterns/combobox.tsx'
+import DialogPage, { meta as dialog } from '../pages/patterns/dialog.tsx'
 import FormPage, { meta as form } from '../pages/patterns/form.tsx'
 import ListboxPage, { meta as listbox } from '../pages/patterns/listbox.tsx'
 import MenuPage, { meta as menu } from '../pages/patterns/menu.tsx'
@@ -51,6 +52,7 @@ export const pages: UiPage[] = [
   { ...spring, Component: SpringPage },
   { ...tween, Component: TweenPage },
   { ...combobox, Component: ComboboxPage },
+  { ...dialog, Component: DialogPage },
   { ...form, Component: FormPage },
   { ...listbox, Component: ListboxPage },
   { ...menu, Component: MenuPage },

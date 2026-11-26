@@ -17,15 +17,17 @@ export function FrameworkCombobox() {
   return (
     <combobox.Context name="framework">
       <input mix={[inputStyle, combobox.input()]} placeholder="Search frameworks" />
-      <div mix={[popoverStyle, combobox.popover()]}>
-        <div mix={[listStyle, combobox.list()]}>
-          {frameworks.map((option) => (
-            <div key={option.value} mix={[optionStyle, combobox.option(option)]}>
-              {option.label}
-            </div>
-          ))}
+      <combobox.PopoverContext>
+        <div mix={[popoverStyle, combobox.popover()]}>
+          <div mix={[listStyle, combobox.list()]}>
+            {frameworks.map((option) => (
+              <div key={option.value} mix={[optionStyle, combobox.option(option)]}>
+                {option.label}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </combobox.PopoverContext>
       <input mix={combobox.hiddenInput()} />
     </combobox.Context>
   )
@@ -35,13 +37,15 @@ export function FrameworkCombobox() {
 Listen for committed-value changes on the combobox root or an ancestor:
 
 ```tsx
-<div
-  mix={combobox.onComboboxChange((event) => {
-    console.log(event.value, event.label, event.optionId)
-  })}
->
-  {/* combobox */}
-</div>
+<combobox.PopoverContext>
+  <div
+    mix={combobox.onComboboxChange((event) => {
+      console.log(event.value, event.label, event.optionId)
+    })}
+  >
+    {/* combobox */}
+  </div>
+</combobox.PopoverContext>
 ```
 
 ## `@remix-run/ui/combobox`
@@ -67,6 +71,12 @@ Turns the host input into the combobox input.
 - Keeps focus on the input during list navigation and pointer selection.
 - Wires `role="combobox"`, `aria-expanded`, `aria-controls`, and `aria-activedescendant`.
 - Opens from typing, click, and arrow-key navigation.
+
+### `combobox.PopoverContext`
+
+Wrap the element with `combobox.popover()` in `combobox.PopoverContext` within the same `combobox.Context` instance. Keep this wrapper inside `combobox.Portal` when portaled, or omit the Portal for inline rendering.
+
+`ComboboxPopoverContextProps` accepts the popup surface as `children`.
 
 ### `combobox.popover()`
 
@@ -116,3 +126,7 @@ Use `select` when you want a button-triggered single-select control.
 Use `listbox` when you need listbox semantics without an editable text input.
 
 Use `popover` directly for custom floating panels that are not value-picking controls.
+
+## Portal
+
+`combobox.Portal` renders the surface in the document body and coordinates focus with its originating controls. Pass `container` to choose another element in the same document's light DOM. `combobox.Portal` must be declared outside a shadow root and use a container outside shadow roots. Keep `combobox.PopoverContext` inside it. You can omit the Portal for inline rendering while keeping the surface context.
