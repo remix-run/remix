@@ -758,7 +758,7 @@ describe('toast availability', () => {
     let current = element(result.container, '[data-id="new"]')
     assert.equal(old.inert, true)
     assert.equal(document.activeElement, current)
-    assert.equal(result.$$('[data-toast-focus-guard][tabindex="0"]').length, 2)
+    assert.equal(result.$$('[data-rmx-focus-guard][tabindex="0"]').length, 2)
     await result.act(() => result.root.render(view(2)))
     assert.equal(document.activeElement, current)
     await result.act(() =>

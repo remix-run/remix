@@ -40,7 +40,6 @@ type FocusGuardProps = {
   active: boolean
   onFocus(event: FocusEvent & { currentTarget: HTMLElement }): void
   onRef?: (node: HTMLElement, signal: AbortSignal) => void
-  'data-toast-focus-guard'?: ''
 }
 
 // Patterns own focus policy. This component only renders the accessible boundary sensor.
@@ -54,7 +53,6 @@ export function FocusGuard(handle: Handle<FocusGuardProps>) {
         role={role}
         aria-hidden={role ? undefined : 'true'}
         data-rmx-focus-guard=""
-        data-toast-focus-guard={handle.props['data-toast-focus-guard']}
         mix={[
           css({
             position: 'fixed',

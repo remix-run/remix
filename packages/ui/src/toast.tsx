@@ -580,13 +580,11 @@ export function ItemContext(handle: Handle<ToastItemContextProps, ItemState>): (
       <>
         <FocusGuard
           active={context.hasReturnTarget && first}
-          data-toast-focus-guard=""
           onFocus={(event) => context.focusGuard(event.relatedTarget)}
         />
         {handle.props.children}
         <FocusGuard
           active={context.hasReturnTarget && last}
-          data-toast-focus-guard=""
           onFocus={(event) => context.focusGuard(event.relatedTarget)}
         />
       </>
