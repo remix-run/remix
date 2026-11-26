@@ -393,11 +393,7 @@ function isInvalidatedUrls(value: unknown): value is Record<string, number> {
 }
 
 function disposeOnSignal(signal: NodeJS.Signals) {
-  if (process.env.HMR_TRACE === '1')
-    console.error('[hmr-trace]', Date.now(), process.pid, 'disposeOnSignal:start')
   runtime.disposeAll().finally(() => {
-    if (process.env.HMR_TRACE === '1')
-      console.error('[hmr-trace]', Date.now(), process.pid, 'disposeOnSignal:done')
     if (process.listenerCount(signal) === 0) {
       process.exit(signal === 'SIGINT' ? 130 : 143)
     }

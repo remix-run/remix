@@ -557,8 +557,6 @@ export async function editClientField(
   text: string,
   clientEntry: boolean,
 ): Promise<void> {
-  if (process.env.HMR_TRACE === '1')
-    console.error('[test-trace]', Date.now(), 'edit', text, clientEntry)
   let filePath = path.join(fixture.rootDir, 'app/ClientField.tsx')
   let temporaryPath = `${filePath}.tmp`
   // node-hmr logs the change after marking itself not ready, and the proxy holds requests until
@@ -579,27 +577,10 @@ export async function assertFreshClientFieldResponses(
   // Check a second request too: stale wrapper metadata persists beyond the first response.
   for (let request = 0; request < 2; request++) {
     // The proxy holds this request until a restart finishes, so allow the startup budget.
-    if (process.env.HMR_TRACE === '1')
-      console.error('[test-trace]', Date.now(), 'request:start', text, request)
-    let diagnosticBudget = Number(
-      process.env.HMR_DIAGNOSTIC_REQUEST_BUDGET ?? browserStartupTimeout,
-    )
-    let diagnosticDeadline = process.env.HMR_DIAGNOSTIC_REQUEST_BUDGET
-      ? setTimeout(
-          () =>
-            console.error('[test-trace]', Date.now(), 'original-deadline:exceeded', text, request),
-          browserStartupTimeout,
-        ).unref()
-      : undefined
     let response = await fetch(server.baseUrl, {
-      signal: AbortSignal.timeout(diagnosticBudget),
+      signal: AbortSignal.timeout(browserStartupTimeout),
     })
-    if (process.env.HMR_TRACE === '1')
-      console.error('[test-trace]', Date.now(), 'request:headers', text, request)
     let html = await response.text()
-    if (process.env.HMR_TRACE === '1')
-      console.error('[test-trace]', Date.now(), 'request:body', text, request)
-    clearTimeout(diagnosticDeadline)
     assert.equal(response.status, 200, html)
     assert.ok(html.includes(text), html)
     let boundaries = [...html.matchAll(/<!-- rmx:h:([^ ]+) -->/g)]
@@ -640,10 +621,7 @@ function getNodeHmrProxyDevSource(): string {
     '    // The child writes this file before it reports ready, and createHmrReadyFetch only calls',
     '    // this after the runner is ready.',
     '    url.port = await readFile(process.env.CHILD_PORT_FILE, "utf8")',
-    '    if (process.env.HMR_TRACE === "1" && url.pathname === "/") console.error("[proxy-trace]", Date.now(), "fetch:start", String(url))',
-    '    let response = await fetch(url, init)',
-    '    if (process.env.HMR_TRACE === "1" && url.pathname === "/") console.error("[proxy-trace]", Date.now(), "fetch:headers", response.status)',
-    '    return response',
+    '    return await fetch(url, init)',
     '  },',
     '})',
     '',
@@ -806,7 +784,6 @@ function getNodeHmrServerSource(
     '}',
     '',
     'let server = createServer(async (request, response) => {',
-    '  if (process.env.HMR_TRACE === "1" && request.url === "/") console.error("[server-trace]", Date.now(), process.pid, "request", request.url)',
     '  try {',
     "    let host = request.headers.host ?? '127.0.0.1'",
     "    let url = new URL(request.url ?? '/', `http://${host}`)",
@@ -1145,7 +1122,6 @@ export async function startNodeHmrFixtureServer(
   child.stdout?.setEncoding('utf-8')
   child.stdout?.on('data', (chunk: string) => {
     processOutput += chunk
-    if (process.env.HMR_TRACE === '1') process.stderr.write(chunk)
     lineBuffer += chunk
 
     let lines = lineBuffer.split('\n')
@@ -1162,7 +1138,6 @@ export async function startNodeHmrFixtureServer(
   child.stderr?.setEncoding('utf-8')
   child.stderr?.on('data', (chunk: string) => {
     processOutput += chunk
-    if (process.env.HMR_TRACE === '1') process.stderr.write(chunk)
     notifyStateWaiters()
   })
 

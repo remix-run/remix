@@ -258,27 +258,6 @@ export function createHmrSupervisor(options: {
   let pendingServerUpdateEvent = false
   let isDuplicateFileChangeEvent = createFileChangeEventDeduper()
 
-  function trace(event: string) {
-    if (process.env.HMR_TRACE !== '1') return
-    console.error(
-      '[hmr-trace]',
-      JSON.stringify({
-        time: Date.now(),
-        pid: process.pid,
-        event,
-        status: state.status,
-        child: getChild()?.pid,
-        startingWatchers: startingDirectoryWatchers.size,
-        flushScheduled: watchEventFlushTimer !== undefined,
-        activeFlushes: activeWatchEventFlushCount,
-        pendingUpdates: pendingHotUpdateCount,
-        acceptedUpdates: acceptedHotUpdateCount,
-        pendingBrowserRequests: pendingBrowserHmrRequests.size,
-        waiters: readyWaiters.length,
-      }),
-    )
-  }
-
   function getChild(): ChildProcess | undefined {
     return 'child' in state ? state.child : undefined
   }
@@ -298,7 +277,6 @@ export function createHmrSupervisor(options: {
   }
 
   function spawnChild() {
-    trace('spawnChild:start')
     moduleStore.reset()
     browserWatchedFileRefCountsByRuntime = new Map()
     browserWatchedFilePaths = new Set()
@@ -324,7 +302,6 @@ export function createHmrSupervisor(options: {
     )
 
     state = { status: 'starting', child: nextChild }
-    trace('spawnChild:spawned')
 
     nextChild.on('message', (message: unknown) => {
       if (getChild() !== nextChild) return
@@ -353,9 +330,7 @@ export function createHmrSupervisor(options: {
     if (state.status !== 'restart-scheduled') return
     let { child } = state
     state = { status: 'restarting', child }
-    trace('restart:stopping-child')
     await stopChild(child, { force: false, signal: 'SIGTERM' })
-    trace('restart:child-stopped')
     if (state.status !== 'restarting') return
     spawnChild()
   }
@@ -387,15 +362,6 @@ export function createHmrSupervisor(options: {
 
   function handleChildMessage(message: unknown) {
     if (!isChildMessage(message)) return
-    if (
-      [
-        'node-hmr:child:server-ready',
-        'node-hmr:child:restart-requested',
-        'node-hmr:child:hot-module-updated',
-        'node-hmr:child:hot-module-invalidated',
-      ].includes(message.type)
-    )
-      trace(message.type)
 
     if (message.type === 'node-hmr:child:browser-event-emitted') {
       browserHmrEventChannel?.send(message.payload)
@@ -988,7 +954,6 @@ export function createHmrSupervisor(options: {
   }
 
   function ready(): Promise<void> {
-    if (!isReady()) trace('ready:blocked')
     if (isReady()) return Promise.resolve()
 
     return new Promise((resolvePromise) => {
@@ -998,7 +963,6 @@ export function createHmrSupervisor(options: {
 
   function resolveReadyWaiters(options: { force?: boolean } = {}): void {
     if (!options.force && !isReady()) return
-    if (readyWaiters.length > 0) trace('resolveReadyWaiters:resolved')
 
     let waiters = readyWaiters
     readyWaiters = []
