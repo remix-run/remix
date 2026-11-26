@@ -2,6 +2,8 @@ import { createElement, createMixin, on, ref } from '@remix-run/component'
 import type { Dispatched, ElementProps } from '@remix-run/component'
 import type { ErrorMap } from '@remix-run/data-schema'
 
+import { onFormReset } from './lib/form-reset.ts'
+
 export type ValidatableControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 export interface FieldState {
   readonly errors: ReadonlyArray<string>
@@ -283,15 +285,7 @@ export const fieldValidity = createMixin<
       ...getFeedbackProps(),
       mix: [
         ref((control: ValidatableControl, signal) => {
-          control.form?.addEventListener(
-            'reset',
-            (event) => {
-              queueMicrotask(() => {
-                if (!event.defaultPrevented && !signal.aborted) resetControl(control)
-              })
-            },
-            { signal },
-          )
+          onFormReset(control, signal, () => resetControl(control))
         }),
         on<ValidatableControl>('input', (event) => updateFeedback(event.currentTarget, 'input')),
         on<ValidatableControl>('change', (event) => updateFeedback(event.currentTarget, 'input')),

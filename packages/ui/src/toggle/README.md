@@ -47,6 +47,7 @@ Use `checked` and `onCheckedChange` for controlled state, or `defaultChecked` fo
 ## Behavior Notes
 
 - Native checkbox switches use the native `checked` property for state and participate in forms.
+- A native checkbox switch follows its form's `reset`: uncontrolled state returns to `defaultChecked`, and a controlled switch keeps its `checked` value. Like a native reset, this does not call `onCheckedChange` or dispatch a change event. Non-input hosts do not participate in form reset.
 - Custom hosts receive `role="switch"`, `aria-checked`, and keyboard handling. Space toggles the control.
 - Disabled and read-only controls do not toggle.
 - Every switch needs an accessible name, usually from visible label text, `aria-label`, or `aria-labelledby`.

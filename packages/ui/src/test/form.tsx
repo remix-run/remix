@@ -80,3 +80,9 @@ export function edit(
 export function blur(node: HTMLElement) {
   node.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
 }
+
+// The form-control reset listener runs one task after the native reset.
+export async function resetForm(native: HTMLFormElement) {
+  native.reset()
+  await new Promise<void>((resolve) => setTimeout(resolve))
+}

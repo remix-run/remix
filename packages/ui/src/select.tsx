@@ -12,6 +12,7 @@ import {
 } from '@remix-run/component'
 import * as listbox from './listbox.ts'
 import * as popover from './popover.ts'
+import { onFormReset } from './lib/form-reset.ts'
 import { hiddenTypeahead } from './lib/typeahead.ts'
 import { waitForCssTransition } from './lib/wait-for-css-transition.ts'
 import { wait } from './lib/wait.ts'
@@ -83,6 +84,7 @@ interface SelectContextValue {
   close: () => void
   open: () => void
   registerPopoverContext: (context: popover.PopoverContext) => void
+  reset: () => void
   registerSurface: (node: HTMLElement) => void
   registerTrigger: (node: HTMLButtonElement) => void
   selectTypeaheadMatch: (text: string) => void
@@ -230,6 +232,19 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>):
     dispatchChange(change)
   }
 
+  // Restores the initial state without dispatching a change, like a native form reset.
+  function reset() {
+    let nextValue = handle.props.defaultValue ?? null
+    pendingChange = null
+    setSelectedOption(
+      nextValue,
+      listboxRef?.options.find((option) => option.value === nextValue),
+      true,
+    )
+    displayedLabel = handle.props.defaultLabel
+    void handle.update()
+  }
+
   function selectTypeaheadMatch(text: string) {
     if (state !== 'closed' || handle.props.disabled) return
 
@@ -309,6 +324,8 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>):
       popoverContextRef = context
       syncPopoverContext()
     },
+
+    reset,
 
     selectTypeaheadMatch,
 
@@ -399,6 +416,7 @@ const triggerMixin: MixinFactory<HTMLButtonElement, [], ElementProps> = createMi
     }),
     ref((node: HTMLButtonElement, signal) => {
       context.registerTrigger(node)
+      onFormReset(node, signal, context.reset)
       signal.addEventListener('abort', () => {
         context.unregisterTrigger(node)
       })
