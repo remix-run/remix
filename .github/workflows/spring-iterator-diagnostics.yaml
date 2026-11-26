@@ -9,13 +9,12 @@ permissions:
 
 jobs:
   repeat:
-    name: WebKit scheduling (${{ matrix.scheduling }}, batch ${{ matrix.batch }})
+    name: WebKit crossover (batch ${{ matrix.batch }})
     runs-on: macos-15
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        scheduling: [overlap, serial]
         batch: [1, 2]
     steps:
       - uses: actions/checkout@v6
@@ -48,7 +47,6 @@ jobs:
         env:
           CI: 'true'
           CAPTURE_STACKS: 'false'
-          SCHEDULING: ${{ matrix.scheduling }}
         run: |
           mkdir -p "$RUNNER_TEMP/spring-diagnostics"
           top -l 0 -s 1 -n 30 -o cpu -stats pid,ppid,command,cpu,mem,state,threads,time > "$RUNNER_TEMP/spring-diagnostics/top.log" 2>&1 &
@@ -83,35 +81,40 @@ jobs:
               process.wait()
           PYTHON
           set +e
+          any_failed=0
+          for phase in overlap-before serial overlap-after; do
+          mkdir -p "$RUNNER_TEMP/spring-diagnostics/$phase"
           (
             interaction_failed=0
             for repetition in {1..3}; do
-              DEBUG=pw:api,pw:browser pnpm --filter @remix-run/ui test src/test/dialog.test.e2e.ts src/test/focus-portal.test.e2e.ts --project webkit > "$RUNNER_TEMP/spring-diagnostics/interactions-$repetition.log" 2>&1
+              DEBUG=pw:api,pw:browser pnpm --filter @remix-run/ui test src/test/dialog.test.e2e.ts src/test/focus-portal.test.e2e.ts --project webkit > "$RUNNER_TEMP/spring-diagnostics/$phase/interactions-$repetition.log" 2>&1
               status=$?
-              echo "interactions $repetition $status" | tee -a "$RUNNER_TEMP/spring-diagnostics/interactions-results.txt"
+              echo "interactions $repetition $status" | tee -a "$RUNNER_TEMP/spring-diagnostics/$phase/interactions-results.txt"
               if [ "$status" -ne 0 ]; then interaction_failed=1; fi
             done
             exit "$interaction_failed"
           ) &
           interaction_pid=$!
-          if [ "$SCHEDULING" = serial ]; then
+          if [ "$phase" = serial ]; then
             wait "$interaction_pid"
-            interaction_status=$?
-            echo "Serial interaction workload complete: $interaction_status"
+            echo "Serial interaction workload complete: $?"
           fi
           failed=0
           for repetition in {1..8}; do
             echo "::group::Spring repetition $repetition"
-            DEBUG=pw:browser pnpm --filter remix-ui-docs test app/examples/animation/spring/iterator.example.test.browser.tsx --project webkit --browser.echo 2>&1 | python3 "$RUNNER_TEMP/spring-watch.py" "$RUNNER_TEMP/spring-diagnostics" "$repetition" | tee "$RUNNER_TEMP/spring-diagnostics/spring-$repetition.log"
+            DEBUG=pw:browser pnpm --filter remix-ui-docs test app/examples/animation/spring/iterator.example.test.browser.tsx --project webkit --browser.echo 2>&1 | python3 "$RUNNER_TEMP/spring-watch.py" "$RUNNER_TEMP/spring-diagnostics/$phase" "$repetition" | tee "$RUNNER_TEMP/spring-diagnostics/$phase/spring-$repetition.log"
             status=${PIPESTATUS[0]}
-            echo "spring $repetition $status" | tee -a "$RUNNER_TEMP/spring-diagnostics/results.txt"
+            echo "spring $repetition $status" | tee -a "$RUNNER_TEMP/spring-diagnostics/$phase/results.txt"
             if [ "$status" -ne 0 ]; then failed=1; fi
             echo '::endgroup::'
           done
           wait "$interaction_pid"
           if [ "$?" -ne 0 ]; then failed=1; fi
+          if [ "$failed" -ne 0 ]; then any_failed=1; fi
+          done
+          failed=$any_failed
           ps -axo pid,ppid,command > "$RUNNER_TEMP/spring-diagnostics/processes.log"
-          /usr/bin/log show --last 8m --style compact --predicate 'process == "DumpGPURestart" OR eventMessage CONTAINS[c] "GPU Restart" OR (process == "kernel" AND eventMessage CONTAINS[c] "GPU")' > "$RUNNER_TEMP/spring-diagnostics/gpu-events.log" 2>&1
+          /usr/bin/log show --last 25m --style compact --predicate 'process == "DumpGPURestart" OR eventMessage CONTAINS[c] "GPU Restart" OR (process == "kernel" AND eventMessage CONTAINS[c] "GPU")' > "$RUNNER_TEMP/spring-diagnostics/gpu-events.log" 2>&1
           python3 - "$RUNNER_TEMP/spring-diagnostics" <<'PYTHON'
           import shutil, sys, time
           from pathlib import Path
@@ -121,7 +124,7 @@ jobs:
               if not root.exists():
                   continue
               for report in root.rglob('*'):
-                  if not report.is_file() or time.time()-report.stat().st_mtime > 600:
+                  if not report.is_file() or time.time()-report.stat().st_mtime > 1800:
                       continue
                   if any(name in report.name.lower() for name in ['gpu', 'webkit', 'windowserver']):
                       shutil.copy2(report, target / report.name)
@@ -131,32 +134,6 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: spring-scheduling-${{ matrix.scheduling }}-${{ matrix.batch }}
-          path: ${{ runner.temp }}/spring-diagnostics
-          retention-days: 7
-
-      - name: Run the full browser workspace suite sequentially
-        if: always() && matrix.scheduling == 'serial'
-        env:
-          CI: 'true'
-        run: |
-          python3 - <<'PYTHON'
-          from pathlib import Path
-          script = Path('scripts/test-browser.ts')
-          source = script.read_text()
-          assert source.count('--workspace-concurrency=4') == 1
-          script.write_text(source.replace('--workspace-concurrency=4', '--workspace-concurrency=1'))
-          PYTHON
-          set +e
-          pnpm test:browser > "$RUNNER_TEMP/spring-diagnostics/full-serial.log" 2>&1
-          status=$?
-          tail -80 "$RUNNER_TEMP/spring-diagnostics/full-serial.log"
-          /usr/bin/log show --last 20m --style compact --predicate 'process == "DumpGPURestart" OR eventMessage CONTAINS[c] "GPU Restart" OR (process == "kernel" AND eventMessage CONTAINS[c] "GPU")' > "$RUNNER_TEMP/spring-diagnostics/full-serial-gpu-events.log" 2>&1
-          exit "$status"
-
-      - uses: actions/upload-artifact@v7
-        if: always() && matrix.scheduling == 'serial'
-        with:
-          name: spring-full-serial-${{ matrix.batch }}
+          name: spring-crossover-${{ matrix.batch }}
           path: ${{ runner.temp }}/spring-diagnostics
           retention-days: 7
