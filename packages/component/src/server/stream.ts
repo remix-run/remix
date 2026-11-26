@@ -271,10 +271,7 @@ interface SsrBuffer {
   segments: Segment[] | null
 }
 
-let sharedTextEncoder: TextEncoder | undefined
-function getTextEncoder(): TextEncoder {
-  return (sharedTextEncoder ??= new TextEncoder())
-}
+const textEncoder = new TextEncoder()
 
 function getFrameState(context: RenderContext): SsrFrameState {
   return (context.frameState ??= createSsrFrameState(context.frameSrc, context.topFrameSrc))
@@ -322,12 +319,7 @@ function getHtmlAttrMeta(key: string): HtmlAttrMeta {
 function fastSanitizeUrl(tag: string, attrName: string, isUrl: boolean, value: unknown): unknown {
   if (
     !isUrl &&
-    !(
-      attrName.length === 4 &&
-      (attrName === 'data' || attrName.toLowerCase() === 'data') &&
-      tag.length === 6 &&
-      (tag === 'object' || tag.toLowerCase() === 'object')
-    )
+    (attrName.length !== 4 || (attrName !== 'data' && attrName.toLowerCase() !== 'data'))
   ) {
     return value
   }
@@ -346,10 +338,6 @@ function pushSegment(buf: SsrBuffer, seg: StaticSegment | FrameSegment): void {
     buf.html = ''
   }
   buf.segments.push(seg)
-}
-
-function getStyleCache(context: RenderContext): Map<string, { selector: string; css: string }> {
-  return (context.styleCache ??= new Map())
 }
 
 function getClientEntryHeadResources(context: RenderContext): ClientEntryHeadResources {
@@ -383,31 +371,31 @@ function getStyleLayerName(selector: string, layer: string = REMIX_UI_STYLE_LAYE
 
 const SSR_OMITTED_PROPS = new Set(['children', 'mix', 'key', 'animate', 'innerHTML', 'on'])
 
-// 1 = self-closing (void) tags, 0 = non-void tags needing special SSR handling.
-const SPECIAL_TAGS: Record<string, number> = Object.assign(Object.create(null), {
-  area: 1,
-  base: 1,
-  br: 1,
-  col: 1,
-  embed: 1,
-  hr: 1,
-  img: 1,
-  input: 1,
-  link: 1,
-  meta: 1,
-  param: 1,
-  source: 1,
-  track: 1,
-  wbr: 1,
-  html: 0,
-  head: 0,
-  body: 0,
-  svg: 0,
-  foreignObject: 0,
-  textarea: 0,
-  option: 0,
-  select: 0,
-  script: 0,
+// true = self-closing (void) tag, false = non-void tag needing special SSR handling.
+const SPECIAL_TAGS: Record<string, boolean> = Object.assign(Object.create(null), {
+  area: true,
+  base: true,
+  br: true,
+  col: true,
+  embed: true,
+  hr: true,
+  img: true,
+  input: true,
+  link: true,
+  meta: true,
+  param: true,
+  source: true,
+  track: true,
+  wbr: true,
+  html: false,
+  head: false,
+  body: false,
+  svg: false,
+  foreignObject: false,
+  textarea: false,
+  option: false,
+  select: false,
+  script: false,
 })
 
 const ssrSignal = Object.freeze({
@@ -475,28 +463,20 @@ export function renderToStream(
   let onError = options?.onError ?? ((error) => console.error(error))
   let currentFrameSrc = normalizeFrameSrc(options?.frameSrc ?? options?.topFrameSrc)
   let topFrameSrc = normalizeFrameSrc(options?.topFrameSrc ?? currentFrameSrc)
-  let renderAbortController: AbortController | undefined
+  let renderAbortController = new AbortController()
   let signal = options?.signal
-  let cancelled = false
-  let cancelReason: unknown
 
   let context = createRenderContext(
     currentFrameSrc,
     topFrameSrc,
     options?.resolveFrame ?? defaultResolveFrame,
     options?.nonce,
-    signal ? (renderAbortController = new AbortController()).signal : ssrSignal,
+    renderAbortController.signal,
     onError,
   )
 
   function cancel(reason: unknown): void {
-    cancelled = true
-    cancelReason = reason
     signal?.removeEventListener('abort', onAbort)
-    if (!renderAbortController) {
-      renderAbortController = new AbortController()
-      context.signal = renderAbortController.signal
-    }
     if (!renderAbortController.signal.aborted) {
       renderAbortController.abort(reason)
     }
@@ -514,10 +494,7 @@ export function renderToStream(
   return new ReadableStream({
     async start(controller) {
       try {
-        if (cancelled) {
-          closeStream(controller)
-          return
-        }
+        if (closeIfCancelled(controller, context)) return
         let root: SsrBuffer = { html: '', segments: null }
         buildSegment(node, context, root)
         // Await in document order so the first rejecting frame determines the error.
@@ -554,7 +531,7 @@ export function renderToStream(
         if (closeIfCancelled(controller, context)) return
         controller.close()
       } catch (error) {
-        if (isSignalAbortError(context.signal, error) || (cancelled && error === cancelReason)) {
+        if (isSignalAbortError(context.signal, error)) {
           closeStream(controller)
           return
         }
@@ -571,12 +548,11 @@ export function renderToStream(
 }
 
 function encodeHtml(html: string): Uint8Array {
-  let encoder = getTextEncoder()
-  if (html.length > MAX_BUFFERED_HTML_LENGTH) return encoder.encode(html)
+  if (html.length > MAX_BUFFERED_HTML_LENGTH) return textEncoder.encode(html)
 
   // Encoding is synchronous. Copy the written bytes so streams never share the scratch buffer.
   let scratch = (htmlEncodingBuffer ??= new Uint8Array(MAX_BUFFERED_HTML_LENGTH * 3))
-  let { written } = encoder.encodeInto(html, scratch)
+  let { written } = textEncoder.encodeInto(html, scratch)
   return scratch.slice(0, written)
 }
 
@@ -839,99 +815,62 @@ function buildFrameSegment(node: RemixElement, context: RenderContext): FrameSeg
   return seg
 }
 
-function assertSelectInnerHtmlAllowed(
-  tag: string,
-  props: ElementProps,
-  context: RenderContext,
-): void {
-  if (tag === 'select' || tag === 'optgroup') {
-    invariant(
-      tag === 'select'
-        ? props.value == null && props.defaultValue == null
-        : context.selectValues === undefined,
-      'select value and defaultValue require options rendered as JSX children, not through select or optgroup innerHTML',
-    )
-  }
-}
-
 function buildElementSegment(
   tag: string,
   props: any,
   context: RenderContext,
   output: SsrBuffer,
 ): void {
-  let tagFlags = SPECIAL_TAGS[tag]
-  let currentIsSvg = context.insideSvg
-
-  // Fast path: ordinary non-SVG HTML element with no special tag behavior.
-  if (tagFlags === undefined && !currentIsSvg) {
-    let resolved = normalizeUnsafeHTMLProps(props)
-    let innerHTML = resolved.innerHTML
-    let finalProps =
-      resolved.mix !== undefined ? resolveSsrMixedProps(tag, resolved, context) : resolved
-
-    output.html += '<' + tag
-    appendAttributes(tag, finalProps, false, undefined, output)
-    output.html += '>'
-
-    if (innerHTML !== undefined) {
-      assertSelectInnerHtmlAllowed(tag, finalProps, context)
-      output.html += innerHTML + '</' + tag + '>'
-      return
-    }
-
-    let children = props.children
-    if (children != null) {
-      let trackDepth = context.documentSegments.depth !== undefined
-      if (trackDepth) context.elementDepth++
-      buildSegment(children, context, output)
-      if (trackDepth) context.elementDepth--
-    }
-    output.html += '</' + tag + '>'
-    return
-  }
-
   let normalizedProps = normalizeUnsafeHTMLProps(props)
   let innerHTML = normalizedProps.innerHTML
   let mixedProps =
     normalizedProps.mix !== undefined
       ? resolveSsrMixedProps(tag, normalizedProps, context)
       : normalizedProps
-  // Determine namespace context for the current element and its children
-  currentIsSvg = currentIsSvg || tag === 'svg'
+  let isVoid = SPECIAL_TAGS[tag]
+  let isSpecial = isVoid !== undefined
+  let currentIsSvg = context.insideSvg || (isSpecial && tag === 'svg')
 
-  if (!currentIsSvg && tag === 'textarea') {
-    output.html += buildTextareaElementSegment(tag, mixedProps)
-    return
-  }
-
-  if (!currentIsSvg && tag === 'option' && context.selectValues !== undefined) {
-    buildSelectedOptionSegment(mixedProps, context, output)
-    return
+  if (isSpecial && !currentIsSvg) {
+    if (tag === 'textarea') {
+      output.html += buildTextareaElementSegment(tag, mixedProps)
+      return
+    }
+    if (tag === 'option' && context.selectValues !== undefined) {
+      buildSelectedOptionSegment(mixedProps, context, output)
+      return
+    }
   }
 
   let attrs =
-    !currentIsSvg && tag === 'input'
+    isSpecial && !currentIsSvg && tag === 'input'
       ? renderInputAttributes(mixedProps)
       : renderAttributes(
           tag,
           mixedProps,
           currentIsSvg,
-          !currentIsSvg && tag === 'select' ? SELECT_VALUE_PROPS : undefined,
+          isSpecial && !currentIsSvg && tag === 'select' ? SELECT_VALUE_PROPS : undefined,
         )
 
-  if (tagFlags === 1) {
+  if (isVoid === true) {
     output.html += `<${tag}${attrs} />`
     return
   }
 
   let documentElement =
-    !currentIsSvg && (tag === 'html' || tag === 'body')
+    isSpecial && !currentIsSvg && (tag === 'html' || tag === 'body')
       ? createDocumentElementSegments(tag, attrs, context)
       : undefined
 
   if (innerHTML !== undefined) {
-    if (!currentIsSvg) assertSelectInnerHtmlAllowed(tag, mixedProps, context)
+    if (!currentIsSvg && (tag === 'select' || tag === 'optgroup')) {
+      invariant(
+        tag === 'select'
+          ? mixedProps.value == null && mixedProps.defaultValue == null
+          : context.selectValues === undefined,
+        'select value and defaultValue require options rendered as JSX children, not through select or optgroup innerHTML',
+      )
+    }
     if (documentElement) {
       pushSegment(output, documentElement.open)
       output.html += innerHTML
@@ -942,7 +881,7 @@ function buildElementSegment(
     return
   }
 
-  if (tag === 'script') {
+  if (isSpecial && tag === 'script') {
     if (typeof props.children === 'string') {
       if (context.insideHead) {
         collectAuthoredImportMap(context, tag, mixedProps, props.children)
@@ -965,24 +904,32 @@ function buildElementSegment(
 
   let children = props.children
   if (children != null) {
-    // Adjust svg context for children: foreignObject switches back to HTML
-    let previousInsideSvg = context.insideSvg
-    context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
-    let previousSelectValues = context.selectValues
-    let previousSelectScalar = context.selectScalar
-    if (!currentIsSvg && tag === 'select') {
-      let value = mixedProps.value ?? mixedProps.defaultValue
-      context.selectValues = getSelectValues(value)
-      context.selectScalar =
-        (mixedProps.multiple !== '' && !mixedProps.multiple) ||
-        (mixedProps.value != null && !Array.isArray(value))
+    if (isSpecial || currentIsSvg) {
+      // Adjust svg context for children: foreignObject switches back to HTML
+      let previousInsideSvg = context.insideSvg
+      context.insideSvg = tag === 'foreignObject' ? false : currentIsSvg
+      let previousSelectValues = context.selectValues
+      let previousSelectScalar = context.selectScalar
+      if (!currentIsSvg && tag === 'select') {
+        let value = mixedProps.value ?? mixedProps.defaultValue
+        context.selectValues = getSelectValues(value)
+        context.selectScalar =
+          (mixedProps.multiple !== '' && !mixedProps.multiple) ||
+          (mixedProps.value != null && !Array.isArray(value))
+      }
+      context.elementDepth++
+      buildSegment(children, context, output)
+      context.elementDepth--
+      context.selectValues = previousSelectValues
+      context.selectScalar = previousSelectScalar
+      context.insideSvg = previousInsideSvg
+    } else if (context.documentSegments.depth !== undefined) {
+      context.elementDepth++
+      buildSegment(children, context, output)
+      context.elementDepth--
+    } else {
+      buildSegment(children, context, output)
     }
-    context.elementDepth++
-    buildSegment(children, context, output)
-    context.elementDepth--
-    context.selectValues = previousSelectValues
-    context.selectScalar = previousSelectScalar
-    context.insideSvg = previousInsideSvg
   }
 
   if (documentElement) {
@@ -1168,27 +1115,31 @@ function createDocumentElementSegments(
   return segments
 }
 
-function appendClassAttribute(html: string, value: unknown): string {
-  if (typeof value === 'string') {
-    return html + ` class="${escapeHtml(value)}"`
-  }
-  if (typeof value === 'boolean') {
-    return value ? html + ' class' : html
-  }
-  return value != null ? html + ` class="${escapeHtml(String(value))}"` : html
+function appendClassAttribute(attrs: string, value: unknown): string {
+  if (typeof value === 'string') return `${attrs} class="${escapeHtml(value)}"`
+  if (typeof value === 'boolean') return value ? `${attrs} class` : attrs
+  return value != null ? `${attrs} class="${escapeHtml(String(value))}"` : attrs
 }
 
-function appendAttributes(
+function mergeClassValues(classAttr: unknown, className: unknown): unknown {
+  if (classAttr === undefined || classAttr === null) return className
+  if (typeof classAttr === 'string' && typeof className === 'string' && classAttr && className) {
+    return `${classAttr} ${className}`
+  }
+  if (typeof classAttr === 'string' && classAttr) return classAttr
+  if (typeof className === 'string' && className) return className
+  return classAttr ?? className
+}
+
+function renderAttributes(
   tag: string,
   props: any,
   isSvg: boolean,
-  excludedProps: Set<string> | undefined,
-  output: SsrBuffer,
-): void {
-  let hasClass = false
-  let classAttr: unknown
+  excludedProps?: Set<string>,
+): string {
+  let deferredClass: unknown
   let emittedClass = false
-  let html = output.html
+  let attrs = ''
 
   for (let key in props) {
     if (!Object.hasOwn(props, key)) continue
@@ -1198,35 +1149,30 @@ function appendAttributes(
     if (value === undefined || value === null) continue
 
     if (key === 'class') {
-      hasClass = true
-      classAttr = value
+      if (!emittedClass) deferredClass = value
       continue
     }
 
     if (key === 'className') {
       emittedClass = true
-      let ownClass = hasClass ? classAttr : Object.hasOwn(props, 'class') ? props.class : undefined
-      let merged =
-        ownClass === undefined || ownClass === null
-          ? value
-          : typeof ownClass === 'string' && typeof value === 'string' && ownClass && value
-            ? `${ownClass} ${value}`
-            : typeof ownClass === 'string' && ownClass
-              ? ownClass
-              : typeof value === 'string' && value
-                ? value
-                : (ownClass ?? value)
-      html = appendClassAttribute(html, merged)
+      let ownClass =
+        deferredClass !== undefined
+          ? deferredClass
+          : Object.hasOwn(props, 'class')
+            ? props.class
+            : undefined
+      deferredClass = undefined
+      attrs = appendClassAttribute(attrs, mergeClassValues(ownClass, value))
       continue
     }
 
     if (key === 'style') {
       if (typeof value === 'object') {
-        html += ` style="${escapeHtml(serializeStyleObject(value))}"`
+        attrs += ` style="${escapeHtml(serializeStyleObject(value))}"`
       } else if (typeof value === 'boolean') {
-        if (value) html += ' style'
+        if (value) attrs += ' style'
       } else {
-        html += ` style="${escapeHtml(String(value))}"`
+        attrs += ` style="${escapeHtml(String(value))}"`
       }
       continue
     }
@@ -1251,39 +1197,27 @@ function appendAttributes(
 
     if (typeof value === 'boolean') {
       if (isBoolish) {
-        html += ` ${attrName}="${value}"`
+        attrs += ` ${attrName}="${value}"`
       } else if (value) {
-        html += ` ${attrName}`
+        attrs += ` ${attrName}`
       }
     } else {
       let safeValue = fastSanitizeUrl(tag, attrName, isUrl, value)
-      html += ` ${attrName}="${escapeHtml(typeof safeValue === 'string' ? safeValue : String(safeValue))}"`
+      attrs += ` ${attrName}="${escapeHtml(String(safeValue))}"`
     }
   }
 
-  if (hasClass && !emittedClass) {
-    html = appendClassAttribute(html, classAttr)
+  if (deferredClass !== undefined) {
+    attrs = appendClassAttribute(attrs, deferredClass)
   }
 
-  output.html = html
-}
-
-function renderAttributes(
-  tag: string,
-  props: any,
-  isSvg: boolean,
-  excludedProps?: Set<string>,
-): string {
-  let tmp: SsrBuffer = { html: '', segments: null }
-  appendAttributes(tag, props, isSvg, excludedProps, tmp)
-  return tmp.html
+  return attrs
 }
 
 function isBrowserOnlyMixinDescriptor(value: unknown): boolean {
-  let type = (
-    value as { type?: ((...args: never[]) => unknown) & { __rmxMixinSsr?: boolean } } | null
-  )?.type
-  return typeof type === 'function' && type.__rmxMixinSsr === false
+  if (!value || typeof value !== 'object' || !('type' in value)) return false
+  let type = value.type
+  return typeof type === 'function' && '__rmxMixinSsr' in type && type.__rmxMixinSsr === false
 }
 
 function resolveSsrMixedProps(
@@ -1362,13 +1296,13 @@ function createSsrMixinHandle(
         if (typeof providerType !== 'function') {
           return undefined
         }
-        return parentHandle?.lookupContext(providerType)
+        return parentHandle?.lookupContext(providerType as ElementFunction)
       },
     },
     frame: createFrameHandle({
-      src: context.frameState ? context.frameState.frame.src : context.frameSrc,
+      src: context.frameState?.frame.src ?? context.frameSrc,
       $runtime: {
-        styleCache: getStyleCache(context),
+        styleCache: (context.styleCache ??= new Map()),
       },
     }),
     element,
@@ -1402,7 +1336,7 @@ class SsrComponentHandle implements Handle<ElementProps, unknown> {
     explicitId: string | undefined,
   ) {
     this.#type = type
-    this.props = props
+    this.props = { ...props }
     this.#parent = renderContext.parentHandle
     this.#renderContext = renderContext
     this.#id = explicitId
@@ -1431,7 +1365,7 @@ class SsrComponentHandle implements Handle<ElementProps, unknown> {
       },
       get: ((providerType: ElementType | symbol) =>
         typeof providerType === 'function'
-          ? this.#parent?.lookupContext(providerType)
+          ? this.#parent?.lookupContext(providerType as ElementFunction)
           : undefined) as Handle<ElementProps, unknown>['context']['get'],
     })
   }
@@ -1439,6 +1373,7 @@ class SsrComponentHandle implements Handle<ElementProps, unknown> {
   get update(): () => Promise<AbortSignal> {
     return (this.#update ??= () => {
       let name = this.#type.name || 'Anonymous'
+      // Keep error/warning messages in sync with createComponent() in runtime/vdom.ts.
       if (this.#phase === 'setup') {
         console.warn(
           `Ignored handle.update() while ${name} is running its setup function. The initial render includes setup changes.`,
@@ -1456,7 +1391,7 @@ class SsrComponentHandle implements Handle<ElementProps, unknown> {
     })
   }
 
-  lookupContext(providerType: Function): unknown {
+  lookupContext(providerType: ElementFunction): unknown {
     let current: SsrComponentHandle | undefined = this
     while (current !== undefined) {
       if (current.#type === providerType) {
@@ -1625,8 +1560,7 @@ function buildEntrySegment(
 ): void {
   let instanceId = randomId('h')
   output.html += `<!--${createHydrationStartMarker(instanceId)}-->`
-  // Copy props for the server handle so mutations during SSR cannot alter serialized entry props.
-  buildComponentSegment(type, { ...props }, context, instanceId, output)
+  buildComponentSegment(type, props, context, instanceId, output)
 
   // Store hydration data in context for aggregation
   let replacer = createHydrationPropsReplacer(context)
@@ -1782,11 +1716,7 @@ function serializeBuffer(buf: SsrBuffer): string {
   return parts.join('')
 }
 
-const HTML_ESCAPE_RE = /[&<>"']/
-const TEXT_ESCAPE_RE = /[&<>]/
-
-function escapeHtml(str: string): string {
-  if (!HTML_ESCAPE_RE.test(str)) return str
+function escapeMarkup(str: string, escapeQuotes: boolean): string {
   let len = str.length
   let lastIndex = 0
   let out = ''
@@ -1797,8 +1727,8 @@ function escapeHtml(str: string): string {
     if (c === 38) esc = '&amp;'
     else if (c === 60) esc = '&lt;'
     else if (c === 62) esc = '&gt;'
-    else if (c === 34) esc = '&quot;'
-    else if (c === 39) esc = '&#39;'
+    else if (escapeQuotes && c === 34) esc = '&quot;'
+    else if (escapeQuotes && c === 39) esc = '&#39;'
     else continue
     if (lastIndex !== i) out += str.slice(lastIndex, i)
     out += esc
@@ -1807,24 +1737,12 @@ function escapeHtml(str: string): string {
   return lastIndex < len ? out + str.slice(lastIndex) : out
 }
 
+function escapeHtml(str: string): string {
+  return /[&<>"']/.test(str) ? escapeMarkup(str, true) : str
+}
+
 function escapeTextContent(str: string): string {
-  if (!TEXT_ESCAPE_RE.test(str)) return str
-  let len = str.length
-  let lastIndex = 0
-  let out = ''
-  for (let i = 0; i < len; i++) {
-    let c = str.charCodeAt(i)
-    if (c > 62) continue
-    let esc: string
-    if (c === 38) esc = '&amp;'
-    else if (c === 60) esc = '&lt;'
-    else if (c === 62) esc = '&gt;'
-    else continue
-    if (lastIndex !== i) out += str.slice(lastIndex, i)
-    out += esc
-    lastIndex = i + 1
-  }
-  return lastIndex < len ? out + str.slice(lastIndex) : out
+  return /[&<>]/.test(str) ? escapeMarkup(str, false) : str
 }
 
 function escapeTemplateContent(html: string): string {
@@ -1853,7 +1771,6 @@ function finalizeHtml(root: SsrBuffer, context: RenderContext): string {
   let headContent = nonceMeta + importMapScript + preloads + styles
   let rmxData = buildRmxDataScript(context)
   if (context.flushKind !== 'document') {
-    if (!headContent && !rmxData) return serializeBuffer(root)
     return (headContent ? `<head>${headContent}</head>` : '') + serializeBuffer(root) + rmxData
   }
   if (!headContent && !rmxData) return serializeBuffer(root)

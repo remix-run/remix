@@ -268,39 +268,32 @@ interface NormalizedUnsafeHTMLProps extends Record<string, unknown> {
  * @returns Host props with opaque raw-HTML values replaced by their strings.
  * @internal
  */
+const UNSAFE_HTML_PROPS = ['innerHTML', 'srcDoc', 'srcdoc'] as const
+
 export function normalizeUnsafeHTMLProps(
   props: Record<string, unknown>,
 ): NormalizedUnsafeHTMLProps {
-  if (props.outerHTML !== undefined) {
-    invariant(false, 'Invalid outerHTML prop: outerHTML is not supported on host elements')
-  }
+  invariant(
+    props.outerHTML === undefined,
+    'Invalid outerHTML prop: outerHTML is not supported on host elements',
+  )
 
-  let rawInner = props.innerHTML
-  let rawSrcDoc = props.srcDoc
-  let rawSrcdoc = props.srcdoc
-  if (rawInner === undefined && rawSrcDoc === undefined && rawSrcdoc === undefined) {
+  if (props.innerHTML === undefined && props.srcDoc === undefined && props.srcdoc === undefined) {
     return props
   }
 
   let normalized: NormalizedUnsafeHTMLProps = { ...props }
-  if (rawInner !== undefined) {
-    let html = UnsafeHTMLValue.read(rawInner)
+  for (let name of UNSAFE_HTML_PROPS) {
+    let value = props[name]
+    if (value === undefined) continue
+    let html = UnsafeHTMLValue.read(value)
     invariant(
       html !== undefined,
-      'Invalid innerHTML prop: expected a value created with unsafeHTML()',
+      `Invalid ${name} prop: expected a value created with unsafeHTML()`,
     )
-    normalized.innerHTML = html
+    normalized[name] = html
   }
-  if (rawSrcDoc !== undefined) {
-    let html = UnsafeHTMLValue.read(rawSrcDoc)
-    invariant(html !== undefined, 'Invalid srcDoc prop: expected a value created with unsafeHTML()')
-    normalized.srcDoc = html
-  }
-  if (rawSrcdoc !== undefined) {
-    let html = UnsafeHTMLValue.read(rawSrcdoc)
-    invariant(html !== undefined, 'Invalid srcdoc prop: expected a value created with unsafeHTML()')
-    normalized.srcdoc = html
-  }
+
   return normalized
 }
 

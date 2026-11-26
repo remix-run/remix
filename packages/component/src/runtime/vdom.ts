@@ -2462,7 +2462,7 @@ export function shouldStringifyBooleanAttribute(name: string): boolean {
   )
 }
 
-export function getMergedClassName(props: ElementProps): string | undefined {
+function getMergedClassName(props: ElementProps): string | undefined {
   let classAttr = typeof props.class === 'string' ? props.class : ''
   let className = typeof props.className === 'string' ? props.className : ''
   return classAttr && className ? `${classAttr} ${className}` : classAttr || className || undefined

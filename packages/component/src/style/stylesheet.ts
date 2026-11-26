@@ -236,8 +236,7 @@ export function serializeStyleObject(style: Record<string, unknown>): string {
       cssValue = normalizeCssValue(key, value)
     }
     if (cssValue !== undefined) {
-      let prop = camelToKebab(key)
-      out += (out ? ' ' : '') + prop + ': ' + cssValue + ';'
+      out += (out ? ' ' : '') + camelToKebab(key) + ': ' + cssValue + ';'
     }
   }
   return out

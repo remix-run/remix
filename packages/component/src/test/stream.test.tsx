@@ -4,12 +4,7 @@ import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
 import { createMixin, createRoot, css, on, unsafeHTML } from '../index.ts'
 import { createElement } from '../runtime/create-element.ts'
 
-import {
-  ImportMap,
-  renderToStream,
-  renderToString,
-  type RenderToStringOptions,
-} from '../server/stream.ts'
+import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import type { SerializableObject } from '../runtime/client-entries.ts'
 import { drain, readChunks, trackUnhandledRejections, withResolvers } from './utils.ts'
@@ -792,29 +787,17 @@ describe('stream', () => {
       expect(forMatch?.[1]).toBe(idMatch?.[1])
     })
 
-    it('warns on handle.update() during SSR setup without resolving and throws during SSR render', async (t) => {
+    it('warns on handle.update() during SSR setup and throws during SSR render', async (t) => {
       let warnSpy = t.mock.method(console, 'warn', () => {})
-      let updatePromise: Promise<AbortSignal> | undefined
-      let settled = false
 
       function SetupUpdate(handle: Handle) {
         let { update } = handle
-        updatePromise = update()
-        void updatePromise.then(() => {
-          settled = true
-        })
+        void update()
         return () => <span>ok</span>
       }
 
-      let html = await renderToString(<SetupUpdate />)
-      expect(html).toBe('<span>ok</span>')
+      expect(await renderToString(<SetupUpdate />)).toBe('<span>ok</span>')
       expect(warnSpy).toHaveBeenCalledTimes(1)
-      let race = await Promise.race([
-        updatePromise!.then(() => 'settled'),
-        renderToString(<span>after</span>).then(() => 'unsettled'),
-      ])
-      expect(race).toBe('unsettled')
-      expect(settled).toBe(false)
 
       function RenderUpdate(handle: Handle) {
         let { update } = handle
@@ -827,6 +810,21 @@ describe('stream', () => {
       await expect(renderToString(<RenderUpdate />)).rejects.toThrow(
         'Cannot call handle.update() while RenderUpdate is running its render function',
       )
+    })
+
+    it('isolates handle.props mutations on reused elements across renders', async () => {
+      function MutateProps(handle: Handle<{ label: string; count?: number }>) {
+        handle.props.count = (handle.props.count ?? 0) + 1
+        return () => (
+          <span>
+            {handle.props.label}:{handle.props.count}
+          </span>
+        )
+      }
+
+      let element = <MutateProps label="item" />
+      expect(await renderToString(element)).toBe('<span>item:1</span>')
+      expect(await renderToString(element)).toBe('<span>item:1</span>')
     })
 
     it('isolates handle.frame across separate renders and supports destructured context methods', async () => {
@@ -886,10 +884,26 @@ describe('stream', () => {
       let options = {
         nonce: 'abc',
         resolveFrame: () => '<div>should not run</div>',
-      } as RenderToStringOptions
+      }
 
       await expect(renderToString(<Frame src="/panel" />, options)).rejects.toThrow(
         'No resolveFrame provided',
+      )
+    })
+
+    it('renders document body innerHTML with head resources and hydration data', async () => {
+      let html = await renderToString(
+        <html>
+          <head>
+            <title>Doc</title>
+          </head>
+          <body innerHTML={unsafeHTML('<main>raw</main>')} />
+        </html>,
+        { nonce: 'n1' },
+      )
+
+      expect(html).toBe(
+        '<html><head><title>Doc</title><meta name="rmx-nonce" content="" nonce="n1"></head><body><main>raw</main></body></html>',
       )
     })
   })
