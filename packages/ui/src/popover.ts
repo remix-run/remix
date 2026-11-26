@@ -10,8 +10,7 @@ import {
   type RemixNode,
 } from '@remix-run/component'
 import { anchor as positionAnchor, type AnchorOptions, type AnchorTarget } from './anchor.ts'
-import { activeElement, SurfaceBoundary } from './lib/focus.tsx'
-import { contains } from './lib/contains.ts'
+import { getActiveElement, SurfaceBoundary } from './lib/focus-boundary.tsx'
 import {
   getDismissableLayerBranch,
   registerDismissableLayer,
@@ -201,7 +200,7 @@ const surfaceMixin: MixinFactory<HTMLElement, [options: PopoverSurfaceOptions], 
             if (
               currentOptions.restoreFocusOnHide !== false &&
               boundary.portal?.restoreFocus !== false &&
-              !isInModalExemptRegion(node.ownerDocument, activeElement(node.ownerDocument))
+              !isInModalExemptRegion(node.ownerDocument, getActiveElement(node.ownerDocument))
             )
               context.hideFocusTarget?.focus()
           }

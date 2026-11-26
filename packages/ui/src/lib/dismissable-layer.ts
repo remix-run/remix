@@ -1,4 +1,15 @@
-import { contains } from './contains.ts'
+export function containsIncludingShadowRoots(container: Element, target: Node | null): boolean {
+  while (target) {
+    if (container.contains(target)) return true
+    let root = target.getRootNode()
+    target = isShadowRoot(root) ? root.host : null
+  }
+  return false
+}
+
+function isShadowRoot(node: Node): node is ShadowRoot {
+  return node.nodeType === 11 && 'host' in node
+}
 
 type DismissableLayerOptions = {
   getParent?(): Node | null
@@ -38,7 +49,7 @@ export function getDismissableLayerBranch(node: HTMLElement): HTMLElement[] {
     for (let layer of layers) {
       if (
         (layer.parent && branch.has(layer.parent.node)) ||
-        [...branch].some((owner) => contains(owner, layer.node))
+        [...branch].some((owner) => containsIncludingShadowRoots(owner, layer.node))
       ) {
         branch.add(layer.node)
       }
@@ -96,7 +107,7 @@ export function getModalExemptRegions(doc: Document): HTMLElement[] {
 }
 
 export function isInModalExemptRegion(doc: Document, target: Node | null): boolean {
-  return getModalExemptRegions(doc).some((node) => contains(node, target))
+  return getModalExemptRegions(doc).some((node) => containsIncludingShadowRoots(node, target))
 }
 
 export function notifyModalExemptRegionsOfScopeClose(
@@ -173,7 +184,9 @@ function isInLiveRegion(event: Event, document: Document): boolean {
 function isInside(layer: DismissableLayer, event: Event): boolean {
   let branch = getDismissableLayerBranch(layer.node)
   return eventNodes(event, layer.node.ownerDocument).some(
-    (target) => branch.some((node) => contains(node, target)) || layer.options.isInside?.(target),
+    (target) =>
+      branch.some((node) => containsIncludingShadowRoots(node, target)) ||
+      layer.options.isInside?.(target),
   )
 }
 
@@ -293,8 +306,8 @@ export function registerDismissableLayer(
     let target = child.options.getParent?.() ?? child.node
     let parent: DismissableLayer | undefined
     for (let candidate of layers) {
-      if (candidate === child || !contains(candidate.node, target)) continue
-      if (parent && !contains(parent.node, candidate.node)) continue
+      if (candidate === child || !containsIncludingShadowRoots(candidate.node, target)) continue
+      if (parent && !containsIncludingShadowRoots(parent.node, candidate.node)) continue
       let ancestor: DismissableLayer | undefined = candidate
       while (ancestor && ancestor !== child) ancestor = ancestor.parent
       if (!ancestor) parent = candidate

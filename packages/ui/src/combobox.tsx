@@ -1,4 +1,4 @@
-import { SurfacePortalOwner } from './lib/focus.tsx'
+import { SurfacePortalOwner } from './lib/focus-boundary.tsx'
 import { FocusPortal } from './lib/focus-portal.tsx'
 import {
   attrs,

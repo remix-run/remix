@@ -13,8 +13,8 @@ import {
   type MixinHandle,
   type RemixNode,
 } from '@remix-run/component'
-import { SurfaceBoundary } from './lib/focus.tsx'
-import { activateFocusScope } from './dialog/focus.ts'
+import { getActiveElement, SurfaceBoundary } from './lib/focus-boundary.tsx'
+import { activateFocusScope } from './lib/focus-scope.ts'
 import {
   getDismissableLayerBranch,
   registerDismissableLayer,
@@ -442,8 +442,7 @@ const surfaceMixin: MixinFactory<HTMLElement, [options?: DialogSurfaceOptions], 
         }
         if (open && !focusScope) {
           // Capture the opener before revealing content or applying initial focus.
-          let active = node.ownerDocument.activeElement
-          while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement
+          let active = getActiveElement(node.ownerDocument)
           previouslyFocused = active instanceof HTMLElement ? active : null
         }
         if (open && (changed || focusScope) && context.backdrop) {

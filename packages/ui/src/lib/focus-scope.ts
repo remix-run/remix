@@ -1,7 +1,11 @@
 import { isFocusable, tabbable } from 'tabbable'
-import { activeElement, getSurfaceBoundaries, observeSurfaceBoundaries } from '../lib/focus.tsx'
-import { contains } from '../lib/contains.ts'
 import {
+  getActiveElement,
+  getSurfaceBoundaries,
+  observeSurfaceBoundaries,
+} from './focus-boundary.tsx'
+import {
+  containsIncludingShadowRoots,
   getDismissableLayerBranch,
   liveRegionSelector,
   observeDismissableLayers,
@@ -9,7 +13,7 @@ import {
   getModalExemptRegions,
   isInModalExemptRegion,
   observeModalExemptRegions,
-} from '../lib/dismissable-layer.ts'
+} from './dismissable-layer.ts'
 
 type FocusScopeOptions = {
   modal: boolean | 'trap-focus'
@@ -40,7 +44,7 @@ export function activateFocusScope(
 } {
   if (options.modal) validateBoundaries(node)
   let doc = node.ownerDocument
-  let previouslyFocused = activeElement(doc)
+  let previouslyFocused = getActiveElement(doc)
   let manager = managers.get(doc)
   if (!manager) {
     manager = createManager(doc)
@@ -85,8 +89,8 @@ export function activateFocusScope(
         previous = previous.previous
       ) {
         if (!previous.disposed) {
-          if (contains(previous.node, target)) break
-        } else if (!target?.isConnected || contains(previous.node, target)) {
+          if (containsIncludingShadowRoots(previous.node, target)) break
+        } else if (!target?.isConnected || containsIncludingShadowRoots(previous.node, target)) {
           target = previous.getReturnTarget()
         }
       }
@@ -94,7 +98,7 @@ export function activateFocusScope(
       if (
         wasCurrent &&
         restoreFocus &&
-        (options.hasExplicitReturnFocus?.() || !isInModalExemptRegion(doc, activeElement(doc)))
+        (options.hasExplicitReturnFocus?.() || !isInModalExemptRegion(doc, getActiveElement(doc)))
       ) {
         manager.restoreFocus(target)
       }
@@ -106,7 +110,9 @@ function createManager(doc: Document) {
   let scopes: FocusScope[] = []
   let shielded = new Map<Element, { inert: string | null; ariaHidden: string | null }>()
   let redirecting = false
-  let focusedRegion = getModalExemptRegions(doc).find((node) => contains(node, activeElement(doc)))
+  let focusedRegion = getModalExemptRegions(doc).find((node) =>
+    containsIncludingShadowRoots(node, getActiveElement(doc)),
+  )
   let observer = new MutationObserver((records) => {
     // Changes inside unshielded layers, backdrops, and live regions cannot change which background
     // nodes are shielded, so they skip the full-document rescan.
@@ -120,7 +126,7 @@ function createManager(doc: Document) {
     if (
       records.some(
         (record) =>
-          !unshielded.some((node) => contains(node, record.target)) &&
+          !unshielded.some((node) => containsIncludingShadowRoots(node, record.target)) &&
           !isInLiveRegion(record.target),
       )
     ) {
@@ -130,7 +136,7 @@ function createManager(doc: Document) {
   })
 
   function restoreRemovedFocus() {
-    let active = activeElement(doc)
+    let active = getActiveElement(doc)
     let scope = scopes.findLast(
       (scope) =>
         scope.lastFocused &&
@@ -144,7 +150,9 @@ function createManager(doc: Document) {
     return scopes
       .slice(scopes.indexOf(scope))
       .some((current) =>
-        getDismissableLayerBranch(current.node).some((node) => contains(node, target)),
+        getDismissableLayerBranch(current.node).some((node) =>
+          containsIncludingShadowRoots(node, target),
+        ),
       )
   }
 
@@ -174,7 +182,8 @@ function createManager(doc: Document) {
             direction !== undefined
               ? direction === -1
               : (guard === boundary.before) ===
-                (previous instanceof NodeConstructor && contains(boundary.node, previous))
+                (previous instanceof NodeConstructor &&
+                  containsIncludingShadowRoots(boundary.node, previous))
           let all = tabbable(doc.body, { getShadowRoot: true })
           let candidates = all.filter(
             (node) => !node.hasAttribute('data-rmx-focus-guard') && containsScope(scope, node),
@@ -222,7 +231,7 @@ function createManager(doc: Document) {
       function visit(parent: Element | ShadowRoot) {
         for (let child of parent.children) {
           if (allowed.includes(child)) continue
-          if (allowed.some((node) => contains(child, node))) {
+          if (allowed.some((node) => containsIncludingShadowRoots(child, node))) {
             visit(child)
             if (child.shadowRoot) visit(child.shadowRoot)
           } else {
@@ -265,14 +274,16 @@ function createManager(doc: Document) {
   function onFocusIn(event: FocusEvent) {
     let scope = scopes.at(-1)
     if (!scope || redirecting) return
-    let target = activeElement(doc)
-    focusedRegion = getModalExemptRegions(doc).find((node) => contains(node, target))
+    let target = getActiveElement(doc)
+    focusedRegion = getModalExemptRegions(doc).find((node) =>
+      containsIncludingShadowRoots(node, target),
+    )
     let interaction = focusedRegion !== undefined
     let focusScope = scopes.findLast((scope) => scope.options.modal)
     if (focusScope && !interaction && !containsScope(focusScope, target)) {
       redirecting = true
       focusInside(focusScope)
-      focusScope.lastFocused = activeElement(doc)
+      focusScope.lastFocused = getActiveElement(doc)
       redirecting = false
       return
     }
@@ -293,14 +304,16 @@ function createManager(doc: Document) {
       event.altKey ||
       event.ctrlKey ||
       event.metaKey ||
-      isInModalExemptRegion(doc, activeElement(doc))
+      isInModalExemptRegion(doc, getActiveElement(doc))
     ) {
       return
     }
     let root = scopes
       .slice(scopes.indexOf(scope))
       .every((current) =>
-        getDismissableLayerBranch(current.node).every((node) => contains(scope.node, node)),
+        getDismissableLayerBranch(current.node).every((node) =>
+          containsIncludingShadowRoots(scope.node, node),
+        ),
       )
       ? scope.node
       : doc.body
@@ -320,11 +333,12 @@ function createManager(doc: Document) {
   let stopObservingRegions = observeModalExemptRegions(doc, (node, registered) => {
     updateBackground()
     let scope = scopes.findLast((scope) => scope.options.modal)
-    let active = activeElement(doc)
+    let active = getActiveElement(doc)
     if (
       !registered &&
       scope &&
-      (contains(node, active) || (focusedRegion === node && active === doc.body)) &&
+      (containsIncludingShadowRoots(node, active) ||
+        (focusedRegion === node && active === doc.body)) &&
       !containsScope(scope, active) &&
       !isInModalExemptRegion(doc, active)
     ) {
@@ -347,8 +361,8 @@ function createManager(doc: Document) {
       let focusScope = scopes.findLast((scope) => scope.options.modal)
       if (
         focusScope &&
-        !containsScope(focusScope, activeElement(doc)) &&
-        !isInModalExemptRegion(doc, activeElement(doc))
+        !containsScope(focusScope, getActiveElement(doc)) &&
+        !isInModalExemptRegion(doc, getActiveElement(doc))
       )
         focusInside(focusScope)
     },
@@ -378,7 +392,10 @@ function createManager(doc: Document) {
 function validateBoundaries(node: HTMLElement): void {
   let boundaries = getSurfaceBoundaries(node.ownerDocument)
   for (let child of getDismissableLayerBranch(node)) {
-    if (!contains(node, child) && !boundaries.some((boundary) => boundary.node === child))
+    if (
+      !containsIncludingShadowRoots(node, child) &&
+      !boundaries.some((boundary) => boundary.node === child)
+    )
       throw new Error(
         'Detached popups in a modal require PopoverContext or popover.SurfaceContext at their DOM destination',
       )
@@ -404,7 +421,7 @@ function focus(
   if (!node || !node.isConnected || !('focus' in node) || typeof node.focus !== 'function')
     return false
   node.focus(options)
-  return contains(node, activeElement(node.ownerDocument))
+  return containsIncludingShadowRoots(node, getActiveElement(node.ownerDocument))
 }
 
 function restoreAttribute(node: Element, name: string, value: string | null): void {

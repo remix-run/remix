@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoot } from '@remix-run/component'
-import { FocusGuard } from './focus.tsx'
+import { FocusGuard } from './focus-boundary.tsx'
 
 describe('focus guards', () => {
   it('retains its element while toggling keyboard and WebKit accessibility activation', (t) => {

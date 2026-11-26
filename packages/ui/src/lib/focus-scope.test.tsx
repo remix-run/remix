@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
-import { activateFocusScope } from './focus.ts'
-import { registerModalExemptRegion } from '../lib/dismissable-layer.ts'
+import { activateFocusScope } from './focus-scope.ts'
+import { registerModalExemptRegion } from './dismissable-layer.ts'
 
 let scopes: ReturnType<typeof activateFocusScope>[] = []
 

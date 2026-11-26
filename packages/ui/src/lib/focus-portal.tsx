@@ -1,14 +1,14 @@
 import { Portal, css, ref, type Handle, type RemixNode } from '@remix-run/component'
 import { focusable, tabbable } from 'tabbable'
-import { contains } from './contains.ts'
+import { containsIncludingShadowRoots } from './dismissable-layer.ts'
 import {
   FocusGuard,
-  activeElement,
+  getActiveElement,
   FocusPortalScope,
   getSurfaceBoundaries,
   type FocusTransport,
   type SurfaceBoundaryRegistration,
-} from './focus.tsx'
+} from './focus-boundary.tsx'
 
 type PortalOptions = {
   componentName: string
@@ -91,7 +91,7 @@ export function FocusPortal(handle: Handle<PortalOptions>): () => RemixNode {
       disposed ||
       !transport.active ||
       handle.props.mode === 'trap' ||
-      (before && transport.contains(activeElement(before.ownerDocument)))
+      (before && transport.contains(getActiveElement(before.ownerDocument)))
     )
       return
     for (let boundary of boundaries) {
@@ -153,7 +153,7 @@ export function FocusPortal(handle: Handle<PortalOptions>): () => RemixNode {
     if (
       !transport.active ||
       handle.props.mode === 'trap' ||
-      transport.contains(activeElement(before.ownerDocument))
+      transport.contains(getActiveElement(before.ownerDocument))
     ) {
       restore()
       return
@@ -163,7 +163,9 @@ export function FocusPortal(handle: Handle<PortalOptions>): () => RemixNode {
       if (
         Array.from(boundaries).some(
           (boundary) =>
-            contains(boundary.node, node) || boundary.before === node || boundary.after === node,
+            containsIncludingShadowRoots(boundary.node, node) ||
+            boundary.before === node ||
+            boundary.after === node,
         )
       )
         continue
@@ -225,7 +227,9 @@ export function FocusPortal(handle: Handle<PortalOptions>): () => RemixNode {
         !!node &&
         (Array.from(boundaries).some(
           (boundary) =>
-            contains(boundary.node, node) || boundary.before === node || boundary.after === node,
+            containsIncludingShadowRoots(boundary.node, node) ||
+            boundary.before === node ||
+            boundary.after === node,
         ) ||
           Array.from(transport.children).some((child) => child.contains(node)))
       )

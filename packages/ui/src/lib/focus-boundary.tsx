@@ -1,6 +1,6 @@
 import { css, on, ref, type Handle, type RemixNode } from '@remix-run/component'
 
-export function activeElement(doc: Document): Element | null {
+export function getActiveElement(doc: Document): Element | null {
   let active = doc.activeElement
   while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement
   return active
@@ -190,7 +190,7 @@ export function SurfaceBoundary(
       after,
       cross(direction) {
         let guard = direction === 1 ? after : before
-        if (guard) onFocus?.(guard, activeElement(doc), direction)
+        if (guard) onFocus?.(guard, getActiveElement(doc), direction)
       },
       update(nextActive, nextOnFocus) {
         onFocus = nextOnFocus

@@ -1,7 +1,7 @@
 import { attrs, createMixin, css, on, ref, TypedEventTarget } from '@remix-run/component'
 import type { ElementProps, Handle, RemixNode } from '@remix-run/component'
-import { FocusGuard } from './lib/focus.tsx'
-import { registerModalExemptRegion } from './lib/dismissable-layer.ts'
+import { getActiveElement, FocusGuard } from './lib/focus-boundary.tsx'
+import { containsIncludingShadowRoots, registerModalExemptRegion } from './lib/dismissable-layer.ts'
 
 /** Content published to a toast manager. */
 export interface ToastAddOptions<data = unknown> {
@@ -163,19 +163,9 @@ function isElement(target: unknown): target is HTMLElement {
   )
 }
 
-function activeElement(doc: Document): HTMLElement | null {
-  let active = doc.activeElement
-  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement
+function getActiveHTMLElement(doc: Document): HTMLElement | null {
+  let active = getActiveElement(doc)
   return isElement(active) ? active : null
-}
-
-function contains(container: HTMLElement, target: Node | null): boolean {
-  while (target) {
-    if (container.contains(target)) return true
-    let root = target.getRootNode()
-    target = 'host' in root && isElement(root.host) ? root.host : null
-  }
-  return false
 }
 
 function focusElement(node: HTMLElement, visible?: boolean) {
@@ -208,9 +198,9 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
   function restoreFocus(): boolean {
     if (!region || !returnTo) return false
     let doc = region.ownerDocument
-    if (returnTo === doc.body) activeElement(doc)?.blur()
+    if (returnTo === doc.body) getActiveHTMLElement(doc)?.blur()
     else if (returnTo.isConnected) focusElement(returnTo)
-    let restored = !contains(region, activeElement(doc))
+    let restored = !containsIncludingShadowRoots(region, getActiveHTMLElement(doc))
     if (restored) returnTo = undefined
     return restored
   }
@@ -218,13 +208,13 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
   function refresh() {
     let items = toastManager.items
     let available = new Set(items.slice(0, limit).map((toastItem) => toastItem.id))
-    let active = region && activeElement(region.ownerDocument)
-    if (region && !available.size && active && contains(region, active)) {
+    let active = region && getActiveHTMLElement(region.ownerDocument)
+    if (region && !available.size && active && containsIncludingShadowRoots(region, active)) {
       if (!restoreFocus()) active.blur()
-      active = activeElement(region.ownerDocument)
+      active = getActiveHTMLElement(region.ownerDocument)
     }
     for (let [id, { node }] of presentations) {
-      if (!available.has(id) && active && contains(node, active)) {
+      if (!available.has(id) && active && containsIncludingShadowRoots(node, active)) {
         if (!interaction.keyboardFocused && !active.matches(':focus-visible')) {
           active.blur()
           continue
@@ -271,7 +261,9 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       return returnTo !== undefined
     },
     get focused() {
-      return Boolean(region && contains(region, activeElement(region.ownerDocument)))
+      return Boolean(
+        region && containsIncludingShadowRoots(region, getActiveHTMLElement(region.ownerDocument)),
+      )
     },
     get expanded() {
       return interaction.expanded
@@ -299,7 +291,10 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       let unregisterRegion = registerModalExemptRegion({
         node,
         onScopeClose(branch, returnTarget) {
-          if (returnTo && branch.some((node) => contains(node, returnTo ?? null))) {
+          if (
+            returnTo &&
+            branch.some((node) => containsIncludingShadowRoots(node, returnTo ?? null))
+          ) {
             returnTo = isElement(returnTarget) ? returnTarget : doc.body
           }
         },
@@ -331,8 +326,8 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
           )
             return
           interaction.clearPointerInteraction()
-          let active = activeElement(doc)
-          if (active && contains(node, active)) active.blur()
+          let active = getActiveHTMLElement(doc)
+          if (active && containsIncludingShadowRoots(node, active)) active.blur()
         },
         { capture: true, signal },
       )
@@ -354,9 +349,13 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       node.addEventListener(
         'focusin',
         (event) => {
-          let active = activeElement(doc)
+          let active = getActiveHTMLElement(doc)
           if (active && (entering || active.matches(':focus-visible'))) {
-            if (!entering && isElement(event.relatedTarget) && !contains(node, event.relatedTarget))
+            if (
+              !entering &&
+              isElement(event.relatedTarget) &&
+              !containsIncludingShadowRoots(node, event.relatedTarget)
+            )
               returnTo = event.relatedTarget
             interaction.set('keyboardFocused', true)
           }
@@ -368,7 +367,11 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
       node.addEventListener(
         'focusout',
         (event) => {
-          if (isElement(event.relatedTarget) && contains(node, event.relatedTarget)) return
+          if (
+            isElement(event.relatedTarget) &&
+            containsIncludingShadowRoots(node, event.relatedTarget)
+          )
+            return
           interaction.set('keyboardFocused', false)
           refresh()
           void handle.update()
@@ -385,7 +388,7 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
             return
           }
           if (event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey) return
-          if (event.shiftKey && activeElement(doc) === node && restoreFocus())
+          if (event.shiftKey && getActiveHTMLElement(doc) === node && restoreFocus())
             event.preventDefault()
         },
         { signal },
@@ -404,15 +407,19 @@ export function Context<data = unknown>(handle: Handle<ToastContextProps<data>>)
             node.closest('[inert]')
           )
             return
-          if (!toastManager.items.length || contains(node, activeElement(doc))) return
-          returnTo = activeElement(doc) ?? doc.body
+          if (
+            !toastManager.items.length ||
+            containsIncludingShadowRoots(node, getActiveHTMLElement(doc))
+          )
+            return
+          returnTo = getActiveHTMLElement(doc) ?? doc.body
           entering = true
           try {
             focusElement(node, true)
           } finally {
             entering = false
           }
-          if (activeElement(doc) === node) event.preventDefault()
+          if (getActiveHTMLElement(doc) === node) event.preventDefault()
         },
         { signal },
       )
@@ -688,7 +695,7 @@ export const item = createMixin<HTMLElement, [options?: ToastItemOptions], Eleme
             event.defaultPrevented ||
             event.key !== 'Escape' ||
             !host ||
-            !contains(host, activeElement(host.ownerDocument))
+            !containsIncludingShadowRoots(host, getActiveHTMLElement(host.ownerDocument))
           )
             return
           event.preventDefault()
