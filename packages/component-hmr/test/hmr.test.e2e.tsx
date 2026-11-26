@@ -50,6 +50,104 @@ describe('component-hmr e2e', { skip: isBun }, () => {
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
   })
 
+  it('keeps working children mountable after a throwing edit and recovers after reload', async (t) => {
+    let fixture = await createHmrFixture()
+    t.after(fixture.close)
+    let source = `import { on } from '@remix-run/component'
+export function Child() {
+  let label = 'working'
+  return () => <output>{label}</output>
+}
+export function Counter(handle) {
+  let visible = false
+  let toggle = () => {
+    visible = !visible
+    handle.update()
+  }
+  return () => <main>
+    <input data-testid="field" />
+    <button mix={on('click', toggle)}>Toggle child</button>
+    {visible ? <Child /> : null}
+  </main>
+}`
+    await write(fixture.rootDir, 'app/Counter.tsx', source)
+    let page = await t.serve(await createHmrTestServer(fixture))
+    await openHmrPage(page)
+    await page.locator('[data-testid="field"]').fill('retained')
+    await page.getByRole('button', { name: 'Toggle child' }).click()
+    await waitForText(page, 'output', 'working')
+    await page.getByRole('button', { name: 'Toggle child' }).click()
+    await page.waitForFunction(() => document.querySelector('output') === null)
+
+    let failed = waitForConsoleMessage(page, '[remix] HMR update failed')
+    await write(
+      fixture.rootDir,
+      'app/Counter.tsx',
+      `${source.replace('working', 'rejected')}\nthrow new Error('rejected edit')`,
+    )
+    await failed
+    // This callback and its Child reference were captured by the original setup.
+    await page.getByRole('button', { name: 'Toggle child' }).click()
+    await waitForText(page, 'output', 'working')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'retained')
+
+    // The assets host drops its accept handler after an evaluation failure and reloads on recovery.
+    let recovered = waitForNavigation(page)
+    await write(fixture.rootDir, 'app/Counter.tsx', source.replace('working', 'recovered'))
+    await recovered
+    await page.getByRole('button', { name: 'Toggle child' }).click()
+    await waitForText(page, 'output', 'recovered')
+  })
+
+  it('keeps working children mountable after an awaited rejection and recovers after reload', async (t) => {
+    let fixture = await createHmrFixture()
+    t.after(fixture.close)
+    let source = `import { on } from '@remix-run/component'
+export function Child() {
+  let label = 'working'
+  return () => <output>{label}</output>
+}
+export function Counter(handle) {
+  let visible = false
+  let toggle = () => {
+    visible = !visible
+    handle.update()
+  }
+  return () => <main>
+    <input data-testid="field" />
+    <button mix={on('click', toggle)}>Toggle child</button>
+    {visible ? <Child /> : null}
+  </main>
+}`
+    await write(fixture.rootDir, 'app/Counter.tsx', source)
+    let page = await t.serve(await createHmrTestServer(fixture))
+    await openHmrPage(page)
+    await page.locator('[data-testid="field"]').fill('retained')
+    await page.getByRole('button', { name: 'Toggle child' }).click()
+    await waitForText(page, 'output', 'working')
+    await page.getByRole('button', { name: 'Toggle child' }).click()
+    await page.waitForFunction(() => document.querySelector('output') === null)
+
+    let failed = waitForConsoleMessage(page, '[remix] HMR update failed')
+    await write(
+      fixture.rootDir,
+      'app/Counter.tsx',
+      `${source.replace('working', 'rejected')}\nawait Promise.reject(new Error('rejected edit'))`,
+    )
+    await failed
+    // This callback and its Child reference were captured by the original setup.
+    await page.getByRole('button', { name: 'Toggle child' }).click()
+    await waitForText(page, 'output', 'working')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'retained')
+
+    // The assets host drops its accept handler after an evaluation failure and reloads on recovery.
+    let recovered = waitForNavigation(page)
+    await write(fixture.rootDir, 'app/Counter.tsx', source.replace('working', 'recovered'))
+    await recovered
+    await page.getByRole('button', { name: 'Toggle child' }).click()
+    await waitForText(page, 'output', 'recovered')
+  })
+
   it('updates a component when an optimized barrel import is retargeted', async (t) => {
     let fixture = await createHmrFixture()
     t.after(fixture.close)

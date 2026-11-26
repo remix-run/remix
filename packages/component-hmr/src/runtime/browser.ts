@@ -1,6 +1,7 @@
 import { getComponentModuleInvalidationMessage } from '../lib/module-boundary.ts'
 import {
   callComponentRenderForHmr,
+  commitComponentModuleForHmr,
   clearComponentHmrState,
   getComponentHandleForHmr,
   getComponentHmrState,
@@ -21,6 +22,7 @@ import {
 export const __componentHmrBrowserRuntime__ = {
   getComponentModuleInvalidationMessage,
   callComponentRenderForHmr,
+  commitComponentModuleForHmr,
   clearComponentHmrState,
   getComponentHandleForHmr,
   getComponentHmrState,

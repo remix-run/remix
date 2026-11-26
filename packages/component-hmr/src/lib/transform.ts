@@ -163,6 +163,7 @@ export function transformComponentsForBrowser(
   let importSpecifiers = getComponentHmrImportSpecifiers(options.importSource)
   let edits: SourceEdit[] = []
   let componentNames: string[] = []
+  let componentWrappers: string[] = []
 
   for (let match of componentMatches) {
     componentNames.push(match.name)
@@ -172,6 +173,8 @@ export function transformComponentsForBrowser(
       implementation: getUnusedName(`__remixComponentHmrImpl_${match.name}__`, referenceInfo.names),
       wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, referenceInfo.names),
     }
+
+    componentWrappers.push(componentIdentifiers.wrapper)
 
     let implementation = createHmrImplementationBody(
       match,
@@ -190,10 +193,10 @@ export function transformComponentsForBrowser(
     )
     let wrapperSource = [
       `function ${match.functionExpressionName ?? match.name}(${match.wrapperParams}) {`,
-      `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}).apply(void 0, arguments);`,
+      `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.wrapper}).apply(void 0, arguments);`,
       `}`,
     ].join('\n')
-    let registrationSource = `const ${componentIdentifiers.wrapper} = ${match.name};\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${componentIdentifiers.componentRefresh}, ${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${JSON.stringify(match.setupHash)}, ${componentIdentifiers.wrapper});`
+    let registrationSource = `${componentIdentifiers.wrapper} = ${match.name};\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${componentIdentifiers.componentRefresh}, ${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${JSON.stringify(match.setupHash)}, ${componentIdentifiers.wrapper});`
     rewriteComponentMatch(edits, match, implementationSource, wrapperSource, registrationSource)
   }
 
@@ -205,6 +208,8 @@ export function transformComponentsForBrowser(
       implementation: getUnusedName(`__remixComponentHmrImpl_${match.name}__`, referenceInfo.names),
       wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, referenceInfo.names),
     }
+
+    componentWrappers.push(componentIdentifiers.wrapper)
 
     let selfWrapper = getComponentSelfBindings(match, referenceInfo).length
       ? getUnusedName(`__remixComponentHmrSelfWrapper_${match.name}__`, referenceInfo.names)
@@ -223,7 +228,7 @@ export function transformComponentsForBrowser(
       `function ${match.functionName}(${match.wrapperParams}) {`,
       `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(
         options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}).apply(void 0, arguments);`,
+      )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.wrapper}).apply(void 0, arguments);`,
       `}`,
     ].join('\n')
 
@@ -254,7 +259,7 @@ export function transformComponentsForBrowser(
         start: match.statementEnd,
         end: match.statementEnd,
         fragments: [
-          `\nconst ${componentIdentifiers.wrapper} = ${match.name};\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${componentIdentifiers.componentRefresh}, ${JSON.stringify(
+          `\n${componentIdentifiers.wrapper} = ${match.name};\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${componentIdentifiers.componentRefresh}, ${JSON.stringify(
             options.moduleUrl,
           )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${JSON.stringify(
             match.setupHash,
@@ -269,6 +274,7 @@ export function transformComponentsForBrowser(
       importSpecifiers.browserRuntimeSpecifier,
     )};`,
     `import * as ${identifiers.componentRefresh} from ${JSON.stringify(importSpecifiers.refreshSpecifier)};`,
+    `let ${componentWrappers.join(', ')};`,
     ``,
   ].join('\n')
   let footer = [
@@ -300,6 +306,7 @@ export function transformComponentsForBrowser(
     `    }`,
     `  });`,
     `}`,
+    `${identifiers.componentHmr}.commitComponentModuleForHmr([${componentWrappers.join(', ')}]);`,
   ].join('\n')
 
   let fragments = assembleModule(source, edits, imports, footer)
@@ -357,6 +364,7 @@ export function transformComponentsForServer(
   let importSpecifiers = getComponentHmrImportSpecifiers(options.importSource)
   let edits: SourceEdit[] = []
   let componentNames: string[] = []
+  let componentWrappers: string[] = []
 
   for (let match of componentMatches) {
     componentNames.push(match.name)
@@ -367,6 +375,8 @@ export function transformComponentsForServer(
       wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, names),
       self: getUnusedName(`__remixComponentHmrSelf_${match.name}__`, names),
     }
+
+    componentWrappers.push(componentIdentifiers.wrapper)
 
     let selfBindings = getComponentSelfBindings(match, referenceInfo)
     let bodySnippet = rewriteReferences(
@@ -385,10 +395,10 @@ export function transformComponentsForServer(
     )
     let wrapperSource = [
       `function ${match.functionExpressionName ?? match.name}(${match.wrapperParams}) {`,
-      `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}).apply(void 0, arguments);`,
+      `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.wrapper}).apply(void 0, arguments);`,
       `}`,
     ].join('\n')
-    let registrationSource = `const ${componentIdentifiers.wrapper} = ${match.name};\n${createSelfBindingSource(selfBindings, componentIdentifiers.self, componentIdentifiers.wrapper)}\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation});`
+    let registrationSource = `${componentIdentifiers.wrapper} = ${match.name};\n${createSelfBindingSource(selfBindings, componentIdentifiers.self, componentIdentifiers.wrapper)}\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${componentIdentifiers.wrapper});`
     rewriteComponentMatch(edits, match, implementationSource, wrapperSource, registrationSource)
   }
 
@@ -401,6 +411,8 @@ export function transformComponentsForServer(
       wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, names),
       self: getUnusedName(`__remixComponentHmrSelf_${match.name}__`, names),
     }
+
+    componentWrappers.push(componentIdentifiers.wrapper)
 
     let selfBindings = getComponentSelfBindings(match, referenceInfo)
     let selfWrapper = selfBindings.length
@@ -418,7 +430,7 @@ export function transformComponentsForServer(
       `function ${match.functionName}(${match.wrapperParams}) {`,
       `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(
         options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}).apply(void 0, arguments);`,
+      )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.wrapper}).apply(void 0, arguments);`,
       `}`,
     ].join('\n')
 
@@ -446,9 +458,9 @@ export function transformComponentsForServer(
         start: match.statementEnd,
         end: match.statementEnd,
         fragments: [
-          `\nconst ${componentIdentifiers.wrapper} = ${match.name};\n${createSelfBindingSource(selfBindings, componentIdentifiers.self, selfWrapper ?? componentIdentifiers.wrapper)}\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${JSON.stringify(
+          `\n${componentIdentifiers.wrapper} = ${match.name};\n${createSelfBindingSource(selfBindings, componentIdentifiers.self, selfWrapper ?? componentIdentifiers.wrapper)}\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${JSON.stringify(
             options.moduleUrl,
-          )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation});`,
+          )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${componentIdentifiers.wrapper});`,
         ],
       },
     )
@@ -458,6 +470,7 @@ export function transformComponentsForServer(
     `import { __componentHmrServerRuntime__ as ${identifiers.componentHmr} } from ${JSON.stringify(
       importSpecifiers.serverRuntimeSpecifier,
     )};`,
+    `let ${componentWrappers.join(', ')};`,
     ``,
   ].join('\n')
   let footer = [
@@ -485,6 +498,7 @@ export function transformComponentsForServer(
     `    }`,
     `  });`,
     `}`,
+    `${identifiers.componentHmr}.commitComponentModuleForHmr([${componentWrappers.join(', ')}]);`,
   ].join('\n')
 
   let fragments = assembleModule(source, edits, imports, footer)
