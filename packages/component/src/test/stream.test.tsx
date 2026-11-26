@@ -1034,6 +1034,19 @@ describe('stream', () => {
       )
     })
 
+    it('emits standalone class after other attributes and preserves className position', async () => {
+      let html = await renderToString(
+        <>
+          <a class="nav-link" href="/api/" />
+          <div className="panel" data-panel="before" />
+        </>,
+      )
+
+      expect(html).toBe(
+        '<a href="/api/" class="nav-link"></a><div class="panel" data-panel="before"></div>',
+      )
+    })
+
     it('blocks javascript URLs in executable URL attributes', async () => {
       let html = await drain(
         renderToStream(

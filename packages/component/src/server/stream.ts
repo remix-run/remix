@@ -1168,6 +1168,16 @@ function createDocumentElementSegments(
   return segments
 }
 
+function appendClassAttribute(html: string, value: unknown): string {
+  if (typeof value === 'string') {
+    return html + ` class="${escapeHtml(value)}"`
+  }
+  if (typeof value === 'boolean') {
+    return value ? html + ' class' : html
+  }
+  return value != null ? html + ` class="${escapeHtml(String(value))}"` : html
+}
+
 function appendAttributes(
   tag: string,
   props: any,
@@ -1175,6 +1185,8 @@ function appendAttributes(
   excludedProps: Set<string> | undefined,
   output: SsrBuffer,
 ): void {
+  let hasClass = false
+  let classAttr: unknown
   let emittedClass = false
   let html = output.html
 
@@ -1185,33 +1197,26 @@ function appendAttributes(
     let value = props[key]
     if (value === undefined || value === null) continue
 
-    if (key === 'class' || key === 'className') {
-      if (emittedClass) continue
+    if (key === 'class') {
+      hasClass = true
+      classAttr = value
+      continue
+    }
+
+    if (key === 'className') {
       emittedClass = true
-      let otherKey = key === 'class' ? 'className' : 'class'
-      let otherVal = Object.hasOwn(props, otherKey) ? props[otherKey] : undefined
-      let merged: unknown
-      if (otherVal === undefined || otherVal === null) {
-        merged = value
-      } else {
-        let classAttr = key === 'class' ? value : otherVal
-        let className = key === 'class' ? otherVal : value
-        merged =
-          typeof classAttr === 'string' && typeof className === 'string' && classAttr && className
-            ? `${classAttr} ${className}`
-            : typeof classAttr === 'string' && classAttr
-              ? classAttr
-              : typeof className === 'string' && className
-                ? className
-                : (classAttr ?? className)
-      }
-      if (typeof merged === 'string') {
-        html += ` class="${escapeHtml(merged)}"`
-      } else if (typeof merged === 'boolean') {
-        if (merged) html += ' class'
-      } else if (merged != null) {
-        html += ` class="${escapeHtml(String(merged))}"`
-      }
+      let ownClass = hasClass ? classAttr : Object.hasOwn(props, 'class') ? props.class : undefined
+      let merged =
+        ownClass === undefined || ownClass === null
+          ? value
+          : typeof ownClass === 'string' && typeof value === 'string' && ownClass && value
+            ? `${ownClass} ${value}`
+            : typeof ownClass === 'string' && ownClass
+              ? ownClass
+              : typeof value === 'string' && value
+                ? value
+                : (ownClass ?? value)
+      html = appendClassAttribute(html, merged)
       continue
     }
 
@@ -1254,6 +1259,10 @@ function appendAttributes(
       let safeValue = fastSanitizeUrl(tag, attrName, isUrl, value)
       html += ` ${attrName}="${escapeHtml(typeof safeValue === 'string' ? safeValue : String(safeValue))}"`
     }
+  }
+
+  if (hasClass && !emittedClass) {
+    html = appendClassAttribute(html, classAttr)
   }
 
   output.html = html
