@@ -11,27 +11,21 @@ permissions:
 jobs:
   compare:
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
       - uses: ./.github/actions/setup-node-pnpm-cache
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @remix-run/component exec playwright install webkit
-      - name: isolated-before-1
-        run: node scripts/hmr-performance-run.mjs isolated-before-1 pnpm --filter @remix-run/component-hmr test --quiet test/hmr-client-entry.test.e2e.tsx --only 'adds hydration boundaries in fresh responses when clientEntry is added through node-hmr'
-      - name: isolated-before-2
-        run: node scripts/hmr-performance-run.mjs isolated-before-2 pnpm --filter @remix-run/component-hmr test --quiet test/hmr-client-entry.test.e2e.tsx --only 'adds hydration boundaries in fresh responses when clientEntry is added through node-hmr'
-      - name: outer4-inner-default
-        run: node scripts/hmr-performance-run.mjs outer4-inner-default pnpm --recursive --no-sort --no-bail --stream --workspace-concurrency=4 --filter ./docs/ui --filter ./packages/assets --filter ./packages/component-hmr --filter ./packages/multiple-import-maps-polyfill run test --type browser --type e2e --quiet
-      - name: outer1-inner-default
-        run: node scripts/hmr-performance-run.mjs outer1-inner-default pnpm --recursive --no-sort --no-bail --stream --workspace-concurrency=1 --filter ./docs/ui --filter ./packages/assets --filter ./packages/component-hmr --filter ./packages/multiple-import-maps-polyfill run test --type browser --type e2e --quiet
-      - name: outer4-inner1
-        run: node scripts/hmr-performance-run.mjs outer4-inner1 pnpm --recursive --no-sort --no-bail --stream --workspace-concurrency=4 --filter ./docs/ui --filter ./packages/assets --filter ./packages/component-hmr --filter ./packages/multiple-import-maps-polyfill run test --type browser --type e2e --quiet --concurrency 1
-      - name: isolated-after-1
-        run: node scripts/hmr-performance-run.mjs isolated-after-1 pnpm --filter @remix-run/component-hmr test --quiet test/hmr-client-entry.test.e2e.tsx --only 'adds hydration boundaries in fresh responses when clientEntry is added through node-hmr'
-      - name: isolated-after-2
-        run: node scripts/hmr-performance-run.mjs isolated-after-2 pnpm --filter @remix-run/component-hmr test --quiet test/hmr-client-entry.test.e2e.tsx --only 'adds hydration boundaries in fresh responses when clientEntry is added through node-hmr'
+      - name: isolated-before
+        run: node scripts/hmr-performance-run.mjs full-isolated-before pnpm --filter @remix-run/component-hmr test --quiet test/hmr-client-entry.test.e2e.tsx --only 'adds hydration boundaries in fresh responses when clientEntry is added through node-hmr'
+      - name: full4-inner-default
+        run: node scripts/hmr-performance-full.mjs full4-inner-default 4
+      - name: full1-inner-default
+        run: node scripts/hmr-performance-full.mjs full1-inner-default 1
+      - name: isolated-after
+        run: node scripts/hmr-performance-run.mjs full-isolated-after pnpm --filter @remix-run/component-hmr test --quiet test/hmr-client-entry.test.e2e.tsx --only 'adds hydration boundaries in fresh responses when clientEntry is added through node-hmr'
       - name: Upload performance measurements
         if: always()
         uses: actions/upload-artifact@v4
