@@ -431,10 +431,13 @@ function placeSiblingUnitBefore(unit: SiblingUnit, parent: ParentNode, ref: Node
     return
   }
 
-  parent.insertBefore(
-    createFragment(unit.start.ownerDocument, collectNodeRange(unit.start, unit.end, true)),
-    ref,
-  )
+  // Keep live nodes out of a fragment so placement can preserve browser state.
+  let nodes = excludePortalRanges(collectNodeRange(unit.start, unit.end, true), parent)
+  let sourceParent = unit.start.parentNode
+  for (let node of nodes) {
+    // Don't reinsert nodes removed by a focus handler during an earlier move.
+    if (node.parentNode === sourceParent) placeNodeBefore(parent, node, ref)
+  }
 }
 
 function createFragment(doc: Document, nodes: Node[]): DocumentFragment {
