@@ -32,6 +32,16 @@ function tab(node: HTMLElement, shiftKey = false) {
   return event
 }
 
+function nextChildListMutation(node: Node) {
+  return new Promise<void>((resolve) => {
+    let observer = new MutationObserver(() => {
+      observer.disconnect()
+      resolve()
+    })
+    observer.observe(node, { childList: true, subtree: true })
+  })
+}
+
 afterEach(() => {
   for (let scope of scopes.toReversed()) scope.dispose({ restoreFocus: false })
   scopes = []
@@ -39,6 +49,223 @@ afterEach(() => {
 })
 
 describe('dialog focus scope', () => {
+  it('returns focus to the modal when an interior control is reinserted', async (t) => {
+    document.body.innerHTML =
+      '<main>Page</main><div id="dialog" tabindex="-1"><input id="field" /></div>'
+    activate(get('#dialog'))
+    let field = get('#field')
+    field.focus()
+
+    field.replaceWith(field)
+
+    await t.waitFor(() => expect(document.activeElement).toBe(field))
+  })
+
+  it('recovers a shadow-root control when its ancestor is reinserted', async (t) => {
+    document.body.innerHTML =
+      '<div id="dialog" tabindex="-1"><section id="container"><div id="host"></div></section></div>'
+    let shadow = get('#host').attachShadow({ mode: 'open' })
+    let field = document.createElement('input')
+    shadow.append(field)
+    activate(get('#dialog'))
+    field.focus()
+    let container = get('#container')
+
+    container.replaceWith(container)
+
+    await t.waitFor(() => expect(shadow.activeElement).toBe(field))
+  })
+
+  it('recovers reinserted focus when modal-exempt registration consumes pending mutations', async (t) => {
+    document.body.innerHTML =
+      '<div id="dialog" tabindex="-1"><input id="field" /></div><section id="notifications"></section>'
+    activate(get('#dialog'))
+    let field = get('#field')
+    field.focus()
+
+    field.replaceWith(field)
+    let unregister = registerModalExemptRegion({ node: get('#notifications') })
+    try {
+      await t.waitFor(() => expect(document.activeElement).toBe(field))
+    } finally {
+      unregister()
+    }
+  })
+
+  it('leaves nonmodal focus on body after an interior control is reinserted', async () => {
+    document.body.innerHTML = '<div id="dialog" tabindex="-1"><input id="field" /></div>'
+    let dialog = get('#dialog')
+    activate(dialog, { modal: false })
+    let field = get('#field')
+    field.focus()
+    let mutation = nextChildListMutation(dialog)
+
+    field.replaceWith(field)
+    await mutation
+
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('keeps autofocus disabled when an unfocused control is reinserted', async () => {
+    document.body.innerHTML = '<div id="dialog" tabindex="-1"><input id="field" /></div>'
+    let dialog = get('#dialog')
+    activate(dialog, { modal: true, initialFocus: false })
+    let field = get('#field')
+    let mutation = nextChildListMutation(dialog)
+
+    field.replaceWith(field)
+    await mutation
+
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('does not reclaim intentionally blurred focus after an unrelated mutation', async () => {
+    document.body.innerHTML = '<div id="dialog" tabindex="-1"><input id="field" /></div>'
+    let dialog = get('#dialog')
+    activate(dialog)
+    get('#field').blur()
+    let mutation = nextChildListMutation(dialog)
+
+    dialog.append(document.createElement('span'))
+    await mutation
+
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('leaves modal-exempt focus alone when a remembered modal control is reinserted', async () => {
+    document.body.innerHTML =
+      '<div id="dialog" tabindex="-1"><input id="field" /></div><section id="notifications"><button id="action">Undo</button></section>'
+    let unregister = registerModalExemptRegion({ node: get('#notifications') })
+    try {
+      let dialog = get('#dialog')
+      activate(dialog)
+      get('#action').focus()
+      let field = get('#field')
+      let mutation = nextChildListMutation(dialog)
+
+      field.replaceWith(field)
+      await mutation
+
+      expect(document.activeElement).toBe(get('#action'))
+    } finally {
+      unregister()
+    }
+  })
+
+  it('does not reclaim modal focus when a modal-exempt control is reinserted', async () => {
+    document.body.innerHTML =
+      '<div id="dialog" tabindex="-1"><input /></div><section id="notifications"><button id="action">Undo</button></section>'
+    let unregister = registerModalExemptRegion({ node: get('#notifications') })
+    try {
+      activate(get('#dialog'))
+      let action = get('#action')
+      action.focus()
+      let mutation = nextChildListMutation(get('#notifications'))
+
+      action.replaceWith(action)
+      await mutation
+
+      expect(document.activeElement).toBe(document.body)
+    } finally {
+      unregister()
+    }
+  })
+
+  it('reapplies mixed nested shielding without making trap-focus siblings inert', async (t) => {
+    document.body.innerHTML =
+      '<main id="background"></main><div id="parent" tabindex="-1"><button id="sibling">Parent</button><div id="child" tabindex="-1"><input /></div></div>'
+    activate(get('#parent'))
+    let child = activate(get('#child'), { modal: 'trap-focus' })
+    get('#sibling').removeAttribute('aria-hidden')
+    get('#background').removeAttribute('inert')
+    await t.waitFor(() => {
+      expect(get('#background').inert).toBe(true)
+      expect(get('#sibling').getAttribute('aria-hidden')).toBe('true')
+    })
+    expect(get('#sibling').inert).toBe(false)
+    child.dispose()
+    expect(get('#sibling').hasAttribute('aria-hidden')).toBe(false)
+    expect(get('#background').inert).toBe(true)
+  })
+
+  it('recovers the last modal control after navigation resets focus', () => {
+    document.body.innerHTML =
+      '<div id="dialog" tabindex="-1"><input /><button id="last">Last</button></div>'
+    activate(get('#dialog'))
+    get('#last').focus()
+    get('#last').blur()
+    window.navigation.dispatchEvent(new Event('navigatesuccess'))
+    expect(document.activeElement).toBe(get('#last'))
+  })
+
+  it('recovers the innermost focus trap after navigation', () => {
+    document.body.innerHTML =
+      '<div id="parent" tabindex="-1"><button>Parent</button><div id="child" tabindex="-1"><input id="inside" /></div></div>'
+    activate(get('#parent'))
+    let child = activate(get('#child'), { modal: 'trap-focus' })
+    get('#inside').blur()
+    window.navigation.dispatchEvent(new Event('navigatesuccess'))
+    expect(document.activeElement).toBe(get('#inside'))
+    child.dispose()
+    get('#parent').focus()
+    get('#parent').blur()
+    window.navigation.dispatchEvent(new Event('navigatesuccess'))
+    expect(document.activeElement).toBe(get('#parent'))
+  })
+
+  it('does not recover navigation focus for a nonmodal scope', () => {
+    document.body.innerHTML = '<div id="dialog" tabindex="-1"><input id="inside" /></div>'
+    activate(get('#dialog'), { modal: false })
+    get('#inside').blur()
+    window.navigation.dispatchEvent(new Event('navigatesuccess'))
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('keeps disabled autofocus until focus has entered the modal', () => {
+    document.body.innerHTML = '<div id="dialog" tabindex="-1"><input /></div>'
+    activate(get('#dialog'), { modal: true, initialFocus: false })
+    window.navigation.dispatchEvent(new Event('navigatesuccess'))
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('leaves interactive modal-exempt focus alone on navigation', () => {
+    document.body.innerHTML =
+      '<div id="dialog" tabindex="-1"><input /></div><section id="notifications"><button id="action">Undo</button></section>'
+    let unregister = registerModalExemptRegion({ node: get('#notifications') })
+    try {
+      activate(get('#dialog'))
+      get('#action').focus()
+      window.navigation.dispatchEvent(new Event('navigatesuccess'))
+      expect(document.activeElement).toBe(get('#action'))
+    } finally {
+      unregister()
+    }
+  })
+
+  it('removes navigation recovery when the last scope closes', () => {
+    document.body.innerHTML = '<div id="dialog" tabindex="-1"><input id="inside" /></div>'
+    let scope = activate(get('#dialog'))
+    scope.dispose({ restoreFocus: false })
+    get('#inside').blur()
+    window.navigation.dispatchEvent(new Event('navigatesuccess'))
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('reapplies shielding removed by an attribute-only update', async (t) => {
+    document.body.innerHTML =
+      '<main id="background"></main><div id="dialog" tabindex="-1"><input /></div>'
+    let scope = activate(get('#dialog'))
+    get('#background').removeAttribute('inert')
+    get('#background').setAttribute('aria-hidden', 'false')
+    await t.waitFor(() => {
+      expect(get('#background').inert).toBe(true)
+      expect(get('#background').getAttribute('aria-hidden')).toBe('true')
+    })
+    scope.dispose()
+    expect(get('#background').hasAttribute('inert')).toBe(false)
+    expect(get('#background').hasAttribute('aria-hidden')).toBe(false)
+  })
+
   it('focuses the first tabbable control and restores the opener', () => {
     document.body.innerHTML = `
       <button id="opener">Open</button>

@@ -58,7 +58,90 @@ afterEach(() => {
 })
 
 describe('lockScroll', () => {
-  it('locks document scrolling and restores inline styles on unlock', () => {
+  it('locks and releases each document independently', () => {
+    let frame = document.createElement('iframe')
+    document.body.append(frame)
+    let doc = frame.contentDocument
+    let view = frame.contentWindow
+    if (!doc || !view) throw new Error('Missing frame document')
+    let outerSheets = [...document.adoptedStyleSheets]
+    let innerSheets = [...doc.adoptedStyleSheets]
+    let unlockOuter = lockScroll()
+    let unlockInner = lockScroll(doc)
+    try {
+      expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
+      expect(view.getComputedStyle(doc.documentElement).overflow).toBe('hidden')
+      unlockOuter()
+      expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
+      expect(view.getComputedStyle(doc.documentElement).overflow).toBe('hidden')
+      unlockInner()
+      expect(view.getComputedStyle(doc.documentElement).overflow).toBe('visible')
+      expect(document.adoptedStyleSheets.length).toBe(outerSheets.length)
+      expect(doc.adoptedStyleSheets.length).toBe(innerSheets.length)
+    } finally {
+      unlockOuter()
+      unlockInner()
+      frame.remove()
+    }
+  })
+
+  it('beats application rules and normal inline overflow while preserving unrelated sheets', () => {
+    let application = new CSSStyleSheet()
+    application.replaceSync(
+      '@layer app { html { overflow: scroll } } html { overflow: auto !important }',
+    )
+    let original = [...document.adoptedStyleSheets]
+    document.adoptedStyleSheets = [...original, application]
+    document.documentElement.style.overflow = 'scroll'
+    let unlock = lockScroll()
+    try {
+      expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
+      let later = new CSSStyleSheet()
+      later.replaceSync('html { overflow: scroll !important; color: rgb(1, 2, 3) }')
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, later]
+      expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
+      unlock()
+      expect(getComputedStyle(document.documentElement).overflow).toBe('scroll')
+      expect(document.adoptedStyleSheets.includes(application)).toBe(true)
+      expect(document.adoptedStyleSheets.includes(later)).toBe(true)
+      expect(getComputedStyle(document.documentElement).color).toBe('rgb(1, 2, 3)')
+      let unlockAgain = lockScroll()
+      expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
+      unlockAgain()
+      expect(getComputedStyle(document.documentElement).overflow).toBe('scroll')
+    } finally {
+      unlock()
+      document.adoptedStyleSheets = original
+    }
+  })
+
+  it('does not reserve an extra gutter when there is no scrollbar', () => {
+    Object.defineProperty(document.documentElement, 'clientWidth', {
+      configurable: true,
+      value: 1000,
+    })
+    let unlock = lockScroll()
+    try {
+      expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
+      expect(getComputedStyle(document.documentElement).scrollbarGutter).toBe('auto')
+    } finally {
+      unlock()
+    }
+  })
+
+  it('keeps locking when html attributes are replaced and releases to the new styles', () => {
+    let unlock = lockScroll()
+    try {
+      document.documentElement.setAttribute('style', 'overflow: auto; color: red')
+      expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
+    } finally {
+      unlock()
+    }
+    expect(getComputedStyle(document.documentElement).overflow).toBe('auto')
+    expect(document.documentElement.style.color).toBe('red')
+  })
+
+  it('locks document scrolling without changing authored inline styles', () => {
     document.documentElement.style.overflow = 'auto'
     document.documentElement.style.scrollbarGutter = 'stable both-edges'
     document.body.style.overflow = 'clip'
@@ -71,8 +154,8 @@ describe('lockScroll', () => {
 
     let unlock = lockScroll()
 
-    expect(document.documentElement.style.overflow).toBe('hidden')
-    expect(document.documentElement.style.scrollbarGutter).toBe('stable both-edges')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
+    expect(getComputedStyle(document.documentElement).scrollbarGutter).toBe('stable both-edges')
     expect(document.body.style.overflow).toBe('clip')
     expect(document.body.style.position).toBe('relative')
     expect(document.body.style.top).toBe('1px')
@@ -83,8 +166,8 @@ describe('lockScroll', () => {
 
     unlock()
 
-    expect(document.documentElement.style.overflow).toBe('auto')
-    expect(document.documentElement.style.scrollbarGutter).toBe('stable both-edges')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('auto')
+    expect(getComputedStyle(document.documentElement).scrollbarGutter).toBe('stable both-edges')
     expect(document.body.style.overflow).toBe('clip')
     expect(document.body.style.position).toBe('relative')
     expect(document.body.style.top).toBe('1px')
@@ -98,13 +181,13 @@ describe('lockScroll', () => {
   it('reserves the scrollbar gutter while locked', () => {
     let unlock = lockScroll()
 
-    expect(document.documentElement.style.overflow).toBe('hidden')
-    expect(document.documentElement.style.scrollbarGutter).toBe('stable')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
+    expect(getComputedStyle(document.documentElement).scrollbarGutter).toBe('stable')
 
     unlock()
 
-    expect(document.documentElement.style.overflow).toBe('')
-    expect(document.documentElement.style.scrollbarGutter).toBe('')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
+    expect(getComputedStyle(document.documentElement).scrollbarGutter).toBe('auto')
   })
 
   it('keeps the document locked until the last unlock runs', () => {
@@ -113,13 +196,13 @@ describe('lockScroll', () => {
 
     unlockFirst()
 
-    expect(document.documentElement.style.overflow).toBe('hidden')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
     expect(window.scrollTo).not.toHaveBeenCalled()
 
     unlockSecond()
     unlockSecond()
 
-    expect(document.documentElement.style.overflow).toBe('')
+    expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
     expect(window.scrollTo).toHaveBeenCalledTimes(1)
   })
 })
