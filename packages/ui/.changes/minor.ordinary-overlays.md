@@ -90,10 +90,4 @@ Comboboxes:
 
 DOM events, form ownership, and inherited styles follow the Portal destination.
 
-Popups no longer appear above other content automatically. If your app uses `z-index`, set `--rmx-layer-base` on the document root to keep dialogs and popups above that content. For example, for app content using `z-index: 100`:
-
-```diff
- :root {
-+  --rmx-layer-base: 100;
- }
-```
+Popups no longer use the browser's top layer. Wrap your app content in an element with `css({ isolation: 'isolate' })` so popups portaled to `document.body` appear above the app's z-index layers. For other layering setups, `--rmx-layer-base` can optionally raise the dialog and popup stack. It defaults to `0`.

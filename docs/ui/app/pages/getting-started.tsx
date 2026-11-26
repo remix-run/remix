@@ -13,11 +13,25 @@ const previews = categories.flatMap((category) => {
 const installCode = await highlightSource('npm i remix @remix-run/ui', 'sh')
 const stackingCode = await highlightSource(
   `
-  :root {
-    --rmx-layer-base: 100;
+  import { css } from 'remix/component'
+  import type { Handle, RemixNode } from 'remix/component'
+
+  function Document(handle: Handle<{ children: RemixNode }>) {
+    return () => (
+      <html lang="en">
+        <head>
+          <title>My app</title>
+        </head>
+        <body>
+          <div mix={css({ isolation: 'isolate' })}>
+            {handle.props.children}
+          </div>
+        </body>
+      </html>
+    )
   }
 `,
-  'css',
+  'tsx',
 )
 const notificationStackingCode = await highlightSource(
   `
@@ -100,19 +114,28 @@ export default function GettingStarted() {
             <a href="/patterns/select/">selects</a> and <a href="/patterns/combobox/">comboboxes</a>
             . Backdrops sit below their dialogs, and nested popups appear above their parents. These
             patterns also coordinate dismissal so Escape closes the active child before its parent.
-            Use the pattern's Portal component when ancestors would clip a surface or create a
-            stacking context that constrains its z-index.
+            Use the corresponding Portal component, such as <code>dialog.Portal</code> or{' '}
+            <code>popover.Portal</code>, when ancestors would clip a surface or create a stacking
+            context that constrains its z-index.
           </p>
           <p>
-            Each surface's CSS <code>z-index</code> adds its position in the shared stack to{' '}
-            <code>--rmx-layer-base</code>, which defaults to <code>0</code>. For example, if your
-            app has a fixed header with <code>z-index: 100</code>, set the base to <code>100</code>{' '}
-            on the document root so dialogs and their backdrops appear above it. This raises the
-            whole stack while preserving the order of dialogs and nested popups. Setting it once on{' '}
-            <code>:root</code> lets every surface inherit the same value, including content rendered
-            through a portal.
+            Wrap your app content in an element with <code>isolation: isolate</code>. This creates a
+            stacking context that keeps your app's z-index values together. A header with a high
+            z-index stays within that group, so it cannot cover dialogs and popups rendered outside
+            the wrapper.
           </p>
           <CodeBlock html={stackingCode} />
+          <p>
+            Dialogs and other patterns with popup content provide Portal components that render into{' '}
+            <code>document.body</code> by default, outside this wrapper. Keep custom portal
+            containers outside the wrapper too if they should appear above the app. Inline surfaces
+            and portals rendered inside the wrapper still share its stacking context.
+          </p>
+          <p>
+            For other layering setups, you can optionally set <code>--rmx-layer-base</code> on{' '}
+            <code>:root</code> to raise the dialog and popup stack above other content. It defaults
+            to <code>0</code>.
+          </p>
           <p>
             <a href="/patterns/toast/">Toast</a> leaves the notification region's z-index to your
             styles. Use the same base variable with a larger offset so changing the base moves both
