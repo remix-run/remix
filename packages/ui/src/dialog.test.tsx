@@ -24,14 +24,6 @@ function get<element extends HTMLElement>(container: HTMLElement, selector: stri
   return node
 }
 
-async function settle(root: ReturnType<typeof createRoot>) {
-  root.flush()
-  await new Promise<void>((resolve) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-  )
-  root.flush()
-}
-
 function Example(handle: Handle<dialog.DialogContextProps>) {
   return () => (
     <dialog.Context {...handle.props}>
@@ -188,7 +180,7 @@ afterEach(() => {
 })
 
 describe('dialog', () => {
-  it('shows a backdrop mounted in a later portal and releases it on close', async () => {
+  it('shows a backdrop mounted in a later portal and releases it on close', async (t) => {
     let { root } = render(
       <dialog.Context defaultOpen>
         <Portal>
@@ -205,19 +197,19 @@ describe('dialog', () => {
         </Portal>
       </dialog.Context>,
     )
-    await settle(root)
+    root.flush()
     let backdrop = get<HTMLElement>(document.body, '[data-backdrop]')
     let surface = get<HTMLElement>(document.body, '[data-surface]')
-    expect(backdrop.hasAttribute('data-open')).toBe(true)
+    await t.waitFor(() => expect(backdrop.hasAttribute('data-open')).toBe(true))
     expect(
       Number(getComputedStyle(backdrop).zIndex) < Number(getComputedStyle(surface).zIndex),
     ).toBe(true)
     get<HTMLButtonElement>(document.body, '#close-late').click()
-    await settle(root)
-    expect(backdrop.hasAttribute('data-open')).toBe(false)
+    root.flush()
+    await t.waitFor(() => expect(backdrop.hasAttribute('data-open')).toBe(false))
   })
 
-  it('keeps initially open portaled children above their parent for focus and Escape', async () => {
+  it('keeps initially open portaled children above their parent for focus and Escape', async (t) => {
     let { root } = render(
       <dialog.Context defaultOpen>
         <Portal>
@@ -239,11 +231,11 @@ describe('dialog', () => {
         </Portal>
       </dialog.Context>,
     )
-    await settle(root)
+    root.flush()
     let parent = get<HTMLElement>(document.body, '[data-parent]')
     let child = get<HTMLElement>(document.body, '[data-child]')
     let backdrop = get<HTMLElement>(document.body, '[data-child-backdrop]')
-    expect(document.activeElement?.id).toBe('child-action')
+    await t.waitFor(() => expect(document.activeElement?.id).toBe('child-action'))
     expect(Number(getComputedStyle(child).zIndex) > Number(getComputedStyle(backdrop).zIndex)).toBe(
       true,
     )
@@ -253,25 +245,25 @@ describe('dialog', () => {
     child.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
     )
-    await settle(root)
-    expect(child.hasAttribute('data-open')).toBe(false)
+    root.flush()
+    await t.waitFor(() => expect(child.hasAttribute('data-open')).toBe(false))
     expect(parent.hasAttribute('data-open')).toBe(true)
     root.render(null)
-    await settle(root)
-    expect(document.body.querySelector('[data-open]')).toBe(null)
+    root.flush()
+    await t.waitFor(() => expect(document.body.querySelector('[data-open]')).toBe(null))
     expect(document.body.querySelector('[inert]')).toBe(null)
   })
 
-  it('renders an ordinary element outside the native top layer', async () => {
+  it('renders an ordinary element outside the native top layer', async (t) => {
     let { container, root } = render(<Example defaultOpen />)
-    await settle(root)
+    root.flush()
     let surface = get<HTMLElement>(container, '[role="dialog"]')
-    expect(surface.hasAttribute('popover')).toBe(false)
+    await t.waitFor(() => expect(surface.hasAttribute('popover')).toBe(false))
     expect(surface.matches(':popover-open')).toBe(false)
     expect(surface.getClientRects().length > 0).toBe(true)
   })
 
-  it('focuses a registered target and returns focus to the trigger that opened it', async () => {
+  it('focuses a registered target and returns focus to the trigger that opened it', async (t) => {
     let { container, root } = render(
       <dialog.Context>
         <button id="first" mix={dialog.trigger()}>
@@ -294,14 +286,14 @@ describe('dialog', () => {
     let second = get<HTMLButtonElement>(container, '#second')
     second.focus()
     second.click()
-    await settle(root)
-    expect(document.activeElement?.id).toBe('selected')
+    root.flush()
+    await t.waitFor(() => expect(document.activeElement?.id).toBe('selected'))
     get<HTMLButtonElement>(container, '#close').click()
-    await settle(root)
-    expect(document.activeElement?.id).toBe('second')
+    root.flush()
+    await t.waitFor(() => expect(document.activeElement?.id).toBe('second'))
   })
 
-  it('focuses the surface after touch opening to avoid opening a virtual keyboard', async () => {
+  it('focuses the surface after touch opening to avoid opening a virtual keyboard', async (t) => {
     let { container, root } = render(<Example />)
     get(container, '#trigger').dispatchEvent(
       new PointerEvent('click', {
@@ -309,11 +301,11 @@ describe('dialog', () => {
         pointerType: 'touch',
       }),
     )
-    await settle(root)
-    expect(document.activeElement).toBe(get(container, '[role="dialog"]'))
+    root.flush()
+    await t.waitFor(() => expect(document.activeElement).toBe(get(container, '[role="dialog"]')))
   })
 
-  it('uses an explicit focus return target even after the opener is removed', async () => {
+  it('uses an explicit focus return target even after the opener is removed', async (t) => {
     let api: dialog.DialogRef | undefined
     function RemovableTrigger(handle: Handle) {
       let visible = true
@@ -349,22 +341,22 @@ describe('dialog', () => {
     }
     let { container, root } = render(<RemovableTrigger />)
     get<HTMLButtonElement>(container, '#trigger').click()
-    await settle(root)
+    root.flush()
     get<HTMLButtonElement>(container, '#remove-trigger').click()
-    await settle(root)
+    root.flush()
     api?.close()
-    await settle(root)
-    expect(document.activeElement?.id).toBe('return')
+    root.flush()
+    await t.waitFor(() => expect(document.activeElement?.id).toBe('return'))
   })
 
-  it('restores page scrolling when an open dialog is unmounted', async () => {
+  it('restores page scrolling when an open dialog is unmounted', async (t) => {
     let overflow = document.documentElement.style.overflow
     let { root } = render(<Example defaultOpen />)
-    await settle(root)
-    expect(document.documentElement.style.overflow).toBe('hidden')
+    root.flush()
+    await t.waitFor(() => expect(document.documentElement.style.overflow).toBe('hidden'))
     root.render(null)
-    await settle(root)
-    expect(document.documentElement.style.overflow).toBe(overflow)
+    root.flush()
+    await t.waitFor(() => expect(document.documentElement.style.overflow).toBe(overflow))
     expect(document.querySelector('[data-open]')).toBe(null)
   })
 
@@ -447,7 +439,9 @@ describe('dialog', () => {
     let parent = get(document.body, '[data-depth-parent]')
     get<HTMLButtonElement>(document.body, '#depth-child-trigger').click()
     root.flush()
-    expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0')
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0'),
+    )
     root.render(<NestedDepthDialog child={{ open: true }} />)
     root.flush()
     await t.waitFor(() =>
@@ -473,7 +467,9 @@ describe('dialog', () => {
     )
     root.render(<NestedDepthDialog child={{ open: true }} withChildSurface={false} />)
     root.flush()
-    expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0')
+    await t.waitFor(() =>
+      expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('0'),
+    )
     root.render(<NestedDepthDialog child={{ open: true }} />)
     root.flush()
     await t.waitFor(() =>
@@ -504,7 +500,7 @@ describe('dialog', () => {
     )
     get<HTMLButtonElement>(document.body, '#depth-child-close').click()
     root.flush()
-    expect(child.getAttribute('data-state')).toBe('open')
+    await t.waitFor(() => expect(child.getAttribute('data-state')).toBe('open'))
     expect(parent.style.getPropertyValue('--dialog-open-descendant-depth')).toBe('1')
   })
 
@@ -568,7 +564,7 @@ describe('dialog', () => {
     ).toBe('0')
   })
 
-  it('keeps the parent modal and its scroll lock when a nested dialog closes', async () => {
+  it('keeps the parent modal and its scroll lock when a nested dialog closes', async (t) => {
     let { container, root } = render(
       <dialog.Context defaultOpen>
         <dialog.SurfaceContext>
@@ -589,20 +585,22 @@ describe('dialog', () => {
         </dialog.SurfaceContext>
       </dialog.Context>,
     )
-    await settle(root)
+    root.flush()
     let trigger = get<HTMLButtonElement>(container, '#child-trigger')
     trigger.click()
-    await settle(root)
-    expect(document.querySelectorAll('[data-open]').length).toBe(2)
+    root.flush()
+    await t.waitFor(() => expect(document.querySelectorAll('[data-open]').length).toBe(2))
     get<HTMLButtonElement>(container, '#child-close').click()
-    await settle(root)
-    expect(get<HTMLElement>(container, '[data-parent]').matches('[data-open]')).toBe(true)
+    root.flush()
+    await t.waitFor(() =>
+      expect(get<HTMLElement>(container, '[data-parent]').matches('[data-open]')).toBe(true),
+    )
     expect(get<HTMLElement>(container, '[data-child]').matches('[data-open]')).toBe(false)
     expect(document.documentElement.style.overflow).toBe('hidden')
     expect(document.activeElement?.id).toBe('child-trigger')
   })
 
-  it('handles Escape once and allows the owner to veto it', async () => {
+  it('handles Escape once and allows the owner to veto it', async (t) => {
     let changes: dialog.DialogChangeReason[] = []
     let { container, root } = render(
       <Example
@@ -613,31 +611,31 @@ describe('dialog', () => {
         }}
       />,
     )
-    await settle(root)
+    root.flush()
     let surface = get<HTMLElement>(container, '[role="dialog"]')
     surface.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
     )
-    await settle(root)
-    expect(changes).toEqual(['escape-key'])
+    root.flush()
+    await t.waitFor(() => expect(changes).toEqual(['escape-key']))
     expect(surface.matches('[data-open]')).toBe(true)
   })
 
-  it('disables Escape dismissal without disabling the close button', async () => {
+  it('disables Escape dismissal without disabling the close button', async (t) => {
     let { container, root } = render(<Example defaultOpen closeOnEscape={false} />)
-    await settle(root)
+    root.flush()
     let surface = get<HTMLElement>(container, '[role="dialog"]')
     surface.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
     )
-    await settle(root)
-    expect(surface.matches('[data-open]')).toBe(true)
+    root.flush()
+    await t.waitFor(() => expect(surface.matches('[data-open]')).toBe(true))
     get<HTMLButtonElement>(container, '#close').click()
-    await settle(root)
-    expect(surface.matches('[data-open]')).toBe(false)
+    root.flush()
+    await t.waitFor(() => expect(surface.matches('[data-open]')).toBe(false))
   })
 
-  it('does not open from a disabled trigger or submit its surrounding form', async () => {
+  it('does not open from a disabled trigger or submit its surrounding form', async (t) => {
     let submissions = 0
     let { container, root } = render(
       <form
@@ -662,15 +660,19 @@ describe('dialog', () => {
       </form>,
     )
     get<HTMLButtonElement>(container, '#disabled').click()
-    await settle(root)
-    expect(get<HTMLElement>(container, '[role="dialog"]').matches('[data-open]')).toBe(false)
+    root.flush()
+    await t.waitFor(() =>
+      expect(get<HTMLElement>(container, '[role="dialog"]').matches('[data-open]')).toBe(false),
+    )
     get<HTMLButtonElement>(container, '#enabled').click()
-    await settle(root)
-    expect(get<HTMLElement>(container, '[role="dialog"]').matches('[data-open]')).toBe(true)
+    root.flush()
+    await t.waitFor(() =>
+      expect(get<HTMLElement>(container, '[role="dialog"]').matches('[data-open]')).toBe(true),
+    )
     expect(submissions).toBe(0)
   })
 
-  it('removes label relationships when their parts are removed', async () => {
+  it('removes label relationships when their parts are removed', async (t) => {
     function Labels(handle: Handle) {
       let visible = true
       return () => (
@@ -698,23 +700,23 @@ describe('dialog', () => {
       )
     }
     let { container, root } = render(<Labels />)
-    await settle(root)
+    root.flush()
     let surface = get<HTMLElement>(container, '[role="dialog"]')
     get<HTMLButtonElement>(container, '#remove-labels').click()
-    await settle(root)
-    expect(surface.hasAttribute('aria-labelledby')).toBe(false)
+    root.flush()
+    await t.waitFor(() => expect(surface.hasAttribute('aria-labelledby')).toBe(false))
     expect(surface.hasAttribute('aria-describedby')).toBe(false)
   })
 
-  it('opens a modal, links its labels, and closes from the close button', async () => {
+  it('opens a modal, links its labels, and closes from the close button', async (t) => {
     let { container, root } = render(<Example />)
     let trigger = get<HTMLButtonElement>(container, '#trigger')
     let surface = get<HTMLElement>(container, '[role="dialog"]')
     expect(surface.matches('[data-open]')).toBe(false)
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
     trigger.click()
-    await settle(root)
-    expect(surface.matches('[data-open]')).toBe(true)
+    root.flush()
+    await t.waitFor(() => expect(surface.matches('[data-open]')).toBe(true))
     expect(trigger.getAttribute('aria-controls')).toBe(surface.id)
     expect(trigger.getAttribute('aria-expanded')).toBe('true')
     expect(document.getElementById(surface.getAttribute('aria-labelledby')!)?.textContent).toBe(
@@ -724,12 +726,12 @@ describe('dialog', () => {
       'Your public information.',
     )
     get<HTMLButtonElement>(container, '#close').click()
-    await settle(root)
-    expect(surface.matches('[data-open]')).toBe(false)
+    root.flush()
+    await t.waitFor(() => expect(surface.matches('[data-open]')).toBe(false))
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
   })
 
-  it('keeps a controlled dialog open until its owner accepts a close request', async () => {
+  it('keeps a controlled dialog open until its owner accepts a close request', async (t) => {
     let requests: boolean[] = []
     let acceptClose = () => {}
     function Controlled(handle: Handle) {
@@ -745,15 +747,15 @@ describe('dialog', () => {
       )
     }
     let { container, root } = render(<Controlled />)
-    await settle(root)
+    root.flush()
     let surface = get<HTMLElement>(container, '[role="dialog"]')
     get<HTMLButtonElement>(container, '#close').click()
-    await settle(root)
-    expect(requests).toEqual([false])
+    root.flush()
+    await t.waitFor(() => expect(requests).toEqual([false]))
     expect(surface.matches('[data-open]')).toBe(true)
     acceptClose()
-    await settle(root)
-    expect(surface.matches('[data-open]')).toBe(false)
+    root.flush()
+    await t.waitFor(() => expect(surface.matches('[data-open]')).toBe(false))
   })
 
   it('allows non-modal focus and pointer interaction without locking the page', async () => {
@@ -764,7 +766,7 @@ describe('dialog', () => {
         <Example defaultOpen modal={false} closeOnOutsideClick={false} />
       </>,
     )
-    await settle(root)
+    root.flush()
     let outside = get<HTMLButtonElement>(container, '#outside')
     outside.focus()
     expect(document.activeElement).toBe(outside)
@@ -773,22 +775,24 @@ describe('dialog', () => {
     expect(get(container, '[role="dialog"]').hasAttribute('aria-modal')).toBe(false)
   })
 
-  it('closes a non-modal dialog when focus leaves without stealing focus back', async () => {
+  it('closes a non-modal dialog when focus leaves without stealing focus back', async (t) => {
     let { container, root } = render(
       <>
         <button id="outside">Outside</button>
         <Example defaultOpen modal={false} />
       </>,
     )
-    await settle(root)
+    root.flush()
     let outside = get<HTMLButtonElement>(container, '#outside')
     outside.focus()
-    await settle(root)
-    expect(get(container, '[role="dialog"]').matches('[data-open]')).toBe(false)
+    root.flush()
+    await t.waitFor(() =>
+      expect(get(container, '[role="dialog"]').matches('[data-open]')).toBe(false),
+    )
     expect(document.activeElement).toBe(outside)
   })
 
-  it('traps focus without blocking background pointers or page scrolling', async () => {
+  it('traps focus without blocking background pointers or page scrolling', async (t) => {
     let overflow = document.documentElement.style.overflow
     let { container, root } = render(
       <>
@@ -796,15 +800,15 @@ describe('dialog', () => {
         <Example defaultOpen modal="trap-focus" closeOnOutsideClick={false} />
       </>,
     )
-    await settle(root)
+    root.flush()
     let outside = get<HTMLButtonElement>(container, '#outside')
-    expect(outside.closest('[inert]')).toBe(null)
+    await t.waitFor(() => expect(outside.closest('[inert]')).toBe(null))
     expect(document.documentElement.style.overflow).toBe(overflow)
     outside.focus()
     expect(get(container, '[role="dialog"]').contains(document.activeElement)).toBe(true)
   })
 
-  it('preserves the outside focus target when a trigger-opened non-modal dialog loses focus', async () => {
+  it('preserves the outside focus target when a trigger-opened non-modal dialog loses focus', async (t) => {
     let { container, root } = render(
       <>
         <button id="outside">Outside</button>
@@ -812,15 +816,17 @@ describe('dialog', () => {
       </>,
     )
     get<HTMLButtonElement>(container, '#trigger').click()
-    await settle(root)
+    root.flush()
     let outside = get<HTMLButtonElement>(container, '#outside')
     outside.focus()
-    await settle(root)
-    expect(get(container, '[role="dialog"]').matches('[data-open]')).toBe(false)
+    root.flush()
+    await t.waitFor(() =>
+      expect(get(container, '[role="dialog"]').matches('[data-open]')).toBe(false),
+    )
     expect(document.activeElement).toBe(outside)
   })
 
-  it('changes modal behavior while open without losing the original focus return target', async () => {
+  it('changes modal behavior while open without losing the original focus return target', async (t) => {
     let api: dialog.DialogRef | undefined
     let setModal = (_modal: dialog.DialogModal) => {}
     function Modes(handle: Handle) {
@@ -845,43 +851,43 @@ describe('dialog', () => {
         <Modes />
       </>,
     )
-    await settle(root)
+    root.flush()
     let outside = get<HTMLButtonElement>(container, '#outside')
     outside.focus()
     api?.show()
-    await settle(root)
-    expect(outside.closest('[inert]')).not.toBe(null)
+    root.flush()
+    await t.waitFor(() => expect(outside.closest('[inert]')).not.toBe(null))
     setModal(false)
-    await settle(root)
-    expect(outside.closest('[inert]')).toBe(null)
+    root.flush()
+    await t.waitFor(() => expect(outside.closest('[inert]')).toBe(null))
     expect(get(container, '[role="dialog"]').hasAttribute('aria-modal')).toBe(false)
     setModal('trap-focus')
-    await settle(root)
+    root.flush()
     outside.focus()
     expect(get(container, '[role="dialog"]').contains(document.activeElement)).toBe(true)
     api?.close()
-    await settle(root)
-    expect(document.activeElement).toBe(outside)
+    root.flush()
+    await t.waitFor(() => expect(document.activeElement).toBe(outside))
   })
 
-  it('keeps the dialog open when Escape and outside dismissal are disabled', async () => {
+  it('keeps the dialog open when Escape and outside dismissal are disabled', async (t) => {
     let { container, root } = render(
       <Example defaultOpen closeOnEscape={false} closeOnOutsideClick={false} />,
     )
-    await settle(root)
+    root.flush()
     let surface = get(container, '[role="dialog"]')
     surface.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
     )
     document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
-    await settle(root)
-    expect(surface.matches('[data-open]')).toBe(true)
+    root.flush()
+    await t.waitFor(() => expect(surface.matches('[data-open]')).toBe(true))
     get<HTMLButtonElement>(container, '#close').click()
-    await settle(root)
-    expect(surface.matches('[data-open]')).toBe(false)
+    root.flush()
+    await t.waitFor(() => expect(surface.matches('[data-open]')).toBe(false))
   })
 
-  it('supports alert dialogs and explicit accessible labels', async () => {
+  it('supports alert dialogs and explicit accessible labels', async (t) => {
     let { container, root } = render(
       <dialog.Context defaultOpen>
         <dialog.SurfaceContext>
@@ -898,14 +904,14 @@ describe('dialog', () => {
         </dialog.SurfaceContext>
       </dialog.Context>,
     )
-    await settle(root)
+    root.flush()
     let surface = get(container, '[role="alertdialog"]')
-    expect(surface.getAttribute('aria-label')).toBe('Confirm deletion')
+    await t.waitFor(() => expect(surface.getAttribute('aria-label')).toBe('Confirm deletion'))
     expect(surface.hasAttribute('aria-labelledby')).toBe(false)
     expect(surface.getAttribute('aria-describedby')).toBe('custom-description')
   })
 
-  it('does not move focus when initialFocus is false, including on autofocus content', async () => {
+  it('does not move focus when initialFocus is false, including on autofocus content', async (t) => {
     let { container, root } = render(
       <dialog.Context modal={false}>
         <button id="trigger" mix={dialog.trigger()}>
@@ -918,16 +924,16 @@ describe('dialog', () => {
         </dialog.SurfaceContext>
       </dialog.Context>,
     )
-    await settle(root)
+    root.flush()
     let trigger = get<HTMLButtonElement>(container, '#trigger')
     trigger.focus()
     trigger.click()
-    await settle(root)
-    expect(document.activeElement?.id).toBe('trigger')
+    root.flush()
+    await t.waitFor(() => expect(document.activeElement?.id).toBe('trigger'))
     expect(get(container, '#autofocus').hasAttribute('autofocus')).toBe(true)
   })
 
-  it('restores prior focus after imperative opening with native autofocus content', async () => {
+  it('restores prior focus after imperative opening with native autofocus content', async (t) => {
     let api: dialog.DialogRef | undefined
     let { container, root } = render(
       <>
@@ -945,18 +951,18 @@ describe('dialog', () => {
         </dialog.Context>
       </>,
     )
-    await settle(root)
+    root.flush()
     let outside = get<HTMLButtonElement>(container, '#outside')
     outside.focus()
     api?.show()
-    await settle(root)
-    expect(document.activeElement?.id).toBe('autofocus')
+    root.flush()
+    await t.waitFor(() => expect(document.activeElement?.id).toBe('autofocus'))
     api?.close()
-    await settle(root)
-    expect(document.activeElement).toBe(outside)
+    root.flush()
+    await t.waitFor(() => expect(document.activeElement).toBe(outside))
   })
 
-  it('can suppress both initial focus and focus restoration', async () => {
+  it('can suppress both initial focus and focus restoration', async (t) => {
     let api: dialog.DialogRef | undefined
     let { container, root } = render(
       <dialog.Context
@@ -978,14 +984,14 @@ describe('dialog', () => {
     let trigger = get<HTMLButtonElement>(container, '#trigger')
     trigger.focus()
     trigger.click()
-    await settle(root)
-    expect(document.activeElement).toBe(trigger)
+    root.flush()
+    await t.waitFor(() => expect(document.activeElement).toBe(trigger))
     get<HTMLElement>(container, '#inside').focus()
     api?.close()
-    await settle(root)
-    expect(document.activeElement).not.toBe(trigger)
+    root.flush()
+    await t.waitFor(() => expect(document.activeElement).not.toBe(trigger))
   })
-  it('wraps actual guard crossings while skipping disabled, hidden and unchecked controls', async () => {
+  it('wraps actual guard crossings while skipping disabled, hidden and unchecked controls', async (t) => {
     let { container, root } = render(
       <dialog.Context defaultOpen>
         <dialog.SurfaceContext>
@@ -1001,7 +1007,7 @@ describe('dialog', () => {
         </dialog.SurfaceContext>
       </dialog.Context>,
     )
-    await settle(root)
+    root.flush()
     let guards = container.querySelectorAll<HTMLElement>('[data-rmx-focus-guard]')
     expect(guards.length).toBe(2)
     get(container, '#selected').focus()
@@ -1022,7 +1028,7 @@ describe('dialog', () => {
         </dialog.SurfaceContext>
       </dialog.Context>,
     )
-    await settle(root)
+    root.flush()
     let shadow = get(container, '#host').attachShadow({ mode: 'open' })
     let control = document.createElement('button')
     control.textContent = 'Shadow control'
@@ -1036,7 +1042,7 @@ describe('dialog', () => {
     expect(shadow.activeElement).toBe(control)
   })
 
-  it('waits for exit animations and ignores a superseded close when reopened', async () => {
+  it('waits for exit animations and ignores a superseded close when reopened', async (t) => {
     let api: dialog.DialogRef | undefined
     let completed: boolean[] = []
     let { container, root } = render(
@@ -1048,27 +1054,29 @@ describe('dialog', () => {
         onOpenChangeComplete={(value) => completed.push(value)}
       />,
     )
-    await settle(root)
+    root.flush()
+    await t.waitFor(() => expect(completed).toEqual([true]))
     let surface = get<HTMLElement>(container, '[role="dialog"]')
     let animation = surface.animate({ opacity: [1, 0] }, { duration: 1000 })
     animation.pause()
     api?.close()
-    await settle(root)
-    expect(surface.matches('[data-open]')).toBe(true)
+    root.flush()
+    await t.waitFor(() => expect(surface.matches('[data-open]')).toBe(true))
     expect(surface.getAttribute('data-state')).toBe('closed')
     api?.show()
-    await settle(root)
+    root.flush()
     animation.finish()
-    await settle(root)
+    await animation.finished
+    root.flush()
+    await t.waitFor(() => expect(completed).toEqual([true, true]))
     expect(surface.matches('[data-open]')).toBe(true)
-    expect(completed).toEqual([true, true])
     api?.close()
-    await settle(root)
-    expect(surface.matches('[data-open]')).toBe(false)
+    root.flush()
+    await t.waitFor(() => expect(surface.matches('[data-open]')).toBe(false))
     expect(completed).toEqual([true, true, false])
   })
 
-  it('does not wait for infinite decorative animations when closing', async () => {
+  it('does not wait for infinite decorative animations when closing', async (t) => {
     let api: dialog.DialogRef | undefined
     let { container, root } = render(
       <Example
@@ -1078,16 +1086,16 @@ describe('dialog', () => {
         }}
       />,
     )
-    await settle(root)
+    root.flush()
     let surface = get(container, '[role="dialog"]')
     let animation = surface.animate({ opacity: [0.9, 1] }, { duration: 1000, iterations: Infinity })
     api?.close()
-    await settle(root)
-    expect(surface.matches('[data-open]')).toBe(false)
+    root.flush()
+    await t.waitFor(() => expect(surface.matches('[data-open]')).toBe(false))
     animation.cancel()
   })
 
-  it('retains keyed content and guard boundaries through updates and surface replacement', async () => {
+  it('retains keyed content and guard boundaries through updates and surface replacement', async (t) => {
     function ChangingSurface(handle: Handle<{ items: string[]; visible: boolean }>) {
       return () => (
         <dialog.Context defaultOpen>
@@ -1106,26 +1114,26 @@ describe('dialog', () => {
       )
     }
     let { container, root } = render(<ChangingSurface items={['first', 'last']} visible />)
-    await settle(root)
+    root.flush()
     let first = get(container, '#first')
     let guards = Array.from(container.querySelectorAll<HTMLElement>('[data-rmx-focus-guard]'))
     expect(guards.length).toBe(2)
     expect(guards.every((node) => node.tabIndex === 0)).toBe(true)
     root.render(<ChangingSurface items={['last', 'first']} visible />)
-    await settle(root)
-    expect(get(container, '#first')).toBe(first)
+    root.flush()
+    await t.waitFor(() => expect(get(container, '#first')).toBe(first))
     expect(Array.from(container.querySelectorAll('[data-rmx-focus-guard]'))).toEqual(guards)
     root.render(<ChangingSurface items={[]} visible={false} />)
-    await settle(root)
-    expect(guards.every((node) => node.tabIndex === -1)).toBe(true)
+    root.flush()
+    await t.waitFor(() => expect(guards.every((node) => node.tabIndex === -1)).toBe(true))
     expect(document.body.querySelector('[inert]')).toBe(null)
     root.render(<ChangingSurface items={['replacement']} visible />)
-    await settle(root)
-    expect(guards.every((node) => node.tabIndex === 0)).toBe(true)
+    root.flush()
+    await t.waitFor(() => expect(guards.every((node) => node.tabIndex === 0)).toBe(true))
     expect(document.activeElement).toBe(get(container, '#replacement'))
   })
 
-  it('closes nested dialogs and restores outside focus when their parent closes', async () => {
+  it('closes nested dialogs and restores outside focus when their parent closes', async (t) => {
     let parent: dialog.DialogRef | undefined
     let { container, root } = render(
       <dialog.Context
@@ -1153,16 +1161,16 @@ describe('dialog', () => {
       </dialog.Context>,
     )
     get<HTMLButtonElement>(container, '#parent-trigger').click()
-    await settle(root)
+    root.flush()
     get<HTMLButtonElement>(container, '#child-trigger').click()
-    await settle(root)
+    root.flush()
     parent?.close()
-    await settle(root)
-    expect(container.querySelectorAll('[data-open]').length).toBe(0)
+    root.flush()
+    await t.waitFor(() => expect(container.querySelectorAll('[data-open]').length).toBe(0))
     expect(document.activeElement?.id).toBe('parent-trigger')
   })
 
-  it('closes nested popovers and releases their scroll lock when the parent closes', async () => {
+  it('closes nested popovers and releases their scroll lock when the parent closes', async (t) => {
     let api: dialog.DialogRef | undefined
     let overflow = document.documentElement.style.overflow
     function NestedPopover(handle: Handle) {
@@ -1213,20 +1221,20 @@ describe('dialog', () => {
     }
     let { container, root } = render(<NestedPopover />)
     get<HTMLButtonElement>(container, '#trigger').click()
-    await settle(root)
+    root.flush()
     get<HTMLButtonElement>(container, '#popup-trigger').click()
-    await settle(root)
-    expect(get(container, '[data-popup]').matches('[data-open]')).toBe(true)
+    root.flush()
+    await t.waitFor(() => expect(get(container, '[data-popup]').matches('[data-open]')).toBe(true))
     api?.close()
-    await settle(root)
-    expect(container.querySelectorAll('[data-open]').length).toBe(0)
+    root.flush()
+    await t.waitFor(() => expect(container.querySelectorAll('[data-open]').length).toBe(0))
     expect(document.documentElement.style.overflow).toBe(overflow)
     api?.show()
-    await settle(root)
-    expect(get(container, '[data-popup]').matches('[data-open]')).toBe(false)
+    root.flush()
+    await t.waitFor(() => expect(get(container, '[data-popup]').matches('[data-open]')).toBe(false))
   })
 
-  it('keeps a detached popup in the dialog focus boundary and closes it with its owner', async () => {
+  it('keeps a detached popup in the dialog focus boundary and closes it with its owner', async (t) => {
     let api: dialog.DialogRef | undefined
     let overflow = document.documentElement.style.overflow
     let { container, root } = render(
@@ -1237,19 +1245,19 @@ describe('dialog', () => {
       />,
     )
     get<HTMLButtonElement>(container, '#trigger').click()
-    await settle(root)
+    root.flush()
     get<HTMLButtonElement>(container, '#popup-trigger').click()
-    await settle(root)
-    expect(document.activeElement?.id).toBe('popup-action')
+    root.flush()
+    await t.waitFor(() => expect(document.activeElement?.id).toBe('popup-action'))
     expect(get(container, '[data-popup]').closest('[inert], [aria-hidden="true"]')).toBe(null)
     api?.close()
-    await settle(root)
-    expect(container.querySelectorAll('[data-open]').length).toBe(0)
+    root.flush()
+    await t.waitFor(() => expect(container.querySelectorAll('[data-open]').length).toBe(0))
     expect(document.documentElement.style.overflow).toBe(overflow)
     expect(document.activeElement?.id).toBe('trigger')
   })
 
-  it('releases a removed portaled popup while keeping its modal active', async () => {
+  it('releases a removed portaled popup while keeping its modal active', async (t) => {
     function RemovablePopup(handle: Handle<{ visible: boolean }>) {
       return () => (
         <popover.Context>
@@ -1275,13 +1283,13 @@ describe('dialog', () => {
       )
     }
     let { container, root } = render(<RemovablePopup visible />)
-    await settle(root)
+    root.flush()
     let errors: unknown[] = []
     root.addEventListener('error', (event) => errors.push(event.error))
     get(document.body, '#popup-input').focus()
     root.render(<RemovablePopup visible={false} />)
-    await settle(root)
-    expect(document.querySelector('[data-popup]')).toBe(null)
+    root.flush()
+    await t.waitFor(() => expect(document.querySelector('[data-popup]')).toBe(null))
     expect(errors).toEqual([])
     let surface = get(container, '[role="dialog"]')
     expect(surface.hasAttribute('data-open')).toBe(true)
@@ -1289,7 +1297,7 @@ describe('dialog', () => {
     expect(document.documentElement.style.overflow).toBe('hidden')
   })
 
-  it('keeps a nonmodal dialog open while focus moves into its detached popup', async () => {
+  it('keeps a nonmodal dialog open while focus moves into its detached popup', async (t) => {
     let { container, root } = render(
       <>
         <button id="outside">Outside</button>
@@ -1297,18 +1305,20 @@ describe('dialog', () => {
       </>,
     )
     get<HTMLButtonElement>(container, '#trigger').click()
-    await settle(root)
+    root.flush()
     get<HTMLButtonElement>(container, '#popup-trigger').click()
-    await settle(root)
-    expect(get(container, '[role="dialog"]').matches('[data-open]')).toBe(true)
+    root.flush()
+    await t.waitFor(() =>
+      expect(get(container, '[role="dialog"]').matches('[data-open]')).toBe(true),
+    )
     expect(document.activeElement?.id).toBe('popup-action')
     get(container, '#outside').focus()
-    await settle(root)
-    expect(container.querySelectorAll('[data-open]').length).toBe(0)
+    root.flush()
+    await t.waitFor(() => expect(container.querySelectorAll('[data-open]').length).toBe(0))
     expect(document.activeElement?.id).toBe('outside')
   })
 
-  it('owns a detached context menu positioned at the pointer', async () => {
+  it('owns a detached context menu positioned at the pointer', async (t) => {
     let api: dialog.DialogRef | undefined
     let { container, root } = render(
       <menu.Context label="Actions">
@@ -1335,7 +1345,7 @@ describe('dialog', () => {
         </dialog.Context>
       </menu.Context>,
     )
-    await settle(root)
+    root.flush()
     get(container, '#context-trigger').dispatchEvent(
       new MouseEvent('contextmenu', {
         clientX: 50,
@@ -1344,15 +1354,17 @@ describe('dialog', () => {
         cancelable: true,
       }),
     )
-    await settle(root)
-    expect(get(container, '[data-menu]').closest('[inert], [aria-hidden="true"]')).toBe(null)
+    root.flush()
+    await t.waitFor(() =>
+      expect(get(container, '[data-menu]').closest('[inert], [aria-hidden="true"]')).toBe(null),
+    )
     expect(document.activeElement?.id).toBe('context-list')
     api?.close()
-    await settle(root)
-    expect(container.querySelectorAll('[data-open]').length).toBe(0)
+    root.flush()
+    await t.waitFor(() => expect(container.querySelectorAll('[data-open]').length).toBe(0))
   })
 
-  it('leaves menu Tab navigation to the browser while closing the menu', async () => {
+  it('leaves menu Tab navigation to the browser while closing the menu', async (t) => {
     let { container, root } = render(
       <dialog.Context defaultOpen>
         <dialog.SurfaceContext>
@@ -1374,18 +1386,20 @@ describe('dialog', () => {
         </dialog.SurfaceContext>
       </dialog.Context>,
     )
-    await settle(root)
+    root.flush()
     get<HTMLButtonElement>(container, '#menu-trigger').click()
-    await settle(root)
+    root.flush()
     let event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
     get(container, '#menu-list').dispatchEvent(event)
     expect(event.defaultPrevented).toBe(false)
-    await settle(root)
-    expect(get(container, '[data-popover]').hasAttribute('data-open')).toBe(false)
+    root.flush()
+    await t.waitFor(() =>
+      expect(get(container, '[data-popover]').hasAttribute('data-open')).toBe(false),
+    )
     expect(get(container, '[role="dialog"]').hasAttribute('data-open')).toBe(true)
   })
 
-  it('releases a dialog when its containing popover closes', async () => {
+  it('releases a dialog when its containing popover closes', async (t) => {
     let api: dialog.DialogRef | undefined
     let closePopover = () => {}
     let overflow = document.documentElement.style.overflow
@@ -1421,17 +1435,17 @@ describe('dialog', () => {
       )
     }
     let { container, root } = render(<DialogInPopover />)
-    await settle(root)
+    root.flush()
     get<HTMLButtonElement>(container, '#trigger').click()
-    await settle(root)
+    root.flush()
     closePopover()
-    await settle(root)
-    expect(container.querySelectorAll('[data-open]').length).toBe(0)
+    root.flush()
+    await t.waitFor(() => expect(container.querySelectorAll('[data-open]').length).toBe(0))
     expect(document.documentElement.style.overflow).toBe(overflow)
     expect(api?.open).toBe(false)
   })
 
-  it('releases a controlled dialog even when its owner refuses an ancestor-close request', async () => {
+  it('releases a controlled dialog even when its owner refuses an ancestor-close request', async (t) => {
     let closePopover = () => {}
     let rerender = () => {}
     let overflow = document.documentElement.style.overflow
@@ -1463,17 +1477,17 @@ describe('dialog', () => {
       )
     }
     let { container, root } = render(<ControlledInPopover />)
-    await settle(root)
+    root.flush()
     closePopover()
-    await settle(root)
+    root.flush()
     rerender()
-    await settle(root)
-    expect(container.querySelectorAll('[data-open]').length).toBe(0)
+    root.flush()
+    await t.waitFor(() => expect(container.querySelectorAll('[data-open]').length).toBe(0))
     expect(document.documentElement.style.overflow).toBe(overflow)
     expect(container.querySelector('[inert]')).toBe(null)
   })
 
-  it('allows canceling an open request through the public event', async () => {
+  it('allows canceling an open request through the public event', async (t) => {
     let reasons: dialog.DialogChangeReason[] = []
     let { container, root } = render(
       <div
@@ -1486,8 +1500,8 @@ describe('dialog', () => {
       </div>,
     )
     get<HTMLButtonElement>(container, '#trigger').click()
-    await settle(root)
-    expect(reasons).toEqual(['trigger'])
+    root.flush()
+    await t.waitFor(() => expect(reasons).toEqual(['trigger']))
     expect(get<HTMLElement>(container, '[role="dialog"]').matches('[data-open]')).toBe(false)
   })
 
@@ -1528,8 +1542,8 @@ describe('dialog', () => {
         </dialog.SurfaceContext>
       </dialog.Context>,
     )
-    await settle(root)
-    expect(errors.length).toBe(1)
+    root.flush()
+    await t.waitFor(() => expect(errors.length).toBe(1))
     expect(errors[0] instanceof Error && errors[0].message).toBe(
       'SurfaceContext must wrap its surface at the DOM destination. Place it inside Portal.',
     )

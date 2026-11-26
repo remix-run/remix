@@ -416,35 +416,23 @@ describe('dialog browser interactions', () => {
     await page.locator('#scope-start').focus()
     await page.keyboard.press('Shift+Tab')
     expect(await page.evaluate(() => document.activeElement?.id)).toBe('scope-end')
-    await page.evaluate(
-      () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-        }),
-    )
-    expect(
-      await page.locator('[data-testid="dialog"]').evaluate((node) => {
-        let last = node.querySelector('#scope-end')
-        return (
-          node.scrollTop > 0 &&
-          !!last &&
-          last.getBoundingClientRect().bottom <= node.getBoundingClientRect().bottom + 1
-        )
-      }),
-    ).toBe(true)
+    await page.waitForFunction(() => {
+      let node = document.querySelector('[data-testid="dialog"]')
+      if (!(node instanceof HTMLElement)) return false
+      let last = node.querySelector('#scope-end')
+      return (
+        node.scrollTop > 0 &&
+        !!last &&
+        last.getBoundingClientRect().bottom <= node.getBoundingClientRect().bottom + 1
+      )
+    })
     await page.keyboard.press('Tab')
     expect(await page.evaluate(() => document.activeElement?.id)).toBe('scope-start')
-    await page.evaluate(
-      () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-        }),
-    )
-    expect(
-      await page.locator('[data-testid="dialog"]').evaluate((node) => {
-        let first = node.querySelector('#scope-start')
-        return !!first && first.getBoundingClientRect().top >= node.getBoundingClientRect().top
-      }),
-    ).toBe(true)
+    await page.waitForFunction(() => {
+      let node = document.querySelector('[data-testid="dialog"]')
+      if (!(node instanceof HTMLElement)) return false
+      let first = node.querySelector('#scope-start')
+      return !!first && first.getBoundingClientRect().top >= node.getBoundingClientRect().top
+    })
   })
 })
