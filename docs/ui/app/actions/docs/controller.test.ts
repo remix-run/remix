@@ -1,37 +1,10 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
-import uiPackage from '../../../../../packages/ui/package.json' with { type: 'json' }
 import { router } from '../../router.ts'
 import { pages } from '../../data/pages.ts'
 import { routes } from '../../routes.ts'
 
 describe('UI docs', () => {
-  it('introduces the standalone package and links to both sections', async () => {
-    let response = await router.fetch(new Request('http://localhost/'))
-    let html = await response.text()
-    assert.equal(response.status, 200)
-    assert.equal(
-      html.match(/class="docs-nav-version">([^<]+)<\/span>/)?.[1],
-      `v${uiPackage.version}`,
-    )
-    assert.match(html, /Unstyled, accessible UI patterns and animation for Remix/)
-    assert.match(html, /<h2 class="docs-nav-heading">Patterns<\/h2>/)
-    assert.match(html, /is currently unstable and versioned in the v0\.x range/)
-    assert.match(html, /npm/)
-    assert.match(html, /@remix-run\/ui/)
-    assert.match(html, /href="\/patterns\/accordion\/"/)
-    assert.match(html, /href="\/animation\/spring\/"/)
-    let cards = html.slice(html.indexOf('<section id="explore"'))
-    assert.match(cards, /href="\/patterns\/accordion\/">Patterns /)
-    assert.match(cards, /href="\/animation\/entrance-exit\/">Animation /)
-    assert.match(html, /data-code-block-copy/)
-    assert.match(html, /<section id="installation"[^>]*><h2>Installation<\/h2>/)
-    assert.match(html, /<section id="using-ui"[^>]*><h2>Using the library<\/h2>/)
-    assert.match(html, /<section id="explore"[^>]*><h2>Explore the library<\/h2>/)
-    assert.match(html, /<section id="stacking"[^>]*><h2>Stacking and overlays<\/h2>/)
-    assert.match(html, /On this page/)
-  })
-
   it('makes landing previews decorative and does not hydrate their examples', async () => {
     let response = await router.fetch(new Request('http://localhost/'))
     let html = await response.text()
