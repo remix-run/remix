@@ -81,6 +81,8 @@ export function snapshot(phase: string, detail: object = {}): void {
       ppid: process.ppid,
       stage: process.env.HMR_PERF_STAGE,
       argv: process.argv,
+      cwd: process.cwd(),
+      workspace: process.env.npm_package_name,
       uptimeMs: process.uptime() * 1000,
       cpuUserMs: cpu.user / 1000,
       cpuSystemMs: cpu.system / 1000,
