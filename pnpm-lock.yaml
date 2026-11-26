@@ -2441,6 +2441,12 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../node-fetch-server
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
@@ -2450,9 +2456,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      esbuild:
-        specifier: ^0.27.1
-        version: 0.27.7
       playwright:
         specifier: 'catalog:'
         version: 1.63.0

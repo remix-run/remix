@@ -144,10 +144,11 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@remix-run/assets": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
-    "esbuild": "^0.27.1",
     "playwright": "catalog:",
     "typescript": "catalog:"
   },

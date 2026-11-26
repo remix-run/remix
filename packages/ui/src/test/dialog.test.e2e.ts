@@ -1,7 +1,7 @@
-import { createServer } from 'node:http'
-import { fileURLToPath } from 'node:url'
-import { build } from 'esbuild'
+import * as path from 'node:path'
 import { expect } from '@remix-run/assert'
+import { createAssetServer } from '@remix-run/assets'
+import { createTestServer } from '@remix-run/node-fetch-server/test'
 import { describe, it, type TestContext } from '@remix-run/test'
 
 async function openFixture(
@@ -15,45 +15,32 @@ async function openFixture(
     open?: boolean
   } = {},
 ) {
-  let result = await build({
-    entryPoints: [fileURLToPath(new URL('./dialog.fixture.tsx', import.meta.url))],
-    bundle: true,
-    write: false,
-    format: 'esm',
-    platform: 'browser',
-    target: 'esnext',
-    jsx: 'automatic',
-    jsxImportSource: '@remix-run/component',
+  let assets = createAssetServer({
+    rootDir: path.resolve(import.meta.dirname, '../..'),
+    basePath: '/assets',
+    mounts: { packages: '..', npm: '../../node_modules' },
+    allowFiles: ['src/**'],
+    allowPackages: ['@remix-run/component', '@remix-run/data-schema', 'tabbable'],
+    watch: false,
   })
-  let script = result.outputFiles[0].text
-  let server = createServer((request, response) => {
-    response.setHeader(
-      'Content-Type',
-      request.url === '/fixture.js' ? 'text/javascript' : 'text/html',
-    )
-    response.end(
-      request.url === '/fixture.js'
-        ? script
-        : `<!doctype html><html><head><style>
+  t.after(() => assets.close())
+  let entry = await assets.getScriptEntry(path.join(import.meta.dirname, 'dialog.fixture.tsx'))
+  let page = await t.serve(
+    await createTestServer(async (request) => {
+      let assetResponse = await assets.fetch(request)
+      if (assetResponse) return assetResponse
+      return new Response(
+        `<!doctype html><html><head><style>
       [role="dialog"] { inset: 0; margin: auto; height: max-content; background: white; width: min(28rem, calc(100vw - 4rem)); max-height: calc(100dvh - 4rem); overflow: auto; padding: 1rem; }
       [data-testid$="backdrop"] { position: fixed; inset: 0; margin: 0; width: auto; height: auto; border: 0; background: #0008; }
       [data-popover] { background: white; border: 1px solid black; padding: 8px; }
       button, input { margin: .25rem; }
-    </style></head><body><script type="module" src="/fixture.js"></script></body></html>`,
-    )
-  })
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
-  let address = server.address()
-  if (!address || typeof address === 'string') throw new Error('No test server address')
-  let page = await t.serve({
-    baseUrl: `http://127.0.0.1:${address.port}`,
-    async close() {
-      server.closeAllConnections()
-      await new Promise<void>((resolve, reject) =>
-        server.close((error) => (error ? reject(error) : resolve())),
+    </style><script type="importmap">${JSON.stringify(entry.importMap)}</script></head>
+    <body><script type="module" src="${entry.href}"></script></body></html>`,
+        { headers: { 'Content-Type': 'text/html' } },
       )
-    },
-  })
+    }),
+  )
   let params = new URLSearchParams()
   if (options.modal === false) params.set('modal', 'false')
   if (options.modal === 'trap-focus') params.set('modal', 'trap-focus')
