@@ -1,3 +1,4 @@
+import { measureSync } from '../../../../scripts/hmr-performance-metrics.ts'
 import {
   analyze,
   type Scope,
@@ -125,199 +126,207 @@ export function transformComponentsForBrowser(
   source: string,
   options: BrowserComponentsHmrTransformOptions,
 ): ComponentsHmrTransformResult {
-  let ast = parseModule(source)
-  if (!ast) return createUnchangedResult(source)
+  return measureSync('component-browser', options.moduleUrl, source.length, () => {
+    let ast = parseModule(source)
+    if (!ast) return createUnchangedResult(source)
 
-  let matchResult = findMatches(ast, source)
-  if (!isSafeComponentHmrBoundary(matchResult)) {
-    return createUnchangedResult(source)
-  }
-  let { componentMatches, clientEntryMatches, trackedExports } = matchResult
-
-  let referenceInfo = createReferenceInfo(ast)
-  if (!referenceInfo) return createUnchangedResult(source)
-  let setupBindings = new Map<ComponentMatch | ClientEntryMatch, Variable[]>()
-  for (let match of [...componentMatches, ...clientEntryMatches]) {
-    let bindings = getComponentSetupBindings(match, referenceInfo)
-    if (!bindings) return createUnchangedResult(source)
-    setupBindings.set(match, bindings)
-    let hoistedVarNames = getHoistedSetupVarNames(match, bindings)
-    if (hoistedVarNames.length) {
-      match.setupHash = hashSource([match.setupHash, ...hoistedVarNames].join('\n'))
+    let matchResult = findMatches(ast, source)
+    if (!isSafeComponentHmrBoundary(matchResult)) {
+      return createUnchangedResult(source)
     }
-  }
-  let identifiers = {
-    componentHmr: getUnusedName('__remixComponentHmr__', referenceInfo.names),
-    componentRefresh: getUnusedName('__remixComponentRefresh__', referenceInfo.names),
-    componentNames: getUnusedName('__remixComponentHmrComponentNames__', referenceInfo.names),
-    acceptComponentModule: getUnusedName(
-      '__remixComponentHmrAcceptComponentModule__',
-      referenceInfo.names,
-    ),
-    previousExports: getUnusedName('__remixComponentHmrPreviousExports__', referenceInfo.names),
-    invalidationMessage: getUnusedName(
-      '__remixComponentHmrInvalidationMessage__',
-      referenceInfo.names,
-    ),
-  }
-  let importSpecifiers = getComponentHmrImportSpecifiers(options.importSource)
-  let edits: SourceEdit[] = []
-  let componentNames: string[] = []
-  let componentWrappers: string[] = []
+    let { componentMatches, clientEntryMatches, trackedExports } = matchResult
 
-  for (let match of componentMatches) {
-    componentNames.push(match.name)
-
-    let componentIdentifiers = {
-      ...identifiers,
-      implementation: getUnusedName(`__remixComponentHmrImpl_${match.name}__`, referenceInfo.names),
-      wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, referenceInfo.names),
+    let referenceInfo = createReferenceInfo(ast)
+    if (!referenceInfo) return createUnchangedResult(source)
+    let setupBindings = new Map<ComponentMatch | ClientEntryMatch, Variable[]>()
+    for (let match of [...componentMatches, ...clientEntryMatches]) {
+      let bindings = getComponentSetupBindings(match, referenceInfo)
+      if (!bindings) return createUnchangedResult(source)
+      setupBindings.set(match, bindings)
+      let hoistedVarNames = getHoistedSetupVarNames(match, bindings)
+      if (hoistedVarNames.length) {
+        match.setupHash = hashSource([match.setupHash, ...hoistedVarNames].join('\n'))
+      }
     }
-
-    componentWrappers.push(componentIdentifiers.wrapper)
-
-    let implementation = createHmrImplementationBody(
-      match,
-      source,
-      options.moduleUrl,
-      setupBindings.get(match) ?? [],
-      referenceInfo,
-      componentIdentifiers,
-    )
-
-    let implementationSource = createImplementationSource(
-      match,
-      componentIdentifiers.implementation,
-      implementation,
-      match.wrapperParams,
-    )
-    let wrapperSource = [
-      `function ${match.functionExpressionName ?? match.name}(${match.wrapperParams}) {`,
-      `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.wrapper}).apply(void 0, arguments);`,
-      `}`,
-    ].join('\n')
-    let registrationSource = `${componentIdentifiers.wrapper} = ${match.name};\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${componentIdentifiers.componentRefresh}, ${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${JSON.stringify(match.setupHash)}, ${componentIdentifiers.wrapper});`
-    rewriteComponentMatch(edits, match, implementationSource, wrapperSource, registrationSource)
-  }
-
-  for (let match of clientEntryMatches) {
-    componentNames.push(match.name)
-
-    let componentIdentifiers = {
-      ...identifiers,
-      implementation: getUnusedName(`__remixComponentHmrImpl_${match.name}__`, referenceInfo.names),
-      wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, referenceInfo.names),
+    let identifiers = {
+      componentHmr: getUnusedName('__remixComponentHmr__', referenceInfo.names),
+      componentRefresh: getUnusedName('__remixComponentRefresh__', referenceInfo.names),
+      componentNames: getUnusedName('__remixComponentHmrComponentNames__', referenceInfo.names),
+      acceptComponentModule: getUnusedName(
+        '__remixComponentHmrAcceptComponentModule__',
+        referenceInfo.names,
+      ),
+      previousExports: getUnusedName('__remixComponentHmrPreviousExports__', referenceInfo.names),
+      invalidationMessage: getUnusedName(
+        '__remixComponentHmrInvalidationMessage__',
+        referenceInfo.names,
+      ),
     }
+    let importSpecifiers = getComponentHmrImportSpecifiers(options.importSource)
+    let edits: SourceEdit[] = []
+    let componentNames: string[] = []
+    let componentWrappers: string[] = []
 
-    componentWrappers.push(componentIdentifiers.wrapper)
+    for (let match of componentMatches) {
+      componentNames.push(match.name)
 
-    let selfWrapper = getComponentSelfBindings(match, referenceInfo).length
-      ? getUnusedName(`__remixComponentHmrSelfWrapper_${match.name}__`, referenceInfo.names)
-      : null
-    let implementation = createHmrImplementationBody(
-      match,
-      source,
-      options.moduleUrl,
-      setupBindings.get(match) ?? [],
-      referenceInfo,
-      componentIdentifiers,
-      selfWrapper ?? componentIdentifiers.wrapper,
-    )
+      let componentIdentifiers = {
+        ...identifiers,
+        implementation: getUnusedName(
+          `__remixComponentHmrImpl_${match.name}__`,
+          referenceInfo.names,
+        ),
+        wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, referenceInfo.names),
+      }
 
-    let wrapperSource = [
-      `function ${match.functionName}(${match.wrapperParams}) {`,
-      `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(
+      componentWrappers.push(componentIdentifiers.wrapper)
+
+      let implementation = createHmrImplementationBody(
+        match,
+        source,
         options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.wrapper}).apply(void 0, arguments);`,
+        setupBindings.get(match) ?? [],
+        referenceInfo,
+        componentIdentifiers,
+      )
+
+      let implementationSource = createImplementationSource(
+        match,
+        componentIdentifiers.implementation,
+        implementation,
+        match.wrapperParams,
+      )
+      let wrapperSource = [
+        `function ${match.functionExpressionName ?? match.name}(${match.wrapperParams}) {`,
+        `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.wrapper}).apply(void 0, arguments);`,
+        `}`,
+      ].join('\n')
+      let registrationSource = `${componentIdentifiers.wrapper} = ${match.name};\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${componentIdentifiers.componentRefresh}, ${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${JSON.stringify(match.setupHash)}, ${componentIdentifiers.wrapper});`
+      rewriteComponentMatch(edits, match, implementationSource, wrapperSource, registrationSource)
+    }
+
+    for (let match of clientEntryMatches) {
+      componentNames.push(match.name)
+
+      let componentIdentifiers = {
+        ...identifiers,
+        implementation: getUnusedName(
+          `__remixComponentHmrImpl_${match.name}__`,
+          referenceInfo.names,
+        ),
+        wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, referenceInfo.names),
+      }
+
+      componentWrappers.push(componentIdentifiers.wrapper)
+
+      let selfWrapper = getComponentSelfBindings(match, referenceInfo).length
+        ? getUnusedName(`__remixComponentHmrSelfWrapper_${match.name}__`, referenceInfo.names)
+        : null
+      let implementation = createHmrImplementationBody(
+        match,
+        source,
+        options.moduleUrl,
+        setupBindings.get(match) ?? [],
+        referenceInfo,
+        componentIdentifiers,
+        selfWrapper ?? componentIdentifiers.wrapper,
+      )
+
+      let wrapperSource = [
+        `function ${match.functionName}(${match.wrapperParams}) {`,
+        `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(
+          options.moduleUrl,
+        )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.wrapper}).apply(void 0, arguments);`,
+        `}`,
+      ].join('\n')
+
+      edits.push(
+        {
+          kind: 'prepend',
+          start: match.statementStart,
+          end: match.statementStart,
+          fragments: [
+            selfWrapper ? `let ${selfWrapper};\n` : '',
+            ...createImplementationSource(
+              match,
+              componentIdentifiers.implementation,
+              implementation,
+              match.wrapperParams,
+            ),
+            '\n',
+          ],
+        },
+        {
+          kind: 'overwrite',
+          start: match.functionStart,
+          end: match.functionEnd,
+          fragments: [selfWrapper ? `(${selfWrapper} = ${wrapperSource})` : wrapperSource],
+        },
+        {
+          kind: 'append',
+          start: match.statementEnd,
+          end: match.statementEnd,
+          fragments: [
+            `\n${componentIdentifiers.wrapper} = ${match.name};\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${componentIdentifiers.componentRefresh}, ${JSON.stringify(
+              options.moduleUrl,
+            )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${JSON.stringify(
+              match.setupHash,
+            )}, ${componentIdentifiers.wrapper});`,
+          ],
+        },
+      )
+    }
+
+    let imports = [
+      `import { __componentHmrBrowserRuntime__ as ${identifiers.componentHmr} } from ${JSON.stringify(
+        importSpecifiers.browserRuntimeSpecifier,
+      )};`,
+      `import * as ${identifiers.componentRefresh} from ${JSON.stringify(importSpecifiers.refreshSpecifier)};`,
+      `let ${componentWrappers.join(', ')};`,
+      ``,
+    ].join('\n')
+    let footer = [
+      ``,
+      `if (import.meta.hot) {`,
+      `  let ${identifiers.componentNames} = ${JSON.stringify(componentNames)};`,
+      `  let ${identifiers.acceptComponentModule} = ${createComponentNamesCheckSource(
+        options.moduleUrl,
+        identifiers.componentNames,
+        {
+          spaces: 0,
+          clientEntryNames: clientEntryMatches.map((match) => match.name),
+        },
+      )};`,
+      `  let ${identifiers.previousExports} = ${createPreviousExportsSource(trackedExports)};`,
+      `  import.meta.hot.accept((module) => {`,
+      `    if (!${identifiers.acceptComponentModule}) return;`,
+      `    if (module && typeof module === 'object') {`,
+      `      let ${identifiers.invalidationMessage} = ${identifiers.componentHmr}.getComponentModuleInvalidationMessage(module, ${identifiers.previousExports}, ${identifiers.componentNames});`,
+      `      if (${identifiers.invalidationMessage}) {`,
+      `        import.meta.hot.invalidate(${identifiers.invalidationMessage});`,
+      `        return;`,
+      `      }`,
+      `      ${identifiers.componentHmr}.updateComponentModuleForHmr(${identifiers.componentRefresh}, ${JSON.stringify(
+        options.moduleUrl,
+      )}, module);`,
+      `    } else {`,
+      `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
+      `    }`,
+      `  });`,
       `}`,
+      `${identifiers.componentHmr}.commitComponentModuleForHmr([${componentWrappers.join(', ')}]);`,
     ].join('\n')
 
-    edits.push(
-      {
-        kind: 'prepend',
-        start: match.statementStart,
-        end: match.statementStart,
-        fragments: [
-          selfWrapper ? `let ${selfWrapper};\n` : '',
-          ...createImplementationSource(
-            match,
-            componentIdentifiers.implementation,
-            implementation,
-            match.wrapperParams,
-          ),
-          '\n',
-        ],
-      },
-      {
-        kind: 'overwrite',
-        start: match.functionStart,
-        end: match.functionEnd,
-        fragments: [selfWrapper ? `(${selfWrapper} = ${wrapperSource})` : wrapperSource],
-      },
-      {
-        kind: 'append',
-        start: match.statementEnd,
-        end: match.statementEnd,
-        fragments: [
-          `\n${componentIdentifiers.wrapper} = ${match.name};\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${componentIdentifiers.componentRefresh}, ${JSON.stringify(
-            options.moduleUrl,
-          )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${JSON.stringify(
-            match.setupHash,
-          )}, ${componentIdentifiers.wrapper});`,
-        ],
-      },
-    )
-  }
+    let fragments = assembleModule(source, edits, imports, footer)
+    let code = fragments.join('')
 
-  let imports = [
-    `import { __componentHmrBrowserRuntime__ as ${identifiers.componentHmr} } from ${JSON.stringify(
-      importSpecifiers.browserRuntimeSpecifier,
-    )};`,
-    `import * as ${identifiers.componentRefresh} from ${JSON.stringify(importSpecifiers.refreshSpecifier)};`,
-    `let ${componentWrappers.join(', ')};`,
-    ``,
-  ].join('\n')
-  let footer = [
-    ``,
-    `if (import.meta.hot) {`,
-    `  let ${identifiers.componentNames} = ${JSON.stringify(componentNames)};`,
-    `  let ${identifiers.acceptComponentModule} = ${createComponentNamesCheckSource(
-      options.moduleUrl,
-      identifiers.componentNames,
-      {
-        spaces: 0,
-        clientEntryNames: clientEntryMatches.map((match) => match.name),
-      },
-    )};`,
-    `  let ${identifiers.previousExports} = ${createPreviousExportsSource(trackedExports)};`,
-    `  import.meta.hot.accept((module) => {`,
-    `    if (!${identifiers.acceptComponentModule}) return;`,
-    `    if (module && typeof module === 'object') {`,
-    `      let ${identifiers.invalidationMessage} = ${identifiers.componentHmr}.getComponentModuleInvalidationMessage(module, ${identifiers.previousExports}, ${identifiers.componentNames});`,
-    `      if (${identifiers.invalidationMessage}) {`,
-    `        import.meta.hot.invalidate(${identifiers.invalidationMessage});`,
-    `        return;`,
-    `      }`,
-    `      ${identifiers.componentHmr}.updateComponentModuleForHmr(${identifiers.componentRefresh}, ${JSON.stringify(
-      options.moduleUrl,
-    )}, module);`,
-    `    } else {`,
-    `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
-    `    }`,
-    `  });`,
-    `}`,
-    `${identifiers.componentHmr}.commitComponentModuleForHmr([${componentWrappers.join(', ')}]);`,
-  ].join('\n')
-
-  let fragments = assembleModule(source, edits, imports, footer)
-  let code = fragments.join('')
-
-  return {
-    code,
-    componentNames,
-    map: options.sourceMap ? generateSourceMap(fragments, code, source, options.moduleUrl) : null,
-    transformed: true,
-  }
+    return {
+      code,
+      componentNames,
+      map: options.sourceMap ? generateSourceMap(fragments, code, source, options.moduleUrl) : null,
+      transformed: true,
+    }
+  })
 }
 
 /**
@@ -336,180 +345,182 @@ export function transformComponentsForServer(
   source: string,
   options: ServerComponentsHmrTransformOptions,
 ): ComponentsHmrTransformResult {
-  let ast = parseModule(source)
-  if (!ast) return createUnchangedResult(source)
+  return measureSync('component-server', options.moduleUrl, source.length, () => {
+    let ast = parseModule(source)
+    if (!ast) return createUnchangedResult(source)
 
-  let matchResult = findMatches(ast, source)
-  if (!isSafeComponentHmrBoundary(matchResult)) {
-    return createUnchangedResult(source)
-  }
-  let { componentMatches, clientEntryMatches, trackedExports } = matchResult
-
-  let referenceInfo = createReferenceInfo(ast)
-  if (!referenceInfo) return createUnchangedResult(source)
-  for (let match of [...componentMatches, ...clientEntryMatches]) {
-    // Rewriting a named self-binding cannot preserve names looked up by direct eval.
-    if (match.functionExpressionName && !getComponentSetupBindings(match, referenceInfo)) {
+    let matchResult = findMatches(ast, source)
+    if (!isSafeComponentHmrBoundary(matchResult)) {
       return createUnchangedResult(source)
     }
-  }
-  let names = referenceInfo.names
-  let identifiers = {
-    componentHmr: getUnusedName('__remixComponentHmr__', names),
-    componentNames: getUnusedName('__remixComponentHmrComponentNames__', names),
-    acceptComponentModule: getUnusedName('__remixComponentHmrAcceptComponentModule__', names),
-    previousExports: getUnusedName('__remixComponentHmrPreviousExports__', names),
-    invalidationMessage: getUnusedName('__remixComponentHmrInvalidationMessage__', names),
-  }
-  let importSpecifiers = getComponentHmrImportSpecifiers(options.importSource)
-  let edits: SourceEdit[] = []
-  let componentNames: string[] = []
-  let componentWrappers: string[] = []
+    let { componentMatches, clientEntryMatches, trackedExports } = matchResult
 
-  for (let match of componentMatches) {
-    componentNames.push(match.name)
+    let referenceInfo = createReferenceInfo(ast)
+    if (!referenceInfo) return createUnchangedResult(source)
+    for (let match of [...componentMatches, ...clientEntryMatches]) {
+      // Rewriting a named self-binding cannot preserve names looked up by direct eval.
+      if (match.functionExpressionName && !getComponentSetupBindings(match, referenceInfo)) {
+        return createUnchangedResult(source)
+      }
+    }
+    let names = referenceInfo.names
+    let identifiers = {
+      componentHmr: getUnusedName('__remixComponentHmr__', names),
+      componentNames: getUnusedName('__remixComponentHmrComponentNames__', names),
+      acceptComponentModule: getUnusedName('__remixComponentHmrAcceptComponentModule__', names),
+      previousExports: getUnusedName('__remixComponentHmrPreviousExports__', names),
+      invalidationMessage: getUnusedName('__remixComponentHmrInvalidationMessage__', names),
+    }
+    let importSpecifiers = getComponentHmrImportSpecifiers(options.importSource)
+    let edits: SourceEdit[] = []
+    let componentNames: string[] = []
+    let componentWrappers: string[] = []
 
-    let componentIdentifiers = {
-      ...identifiers,
-      implementation: getUnusedName(`__remixComponentHmrImpl_${match.name}__`, names),
-      wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, names),
-      self: getUnusedName(`__remixComponentHmrSelf_${match.name}__`, names),
+    for (let match of componentMatches) {
+      componentNames.push(match.name)
+
+      let componentIdentifiers = {
+        ...identifiers,
+        implementation: getUnusedName(`__remixComponentHmrImpl_${match.name}__`, names),
+        wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, names),
+        self: getUnusedName(`__remixComponentHmrSelf_${match.name}__`, names),
+      }
+
+      componentWrappers.push(componentIdentifiers.wrapper)
+
+      let selfBindings = getComponentSelfBindings(match, referenceInfo)
+      let bodySnippet = rewriteReferences(
+        { type: 'BlockStatement', start: match.bodyStart, end: match.bodyEnd },
+        selfBindings,
+        source,
+        componentIdentifiers.self,
+        referenceInfo,
+      )
+      let bodySource = [bodySnippet]
+      let implementationSource = createImplementationSource(
+        match,
+        componentIdentifiers.implementation,
+        bodySource,
+        rewriteSelfParams(match, source, selfBindings, componentIdentifiers.self, referenceInfo),
+      )
+      let wrapperSource = [
+        `function ${match.functionExpressionName ?? match.name}(${match.wrapperParams}) {`,
+        `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.wrapper}).apply(void 0, arguments);`,
+        `}`,
+      ].join('\n')
+      let registrationSource = `${componentIdentifiers.wrapper} = ${match.name};\n${createSelfBindingSource(selfBindings, componentIdentifiers.self, componentIdentifiers.wrapper)}\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${componentIdentifiers.wrapper});`
+      rewriteComponentMatch(edits, match, implementationSource, wrapperSource, registrationSource)
     }
 
-    componentWrappers.push(componentIdentifiers.wrapper)
+    for (let match of clientEntryMatches) {
+      componentNames.push(match.name)
 
-    let selfBindings = getComponentSelfBindings(match, referenceInfo)
-    let bodySnippet = rewriteReferences(
-      { type: 'BlockStatement', start: match.bodyStart, end: match.bodyEnd },
-      selfBindings,
-      source,
-      componentIdentifiers.self,
-      referenceInfo,
-    )
-    let bodySource = [bodySnippet]
-    let implementationSource = createImplementationSource(
-      match,
-      componentIdentifiers.implementation,
-      bodySource,
-      rewriteSelfParams(match, source, selfBindings, componentIdentifiers.self, referenceInfo),
-    )
-    let wrapperSource = [
-      `function ${match.functionExpressionName ?? match.name}(${match.wrapperParams}) {`,
-      `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.wrapper}).apply(void 0, arguments);`,
-      `}`,
+      let componentIdentifiers = {
+        ...identifiers,
+        implementation: getUnusedName(`__remixComponentHmrImpl_${match.name}__`, names),
+        wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, names),
+        self: getUnusedName(`__remixComponentHmrSelf_${match.name}__`, names),
+      }
+
+      componentWrappers.push(componentIdentifiers.wrapper)
+
+      let selfBindings = getComponentSelfBindings(match, referenceInfo)
+      let selfWrapper = selfBindings.length
+        ? getUnusedName(`__remixComponentHmrSelfWrapper_${match.name}__`, names)
+        : null
+      let bodySnippet = rewriteReferences(
+        { type: 'BlockStatement', start: match.bodyStart, end: match.bodyEnd },
+        selfBindings,
+        source,
+        componentIdentifiers.self,
+        referenceInfo,
+      )
+      let bodySource = [bodySnippet]
+      let wrapperSource = [
+        `function ${match.functionName}(${match.wrapperParams}) {`,
+        `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(
+          options.moduleUrl,
+        )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.wrapper}).apply(void 0, arguments);`,
+        `}`,
+      ].join('\n')
+
+      let implementationSource = createImplementationSource(
+        match,
+        componentIdentifiers.implementation,
+        bodySource,
+        rewriteSelfParams(match, source, selfBindings, componentIdentifiers.self, referenceInfo),
+      )
+      edits.push(
+        {
+          kind: 'append',
+          start: match.statementStart,
+          end: match.statementStart,
+          fragments: [selfWrapper ? `let ${selfWrapper};\n` : '', ...implementationSource, '\n'],
+        },
+        {
+          kind: 'overwrite',
+          start: match.functionStart,
+          end: match.functionEnd,
+          fragments: [selfWrapper ? `(${selfWrapper} = ${wrapperSource})` : wrapperSource],
+        },
+        {
+          kind: 'append',
+          start: match.statementEnd,
+          end: match.statementEnd,
+          fragments: [
+            `\n${componentIdentifiers.wrapper} = ${match.name};\n${createSelfBindingSource(selfBindings, componentIdentifiers.self, selfWrapper ?? componentIdentifiers.wrapper)}\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${JSON.stringify(
+              options.moduleUrl,
+            )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${componentIdentifiers.wrapper});`,
+          ],
+        },
+      )
+    }
+
+    let imports = [
+      `import { __componentHmrServerRuntime__ as ${identifiers.componentHmr} } from ${JSON.stringify(
+        importSpecifiers.serverRuntimeSpecifier,
+      )};`,
+      `let ${componentWrappers.join(', ')};`,
+      ``,
     ].join('\n')
-    let registrationSource = `${componentIdentifiers.wrapper} = ${match.name};\n${createSelfBindingSource(selfBindings, componentIdentifiers.self, componentIdentifiers.wrapper)}\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${componentIdentifiers.wrapper});`
-    rewriteComponentMatch(edits, match, implementationSource, wrapperSource, registrationSource)
-  }
-
-  for (let match of clientEntryMatches) {
-    componentNames.push(match.name)
-
-    let componentIdentifiers = {
-      ...identifiers,
-      implementation: getUnusedName(`__remixComponentHmrImpl_${match.name}__`, names),
-      wrapper: getUnusedName(`__remixComponentHmrWrapper_${match.name}__`, names),
-      self: getUnusedName(`__remixComponentHmrSelf_${match.name}__`, names),
-    }
-
-    componentWrappers.push(componentIdentifiers.wrapper)
-
-    let selfBindings = getComponentSelfBindings(match, referenceInfo)
-    let selfWrapper = selfBindings.length
-      ? getUnusedName(`__remixComponentHmrSelfWrapper_${match.name}__`, names)
-      : null
-    let bodySnippet = rewriteReferences(
-      { type: 'BlockStatement', start: match.bodyStart, end: match.bodyEnd },
-      selfBindings,
-      source,
-      componentIdentifiers.self,
-      referenceInfo,
-    )
-    let bodySource = [bodySnippet]
-    let wrapperSource = [
-      `function ${match.functionName}(${match.wrapperParams}) {`,
-      `  return ${componentIdentifiers.componentHmr}.getCurrentComponentForHmr(${JSON.stringify(
+    let footer = [
+      ``,
+      `if (import.meta.hot) {`,
+      `  let ${identifiers.componentNames} = ${JSON.stringify(componentNames)};`,
+      `  let ${identifiers.acceptComponentModule} = ${createComponentNamesCheckSource(
         options.moduleUrl,
-      )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.wrapper}).apply(void 0, arguments);`,
+        identifiers.componentNames,
+        {
+          spaces: 0,
+          clientEntryNames: clientEntryMatches.map((match) => match.name),
+        },
+      )};`,
+      `  let ${identifiers.previousExports} = ${createPreviousExportsSource(trackedExports)};`,
+      `  import.meta.hot.accept((module) => {`,
+      `    if (!${identifiers.acceptComponentModule}) return;`,
+      `    if (!module || typeof module !== 'object') {`,
+      `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
+      `      return;`,
+      `    }`,
+      `    let ${identifiers.invalidationMessage} = ${identifiers.componentHmr}.getComponentModuleInvalidationMessage(module, ${identifiers.previousExports}, ${identifiers.componentNames});`,
+      `    if (${identifiers.invalidationMessage}) {`,
+      `      import.meta.hot.invalidate(${identifiers.invalidationMessage});`,
+      `    }`,
+      `  });`,
       `}`,
+      `${identifiers.componentHmr}.commitComponentModuleForHmr([${componentWrappers.join(', ')}]);`,
     ].join('\n')
 
-    let implementationSource = createImplementationSource(
-      match,
-      componentIdentifiers.implementation,
-      bodySource,
-      rewriteSelfParams(match, source, selfBindings, componentIdentifiers.self, referenceInfo),
-    )
-    edits.push(
-      {
-        kind: 'append',
-        start: match.statementStart,
-        end: match.statementStart,
-        fragments: [selfWrapper ? `let ${selfWrapper};\n` : '', ...implementationSource, '\n'],
-      },
-      {
-        kind: 'overwrite',
-        start: match.functionStart,
-        end: match.functionEnd,
-        fragments: [selfWrapper ? `(${selfWrapper} = ${wrapperSource})` : wrapperSource],
-      },
-      {
-        kind: 'append',
-        start: match.statementEnd,
-        end: match.statementEnd,
-        fragments: [
-          `\n${componentIdentifiers.wrapper} = ${match.name};\n${createSelfBindingSource(selfBindings, componentIdentifiers.self, selfWrapper ?? componentIdentifiers.wrapper)}\n${componentIdentifiers.componentHmr}.registerComponentForHmr(${JSON.stringify(
-            options.moduleUrl,
-          )}, ${JSON.stringify(match.name)}, ${componentIdentifiers.implementation}, ${componentIdentifiers.wrapper});`,
-        ],
-      },
-    )
-  }
+    let fragments = assembleModule(source, edits, imports, footer)
+    let code = fragments.join('')
 
-  let imports = [
-    `import { __componentHmrServerRuntime__ as ${identifiers.componentHmr} } from ${JSON.stringify(
-      importSpecifiers.serverRuntimeSpecifier,
-    )};`,
-    `let ${componentWrappers.join(', ')};`,
-    ``,
-  ].join('\n')
-  let footer = [
-    ``,
-    `if (import.meta.hot) {`,
-    `  let ${identifiers.componentNames} = ${JSON.stringify(componentNames)};`,
-    `  let ${identifiers.acceptComponentModule} = ${createComponentNamesCheckSource(
-      options.moduleUrl,
-      identifiers.componentNames,
-      {
-        spaces: 0,
-        clientEntryNames: clientEntryMatches.map((match) => match.name),
-      },
-    )};`,
-    `  let ${identifiers.previousExports} = ${createPreviousExportsSource(trackedExports)};`,
-    `  import.meta.hot.accept((module) => {`,
-    `    if (!${identifiers.acceptComponentModule}) return;`,
-    `    if (!module || typeof module !== 'object') {`,
-    `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
-    `      return;`,
-    `    }`,
-    `    let ${identifiers.invalidationMessage} = ${identifiers.componentHmr}.getComponentModuleInvalidationMessage(module, ${identifiers.previousExports}, ${identifiers.componentNames});`,
-    `    if (${identifiers.invalidationMessage}) {`,
-    `      import.meta.hot.invalidate(${identifiers.invalidationMessage});`,
-    `    }`,
-    `  });`,
-    `}`,
-    `${identifiers.componentHmr}.commitComponentModuleForHmr([${componentWrappers.join(', ')}]);`,
-  ].join('\n')
-
-  let fragments = assembleModule(source, edits, imports, footer)
-  let code = fragments.join('')
-
-  return {
-    code,
-    componentNames,
-    map: options.sourceMap ? generateSourceMap(fragments, code, source, options.moduleUrl) : null,
-    transformed: true,
-  }
+    return {
+      code,
+      componentNames,
+      map: options.sourceMap ? generateSourceMap(fragments, code, source, options.moduleUrl) : null,
+      transformed: true,
+    }
+  })
 }
 
 function getComponentHmrImportSpecifiers(importSource: string): {

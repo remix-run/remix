@@ -1,3 +1,4 @@
+import { measureAsync } from '../../../../../scripts/hmr-performance-metrics.ts'
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
@@ -175,126 +176,128 @@ export async function transformModule(
   record: ScriptRecord,
   args: TransformArgs,
 ): Promise<TransformResult> {
-  let resolvedPath = args.resolveActualPath(record.identityPath)
-  if (!resolvedPath) {
-    return {
-      ok: false,
-      error: createAssetServerCompilationError(`File not found: ${record.identityPath}`, {
-        code: 'FILE_NOT_FOUND',
-      }),
-      tracking: {
-        trackedFiles: args.isWatchIgnored(record.identityPath) ? [] : [record.identityPath],
-      },
-    }
-  }
-
-  let transformOptions = args.tsconfigTransformOptionsResolver.getTransformOptions(
-    resolvedPath,
-    args.isWatchIgnored,
-  )
-  let trackedFiles = [
-    ...(args.isWatchIgnored(resolvedPath) ? [] : [resolvedPath]),
-    ...transformOptions.trackedFiles,
-  ]
-  let sourceText: string
-  try {
-    sourceText = await fsp.readFile(resolvedPath, 'utf-8')
-  } catch (error) {
-    if (isNoEntityError(error)) {
+  return await measureAsync('asset-transform', record.identityPath, async () => {
+    let resolvedPath = args.resolveActualPath(record.identityPath)
+    if (!resolvedPath) {
       return {
         ok: false,
-        error: createAssetServerCompilationError(`File not found: ${resolvedPath}`, {
-          cause: error,
+        error: createAssetServerCompilationError(`File not found: ${record.identityPath}`, {
           code: 'FILE_NOT_FOUND',
         }),
+        tracking: {
+          trackedFiles: args.isWatchIgnored(record.identityPath) ? [] : [record.identityPath],
+        },
+      }
+    }
+
+    let transformOptions = args.tsconfigTransformOptionsResolver.getTransformOptions(
+      resolvedPath,
+      args.isWatchIgnored,
+    )
+    let trackedFiles = [
+      ...(args.isWatchIgnored(resolvedPath) ? [] : [resolvedPath]),
+      ...transformOptions.trackedFiles,
+    ]
+    let sourceText: string
+    try {
+      sourceText = await fsp.readFile(resolvedPath, 'utf-8')
+    } catch (error) {
+      if (isNoEntityError(error)) {
+        return {
+          ok: false,
+          error: createAssetServerCompilationError(`File not found: ${resolvedPath}`, {
+            cause: error,
+            code: 'FILE_NOT_FOUND',
+          }),
+          tracking: {
+            trackedFiles,
+          },
+        }
+      }
+      return {
+        ok: false,
+        error: toTransformFailedError(error, resolvedPath),
         tracking: {
           trackedFiles,
         },
       }
     }
-    return {
-      ok: false,
-      error: toTransformFailedError(error, resolvedPath),
-      tracking: {
-        trackedFiles,
-      },
-    }
-  }
 
-  try {
-    let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
-    if (!stableUrlPathname) {
-      throw createAssetServerCompilationError(
-        `File ${record.identityPath} is outside all configured mounts.`,
-        {
-          code: 'FILE_OUTSIDE_MOUNTS',
-        },
-      )
-    }
-
-    let analysis = await analyzeModuleSource(sourceText, resolvedPath, transformOptions, {
-      define: args.define ?? undefined,
-      minify: args.minify,
-      loaders: args.loaders,
-      moduleUrl: stableUrlPathname,
-      sourceMaps: args.sourceMaps ?? undefined,
-      target: args.target ?? undefined,
-    })
-
-    analysis.unresolvedImports = analysis.unresolvedImports.filter(
-      (unresolved) => !args.externalSet.has(getDisplayImportSpecifier(unresolved.specifier)),
-    )
-
-    if (mayContainCommonJSModuleGlobals(sourceText) && isCommonJS(analysis.rawCode)) {
-      throw createAssetServerCompilationError(
-        `CommonJS module detected: ${resolvedPath}. ` +
-          `This module uses CommonJS (require/module.exports) which is not supported. ` +
-          `Please use an ESM-compatible module.`,
-        {
-          code: 'COMMONJS_NOT_SUPPORTED',
-        },
-      )
-    }
-
-    let sourceMap = analysis.sourceMap
-      ? rewriteSourceMapSources(
-          analysis.sourceMap,
-          resolvedPath,
-          stableUrlPathname,
-          args.sourceMapSourcePaths,
-          sourceText,
+    try {
+      let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
+      if (!stableUrlPathname) {
+        throw createAssetServerCompilationError(
+          `File ${record.identityPath} is outside all configured mounts.`,
+          {
+            code: 'FILE_OUTSIDE_MOUNTS',
+          },
         )
-      : null
+      }
 
-    return {
-      ok: true,
-      tracking: {
-        trackedFiles,
-      },
-      value: {
-        hmr: getHmrAnalysis(analysis.rawCode),
-        identityPath: record.identityPath,
-        importerDir: path.dirname(resolvedPath),
-        packageSpecifiers: analysis.unresolvedImports
-          .filter((unresolved) => isBareImportSpecifier(unresolved.specifier))
-          .map((unresolved) => unresolved.specifier),
-        rawCode: analysis.rawCode,
-        resolvedPath,
-        sourceMap,
-        stableUrlPathname,
-        trackedFiles,
-        unresolvedImports: analysis.unresolvedImports,
-      },
+      let analysis = await analyzeModuleSource(sourceText, resolvedPath, transformOptions, {
+        define: args.define ?? undefined,
+        minify: args.minify,
+        loaders: args.loaders,
+        moduleUrl: stableUrlPathname,
+        sourceMaps: args.sourceMaps ?? undefined,
+        target: args.target ?? undefined,
+      })
+
+      analysis.unresolvedImports = analysis.unresolvedImports.filter(
+        (unresolved) => !args.externalSet.has(getDisplayImportSpecifier(unresolved.specifier)),
+      )
+
+      if (mayContainCommonJSModuleGlobals(sourceText) && isCommonJS(analysis.rawCode)) {
+        throw createAssetServerCompilationError(
+          `CommonJS module detected: ${resolvedPath}. ` +
+            `This module uses CommonJS (require/module.exports) which is not supported. ` +
+            `Please use an ESM-compatible module.`,
+          {
+            code: 'COMMONJS_NOT_SUPPORTED',
+          },
+        )
+      }
+
+      let sourceMap = analysis.sourceMap
+        ? rewriteSourceMapSources(
+            analysis.sourceMap,
+            resolvedPath,
+            stableUrlPathname,
+            args.sourceMapSourcePaths,
+            sourceText,
+          )
+        : null
+
+      return {
+        ok: true,
+        tracking: {
+          trackedFiles,
+        },
+        value: {
+          hmr: getHmrAnalysis(analysis.rawCode),
+          identityPath: record.identityPath,
+          importerDir: path.dirname(resolvedPath),
+          packageSpecifiers: analysis.unresolvedImports
+            .filter((unresolved) => isBareImportSpecifier(unresolved.specifier))
+            .map((unresolved) => unresolved.specifier),
+          rawCode: analysis.rawCode,
+          resolvedPath,
+          sourceMap,
+          stableUrlPathname,
+          trackedFiles,
+          unresolvedImports: analysis.unresolvedImports,
+        },
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        error: toTransformFailedError(error, resolvedPath),
+        tracking: {
+          trackedFiles,
+        },
+      }
     }
-  } catch (error) {
-    return {
-      ok: false,
-      error: toTransformFailedError(error, resolvedPath),
-      tracking: {
-        trackedFiles,
-      },
-    }
-  }
+  })
 }
 
 export function getHmrAnalysis(rawCode: string): TransformedModule['hmr'] {

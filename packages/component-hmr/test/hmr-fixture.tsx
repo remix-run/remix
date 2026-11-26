@@ -1,3 +1,4 @@
+import { snapshot } from '../../../scripts/hmr-performance-metrics.ts'
 import * as assert from '@remix-run/assert'
 import { createHtmlResponse } from '@remix-run/response/html'
 import type { TestContext } from '@remix-run/test'
@@ -31,8 +32,8 @@ const nodeTsxImportUrl = pathToFileURL(
 ).href
 const componentHmrNodeImportUrl = pathToFileURL(path.resolve(packageDir, 'src/node.ts')).href
 const consoleMessageTimeout = 5000
-const nodeHmrReadyTimeout = 15_000
-export const browserStartupTimeout = 15_000
+const nodeHmrReadyTimeout = process.env.HMR_PERF_DIR ? 60_000 : 15_000
+export const browserStartupTimeout = process.env.HMR_PERF_DIR ? 60_000 : 15_000
 
 type HmrFixture = {
   close(): Promise<void>
@@ -557,6 +558,7 @@ export async function editClientField(
   text: string,
   clientEntry: boolean,
 ): Promise<void> {
+  snapshot('test:edit', { text, clientEntry, fixture: fixture.rootDir })
   let filePath = path.join(fixture.rootDir, 'app/ClientField.tsx')
   let temporaryPath = `${filePath}.tmp`
   // node-hmr logs the change after marking itself not ready, and the proxy holds requests until
@@ -577,10 +579,13 @@ export async function assertFreshClientFieldResponses(
   // Check a second request too: stale wrapper metadata persists beyond the first response.
   for (let request = 0; request < 2; request++) {
     // The proxy holds this request until a restart finishes, so allow the startup budget.
+    snapshot('test:request-start', { text, request, url: server.baseUrl })
     let response = await fetch(server.baseUrl, {
       signal: AbortSignal.timeout(browserStartupTimeout),
     })
+    snapshot('test:response-headers', { text, request, status: response.status })
     let html = await response.text()
+    snapshot('test:response-body', { text, request, bytes: html.length })
     assert.equal(response.status, 200, html)
     assert.ok(html.includes(text), html)
     let boundaries = [...html.matchAll(/<!-- rmx:h:([^ ]+) -->/g)]
@@ -601,12 +606,14 @@ export async function assertFreshClientFieldResponses(
 
 function getNodeHmrProxyDevSource(): string {
   return [
+    `import { snapshot } from ${JSON.stringify(pathToFileURL(path.join(workspaceDir, 'scripts/hmr-performance-metrics.ts')).href)}`,
     "import { createServer } from 'node:http'",
     "import { readFile } from 'node:fs/promises'",
     `import { createFetchProxy } from ${JSON.stringify(fetchProxyImportUrl)}`,
     `import { createHmrReadyFetch, run } from ${JSON.stringify(nodeHmrImportUrl)}`,
     `import { createRequestListener } from ${JSON.stringify(nodeFetchServerImportUrl)}`,
     '',
+    "snapshot('proxy:module-evaluated')",
     'let originPort = Number(process.env.TEST_SERVER_PORT ?? 0)',
     '',
     "let app = run('server.tsx', {",
@@ -621,7 +628,10 @@ function getNodeHmrProxyDevSource(): string {
     '    // The child writes this file before it reports ready, and createHmrReadyFetch only calls',
     '    // this after the runner is ready.',
     '    url.port = await readFile(process.env.CHILD_PORT_FILE, "utf8")',
-    '    return await fetch(url, init)',
+    "    snapshot('proxy:fetch-start', { url: String(url) })",
+    '    let response = await fetch(url, init)',
+    "    snapshot('proxy:fetch-headers', { url: String(url), status: response.status })",
+    '    return response',
     '  },',
     '})',
     '',
@@ -685,6 +695,7 @@ function getNodeHmrServerSource(
   let npmDir = path.relative(workspaceDir, path.join(rootDir, 'node_modules'))
 
   return [
+    `import { snapshot } from ${JSON.stringify(pathToFileURL(path.join(workspaceDir, 'scripts/hmr-performance-metrics.ts')).href)}`,
     "import { createServer } from 'node:http'",
     "import { writeFile } from 'node:fs/promises'",
     "import { createAssetServer } from '@remix-run/assets'",
@@ -698,6 +709,7 @@ function getNodeHmrServerSource(
       ? ["import { ClientField } from './app/ClientField.tsx'"]
       : []),
     '',
+    "snapshot('server:module-evaluated')",
     "let title = '" + (options.title ?? 'Initial') + "'",
     'void sideEffect',
     'let assetServer = createAssetServer({',
@@ -746,7 +758,9 @@ function getNodeHmrServerSource(
         ]),
     '',
     'async function renderDocument() {',
+    "  snapshot('server:script-entry-start')",
     `  let { href, importMap, preloads } = await assetServer.getScriptEntry(${JSON.stringify(`${appDir}/entry.tsx`)})`,
+    "  snapshot('server:script-entry-end')",
     '  return renderToStream(',
     '    <html>',
     '      <head>',
@@ -784,6 +798,7 @@ function getNodeHmrServerSource(
     '}',
     '',
     'let server = createServer(async (request, response) => {',
+    "  if (request.url === '/') snapshot('server:request')",
     '  try {',
     "    let host = request.headers.host ?? '127.0.0.1'",
     "    let url = new URL(request.url ?? '/', `http://${host}`)",
@@ -830,6 +845,7 @@ function getNodeHmrServerSource(
     '  let address = server.address()',
     "  if (address && typeof address === 'object') {",
     '    await writeFile(process.env.CHILD_PORT_FILE, String(address.port))',
+    "    snapshot('server:ready')",
     '    emitServerReady()',
     "    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))",
     '  }',
@@ -872,6 +888,7 @@ function getNodeHmrServerSource(
     '    }',
     '  } finally {',
     '    response.end()',
+    "    snapshot('server:body-end')",
     '    reader.releaseLock()',
     '  }',
     '}',
