@@ -91,6 +91,10 @@ export interface SuperHeadersPropertyInit {
   referrerPolicy?: string | null
   refresh?: string | null
   retryAfter?: string | null
+  secFetchDest?: string | null
+  secFetchMode?: string | null
+  secFetchSite?: string | null
+  secFetchUser?: string | null
   server?: string | null
   setCookie?: SetCookieValue | readonly SetCookieValue[] | null
   strictTransportSecurity?: string | null
@@ -283,6 +287,10 @@ const StringHeaderDescriptors: readonly StringHeaderDescriptor[] = [
   stringHeader('referrerPolicy', 'Referrer-Policy'),
   stringHeader('refresh', 'Refresh'),
   stringHeader('retryAfter', 'Retry-After'),
+  stringHeader('secFetchDest', 'Sec-Fetch-Dest'),
+  stringHeader('secFetchMode', 'Sec-Fetch-Mode'),
+  stringHeader('secFetchSite', 'Sec-Fetch-Site'),
+  stringHeader('secFetchUser', 'Sec-Fetch-User'),
   stringHeader('server', 'Server'),
   stringHeader('strictTransportSecurity', 'Strict-Transport-Security'),
   stringHeader('traceparent', 'Traceparent'),
@@ -863,6 +871,14 @@ export interface SuperHeaders {
   set refresh(value: string | null | undefined)
   get retryAfter(): string | null
   set retryAfter(value: string | null | undefined)
+  get secFetchDest(): string | null
+  set secFetchDest(value: string | null | undefined)
+  get secFetchMode(): string | null
+  set secFetchMode(value: string | null | undefined)
+  get secFetchSite(): string | null
+  set secFetchSite(value: string | null | undefined)
+  get secFetchUser(): string | null
+  set secFetchUser(value: string | null | undefined)
   get server(): string | null
   set server(value: string | null | undefined)
   get setCookie(): SetCookieList
