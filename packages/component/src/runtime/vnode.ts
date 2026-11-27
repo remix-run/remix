@@ -103,13 +103,15 @@ export type Props<T extends keyof JSX.IntrinsicElements> = NormalizeMixProp<
  * @returns A Remix virtual element.
  */
 export function jsx(type: ElementType, props: ElementProps, key?: any): RemixElement {
-  return {
-    [REMIX_ELEMENT]: true,
-    $rmx: true,
+  // Assigning the symbol after the literal lets V8 use its fast boilerplate path instead of DefineKeyedOwnProperty.
+  let el = {
+    $rmx: true as const,
     key,
     props: normalizeElementProps(props),
     type,
-  }
+  } as RemixElement
+  el[REMIX_ELEMENT] = true
+  return el
 }
 
 export { jsx as jsxDEV, jsx as jsxs }
@@ -193,9 +195,12 @@ export function isPrimitiveChild(value: unknown): value is PrimitiveChild {
 }
 
 export function normalizeChildren(children: readonly RemixNode[]): RemixNode[] {
-  return children.some(Array.isArray)
-    ? ((children as unknown[]).flat(Infinity) as RemixNode[])
-    : (children as RemixNode[])
+  for (let i = 0; i < children.length; i++) {
+    if (Array.isArray(children[i])) {
+      return (children as unknown[]).flat(Infinity) as RemixNode[]
+    }
+  }
+  return children as RemixNode[]
 }
 
 export function isRemixNode(value: unknown): value is RemixNode {
