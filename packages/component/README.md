@@ -245,7 +245,7 @@ function Clock(handle: Handle) {
 
 Use `handle.signal` for work started this way, because it's only aborted when the component is removed. Pass it to `fetch()` for a one-time load that later renders shouldn't cancel.
 
-Queue a task from render when the work depends on props. The task receives an `AbortSignal` that is aborted when the component renders again or is removed. A task queued from render is queued again on every render, so guard it with the prop value it depends on. Otherwise the task's own `handle.update()` renders again and queues the work again:
+Queue a task from render when work depends on props. A task's signal is aborted when the component renders again or is removed, so a slow request using that signal can keep restarting during renders with the same props. For a request keyed by `userId`, keep its own controller and start a new request when that ID changes:
 
 ```tsx
 import type { Handle } from 'remix/component'
@@ -254,13 +254,24 @@ function UserCard(handle: Handle<{ userId: string }>) {
   let user: { name: string } | undefined
   let error: string | undefined
   let loadedId: string | undefined
+  let requestedId: string | undefined
+  let controller: AbortController | undefined
+
+  handle.signal.addEventListener('abort', () => controller?.abort(), { once: true })
 
   return () => {
     let { userId } = handle.props
     let loading = userId !== loadedId
 
-    if (loading) {
-      handle.queueTask(async (signal) => {
+    if (userId !== requestedId) {
+      handle.queueTask(async (taskSignal) => {
+        if (taskSignal.aborted || userId === requestedId) return
+
+        requestedId = userId
+        controller?.abort()
+        controller = new AbortController()
+        let { signal } = controller
+
         try {
           let response = await fetch(`/api/users/${userId}`, { signal })
           let data = await response.json()
@@ -283,7 +294,7 @@ function UserCard(handle: Handle<{ userId: string }>) {
 }
 ```
 
-When `userId` changes, the next render aborts the previous request and queues one for the new ID. Any other render while a request is in flight also aborts it, and that render queues it again, so only the latest request for the current `userId` completes. Catch errors inside async tasks, as described in [Abort Signals](#abort-signals).
+The task's signal guards the start of work after commit. The request uses its own signal, so renders for the same `userId` leave it running. Starting a request for a different ID aborts the previous one, and `handle.signal` aborts it when the component is removed. Catch errors inside async tasks, as described in [Abort Signals](#abort-signals).
 
 ### Abort Signals
 
