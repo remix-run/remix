@@ -63,6 +63,17 @@ function streamFile(
   start = 0,
   end = Infinity,
 ): ReadableStream<Uint8Array<ArrayBuffer>> {
+  // An empty range (e.g. `file.slice(0, 0)`) has no bytes to read. Returning an
+  // already-closed stream avoids passing an out-of-range `end` (like `-1`) to
+  // `fs.createReadStream`, which would throw a `RangeError`.
+  if (start >= end) {
+    return new ReadableStream({
+      start(controller) {
+        controller.close()
+      },
+    })
+  }
+
   let readStream = fs.createReadStream(filename, { start, end: end - 1 }).iterator()
 
   return new ReadableStream({

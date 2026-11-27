@@ -123,6 +123,26 @@ describe('openLazyFile', () => {
     assert.equal(await lazyFile.text(), '')
   })
 
+  it('handles empty slices without throwing', async () => {
+    let filePath = createTestFile('test.txt', 'hello world')
+
+    let lazyFile = openLazyFile(filePath)
+    let slice = lazyFile.slice(0, 0)
+
+    assert.equal(slice.size, 0)
+    assert.equal(await slice.text(), '')
+  })
+
+  it('handles empty slices of empty files', async () => {
+    let filePath = createTestFile('empty.txt', '')
+
+    let lazyFile = openLazyFile(filePath)
+    let slice = lazyFile.slice(0, 0)
+
+    assert.equal(slice.size, 0)
+    assert.equal(await slice.text(), '')
+  })
+
   it('handles large files', async () => {
     let largeContent = 'x'.repeat(10000)
     let filePath = createTestFile('large.txt', largeContent)
