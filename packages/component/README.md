@@ -1124,6 +1124,8 @@ Frame content can contain other frames and client entries.
 - **Reload:** `frame.reload()` fetches the frame's `src`, reconciles the new content into the DOM, and passes updated props to the client entries inside it.
 - **Removal:** When a frame is removed, its client entries are cleaned up and nested frames are disposed.
 
+With `renderToStream()`, a non-blocking frame's resolved HTML arrives in a `<template>`. The browser runtime swaps it in, so the fallback stays visible when JavaScript cannot run. Render content that must appear without scripts directly in the page or in a blocking frame.
+
 ### Lazy Loading
 
 Use `loading="lazy"` for content farther down the page. The server renders only the fallback, and the browser resolves the frame when it approaches the viewport:
