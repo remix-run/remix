@@ -165,8 +165,9 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
    */
   unset(key: keyof valueData): void {
     this.#checkDestroyed()
-    this.#valueMap.delete(key as any)
-    this.#dirty = true
+    if (this.#valueMap.delete(key as any)) {
+      this.#dirty = true
+    }
   }
 }
 
