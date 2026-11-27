@@ -1180,6 +1180,116 @@ describe('createRequestListener', () => {
     })
   })
 
+  it('ends single-chunk responses with Content-Length directly without a separate write', async () => {
+    let payload = new TextEncoder().encode('hello world')
+    let handler: FetchHandler = () =>
+      new Response(payload, {
+        headers: {
+          'Content-Type': 'text/plain',
+          'Content-Length': String(payload.byteLength),
+        },
+      })
+
+    let listener = createRequestListener(handler)
+    let req = createMockRequest()
+    let writeCalls = 0
+    let endedChunk: Uint8Array | undefined
+    let done = new Promise<void>((resolve) => {
+      let res = Object.assign(new stream.Writable(), {
+        req,
+        writeHead() {},
+        write() {
+          writeCalls++
+          return true
+        },
+        end(chunk?: Uint8Array) {
+          endedChunk = chunk
+          resolve()
+        },
+      }) as unknown as http.ServerResponse
+
+      listener(req, res)
+    })
+
+    await done
+    assert.equal(writeCalls, 0)
+    assert.equal(Buffer.from(endedChunk!).toString(), 'hello world')
+  })
+
+  it('cancels the body reader after ending a single-chunk response with Content-Length', async () => {
+    let encoder = new TextEncoder()
+    let cancelled = false
+    let singleChunkStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode('hello'))
+      },
+      cancel() {
+        cancelled = true
+      },
+    })
+
+    let listener = createRequestListener(
+      () =>
+        new Response(singleChunkStream, {
+          headers: { 'Content-Type': 'text/plain', 'Content-Length': '5' },
+        }),
+    )
+    let req = createMockRequest()
+    let endedChunk: Uint8Array | undefined
+    await new Promise<void>((resolve) => {
+      let res = Object.assign(new stream.Writable(), {
+        req,
+        writeHead() {},
+        write() {
+          return true
+        },
+        end(chunk?: Uint8Array) {
+          endedChunk = chunk
+          resolve()
+        },
+      }) as unknown as http.ServerResponse
+      listener(req, res)
+    })
+    assert.equal(Buffer.from(endedChunk!).toString(), 'hello')
+    assert.equal(cancelled, true)
+  })
+
+  it('writes all chunks when the first chunk is shorter than Content-Length', async () => {
+    let encoder = new TextEncoder()
+    let listener = createRequestListener(
+      () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(encoder.encode('hel'))
+              controller.enqueue(encoder.encode('lo'))
+              controller.close()
+            },
+          }),
+          {
+            headers: { 'Content-Type': 'text/plain', 'Content-Length': '5' },
+          },
+        ),
+    )
+    let req = createMockRequest()
+    let chunks: Uint8Array[] = []
+    await new Promise<void>((resolve) => {
+      let res = Object.assign(new stream.Writable(), {
+        req,
+        writeHead() {},
+        write(chunk: Uint8Array) {
+          chunks.push(chunk)
+          return true
+        },
+        end() {
+          resolve()
+        },
+      }) as unknown as http.ServerResponse
+      listener(req, res)
+    })
+    assert.equal(Buffer.concat(chunks).toString(), 'hello')
+  })
+
   it('writes the first response stream chunk before waiting for the second chunk', async () => {
     let encoder = new TextEncoder()
     let resolveSecondChunk!: () => void

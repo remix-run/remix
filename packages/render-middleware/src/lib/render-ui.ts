@@ -1,7 +1,6 @@
 import type { AssetServer } from '@remix-run/assets'
 import { CspNonce, getCspNonce, inheritCspNonce } from '@remix-run/csp-middleware'
 import type { Middleware, RequestContext } from '@remix-run/fetch-router'
-import { createHtmlResponse } from '@remix-run/response/html'
 import {
   renderToStream,
   type ImportMapData,
@@ -13,14 +12,19 @@ import { renderWith, type Renderer } from './render.ts'
 type RenderRequestContext = Pick<RequestContext, 'headers' | 'request' | 'router' | 'url'>
 type RemixNode = Parameters<typeof renderToStream>[0]
 
+const DOCTYPE_BYTES = new TextEncoder().encode('<!DOCTYPE html>')
+const DOCTYPE_SNIFF_BYTES = 64
+const DEFAULT_HTML_HEADERS = { 'Content-Type': 'text/html; charset=UTF-8' }
 const FRAME_HEADER = 'X-Remix-Frame'
 const FRAME_TARGET_HEADER = 'X-Remix-Target'
 const TOP_FRAME_SRC_HEADER = 'X-Remix-Top-Frame-Src'
 // Internal subrequests report errors through the enclosing render.
 // Browser frame requests use the same headers, so identify internal requests by object identity.
 const internalFrameRequests = new WeakSet<Request>()
-// Keyed by body so responses rebuilt with `new Response(response.body, response)` keep waiting.
+// Keyed by stream so responses rebuilt with `new Response(response.body, response)` keep waiting.
 const pendingShells = new WeakMap<ReadableStream<Uint8Array>, Promise<void>>()
+// Tracks requests that called render() so non-HTML routes skip touching response.body.
+const renderedRequests = new WeakSet<Request>()
 const MAX_FRAME_REDIRECTS = 20
 const FRAME_REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 const FRAME_REQUEST_HEADERS_TO_REMOVE = [
@@ -75,8 +79,6 @@ export function render(
 ): Middleware<{ key: typeof Renderer; value: RenderFunction; property: 'render' }> {
   let installRenderer = renderWith((context) => {
     let request = context.request
-    let topFrameSrc = getTopFrameSrc(request)
-    let onError = internalFrameRequests.has(request) ? () => {} : options.onError
     let nonce = getCspNonce(context)
     // Child routes may render without installing CSP middleware themselves.
     if (nonce !== undefined) context.set(CspNonce, nonce)
@@ -85,9 +87,9 @@ export function render(
       let { stream, shell } = trackShell(
         renderToStream(node, {
           frameSrc: request.url,
-          topFrameSrc,
+          topFrameSrc: getTopFrameSrc(request),
           signal: request.signal,
-          onError,
+          onError: internalFrameRequests.has(request) ? () => {} : options.onError,
           nonce: getCspNonce(context),
           resolveFrame: (src, target, frameContext) =>
             resolveFrame(context, src, target, frameContext),
@@ -95,22 +97,54 @@ export function render(
             resolveClientEntry(options.assets, entryId, component),
         }),
       )
-      let response = createHtmlResponse(stream, init)
+
+      let response: Response
+      if (init?.headers == null) {
+        response = new Response(
+          stream,
+          init ? { ...init, headers: DEFAULT_HTML_HEADERS } : { headers: DEFAULT_HTML_HEADERS },
+        )
+      } else {
+        let headers = new Headers(init.headers)
+        if (!headers.has('Content-Type')) {
+          headers.set('Content-Type', 'text/html; charset=UTF-8')
+        }
+        response = new Response(stream, { ...init, headers })
+      }
+
+      renderedRequests.add(request)
       if (response.body != null) pendingShells.set(response.body, shell)
       return response
     }
   })
 
-  return async (context, next) => {
-    let response = await installRenderer(context, next)
-    // Wait for the shell so render errors reject the request before the status is sent.
-    if (response.body != null) await pendingShells.get(response.body)
-    return response
+  function waitForShell(request: Request, response: Response): Response | Promise<Response> {
+    if (!renderedRequests.has(request) || response.body == null) {
+      return response
+    }
+    let pending = pendingShells.get(response.body)
+    return pending ? pending.then(() => response) : response
+  }
+
+  return (context, next) => {
+    let result = installRenderer(context, next)
+    return result instanceof Response
+      ? waitForShell(context.request, result)
+      : result.then((response) => waitForShell(context.request, response))
   }
 }
 
-// The first chunk from renderToStream() contains the whole shell, so shell render errors
-// reject the first read. Content streamed after it can no longer change the response status.
+function startsWithDoctypeBytes(bytes: Uint8Array): boolean {
+  let decoder = new TextDecoder()
+  let prefix = decoder.decode(bytes.subarray(0, DOCTYPE_SNIFF_BYTES), { stream: true })
+  if (bytes.length > DOCTYPE_SNIFF_BYTES && prefix.trimStart().length < '<!doctype html'.length) {
+    prefix += decoder.decode(bytes.subarray(DOCTYPE_SNIFF_BYTES), { stream: true })
+  }
+  return /^\s*<!doctype html/i.test(prefix)
+}
+
+// The first chunk from renderToStream() contains the whole shell, so shell render errors reject
+// the first read. Prepending DOCTYPE here avoids a second wrapper stream from createHtmlResponse().
 function trackShell(source: ReadableStream<Uint8Array>): {
   stream: ReadableStream<Uint8Array>
   shell: Promise<void>
@@ -123,17 +157,27 @@ function trackShell(source: ReadableStream<Uint8Array>): {
 
   let stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
+      let isFirst = firstRead !== undefined
       let read = firstRead ?? reader.read()
       firstRead = undefined
       let result = await read
       if (result.done) {
+        if (isFirst) controller.enqueue(DOCTYPE_BYTES.slice())
         controller.close()
+        return
+      }
+      if (isFirst && !startsWithDoctypeBytes(result.value)) {
+        let combined = new Uint8Array(DOCTYPE_BYTES.byteLength + result.value.byteLength)
+        combined.set(DOCTYPE_BYTES, 0)
+        combined.set(result.value, DOCTYPE_BYTES.byteLength)
+        controller.enqueue(combined)
       } else {
         controller.enqueue(result.value)
       }
     },
     cancel(reason) {
-      return reader.cancel(reason)
+      // Absorb rejections when inner middleware cancels an already-errored shell body to replace it.
+      return reader.cancel(reason).catch(() => {})
     },
   })
 
@@ -247,11 +291,13 @@ function createCrossOriginFrameHeaders(headers: Headers): Headers {
   return crossOriginHeaders
 }
 
-async function resolveClientEntry(
+function resolveClientEntry(
   assets: Pick<AssetServer, 'getScriptEntry'> | undefined,
   entryId: string,
   component: { readonly name: string },
-): Promise<{ href: string; importMap?: ImportMapData; exportName: string; preloads?: string[] }> {
+):
+  | { href: string; importMap?: ImportMapData; exportName: string; preloads?: string[] }
+  | Promise<{ href: string; importMap?: ImportMapData; exportName: string; preloads?: string[] }> {
   let hashIndex = entryId.lastIndexOf('#')
   let sourceId = hashIndex === -1 ? entryId : entryId.slice(0, hashIndex)
   let explicitExportName = hashIndex === -1 ? '' : entryId.slice(hashIndex + 1)
@@ -265,9 +311,12 @@ async function resolveClientEntry(
     }
     if (!exportName) throw createMissingExportNameError(entryId, true)
 
-    let { href, importMap, preloads } = await assets.getScriptEntry(sourceId)
-
-    return { href, importMap, exportName, preloads }
+    return assets.getScriptEntry(sourceId).then(({ href, importMap, preloads }) => ({
+      href,
+      importMap,
+      exportName,
+      preloads,
+    }))
   }
 
   if (!exportName) throw createMissingExportNameError(entryId, assets != null)

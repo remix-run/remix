@@ -461,19 +461,72 @@ export function renderToStream(
   options?: RenderToStreamOptions,
 ): ReadableStream<Uint8Array> {
   let onError = options?.onError ?? ((error) => console.error(error))
+  let signal = options?.signal
+  if (signal?.aborted) {
+    return emptyReadableStream()
+  }
+
   let currentFrameSrc = normalizeFrameSrc(options?.frameSrc ?? options?.topFrameSrc)
   let topFrameSrc = normalizeFrameSrc(options?.topFrameSrc ?? currentFrameSrc)
-  let renderAbortController = new AbortController()
-  let signal = options?.signal
-
   let context = createRenderContext(
     currentFrameSrc,
     topFrameSrc,
     options?.resolveFrame ?? defaultResolveFrame,
     options?.nonce,
-    renderAbortController.signal,
+    ssrSignal,
     onError,
   )
+
+  let root: SsrBuffer = { html: '', segments: null }
+  let pendingClientEntries: Promise<void> | undefined
+
+  function finalizeShellBytes(): Uint8Array {
+    validateClientEntriesForHydration(context)
+    if (context.managedImportMaps && context.managedImportMaps.length > 0) {
+      finalizeManagedImportMap(context)
+    }
+    let finalHtml = finalizeHtml(root, context)
+    return encodeHtml(appendFlushMarker(finalHtml, context.flushKind))
+  }
+
+  try {
+    buildSegment(node, context, root)
+
+    let hasBlockingFrames =
+      context.blockingFrames !== undefined && context.blockingFrames.length > 0
+    let hasPendingFrames = context.pendingFrames !== undefined && context.pendingFrames.length > 0
+
+    if (!hasBlockingFrames && !hasPendingFrames) {
+      pendingClientEntries = resolveClientEntries(context, options?.resolveClientEntry)
+      if (pendingClientEntries === undefined) {
+        let bytes = finalizeShellBytes()
+        if (signal?.aborted) {
+          return emptyReadableStream()
+        }
+        return new ReadableStream({
+          start(controller) {
+            controller.enqueue(bytes)
+            controller.close()
+          },
+        })
+      }
+      // Keep the promise observed in case cancellation closes the stream before awaiting it.
+      pendingClientEntries.catch(() => {})
+    }
+  } catch (error) {
+    if (signal?.aborted && error === signal.reason) {
+      return emptyReadableStream()
+    }
+    onError(error)
+    return new ReadableStream({
+      start(controller) {
+        controller.error(error)
+      },
+    })
+  }
+
+  let renderAbortController = new AbortController()
+  context.signal = renderAbortController.signal
 
   function cancel(reason: unknown): void {
     signal?.removeEventListener('abort', onAbort)
@@ -495,23 +548,19 @@ export function renderToStream(
     async start(controller) {
       try {
         if (closeIfCancelled(controller, context)) return
-        let root: SsrBuffer = { html: '', segments: null }
-        buildSegment(node, context, root)
         // Await in document order so the first rejecting frame determines the error.
         if (context.blockingFrames) {
           for (let frame of context.blockingFrames) await frame
           if (closeIfCancelled(controller, context)) return
         }
-        if (context.unresolvedHydrationData && context.unresolvedHydrationData.size > 0) {
+        if (pendingClientEntries !== undefined) {
+          await pendingClientEntries
+          if (closeIfCancelled(controller, context)) return
+        } else if (context.unresolvedHydrationData && context.unresolvedHydrationData.size > 0) {
           await resolveClientEntries(context, options?.resolveClientEntry)
           if (closeIfCancelled(controller, context)) return
-          validateClientEntriesForHydration(context)
         }
-        if (context.managedImportMaps && context.managedImportMaps.length > 0) {
-          finalizeManagedImportMap(context)
-        }
-        let finalHtml = finalizeHtml(root, context)
-        let bytes = encodeHtml(appendFlushMarker(finalHtml, context.flushKind))
+        let bytes = finalizeShellBytes()
         if (closeIfCancelled(controller, context)) return
         controller.enqueue(bytes)
 
@@ -1603,30 +1652,40 @@ function resolveDefaultClientEntry(
   )
 }
 
-async function resolveClientEntries(
+function isPromiseLike<value>(value: unknown): value is PromiseLike<value> {
+  return (
+    value !== null &&
+    (typeof value === 'object' || typeof value === 'function') &&
+    typeof (value as { then?: unknown }).then === 'function'
+  )
+}
+
+function resolveClientEntries(
   context: RenderContext,
   resolveClientEntry?: (
     entryId: string,
     component: EntryComponent,
   ) => Promise<ResolvedClientEntry> | ResolvedClientEntry,
-): Promise<void> {
-  if (!context.unresolvedHydrationData || context.unresolvedHydrationData.size === 0) return
+): Promise<void> | undefined {
+  let unresolved = context.unresolvedHydrationData
+  if (!unresolved || unresolved.size === 0) return undefined
 
   let resolvedEntries = new Map<EntryComponent, ResolvedClientEntry>()
   let hydrationData = (context.hydrationData ??= new Map())
+  let entries = Array.from(unresolved.entries())
 
-  for (let [hydrationId, unresolvedHydrationData] of context.unresolvedHydrationData) {
-    let { entryId, component, propsJson } = unresolvedHydrationData
-    let resolvedEntry = resolvedEntries.get(component)
-    if (!resolvedEntry) {
-      resolvedEntry = resolveClientEntry
-        ? await Promise.resolve(resolveClientEntry(entryId, component))
-        : resolveDefaultClientEntry(entryId, component)
+  function record(
+    hydrationId: string,
+    entryId: string,
+    component: EntryComponent,
+    propsJson: string,
+    resolvedEntry: ResolvedClientEntry,
+  ): void {
+    if (!resolvedEntries.has(component)) {
       validateResolvedClientEntry(entryId, resolvedEntry)
       resolvedEntries.set(component, resolvedEntry)
       collectResolvedClientEntryResources(getClientEntryHeadResources(context), resolvedEntry)
     }
-
     hydrationData.set(hydrationId, {
       exportName: resolvedEntry.exportName,
       moduleUrl: resolvedEntry.href,
@@ -1634,7 +1693,43 @@ async function resolveClientEntries(
     })
   }
 
-  context.unresolvedHydrationData.clear()
+  async function finishAsync(
+    startIndex: number,
+    firstPending: PromiseLike<ResolvedClientEntry>,
+  ): Promise<void> {
+    for (let i = startIndex; i < entries.length; i++) {
+      let [hydrationId, { entryId, component, propsJson }] = entries[i]!
+      let resolvedEntry = resolvedEntries.get(component)
+      if (!resolvedEntry) {
+        resolvedEntry =
+          i === startIndex
+            ? await firstPending
+            : resolveClientEntry
+              ? await Promise.resolve(resolveClientEntry(entryId, component))
+              : resolveDefaultClientEntry(entryId, component)
+      }
+      record(hydrationId, entryId, component, propsJson, resolvedEntry)
+    }
+    unresolved!.clear()
+  }
+
+  for (let i = 0; i < entries.length; i++) {
+    let [hydrationId, { entryId, component, propsJson }] = entries[i]!
+    let resolvedEntry = resolvedEntries.get(component)
+    if (!resolvedEntry) {
+      let result = resolveClientEntry
+        ? resolveClientEntry(entryId, component)
+        : resolveDefaultClientEntry(entryId, component)
+      if (isPromiseLike(result)) {
+        return finishAsync(i, result)
+      }
+      resolvedEntry = result
+    }
+    record(hydrationId, entryId, component, propsJson, resolvedEntry)
+  }
+
+  unresolved.clear()
+  return undefined
 }
 
 function collectResolvedClientEntryResources(

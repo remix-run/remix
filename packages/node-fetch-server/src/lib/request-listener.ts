@@ -175,8 +175,9 @@ function sendResponseForRequest(
 ): Promise<void> | void {
   if (isResponseClosed(res, lifecycle) || request.signal.aborted) return
 
+  let contentLength: number | undefined
   try {
-    writeResponseHead(res, response)
+    contentLength = writeResponseHead(res, response)
     if (response.body == null || res.req.method === 'HEAD') {
       res.end()
       return
@@ -185,7 +186,7 @@ function sendResponseForRequest(
     return handleResponseSendError(res, request, onError, error, lifecycle)
   }
 
-  return writeResponseBody(res, response.body, lifecycle).then(undefined, (error) =>
+  return writeResponseBody(res, response.body, lifecycle, contentLength).then(undefined, (error) =>
     handleResponseSendError(res, request, onError, error, lifecycle),
   )
 }
@@ -872,18 +873,24 @@ async function writeResponse(
   response: Response,
   lifecycle?: RequestLifecycle,
 ): Promise<void> {
-  writeResponseHead(res, response)
+  let contentLength = writeResponseHead(res, response)
   if (response.body != null && res.req.method !== 'HEAD') {
-    await writeResponseBody(res, response.body, lifecycle)
+    await writeResponseBody(res, response.body, lifecycle, contentLength)
   } else {
     res.end()
   }
 }
 
+function parseContentLength(value: string | string[] | undefined): number | undefined {
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) return undefined
+  let parsed = Number(value)
+  return Number.isSafeInteger(parsed) ? parsed : undefined
+}
+
 function writeResponseHead(
   res: http.ServerResponse | http2.Http2ServerResponse,
   response: Response,
-): void {
+): number | undefined {
   // Iterate over response.headers so we are sure to send multiple Set-Cookie headers correctly.
   // These would incorrectly be merged into a single header if we tried to use
   // `Object.fromEntries(response.headers.entries())`.
@@ -912,12 +919,15 @@ function writeResponseHead(
     // https://nodejs.org/docs/latest-v22.x/api/http2.html#responsewriteheadstatuscode-statusmessage-headers
     ;(res as http2.Http2ServerResponse).writeHead(response.status, headers)
   }
+
+  return parseContentLength(headers['content-length'])
 }
 
 async function writeResponseBody(
   res: http.ServerResponse | http2.Http2ServerResponse,
   body: ReadableStream<Uint8Array>,
   lifecycle?: RequestLifecycle,
+  contentLength?: number,
 ): Promise<void> {
   let reader = body.getReader()
   let responseClosed = lifecycle?.closed ?? false
@@ -941,10 +951,20 @@ async function writeResponseBody(
   // consumer, and Node's WHATWG stream implementation allocates a `TypeError` with a stack trace
   // on every `releaseLock()` call.
   try {
-    while (!(lifecycle?.closed ?? responseClosed)) {
-      let result = await reader.read()
-      if (result.done) break
+    if (lifecycle?.closed ?? responseClosed) return
+    let result = await reader.read()
+    if (result.done) {
+      if (!(lifecycle?.closed ?? responseClosed)) res.end()
+      return
+    }
 
+    if (contentLength !== undefined && result.value.byteLength === contentLength) {
+      if (!(lifecycle?.closed ?? responseClosed)) res.end(result.value)
+      void reader.cancel().catch(() => undefined)
+      return
+    }
+
+    while (!(lifecycle?.closed ?? responseClosed)) {
       // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
       if (res.write(result.value) === false) {
         await waitForDrainOrClose(res)
@@ -953,6 +973,9 @@ async function writeResponseBody(
           return
         }
       }
+
+      result = await reader.read()
+      if (result.done) break
     }
   } finally {
     if (lifecycle !== undefined) {

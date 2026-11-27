@@ -2055,9 +2055,6 @@ importers:
       '@remix-run/fetch-router':
         specifier: workspace:^
         version: link:../fetch-router
-      '@remix-run/response':
-        specifier: workspace:^
-        version: link:../response
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*

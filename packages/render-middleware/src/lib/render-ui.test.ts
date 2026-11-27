@@ -854,4 +854,54 @@ describe('render', () => {
     await assert.rejects(router.fetch('https://remix.run/'), renderError)
     assert.deepEqual(errors, [renderError])
   })
+
+  it('prepends a single DOCTYPE for synchronous and streamed frame responses', async () => {
+    let router = createRouter({ middleware: [render()] as const })
+
+    router.get('/sync', (context) =>
+      context.render(createElement('html', {}, createElement('body', {}, 'Sync'))),
+    )
+    router.get('/streamed', (context) =>
+      context.render(
+        createElement(
+          'html',
+          {},
+          createElement(
+            'body',
+            {},
+            createElement(Frame, { src: '/panel', fallback: createElement('p', {}, 'Loading') }),
+          ),
+        ),
+      ),
+    )
+    router.get('/panel', (context) => context.render(createElement('p', {}, 'Loaded')))
+
+    router.get('/custom-status', (context) =>
+      context.render(createElement('p', {}, 'Missing'), { status: 404 }),
+    )
+    router.get('/custom-headers', (context) =>
+      context.render(createElement('p', {}, 'Custom'), {
+        headers: { 'X-Custom': 'yes' },
+      }),
+    )
+
+    let syncHtml = await (await router.fetch('https://remix.run/sync')).text()
+    assert.equal(
+      syncHtml,
+      '<!DOCTYPE html><html><body>Sync</body></html><!-- rmx:flush document -->',
+    )
+
+    let streamedHtml = await (await router.fetch('https://remix.run/streamed')).text()
+    assert.equal(streamedHtml.startsWith('<!DOCTYPE html><html><body>'), true)
+    assert.equal(streamedHtml.match(/<!doctype html>/gi)?.length, 1)
+    assert.match(streamedHtml, /Loaded/)
+
+    let statusRes = await router.fetch('https://remix.run/custom-status')
+    assert.equal(statusRes.status, 404)
+    assert.equal(statusRes.headers.get('Content-Type'), 'text/html; charset=UTF-8')
+
+    let headerRes = await router.fetch('https://remix.run/custom-headers')
+    assert.equal(headerRes.headers.get('X-Custom'), 'yes')
+    assert.equal(headerRes.headers.get('Content-Type'), 'text/html; charset=UTF-8')
+  })
 })

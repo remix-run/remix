@@ -239,29 +239,122 @@ describe('stream', () => {
       expect(html).toBe('<div>Hello, world!</div>')
     })
 
-    it('removes the request abort listener after rendering finishes', async (t) => {
+    it('skips registering a request abort listener for synchronous renders', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+
+      expect(await drain(renderToStream(<p>Finished</p>, { signal: controller.signal }))).toBe(
+        '<p>Finished</p>',
+      )
+      expect(add).toHaveBeenCalledTimes(0)
+    })
+
+    it('removes the request abort listener after async rendering finishes', async (t) => {
       let controller = new AbortController()
       let add = t.mock.method(controller.signal, 'addEventListener')
       let remove = t.mock.method(controller.signal, 'removeEventListener')
+      let [frame, resolve] = withResolvers<string>()
+      let stream = renderToStream(<Frame src="/blocking" />, {
+        signal: controller.signal,
+        resolveFrame() {
+          return frame
+        },
+      })
+      resolve('<p>Finished</p>')
 
-      await drain(renderToStream(<p>Finished</p>, { signal: controller.signal }))
+      await drain(stream)
 
+      expect(add).toHaveBeenCalledTimes(1)
       expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
     })
 
-    it('removes the request abort listener when rendering fails', async (t) => {
+    it('removes the request abort listener when async rendering fails', async (t) => {
       let controller = new AbortController()
       let add = t.mock.method(controller.signal, 'addEventListener')
       let remove = t.mock.method(controller.signal, 'removeEventListener')
-      function Broken(): never {
-        throw new Error('Render failed')
-      }
+      let [frame, , reject] = withResolvers<string>()
+      let stream = renderToStream(<Frame src="/blocking" />, {
+        signal: controller.signal,
+        onError() {},
+        resolveFrame() {
+          return frame
+        },
+      })
+      reject(new Error('Render failed'))
 
-      await expect(
-        drain(renderToStream(<Broken />, { signal: controller.signal, onError() {} })),
-      ).rejects.toThrow('Render failed')
+      await expect(drain(stream)).rejects.toThrow('Render failed')
 
+      expect(add).toHaveBeenCalledTimes(1)
       expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
+    })
+
+    it('skips abort listener registration for synchronous client entries and emits hydration data', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
+      let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
+        return () => <button type="button">0</button>
+      })
+
+      let html = await drain(
+        renderToStream(<Counter />, {
+          signal: controller.signal,
+          resolveClientEntry(entryId) {
+            return { href: entryId.split('#')[0]!, exportName: 'Counter' }
+          },
+        }),
+      )
+      expect(html).toContain('<button type="button">0</button>')
+      let data = parseRmxDataFromHtml(html)
+      let [, entry] = getSingleEntry(data.h)
+      expect(entry.moduleUrl).toBe('/js/counter.js')
+      expect(entry.exportName).toBe('Counter')
+      expect(add).toHaveBeenCalledTimes(0)
+    })
+
+    it('resolves mixed sync and async client entries once per component and handles sync throws', async () => {
+      let calls = new Map<string, number>()
+      let SyncComp = clientEntry('/js/sync.js#SyncComp', function SyncComp() {
+        return () => <span>sync</span>
+      })
+      let AsyncComp = clientEntry('/js/async.js#AsyncComp', function AsyncComp() {
+        return () => <span>async</span>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <div>
+            <SyncComp />
+            <AsyncComp />
+            <AsyncComp />
+          </div>,
+          {
+            resolveClientEntry(entryId) {
+              calls.set(entryId, (calls.get(entryId) ?? 0) + 1)
+              if (entryId.includes('sync')) {
+                return { href: '/assets/sync.js', exportName: 'SyncComp' }
+              }
+              return Promise.resolve({ href: '/assets/async.js', exportName: 'AsyncComp' })
+            },
+          },
+        ),
+      )
+      expect(calls.get('/js/sync.js#SyncComp')).toBe(1)
+      expect(calls.get('/js/async.js#AsyncComp')).toBe(1)
+      expect(html).toContain('<span>sync</span>')
+      expect(html).toContain('<span>async</span>')
+
+      let errors: unknown[] = []
+      await expect(
+        drain(
+          renderToStream(<SyncComp />, {
+            onError: (error) => errors.push(error),
+            resolveClientEntry() {
+              throw new Error('Sync entry failed')
+            },
+          }),
+        ),
+      ).rejects.toThrow('Sync entry failed')
+      expect(errors.length).toBe(1)
     })
 
     it('removes the request abort listener when the consumer cancels pending rendering', async (t) => {

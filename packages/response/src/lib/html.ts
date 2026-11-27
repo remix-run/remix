@@ -2,6 +2,8 @@ import { isSafeHtml, type SafeHtml } from '@remix-run/html-template'
 
 const DOCTYPE = '<!DOCTYPE html>'
 const DOCTYPE_SNIFF_BYTES = 64
+const DOCTYPE_BYTES = new TextEncoder().encode(DOCTYPE)
+const DEFAULT_HTML_HEADERS = { 'Content-Type': 'text/html; charset=UTF-8' }
 
 type HtmlBody = string | SafeHtml | Blob | BufferSource | ReadableStream<Uint8Array>
 
@@ -16,7 +18,14 @@ type HtmlBody = string | SafeHtml | Blob | BufferSource | ReadableStream<Uint8Ar
 export function createHtmlResponse(body: HtmlBody, init?: ResponseInit): Response {
   let payload: BodyInit = ensureDoctype(body)
 
-  let headers = new Headers(init?.headers)
+  if (init?.headers == null) {
+    return new Response(
+      payload,
+      init ? { ...init, headers: DEFAULT_HTML_HEADERS } : { headers: DEFAULT_HTML_HEADERS },
+    )
+  }
+
+  let headers = new Headers(init.headers)
   if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'text/html; charset=UTF-8')
   }
@@ -65,7 +74,6 @@ function startsWithDoctypeBytes(bytes: Uint8Array): boolean {
 }
 
 function prependDoctypeToStream(stream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
-  let doctypeBytes = new TextEncoder().encode(DOCTYPE)
   let reader = stream.getReader()
 
   return new ReadableStream({
@@ -75,8 +83,8 @@ function prependDoctypeToStream(stream: ReadableStream<Uint8Array>): ReadableStr
         let firstChunk = await reader.read()
 
         if (firstChunk.done) {
-          // Empty stream, just add DOCTYPE
-          controller.enqueue(doctypeBytes)
+          // Empty stream, just add DOCTYPE (copy so consumers cannot mutate shared bytes)
+          controller.enqueue(DOCTYPE_BYTES.slice())
           controller.close()
           return
         }
@@ -86,9 +94,11 @@ function prependDoctypeToStream(stream: ReadableStream<Uint8Array>): ReadableStr
           // Already has DOCTYPE, pass through
           controller.enqueue(firstChunk.value)
         } else {
-          // Prepend DOCTYPE
-          controller.enqueue(doctypeBytes)
-          controller.enqueue(firstChunk.value)
+          // Combine DOCTYPE with the first chunk to avoid an extra write.
+          let combined = new Uint8Array(DOCTYPE_BYTES.byteLength + firstChunk.value.byteLength)
+          combined.set(DOCTYPE_BYTES, 0)
+          combined.set(firstChunk.value, DOCTYPE_BYTES.byteLength)
+          controller.enqueue(combined)
         }
 
         // Pass through remaining chunks
@@ -104,6 +114,9 @@ function prependDoctypeToStream(stream: ReadableStream<Uint8Array>): ReadableStr
       } catch (error) {
         controller.error(error)
       }
+    },
+    cancel(reason) {
+      return reader.cancel(reason).catch(() => {})
     },
   })
 }
