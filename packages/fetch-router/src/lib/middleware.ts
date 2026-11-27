@@ -11,7 +11,7 @@ import type {
 /**
  * A middleware of any context transform.
  */
-export type AnyMiddleware = Middleware<ContextTransform>
+export type AnyMiddleware = Middleware<ContextTransform, any>
 
 type ContextTransform =
   | ContextEntry
@@ -23,7 +23,7 @@ type EmptyContextTransform = readonly []
 declare const contextTransform: unique symbol
 
 type TransformOf<middleware> =
-  middleware extends Middleware<infer transform> ? transform : EmptyContextTransform
+  middleware extends Middleware<infer transform, any> ? transform : EmptyContextTransform
 
 type ContextWithTransform<
   context extends RequestContext<any, any>,
@@ -73,8 +73,11 @@ export type MiddlewareContext<
  * middleware that provides one context value, add a `property` field to install a direct context
  * property, or use {@link ContextEntries} for multiple values.
  */
-export type Middleware<transform extends ContextTransform = EmptyContextTransform> = ((
-  context: RequestContext<any>,
+export type Middleware<
+  transform extends ContextTransform = EmptyContextTransform,
+  reads extends ContextEntries = any,
+> = ((
+  context: RequestContext<any, reads>,
   next: NextFunction,
 ) => Response | Promise<Response>) & {
   /**

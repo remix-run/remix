@@ -926,4 +926,34 @@ describe('router type inference', () => {
     void accountAction
     void adminController
   })
+
+  it('allows Middleware to accept contexts with entries and declare readable entries', () => {
+    let noStore: Middleware = async (_context, next) => {
+      let response = await next()
+      response.headers.set('Cache-Control', 'no-store')
+      return response
+    }
+
+    let readUser: Middleware<
+      readonly [],
+      [{ key: typeof CurrentUser; value: { id: string } }]
+    > = (context, next) => {
+      let user = context.get(CurrentUser)
+      expectTypeEquality<IsEqual<typeof user, { id: string }>>()
+      return next()
+    }
+
+    let router = createRouter({
+      middleware: createMiddleware(requireUser(), readUser),
+      defaultHandler(context) {
+        return noStore(context, async () => {
+          let user = context.get(CurrentUser)
+          expectTypeEquality<IsEqual<typeof user, { id: string }>>()
+          return new Response(user.id)
+        })
+      },
+    })
+
+    void router
+  })
 })
