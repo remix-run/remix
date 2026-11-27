@@ -1,0 +1,1 @@
+Stop `remix test --coverage` from printing a `module.register()` deprecation warning (`DEP0205`) in server test workers on Node.js 26. The coverage loader now registers synchronous in-thread hooks with `module.registerHooks()`.

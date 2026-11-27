@@ -1,5 +1,5 @@
 import * as mod from 'node:module'
-import { IS_RUNNING_FROM_SRC, type SerializedOnlyPattern } from './config.ts'
+import type { SerializedOnlyPattern } from './config.ts'
 import { importModule } from './import-module.ts'
 import type { CoverageConfig } from './coverage.ts'
 import type { TestResults } from './reporters/results.ts'
@@ -23,10 +23,8 @@ export async function runServerTestFile(value: unknown): Promise<TestResults> {
     // an un-minified esbuild transform so V8 coverage byte offsets align with readable
     // source lines.
     if (workerData.coverage && !IS_BUN) {
-      // Ensure we load the right file whether we're running in the monorepo (TS) or
-      // from a published package (JS)
-      let ext = IS_RUNNING_FROM_SRC ? '.ts' : '.js'
-      mod.register(new URL(`./coverage-loader${ext}`, import.meta.url), import.meta.url)
+      let { load } = await import('./coverage-loader.ts')
+      mod.registerHooks({ load })
       await import(workerData.file)
     } else {
       await importModule(workerData.file, import.meta)

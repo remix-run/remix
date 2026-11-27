@@ -10,7 +10,7 @@ import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import type { ResolveFrame } from '../runtime/frame-runtime.ts'
 import { appendFlushMarker, FRAME_TEMPLATE_END_MARKER } from '../runtime/stream-protocol.ts'
 import { renderToStream } from '../server/stream.ts'
-import { css, navigate, on, updateUrl } from '../index.ts'
+import { css, navigate, on, Portal, updateUrl } from '../index.ts'
 import {
   drain,
   nextDomMutation,
@@ -158,6 +158,58 @@ async function renderDocumentContent(content: RemixNode): Promise<string> {
 
 async function renderFrameContent(content: RemixNode): Promise<string> {
   return await drain(renderToStream(content))
+}
+
+async function setupClientEntryReorder(t: TestContext, content: RemixNode) {
+  let Entry = clientEntry('/entry.js#Entry', function Entry() {
+    return () => content
+  })
+  let Other = clientEntry('/other.js#Other', function Other() {
+    return () => <p>B</p>
+  })
+  let Third = clientEntry('/third.js#Third', function Third() {
+    return () => <p>C</p>
+  })
+  function page(reordered: boolean) {
+    return (
+      <html>
+        <head />
+        <body>
+          <main style={{ height: 40, overflow: 'auto', overflowAnchor: 'none' }}>
+            {reordered ? [<Other />, <Third />, <Entry />] : [<Entry />, <Other />, <Third />]}
+          </main>
+        </body>
+      </html>
+    )
+  }
+  let parsed = new DOMParser().parseFromString(
+    await drainWithProtocol(renderToStream(page(false))),
+    'text/html',
+  )
+  document.documentElement.innerHTML = parsed.documentElement.innerHTML
+  let reordered = false
+  let app = run({
+    loadModule(moduleUrl) {
+      if (moduleUrl === '/entry.js') return Entry
+      if (moduleUrl === '/other.js') return Other
+      if (moduleUrl === '/third.js') return Third
+      throw new Error(`Unexpected module: ${moduleUrl}`)
+    },
+    resolveFrame() {
+      reordered = !reordered
+      return drainWithProtocol(renderToStream(page(reordered)))
+    },
+  })
+  t.after(() => app.dispose())
+  await app.ready()
+  let input = document.querySelector('input')
+  let main = document.querySelector('main')
+  invariant(input && main)
+  input.value = 'Keep my draft'
+  input.focus()
+  input.setSelectionRange(2, 7, 'backward')
+  expect(document.activeElement).toBe(input)
+  return { app, input, main }
 }
 
 async function renderSplitFrameTemplate(
@@ -2474,6 +2526,169 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('preserves focus and selection when a live client entry moves', async (t) => {
+    let { app, input, main } = await setupClientEntryReorder(t, <input />)
+    let focusEvents = 0
+    input.addEventListener('focus', () => focusEvents++, { signal: t.signal })
+
+    for (let tags of [
+      ['P', 'P', 'INPUT'],
+      ['INPUT', 'P', 'P'],
+    ]) {
+      await app.frames.top.reload()
+
+      expect(Array.from(main.children, (node) => node.tagName)).toEqual(tags)
+      expect(main.textContent).toBe('BC')
+      expect(main.querySelector('input')).toBe(input)
+      expect(input.value).toBe('Keep my draft')
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(2)
+      expect(input.selectionEnd).toBe(7)
+      expect(input.selectionDirection).toBe('backward')
+      if (typeof main.moveBefore === 'function') expect(focusEvents).toBe(0)
+    }
+  })
+
+  it('restores focus, selection and scroll for a fragment entry without native moves', async (t) => {
+    function Editor(handle: Handle) {
+      let count = 0
+      return () => (
+        <>
+          <input style={{ display: 'block', height: 100 }} />
+          <button
+            mix={on('click', () => {
+              count++
+              handle.update()
+            })}
+          >
+            {count}
+          </button>
+        </>
+      )
+    }
+    let { app, input, main } = await setupClientEntryReorder(t, <Editor />)
+    Object.defineProperty(main, 'moveBefore', { value: undefined })
+    main.scrollTop = 10
+    let scrollTop = main.scrollTop
+    expect(scrollTop).toBe(10)
+    let button = main.querySelector('button')
+    invariant(button)
+    button.click()
+    app.flush()
+    expect(button.textContent).toBe('1')
+    input.addEventListener(
+      'focus',
+      () => {
+        main.scrollTop = 50
+      },
+      { signal: t.signal },
+    )
+
+    for (let tags of [
+      ['P', 'P', 'INPUT', 'BUTTON'],
+      ['INPUT', 'BUTTON', 'P', 'P'],
+    ]) {
+      await app.frames.top.reload()
+
+      expect(Array.from(main.children, (node) => node.tagName)).toEqual(tags)
+      expect(main.querySelector('input')).toBe(input)
+      expect(main.querySelector('button')).toBe(button)
+      expect(button.textContent).toBe('1')
+      expect(input.value).toBe('Keep my draft')
+      expect(document.activeElement).toBe(input)
+      expect(input.selectionStart).toBe(2)
+      expect(input.selectionEnd).toBe(7)
+      expect(input.selectionDirection).toBe('backward')
+      expect(main.scrollTop).toBe(scrollTop)
+    }
+    button.click()
+    app.flush()
+    expect(button.textContent).toBe('2')
+  })
+
+  it('does not restore siblings removed by a focus handler during a fallback move', async (t) => {
+    let flush = () => {}
+    let removeOnFocus = false
+    function Editor(handle: Handle) {
+      let visible = true
+      return () => (
+        <>
+          <input
+            mix={on('focus', () => {
+              if (!removeOnFocus) return
+              visible = false
+              handle.update()
+              flush()
+            })}
+          />
+          {visible && <button>Dismiss</button>}
+        </>
+      )
+    }
+    let { app, input, main } = await setupClientEntryReorder(t, <Editor />)
+    Object.defineProperty(main, 'moveBefore', { value: undefined })
+    flush = () => app.flush()
+    removeOnFocus = true
+
+    await app.frames.top.reload()
+
+    expect(Array.from(main.children, (node) => node.tagName)).toEqual(['P', 'P', 'INPUT'])
+    expect(main.querySelector('button')).toBeNull()
+    expect(main.querySelector('input')).toBe(input)
+    expect(document.activeElement).toBe(input)
+  })
+
+  it('keeps portaled input content connected when its client entry moves', async (t) => {
+    let { app, input, main } = await setupClientEntryReorder(
+      t,
+      <Portal>
+        <input />
+      </Portal>,
+    )
+    let removed: Node[] = []
+    let observer = new MutationObserver((records) => {
+      removed.push(...records.flatMap((record) => Array.from(record.removedNodes)))
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    t.after(() => observer.disconnect())
+
+    await app.frames.top.reload()
+
+    expect(main.textContent).toBe('BC')
+    expect(document.querySelector('input')).toBe(input)
+    expect(document.activeElement).toBe(input)
+    expect(input.selectionStart).toBe(2)
+    expect(input.selectionEnd).toBe(7)
+    expect(removed.some((node) => node === input || node.contains(input))).toBe(false)
+  })
+
+  it('leaves an adjacent Portal destination connected when a live entry moves past it', async (t) => {
+    let { app, input, main } = await setupClientEntryReorder(t, <input />)
+    let root = createRoot(document.createElement('div'))
+    t.after(() => root.dispose())
+    root.render(
+      <Portal container={main}>
+        <aside>Adjacent</aside>
+      </Portal>,
+    )
+    let aside = main.querySelector('aside')
+    invariant(aside)
+    let removed: Node[] = []
+    let observer = new MutationObserver((records) => {
+      removed.push(...records.flatMap((record) => Array.from(record.removedNodes)))
+    })
+    observer.observe(main, { childList: true, subtree: true })
+    t.after(() => observer.disconnect())
+
+    await app.frames.top.reload()
+
+    expect(Array.from(main.children, (node) => node.tagName)).toEqual(['P', 'P', 'ASIDE', 'INPUT'])
+    expect(main.querySelector('aside')).toBe(aside)
+    expect(main.querySelector('input')).toBe(input)
+    expect(document.activeElement).toBe(input)
+    expect(removed.some((node) => node === aside || node.contains(aside))).toBe(false)
+  })
+
   it('disposes hydrated client entries removed by full-document reloads', async () => {
     let removeCount = 0
 
@@ -4152,6 +4367,65 @@ describe('run', () => {
     expect(items[1].textContent).toBe('Second')
 
     clientFrame.dispose()
+  })
+
+  it('preserves focus and selection when a nested frame range moves', async (t) => {
+    function page(reordered: boolean) {
+      let a = <Frame name="a" src="/a" />
+      let b = <Frame name="b" src="/b" />
+      let c = <Frame name="c" src="/c" />
+      return (
+        <html>
+          <head />
+          <body>
+            <main>{reordered ? [b, c, a] : [a, b, c]}</main>
+          </body>
+        </html>
+      )
+    }
+    function resolveChild(src: string) {
+      if (src === '/a') return '<input>'
+      if (src === '/b') return '<p>B</p>'
+      if (src === '/c') return '<p>C</p>'
+      throw new Error(`Unexpected frame: ${src}`)
+    }
+    let parsed = new DOMParser().parseFromString(
+      await drainWithProtocol(renderToStream(page(false), { resolveFrame: resolveChild })),
+      'text/html',
+    )
+    document.documentElement.innerHTML = parsed.documentElement.innerHTML
+    let app = run({
+      loadModule() {
+        throw new Error('No client entries expected')
+      },
+      resolveFrame(src) {
+        if (src === '/a' || src === '/b' || src === '/c') return resolveChild(src)
+        return drainWithProtocol(renderToStream(page(true), { resolveFrame: resolveChild }))
+      },
+    })
+    t.after(() => app.dispose())
+    await app.ready()
+    let input = document.querySelector('input')
+    invariant(input)
+    let frame = app.frames.get('a')
+    invariant(frame)
+    input.value = 'Keep my draft'
+    input.focus()
+    input.setSelectionRange(2, 7)
+
+    await app.frames.top.reload()
+
+    expect(app.frames.get('a')).toBe(frame)
+    expect(Array.from(document.querySelectorAll('main > *'), (node) => node.tagName)).toEqual([
+      'P',
+      'P',
+      'INPUT',
+    ])
+    expect(document.querySelector('input')).toBe(input)
+    expect(input.value).toBe('Keep my draft')
+    expect(document.activeElement).toBe(input)
+    expect(input.selectionStart).toBe(2)
+    expect(input.selectionEnd).toBe(7)
   })
 
   it('clears frame content when reload resolves to an empty stream', async () => {

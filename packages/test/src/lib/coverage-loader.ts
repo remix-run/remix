@@ -1,8 +1,11 @@
-import { readFile } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
+import type { registerHooks } from 'node:module'
 import { fileURLToPath } from 'node:url'
-import { transformTypeScript } from './ts-transform.ts'
+import { transformTypeScriptSync } from './ts-transform.ts'
 
-// Custom ESM loader hook for TypeScript files.
+type LoadHook = NonNullable<Parameters<typeof registerHooks>[0]['load']>
+
+// In-thread module load hook for TypeScript files.
 //
 // Applies an un-minified esbuild transform that preserves line structure.
 // This ensures V8 coverage byte offsets map
@@ -10,22 +13,15 @@ import { transformTypeScript } from './ts-transform.ts'
 // accurate per-line coverage rather than collapsing multiple statements onto
 // a single minified line.
 
-export async function load(
-  url: string,
-  context: { format?: string },
-  nextLoad: (
-    url: string,
-    context: { format?: string },
-  ) => Promise<{ format: string; source: string }>,
-) {
+export const load: LoadHook = (url, context, nextLoad) => {
   let cleanUrl = url.includes('?') ? url.slice(0, url.indexOf('?')) : url
   if (!cleanUrl.endsWith('.ts') && !cleanUrl.endsWith('.tsx')) {
     return nextLoad(url, context)
   }
 
   let filePath = fileURLToPath(cleanUrl)
-  let source = await readFile(filePath, 'utf-8')
-  let { code } = await transformTypeScript(source, filePath)
+  let source = readFileSync(filePath, 'utf-8')
+  let { code } = transformTypeScriptSync(source, filePath)
 
   return { format: 'module', source: code, shortCircuit: true }
 }
