@@ -428,11 +428,15 @@ describe('dialog browser interactions', () => {
     })
     await page.keyboard.press('Tab')
     expect(await page.evaluate(() => document.activeElement?.id)).toBe('scope-start')
-    await page.waitForFunction(() => {
+    // Firefox could replay a stale scroll on the next reflow, so check after layout settles.
+    let firstVisible = await page.evaluate(async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
       let node = document.querySelector('[data-testid="dialog"]')
-      if (!(node instanceof HTMLElement)) return false
-      let first = node.querySelector('#scope-start')
-      return !!first && first.getBoundingClientRect().top >= node.getBoundingClientRect().top
+      let first = node?.querySelector('#scope-start')
+      return (
+        !!node && !!first && first.getBoundingClientRect().top >= node.getBoundingClientRect().top
+      )
     })
+    expect(firstVisible).toBe(true)
   })
 })

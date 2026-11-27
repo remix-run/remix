@@ -194,7 +194,10 @@ function createManager(doc: Document) {
           let target =
             next.find((node) => candidates.includes(node)) ??
             (backwards ? candidates.at(-1) : candidates[0])
-          focus(target ?? scope.node, { preventScroll: false })
+          let redirected = target ?? scope.node
+          // Firefox can replay a stale scroll after focus scrolling inside a guard's focus event,
+          // leaving the redirected target out of view. Scroll explicitly instead.
+          if (focus(redirected)) redirected.scrollIntoView({ block: 'nearest', inline: 'nearest' })
         },
       )
     }
