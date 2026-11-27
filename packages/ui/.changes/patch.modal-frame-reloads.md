@@ -1,1 +1,1 @@
-Keep modal dialog shielding and scroll locks active across frame reloads, and recover modal focus after client navigation.
+Keep page scrolling locked across top-frame reloads while popovers, menus, selects or comboboxes are open.
