@@ -1730,19 +1730,6 @@ importers:
         specifier: ^4.90.1
         version: 4.90.1(@cloudflare/workers-types@4.20260511.1)
 
-  packages/multipart-parser/demos/deno:
-    dependencies:
-      '@remix-run/multipart-parser':
-        specifier: workspace:^
-        version: link:../..
-      tmp:
-        specifier: ^0.2.5
-        version: 0.2.5
-    devDependencies:
-      '@types/tmp':
-        specifier: ^0.2.6
-        version: 0.2.6
-
   packages/multipart-parser/demos/node:
     dependencies:
       '@remix-run/multipart-parser':

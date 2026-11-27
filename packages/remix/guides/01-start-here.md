@@ -109,7 +109,7 @@ server.listen(44100, () => {
 
 `server.ts` is the runtime entrypoint. In our Node-based example, it creates an HTTP server, adapts each Node request into a Web `Request`, and passes it to `router.fetch(request)`.
 
-Later you can read more about [`createRequestListener`](/request-handling/#createrequestlistener), [running on Bun, Deno, or Workers](/request-handling/#alternate-runtimes-bun-deno-workers), and [middleware ordering](/request-handling/#middleware-ordering).
+Later you can read more about [`createRequestListener`](/request-handling/#createrequestlistener), [running on Bun or Workers](/request-handling/#alternate-runtimes-bun-deno-workers), and [middleware ordering](/request-handling/#middleware-ordering).
 
 ## Define your first route {#define-your-first-route}
 
