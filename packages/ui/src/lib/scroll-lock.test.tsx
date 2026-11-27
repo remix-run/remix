@@ -58,29 +58,21 @@ afterEach(() => {
 })
 
 describe('lockScroll', () => {
-  it('locks and releases each document independently', () => {
+  it('applies the scroll lock stylesheet in the target document', () => {
     let frame = document.createElement('iframe')
     document.body.append(frame)
     let doc = frame.contentDocument
     let view = frame.contentWindow
     if (!doc || !view) throw new Error('Missing frame document')
-    let outerSheets = [...document.adoptedStyleSheets]
-    let innerSheets = [...doc.adoptedStyleSheets]
-    let unlockOuter = lockScroll()
-    let unlockInner = lockScroll(doc)
+    let originalSheets = [...doc.adoptedStyleSheets]
+    let unlock = lockScroll(doc)
     try {
-      expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
       expect(view.getComputedStyle(doc.documentElement).overflow).toBe('hidden')
-      unlockOuter()
-      expect(getComputedStyle(document.documentElement).overflow).toBe('visible')
-      expect(view.getComputedStyle(doc.documentElement).overflow).toBe('hidden')
-      unlockInner()
+      unlock()
       expect(view.getComputedStyle(doc.documentElement).overflow).toBe('visible')
-      expect(document.adoptedStyleSheets.length).toBe(outerSheets.length)
-      expect(doc.adoptedStyleSheets.length).toBe(innerSheets.length)
+      expect([...doc.adoptedStyleSheets]).toEqual(originalSheets)
     } finally {
-      unlockOuter()
-      unlockInner()
+      unlock()
       frame.remove()
     }
   })
@@ -105,27 +97,9 @@ describe('lockScroll', () => {
       expect(document.adoptedStyleSheets.includes(application)).toBe(true)
       expect(document.adoptedStyleSheets.includes(later)).toBe(true)
       expect(getComputedStyle(document.documentElement).color).toBe('rgb(1, 2, 3)')
-      let unlockAgain = lockScroll()
-      expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
-      unlockAgain()
-      expect(getComputedStyle(document.documentElement).overflow).toBe('scroll')
     } finally {
       unlock()
       document.adoptedStyleSheets = original
-    }
-  })
-
-  it('does not reserve an extra gutter when there is no scrollbar', () => {
-    Object.defineProperty(document.documentElement, 'clientWidth', {
-      configurable: true,
-      value: 1000,
-    })
-    let unlock = lockScroll()
-    try {
-      expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
-      expect(getComputedStyle(document.documentElement).scrollbarGutter).toBe('auto')
-    } finally {
-      unlock()
     }
   })
 

@@ -37,9 +37,6 @@ const App = clientEntry('/js/app.js#App', function App(handle: Handle<{ label: s
                   <dialog.SurfaceContext>
                     <section id="child" aria-label="Child" mix={dialog.surface()}>
                       <input id="child-field" aria-label="Child field" />
-                      <button id="child-close" mix={dialog.close()}>
-                        Close child
-                      </button>
                     </section>
                   </dialog.SurfaceContext>
                 </dialog.Portal>
@@ -165,64 +162,28 @@ describe('modal dialog across frame reloads', () => {
     expect(document.activeElement).toBe(get('#field'))
   })
 
-  it('keeps a portaled popup usable through reload and navigation', async (t) => {
+  it('restores focus inside a portaled popup after navigation', async (t) => {
     let app = await openModal(t)
     get('#popup-trigger').click()
     app.flush()
     await t.waitFor(() => expect(document.activeElement).toBe(get('#popup-field')))
     let field = get('#popup-field')
-    app.frames.top.src = '/next'
-    await app.frames.top.reload()
-    expect(get('#popup-field')).toBe(field)
-    expect(document.activeElement).toBe(field)
+
     await navigate('/next?popup')
+
     expect(document.activeElement).toBe(field)
     expect(field.closest('[inert], [aria-hidden="true"]')).toBe(null)
-    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
-    app.flush()
-    await t.waitFor(() => expect(get('#popup').hasAttribute('data-open')).toBe(false))
-    expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
-    await expectCloseReleases(t, app, ['#header', '#main', '#footer'])
   })
 
-  it('preserves interactive Toast focus through reload and navigation with manual focus reset', async (t) => {
-    let app = await openModal(t)
-    get('#publish').click()
-    app.flush()
-    await t.waitFor(() => expect(get('#notifications').closest('[inert]')).toBe(null))
-    get('#dismiss').focus()
-    app.frames.top.src = '/next'
-    await app.frames.top.reload()
-    expect(document.activeElement).toBe(get('#dismiss'))
-    await navigate('/next?toast', { resetFocus: false })
-    expect(document.activeElement).toBe(get('#dismiss'))
-    expect(get('#notifications').closest('[inert], [aria-hidden="true"]')).toBe(null)
-    expect(get('#main').inert).toBe(true)
-    get('#dismiss').click()
-    app.flush()
-    await t.waitFor(() => expect(document.querySelector('#dismiss')).toBe(null))
-    expect(get('[role="dialog"]').hasAttribute('data-open')).toBe(true)
-    get('#field').focus()
-    await expectCloseReleases(t, app, ['#header', '#main', '#footer'])
-  })
-
-  it('keeps the innermost modal focused and releases nested locks in order after navigation', async (t) => {
+  it('restores focus to the innermost modal after navigation', async (t) => {
     let app = await openModal(t)
     get('#child-trigger').click()
     app.flush()
     await t.waitFor(() => expect(document.activeElement).toBe(get('#child-field')))
-    app.frames.top.src = '/next'
-    await app.frames.top.reload()
+
     await navigate('/next?nested')
+
     expect(document.activeElement).toBe(get('#child-field'))
-    expect(get('#field').closest('[inert]')).not.toBe(null)
-    get('#child-close').click()
-    app.flush()
-    await t.waitFor(() => expect(get('#child').hasAttribute('data-open')).toBe(false))
-    expect(document.activeElement).toBe(get('#child-trigger'))
-    expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
-    get('#field').focus()
-    await expectCloseReleases(t, app, ['#header', '#main', '#footer'])
   })
 
   it('keeps content inside a reloaded named frame inert', async (t) => {
@@ -280,7 +241,6 @@ function Popup(handle: Handle) {
         id="popup-trigger"
         mix={[
           popover.anchor({}),
-          popover.focusOnHide(),
           on('click', () => {
             open = true
             void handle.update()

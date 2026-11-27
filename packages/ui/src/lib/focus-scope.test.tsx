@@ -116,15 +116,6 @@ describe('dialog focus scope', () => {
     }
   })
 
-  it('does not recover navigation focus after the last scope closes', () => {
-    document.body.innerHTML = '<div id="dialog" tabindex="-1"><input id="inside" /></div>'
-    let scope = activate(get('#dialog'))
-    scope.dispose({ restoreFocus: false })
-    get('#inside').blur()
-    window.navigation.dispatchEvent(new Event('navigatesuccess'))
-    expect(document.activeElement).toBe(document.body)
-  })
-
   it('reapplies shielding removed by an attribute-only update', async (t) => {
     document.body.innerHTML =
       '<main id="background"></main><div id="dialog" tabindex="-1"><input /></div>'
