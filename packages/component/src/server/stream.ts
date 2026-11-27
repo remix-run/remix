@@ -15,6 +15,7 @@ import {
   isAllowedHostPropName,
   normalizeAttributeName,
   sanitizeUrlAttribute,
+  serializeStyleObject,
   shouldStringifyBooleanAttribute,
 } from '../runtime/vdom.ts'
 import { DOCUMENT_NONCE_META_NAME } from '../runtime/nonce.ts'
@@ -30,7 +31,7 @@ import {
   stripFlushMarkers,
 } from '../runtime/stream-protocol.ts'
 import { composeMixedProps } from '../runtime/mixins/mixin.ts'
-import { REMIX_UI_STYLE_LAYER, serializeStyleObject } from '../style/stylesheet.ts'
+import { REMIX_UI_STYLE_LAYER } from '../style/stylesheet.ts'
 import { cssMixinType } from '../style/css-mixin.ts'
 import {
   Fragment,

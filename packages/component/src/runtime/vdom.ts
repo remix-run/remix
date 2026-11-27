@@ -887,7 +887,26 @@ type OptionalFrameRuntime = {
 
 const EMPTY_DIRECT_EVENTS: OnMixinDescriptor[] = []
 const EMPTY_CHILDREN: CommittedVNode[] = []
+const EMPTY_VNODE_INPUTS: VNodeInput[] = []
+const EMPTY_PROPS: RuntimeHostProps = {}
 const controlledSelectValues = new WeakMap<HTMLSelectElement, unknown>()
+let controlledSelectCount = 0
+const frameFramesCache = new WeakMap<FrameHandle, Handle['frames']>()
+
+function getFrameFrames(frame: FrameHandle): Handle['frames'] {
+  let cached = frameFramesCache.get(frame)
+  if (cached) return cached
+  cached = {
+    get top() {
+      return (frame.$runtime as OptionalFrameRuntime | undefined)?.topFrame ?? frame
+    },
+    get(name) {
+      return (frame.$runtime as OptionalFrameRuntime | undefined)?.registry?.get(name)
+    },
+  }
+  frameFramesCache.set(frame, cached)
+  return cached
+}
 
 let idCounter = 0
 export let portalRanges: PortalRanges | undefined
@@ -914,11 +933,29 @@ export function findContextFromAncestry(node: VNodeParent, type: ElementFunction
 }
 
 export function childrenToVNodes(children: RemixNode, hostChild = true): VNodeInput[] {
-  if (children === undefined) return []
+  if (children === undefined) return EMPTY_VNODE_INPUTS
   if (!Array.isArray(children)) return [toVNode(children, hostChild)]
   let list = normalizeChildren(children)
-  let out: VNodeInput[] = []
-  for (let i = 0; i < list.length; i++) out.push(toVNode(list[i], hostChild))
+  let len = list.length
+  if (len === 0) return EMPTY_VNODE_INPUTS
+  // When every child is a primitive (e.g. `$${amount}`), merge into one text node so hydration
+  // matches the single server text node without calling splitText().
+  if (len > 1 && isPrimitiveChild(list[0])) {
+    let allPrimitives = true
+    for (let i = 1; i < len; i++) {
+      if (!isPrimitiveChild(list[i])) {
+        allPrimitives = false
+        break
+      }
+    }
+    if (allPrimitives) {
+      let text = String(list[0])
+      for (let i = 1; i < len; i++) text += String(list[i])
+      return [{ kind: 'text', type: null, _text: text }]
+    }
+  }
+  let out: VNodeInput[] = new Array(len)
+  for (let i = 0; i < len; i++) out[i] = toVNode(list[i], hostChild)
   return out
 }
 
@@ -975,11 +1012,15 @@ export function toVNode(node: unknown, hostChild = false): VNodeInput {
 export function parseHostProps(props: RuntimeElementProps): RuntimeHostProps {
   let normalized = normalizeUnsafeHTMLProps(props)
   let mix = normalized.mix
-  invariant(
-    mix === undefined ||
-      (Array.isArray(mix) ? mix.every(isMixinDescriptor) : isMixinDescriptor(mix)),
-    'Invalid mix prop',
-  )
+  if (mix !== undefined) {
+    if (Array.isArray(mix)) {
+      for (let i = 0; i < mix.length; i++) {
+        invariant(isMixinDescriptor(mix[i]), 'Invalid mix prop')
+      }
+    } else {
+      invariant(isMixinDescriptor(mix), 'Invalid mix prop')
+    }
+  }
   return normalized
 }
 
@@ -1023,8 +1064,10 @@ function createControlledState(node: CommittedHostNode, scheduler: Scheduler): C
       checked = 'checked' in element ? props.checked : undefined
       version++
       if (select) {
-        if (value === undefined) controlledSelectValues.delete(select)
-        else {
+        if (value === undefined) {
+          if (controlledSelectValues.delete(select)) controlledSelectCount--
+        } else {
+          if (!controlledSelectValues.has(select)) controlledSelectCount++
           controlledSelectValues.set(select, value)
           setSelectValue(select, value)
         }
@@ -1036,17 +1079,29 @@ function createControlledState(node: CommittedHostNode, scheduler: Scheduler): C
         element.removeEventListener('change', listener)
       }
       version = null
-      if (select) controlledSelectValues.delete(select)
+      if (select && controlledSelectValues.delete(select)) controlledSelectCount--
     },
   }
 }
 
+function isElementNode(node: Node | null | undefined): node is Element {
+  return node != null && node.nodeType === 1
+}
+
 export function restoreAncestorSelect(parent: ParentNode): void {
-  let select = parent instanceof Element ? parent.closest('select') : null
+  if (controlledSelectCount === 0) return
+  let select = isElementNode(parent) ? parent.closest('select') : null
   if (select instanceof HTMLSelectElement) {
     let value = controlledSelectValues.get(select)
     if (value !== undefined) setSelectValue(select, value)
   }
+}
+
+function isAllDirectEvents(mix: Array<{ type: object }>): mix is OnMixinDescriptor[] {
+  for (let i = 0; i < mix.length; i++) {
+    if (!(DIRECT_EVENT in mix[i].type)) return false
+  }
+  return true
 }
 
 function resolveNodeMixProps(
@@ -1063,8 +1118,8 @@ function resolveNodeMixProps(
     let direct: OnMixinDescriptor[] | null = !mix
       ? EMPTY_DIRECT_EVENTS
       : Array.isArray(mix)
-        ? mix.every((d) => DIRECT_EVENT in d.type)
-          ? (mix as unknown as OnMixinDescriptor[])
+        ? isAllDirectEvents(mix)
+          ? mix
           : null
         : DIRECT_EVENT in (mix as { type: object }).type
           ? [mix as unknown as OnMixinDescriptor]
@@ -1209,32 +1264,41 @@ export function reconcileVNodes(
   linked._svg = svg
 
   if (!curr && cursor) {
-    let hydrationNode = nextHydrationNode(
-      cursor.current ?? null,
-      node.kind !== 'host' && node.kind !== 'frame' && (node.kind !== 'text' || node._text === ''),
-      anchor,
-    )
-    cursor.current = hydrationNode
+    let cur = cursor.current ?? null
     if (
-      vParent.kind !== 'root' &&
-      node.kind === 'component' &&
-      isEntryType(node.type) &&
-      hydrationNode?.nodeType === 8
+      cur === null ||
+      cur === anchor ||
+      (cur.nodeType !== 3 && (!isElementNode(cur) || cur.localName === 'style'))
     ) {
-      let end = (frame.$runtime as OptionalFrameRuntime | undefined)?.clientEntries?.getEnd(
-        hydrationNode as Comment,
+      let hydrationNode = nextHydrationNode(
+        cur,
+        node.kind !== 'host' &&
+          node.kind !== 'frame' &&
+          (node.kind !== 'text' || node._text === ''),
+        anchor,
       )
-      if (end) {
-        let committed = renderClientEntryBoundary(
-          node,
-          vParent,
-          svg,
+      cursor.current = hydrationNode
+      if (
+        vParent.kind !== 'root' &&
+        node.kind === 'component' &&
+        isEntryType(node.type) &&
+        hydrationNode?.nodeType === 8
+      ) {
+        let end = (frame.$runtime as OptionalFrameRuntime | undefined)?.clientEntries?.getEnd(
           hydrationNode as Comment,
-          end,
-          context,
         )
-        cursor.current = end.nextSibling
-        return committed
+        if (end) {
+          let committed = renderClientEntryBoundary(
+            node,
+            vParent,
+            svg,
+            hydrationNode as Comment,
+            end,
+            context,
+          )
+          cursor.current = end.nextSibling
+          return committed
+        }
       }
     }
   }
@@ -1289,14 +1353,7 @@ export function reconcileVNodes(
           frame,
           type: node.type,
           getContext: (type: ElementFunction) => findContextFromAncestry(vParent, type),
-          frames: {
-            get top() {
-              return (frame.$runtime as OptionalFrameRuntime | undefined)?.topFrame ?? frame
-            },
-            get(name) {
-              return (frame.$runtime as OptionalFrameRuntime | undefined)?.registry?.get(name)
-            },
-          },
+          frames: getFrameFrames(frame),
         })
       } else {
         handle = (curr as CommittedComponentNode)._handle
@@ -1332,7 +1389,7 @@ export function reconcileVNodes(
 }
 
 function isHeadTag(type: string): boolean {
-  return type.length === 4 && type.toLowerCase() === 'head'
+  return type === 'head' || (type.length === 4 && type.toLowerCase() === 'head')
 }
 
 function reconcileHost(
@@ -1370,12 +1427,14 @@ function reconcileHost(
   let childInputs = node._children
   let dom: Element | undefined
   let childCursor: HydrationCursor | undefined
+  let hydratedMatch = false
   let shouldInsertDom = false
   let bindParent: ParentNode | undefined
   let editedBeforeHydration: 'value' | 'checked' | undefined
-  let prevProps: RuntimeHostProps = curr ? curr._mp : {}
+  let prevProps: RuntimeHostProps = curr ? curr._mp : EMPTY_PROPS
   let patchTargetProps = resolved
   let dispatchInline = false
+  let tag = node.type
 
   if (curr) {
     dom = curr._dom
@@ -1388,7 +1447,7 @@ function reconcileHost(
     dom = targetHead
     let h = cursor?.current
     childCursor = cursor ? { current: h } : undefined
-    if (h instanceof Element && h.tagName.toLowerCase() === 'head') {
+    if (isElementNode(h) && h.localName === 'head') {
       if (childCursor) childCursor.current = h.firstChild
       let next = h.nextSibling
       if (h !== targetHead) {
@@ -1399,31 +1458,41 @@ function reconcileHost(
     }
   } else {
     let h = cursor?.current
-    if (h instanceof Element) {
-      let tagOf = (el: Element) => (svg ? el.tagName : el.tagName.toLowerCase())
-      let cursorTag = tagOf(h)
-      let match: Element | null = cursorTag === node.type ? h : null
+    if (isElementNode(h)) {
+      let cursorTag = svg ? h.tagName : h.localName
+      let match: Element | null = cursorTag === tag ? h : null
       if (!match) {
         let sib = nextHydrationNode(h.nextSibling, false, anchor)
-        if (sib instanceof Element && tagOf(sib) === node.type) match = sib
+        if (isElementNode(sib) && (svg ? sib.tagName : sib.localName) === tag) {
+          match = sib
+        }
       }
       if (match) {
         dom = match
-        childCursor = { current: match.firstChild }
+        hydratedMatch = true
+        if (childInputs.length > 0 && resolved.innerHTML == null) {
+          childCursor = { current: match.firstChild }
+        }
         if (cursor) cursor.current = match.nextSibling
       } else {
-        console.error('Hydration mismatch:', 'tag', cursorTag, node.type)
+        console.error('Hydration mismatch:', 'tag', cursorTag, tag)
         if (cursor) cursor.current = undefined
       }
     }
     if (!dom) {
-      dom = svg ? document.createElementNS(SVG_NS, node.type) : document.createElement(node.type)
+      dom = svg ? document.createElementNS(SVG_NS, tag) : document.createElement(tag)
       shouldInsertDom = true
       bindParent = domParent
     }
-    if (childCursor) {
-      if (dom instanceof HTMLOptionElement) patchTargetProps = { ...resolved, selected: undefined }
-      if (dom instanceof HTMLInputElement && (dom.type === 'checkbox' || dom.type === 'radio')) {
+    if (hydratedMatch && (tag === 'option' || tag === 'input' || tag === 'textarea')) {
+      if (tag === 'option' && dom instanceof HTMLOptionElement) {
+        patchTargetProps = { ...resolved, selected: undefined }
+      }
+      if (
+        tag === 'input' &&
+        dom instanceof HTMLInputElement &&
+        (dom.type === 'checkbox' || dom.type === 'radio')
+      ) {
         if (dom.checked !== dom.defaultChecked) editedBeforeHydration = 'checked'
       } else if (
         (dom instanceof HTMLInputElement || dom instanceof HTMLTextAreaElement) &&
@@ -1446,7 +1515,7 @@ function reconcileHost(
 
   let patchBeforeChildren = (!curr && !targetHead) || reclaimed
   if (patchBeforeChildren) {
-    patchHostProps(prevProps, patchTargetProps, dom)
+    patchHostProps(prevProps, patchTargetProps, dom, svg, hydratedMatch)
     if (reclaimed) syncHostControls(committed, scheduler)
   }
 
@@ -1463,7 +1532,7 @@ function reconcileHost(
     committed._children = diffChildren(null, childInputs, dom, committed, context, childCursor)
   }
 
-  if (!curr && !targetHead && !childCursor) {
+  if (!curr && !targetHead && !hydratedMatch && (tag === 'select' || tag === 'option')) {
     if (dom instanceof HTMLSelectElement) {
       let value = resolved.value ?? resolved.defaultValue
       if (value != null) {
@@ -1478,7 +1547,7 @@ function reconcileHost(
     }
   }
 
-  if (!patchBeforeChildren) patchHostProps(prevProps, patchTargetProps, dom)
+  if (!patchBeforeChildren) patchHostProps(prevProps, patchTargetProps, dom, svg, false)
   if (!reclaimed) syncHostControls(committed, scheduler)
   committed._mix?.bind(committed, context, reclaimed, bindParent)
 
@@ -1523,8 +1592,8 @@ function reconcileText(
   if (curr) {
     dom = curr._dom
     if (curr._text !== text) dom.data = text
-  } else if (h instanceof Text) {
-    dom = h
+  } else if (h && h.nodeType === 3) {
+    dom = h as Text
     if (dom.data !== text) {
       if (dom.data.startsWith(text)) {
         dom.splitText(text.length)
@@ -1532,13 +1601,14 @@ function reconcileText(
         if (text.startsWith(dom.data)) {
           let rem = text.slice(dom.length)
           let sib = dom.nextSibling
-          while (rem && sib !== anchor && sib instanceof Text) {
-            if (!rem.startsWith(sib.data)) {
-              if (sib.data.startsWith(rem)) sib.deleteData(0, rem.length)
+          while (rem && sib && sib !== anchor && sib.nodeType === 3) {
+            let sibText = sib as Text
+            if (!rem.startsWith(sibText.data)) {
+              if (sibText.data.startsWith(rem)) sibText.deleteData(0, rem.length)
               break
             }
-            rem = rem.slice(sib.length)
-            sib.remove()
+            rem = rem.slice(sibText.length)
+            sibText.remove()
             sib = dom.nextSibling
           }
         } else {
@@ -1740,7 +1810,14 @@ export function diffChildren(
     return EMPTY_CHILDREN
   }
 
-  if (next.some((child) => child.key != null)) {
+  let hasKeys = false
+  for (let i = 0; i < next.length; i++) {
+    if (next[i].key != null) {
+      hasKeys = true
+      break
+    }
+  }
+  if (hasKeys) {
     if (curr) {
       let inOrder = curr.length === next.length
       for (let i = 0; inOrder && i < next.length; i++) {
@@ -2130,6 +2207,15 @@ const NUMERIC_CSS_PROP =
   /^(?:animation(?:iterationcount)?|aspectratio|bookmarklevel|(?:borderimage|mask(?:border|boximage))(?:outset|slice|width)?|box(?:flex(?:group)?|ordinalgroup)|column(?:s|count|span)|flex(?:grow|linecount|negative|order|positive|shrink)?|floatdefer|font(?:sizeadjust|weight)|forcebrokenimageicon|grid(?:area|(?:column|row)(?:end|span|start)?)|hyphenatelimit(?:chars|lines)|initialletter|line(?:clamp|height)|mathdepth|maxlines|(?:fill|flood|stop|stroke)?opacity|order|orphans|readingorder|scale|shapeimagethreshold|tabsize|voicebalance|widows|zindex|zoom|stroke(?:dash(?:array|offset)|miterlimit|width))$/i
 
 function skipHostProp(name: string, select: HTMLSelectElement | null): boolean {
+  if (
+    name === 'children' ||
+    name === 'class' ||
+    name === 'className' ||
+    name === 'key' ||
+    name === 'mix'
+  ) {
+    return true
+  }
   return (
     RESERVED_PROPS.has(name) ||
     !isAllowedHostPropName(name) ||
@@ -2143,30 +2229,44 @@ function skipHostProp(name: string, select: HTMLSelectElement | null): boolean {
  * @param curr Previous host props.
  * @param next Next host props.
  * @param dom Element to patch.
+ * @param isSvg Whether the element is in the SVG namespace.
+ * @param hydrating Whether the element is adopting existing server-rendered DOM.
  */
-export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Element): void {
-  let isSvg = dom.namespaceURI === SVG_NS
-  let select = dom instanceof HTMLSelectElement ? dom : null
+export function patchHostProps(
+  curr: ElementProps,
+  next: ElementProps,
+  dom: Element,
+  isSvg = dom.namespaceURI === SVG_NS,
+  hydrating = false,
+): void {
+  let select = !isSvg && dom.localName === 'select' && dom instanceof HTMLSelectElement ? dom : null
   let wasMultiple = select?.multiple
-  let currClass = getMergedClassName(curr)
+  let currClass = curr === EMPTY_PROPS ? undefined : getMergedClassName(curr)
   let nextClass = getMergedClassName(next)
 
   if (currClass !== nextClass) {
-    if (nextClass) dom.setAttribute('class', nextClass)
-    else dom.removeAttribute('class')
+    if (nextClass) {
+      if (!hydrating || dom.getAttribute('class') !== nextClass) {
+        dom.setAttribute('class', nextClass)
+      }
+    } else {
+      dom.removeAttribute('class')
+    }
   }
 
-  for (let name in curr) {
-    if (skipHostProp(name, select)) continue
-    let value = next[name]
-    if (value == null) patchHostProp(dom, name, value, curr[name], isSvg, select)
+  if (curr !== EMPTY_PROPS) {
+    for (let name in curr) {
+      if (skipHostProp(name, select)) continue
+      let value = next[name]
+      if (value == null) patchHostProp(dom, name, value, curr[name], isSvg, select, false)
+    }
   }
   for (let name in next) {
     if (skipHostProp(name, select)) continue
     let value = next[name]
     if (value == null) continue
-    let prev = curr[name]
-    if (value !== prev) patchHostProp(dom, name, value, prev, isSvg, select)
+    let prev = curr === EMPTY_PROPS ? undefined : curr[name]
+    if (value !== prev) patchHostProp(dom, name, value, prev, isSvg, select, hydrating)
   }
 
   if (select && wasMultiple !== select.multiple && next.value == null) {
@@ -2197,6 +2297,47 @@ function removeHostAttribute(dom: Element, attr: string, isSvg: boolean): void {
   else dom.removeAttribute(attr)
 }
 
+function isHydrationPropertyProp(localName: string, name: string): boolean {
+  if (
+    localName.includes('-') ||
+    name === 'textContent' ||
+    name === 'innerText' ||
+    name === 'scrollTop' ||
+    name === 'scrollLeft'
+  ) {
+    return true
+  }
+  if (
+    localName === 'input' ||
+    localName === 'textarea' ||
+    localName === 'select' ||
+    localName === 'option' ||
+    localName === 'output'
+  ) {
+    return (
+      name === 'value' ||
+      name === 'checked' ||
+      name === 'indeterminate' ||
+      name === 'defaultValue' ||
+      name === 'defaultChecked' ||
+      name === 'selected' ||
+      name === 'selectedIndex' ||
+      name === 'multiple'
+    )
+  }
+  if (localName === 'audio' || localName === 'video') {
+    return (
+      name === 'volume' ||
+      name === 'muted' ||
+      name === 'playbackRate' ||
+      name === 'defaultPlaybackRate' ||
+      name === 'currentTime' ||
+      name === 'srcObject'
+    )
+  }
+  return false
+}
+
 function patchHostProp(
   dom: Element,
   name: string,
@@ -2204,8 +2345,9 @@ function patchHostProp(
   prev: unknown,
   isSvg: boolean,
   select: HTMLSelectElement | null,
+  hydrating: boolean,
 ): void {
-  let attr = normalizeAttributeName(name, isSvg)
+  let attr = name === 'style' ? 'style' : normalizeAttributeName(name, isSvg)
 
   if (value == null) {
     if (
@@ -2229,23 +2371,42 @@ function patchHostProp(
     return
   }
 
-  value = sanitizeUrlAttribute(dom.localName, attr, value)
+  if (attr === 'style') {
+    if (typeof value === 'string') {
+      if (!hydrating || dom.getAttribute('style') !== value) {
+        dom.setAttribute('style', value)
+      }
+      return
+    }
+    if (isStyleObject(value)) {
+      if (hydrating && dom.getAttribute('style') === serializeStyleObject(value)) {
+        return
+      }
+      let prevStyle = name === 'style' && isStyleObject(prev) ? prev : undefined
+      if (!prevStyle && name === 'style') dom.removeAttribute('style')
+      patchStyleObject(dom, prevStyle, value)
+      return
+    }
+  }
+
+  let localName = dom.localName
+  value = sanitizeUrlAttribute(localName, attr, value)
 
   if (select && name === 'value') {
     setSelectValue(select, value)
     return
   }
 
-  if (attr === 'style') {
-    if (typeof value === 'string') {
-      dom.setAttribute('style', value)
-      return
-    }
-    if (isStyleObject(value)) {
-      let prevStyle = name === 'style' && isStyleObject(prev) ? prev : undefined
-      if (!prevStyle && name === 'style') dom.removeAttribute('style')
-      patchStyleObject(dom, prevStyle, value)
-      return
+  if (hydrating && typeof value !== 'function' && !isHydrationPropertyProp(localName, name)) {
+    let stringify = typeof value !== 'boolean' || shouldStringifyBooleanAttribute(attr)
+    let ns = getSvgAttributeNamespace(attr, isSvg)
+    let localAttr = ns ? attr.slice(attr.indexOf(':') + 1) : attr
+    if (stringify) {
+      let current = ns ? dom.getAttributeNS(ns, localAttr) : dom.getAttribute(localAttr)
+      if (current === String(value)) return
+    } else {
+      let present = ns ? dom.hasAttributeNS(ns, localAttr) : dom.hasAttribute(localAttr)
+      if (present === value) return
     }
   }
 
@@ -2329,6 +2490,43 @@ function setInlineStyle(style: CSSStyleDeclaration, name: string, value: string)
   }
 }
 
+const camelToKebabCache = new Map<string, string>()
+
+export function camelToKebab(str: string): string {
+  if (str.startsWith('--')) return str
+  let cached = camelToKebabCache.get(str)
+  if (cached === undefined) {
+    cached = str
+      .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+      .replace(/^(webkit|moz|ms|o)-/, '-$1-')
+    if (camelToKebabCache.size >= 256) {
+      let oldest = camelToKebabCache.keys().next()
+      if (!oldest.done) camelToKebabCache.delete(oldest.value)
+    }
+    camelToKebabCache.set(str, cached)
+  }
+  return cached
+}
+
+export function serializeStyleObject(style: Record<string, unknown>): string {
+  let out = ''
+  for (let key in style) {
+    if (!Object.hasOwn(style, key)) continue
+    let value = style[key]
+    if (value == null || typeof value === 'boolean') continue
+    let cssValue =
+      typeof value === 'string'
+        ? value
+        : Array.isArray(value)
+          ? value.join(', ')
+          : normalizeCssValue(key, value)
+    if (cssValue !== undefined) {
+      out += (out ? ' ' : '') + camelToKebab(key) + ': ' + cssValue + ';'
+    }
+  }
+  return out
+}
+
 function patchStyleObject(
   dom: Element,
   curr: Record<string, unknown> | undefined,
@@ -2336,19 +2534,7 @@ function patchStyleObject(
 ): void {
   let style = 'style' in dom ? (dom as HTMLElement).style : undefined
   if (!(style instanceof CSSStyleDeclaration)) {
-    let parts: string[] = []
-    for (let [key, value] of Object.entries(next)) {
-      let cssValue = toInlineStyleValue(key, value)
-      if (cssValue !== undefined) {
-        let prop = key.startsWith('--')
-          ? key
-          : key
-              .replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
-              .replace(/^(webkit|moz|ms|o)-/, '-$1-')
-        parts.push(`${prop}: ${cssValue};`)
-      }
-    }
-    dom.setAttribute('style', parts.join(' '))
+    dom.setAttribute('style', serializeStyleObject(next))
     return
   }
 
@@ -2413,10 +2599,14 @@ export function sanitizeUrlAttribute(tagName: string, attrName: string, value: u
   if (!EXEC_URL_ATTR.has(lower) && !(lower === 'data' && tagName.toLowerCase() === 'object')) {
     return value
   }
+  let str = String(value)
+  if (str.length > 0) {
+    let c = str.charCodeAt(0)
+    // Leading non-whitespace ASCII other than 'j'/'J' cannot start with "javascript:".
+    if (c > 32 && c !== 106 && c !== 74) return value
+  }
   // Browsers ignore leading C0 controls and spaces, plus tabs and newlines within URL schemes.
-  return /^javascript:/i.test(String(value).replace(/^[\0- ]+|[\r\n\t]/g, ''))
-    ? BLOCKED_JS_URL
-    : value
+  return /^javascript:/i.test(str.replace(/^[\0- ]+|[\r\n\t]/g, '')) ? BLOCKED_JS_URL : value
 }
 
 const HTML_RENAMES: Record<string, string> = {

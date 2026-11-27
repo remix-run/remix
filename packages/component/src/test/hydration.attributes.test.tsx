@@ -351,5 +351,127 @@ describe('hydration', () => {
       expect(existingFilter.getAttribute('filter-units')).toBe(null)
       expect(existingFilter.filterUnits.baseVal).toBe(1)
     })
+
+    it('skips redundant DOM attribute and style mutations when hydrated props match SSR output', async (t) => {
+      let tree = (
+        <div
+          id="card"
+          class="metric-card"
+          tabIndex={0}
+          data-kind="summary"
+          aria-expanded={false}
+          style={{ backgroundColor: '#fff', padding: '12px', marginTop: 8 }}
+        >
+          <a href="/details" title="View details">
+            Open
+          </a>
+          <button disabled>Locked</button>
+        </div>
+      )
+
+      container.innerHTML = await renderToString(tree)
+      let mutations: MutationRecord[] = []
+      let observer = new MutationObserver((records) => mutations.push(...records))
+      observer.observe(container, {
+        attributes: true,
+        childList: true,
+        characterData: true,
+        subtree: true,
+      })
+      t.after(() => observer.disconnect())
+
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(tree)
+      root.flush()
+      mutations.push(...observer.takeRecords())
+
+      expect(mutations.length).toBe(0)
+    })
+
+    it('applies non-reflected input indeterminate property and patches mismatched boolean/style props during hydration', async (t) => {
+      container.innerHTML = await renderToString(
+        <div>
+          <input type="checkbox" indeterminate />
+          <button disabled>Action</button>
+          <span style="color: red">Label</span>
+        </div>,
+      )
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(
+        <div>
+          <input type="checkbox" indeterminate />
+          <button disabled={false}>Action</button>
+          <span style="color: green">Label</span>
+        </div>,
+      )
+      root.flush()
+
+      let input = container.querySelector('input')
+      let button = container.querySelector('button')
+      let span = container.querySelector('span')
+      invariant(input && button && span)
+      expect(input.indeterminate).toBe(true)
+      expect(button.disabled).toBe(false)
+      expect(button.hasAttribute('disabled')).toBe(false)
+      expect(span.getAttribute('style')).toBe('color: green')
+    })
+
+    it('hydrates namespaced SVG attributes without redundant DOM writes', async (t) => {
+      let tree = (
+        <svg>
+          <use href="#icon" xlinkTitle="Star" />
+        </svg>
+      )
+      container.innerHTML = await renderToString(tree)
+
+      let mutations: MutationRecord[] = []
+      let observer = new MutationObserver((records) => mutations.push(...records))
+      observer.observe(container, { attributes: true, subtree: true })
+      t.after(() => observer.disconnect())
+
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(tree)
+      root.flush()
+      mutations.push(...observer.takeRecords())
+
+      expect(mutations.length).toBe(0)
+
+      // Mismatched namespaced attribute is still patched during hydration
+      let container2 = document.createElement('div')
+      container2.innerHTML = await renderToString(
+        <svg>
+          <use href="#icon" xlinkTitle="Server" />
+        </svg>,
+      )
+      let root2 = createRoot(container2)
+      t.after(() => root2.dispose())
+      root2.render(
+        <svg>
+          <use href="#icon" xlinkTitle="Client" />
+        </svg>,
+      )
+      root2.flush()
+      let use = container2.querySelector('use')
+      invariant(use)
+      expect(use.getAttributeNS('http://www.w3.org/1999/xlink', 'title')).toBe('Client')
+    })
+
+    it('applies media element DOM-only properties during hydration', async (t) => {
+      let node = <video playbackRate={2} volume={0.5} />
+      container.innerHTML = await renderToString(node)
+
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(node)
+      root.flush()
+
+      let video = container.querySelector('video')
+      invariant(video instanceof HTMLVideoElement)
+      expect(video.playbackRate).toBe(2)
+      expect(video.volume).toBe(0.5)
+    })
   })
 })

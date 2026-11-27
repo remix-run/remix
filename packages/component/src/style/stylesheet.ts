@@ -1,5 +1,3 @@
-import { normalizeCssValue } from '../runtime/vdom.ts'
-
 // # Style ownership model
 //
 // Rules are content-addressed: a class name is a hash of the style object that
@@ -201,43 +199,4 @@ export type AllStyleProperties = {
 }
 export interface StyleProps extends AllStyleProperties, DOMStyleProperties {
   cssText?: string | null
-}
-
-const camelToKebabCache = new Map<string, string>()
-
-export function camelToKebab(str: string): string {
-  if (str.startsWith('--')) return str
-  let cached = camelToKebabCache.get(str)
-  if (cached === undefined) {
-    cached = str
-      .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
-      .replace(/^(webkit|moz|ms|o)-/, '-$1-')
-    if (camelToKebabCache.size >= 256) {
-      let oldest = camelToKebabCache.keys().next()
-      if (!oldest.done) camelToKebabCache.delete(oldest.value)
-    }
-    camelToKebabCache.set(str, cached)
-  }
-  return cached
-}
-
-export function serializeStyleObject(style: Record<string, unknown>): string {
-  let out = ''
-  for (let key in style) {
-    if (!Object.hasOwn(style, key)) continue
-    let value = style[key]
-    if (value == null || typeof value === 'boolean') continue
-    let cssValue: string | undefined
-    if (typeof value === 'string') {
-      cssValue = value
-    } else if (Array.isArray(value)) {
-      cssValue = value.join(', ')
-    } else {
-      cssValue = normalizeCssValue(key, value)
-    }
-    if (cssValue !== undefined) {
-      out += (out ? ' ' : '') + camelToKebab(key) + ': ' + cssValue + ';'
-    }
-  }
-  return out
 }

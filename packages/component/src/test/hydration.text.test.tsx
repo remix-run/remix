@@ -245,5 +245,48 @@ describe('hydration', () => {
       expect(existingPre.lastChild).toBe(existingSpan)
       expect(existingPre.textContent).toBe(firstText + secondText + 'after')
     })
+
+    it('hydrates all-primitive interpolated text without splitting the server text node', async (t) => {
+      let amount = '10.50'
+      let view = () => <td>${amount}</td>
+      container.innerHTML = `<table><tbody><tr>${await renderToString(view())}</tr></tbody></table>`
+
+      let tr = container.querySelector('tr')
+      let td = container.querySelector('td')
+      invariant(tr && td)
+      let originalText = td.firstChild
+      invariant(originalText instanceof Text)
+
+      let mutations: MutationRecord[] = []
+      let observer = new MutationObserver((records) => mutations.push(...records))
+      observer.observe(tr, { childList: true, characterData: true, subtree: true })
+      t.after(() => observer.disconnect())
+
+      let root = createRoot(tr)
+      t.after(() => root.dispose())
+      root.render(view())
+      root.flush()
+      mutations.push(...observer.takeRecords())
+
+      expect(td.childNodes.length).toBe(1)
+      expect(td.firstChild).toBe(originalText)
+      expect(mutations.length).toBe(0)
+
+      amount = '21.00'
+      root.render(view())
+      root.flush()
+      expect(td.textContent).toBe('$21.00')
+      expect(td.firstChild).toBe(originalText)
+
+      // Transitioning from all-primitive children to mixed children reconciles cleanly
+      root.render(
+        <td>
+          {'$'}
+          <strong>21.00</strong>
+        </td>,
+      )
+      root.flush()
+      expect(td.innerHTML).toBe('$<strong>21.00</strong>')
+    })
   })
 })
