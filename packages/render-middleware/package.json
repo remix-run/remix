@@ -46,7 +46,6 @@
     "@remix-run/assets": "workspace:^",
     "@remix-run/component": "workspace:^",
     "@remix-run/fetch-router": "workspace:^",
-    "@remix-run/response": "workspace:^",
     "@remix-run/csp-middleware": "workspace:^"
   },
   "scripts": {

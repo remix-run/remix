@@ -480,27 +480,29 @@ export function renderToStream(
   let root: SsrBuffer = { html: '', segments: null }
   let pendingClientEntries: Promise<void> | undefined
 
+  function finalizeShellBytes(): Uint8Array {
+    validateClientEntriesForHydration(context)
+    if (context.managedImportMaps && context.managedImportMaps.length > 0) {
+      finalizeManagedImportMap(context)
+    }
+    let finalHtml = finalizeHtml(root, context)
+    return encodeHtml(appendFlushMarker(finalHtml, context.flushKind))
+  }
+
   try {
     buildSegment(node, context, root)
 
     let hasBlockingFrames =
       context.blockingFrames !== undefined && context.blockingFrames.length > 0
     let hasPendingFrames = context.pendingFrames !== undefined && context.pendingFrames.length > 0
-    let hasBlockingTails =
-      context.blockingFrameTails !== undefined && context.blockingFrameTails.length > 0
 
-    if (!hasBlockingFrames && !hasPendingFrames && !hasBlockingTails) {
+    if (!hasBlockingFrames && !hasPendingFrames) {
       pendingClientEntries = resolveClientEntries(context, options?.resolveClientEntry)
       if (pendingClientEntries === undefined) {
-        validateClientEntriesForHydration(context)
-        if (context.managedImportMaps && context.managedImportMaps.length > 0) {
-          finalizeManagedImportMap(context)
-        }
-        let finalHtml = finalizeHtml(root, context)
+        let bytes = finalizeShellBytes()
         if (signal?.aborted) {
           return emptyReadableStream()
         }
-        let bytes = encodeHtml(appendFlushMarker(finalHtml, context.flushKind))
         return new ReadableStream({
           start(controller) {
             controller.enqueue(bytes)
@@ -508,6 +510,8 @@ export function renderToStream(
           },
         })
       }
+      // Keep the promise observed in case cancellation closes the stream before awaiting it.
+      pendingClientEntries.catch(() => {})
     }
   } catch (error) {
     if (signal?.aborted && error === signal.reason) {
@@ -552,17 +556,11 @@ export function renderToStream(
         if (pendingClientEntries !== undefined) {
           await pendingClientEntries
           if (closeIfCancelled(controller, context)) return
-          validateClientEntriesForHydration(context)
         } else if (context.unresolvedHydrationData && context.unresolvedHydrationData.size > 0) {
           await resolveClientEntries(context, options?.resolveClientEntry)
           if (closeIfCancelled(controller, context)) return
-          validateClientEntriesForHydration(context)
         }
-        if (context.managedImportMaps && context.managedImportMaps.length > 0) {
-          finalizeManagedImportMap(context)
-        }
-        let finalHtml = finalizeHtml(root, context)
-        let bytes = encodeHtml(appendFlushMarker(finalHtml, context.flushKind))
+        let bytes = finalizeShellBytes()
         if (closeIfCancelled(controller, context)) return
         controller.enqueue(bytes)
 
@@ -1662,28 +1660,6 @@ function isPromiseLike<value>(value: unknown): value is PromiseLike<value> {
   )
 }
 
-function recordResolvedClientEntry(
-  context: RenderContext,
-  resolvedEntries: Map<EntryComponent, ResolvedClientEntry>,
-  hydrationData: Map<string, HydrationData>,
-  hydrationId: string,
-  entryId: string,
-  component: EntryComponent,
-  propsJson: string,
-  resolvedEntry: ResolvedClientEntry,
-): void {
-  if (!resolvedEntries.has(component)) {
-    validateResolvedClientEntry(entryId, resolvedEntry)
-    resolvedEntries.set(component, resolvedEntry)
-    collectResolvedClientEntryResources(getClientEntryHeadResources(context), resolvedEntry)
-  }
-  hydrationData.set(hydrationId, {
-    exportName: resolvedEntry.exportName,
-    moduleUrl: resolvedEntry.href,
-    propsJson,
-  })
-}
-
 function resolveClientEntries(
   context: RenderContext,
   resolveClientEntry?: (
@@ -1697,6 +1673,25 @@ function resolveClientEntries(
   let resolvedEntries = new Map<EntryComponent, ResolvedClientEntry>()
   let hydrationData = (context.hydrationData ??= new Map())
   let entries = Array.from(unresolved.entries())
+
+  function record(
+    hydrationId: string,
+    entryId: string,
+    component: EntryComponent,
+    propsJson: string,
+    resolvedEntry: ResolvedClientEntry,
+  ): void {
+    if (!resolvedEntries.has(component)) {
+      validateResolvedClientEntry(entryId, resolvedEntry)
+      resolvedEntries.set(component, resolvedEntry)
+      collectResolvedClientEntryResources(getClientEntryHeadResources(context), resolvedEntry)
+    }
+    hydrationData.set(hydrationId, {
+      exportName: resolvedEntry.exportName,
+      moduleUrl: resolvedEntry.href,
+      propsJson,
+    })
+  }
 
   async function finishAsync(
     startIndex: number,
@@ -1713,53 +1708,24 @@ function resolveClientEntries(
               ? await Promise.resolve(resolveClientEntry(entryId, component))
               : resolveDefaultClientEntry(entryId, component)
       }
-      recordResolvedClientEntry(
-        context,
-        resolvedEntries,
-        hydrationData,
-        hydrationId,
-        entryId,
-        component,
-        propsJson,
-        resolvedEntry,
-      )
+      record(hydrationId, entryId, component, propsJson, resolvedEntry)
     }
     unresolved!.clear()
   }
 
   for (let i = 0; i < entries.length; i++) {
     let [hydrationId, { entryId, component, propsJson }] = entries[i]!
-    let existing = resolvedEntries.get(component)
-    if (existing) {
-      recordResolvedClientEntry(
-        context,
-        resolvedEntries,
-        hydrationData,
-        hydrationId,
-        entryId,
-        component,
-        propsJson,
-        existing,
-      )
-      continue
+    let resolvedEntry = resolvedEntries.get(component)
+    if (!resolvedEntry) {
+      let result = resolveClientEntry
+        ? resolveClientEntry(entryId, component)
+        : resolveDefaultClientEntry(entryId, component)
+      if (isPromiseLike(result)) {
+        return finishAsync(i, result)
+      }
+      resolvedEntry = result
     }
-
-    let result = resolveClientEntry
-      ? resolveClientEntry(entryId, component)
-      : resolveDefaultClientEntry(entryId, component)
-    if (isPromiseLike(result)) {
-      return finishAsync(i, result)
-    }
-    recordResolvedClientEntry(
-      context,
-      resolvedEntries,
-      hydrationData,
-      hydrationId,
-      entryId,
-      component,
-      propsJson,
-      result,
-    )
+    record(hydrationId, entryId, component, propsJson, resolvedEntry)
   }
 
   unresolved.clear()

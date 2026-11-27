@@ -950,25 +950,21 @@ async function writeResponseBody(
   // Don't call `reader.releaseLock()` after consuming the body: `sendResponse` is the terminal
   // consumer, and Node's WHATWG stream implementation allocates a `TypeError` with a stack trace
   // on every `releaseLock()` call.
-  let ended = false
   try {
-    let isFirstChunk = true
+    if (lifecycle?.closed ?? responseClosed) return
+    let result = await reader.read()
+    if (result.done) {
+      if (!(lifecycle?.closed ?? responseClosed)) res.end()
+      return
+    }
+
+    if (contentLength !== undefined && result.value.byteLength === contentLength) {
+      if (!(lifecycle?.closed ?? responseClosed)) res.end(result.value)
+      void reader.cancel().catch(() => undefined)
+      return
+    }
+
     while (!(lifecycle?.closed ?? responseClosed)) {
-      let result = await reader.read()
-      if (result.done) break
-
-      if (
-        isFirstChunk &&
-        contentLength !== undefined &&
-        result.value.byteLength === contentLength
-      ) {
-        ended = true
-        res.end(result.value)
-        void reader.cancel().catch(() => undefined)
-        break
-      }
-      isFirstChunk = false
-
       // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
       if (res.write(result.value) === false) {
         await waitForDrainOrClose(res)
@@ -977,6 +973,9 @@ async function writeResponseBody(
           return
         }
       }
+
+      result = await reader.read()
+      if (result.done) break
     }
   } finally {
     if (lifecycle !== undefined) {
@@ -986,7 +985,7 @@ async function writeResponseBody(
     }
   }
 
-  if (ended || (lifecycle?.closed ?? responseClosed)) return
+  if (lifecycle?.closed ?? responseClosed) return
 
   res.end()
 }

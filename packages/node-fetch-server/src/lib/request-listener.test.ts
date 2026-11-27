@@ -1216,7 +1216,7 @@ describe('createRequestListener', () => {
     assert.equal(Buffer.from(endedChunk!).toString(), 'hello world')
   })
 
-  it('writes all chunks for multi-chunk responses with Content-Length and cancels after single-chunk end', async () => {
+  it('cancels the body reader after ending a single-chunk response with Content-Length', async () => {
     let encoder = new TextEncoder()
     let cancelled = false
     let singleChunkStream = new ReadableStream<Uint8Array>({
@@ -1228,17 +1228,17 @@ describe('createRequestListener', () => {
       },
     })
 
-    let singleListener = createRequestListener(
+    let listener = createRequestListener(
       () =>
         new Response(singleChunkStream, {
           headers: { 'Content-Type': 'text/plain', 'Content-Length': '5' },
         }),
     )
-    let req1 = createMockRequest()
+    let req = createMockRequest()
     let endedChunk: Uint8Array | undefined
     await new Promise<void>((resolve) => {
       let res = Object.assign(new stream.Writable(), {
-        req: req1,
+        req,
         writeHead() {},
         write() {
           return true
@@ -1248,12 +1248,15 @@ describe('createRequestListener', () => {
           resolve()
         },
       }) as unknown as http.ServerResponse
-      singleListener(req1, res)
+      listener(req, res)
     })
     assert.equal(Buffer.from(endedChunk!).toString(), 'hello')
     assert.equal(cancelled, true)
+  })
 
-    let multiListener = createRequestListener(
+  it('writes all chunks when the first chunk is shorter than Content-Length', async () => {
+    let encoder = new TextEncoder()
+    let listener = createRequestListener(
       () =>
         new Response(
           new ReadableStream<Uint8Array>({
@@ -1268,11 +1271,11 @@ describe('createRequestListener', () => {
           },
         ),
     )
-    let req2 = createMockRequest()
+    let req = createMockRequest()
     let chunks: Uint8Array[] = []
     await new Promise<void>((resolve) => {
       let res = Object.assign(new stream.Writable(), {
-        req: req2,
+        req,
         writeHead() {},
         write(chunk: Uint8Array) {
           chunks.push(chunk)
@@ -1282,7 +1285,7 @@ describe('createRequestListener', () => {
           resolve()
         },
       }) as unknown as http.ServerResponse
-      multiListener(req2, res)
+      listener(req, res)
     })
     assert.equal(Buffer.concat(chunks).toString(), 'hello')
   })

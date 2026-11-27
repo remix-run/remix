@@ -113,7 +113,7 @@ export function render(
       }
 
       renderedRequests.add(request)
-      pendingShells.set(stream, shell)
+      if (response.body != null) pendingShells.set(response.body, shell)
       return response
     }
   })
@@ -162,7 +162,7 @@ function trackShell(source: ReadableStream<Uint8Array>): {
       firstRead = undefined
       let result = await read
       if (result.done) {
-        if (isFirst) controller.enqueue(DOCTYPE_BYTES)
+        if (isFirst) controller.enqueue(DOCTYPE_BYTES.slice())
         controller.close()
         return
       }
@@ -176,6 +176,7 @@ function trackShell(source: ReadableStream<Uint8Array>): {
       }
     },
     cancel(reason) {
+      // Absorb rejections when inner middleware cancels an already-errored shell body to replace it.
       return reader.cancel(reason).catch(() => {})
     },
   })

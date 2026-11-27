@@ -2,8 +2,7 @@ import { isSafeHtml, type SafeHtml } from '@remix-run/html-template'
 
 const DOCTYPE = '<!DOCTYPE html>'
 const DOCTYPE_SNIFF_BYTES = 64
-const textEncoder = new TextEncoder()
-const DOCTYPE_BYTES = textEncoder.encode(DOCTYPE)
+const DOCTYPE_BYTES = new TextEncoder().encode(DOCTYPE)
 const DEFAULT_HTML_HEADERS = { 'Content-Type': 'text/html; charset=UTF-8' }
 
 type HtmlBody = string | SafeHtml | Blob | BufferSource | ReadableStream<Uint8Array>
@@ -16,7 +15,6 @@ type HtmlBody = string | SafeHtml | Blob | BufferSource | ReadableStream<Uint8Ar
  * @param init The `ResponseInit` object for the response
  * @returns A `Response` object with a HTML body and the appropriate `Content-Type` header
  */
-
 export function createHtmlResponse(body: HtmlBody, init?: ResponseInit): Response {
   let payload: BodyInit = ensureDoctype(body)
 
@@ -85,8 +83,8 @@ function prependDoctypeToStream(stream: ReadableStream<Uint8Array>): ReadableStr
         let firstChunk = await reader.read()
 
         if (firstChunk.done) {
-          // Empty stream, just add DOCTYPE
-          controller.enqueue(DOCTYPE_BYTES)
+          // Empty stream, just add DOCTYPE (copy so consumers cannot mutate shared bytes)
+          controller.enqueue(DOCTYPE_BYTES.slice())
           controller.close()
           return
         }

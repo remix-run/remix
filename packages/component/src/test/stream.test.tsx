@@ -288,14 +288,14 @@ describe('stream', () => {
       expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
     })
 
-    it('skips abort listener registration for sync client entries and resolves async entries once', async (t) => {
+    it('skips abort listener registration for synchronous client entries and emits hydration data', async (t) => {
       let controller = new AbortController()
       let add = t.mock.method(controller.signal, 'addEventListener')
       let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
         return () => <button type="button">0</button>
       })
 
-      let syncHtml = await drain(
+      let html = await drain(
         renderToStream(<Counter />, {
           signal: controller.signal,
           resolveClientEntry(entryId) {
@@ -303,29 +303,58 @@ describe('stream', () => {
           },
         }),
       )
-      expect(syncHtml).toContain('<button type="button">0</button>')
+      expect(html).toContain('<button type="button">0</button>')
+      let data = parseRmxDataFromHtml(html)
+      let [, entry] = getSingleEntry(data.h)
+      expect(entry.moduleUrl).toBe('/js/counter.js')
+      expect(entry.exportName).toBe('Counter')
       expect(add).toHaveBeenCalledTimes(0)
+    })
 
-      let calls = 0
-      let Widget = clientEntry('/js/widget.js#Widget', function Widget() {
-        return () => <span>widget</span>
+    it('resolves mixed sync and async client entries once per component and handles sync throws', async () => {
+      let calls = new Map<string, number>()
+      let SyncComp = clientEntry('/js/sync.js#SyncComp', function SyncComp() {
+        return () => <span>sync</span>
       })
-      let asyncHtml = await drain(
+      let AsyncComp = clientEntry('/js/async.js#AsyncComp', function AsyncComp() {
+        return () => <span>async</span>
+      })
+
+      let html = await drain(
         renderToStream(
           <div>
-            <Widget />
-            <Widget />
+            <SyncComp />
+            <AsyncComp />
+            <AsyncComp />
           </div>,
           {
-            async resolveClientEntry() {
-              calls++
-              return { href: '/assets/widget.js', exportName: 'Widget' }
+            resolveClientEntry(entryId) {
+              calls.set(entryId, (calls.get(entryId) ?? 0) + 1)
+              if (entryId.includes('sync')) {
+                return { href: '/assets/sync.js', exportName: 'SyncComp' }
+              }
+              return Promise.resolve({ href: '/assets/async.js', exportName: 'AsyncComp' })
             },
           },
         ),
       )
-      expect(calls).toBe(1)
-      expect(asyncHtml).toContain('<span>widget</span>')
+      expect(calls.get('/js/sync.js#SyncComp')).toBe(1)
+      expect(calls.get('/js/async.js#AsyncComp')).toBe(1)
+      expect(html).toContain('<span>sync</span>')
+      expect(html).toContain('<span>async</span>')
+
+      let errors: unknown[] = []
+      await expect(
+        drain(
+          renderToStream(<SyncComp />, {
+            onError: (error) => errors.push(error),
+            resolveClientEntry() {
+              throw new Error('Sync entry failed')
+            },
+          }),
+        ),
+      ).rejects.toThrow('Sync entry failed')
+      expect(errors.length).toBe(1)
     })
 
     it('removes the request abort listener when the consumer cancels pending rendering', async (t) => {
