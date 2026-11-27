@@ -104,14 +104,14 @@ export type Props<T extends keyof JSX.IntrinsicElements> = NormalizeMixProp<
  */
 export function jsx(type: ElementType, props: ElementProps, key?: any): RemixElement {
   // Assigning the symbol after the literal lets V8 use its fast boilerplate path instead of DefineKeyedOwnProperty.
-  let el = {
-    $rmx: true as const,
+  let el: Omit<RemixElement, typeof REMIX_ELEMENT> & { [REMIX_ELEMENT]?: true } = {
+    $rmx: true,
     key,
     props: normalizeElementProps(props),
     type,
-  } as RemixElement
+  }
   el[REMIX_ELEMENT] = true
-  return el
+  return el as RemixElement
 }
 
 export { jsx as jsxDEV, jsx as jsxs }

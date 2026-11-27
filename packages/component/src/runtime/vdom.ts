@@ -1266,12 +1266,10 @@ export function reconcileVNodes(
   if (!curr && cursor) {
     let cur = cursor.current ?? null
     if (
-      cur !== null &&
-      cur !== anchor &&
-      (cur.nodeType === 3 || (isElementNode(cur) && cur.localName !== 'style'))
+      cur === null ||
+      cur === anchor ||
+      (cur.nodeType !== 3 && (!isElementNode(cur) || cur.localName === 'style'))
     ) {
-      // Fast path: cursor already points at an ordinary element or text node.
-    } else {
       let hydrationNode = nextHydrationNode(
         cur,
         node.kind !== 'host' &&
@@ -1515,10 +1513,9 @@ function reconcileHost(
   committed._children = EMPTY_CHILDREN
   if (curr) committed._ctrl = curr._ctrl
 
-  let hydrating = hydratedMatch
   let patchBeforeChildren = (!curr && !targetHead) || reclaimed
   if (patchBeforeChildren) {
-    patchHostProps(prevProps, patchTargetProps, dom, svg, hydrating)
+    patchHostProps(prevProps, patchTargetProps, dom, svg, hydratedMatch)
     if (reclaimed) syncHostControls(committed, scheduler)
   }
 
@@ -2252,7 +2249,7 @@ export function patchHostProps(
       if (!hydrating || dom.getAttribute('class') !== nextClass) {
         dom.setAttribute('class', nextClass)
       }
-    } else if (!hydrating) {
+    } else {
       dom.removeAttribute('class')
     }
   }
@@ -2301,12 +2298,21 @@ function removeHostAttribute(dom: Element, attr: string, isSvg: boolean): void {
 }
 
 function isHydrationPropertyProp(localName: string, name: string): boolean {
-  if (localName.includes('-') || name === 'textContent' || name === 'innerText') return true
+  if (
+    localName.includes('-') ||
+    name === 'textContent' ||
+    name === 'innerText' ||
+    name === 'scrollTop' ||
+    name === 'scrollLeft'
+  ) {
+    return true
+  }
   if (
     localName === 'input' ||
     localName === 'textarea' ||
     localName === 'select' ||
-    localName === 'option'
+    localName === 'option' ||
+    localName === 'output'
   ) {
     return (
       name === 'value' ||
@@ -2317,6 +2323,16 @@ function isHydrationPropertyProp(localName: string, name: string): boolean {
       name === 'selected' ||
       name === 'selectedIndex' ||
       name === 'multiple'
+    )
+  }
+  if (localName === 'audio' || localName === 'video') {
+    return (
+      name === 'volume' ||
+      name === 'muted' ||
+      name === 'playbackRate' ||
+      name === 'defaultPlaybackRate' ||
+      name === 'currentTime' ||
+      name === 'srcObject'
     )
   }
   return false

@@ -438,6 +438,40 @@ describe('hydration', () => {
       mutations.push(...observer.takeRecords())
 
       expect(mutations.length).toBe(0)
+
+      // Mismatched namespaced attribute is still patched during hydration
+      let container2 = document.createElement('div')
+      container2.innerHTML = await renderToString(
+        <svg>
+          <use href="#icon" xlinkTitle="Server" />
+        </svg>,
+      )
+      let root2 = createRoot(container2)
+      t.after(() => root2.dispose())
+      root2.render(
+        <svg>
+          <use href="#icon" xlinkTitle="Client" />
+        </svg>,
+      )
+      root2.flush()
+      let use = container2.querySelector('use')
+      invariant(use)
+      expect(use.getAttributeNS('http://www.w3.org/1999/xlink', 'title')).toBe('Client')
+    })
+
+    it('applies media element DOM-only properties during hydration', async (t) => {
+      let node = <video playbackRate={2} volume={0.5} />
+      container.innerHTML = await renderToString(node)
+
+      let root = createRoot(container)
+      t.after(() => root.dispose())
+      root.render(node)
+      root.flush()
+
+      let video = container.querySelector('video')
+      invariant(video instanceof HTMLVideoElement)
+      expect(video.playbackRate).toBe(2)
+      expect(video.volume).toBe(0.5)
     })
   })
 })
