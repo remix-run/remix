@@ -450,30 +450,78 @@ function createRenderContext(
 }
 
 /**
- * Renders a node tree to a streaming HTML response body.
+ * Renders a node tree to an HTTP response body, returning an HTML string directly when the tree
+ * completes synchronously without streaming frames or async client entries, and returning a byte
+ * stream otherwise.
+ *
+ * Output includes Remix stream flush markers so the result works interchangeably with
+ * {@link renderToStream} for document and frame responses.
  *
  * @param node Node tree to render.
  * @param options Stream rendering options.
- * @returns A readable byte stream of HTML.
+ * @returns A complete HTML string or a readable byte stream of HTML.
  */
-export function renderToStream(
+export function renderToBody(
   node: RemixNode,
   options?: RenderToStreamOptions,
-): ReadableStream<Uint8Array> {
+): string | ReadableStream<Uint8Array> {
   let onError = options?.onError ?? ((error) => console.error(error))
+  let signal = options?.signal
+  if (signal?.aborted) {
+    return emptyReadableStream()
+  }
+
   let currentFrameSrc = normalizeFrameSrc(options?.frameSrc ?? options?.topFrameSrc)
   let topFrameSrc = normalizeFrameSrc(options?.topFrameSrc ?? currentFrameSrc)
-  let renderAbortController = new AbortController()
-  let signal = options?.signal
-
   let context = createRenderContext(
     currentFrameSrc,
     topFrameSrc,
     options?.resolveFrame ?? defaultResolveFrame,
     options?.nonce,
-    renderAbortController.signal,
+    ssrSignal,
     onError,
   )
+
+  let root: SsrBuffer = { html: '', segments: null }
+  let pendingClientEntries: Promise<void> | undefined
+
+  try {
+    buildSegment(node, context, root)
+
+    let hasBlockingFrames =
+      context.blockingFrames !== undefined && context.blockingFrames.length > 0
+    let hasPendingFrames = context.pendingFrames !== undefined && context.pendingFrames.length > 0
+    let hasBlockingTails =
+      context.blockingFrameTails !== undefined && context.blockingFrameTails.length > 0
+
+    if (!hasBlockingFrames && !hasPendingFrames && !hasBlockingTails) {
+      pendingClientEntries = resolveClientEntries(context, options?.resolveClientEntry)
+      if (pendingClientEntries === undefined) {
+        validateClientEntriesForHydration(context)
+        if (context.managedImportMaps && context.managedImportMaps.length > 0) {
+          finalizeManagedImportMap(context)
+        }
+        let finalHtml = finalizeHtml(root, context)
+        if (signal?.aborted) {
+          return emptyReadableStream()
+        }
+        return appendFlushMarker(finalHtml, context.flushKind)
+      }
+    }
+  } catch (error) {
+    if (signal?.aborted && error === signal.reason) {
+      return emptyReadableStream()
+    }
+    onError(error)
+    return new ReadableStream({
+      start(controller) {
+        controller.error(error)
+      },
+    })
+  }
+
+  let renderAbortController = new AbortController()
+  context.signal = renderAbortController.signal
 
   function cancel(reason: unknown): void {
     signal?.removeEventListener('abort', onAbort)
@@ -495,14 +543,16 @@ export function renderToStream(
     async start(controller) {
       try {
         if (closeIfCancelled(controller, context)) return
-        let root: SsrBuffer = { html: '', segments: null }
-        buildSegment(node, context, root)
         // Await in document order so the first rejecting frame determines the error.
         if (context.blockingFrames) {
           for (let frame of context.blockingFrames) await frame
           if (closeIfCancelled(controller, context)) return
         }
-        if (context.unresolvedHydrationData && context.unresolvedHydrationData.size > 0) {
+        if (pendingClientEntries !== undefined) {
+          await pendingClientEntries
+          if (closeIfCancelled(controller, context)) return
+          validateClientEntriesForHydration(context)
+        } else if (context.unresolvedHydrationData && context.unresolvedHydrationData.size > 0) {
           await resolveClientEntries(context, options?.resolveClientEntry)
           if (closeIfCancelled(controller, context)) return
           validateClientEntriesForHydration(context)
@@ -543,6 +593,28 @@ export function renderToStream(
     },
     cancel(reason) {
       cancel(reason)
+    },
+  })
+}
+
+/**
+ * Renders a node tree to a streaming HTML response body.
+ *
+ * @param node Node tree to render.
+ * @param options Stream rendering options.
+ * @returns A readable byte stream of HTML.
+ */
+export function renderToStream(
+  node: RemixNode,
+  options?: RenderToStreamOptions,
+): ReadableStream<Uint8Array> {
+  let body = renderToBody(node, options)
+  if (typeof body !== 'string') return body
+
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(encodeHtml(body))
+      controller.close()
     },
   })
 }
@@ -1603,38 +1675,116 @@ function resolveDefaultClientEntry(
   )
 }
 
-async function resolveClientEntries(
+function isPromiseLike<value>(value: unknown): value is PromiseLike<value> {
+  return (
+    value !== null &&
+    (typeof value === 'object' || typeof value === 'function') &&
+    typeof (value as { then?: unknown }).then === 'function'
+  )
+}
+
+function recordResolvedClientEntry(
+  context: RenderContext,
+  resolvedEntries: Map<EntryComponent, ResolvedClientEntry>,
+  hydrationData: Map<string, HydrationData>,
+  hydrationId: string,
+  entryId: string,
+  component: EntryComponent,
+  propsJson: string,
+  resolvedEntry: ResolvedClientEntry,
+): void {
+  if (!resolvedEntries.has(component)) {
+    validateResolvedClientEntry(entryId, resolvedEntry)
+    resolvedEntries.set(component, resolvedEntry)
+    collectResolvedClientEntryResources(getClientEntryHeadResources(context), resolvedEntry)
+  }
+  hydrationData.set(hydrationId, {
+    exportName: resolvedEntry.exportName,
+    moduleUrl: resolvedEntry.href,
+    propsJson,
+  })
+}
+
+function resolveClientEntries(
   context: RenderContext,
   resolveClientEntry?: (
     entryId: string,
     component: EntryComponent,
   ) => Promise<ResolvedClientEntry> | ResolvedClientEntry,
-): Promise<void> {
-  if (!context.unresolvedHydrationData || context.unresolvedHydrationData.size === 0) return
+): Promise<void> | undefined {
+  let unresolved = context.unresolvedHydrationData
+  if (!unresolved || unresolved.size === 0) return undefined
 
   let resolvedEntries = new Map<EntryComponent, ResolvedClientEntry>()
   let hydrationData = (context.hydrationData ??= new Map())
+  let entries = Array.from(unresolved.entries())
 
-  for (let [hydrationId, unresolvedHydrationData] of context.unresolvedHydrationData) {
-    let { entryId, component, propsJson } = unresolvedHydrationData
-    let resolvedEntry = resolvedEntries.get(component)
-    if (!resolvedEntry) {
-      resolvedEntry = resolveClientEntry
-        ? await Promise.resolve(resolveClientEntry(entryId, component))
-        : resolveDefaultClientEntry(entryId, component)
-      validateResolvedClientEntry(entryId, resolvedEntry)
-      resolvedEntries.set(component, resolvedEntry)
-      collectResolvedClientEntryResources(getClientEntryHeadResources(context), resolvedEntry)
+  async function finishAsync(
+    startIndex: number,
+    firstPending: PromiseLike<ResolvedClientEntry>,
+  ): Promise<void> {
+    for (let i = startIndex; i < entries.length; i++) {
+      let [hydrationId, { entryId, component, propsJson }] = entries[i]!
+      let resolvedEntry = resolvedEntries.get(component)
+      if (!resolvedEntry) {
+        resolvedEntry =
+          i === startIndex
+            ? await firstPending
+            : resolveClientEntry
+              ? await Promise.resolve(resolveClientEntry(entryId, component))
+              : resolveDefaultClientEntry(entryId, component)
+      }
+      recordResolvedClientEntry(
+        context,
+        resolvedEntries,
+        hydrationData,
+        hydrationId,
+        entryId,
+        component,
+        propsJson,
+        resolvedEntry,
+      )
     }
-
-    hydrationData.set(hydrationId, {
-      exportName: resolvedEntry.exportName,
-      moduleUrl: resolvedEntry.href,
-      propsJson,
-    })
+    unresolved!.clear()
   }
 
-  context.unresolvedHydrationData.clear()
+  for (let i = 0; i < entries.length; i++) {
+    let [hydrationId, { entryId, component, propsJson }] = entries[i]!
+    let existing = resolvedEntries.get(component)
+    if (existing) {
+      recordResolvedClientEntry(
+        context,
+        resolvedEntries,
+        hydrationData,
+        hydrationId,
+        entryId,
+        component,
+        propsJson,
+        existing,
+      )
+      continue
+    }
+
+    let result = resolveClientEntry
+      ? resolveClientEntry(entryId, component)
+      : resolveDefaultClientEntry(entryId, component)
+    if (isPromiseLike(result)) {
+      return finishAsync(i, result)
+    }
+    recordResolvedClientEntry(
+      context,
+      resolvedEntries,
+      hydrationData,
+      hydrationId,
+      entryId,
+      component,
+      propsJson,
+      result,
+    )
+  }
+
+  unresolved.clear()
+  return undefined
 }
 
 function collectResolvedClientEntryResources(

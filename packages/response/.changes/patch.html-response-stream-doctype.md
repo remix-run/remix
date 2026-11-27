@@ -1,0 +1,1 @@
+Combine prepended DOCTYPE bytes into the first chunk of streamed `createHtmlResponse()` responses, forward stream cancellation to the underlying reader, and avoid unnecessary `Headers` and `TextEncoder` allocations.

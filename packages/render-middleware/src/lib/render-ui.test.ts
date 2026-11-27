@@ -854,4 +854,35 @@ describe('render', () => {
     await assert.rejects(router.fetch('https://remix.run/'), renderError)
     assert.deepEqual(errors, [renderError])
   })
+
+  it('prepends a single DOCTYPE for synchronous and streamed frame responses', async () => {
+    let router = createRouter({ middleware: [render()] as const })
+
+    router.get('/sync', (context) =>
+      context.render(createElement('html', {}, createElement('body', {}, 'Sync'))),
+    )
+    router.get('/streamed', (context) =>
+      context.render(
+        createElement(
+          'html',
+          {},
+          createElement(
+            'body',
+            {},
+            createElement(Frame, { src: '/panel', fallback: createElement('p', {}, 'Loading') }),
+          ),
+        ),
+      ),
+    )
+    router.get('/panel', (context) => context.render(createElement('p', {}, 'Loaded')))
+
+    let syncHtml = await (await router.fetch('https://remix.run/sync')).text()
+    assert.equal(syncHtml.startsWith('<!DOCTYPE html><html><body>Sync</body></html>'), true)
+    assert.equal(syncHtml.match(/<!doctype html>/gi)?.length, 1)
+
+    let streamedHtml = await (await router.fetch('https://remix.run/streamed')).text()
+    assert.equal(streamedHtml.startsWith('<!DOCTYPE html><html><body>'), true)
+    assert.equal(streamedHtml.match(/<!doctype html>/gi)?.length, 1)
+    assert.match(streamedHtml, /Loaded/)
+  })
 })

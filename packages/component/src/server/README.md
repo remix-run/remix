@@ -1,11 +1,12 @@
 # Server
 
-The component runtime can render to HTML on the server using two APIs:
+The component runtime can render to HTML on the server using three APIs:
 
 - `renderToString` - Returns a complete HTML string. Simple, but buffers the entire response.
 - `renderToStream` - Returns a `ReadableStream<Uint8Array>`. Sends the initial HTML immediately and streams frame content as it resolves.
+- `renderToBody` - Returns a complete HTML string directly when the tree finishes synchronously without streaming frames or async client entries, or a `ReadableStream<Uint8Array>` otherwise. Includes stream flush markers so it works interchangeably with `renderToStream` for HTTP responses.
 
-Both are exported from `remix/component/server`.
+All three are exported from `remix/component/server`.
 
 ## renderToString
 
@@ -106,6 +107,22 @@ When the stream encounters a `<Frame>` component:
 The blocking and streaming behaviors use `loading="eager"`, which is the default.
 
 This means the first chunk always contains a complete, renderable page. Slow data sources don't block the initial paint.
+
+## renderToBody
+
+Renders a component tree to an HTTP response body using the same options and stream flush markers as `renderToStream`. When the tree finishes synchronously without streaming frames or async client entries, it returns the complete HTML `string` directly instead of allocating a `ReadableStream`; otherwise it returns a `ReadableStream<Uint8Array>`.
+
+```tsx
+import { renderToBody } from 'remix/component/server'
+import { createHtmlResponse } from 'remix/response/html'
+
+let body = renderToBody(<App />, {
+  frameSrc: request.url,
+  signal: request.signal,
+})
+
+return createHtmlResponse(body)
+```
 
 ## Head content
 

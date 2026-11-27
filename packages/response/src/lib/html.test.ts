@@ -228,6 +228,38 @@ describe('createHtmlResponse()', () => {
         assert.equal(await response.text(), '<!DOCTYPE html>')
       })
 
+      it('combines prepended DOCTYPE into the first chunk', async () => {
+        let stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('<html><body>Hello</body></html>'))
+            controller.close()
+          },
+        })
+        let response = createHtmlResponse(stream)
+        let reader = response.body!.getReader()
+        let first = await reader.read()
+        let second = await reader.read()
+
+        assert.equal(first.done, false)
+        assert.equal(
+          new TextDecoder().decode(first.value),
+          '<!DOCTYPE html><html><body>Hello</body></html>',
+        )
+        assert.equal(second.done, true)
+      })
+
+      it('forwards cancellation to the underlying ReadableStream', async () => {
+        let cancelledReason: unknown
+        let stream = new ReadableStream({
+          cancel(reason) {
+            cancelledReason = reason
+          },
+        })
+        let response = createHtmlResponse(stream)
+        await response.body?.cancel('client-gone')
+        assert.equal(cancelledReason, 'client-gone')
+      })
+
       it('handles multi-chunk ReadableStream', async () => {
         let stream = new ReadableStream({
           start(controller) {
