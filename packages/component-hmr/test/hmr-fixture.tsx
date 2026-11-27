@@ -621,6 +621,8 @@ function getNodeHmrProxyDevSource(): string {
     '    // The child writes this file before it reports ready, and createHmrReadyFetch only calls',
     '    // this after the runner is ready.',
     '    url.port = await readFile(process.env.CHILD_PORT_FILE, "utf8")',
+    '    // Shows when held document requests are released after a restart.',
+    '    if (!url.pathname.startsWith("/assets/")) console.log(`proxy forward ${url.pathname}`)',
     '    return await fetch(url, init)',
     '  },',
     '})',
@@ -1115,13 +1117,26 @@ export async function startNodeHmrFixtureServer(
   let closePromise: Promise<void> | undefined
   let stateWaiters = new Set<() => void>()
 
+  let startedAt = performance.now()
+  let outputAtLineStart = true
+
   function notifyStateWaiters() {
     for (let waiter of stateWaiters) waiter()
   }
 
+  // Elapsed times show which phase stalled when a fixture times out.
+  function appendOutput(chunk: string) {
+    let elapsed = `[+${Math.round(performance.now() - startedAt)}ms] `
+    for (let part of chunk.split(/(?<=\n)/)) {
+      if (outputAtLineStart) processOutput += elapsed
+      processOutput += part
+      outputAtLineStart = part.endsWith('\n')
+    }
+  }
+
   child.stdout?.setEncoding('utf-8')
   child.stdout?.on('data', (chunk: string) => {
-    processOutput += chunk
+    appendOutput(chunk)
     lineBuffer += chunk
 
     let lines = lineBuffer.split('\n')
@@ -1137,7 +1152,7 @@ export async function startNodeHmrFixtureServer(
 
   child.stderr?.setEncoding('utf-8')
   child.stderr?.on('data', (chunk: string) => {
-    processOutput += chunk
+    appendOutput(chunk)
     notifyStateWaiters()
   })
 
