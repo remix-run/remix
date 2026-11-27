@@ -131,6 +131,76 @@ describe('processStyleClass', () => {
     expect(result.css).toContain('font-size: 16px')
     expect(result.css).not.toContain('[object Object]')
   })
+
+  it('emits descriptor at-rules before the class and nests conditional group rules', () => {
+    let result = processStyleClass(
+      {
+        '@property --angle': { syntax: "'<angle>'", inherits: 'false', initialValue: '0deg' },
+        '@font-face': {
+          fontFamily: 'Example',
+          src: 'url(example.woff2)',
+          fontWeight: 400,
+          fontDisplay: 'swap',
+        },
+        '@counter-style thumbs': {
+          system: 'cyclic',
+          symbols: '"*"',
+          suffix: '" "',
+        },
+        '@font-palette-values --example': {
+          fontFamily: 'Example',
+          basePalette: '1',
+        },
+        '@page :first': {
+          size: 'A4',
+          margin: '1in',
+        },
+        animation: 'spin 1s linear infinite',
+        '@media (min-width: 768px)': {
+          fontSize: '16px',
+        },
+      },
+      new Map(),
+    )
+
+    let selector = `.${result.selector}`
+    expect(result.css).toBe(
+      [
+        `@property --angle {`,
+        `  syntax: '<angle>';`,
+        `  inherits: false;`,
+        `  initial-value: 0deg;`,
+        `}`,
+        `@font-face {`,
+        `  font-family: Example;`,
+        `  src: url(example.woff2);`,
+        `  font-weight: 400;`,
+        `  font-display: swap;`,
+        `}`,
+        `@counter-style thumbs {`,
+        `  system: cyclic;`,
+        `  symbols: "*";`,
+        `  suffix: " ";`,
+        `}`,
+        `@font-palette-values --example {`,
+        `  font-family: Example;`,
+        `  base-palette: 1;`,
+        `}`,
+        `@page :first {`,
+        `  size: A4;`,
+        `  margin: 1in;`,
+        `}`,
+        `${selector} {`,
+        `  animation: spin 1s linear infinite;`,
+        `}`,
+        `@media (min-width: 768px) {`,
+        `  ${selector} {`,
+        `    font-size: 16px;`,
+        `  }`,
+        `}`,
+      ].join('\n'),
+    )
+  })
 })
 
 describe('normalizeCssValue', () => {

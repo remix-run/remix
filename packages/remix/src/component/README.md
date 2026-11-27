@@ -595,7 +595,8 @@ function FavoriteToggle(handle: Handle) {
 - Class names nest directly. `'.label'` styles descendants with the `label` class.
 - Nested keys must start with `&`, `.`, `:`, `[`, or `@`. A bare element selector such as `h2` isn't treated as a selector, so write `'& h2'`.
 - Keys are emitted as written and follow native CSS nesting, so a key without `&` applies to descendants. `':hover'` matches hovered descendants, while `'&:hover'` matches the element itself.
-- `@media`, `@supports`, and other at-rules can nest at any level.
+- Conditional group rules such as `@media`, `@supports`, `@container`, `@layer`, and `@starting-style` nest at any level and keep the element selector inside them.
+- `@property`, `@font-face`, `@counter-style`, `@font-palette-values`, and `@page` are emitted before the class rule, with their descriptors as the rule body and descriptor names kebab-cased.
 
 Prefer state selectors such as `'&:hover .label'` or `'&[aria-expanded="true"]'` over tracking hover or focus in JavaScript and rendering again. The browser applies them without a render, and they work before the page hydrates.
 
