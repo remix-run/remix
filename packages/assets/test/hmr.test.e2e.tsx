@@ -211,13 +211,13 @@ describe('asset server HMR', () => {
     let fixture = await createHmrFixture({ counterBareImport: true })
     let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
     let entrySource = await fs.readFile(entryPath, 'utf-8')
-    await fs.writeFile(entryPath, `import './hmr-consumer.ts'\n${entrySource}`)
+    await writeFileAtomically(entryPath, `import './hmr-consumer.ts'\n${entrySource}`)
     let sharedPath = path.join(fixture.rootDir, 'app/shared.ts')
     await write(fixture.rootDir, 'app/shared.ts', "export const value = 'before'")
     await write(fixture.rootDir, 'app/package.json', JSON.stringify({ sideEffects: false }))
     await write(fixture.rootDir, 'app/shared-barrel.ts', "export { value } from './shared.ts'")
     let hmrConsumerPath = path.join(fixture.rootDir, 'app/hmr-consumer.ts')
-    await fs.writeFile(
+    await writeFileAtomically(
       hmrConsumerPath,
       [
         "import { value } from './shared.ts'",
@@ -250,7 +250,7 @@ describe('asset server HMR', () => {
       'test-package': '/assets/app/test-package.ts',
     })
 
-    await fs.writeFile(sharedPath, "export const value = 'after'")
+    await writeFileAtomically(sharedPath, "export const value = 'after'")
     await page.locator('body[data-hmr-value="after"]').waitFor()
 
     let currentEntry = await server.getScriptEntry(entryPath)
@@ -266,7 +266,7 @@ describe('asset server HMR', () => {
     assert.match(updatedBoundaryEntry.href, /\/hmr-consumer\.ts\?t=\d+$/)
     assert.ok(updatedBoundaryEntry.preloads.includes(updatedBoundaryEntry.href))
 
-    await fs.writeFile(sharedPath, "export const value = 'after again'")
+    await writeFileAtomically(sharedPath, "export const value = 'after again'")
     await page.locator('body[data-hmr-value="after again"]').waitFor()
 
     let latestEntry = await server.getScriptEntry(sharedPath)
@@ -298,7 +298,7 @@ describe('asset server HMR', () => {
     let fixture = await createHmrFixture()
     let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
     let entrySource = await fs.readFile(entryPath, 'utf-8')
-    await fs.writeFile(entryPath, `import './hmr-consumer.ts'\n${entrySource}`)
+    await writeFileAtomically(entryPath, `import './hmr-consumer.ts'\n${entrySource}`)
     await write(
       fixture.rootDir,
       'app/package.json',
@@ -917,7 +917,7 @@ describe('asset server HMR', () => {
     let stylesheetPath = path.join(fixture.rootDir, 'app/styles.css')
     let failedStyleRequest = waitForStylesheetResponse(page, 500)
     let observedByAssetServer = server.waitForAssetServerWatchEvent('app/styles.css')
-    await fs.writeFile(stylesheetPath, 'body { background: url("foo); }\n')
+    await writeFileAtomically(stylesheetPath, 'body { background: url("foo); }\n')
     await failedStyleRequest
     // Let both watchers observe the broken content before writing the recovery content.
     await observedByAssetServer
@@ -939,7 +939,7 @@ describe('asset server HMR', () => {
       Reflect.set(globalThis, '__paddingFailures', done)
     })
     let fixedStyleRequest = waitForStylesheetResponse(page, 200)
-    await fs.writeFile(
+    await writeFileAtomically(
       stylesheetPath,
       '[data-testid="increment"] { color: blue; padding: 13px; }\n',
     )
@@ -969,7 +969,7 @@ describe('asset server HMR', () => {
       page,
       '[remix] HMR updated stylesheet /assets/app/styles.css',
     )
-    await fs.writeFile(
+    await writeFileAtomically(
       path.join(fixture.rootDir, 'app/theme.css'),
       '[data-testid="increment"] { color: green; padding: 13px; }\n',
     )
@@ -1077,7 +1077,7 @@ describe('asset server HMR', () => {
     let failedStyleRequest = waitForStylesheetResponse(page, 500, { timeout: 15_000 })
     await server.stopAssets()
     await lostConnection
-    await fs.writeFile(stylesheetPath, 'body { background: url("foo); }\n')
+    await writeFileAtomically(stylesheetPath, 'body { background: url("foo); }\n')
     await server.startAssets()
     await Promise.all([reconnected, failedStyleRequest])
 
@@ -1089,7 +1089,7 @@ describe('asset server HMR', () => {
     let fixedStyleRequest = waitForStylesheetResponse(page, 200, { timeout: 15_000 })
     await server.stopAssets()
     await lostConnection
-    await fs.writeFile(stylesheetPath, '[data-testid="increment"] { color: blue; }\n')
+    await writeFileAtomically(stylesheetPath, '[data-testid="increment"] { color: blue; }\n')
     await server.startAssets()
     await Promise.all([reconnected, fixedStyleRequest])
 
@@ -1253,7 +1253,7 @@ async function writeServerMessage(
   message: string,
 ): Promise<void> {
   let observed = server.waitForOutput(/(hmr update|restart) server-message\.ts/)
-  await fs.writeFile(filePath, `export const serverMessage = '${message}'\n`)
+  await writeFileAtomically(filePath, `export const serverMessage = '${message}'\n`)
   await observed
 }
 
@@ -3211,5 +3211,13 @@ async function stopProcess(child: ChildProcess): Promise<void> {
 async function write(rootDir: string, rel: string, content: string): Promise<void> {
   let filePath = path.join(rootDir, rel)
   await fs.mkdir(path.dirname(filePath), { recursive: true })
-  await fs.writeFile(filePath, content)
+  await writeFileAtomically(filePath, content)
+}
+
+// Under load, a watcher poll between writeFile's truncate and its data reports an empty module,
+// which turns an HMR update into a reload or restart. Renaming a complete file avoids that state.
+async function writeFileAtomically(filePath: string, content: string): Promise<void> {
+  let temporaryPath = `${filePath}.tmp`
+  await fs.writeFile(temporaryPath, content)
+  await fs.rename(temporaryPath, filePath)
 }

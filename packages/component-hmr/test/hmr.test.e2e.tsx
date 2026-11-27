@@ -19,6 +19,7 @@ import {
   waitForStylesheetResponse,
   waitForText,
   write,
+  writeFileAtomically,
 } from './hmr-fixture.tsx'
 import type { NodeHmrTestServer } from './hmr-fixture.tsx'
 
@@ -43,7 +44,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
 
     let counterPath = path.join(fixture.rootDir, 'app/Counter.tsx')
     let counterSource = await fs.readFile(counterPath, 'utf-8')
-    await fs.writeFile(counterPath, counterSource.replace('Increment', 'Increment via HMR'))
+    await writeFileAtomically(counterPath, counterSource.replace('Increment', 'Increment via HMR'))
 
     await waitForText(page, '[data-testid="increment"]', 'Increment via HMR')
     await assertCount(page, 'Count: 3')
@@ -400,7 +401,7 @@ export function Counter(handle) {
 
     let counterPath = path.join(fixture.rootDir, 'app/Counter.tsx')
     let counterSource = await fs.readFile(counterPath, 'utf-8')
-    await fs.writeFile(
+    await writeFileAtomically(
       counterPath,
       counterSource.replace('let count = globalThis.__counterInitialValue', 'let count = 100'),
     )
@@ -463,7 +464,7 @@ export function Counter(handle) {
 
     let counterPath = path.join(fixture.rootDir, 'app/Counter.tsx')
     let counterSource = await fs.readFile(counterPath, 'utf-8')
-    await fs.writeFile(
+    await writeFileAtomically(
       counterPath,
       counterSource
         .replace(
@@ -490,7 +491,7 @@ export function Counter(handle) {
 
     let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
     let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
-    await fs.writeFile(
+    await writeFileAtomically(
       clientFieldPath,
       clientFieldSource.replace('Run callback before HMR', 'Run callback after HMR'),
     )
@@ -512,10 +513,13 @@ export function Counter(handle) {
     let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
 
     let failedUpdate = waitForConsoleMessage(page, '[remix] HMR update failed')
-    await fs.writeFile(clientFieldPath, clientFieldSource.replace("'Client: before'", "'Client:"))
+    await writeFileAtomically(
+      clientFieldPath,
+      clientFieldSource.replace("'Client: before'", "'Client:"),
+    )
     await failedUpdate
 
-    await fs.writeFile(
+    await writeFileAtomically(
       clientFieldPath,
       clientFieldSource.replace('Client: before', 'Client: after!!!!!'),
     )
@@ -536,14 +540,17 @@ export function Counter(handle) {
     let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
 
     let failedUpdate = waitForConsoleMessage(page, '[remix] HMR update failed')
-    await fs.writeFile(clientFieldPath, clientFieldSource.replace("'Client: before'", "'Client:"))
+    await writeFileAtomically(
+      clientFieldPath,
+      clientFieldSource.replace("'Client: before'", "'Client:"),
+    )
     await failedUpdate
 
     let lostConnection = waitForConsoleMessage(page, '[remix] HMR connection lost')
     await server.restartAssets()
     await lostConnection
 
-    await fs.writeFile(
+    await writeFileAtomically(
       clientFieldPath,
       clientFieldSource.replace('Client: before', 'Client: after reconnect!!!!!'),
     )
@@ -569,14 +576,14 @@ export function Counter(handle) {
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
 
       let failedUpdate = waitForConsoleMessage(page, '[remix] HMR update failed')
-      await fs.writeFile(
+      await writeFileAtomically(
         clientFieldPath,
         clientFieldSource.replace('<ClientMessage />', '<ClientMessage'),
       )
       await failedUpdate
       assert.equal(server.readyCount, 1)
 
-      await fs.writeFile(
+      await writeFileAtomically(
         clientFieldPath,
         clientFieldSource.replace('<ClientMessage />', 'Client: after server update!!!!!'),
       )
@@ -620,7 +627,7 @@ export function Counter(handle) {
 
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
-      await fs.writeFile(
+      await writeFileAtomically(
         clientFieldPath,
         clientFieldSource.replace('<ClientMessage />', 'Client: component update'),
       )
@@ -667,7 +674,7 @@ export function Counter(handle) {
       let entryPath = path.join(fixture.rootDir, 'app/entry.tsx')
       let entrySource = await fs.readFile(entryPath, 'utf-8')
       let reloaded = waitForReloadedApp(page)
-      await fs.writeFile(
+      await writeFileAtomically(
         entryPath,
         entrySource.replace('Frame adoption failed:', 'Updated frame adoption failed:'),
       )

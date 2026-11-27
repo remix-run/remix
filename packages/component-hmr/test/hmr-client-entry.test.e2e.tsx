@@ -17,6 +17,7 @@ import {
   waitForReloadedApp,
   waitForText,
   write,
+  writeFileAtomically,
 } from './hmr-fixture.tsx'
 import type { NodeHmrTestServer } from './hmr-fixture.tsx'
 
@@ -38,7 +39,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
       let reloaded = waitForReloadedApp(page)
-      await fs.writeFile(
+      await writeFileAtomically(
         clientFieldPath,
         [
           clientFieldSource.replace('<ClientMessage />', 'Client: after export add'),
@@ -130,7 +131,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
       let reloaded = waitForReloadedApp(page)
-      await fs.writeFile(
+      await writeFileAtomically(
         clientFieldPath,
         [
           clientFieldSource.replace('<ClientMessage />', 'Client: after shared export add'),
@@ -396,7 +397,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       })
       let reloaded = waitForNavigation(page, { waitUntil: 'commit' })
       let adopted = waitForConsoleMessage(page, 'Frame adoption complete', startup.promise)
-      await fs.writeFile(
+      await writeFileAtomically(
         clientFieldPath,
         clientFieldSource
           .replace('<ClientMessage />', 'Client: after export removal')
@@ -441,7 +442,7 @@ describe('component-hmr e2e', { skip: isBun }, () => {
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
       let reloaded = waitForReloadedApp(page)
-      await fs.writeFile(
+      await writeFileAtomically(
         clientFieldPath,
         [
           clientFieldSource.replace('<ClientMessage />', 'Client: after non-component export'),

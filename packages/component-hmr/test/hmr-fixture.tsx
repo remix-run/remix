@@ -557,13 +557,14 @@ export async function editClientField(
   text: string,
   clientEntry: boolean,
 ): Promise<void> {
-  let filePath = path.join(fixture.rootDir, 'app/ClientField.tsx')
-  let temporaryPath = `${filePath}.tmp`
   // node-hmr logs the change after marking itself not ready, and the proxy holds requests until
   // the runner is ready again, so responses after this log reflect the edit.
   let observed = server.waitForOutput(/(hmr update|restart) .*app\/ClientField\.tsx/)
-  await fs.writeFile(temporaryPath, getClientFieldSource({ child: text, clientEntry }))
-  await fs.rename(temporaryPath, filePath)
+  await write(
+    fixture.rootDir,
+    'app/ClientField.tsx',
+    getClientFieldSource({ child: text, clientEntry }),
+  )
   await observed
 
   await assertFreshClientFieldResponses(server, text, clientEntry)
@@ -1685,5 +1686,13 @@ async function stopProcess(child: ChildProcess, closed: Promise<void>): Promise<
 export async function write(rootDir: string, rel: string, content: string): Promise<void> {
   let filePath = path.join(rootDir, rel)
   await fs.mkdir(path.dirname(filePath), { recursive: true })
-  await fs.writeFile(filePath, content)
+  await writeFileAtomically(filePath, content)
+}
+
+// Under load, a watcher poll between writeFile's truncate and its data reports an empty module,
+// which turns an HMR update into a full reload. Renaming a complete file avoids that state.
+export async function writeFileAtomically(filePath: string, content: string): Promise<void> {
+  let temporaryPath = `${filePath}.tmp`
+  await fs.writeFile(temporaryPath, content)
+  await fs.rename(temporaryPath, filePath)
 }
