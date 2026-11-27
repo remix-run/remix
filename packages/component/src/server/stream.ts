@@ -450,21 +450,16 @@ function createRenderContext(
 }
 
 /**
- * Renders a node tree to an HTTP response body, returning an HTML string directly when the tree
- * completes synchronously without streaming frames or async client entries, and returning a byte
- * stream otherwise.
- *
- * Output includes Remix stream flush markers so the result works interchangeably with
- * {@link renderToStream} for document and frame responses.
+ * Renders a node tree to a streaming HTML response body.
  *
  * @param node Node tree to render.
  * @param options Stream rendering options.
- * @returns A complete HTML string or a readable byte stream of HTML.
+ * @returns A readable byte stream of HTML.
  */
-export function renderToBody(
+export function renderToStream(
   node: RemixNode,
   options?: RenderToStreamOptions,
-): string | ReadableStream<Uint8Array> {
+): ReadableStream<Uint8Array> {
   let onError = options?.onError ?? ((error) => console.error(error))
   let signal = options?.signal
   if (signal?.aborted) {
@@ -505,7 +500,13 @@ export function renderToBody(
         if (signal?.aborted) {
           return emptyReadableStream()
         }
-        return appendFlushMarker(finalHtml, context.flushKind)
+        let bytes = encodeHtml(appendFlushMarker(finalHtml, context.flushKind))
+        return new ReadableStream({
+          start(controller) {
+            controller.enqueue(bytes)
+            controller.close()
+          },
+        })
       }
     }
   } catch (error) {
@@ -593,28 +594,6 @@ export function renderToBody(
     },
     cancel(reason) {
       cancel(reason)
-    },
-  })
-}
-
-/**
- * Renders a node tree to a streaming HTML response body.
- *
- * @param node Node tree to render.
- * @param options Stream rendering options.
- * @returns A readable byte stream of HTML.
- */
-export function renderToStream(
-  node: RemixNode,
-  options?: RenderToStreamOptions,
-): ReadableStream<Uint8Array> {
-  let body = renderToBody(node, options)
-  if (typeof body !== 'string') return body
-
-  return new ReadableStream({
-    start(controller) {
-      controller.enqueue(encodeHtml(body))
-      controller.close()
     },
   })
 }

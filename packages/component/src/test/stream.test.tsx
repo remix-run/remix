@@ -4,7 +4,7 @@ import type { FrameHandle, Handle, RemixNode } from '../runtime/component.ts'
 import { createMixin, createRoot, css, on, unsafeHTML } from '../index.ts'
 import { createElement } from '../runtime/create-element.ts'
 
-import { ImportMap, renderToBody, renderToStream, renderToString } from '../server/stream.ts'
+import { ImportMap, renderToStream, renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import type { SerializableObject } from '../runtime/client-entries.ts'
 import { drain, readChunks, trackUnhandledRejections, withResolvers } from './utils.ts'
@@ -288,91 +288,44 @@ describe('stream', () => {
       expect(remove).toHaveBeenCalledWith('abort', add.mock.calls[0]?.arguments[1])
     })
 
-    it('returns a string directly from renderToBody for synchronous renders and sync client entries', () => {
+    it('skips abort listener registration for sync client entries and resolves async entries once', async (t) => {
+      let controller = new AbortController()
+      let add = t.mock.method(controller.signal, 'addEventListener')
       let Counter = clientEntry('/js/counter.js#Counter', function Counter() {
         return () => <button type="button">0</button>
       })
 
-      let plain = renderToBody(<p>Hello</p>)
-      expect(typeof plain).toBe('string')
-      expect(plain).toBe('<p>Hello</p><!-- rmx:flush fragment -->')
+      let syncHtml = await drain(
+        renderToStream(<Counter />, {
+          signal: controller.signal,
+          resolveClientEntry(entryId) {
+            return { href: entryId.split('#')[0]!, exportName: 'Counter' }
+          },
+        }),
+      )
+      expect(syncHtml).toContain('<button type="button">0</button>')
+      expect(add).toHaveBeenCalledTimes(0)
 
-      let withSyncEntry = renderToBody(<Counter />, {
-        resolveClientEntry(entryId) {
-          return { href: entryId.split('#')[0]!, exportName: 'Counter' }
-        },
-      })
-      invariant(typeof withSyncEntry === 'string')
-      expect(withSyncEntry).toContain('<button type="button">0</button>')
-      expect(withSyncEntry).toContain('<!-- rmx:flush fragment -->')
-    })
-
-    it('returns streams from renderToBody for aborted signals, frames, and throwing sync client entries', async () => {
-      let aborted = new AbortController()
-      aborted.abort()
-      let empty = renderToBody(<p>Skipped</p>, { signal: aborted.signal })
-      expect(empty).toBeInstanceOf(ReadableStream)
-      expect(await drain(empty as ReadableStream<Uint8Array>)).toBe('')
-
-      let pendingBody = renderToBody(<Frame src="/panel" fallback={<p>Loading</p>} />, {
-        resolveFrame: () => Promise.resolve('<p>Loaded</p>'),
-      })
-      expect(pendingBody).toBeInstanceOf(ReadableStream)
-      let pendingHtml = await drain(pendingBody as ReadableStream<Uint8Array>)
-      expect(pendingHtml).toContain('<p>Loading</p>')
-      expect(pendingHtml).toContain('<p>Loaded</p>')
-
-      let errors: unknown[] = []
-      let BadEntry = clientEntry('/js/bad.js#BadEntry', function BadEntry() {
-        return () => <span>bad</span>
-      })
-      let erroredBody = renderToBody(<BadEntry />, {
-        onError: (error) => errors.push(error),
-        resolveClientEntry() {
-          throw new Error('Bad entry')
-        },
-      })
-      expect(erroredBody).toBeInstanceOf(ReadableStream)
-      await expect(drain(erroredBody as ReadableStream<Uint8Array>)).rejects.toThrow('Bad entry')
-      expect(errors.length).toBe(1)
-    })
-
-    it('falls back to a stream from renderToBody for async client entries without resolving twice', async () => {
       let calls = 0
       let Widget = clientEntry('/js/widget.js#Widget', function Widget() {
         return () => <span>widget</span>
       })
-
-      let body = renderToBody(
-        <div>
-          <Widget />
-          <Widget />
-        </div>,
-        {
-          async resolveClientEntry() {
-            calls++
-            return { href: '/assets/widget.js', exportName: 'Widget' }
+      let asyncHtml = await drain(
+        renderToStream(
+          <div>
+            <Widget />
+            <Widget />
+          </div>,
+          {
+            async resolveClientEntry() {
+              calls++
+              return { href: '/assets/widget.js', exportName: 'Widget' }
+            },
           },
-        },
+        ),
       )
-
-      expect(body).toBeInstanceOf(ReadableStream)
-      let html = await drain(body as ReadableStream<Uint8Array>)
       expect(calls).toBe(1)
-      expect(html).toContain('<span>widget</span>')
-    })
-
-    it('returns an errored stream from renderToBody and invokes onError on synchronous throw', async () => {
-      let errors: unknown[] = []
-      let failure = new Error('Boom')
-      function Broken(): never {
-        throw failure
-      }
-
-      let body = renderToBody(<Broken />, { onError: (error) => errors.push(error) })
-      expect(body).toBeInstanceOf(ReadableStream)
-      await expect(drain(body as ReadableStream<Uint8Array>)).rejects.toThrow('Boom')
-      expect(errors).toEqual([failure])
+      expect(asyncHtml).toContain('<span>widget</span>')
     })
 
     it('removes the request abort listener when the consumer cancels pending rendering', async (t) => {

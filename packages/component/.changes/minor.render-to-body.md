@@ -1,1 +1,0 @@
-Add `renderToBody()` to `@remix-run/component/server`, returning an HTML string directly when a tree completes synchronously without streaming frames or async client entries and falling back to a `ReadableStream<Uint8Array>` otherwise. Synchronous renders in `renderToBody()` and `renderToStream()` also skip allocating an `AbortController` or registering request abort listeners.

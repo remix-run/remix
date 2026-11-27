@@ -1,1 +1,1 @@
-Skip creating intermediate `ReadableStream` wrappers for synchronous renders in `render()`, and fold DOCTYPE prepending into shell tracking for streamed renders so streaming responses avoid an extra wrapper stream.
+Fold DOCTYPE prepending into shell tracking in `render()` to eliminate an extra wrapper `ReadableStream`, skip `response.body` checks on non-HTML routes, and resolve non-`file:` client entries synchronously.
