@@ -155,6 +155,65 @@ describe('vnode rendering', () => {
       expect(div.namespaceURI).toBe('http://www.w3.org/1999/xhtml')
     })
 
+    it('creates foreignObject itself in the SVG namespace', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(
+        <svg>
+          <foreignObject width="100" height="50">
+            <div id="x">Hello</div>
+          </foreignObject>
+        </svg>,
+      )
+
+      let foreignObject = container.querySelector('svg')?.firstElementChild
+      invariant(foreignObject)
+      expect(foreignObject instanceof SVGForeignObjectElement).toBe(true)
+      expect(foreignObject.namespaceURI).toBe('http://www.w3.org/2000/svg')
+      expect(foreignObject.tagName).toBe('foreignObject')
+      expect(foreignObject.getAttribute('width')).toBe('100')
+
+      let div = container.querySelector('#x')
+      invariant(div)
+      expect(div.namespaceURI).toBe('http://www.w3.org/1999/xhtml')
+
+      root.render(
+        <svg>
+          <foreignObject width="200" height="50">
+            <div id="x">Updated</div>
+          </foreignObject>
+        </svg>,
+      )
+      root.flush()
+
+      expect(container.querySelector('svg')?.firstElementChild).toBe(foreignObject)
+      expect(foreignObject.getAttribute('width')).toBe('200')
+      expect(container.querySelector('#x')).toBe(div)
+      expect(div.textContent).toBe('Updated')
+    })
+
+    it('restores the SVG namespace for svg nested inside foreignObject', () => {
+      let container = document.createElement('div')
+      let { render } = createRoot(container)
+
+      render(
+        <svg>
+          <foreignObject>
+            <div>
+              <svg>
+                <circle id="inner" />
+              </svg>
+            </div>
+          </foreignObject>
+          <circle id="after" />
+        </svg>,
+      )
+
+      expect(container.querySelector('#inner')?.namespaceURI).toBe('http://www.w3.org/2000/svg')
+      expect(container.querySelector('#after')?.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    })
+
     it('updates and removes SVG attributes', () => {
       let container = document.createElement('div')
       let root = createRoot(container)

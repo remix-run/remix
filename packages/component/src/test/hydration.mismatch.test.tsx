@@ -16,6 +16,41 @@ describe('hydration', () => {
     document.body.innerHTML = ''
   })
 
+  describe('svg namespaces', () => {
+    it('adopts a server-rendered foreignObject and its HTML children', async () => {
+      let errors: unknown[][] = []
+      let originalError = console.error
+      console.error = (...args: unknown[]) => {
+        errors.push(args)
+      }
+      try {
+        let tree = (
+          <svg>
+            <foreignObject width="100" height="50">
+              <div id="x">Hello</div>
+            </foreignObject>
+          </svg>
+        )
+        container.innerHTML = await renderToString(tree)
+
+        let foreignObject = container.querySelector('svg')?.firstElementChild
+        let div = container.querySelector('#x')
+        invariant(foreignObject instanceof SVGForeignObjectElement)
+        invariant(div instanceof HTMLDivElement)
+
+        let root = createRoot(container)
+        root.render(tree)
+        root.flush()
+
+        expect(container.querySelector('svg')?.firstElementChild).toBe(foreignObject)
+        expect(container.querySelector('#x')).toBe(div)
+        expect(errors).toEqual([])
+      } finally {
+        console.error = originalError
+      }
+    })
+  })
+
   describe('attribute mismatch handling', () => {
     it('adopts element and patches mismatched attributes', async () => {
       let html = await renderToString(<div className="server-class" data-value="server" />)
