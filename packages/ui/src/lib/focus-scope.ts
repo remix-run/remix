@@ -132,10 +132,10 @@ function createManager(doc: Document) {
     ) {
       updateBackground()
     }
-    restoreRemovedFocus(records)
+    restoreRemovedFocus()
   })
 
-  function restoreRemovedFocus(records: MutationRecord[]) {
+  function restoreRemovedFocus() {
     let active = getActiveElement(doc)
     let scope = scopes.findLast(
       (scope) =>
@@ -143,29 +143,7 @@ function createManager(doc: Document) {
         !containsScope(scope, scope.lastFocused) &&
         (!active || active === doc.body || containsScope(scope, active)),
     )
-    if (scope) {
-      focus(scope.node)
-      return
-    }
-    scope = scopes.findLast((scope) => scope.options.modal)
-    let target = scope?.lastFocused
-    // A removed control may already be back inside its scope when mutations are delivered.
-    if (
-      scope &&
-      target &&
-      (!active || active === doc.body) &&
-      !isInModalExemptRegion(doc, focusedRegion ?? null) &&
-      records.some((record) =>
-        Array.from(record.removedNodes).some(
-          (node) =>
-            node === target ||
-            (node instanceof (doc.defaultView?.Element ?? Element) &&
-              containsIncludingShadowRoots(node, target)),
-        ),
-      )
-    ) {
-      focusInside(scope)
-    }
+    if (scope) focus(scope.node)
   }
 
   function containsScope(scope: FocusScope, target: Node | null) {
@@ -225,7 +203,7 @@ function createManager(doc: Document) {
     // Reconfiguring observation must still recover focus from those pending removals.
     let pending = observer.takeRecords()
     observer.disconnect()
-    if (pending.length) queueMicrotask(() => restoreRemovedFocus(pending))
+    if (pending.length) queueMicrotask(restoreRemovedFocus)
     if (scopes.length > 0) {
       for (let root of roots) {
         for (let node of root.querySelectorAll('*')) {

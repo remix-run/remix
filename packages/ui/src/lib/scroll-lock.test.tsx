@@ -156,6 +156,8 @@ describe('lockScroll', () => {
 
     expect(getComputedStyle(document.documentElement).overflow).toBe('hidden')
     expect(getComputedStyle(document.documentElement).scrollbarGutter).toBe('stable both-edges')
+    expect(document.documentElement.style.overflow).toBe('auto')
+    expect(document.documentElement.style.scrollbarGutter).toBe('stable both-edges')
     expect(document.body.style.overflow).toBe('clip')
     expect(document.body.style.position).toBe('relative')
     expect(document.body.style.top).toBe('1px')
