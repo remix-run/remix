@@ -1193,6 +1193,20 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
         signal: controller.signal,
         target: frameName,
       })
+      if (
+        !isStale() &&
+        isDocumentNode(container.root) &&
+        (options?.method ?? 'get').toLowerCase() === 'get' &&
+        isFileResponse(resolution)
+      ) {
+        // The browser committed the destination before the response arrived, so rendering a file
+        // would show its bytes as text. Discard the body and let the browser load the destination
+        // as its own document. A POST keeps rendering because a document load cannot replay its
+        // body.
+        await resolution.body?.cancel()
+        reloadDocument(container.doc, resolution.url || frame.src)
+        return { signal: controller.signal }
+      }
       return await renderResolution(
         resolution,
         controller.signal,
@@ -2488,6 +2502,19 @@ function findMarkerRangeEndIndex(nodes: Node[], end: Node, startIndex: number): 
 
 function isDocumentNode(node: Node): node is Document {
   return node.nodeType === Node.DOCUMENT_NODE
+}
+
+// A response that declares a media type the browser would not treat as markup. `text/plain` is
+// excluded along with the HTML types: the `Response` constructor applies it to a string body, so
+// resolvers that build their own responses from HTML carry it without meaning a file.
+function isFileResponse(resolution: FrameResolution): resolution is Response {
+  if (!(resolution instanceof Response) || spaResponses.has(resolution)) return false
+  let contentType = resolution.headers.get('Content-Type')
+  if (contentType === null) return false
+  let mediaType = contentType.split(';', 1)[0]!.trim().toLowerCase()
+  return (
+    mediaType !== 'text/html' && mediaType !== 'application/xhtml+xml' && mediaType !== 'text/plain'
+  )
 }
 
 function isDocumentFragmentNode(value: unknown): value is DocumentFragment {

@@ -1504,6 +1504,10 @@ The runtime represents the current document as `app.frames.top` and intercepts e
 
 Frame navigation requires both `window.navigation` and `NavigateEvent.sourceElement`. Browsers missing either capability use document navigation for links, forms, and `navigate()`. Hydration and explicit frame reloads still work.
 
+A link can point at a file rather than a page, and the Navigation API commits the destination before Remix fetches it. When a GET navigation to the current document resolves to a response whose content type is neither HTML nor `text/plain`, the runtime discards the body and loads the destination as its own document, so an image, a PDF, or any other file opens as it would without the runtime. That costs a second request for the file, usually served from the browser's cache; add `data-rmx-document` to a link you already know points at a file to skip the first one.
+
+Everything else renders into the page as before: responses typed `text/plain`, which the `Response` constructor applies to every string body so a resolver returning `new Response(html)` keeps working; responses with no content type; non-GET submissions, which a document load can't replay; and responses aimed at a named frame. Use `data-rmx-document` for links to plain-text endpoints.
+
 ### Links and Forms
 
 Links and forms remain ordinary HTML elements before the runtime starts. These attributes change how the runtime handles them:

@@ -7,5 +7,6 @@ Rendering, hydration, and navigation fixes in `remix/component`:
 - Controls disabled in server HTML with `disabled=""` stay disabled after hydration, and an element that replaces a hydrated empty string renders in the right position.
 - Inputs that render again with `value={undefined}` or `checked={undefined}` keep what the visitor typed or toggled.
 - Streamed child frames show their content as soon as it arrives, and a frame waiting for preloads no longer stays on its server HTML when a sibling finishes first.
+- Links that point at a file, such as an image or a PDF, open in the browser instead of showing the file's bytes as text in the page.
 
 See the [`@remix-run/component` changelog](https://github.com/remix-run/remix/blob/main/packages/component/CHANGELOG.md) for the complete list.
