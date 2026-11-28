@@ -178,7 +178,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
     onWatchFilesChange: options.onWatchFilesChange,
     retainIntermediate: resolvedOptions.watchMode,
-    retainLastResolved: resolvedOptions.watchMode,
   })
   let tsconfigTransformOptionsResolver = createTsconfigTransformOptionsResolver()
   let resolverOptions = {
@@ -242,32 +241,20 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       let entryIdentityPath = resolveServedScriptOrThrow(
         resolveInputFilePath(resolvedOptions.rootDir, filePath),
       ).identityPath
-      let importMapRootPaths = [entryIdentityPath]
-      if (entryOptions?.extraImportMapRoots) {
-        for (let extraRoot of entryOptions.extraImportMapRoots) {
-          if (!importMapRootPaths.includes(extraRoot)) {
-            importMapRootPaths.push(extraRoot)
-          }
-        }
-      }
-
+      let importMapRootPaths = [
+        ...new Set([entryIdentityPath, ...(entryOptions?.extraImportMapRoots ?? [])]),
+      ]
       let resolvedRoots = await getOrCreateResolvedScripts(
         importMapRootPaths.map((identityPath) => scriptStore.get(identityPath)),
       )
       let graph = await resolveServedGraph(resolvedRoots)
-      let preloadLayerPaths = collectPreloadLayerPaths([entryIdentityPath], graph)
-      let servedUrlsByPath = await getServedUrlsForGraph(
-        collectServedUrlPaths(importMapRootPaths, graph),
-        graph,
-      )
-      let preloads = formatPreloadLayers(preloadLayerPaths, servedUrlsByPath).flat()
-      let href =
-        preloads[0] ??
-        appendCurrentHmrTimestamp(
-          entryIdentityPath,
-          getRequiredServedUrl(servedUrlsByPath, entryIdentityPath),
-        )
-      let importMap = buildImportMapFromGraph(importMapRootPaths, graph, servedUrlsByPath)
+      await emitGraph(graph.keys(), graph)
+
+      let preloads = collectPreloadLayerPaths([entryIdentityPath], graph)
+        .flat()
+        .map((identityPath) => getCurrentServedUrlFromGraph(identityPath, graph))
+      let href = preloads[0] ?? getCurrentServedUrlFromGraph(entryIdentityPath, graph)
+      let importMap = buildImportMapFromGraph(importMapRootPaths, graph)
 
       return { href, importMap, preloads }
     },
@@ -279,9 +266,11 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       )
       let graph = await resolveServedGraph(resolvedEntries)
       let layerPaths = collectPreloadLayerPaths(entryPaths, graph)
-      let servedUrlsByPath = await getServedUrlsForGraph(layerPaths.flat(), graph)
+      await emitGraph(layerPaths.flat(), graph)
 
-      return formatPreloadLayers(layerPaths, servedUrlsByPath)
+      return layerPaths.map((layer) =>
+        layer.map((identityPath) => getCurrentServedUrlFromGraph(identityPath, graph)),
+      )
     },
 
     async getImportMap(filePath) {
@@ -290,12 +279,9 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         entryPaths.map((identityPath) => scriptStore.get(identityPath)),
       )
       let graph = await resolveServedGraph(resolvedEntries)
-      let servedUrlsByPath = await getServedUrlsForGraph(
-        collectServedUrlPaths(entryPaths, graph),
-        graph,
-      )
+      await emitGraph(graph.keys(), graph)
 
-      return buildImportMapFromGraph(entryPaths, graph, servedUrlsByPath)
+      return buildImportMapFromGraph(entryPaths, graph)
     },
 
     async getHref(filePath) {
@@ -414,36 +400,21 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   }
 
   function findCachedNearestPackageJsonPath(filePath: string): string | null {
-    let startDirectory = path.dirname(filePath)
-    let cached = nearestPackageJsonByDir.get(startDirectory)
+    return findNearestPackageJsonInDir(path.dirname(filePath))
+  }
+
+  function findNearestPackageJsonInDir(directory: string): string | null {
+    let cached = nearestPackageJsonByDir.get(directory)
     if (cached !== undefined) return cached
 
-    let visited: string[] = []
-    let directory = startDirectory
-    let found: string | null = null
-
-    while (true) {
-      let existing = nearestPackageJsonByDir.get(directory)
-      if (existing !== undefined) {
-        found = existing
-        break
-      }
-      visited.push(directory)
-
-      let packageJsonPath = path.join(directory, 'package.json')
-      if (fs.existsSync(packageJsonPath)) {
-        found = normalizeFilePath(packageJsonPath)
-        break
-      }
-
-      let parentDirectory = path.dirname(directory)
-      if (parentDirectory === directory) break
-      directory = parentDirectory
-    }
-
-    for (let visitedDirectory of visited) {
-      nearestPackageJsonByDir.set(visitedDirectory, found)
-    }
+    let packageJsonPath = path.join(directory, 'package.json')
+    let parentDirectory = path.dirname(directory)
+    let found = fs.existsSync(packageJsonPath)
+      ? normalizeFilePath(packageJsonPath)
+      : parentDirectory === directory
+        ? null
+        : findNearestPackageJsonInDir(parentDirectory)
+    nearestPackageJsonByDir.set(directory, found)
     return found
   }
 
@@ -803,73 +774,53 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     return formatFingerprintedPathname(resolvedModule.stableUrlPathname, emittedModule.fingerprint)
   }
 
-  async function getServedUrlsForGraph(
-    identityPaths: readonly string[],
+  function emitGraph(
+    identityPaths: Iterable<string>,
     graph: ReadonlyMap<string, ResolvedModule>,
-  ): Promise<Map<string, string>> {
-    let servedUrlsByPath = new Map<string, string>()
-    let pendingPaths: string[] = []
+  ): Promise<void> | undefined {
+    if (!resolvedOptions.fingerprintAssets) return undefined
 
+    let pending: ScriptRecord[] = []
     for (let identityPath of identityPaths) {
-      if (servedUrlsByPath.has(identityPath)) continue
-      let resolvedModule = graph.get(identityPath)
-      if (resolvedModule) {
-        if (!resolvedOptions.fingerprintAssets) {
-          servedUrlsByPath.set(identityPath, resolvedModule.stableUrlPathname)
-          continue
-        }
-        let fresh = getFreshEmittedScript(scriptStore.get(identityPath))
-        if (fresh) {
-          servedUrlsByPath.set(
-            identityPath,
-            formatFingerprintedPathname(resolvedModule.stableUrlPathname, fresh.fingerprint),
-          )
-          continue
-        }
-      }
-      servedUrlsByPath.set(identityPath, '')
-      pendingPaths.push(identityPath)
+      let record = scriptStore.get(identityPath)
+      if (!getFreshEmittedScript(record)) pending.push(record)
     }
 
-    if (pendingPaths.length > 0) {
-      let urls = await mapWithConcurrency(pendingPaths, scriptConcurrency, (identityPath) =>
-        getServedUrl(identityPath, graph),
-      )
-      for (let index = 0; index < pendingPaths.length; index++) {
-        servedUrlsByPath.set(pendingPaths[index], urls[index])
-      }
-    }
-
-    return servedUrlsByPath
+    if (pending.length === 0) return undefined
+    return mapWithConcurrency(pending, scriptConcurrency, (record) =>
+      getOrCreateEmittedScript(record, graph),
+    ).then(() => undefined)
   }
 
-  function formatPreloadLayers(
-    layerPaths: readonly (readonly string[])[],
-    servedUrlsByPath: ReadonlyMap<string, string>,
-  ): string[][] {
-    return layerPaths.map((layer) =>
-      layer.map((identityPath) =>
-        appendCurrentHmrTimestamp(
-          identityPath,
-          getRequiredServedUrl(servedUrlsByPath, identityPath),
-        ),
-      ),
-    )
+  function getServedUrlFromGraph(
+    identityPath: string,
+    graph: ReadonlyMap<string, ResolvedModule>,
+  ): string {
+    let stableUrl = graph.get(identityPath)?.stableUrlPathname ?? getStableUrl(identityPath)
+    if (!resolvedOptions.fingerprintAssets) return stableUrl
+
+    let emitted = scriptStore.get(identityPath).emitted
+    return formatFingerprintedPathname(stableUrl, emitted?.fingerprint ?? null)
   }
 
-  function appendCurrentHmrTimestamp(identityPath: string, servedUrl: string): string {
+  function getCurrentServedUrlFromGraph(
+    identityPath: string,
+    graph: ReadonlyMap<string, ResolvedModule>,
+  ): string {
+    let servedUrl = getServedUrlFromGraph(identityPath, graph)
     let timestamp = getHmrImportTimestamp(identityPath)
     return timestamp === null ? servedUrl : appendTimestampQuery(servedUrl, timestamp)
   }
 
   async function getCurrentServedUrl(identityPath: string): Promise<string> {
-    return appendCurrentHmrTimestamp(identityPath, await getServedUrl(identityPath))
+    let servedUrl = await getServedUrl(identityPath)
+    let timestamp = getHmrImportTimestamp(identityPath)
+    return timestamp === null ? servedUrl : appendTimestampQuery(servedUrl, timestamp)
   }
 
   function buildImportMapFromGraph(
     entryPaths: readonly string[],
     graph: ReadonlyMap<string, ResolvedModule>,
-    servedUrlsByPath: ReadonlyMap<string, string>,
   ): ScriptImportMap {
     let resolvedEntrySet = new Set(entryPaths)
     let visited = new Set<string>()
@@ -882,14 +833,14 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       queue = []
       for (let identityPath of frontier) {
         let resolvedModule = graph.get(identityPath)
-        if (!resolvedModule) continue
-        if (visited.has(resolvedModule.identityPath)) continue
+        if (!resolvedModule || visited.has(resolvedModule.identityPath)) continue
         visited.add(resolvedModule.identityPath)
+
         if (!resolvedEntrySet.has(resolvedModule.identityPath)) {
           addImportMapEntry(
             imports,
             resolvedModule.stableUrlPathname,
-            getRequiredServedUrl(servedUrlsByPath, resolvedModule.identityPath),
+            getServedUrlFromGraph(resolvedModule.identityPath, graph),
           )
         }
 
@@ -898,13 +849,13 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
             addImportMapEntry(
               imports,
               getStableUrl(imported.depPath),
-              getRequiredServedUrl(servedUrlsByPath, imported.depPath),
+              getServedUrlFromGraph(imported.depPath, graph),
             )
           }
         }
 
         for (let imported of resolvedModule.runtimeImports) {
-          let depUrl = getRequiredServedUrl(servedUrlsByPath, imported.depPath)
+          let depUrl = getServedUrlFromGraph(imported.depPath, graph)
           if (isBareImportSpecifier(imported.specifier)) {
             let scopePathname = imported.scopePathname
             if (!scopePathname) {
@@ -924,9 +875,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         }
 
         for (let dep of resolvedModule.deps) {
-          if (!visited.has(dep)) {
-            queue.push(dep)
-          }
+          if (!visited.has(dep)) queue.push(dep)
         }
       }
     }
@@ -963,11 +912,14 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   }
 
   function getHmrImportTimestamp(identityPath: string): number | null {
-    return scriptStore.getHmrUpdateTimestamp(identityPath) ?? null
+    return resolvedOptions.hmr ? (scriptStore.getHmrUpdateTimestamp(identityPath) ?? null) : null
   }
 
   function hasHmrTimestampedDependency(resolvedModule: ResolvedModule | undefined): boolean {
-    return resolvedModule?.deps.some((depPath) => getHmrImportTimestamp(depPath) !== null) === true
+    return (
+      resolvedOptions.hmr !== undefined &&
+      resolvedModule?.deps.some((depPath) => getHmrImportTimestamp(depPath) !== null) === true
+    )
   }
 
   function getHmrUpdatesForChange(
@@ -1179,48 +1131,4 @@ function collectPreloadLayerPaths(
   }
 
   return layers
-}
-
-function collectServedUrlPaths(
-  entryPaths: readonly string[],
-  graph: ReadonlyMap<string, ResolvedModule>,
-): string[] {
-  let paths = new Set<string>(entryPaths)
-  let visited = new Set<string>()
-  let queue = [...entryPaths]
-
-  while (queue.length > 0) {
-    let identityPath = queue.pop()
-    if (!identityPath || visited.has(identityPath)) continue
-    visited.add(identityPath)
-
-    let resolvedModule = graph.get(identityPath)
-    if (!resolvedModule) continue
-    paths.add(resolvedModule.identityPath)
-
-    for (let rewrite of resolvedModule.importRewrites) {
-      for (let imported of rewrite.imports) {
-        paths.add(imported.depPath)
-      }
-    }
-    for (let imported of resolvedModule.runtimeImports) {
-      paths.add(imported.depPath)
-    }
-    for (let dep of resolvedModule.deps) {
-      if (!visited.has(dep)) queue.push(dep)
-    }
-  }
-
-  return [...paths]
-}
-
-function getRequiredServedUrl(
-  servedUrlsByPath: ReadonlyMap<string, string>,
-  identityPath: string,
-): string {
-  let url = servedUrlsByPath.get(identityPath)
-  if (url === undefined) {
-    throw new Error(`Missing served URL for script ${identityPath}`)
-  }
-  return url
 }

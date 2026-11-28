@@ -116,7 +116,6 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
     onWatchFilesChange: options.onWatchFilesChange,
     retainIntermediate: resolvedOptions.watchMode,
-    retainLastResolved: resolvedOptions.watchMode,
   })
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedStyle>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedStyle>>()
@@ -497,8 +496,9 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
 
   function hasHmrTimestampedDependency(resolvedStyle: ResolvedStyle | undefined): boolean {
     return (
+      resolvedOptions.watchMode &&
       resolvedStyle?.deps.some((depPath) => styleStore.getHmrUpdateTimestamp(depPath) != null) ===
-      true
+        true
     )
   }
 

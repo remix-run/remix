@@ -419,8 +419,10 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     allowFiles: resolvedOptions.allowFiles,
     allowPackages: resolvedOptions.allowPackages,
     denyFiles: resolvedOptions.denyFiles,
-    packageSearchRoots: hasPackages(resolvedOptions.allowPackages)
-      ? getPackageSearchRoots(resolvedOptions.mounts, resolvedOptions.rootDir)
+    packageSearchRoots: resolvedOptions.allowPackages?.length
+      ? Object.values(resolvedOptions.mounts).map((fileRoot) =>
+          path.resolve(resolvedOptions.rootDir, fileRoot),
+        )
       : undefined,
     rootDir: resolvedOptions.rootDir,
   })
@@ -604,7 +606,11 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       let scriptPayload = await createScriptHmrPayloadWithImportMaps(scriptUpdates)
       if (scriptPayload) {
         browserHmrEvents.push(
-          createBrowserHmrEvent(scriptPayload, getScriptHmrUpdateFiles(scriptUpdates), hmrDataKey),
+          createBrowserHmrEvent(
+            scriptPayload,
+            [...new Set(scriptUpdates.map((update) => update.filePath))],
+            hmrDataKey,
+          ),
         )
       }
 
@@ -682,21 +688,22 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       let requestUrl = new URL(request.url)
       let requestPathname = requestUrl.pathname
 
-      if (resolvedOptions.hmr) {
-        if (requestPathname === hmrClientPathname) {
-          let browserHmrChannel = await browserHmrChannelPromise
-          assertBrowserEventUrl(browserHmrChannel?.url)
-          return await createHmrClientResponse(
-            browserHmrChannel.url,
-            hmrDataKey,
-            resolvedOptions.hmrModuleImporter,
-            request.method,
-            scriptCompiler,
-          )
+      if (resolvedOptions.hmr && requestPathname === hmrClientPathname) {
+        let browserHmrChannel = await browserHmrChannelPromise
+        if (browserHmrChannel?.url === undefined) {
+          throw new TypeError('hmr must be provided')
         }
+        return await createHmrClientResponse(
+          browserHmrChannel.url,
+          hmrDataKey,
+          resolvedOptions.hmrModuleImporter,
+          request.method,
+          scriptCompiler,
+        )
       }
 
-      let requestedTransform = normalizeRequestedTransformQuery(requestUrl.searchParams)
+      let transformParams = requestUrl.searchParams.getAll('transform')
+      let requestedTransform = transformParams.length > 0 ? transformParams : null
       let parsedRequestPathname = parseAssetRequestPathname(requestPathname, {
         fingerprintAssets: resolvedOptions.fingerprintAssets,
         routes: resolvedOptions.routes,
@@ -935,15 +942,15 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       }
 
       if (styleFiles.length === 0 && fileAssetFiles.length === 0) {
-        return flattenPreloadLayers(await scriptCompiler.getPreloadLayers(filePath))
+        return (await scriptCompiler.getPreloadLayers(filePath)).flat()
       }
 
       if (scriptFiles.length === 0 && fileAssetFiles.length === 0) {
-        return flattenPreloadLayers(await styleCompiler.getPreloadLayers(filePath))
+        return (await styleCompiler.getPreloadLayers(filePath)).flat()
       }
 
       if (scriptFiles.length === 0 && styleFiles.length === 0) {
-        return flattenPreloadLayers(await getFilePreloadLayers(fileCompiler, fileAssetFiles))
+        return (await getFilePreloadLayers(fileCompiler, fileAssetFiles)).flat()
       }
 
       // Mixed asset type preloads need to be merged, so we merge in order of first asset type seen.
@@ -1040,11 +1047,6 @@ function getHrefTransform<transforms extends AssetRequestTransformMap>(
   return serializeAssetTransformInvocations(transform, files.transforms, files.maxRequestTransforms)
 }
 
-function normalizeRequestedTransformQuery(searchParams: URLSearchParams): readonly string[] | null {
-  let transforms = searchParams.getAll('transform')
-  return transforms.length > 0 ? transforms : null
-}
-
 function internalServerError(): Response {
   return new Response('Internal Server Error', {
     status: 500,
@@ -1101,12 +1103,6 @@ async function createHmrClientResponse(
   )
 }
 
-function assertBrowserEventUrl(url: string | undefined): asserts url is string {
-  if (url === undefined) {
-    throw new TypeError('hmr must be provided')
-  }
-}
-
 function createBrowserHmrEvent(
   payload: Extract<HmrPayload, { type: 'browser:reload' | 'browser:update' }>,
   files: readonly string[],
@@ -1129,10 +1125,6 @@ function createBrowserHmrEvent(
     ...(files.length === 0 ? {} : { files: [...files] }),
     type: 'update',
   }
-}
-
-function getScriptHmrUpdateFiles(updates: ScriptHmrUpdate[]): string[] {
-  return [...new Set(updates.map((update) => update.filePath))]
 }
 
 export function createScriptHmrPayload(
@@ -1178,10 +1170,6 @@ function mergePreloadLayers(preloadLayersByRoot: readonly (readonly string[][])[
   }
 
   return urls
-}
-
-function flattenPreloadLayers(preloadLayers: readonly (readonly string[])[]): string[] {
-  return preloadLayers.flatMap((layer) => layer)
 }
 
 async function getFilePreloadLayers<transforms extends AssetRequestTransformMap>(
@@ -1363,17 +1351,6 @@ function normalizeWatchOptions(
   if (options === false) return null
   if (options == null || options === true) return {}
   return options
-}
-
-function hasPackages(packages: readonly string[] | undefined): boolean {
-  return packages !== undefined && packages.length > 0
-}
-
-function getPackageSearchRoots(
-  mounts: Readonly<Record<string, string>>,
-  rootDir: string,
-): readonly string[] {
-  return Object.values(mounts).map((fileRoot) => path.resolve(rootDir, fileRoot))
 }
 
 function parseAssetRequestPathname(

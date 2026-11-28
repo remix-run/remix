@@ -12,7 +12,7 @@ import { resolveInputFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { AssetFileTransformResult, ResolvedAssetRequestTransformMap } from './config.ts'
 import { parseAssetTransformInvocations } from './config.ts'
-import { createTransformCacheKey, getFileCacheMeta, setFileCacheMeta } from './cache.ts'
+import { cachedFileMeta, createTransformCacheKey } from './cache.ts'
 import type { FileCache } from './file-cache.ts'
 import { createSourceFileStore } from './store.ts'
 import type {
@@ -332,7 +332,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
         let cachedFile = new File([toArrayBufferView(emittedFile.body)], name, {
           type: emittedFile.contentType,
         })
-        setFileCacheMeta(cachedFile, { contentHash })
+        cachedFileMeta.set(cachedFile, { contentHash })
         await cache.put(transformedCacheKey, cachedFile)
       }
       return emittedFile
@@ -453,7 +453,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     let file = await cache.get(cacheKey)
     if (!file) return null
 
-    let meta = getFileCacheMeta(file)
+    let meta = cachedFileMeta.get(file)
     let body = meta?.body ?? new Uint8Array(await file.arrayBuffer())
     let contentHash = meta?.contentHash ?? (await hashContent(body))
     if (meta && meta.contentHash === undefined) {

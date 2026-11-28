@@ -103,7 +103,6 @@ export function createModuleStore<transformed, resolved, emitted>(
     onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
     onWatchFilesChange?: (delta: { add: string[]; remove: string[] }) => void
     retainIntermediate?: boolean
-    retainLastResolved?: boolean
   } = {},
 ): ModuleStore<transformed, resolved, emitted> {
   let recordsByIdentityPath = new Map<string, MutableModuleRecord<transformed, resolved, emitted>>()
@@ -115,7 +114,6 @@ export function createModuleStore<transformed, resolved, emitted>(
   let emittedLruBytesByIdentityPath = new Map<string, number>()
   let emittedTotalBytes = 0
   let retainIntermediate = options.retainIntermediate ?? true
-  let retainLastResolved = options.retainLastResolved ?? true
   let emptyImporters = new Set<string>()
 
   return {
@@ -181,10 +179,9 @@ export function createModuleStore<transformed, resolved, emitted>(
       removeResolvedIndexes(record)
       record.resolved = resolved
       record.resolvedVersion = record.invalidationVersion
-      if (retainLastResolved) {
+      if (retainIntermediate) {
         record.lastResolved = resolved
-      }
-      if (!retainIntermediate) {
+      } else {
         record.transformed = undefined
         record.transformedVersion = undefined
       }
@@ -427,14 +424,25 @@ export function createModuleStore<transformed, resolved, emitted>(
       addToIndexedSet(recordsByTrackedFile, trackedFile, record.identityPath)
     }
 
-    let nextWatchedDirectories = getWatchedDirectories(record)
-    let directoryDelta = updateWatchDirectoryRefCounts(
+    let directoryDelta = updateRefCounts(
+      watchDirectoryRefCountByPath,
       previousWatchedDirectories,
-      nextWatchedDirectories,
+      getWatchedDirectories(record),
     )
-    let fileDelta = updateWatchFileRefCounts(previousWatchedFiles, record.trackedFiles)
-    emitWatchDirectoryDelta(directoryDelta)
-    emitWatchFileDelta(fileDelta)
+    let fileDelta = updateRefCounts(
+      watchFileRefCountByPath,
+      previousWatchedFiles,
+      record.trackedFiles,
+    )
+    if (
+      options.onWatchDirectoriesChange &&
+      (directoryDelta.add.length > 0 || directoryDelta.remove.length > 0)
+    ) {
+      options.onWatchDirectoriesChange(directoryDelta)
+    }
+    if (options.onWatchFilesChange && (fileDelta.add.length > 0 || fileDelta.remove.length > 0)) {
+      options.onWatchFilesChange(fileDelta)
+    }
   }
 
   function clearTracking(record: MutableModuleRecord<transformed, resolved, emitted>) {
@@ -446,80 +454,36 @@ export function createModuleStore<transformed, resolved, emitted>(
       removeFromIndexedSet(recordsByTrackedFile, trackedFile, record.identityPath)
     }
   }
+}
 
-  function updateWatchDirectoryRefCounts(
-    previousWatchedDirectories: ReadonlySet<string>,
-    nextWatchedDirectories: ReadonlySet<string>,
-  ): { add: string[]; remove: string[] } {
-    let add: string[] = []
-    let remove: string[] = []
+function updateRefCounts(
+  counts: Map<string, number>,
+  previous: ReadonlySet<string>,
+  next: ReadonlySet<string>,
+): { add: string[]; remove: string[] } {
+  let add: string[] = []
+  let remove: string[] = []
 
-    for (let directory of previousWatchedDirectories) {
-      if (nextWatchedDirectories.has(directory)) continue
-      let previousCount = watchDirectoryRefCountByPath.get(directory)
-      if (!previousCount) continue
-      if (previousCount === 1) {
-        watchDirectoryRefCountByPath.delete(directory)
-        remove.push(directory)
-      } else {
-        watchDirectoryRefCountByPath.set(directory, previousCount - 1)
-      }
+  for (let key of previous) {
+    if (next.has(key)) continue
+    let previousCount = counts.get(key)
+    if (!previousCount) continue
+    if (previousCount === 1) {
+      counts.delete(key)
+      remove.push(key)
+    } else {
+      counts.set(key, previousCount - 1)
     }
-
-    for (let directory of nextWatchedDirectories) {
-      if (previousWatchedDirectories.has(directory)) continue
-      let previousCount = watchDirectoryRefCountByPath.get(directory) ?? 0
-      watchDirectoryRefCountByPath.set(directory, previousCount + 1)
-      if (previousCount === 0) {
-        add.push(directory)
-      }
-    }
-
-    return { add, remove }
   }
 
-  function updateWatchFileRefCounts(
-    previousWatchedFiles: ReadonlySet<string>,
-    nextWatchedFiles: ReadonlySet<string>,
-  ): { add: string[]; remove: string[] } {
-    let add: string[] = []
-    let remove: string[] = []
-
-    for (let file of previousWatchedFiles) {
-      if (nextWatchedFiles.has(file)) continue
-      let previousCount = watchFileRefCountByPath.get(file)
-      if (!previousCount) continue
-      if (previousCount === 1) {
-        watchFileRefCountByPath.delete(file)
-        remove.push(file)
-      } else {
-        watchFileRefCountByPath.set(file, previousCount - 1)
-      }
-    }
-
-    for (let file of nextWatchedFiles) {
-      if (previousWatchedFiles.has(file)) continue
-      let previousCount = watchFileRefCountByPath.get(file) ?? 0
-      watchFileRefCountByPath.set(file, previousCount + 1)
-      if (previousCount === 0) {
-        add.push(file)
-      }
-    }
-
-    return { add, remove }
+  for (let key of next) {
+    if (previous.has(key)) continue
+    let previousCount = counts.get(key) ?? 0
+    counts.set(key, previousCount + 1)
+    if (previousCount === 0) add.push(key)
   }
 
-  function emitWatchDirectoryDelta(delta: { add: string[]; remove: string[] }): void {
-    if (!options.onWatchDirectoriesChange) return
-    if (delta.add.length === 0 && delta.remove.length === 0) return
-    options.onWatchDirectoriesChange(delta)
-  }
-
-  function emitWatchFileDelta(delta: { add: string[]; remove: string[] }): void {
-    if (!options.onWatchFilesChange) return
-    if (delta.add.length === 0 && delta.remove.length === 0) return
-    options.onWatchFilesChange(delta)
-  }
+  return { add, remove }
 }
 
 function addToIndexedSet(map: Map<string, Set<string>>, key: string, value: string) {

@@ -56,8 +56,8 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
       let watchedDirectories = includeAncestors
         ? watchedResolutionDirectories
         : watchedFileDirectories
-      let targetsToAdd: string[] = []
-      let targetsToRemove: string[] = []
+      let added = new Set<string>()
+      let removed = new Set<string>()
 
       for (let directory of delta.remove) {
         let normalizedDirectory = normalizeWatchDirectory(directory)
@@ -71,7 +71,7 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
           if (!previousCount) continue
           if (previousCount === 1) {
             targetRefCountByPath.delete(target)
-            targetsToRemove.push(target)
+            removed.add(target)
           } else {
             targetRefCountByPath.set(target, previousCount - 1)
           }
@@ -89,25 +89,14 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
         )) {
           let previousCount = targetRefCountByPath.get(target) ?? 0
           targetRefCountByPath.set(target, previousCount + 1)
-          if (previousCount === 0) {
-            targetsToAdd.push(target)
+          if (previousCount === 0 && !removed.delete(target)) {
+            added.add(target)
           }
         }
       }
 
-      if (targetsToRemove.length > 0 && targetsToAdd.length > 0) {
-        let addedSet = new Set(targetsToAdd)
-        let removedSet = new Set(targetsToRemove)
-        targetsToRemove = targetsToRemove.filter((target) => !addedSet.has(target))
-        targetsToAdd = targetsToAdd.filter((target) => !removedSet.has(target))
-      }
-
-      if (targetsToRemove.length > 0) {
-        watcher.unwatch(targetsToRemove)
-      }
-      if (targetsToAdd.length > 0) {
-        watcher.add(targetsToAdd)
-      }
+      if (removed.size > 0) watcher.unwatch([...removed])
+      if (added.size > 0) watcher.add([...added])
     },
   }
 }

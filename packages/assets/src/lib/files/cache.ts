@@ -13,15 +13,7 @@ type CachedFileMeta = {
   onContentHash?: (hash: string) => void
 }
 
-const fileCacheMetaByFile = new WeakMap<File, CachedFileMeta>()
-
-export function setFileCacheMeta(file: File, meta: CachedFileMeta): void {
-  fileCacheMetaByFile.set(file, meta)
-}
-
-export function getFileCacheMeta(file: File): CachedFileMeta | undefined {
-  return fileCacheMetaByFile.get(file)
-}
+export const cachedFileMeta = new WeakMap<File, CachedFileMeta>()
 
 /** Directory and limits for a filesystem file cache. */
 export interface FsFileCacheOptions {
@@ -168,25 +160,26 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
         })
         return null
       }
-      if (entry.checksum === record.checksum && entry.contentHash !== undefined) {
-        setFileCacheMeta(record.file, { body: record.body, contentHash: entry.contentHash })
-      } else {
-        setFileCacheMeta(record.file, {
-          body: record.body,
-          onContentHash(contentHash) {
-            if (state.entries.get(digest) === entry) {
-              entry.checksum = record.checksum
-              entry.contentHash = contentHash
-            }
-          },
-        })
-      }
+      cachedFileMeta.set(
+        record.file,
+        entry.checksum === record.checksum && entry.contentHash !== undefined
+          ? { body: record.body, contentHash: entry.contentHash }
+          : {
+              body: record.body,
+              onContentHash(contentHash) {
+                if (state.entries.get(digest) === entry) {
+                  entry.checksum = record.checksum
+                  entry.contentHash = contentHash
+                }
+              },
+            },
+      )
       return record.file
     },
     async put(key, file) {
       let limit = Math.min(maxFileSize, maxTotalSize)
       if (file.size > limit) return
-      let meta = getFileCacheMeta(file)
+      let meta = cachedFileMeta.get(file)
       let digest = await hash(textEncoder.encode(key))
       let header = JSON.stringify([digest, file.name, file.type, file.lastModified])
       let isNativeBlob = file instanceof Blob

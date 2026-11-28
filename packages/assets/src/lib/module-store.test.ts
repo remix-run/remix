@@ -552,7 +552,6 @@ describe('createModuleStore', () => {
   it('drops intermediate transformed and lastResolved records when retention is disabled', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       retainIntermediate: false,
-      retainLastResolved: false,
     })
     let transformed = createTransformedModule()
     let resolved = createResolvedModule()
