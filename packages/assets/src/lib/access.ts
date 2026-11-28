@@ -28,6 +28,7 @@ export type AssetAccessRule =
 export type AccessPolicy = {
   getAllowedPackageRoots(): readonly string[]
   getPackageWatchDirectories(): readonly string[]
+  getPackageWatchFiles(): readonly string[]
   handleFileEvent(filePath: string): void
   inspect(filePath: string): AssetAccessDetails
   isAllowed(filePath: string): boolean
@@ -42,8 +43,8 @@ const packageStateFileNames = new Set([
   'pnpm-workspace.yaml',
   'yarn.lock',
 ])
-const packageManagerRootFileNames = packageStateFileNames
 const packageNamePartPattern = /^[A-Za-z0-9._~-]+$/
+const maxInspectCacheEntries = 16_384
 
 export function createAccessPolicy(options: {
   allowFiles: readonly string[]
@@ -70,6 +71,7 @@ export function createAccessPolicy(options: {
   let packageStateDirectories =
     allowPackageNames.size === 0 ? [] : getPackageStateDirectories(packageSearchRoots)
   let packageRootsDirty = false
+  let inspectCache = new Map<string, AssetAccessDetails>()
 
   function refreshPackageRootPathTries(): void {
     if (!packageRootsDirty) return
@@ -79,6 +81,7 @@ export function createAccessPolicy(options: {
       searchRoots: packageSearchRoots,
     })
     allowPackageRootPathTrie = createPackageRootPathTrie(packageRootPaths)
+    inspectCache.clear()
     packageRootsDirty = false
   }
 
@@ -90,6 +93,21 @@ export function createAccessPolicy(options: {
   }
 
   function inspect(filePath: string): AssetAccessDetails {
+    if (packageRootsDirty) {
+      refreshPackageRootPathTries()
+    }
+    let cached = inspectCache.get(filePath)
+    if (cached !== undefined) return cached
+
+    let details = computeAccessDetails(filePath)
+    if (inspectCache.size >= maxInspectCacheEntries) {
+      inspectCache.clear()
+    }
+    inspectCache.set(filePath, details)
+    return details
+  }
+
+  function computeAccessDetails(filePath: string): AssetAccessDetails {
     if (isInjectedPackageFilePath(filePath)) {
       return { allowed: true, allowedBy: { kind: 'injected', value: '@remix-run/assets' } }
     }
@@ -124,11 +142,19 @@ export function createAccessPolicy(options: {
       if (allowPackageNames.size === 0) return []
       return packageStateDirectories
     },
+    getPackageWatchFiles() {
+      if (allowPackageNames.size === 0) return []
+      return packageStateDirectories.flatMap((directory) => {
+        let normalized = directory.replace(/\/+$/, '')
+        return [...packageStateFileNames].map((fileName) => `${normalized}/${fileName}`)
+      })
+    },
     handleFileEvent(filePath) {
       if (allowPackageNames.size === 0) return
       if (!isPackageStateFileEvent(filePath, packageStateDirectories)) return
 
       packageRootsDirty = true
+      inspectCache.clear()
     },
     inspect,
     isAllowed(filePath) {
@@ -251,14 +277,14 @@ function createPackageRootPaths(options: {
 function createPackageRootPathTrie(
   packageRootPaths: ReadonlyMap<string, string>,
 ): PackageRootPathTrie {
-  let rootNode = createPackageRootPathTrieNode()
+  let rootNode: PackageRootPathTrie = { children: new Map() }
 
   for (let [packageRootPath, packageName] of packageRootPaths) {
     let node = rootNode
-    for (let segment of getFilePathSegments(packageRootPath)) {
+    for (let segment of normalizeFilePath(packageRootPath).split('/')) {
       let childNode = node.children.get(segment)
       if (!childNode) {
-        childNode = createPackageRootPathTrieNode()
+        childNode = { children: new Map() }
         node.children.set(segment, childNode)
       }
       node = childNode
@@ -269,12 +295,6 @@ function createPackageRootPathTrie(
   return rootNode
 }
 
-function createPackageRootPathTrieNode(): PackageRootPathTrie {
-  return {
-    children: new Map(),
-  }
-}
-
 function getPackageNameFromRootPathTrie(
   filePath: string,
   trie: PackageRootPathTrie,
@@ -282,7 +302,7 @@ function getPackageNameFromRootPathTrie(
   let node = trie
   if (node.packageName !== undefined) return node.packageName
 
-  for (let segment of getFilePathSegments(filePath)) {
+  for (let segment of normalizeFilePath(filePath).split('/')) {
     let childNode = node.children.get(segment)
     if (!childNode) return undefined
     if (childNode.packageName !== undefined) return childNode.packageName
@@ -290,10 +310,6 @@ function getPackageNameFromRootPathTrie(
   }
 
   return undefined
-}
-
-function getFilePathSegments(filePath: string): string[] {
-  return normalizeFilePath(filePath).split('/')
 }
 
 function normalizePackageSearchRoots(searchRoots: readonly string[]): string[] {
@@ -358,7 +374,7 @@ function normalizePackageStateSearchRoot(searchRoot: string): string {
 }
 
 function hasPackageManagerRootFile(directory: string): boolean {
-  for (let fileName of packageManagerRootFileNames) {
+  for (let fileName of packageStateFileNames) {
     try {
       let stat = fs.statSync(path.join(directory, fileName))
       if (stat.isFile()) return true

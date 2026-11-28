@@ -30,9 +30,10 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
     ...resolveChokidarWatchOptions(options),
   })
   options.onChokidarWatcherCreated?.(watcher)
+  let normalizedRootDir = normalizeFilePath(options.rootDir)
   let watchedResolutionDirectories = new Set<string>()
   let watchedFileDirectories = new Set<string>()
-  let watchedTargets = new Set<string>()
+  let targetRefCountByPath = new Map<string, number>()
 
   for (let event of ['add', 'change', 'unlink'] as const) {
     watcher.on(event, (filePath) => {
@@ -48,44 +49,54 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
       await watcher.close()
     },
     getWatchedTargets() {
-      return [...watchedTargets]
+      return [...targetRefCountByPath.keys()]
     },
     updateWatchedDirectories(delta, updateOptions = {}) {
       let includeAncestors = updateOptions.includeAncestors ?? true
-      let previousDirectories = includeAncestors
+      let watchedDirectories = includeAncestors
         ? watchedResolutionDirectories
         : watchedFileDirectories
-      let nextWatchedDirectories = new Set(previousDirectories)
+      let added = new Set<string>()
+      let removed = new Set<string>()
+
+      for (let directory of delta.remove) {
+        let normalizedDirectory = normalizeWatchDirectory(directory)
+        if (!watchedDirectories.delete(normalizedDirectory)) continue
+        for (let target of getDirectoryWatchTargets(
+          normalizedDirectory,
+          normalizedRootDir,
+          includeAncestors,
+        )) {
+          let previousCount = targetRefCountByPath.get(target)
+          if (!previousCount) continue
+          if (previousCount === 1) {
+            targetRefCountByPath.delete(target)
+            removed.add(target)
+          } else {
+            targetRefCountByPath.set(target, previousCount - 1)
+          }
+        }
+      }
 
       for (let directory of delta.add) {
-        nextWatchedDirectories.add(directory)
-      }
-      for (let directory of delta.remove) {
-        nextWatchedDirectories.delete(directory)
-      }
-
-      if (includeAncestors) {
-        watchedResolutionDirectories = nextWatchedDirectories
-      } else {
-        watchedFileDirectories = nextWatchedDirectories
-      }
-
-      let nextTargets = getWatchTargets({
-        rootDir: options.rootDir,
-        fileDirectories: [...watchedFileDirectories],
-        resolutionDirectories: [...watchedResolutionDirectories],
-      })
-      let targetsToAdd = [...nextTargets].filter((target) => !watchedTargets.has(target))
-      let targetsToRemove = [...watchedTargets].filter((target) => !nextTargets.has(target))
-
-      if (targetsToRemove.length > 0) {
-        watcher.unwatch(targetsToRemove)
-      }
-      if (targetsToAdd.length > 0) {
-        watcher.add(targetsToAdd)
+        let normalizedDirectory = normalizeWatchDirectory(directory)
+        if (watchedDirectories.has(normalizedDirectory)) continue
+        watchedDirectories.add(normalizedDirectory)
+        for (let target of getDirectoryWatchTargets(
+          normalizedDirectory,
+          normalizedRootDir,
+          includeAncestors,
+        )) {
+          let previousCount = targetRefCountByPath.get(target) ?? 0
+          targetRefCountByPath.set(target, previousCount + 1)
+          if (previousCount === 0 && !removed.delete(target)) {
+            added.add(target)
+          }
+        }
       }
 
-      watchedTargets = nextTargets
+      if (removed.size > 0) watcher.unwatch([...removed])
+      if (added.size > 0) watcher.add([...added])
     },
   }
 }
@@ -105,35 +116,19 @@ function resolveChokidarWatchOptions(
   }
 }
 
-function getWatchTargets(options: {
-  fileDirectories: readonly string[]
-  resolutionDirectories: readonly string[]
-  rootDir: string
-}): Set<string> {
-  let normalizedRootDir = normalizeFilePath(options.rootDir)
-  let targets = new Set<string>()
-  let configAncestors = new Set<string>()
+function normalizeWatchDirectory(directory: string): string {
+  return normalizeFilePath(directory).replace(/\/+$/, '')
+}
 
-  for (let directory of options.fileDirectories) {
-    targets.add(normalizeFilePath(directory).replace(/\/+$/, ''))
+function getDirectoryWatchTargets(
+  normalizedDirectory: string,
+  normalizedRootDir: string,
+  includeAncestors: boolean,
+): string[] {
+  if (!includeAncestors || !isSameOrDescendantPath(normalizedDirectory, normalizedRootDir)) {
+    return [normalizedDirectory]
   }
-
-  for (let directory of options.resolutionDirectories) {
-    let normalizedDirectory = normalizeFilePath(directory).replace(/\/+$/, '')
-
-    targets.add(normalizedDirectory)
-    if (!isSameOrDescendantPath(normalizedDirectory, normalizedRootDir)) continue
-
-    for (let ancestor of getAncestorPaths(normalizedDirectory, normalizedRootDir)) {
-      configAncestors.add(ancestor)
-    }
-  }
-
-  for (let ancestor of configAncestors) {
-    targets.add(ancestor)
-  }
-
-  return targets
+  return getAncestorPaths(normalizedDirectory, normalizedRootDir)
 }
 
 function getAncestorPaths(directoryPath: string, rootDir: string): string[] {

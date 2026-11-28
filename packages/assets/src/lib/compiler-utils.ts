@@ -44,6 +44,16 @@ export function getNotModifiedResult(
   return { etag: asset.etag, type: 'not-modified' }
 }
 
+export function createNotModifiedResponse(etag: string, cacheControl: string): Response {
+  return new Response(null, {
+    status: 304,
+    headers: {
+      'Cache-Control': cacheControl,
+      ETag: etag,
+    },
+  })
+}
+
 export function createCompiledAssetResponse(
   result: CompiledAsset,
   contentType: string,
@@ -60,12 +70,13 @@ export function createCompiledAssetResponse(
   }
 
   if (IfNoneMatch.from(options.ifNoneMatch).matches(asset.etag)) {
-    return new Response(null, { status: 304, headers: { ETag: asset.etag } })
+    return createNotModifiedResponse(asset.etag, options.cacheControl)
   }
 
   return new Response(options.method === 'HEAD' ? null : asset.content, {
     headers: {
       'Cache-Control': options.cacheControl,
+      'Content-Length': String(asset.content.byteLength),
       'Content-Type': options.isSourceMapRequest ? 'application/json; charset=utf-8' : contentType,
       ETag: asset.etag,
     },
@@ -97,6 +108,33 @@ export function resolveRealFilePath(filePath: string): string | null {
     if (isNoEntityError(error)) return null
     throw error
   }
+}
+
+export function createRealFilePathCache(): {
+  clear(): void
+  resolve(filePath: string): string | null
+} {
+  let cache = new Map<string, string>()
+
+  return {
+    clear() {
+      cache.clear()
+    },
+    resolve(filePath) {
+      let cached = cache.get(filePath)
+      if (cached !== undefined) return cached
+
+      let resolved = resolveRealFilePath(filePath)
+      if (resolved !== null) {
+        cache.set(filePath, resolved)
+      }
+      return resolved
+    },
+  }
+}
+
+export function getCompiledAssetByteSize(emitted: CompiledAsset): number {
+  return emitted.code.content.byteLength + (emitted.sourceMap?.content.byteLength ?? 0)
 }
 
 export async function mapWithConcurrency<item, result>(

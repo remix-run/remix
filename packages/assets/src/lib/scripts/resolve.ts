@@ -1,4 +1,3 @@
-import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { ResolverFactory } from 'oxc-resolver'
 
@@ -111,6 +110,7 @@ type ResolveResult = {
 
 export type ResolveArgs = {
   concurrency: number
+  findNearestPackageJsonPath(filePath: string): string | null
   isDirectoryResolutionFileIndependent(directory: string): boolean
   isAllowed(absolutePath: string): boolean
   isWatchIgnored(filePath: string): boolean
@@ -242,7 +242,7 @@ export async function resolveModule(
 
     if (transformed.packageSpecifiers.includes(unresolved.specifier)) {
       let packageJsonPath =
-        resolvedSpec.packageJsonPath ?? findNearestPackageJsonPath(resolvedImport.resolvedPath)
+        resolvedSpec.packageJsonPath ?? args.findNearestPackageJsonPath(resolvedImport.resolvedPath)
       if (packageJsonPath && !args.isWatchIgnored(packageJsonPath)) {
         trackedFiles.add(packageJsonPath)
       }
@@ -411,7 +411,7 @@ export async function resolveModule(
     })
   }
 
-  let packageJsonPath = findNearestPackageJsonPath(transformed.resolvedPath)
+  let packageJsonPath = args.findNearestPackageJsonPath(transformed.resolvedPath)
   let resolveTrackingFiles = new Set(trackedFiles)
   if (packageJsonPath && !args.isWatchIgnored(packageJsonPath)) {
     trackedFiles.add(packageJsonPath)
@@ -555,21 +555,6 @@ function ensureTrailingSlash(value: string): string {
   return value.endsWith('/') ? value : `${value}/`
 }
 
-function findNearestPackageJsonPath(filePath: string): string | null {
-  let directory = path.dirname(filePath)
-
-  while (true) {
-    let packageJsonPath = path.join(directory, 'package.json')
-    if (fs.existsSync(packageJsonPath)) {
-      return normalizeFilePath(packageJsonPath)
-    }
-
-    let parentDirectory = path.dirname(directory)
-    if (parentDirectory === directory) return null
-    directory = parentDirectory
-  }
-}
-
 function getPackageJsonCandidatePaths(
   filePath: string,
   nearestPackageJsonPath: string | null,
@@ -683,12 +668,22 @@ async function batchResolveSpecifiers(
   if (specifiers.length === 0) return resolvedBySpecifier
 
   try {
-    for (let specifier of specifiers) {
-      let normalizedResolution = normalizeSpecifierResolution(specifier, importerPath)
-      let resolutionResult = await resolverFactory.resolveFileAsync(
-        normalizedResolution.importerPath,
-        normalizedResolution.specifier,
-      )
+    let normalizedResolutions = specifiers.map((specifier) => ({
+      normalizedResolution: normalizeSpecifierResolution(specifier, importerPath),
+      specifier,
+    }))
+    let resolutionResults = await Promise.all(
+      normalizedResolutions.map(({ normalizedResolution }) =>
+        resolverFactory.resolveFileAsync(
+          normalizedResolution.importerPath,
+          normalizedResolution.specifier,
+        ),
+      ),
+    )
+
+    for (let index = 0; index < normalizedResolutions.length; index++) {
+      let { normalizedResolution, specifier } = normalizedResolutions[index]
+      let resolutionResult = resolutionResults[index]
       if (resolutionResult.error) {
         throw createAssetServerCompilationError(
           normalizedResolution.importerPath === getInjectedPackageImporterPath()

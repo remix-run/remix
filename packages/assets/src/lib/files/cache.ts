@@ -4,6 +4,17 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import type { FileCache } from './file-cache.ts'
 
+const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder()
+
+type CachedFileMeta = {
+  body?: Uint8Array
+  contentHash?: string
+  onContentHash?: (hash: string) => void
+}
+
+export const cachedFileMeta = new WeakMap<File, CachedFileMeta>()
+
 /** Directory and limits for a filesystem file cache. */
 export interface FsFileCacheOptions {
   /**
@@ -131,29 +142,45 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
 
   return {
     async get(key) {
-      let digest = await hash(new TextEncoder().encode(key))
+      let digest = await hash(textEncoder.encode(key))
       await mutations
       let state = await getState()
       let entry = state.entries.get(digest)
       if (!entry) return null
       state.entries.delete(digest)
       state.entries.set(digest, entry)
-      let file = await readRecord(state.storage, digest, maxFileSize).catch((error: unknown) => {
+      let record = await readRecord(state.storage, digest, maxFileSize).catch((error: unknown) => {
         if (isFileError(error, 'ENOENT')) return null
         throw error
       })
-      if (!file) {
+      if (!record) {
         await withCacheMutation(async (current) => {
           // A read may overlap replacement or eviction. Do not remove a newer entry.
           if (current.entries.get(digest) === entry) await removeEntry(current, digest)
         })
+        return null
       }
-      return file
+      cachedFileMeta.set(
+        record.file,
+        entry.checksum === record.checksum && entry.contentHash !== undefined
+          ? { body: record.body, contentHash: entry.contentHash }
+          : {
+              body: record.body,
+              onContentHash(contentHash) {
+                if (state.entries.get(digest) === entry) {
+                  entry.checksum = record.checksum
+                  entry.contentHash = contentHash
+                }
+              },
+            },
+      )
+      return record.file
     },
     async put(key, file) {
       let limit = Math.min(maxFileSize, maxTotalSize)
       if (file.size > limit) return
-      let digest = await hash(new TextEncoder().encode(key))
+      let meta = cachedFileMeta.get(file)
+      let digest = await hash(textEncoder.encode(key))
       let header = JSON.stringify([digest, file.name, file.type, file.lastModified])
       let isNativeBlob = file instanceof Blob
       let content = new Blob([header, '\n', isNativeBlob ? file : await file.arrayBuffer()])
@@ -165,30 +192,38 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
         if (state.entries.has(digest)) await removeEntry(state, digest)
         await trim(state, record.size)
         await state.storage.set(digest, record)
-        state.entries.set(digest, { size: record.size })
+        state.entries.set(digest, {
+          checksum,
+          contentHash: meta?.contentHash,
+          size: record.size,
+        })
         state.size += record.size
       })
     },
   }
 }
 
+type CacheEntry = {
+  checksum?: string
+  contentHash?: string
+  size: number
+}
+
 type CacheState = {
   storage: FileStorage
-  entries: Map<string, { size: number }>
+  entries: Map<string, CacheEntry>
   size: number
 }
 
 export function createTransformCacheKey(namespace: string, identity: string): Promise<string> {
-  return hash(
-    new TextEncoder().encode(JSON.stringify(['transformed-file-v3', namespace, identity])),
-  )
+  return hash(textEncoder.encode(JSON.stringify(['transformed-file-v3', namespace, identity])))
 }
 
 async function readRecord(
   storage: FileStorage,
   digest: string,
   maxFileSize: number,
-): Promise<File | null> {
+): Promise<{ body: Uint8Array; checksum: string; file: File } | null> {
   let file: File | null
   try {
     file = await storage.get(digest)
@@ -201,15 +236,14 @@ async function readRecord(
 
   let bytes = new Uint8Array(await file.arrayBuffer())
   if (bytes.length > maxFileSize || bytes[64] !== 10) return null
-  let decoder = new TextDecoder()
-  let checksum = decoder.decode(bytes.subarray(0, 64))
+  let checksum = textDecoder.decode(bytes.subarray(0, 64))
   if ((await hash(bytes.subarray(65))) !== checksum) return null
 
   let headerEnd = bytes.indexOf(10, 65)
   if (headerEnd === -1) return null
   let header: unknown
   try {
-    header = JSON.parse(decoder.decode(bytes.subarray(65, headerEnd)))
+    header = JSON.parse(textDecoder.decode(bytes.subarray(65, headerEnd)))
   } catch {
     return null
   }
@@ -225,10 +259,15 @@ async function readRecord(
     return null
   }
 
-  return new File([bytes.subarray(headerEnd + 1)], header[1], {
-    type: header[2],
-    lastModified: header[3],
-  })
+  let body = bytes.subarray(headerEnd + 1)
+  return {
+    body,
+    checksum,
+    file: new File([body], header[1], {
+      type: header[2],
+      lastModified: header[3],
+    }),
+  }
 }
 
 function isCacheRecordMetadata(value: unknown): boolean {

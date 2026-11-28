@@ -163,6 +163,48 @@ const benchmarks: Benchmark[] = [
       }
     },
   },
+  {
+    id: 'deep-graph-cold-script-entry',
+    name: 'deep-graph fixture / cold getScriptEntry',
+    async prepare() {
+      let fixture = await getDeepGraphFixture()
+      return async function run() {
+        let assetServer = createBenchAssetServer(fixture)
+        let entry = await assetServer.getScriptEntry(fixture.entryPoint)
+        assertPreloadUrls(entry.preloads, fixture)
+      }
+    },
+  },
+  {
+    id: 'deep-graph-warm-script-entry',
+    name: 'deep-graph fixture / warm getScriptEntry',
+    async prepare() {
+      let fixture = await getDeepGraphFixture()
+      let assetServer = createBenchAssetServer(fixture)
+      let initial = await assetServer.getScriptEntry(fixture.entryPoint)
+      assertPreloadUrls(initial.preloads, fixture)
+      return async function run() {
+        let entry = await assetServer.getScriptEntry(fixture.entryPoint)
+        assert.equal(entry.href, initial.href)
+      }
+    },
+  },
+  {
+    id: 'deep-graph-watch-cold-entry',
+    name: 'deep-graph fixture / watch-mode cold getScriptEntry',
+    async prepare() {
+      let fixture = await getDeepGraphFixture()
+      return async function run() {
+        let assetServer = createStableBenchAssetServer(fixture, { watch: true })
+        try {
+          let entry = await assetServer.getScriptEntry(fixture.entryPoint)
+          assertPreloadUrls(entry.preloads, fixture)
+        } finally {
+          await assetServer.close()
+        }
+      }
+    },
+  },
 ]
 
 function createBenchAssetServer(

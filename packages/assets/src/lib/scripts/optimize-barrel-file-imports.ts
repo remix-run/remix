@@ -44,7 +44,7 @@ type ExportResolution = {
   importedName: string
 }
 
-type SideEffects = boolean | readonly string[] | null
+type SideEffects = boolean | readonly ((relativePath: string) => boolean)[] | null
 
 type ExportAnalysisCache = {
   analyses: WeakMap<ResolvedModule, ExportAnalysis>
@@ -69,15 +69,34 @@ const emptyExportAnalysis: ExportAnalysis = {
   stars: [],
 }
 
-export function createBarrelFileImportOptimizer(): (
-  graph: ReadonlyMap<string, ResolvedModule>,
-) => Map<string, ResolvedModule> {
-  let analysisCache: ExportAnalysisCache = { analyses: new WeakMap(), statements: new Map() }
+export type BarrelFileImportOptimizer = {
+  clear(): void
+  clearSideEffects(): void
+  invalidate(identityPath: string): void
+  optimize(graph: ReadonlyMap<string, ResolvedModule>): Map<string, ResolvedModule>
+}
 
-  return function optimizeBarrelFileImports(
+export function createBarrelFileImportOptimizer(): BarrelFileImportOptimizer {
+  let analysisCache: ExportAnalysisCache = { analyses: new WeakMap(), statements: new Map() }
+  let sideEffectsCache = new Map<string, SideEffects>()
+
+  return {
+    clear() {
+      analysisCache.statements.clear()
+      sideEffectsCache.clear()
+    },
+    clearSideEffects() {
+      sideEffectsCache.clear()
+    },
+    invalidate(identityPath) {
+      analysisCache.statements.delete(identityPath)
+    },
+    optimize: optimizeBarrelFileImports,
+  }
+
+  function optimizeBarrelFileImports(
     graph: ReadonlyMap<string, ResolvedModule>,
   ): Map<string, ResolvedModule> {
-    let sideEffectsCache = new Map<string, SideEffects>()
     let rewrittenGraph = new Map(graph)
     let modules: ResolvedModule[] = []
     let visited = new Set<string>()
@@ -403,17 +422,7 @@ function isSideEffectFree(module: ResolvedModule, cache: Map<string, SideEffects
 
   let packageRoot = path.dirname(packageJsonPath)
   let relativePath = path.relative(packageRoot, module.resolvedPath).replaceAll('\\', '/')
-  return !sideEffects.some((pattern) => {
-    let normalizedPattern = pattern.startsWith('./') ? pattern.slice(2) : pattern
-    try {
-      return picomatch.isMatch(relativePath, normalizedPattern, {
-        basename: !pattern.replaceAll('\\', '/').includes('/'),
-        dot: true,
-      })
-    } catch {
-      return true
-    }
-  })
+  return !sideEffects.some((matcher) => matcher(relativePath))
 }
 
 function readSideEffects(packageJsonPath: string): SideEffects {
@@ -432,7 +441,18 @@ function readSideEffects(packageJsonPath: string): SideEffects {
       Array.isArray(sideEffects) &&
       sideEffects.every((pattern): pattern is string => typeof pattern === 'string')
     ) {
-      return sideEffects
+      return sideEffects.map((pattern) => {
+        let normalizedPattern = pattern.startsWith('./') ? pattern.slice(2) : pattern
+        try {
+          let matcher = picomatch(normalizedPattern, {
+            basename: !pattern.replaceAll('\\', '/').includes('/'),
+            dot: true,
+          })
+          return (relativePath: string) => matcher(relativePath)
+        } catch {
+          return () => true
+        }
+      })
     }
   } catch {}
   return null

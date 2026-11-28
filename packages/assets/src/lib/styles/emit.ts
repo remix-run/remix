@@ -43,18 +43,17 @@ export async function emitResolvedStyle(
   try {
     let rewriteResult = await rewriteDependencies(resolvedStyle, options)
     let finalCode = rewriteResult.code
-    let sourceMap = rewriteResult.sourceMap
-      ? await createEmittedAsset(rewriteResult.sourceMap)
-      : null
+    let sourceMap: EmittedAsset | null = null
 
     if (rewriteResult.sourceMap) {
       if (options.sourceMaps === 'inline') {
         let encoded = Buffer.from(rewriteResult.sourceMap).toString('base64')
         finalCode += `\n/*# sourceMappingURL=data:application/json;base64,${encoded} */`
       } else if (options.sourceMaps === 'external') {
+        sourceMap = await createEmittedAsset(rewriteResult.sourceMap)
         finalCode += `\n/*# sourceMappingURL=${formatFingerprintedPathname(
           resolvedStyle.stableUrlPathname,
-          options.fingerprintAssets && sourceMap ? sourceMap.fingerprint : null,
+          options.fingerprintAssets ? sourceMap.fingerprint : null,
         )}.map */`
       }
     }
@@ -96,10 +95,8 @@ async function rewriteDependencies(
     }
   }
 
-  let rewrittenSource = new MagicString(resolvedStyle.rawCode)
-
-  for (let dependency of resolvedStyle.dependencies) {
-    let replacement =
+  let replacementResults = await Promise.allSettled(
+    resolvedStyle.dependencies.map(async (dependency) =>
       dependency.kind === 'external'
         ? dependency.replacement
         : dependency.kind === 'style'
@@ -109,7 +106,19 @@ async function rewriteDependencies(
                 transform: dependency.requestTransform,
               }),
               dependency.suffix,
-            )
+            ),
+    ),
+  )
+
+  let rewrittenSource = new MagicString(resolvedStyle.rawCode)
+
+  for (let index = 0; index < resolvedStyle.dependencies.length; index++) {
+    let dependency = resolvedStyle.dependencies[index]
+    let replacementResult = replacementResults[index]
+    if (replacementResult.status === 'rejected') {
+      throw replacementResult.reason
+    }
+
     let start = resolvedStyle.rawCode.indexOf(dependency.placeholder)
     if (start < 0) {
       throw createAssetServerCompilationError(
@@ -120,7 +129,7 @@ async function rewriteDependencies(
       )
     }
 
-    rewrittenSource.overwrite(start, start + dependency.placeholder.length, replacement)
+    rewrittenSource.overwrite(start, start + dependency.placeholder.length, replacementResult.value)
   }
 
   return {

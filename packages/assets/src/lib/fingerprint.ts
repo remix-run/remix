@@ -1,16 +1,18 @@
 const fingerprintedExtensionRE = /^(.+)\.@([A-Za-z0-9_-]+)(\.[^./]+)$/
 const fingerprintedBasenameRE = /^(.+)\.@([A-Za-z0-9_-]+)$/
+const textEncoder = new TextEncoder()
 
 export type EmittedAsset = {
-  content: string
+  content: Uint8Array<ArrayBuffer>
   etag: string
   fingerprint: string
 }
 
 export async function createEmittedAsset(content: string): Promise<EmittedAsset> {
-  let fingerprint = await hashContent(content)
+  let bytes = textEncoder.encode(content)
+  let fingerprint = await hashContent(bytes)
   return {
-    content,
+    content: bytes,
     etag: `W/"${fingerprint}"`,
     fingerprint,
   }
@@ -19,7 +21,7 @@ export async function createEmittedAsset(content: string): Promise<EmittedAsset>
 export async function hashContent(content: string | Uint8Array<ArrayBufferLike>): Promise<string> {
   let bytes =
     typeof content === 'string'
-      ? new TextEncoder().encode(content)
+      ? textEncoder.encode(content)
       : content.buffer instanceof ArrayBuffer
         ? new Uint8Array(content.buffer, content.byteOffset, content.byteLength)
         : new Uint8Array(content)

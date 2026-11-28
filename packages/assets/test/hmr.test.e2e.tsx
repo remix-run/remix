@@ -10,7 +10,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { watch, type FSWatcher } from 'chokidar'
 import { createAssetServer, type AssetServer } from '../src/assets.ts'
-import { getInternalChokidarWatcher } from '../src/lib/asset-server.ts'
 import type { HmrPayload } from '../src/lib/hmr.ts'
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -384,11 +383,8 @@ describe('asset server HMR', () => {
     await page.locator('[data-testid="field"]').fill('hello')
 
     let failed = waitForConsoleMessage(page, '[remix] HMR update failed')
-    let observedByAssetServer = server.waitForAssetServerWatchEvent('app/counter.ts')
     await write(fixture.rootDir, 'app/counter.ts', 'export const broken = "\n')
     await failed
-    // Let both watchers observe the broken version before replacing it.
-    await observedByAssetServer
 
     await write(
       fixture.rootDir,
@@ -450,7 +446,6 @@ describe('asset server HMR', () => {
       page,
       '[remix] HMR accepted update /assets/app/counter.ts',
     )
-    let observedByAssetServer = server.waitForAssetServerWatchEvent('app/counter.ts')
     await write(
       fixture.rootDir,
       'app/counter.ts',
@@ -464,9 +459,6 @@ describe('asset server HMR', () => {
     await firstAccepted
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'hello')
     assert.equal(await page.locator('script[type="importmap"]').count(), 2)
-
-    // Let both watchers observe the first update before replacing it.
-    await observedByAssetServer
 
     let secondAccepted = waitForConsoleMessage(
       page,
@@ -916,11 +908,8 @@ describe('asset server HMR', () => {
 
     let stylesheetPath = path.join(fixture.rootDir, 'app/styles.css')
     let failedStyleRequest = waitForStylesheetResponse(page, 500)
-    let observedByAssetServer = server.waitForAssetServerWatchEvent('app/styles.css')
     await writeFileAtomically(stylesheetPath, 'body { background: url("foo); }\n')
     await failedStyleRequest
-    // Let both watchers observe the broken content before writing the recovery content.
-    await observedByAssetServer
 
     await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
@@ -1352,7 +1341,6 @@ type HmrTestServer = {
   restartAssets(): Promise<void>
   startAssets(): Promise<void>
   stopAssets(): Promise<void>
-  waitForAssetServerWatchEvent(relativePath: string): Promise<void>
   waitForBrowserUpdate(pathname: string): Promise<void>
 }
 
@@ -2375,10 +2363,6 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
         server.closeAllConnections()
       })
     },
-    waitForAssetServerWatchEvent(relativePath) {
-      if (!assetServer) throw new Error('Asset server is not running')
-      return waitForAssetServerWatchEvent(assetServer, relativePath)
-    },
     waitForBrowserUpdate(pathname) {
       return new Promise((resolve) => {
         let waiters = browserUpdateWaiters.get(pathname) ?? []
@@ -2449,27 +2433,6 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
       }
     }
   }
-}
-
-// Resolves once the asset server's own watcher has handled a change to `relativePath`. Call it
-// before writing the file so the event cannot be missed.
-function waitForAssetServerWatchEvent(
-  assetServer: AssetServer,
-  relativePath: string,
-): Promise<void> {
-  let watcher = getInternalChokidarWatcher(assetServer)
-  assert.ok(watcher)
-  let observed = Promise.withResolvers<void>()
-  let handleEvent = (_event: string, filePath: string) => {
-    if (!filePath.replace(/\\/g, '/').endsWith(`/${relativePath}`)) return
-    watcher.off('all', handleEvent)
-    observed.resolve()
-  }
-  watcher.on('all', handleEvent)
-  return withFailureBound(
-    observed.promise,
-    `Timed out waiting for the asset server to observe ${relativePath}`,
-  )
 }
 
 function getBrowserHmrUpdatePaths(data: Record<string, unknown>): string[] {

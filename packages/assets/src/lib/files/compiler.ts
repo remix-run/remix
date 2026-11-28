@@ -12,7 +12,7 @@ import { resolveInputFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { AssetFileTransformResult, ResolvedAssetRequestTransformMap } from './config.ts'
 import { parseAssetTransformInvocations } from './config.ts'
-import { createTransformCacheKey } from './cache.ts'
+import { cachedFileMeta, createTransformCacheKey } from './cache.ts'
 import type { FileCache } from './file-cache.ts'
 import { createSourceFileStore } from './store.ts'
 import type {
@@ -23,11 +23,14 @@ import type {
 } from './store.ts'
 import { isNoEntityError } from '../fs-errors.ts'
 import {
+  createNotModifiedResponse,
   getCacheKey,
   getFileSnapshot,
   getNotModifiedResult,
   resolveRealFilePath,
 } from '../compiler-utils.ts'
+
+const textEncoder = new TextEncoder()
 
 type EmittedFile = {
   body: Uint8Array
@@ -298,13 +301,6 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     }
   }
 
-  async function getOrCreateSourceFileMetadata(
-    record: SourceFileRecord,
-  ): Promise<SourceFileMetadata> {
-    if (record.metadata) return record.metadata
-    return toEmittedFileMetadata(await getOrCreateSourceFile(record))
-  }
-
   async function getOrCreateTransformedFile(
     record: SourceFileRecord,
     parsedTransforms: readonly ParsedRequestTransform[],
@@ -323,7 +319,9 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
         return sourceFile
       }
 
+      let contentHash = await hashContent(transformedFile.body)
       let emittedFile = await createEmittedFile(transformedFile.body, {
+        contentHash,
         extension: transformedFile.extension,
         filePath: record.identityPath,
       })
@@ -331,10 +329,11 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
         let name =
           path.basename(record.identityPath, path.extname(record.identityPath)) +
           emittedFile.extension
-        await cache.put(
-          transformedCacheKey,
-          new File([toArrayBufferView(emittedFile.body)], name, { type: emittedFile.contentType }),
-        )
+        let cachedFile = new File([toArrayBufferView(emittedFile.body)], name, {
+          type: emittedFile.contentType,
+        })
+        cachedFileMeta.set(cachedFile, { contentHash })
+        await cache.put(transformedCacheKey, cachedFile)
       }
       return emittedFile
     })()
@@ -454,7 +453,14 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     let file = await cache.get(cacheKey)
     if (!file) return null
 
-    return createEmittedFile(new Uint8Array(await file.arrayBuffer()), {
+    let meta = cachedFileMeta.get(file)
+    let body = meta?.body ?? new Uint8Array(await file.arrayBuffer())
+    let contentHash = meta?.contentHash ?? (await hashContent(body))
+    if (meta && meta.contentHash === undefined) {
+      meta.onContentHash?.(contentHash)
+    }
+    return createEmittedFile(body, {
+      contentHash,
       extension: path.extname(file.name),
       filePath: identityPath,
     })
@@ -463,6 +469,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   async function createEmittedFile(
     body: Uint8Array,
     options: {
+      contentHash?: string
       extension: string
       filePath: string
     },
@@ -477,11 +484,12 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   async function createEmittedFileMetadata(
     body: Uint8Array,
     options: {
+      contentHash?: string
       extension: string
       filePath: string
     },
   ): Promise<EmittedFileMetadata> {
-    let contentHash = await hashContent(body)
+    let contentHash = options.contentHash ?? (await hashContent(body))
     let contentType =
       detectContentType(`file${options.extension}`) ??
       detectContentType(options.filePath) ??
@@ -545,12 +553,14 @@ export function createResponseForFile(
   },
 ): Response {
   if (IfNoneMatch.from(options.ifNoneMatch).matches(result.etag)) {
-    return new Response(null, { status: 304, headers: { ETag: result.etag } })
+    return createNotModifiedResponse(result.etag, options.cacheControl)
   }
 
-  return new Response(options.method === 'HEAD' ? null : toArrayBufferView(result.body), {
+  let body = toArrayBufferView(result.body)
+  return new Response(options.method === 'HEAD' ? null : body, {
     headers: {
       'Cache-Control': options.cacheControl,
+      'Content-Length': String(body.byteLength),
       'Content-Type': result.contentType,
       ETag: result.etag,
     },
@@ -614,7 +624,7 @@ function normalizeTransformResult(
 ): AssetFileTransformResult & { content: Uint8Array; extension: string } {
   if (typeof result === 'string') {
     return {
-      content: new TextEncoder().encode(result),
+      content: textEncoder.encode(result),
       extension: options.currentExtension,
     }
   }
@@ -661,9 +671,7 @@ function normalizeTransformResult(
 
   return {
     content:
-      typeof result.content === 'string'
-        ? new TextEncoder().encode(result.content)
-        : result.content,
+      typeof result.content === 'string' ? textEncoder.encode(result.content) : result.content,
     extension,
   }
 }
