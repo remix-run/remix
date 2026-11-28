@@ -27,26 +27,27 @@ export function split(source: string): SplitResult {
     search: null,
   }
 
+  let end = source.length
   let questionMarkIndex = source.indexOf('?')
   if (questionMarkIndex !== -1) {
-    result.search = span(questionMarkIndex + 1, source.length)
-    source = source.slice(0, questionMarkIndex)
+    result.search = span(questionMarkIndex + 1, end)
+    end = questionMarkIndex
   }
 
   let solidusIndex = source.indexOf('://')
-  if (solidusIndex === -1) {
-    result.pathname = pathnameSpan(source, 0, source.length)
+  if (solidusIndex === -1 || solidusIndex >= end) {
+    result.pathname = pathnameSpan(source, 0, end)
     return result
   }
 
   let firstSlash = source.indexOf('/')
   if (firstSlash !== -1 && firstSlash < solidusIndex) {
-    result.pathname = pathnameSpan(source, 0, source.length)
+    result.pathname = pathnameSpan(source, 0, end)
     return result
   }
 
   let slashIndex = source.indexOf('/', solidusIndex + 3)
-  let hostEnd = slashIndex === -1 ? source.length : slashIndex
+  let hostEnd = slashIndex === -1 || slashIndex >= end ? end : slashIndex
 
   result.protocol = span(0, solidusIndex)
   let host = span(solidusIndex + 3, hostEnd)
@@ -55,8 +56,8 @@ export function split(source: string): SplitResult {
     result.hostname = hostname
     result.port = port
   }
-  if (slashIndex !== -1) {
-    result.pathname = pathnameSpan(source, slashIndex, source.length)
+  if (slashIndex !== -1 && slashIndex < end) {
+    result.pathname = pathnameSpan(source, slashIndex, end)
   }
   return result
 }
@@ -69,13 +70,22 @@ function hostSpans(source: string, host: Span): { hostname: Span | null; port: S
   let lastColonIndex = source.lastIndexOf(':', host[1] - 1)
   if (lastColonIndex < host[0]) return { hostname: host, port: null }
 
-  if (/^\d+$/.test(source.slice(lastColonIndex + 1, host[1]))) {
+  if (isAllDigits(source, lastColonIndex + 1, host[1])) {
     return { hostname: span(host[0], lastColonIndex), port: span(lastColonIndex + 1, host[1]) }
   }
   return { hostname: host, port: null }
 }
 
+function isAllDigits(source: string, start: number, end: number): boolean {
+  if (start >= end) return false
+  for (let i = start; i < end; i++) {
+    let code = source.charCodeAt(i)
+    if (code < 48 || code > 57) return false
+  }
+  return true
+}
+
 function pathnameSpan(source: string, begin: number, end: number): Span | null {
-  if (source[begin] === '/') begin += 1
+  if (begin < end && source.charCodeAt(begin) === 47) begin += 1
   return span(begin, end)
 }

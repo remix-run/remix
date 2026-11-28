@@ -122,12 +122,12 @@ describe('matcher resource limits', () => {
   })
 
   it('enforces match work while comparing pathname wildcard captures', () => {
-    let matcher = createMultiMatcher({ limits: { maxMatchWork: 1_000 } })
+    let matcher = createMultiMatcher({ limits: { maxMatchWork: 300 } })
     matcher.add('/*first(/*rest)', null)
 
     assert.throws(
       () => matcher.match(`https://example.com/${'a/'.repeat(30)}a`),
-      exceedsMatchWork(1_000),
+      exceedsMatchWork(300),
     )
   })
 

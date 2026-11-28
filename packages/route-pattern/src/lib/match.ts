@@ -97,5 +97,5 @@ class TrieMatcher<data = unknown> implements MultiMatcher<data> {
 
 function resolveURL(url: string | URL, options?: MatchOptions): URL {
   if (typeof url !== 'string') return url
-  return options?.baseURL === undefined ? new URL(url) : new URL(url, new URL(options.baseURL))
+  return options?.baseURL === undefined ? new URL(url) : new URL(url, options.baseURL)
 }

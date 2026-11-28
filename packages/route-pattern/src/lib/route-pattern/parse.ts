@@ -13,6 +13,10 @@ const emptySearch: ReadonlyMap<string, ReadonlySet<string>> = new Map()
 const emptyOptionals: ReadonlyMap<number, number> = new Map()
 const emptyPathname: PartPattern = { tokens: [], optionals: emptyOptionals, type: 'pathname' }
 
+export const separatorToken: PartPatternToken = { type: 'separator' }
+const openOptionalToken: PartPatternToken = { type: '(' }
+const closeOptionalToken: PartPatternToken = { type: ')' }
+
 /**
  * Parse a route pattern source string
  *
@@ -21,6 +25,21 @@ const emptyPathname: PartPattern = { tokens: [], optionals: emptyOptionals, type
  * @throws {ParseError} When the source is malformed.
  */
 export function parsePattern<source extends string>(source: source): RoutePattern<source> {
+  // Fast path for pathname-only patterns (avoids split object, Span tuples, and options wrapper)
+  if (source.indexOf('?') === -1 && source.indexOf('://') === -1) {
+    let start = source.charCodeAt(0) === 47 ? 1 : 0
+    return createRoutePattern<source>({
+      protocol: null,
+      hostname: null,
+      port: null,
+      pathname:
+        start === source.length
+          ? emptyPathname
+          : parsePartSpan(source, start, source.length, 'pathname'),
+      search: emptySearch,
+    })
+  }
+
   let spans = split(source)
   if (spans.port && !spans.hostname) {
     throw new ParseError('missing hostname', source, spans.port[0] - 1)
@@ -31,7 +50,7 @@ export function parsePattern<source extends string>(source: source): RoutePatter
     hostname: parseHostname(source, spans.hostname),
     port: spans.port ? source.slice(...spans.port) : null,
     pathname: spans.pathname
-      ? parsePart(source, { span: spans.pathname, type: 'pathname' })
+      ? parsePartSpan(source, spans.pathname[0], spans.pathname[1], 'pathname')
       : emptyPathname,
     search: spans.search ? parseSearch(source.slice(...spans.search)) : emptySearch,
   })
@@ -48,7 +67,16 @@ export function parsePart(
 ): PartPattern {
   let start = options.span ? options.span[0] : 0
   let end = options.span ? options.span[1] : source.length
-  let separatorCode = options.type === 'hostname' ? 46 : 47 // '.' or '/'
+  return parsePartSpan(source, start, end, options.type)
+}
+
+function parsePartSpan(
+  source: string,
+  start: number,
+  end: number,
+  type: 'hostname' | 'pathname',
+): PartPattern {
+  let separatorCode = type === 'hostname' ? 46 : 47 // '.' or '/'
 
   let tokens: Array<Mutable<PartPatternToken>> = []
   let tokenIndices: Array<number> = []
@@ -62,7 +90,7 @@ export function parsePart(
     let code = source.charCodeAt(i)
 
     if (code === separatorCode) {
-      tokens.push({ type: 'separator' })
+      tokens.push(separatorToken)
       tokenIndices.push(i)
       i += 1
       continue
@@ -71,7 +99,7 @@ export function parsePart(
     if (code === 40) {
       optionalStack ??= []
       optionalStack.push({ tokenIndex: tokens.length, sourceIndex: i })
-      tokens.push({ type: '(' })
+      tokens.push(openOptionalToken)
       tokenIndices.push(i)
       i += 1
       continue
@@ -87,7 +115,7 @@ export function parsePart(
       }
       optionals ??= new Map()
       optionals.set(optional.tokenIndex, tokens.length)
-      tokens.push({ type: ')' })
+      tokens.push(closeOptionalToken)
       tokenIndices.push(i)
       i += 1
       continue
@@ -149,7 +177,7 @@ export function parsePart(
     validateOptionalCaptureSchemas(source, tokens, resolvedOptionals, tokenIndices)
   }
 
-  return { tokens, optionals: resolvedOptionals, type: options.type }
+  return { tokens, optionals: resolvedOptionals, type }
 }
 
 function appendTextToken(
@@ -197,13 +225,17 @@ function validateTokenGrammar(
     let token = tokens[index]
     if (token.type !== ':' && token.type !== '*') continue
 
-    // Fast path when the immediate next token is not an optional boundary (avoids Set allocations)
-    let immediate = tokens[index + 1]
+    // Fast path: skip closing ')' boundaries (never branch) before checking next token
+    let nextIndex = index + 1
+    while (nextIndex < tokens.length && tokens[nextIndex].type === ')') {
+      nextIndex += 1
+    }
+    let immediate = tokens[nextIndex]
     if (immediate === undefined || immediate.type === 'separator') continue
-    if (immediate.type !== '(' && immediate.type !== ')') {
+    if (immediate.type !== '(') {
       if (token.type === '*') {
         if (immediate.type === '*') {
-          throw new ParseError('adjacent wildcards', source, tokenIndices[index + 1])
+          throw new ParseError('adjacent wildcards', source, tokenIndices[nextIndex])
         }
         continue
       }
@@ -213,10 +245,10 @@ function validateTokenGrammar(
       ) {
         continue
       }
-      throw new ParseError('invalid param delimiter', source, tokenIndices[index + 1])
+      throw new ParseError('invalid param delimiter', source, tokenIndices[nextIndex])
     }
 
-    for (let next of nextConsumingTokenIndices(tokens, optionals, index + 1)) {
+    for (let next of nextConsumingTokenIndices(tokens, optionals, nextIndex)) {
       if (next === tokens.length) continue
       let nextToken = tokens[next]
 
@@ -317,7 +349,7 @@ function parseProtocol(source: string, span: Span | null): RoutePatternParts['pr
 
 function parseHostname(source: string, span: Span | null): RoutePatternParts['hostname'] {
   if (!span) return null
-  let part = parsePart(source, { span, type: 'hostname' })
+  let part = parsePartSpan(source, span[0], span[1], 'hostname')
   if (part.tokens.length === 1 && part.tokens[0].type === '*' && part.tokens[0].name === '*') {
     return null
   }

@@ -37,8 +37,10 @@ export type PartProgram = {
   readonly staticPrefix: string
   readonly staticSuffix: string
   readonly requiredAnchors: ReadonlyArray<string>
-  readonly minLen: Int32Array
-  readonly maxLen: Float64Array
+  readonly minLength: number
+  readonly maxLength: number
+  readonly minLen: Int32Array | null
+  readonly maxLen: Float64Array | null
   unitTokens: ReadonlyArray<UnitCompiledToken> | null
 }
 
@@ -57,6 +59,7 @@ type Solution = {
 
 const emptySolution: Solution = { captures: null, captureCount: 0 }
 const emptyMeta: ReadonlyArray<MatchParamMeta> = []
+const emptyStrings: ReadonlyArray<string> = []
 
 // Canonical encoded length for ASCII code points in pathname representation.
 // Structural '/' and '.' have length 1; unreserved encodeURIComponent chars have length 1;
@@ -66,6 +69,10 @@ for (let c = 0; c < 128; c++) {
   pathEncodedLenTable[c] = encodeURIComponent(String.fromCharCode(c)).length
 }
 pathEncodedLenTable[47] = 1 // '/' (structural)
+
+// Lookup table for single-pass param segment scanning: '.' maps to 0 as a sentinel.
+const paramEncodedLenTable = new Uint8Array(pathEncodedLenTable)
+paramEncodedLenTable[46] = 0
 
 // Lookup table for non-structural ASCII chars (where '.' and '/' are encoded as %2E and %2F = 3).
 const dataEncodedLenTable = new Uint8Array(pathEncodedLenTable)
@@ -95,6 +102,25 @@ export function encodedPathnameLength(text: string, start: number, end: number):
   return len
 }
 
+// Scans a pathname `:param` segment in one pass: returns -1 if '.' is present, else encoded length.
+export function scanParamEncodedLength(text: string, start: number, end: number): number {
+  let len = 0
+  for (let i = start; i < end; i++) {
+    let code = text.charCodeAt(i)
+    if (code < 128) {
+      let charLen = paramEncodedLenTable[code]
+      if (charLen === 0) return -1
+      len += charLen
+    } else if (code >= 0xd800 && code <= 0xdbff && i + 1 < end) {
+      len += 12
+      i += 1
+    } else {
+      len += code <= 0x7ff ? 6 : 9
+    }
+  }
+  return len
+}
+
 export function decodePercentChunk(chunk: string, strict: boolean): string | null {
   if (chunk.indexOf('%') === -1) return chunk
   try {
@@ -105,37 +131,56 @@ export function decodePercentChunk(chunk: string, strict: boolean): string | nul
   }
 }
 
-export function canonicalizePatternSegmentText(
+// Canonicalizes segment text without wrapper allocation; returns null if it contains a non-structural separator.
+export function canonicalizeSimpleSegmentText(
   text: string,
   type: PartPattern['type'],
   ignoreCase: boolean,
-): { text: string; hasNonStructuralSep: boolean } {
+): string | null {
   let hasPercent = text.indexOf('%') !== -1
   let hasEscapedSlash = type === 'pathname' && text.indexOf('/') !== -1
   if (!hasPercent && !hasEscapedSlash) {
-    return { text: ignoreCase ? text.toLowerCase() : text, hasNonStructuralSep: false }
+    return ignoreCase ? text.toLowerCase() : text
   }
 
   let result = ''
-  let hasNonStructuralSep = false
   let start = 0
   for (let i = 0; i <= text.length; i++) {
     if (i < text.length && text.charCodeAt(i) !== 46) continue
     if (i > start) {
       let decoded = decodePercentChunk(text.slice(start, i), false)!
       if (ignoreCase) decoded = decoded.toLowerCase()
-      if (
-        !hasNonStructuralSep &&
-        (decoded.indexOf('.') !== -1 || (type === 'pathname' && decoded.indexOf('/') !== -1))
-      ) {
-        hasNonStructuralSep = true
+      if (decoded.indexOf('.') !== -1 || (type === 'pathname' && decoded.indexOf('/') !== -1)) {
+        return null
       }
       result += decoded
     }
     if (i < text.length) result += '.'
     start = i + 1
   }
-  return { text: result, hasNonStructuralSep }
+  return result
+}
+
+function canonicalizePatternSegmentText(
+  text: string,
+  type: PartPattern['type'],
+  ignoreCase: boolean,
+): { text: string; hasNonStructuralSep: boolean } {
+  let simple = canonicalizeSimpleSegmentText(text, type, ignoreCase)
+  if (simple !== null) return { text: simple, hasNonStructuralSep: false }
+
+  let result = ''
+  let start = 0
+  for (let i = 0; i <= text.length; i++) {
+    if (i < text.length && text.charCodeAt(i) !== 46) continue
+    if (i > start) {
+      let decoded = decodePercentChunk(text.slice(start, i), false)!
+      result += ignoreCase ? decoded.toLowerCase() : decoded
+    }
+    if (i < text.length) result += '.'
+    start = i + 1
+  }
+  return { text: result, hasNonStructuralSep: true }
 }
 
 export function compilePart(part: PartPattern, options?: { ignoreCase?: boolean }): PartProgram {
@@ -180,45 +225,68 @@ export function compilePart(part: PartPattern, options?: { ignoreCase?: boolean 
   let lastToken = tokens[tokens.length - 1]
   let staticPrefix = firstToken !== undefined && firstToken.type === 'text' ? firstToken.text : ''
   let staticSuffix = lastToken !== undefined && lastToken.type === 'text' ? lastToken.text : ''
+  let matchKind = classifyMatchKind(tokens)
 
-  let requiredAnchors: Array<string> = []
-  let optionalDepth = 0
-  for (let i = 0; i < tokens.length; i++) {
-    let token = tokens[i]
-    if (token.type === '(') {
-      optionalDepth += 1
-    } else if (token.type === ')') {
-      optionalDepth -= 1
-    } else if (token.type === 'text' && optionalDepth === 0 && i > 0 && i < tokens.length - 1) {
-      requiredAnchors.push(token.text)
-    }
-  }
+  let requiredAnchors: ReadonlyArray<string> = emptyStrings
+  let minLen: Int32Array | null = null
+  let maxLen: Float64Array | null = null
+  let minLength = 0
+  let maxLength = 0
 
-  let n = tokens.length
-  let minLen = new Int32Array(n + 1)
-  let maxLen = new Float64Array(n + 1)
-  for (let s = n - 1; s >= 0; s--) {
-    let token = tokens[s]
-    if (token.type === 'text') {
-      minLen[s] = token.text.length + minLen[s + 1]
-      maxLen[s] = token.text.length + maxLen[s + 1]
-    } else if (token.type === ':') {
-      minLen[s] = 1 + minLen[s + 1]
-      maxLen[s] = Infinity
-    } else if (token.type === '*') {
-      minLen[s] = minLen[s + 1]
-      maxLen[s] = Infinity
-    } else if (token.type === ')') {
-      minLen[s] = minLen[s + 1]
-      maxLen[s] = maxLen[s + 1]
-    } else if (token.type === '(') {
-      let incMin = minLen[s + 1]
-      let omitMin = minLen[token.end + 1]
-      minLen[s] = incMin < omitMin ? incMin : omitMin
-      let incMax = maxLen[s + 1]
-      let omitMax = maxLen[token.end + 1]
-      maxLen[s] = incMax > omitMax ? incMax : omitMax
+  if (matchKind === 'static') {
+    minLength = staticPrefix.length
+    maxLength = staticPrefix.length
+  } else if (matchKind !== 'state') {
+    maxLength = Infinity
+    for (let i = 0; i < tokens.length; i++) {
+      let token = tokens[i]
+      if (token.type === 'text') minLength += token.text.length
+      else if (token.type === ':') minLength += 1
     }
+  } else {
+    let anchors: Array<string> | null = null
+    let optionalDepth = 0
+    for (let i = 0; i < tokens.length; i++) {
+      let token = tokens[i]
+      if (token.type === '(') {
+        optionalDepth += 1
+      } else if (token.type === ')') {
+        optionalDepth -= 1
+      } else if (token.type === 'text' && optionalDepth === 0 && i > 0 && i < tokens.length - 1) {
+        anchors ??= []
+        anchors.push(token.text)
+      }
+    }
+    if (anchors !== null) requiredAnchors = anchors
+
+    let n = tokens.length
+    minLen = new Int32Array(n + 1)
+    maxLen = new Float64Array(n + 1)
+    for (let s = n - 1; s >= 0; s--) {
+      let token = tokens[s]
+      if (token.type === 'text') {
+        minLen[s] = token.text.length + minLen[s + 1]
+        maxLen[s] = token.text.length + maxLen[s + 1]
+      } else if (token.type === ':') {
+        minLen[s] = 1 + minLen[s + 1]
+        maxLen[s] = Infinity
+      } else if (token.type === '*') {
+        minLen[s] = minLen[s + 1]
+        maxLen[s] = Infinity
+      } else if (token.type === ')') {
+        minLen[s] = minLen[s + 1]
+        maxLen[s] = maxLen[s + 1]
+      } else if (token.type === '(') {
+        let incMin = minLen[s + 1]
+        let omitMin = minLen[token.end + 1]
+        minLen[s] = incMin < omitMin ? incMin : omitMin
+        let incMax = maxLen[s + 1]
+        let omitMax = maxLen[token.end + 1]
+        maxLen[s] = incMax > omitMax ? incMax : omitMax
+      }
+    }
+    minLength = minLen[0]
+    maxLength = maxLen[0]
   }
 
   return {
@@ -226,11 +294,13 @@ export function compilePart(part: PartPattern, options?: { ignoreCase?: boolean 
     ignoreCase,
     type: part.type,
     tokens,
-    matchKind: classifyMatchKind(tokens),
+    matchKind,
     hasNonStructuralSep,
     staticPrefix,
     staticSuffix,
     requiredAnchors,
+    minLength,
+    maxLength,
     minLen,
     maxLen,
     unitTokens: hasNonStructuralSep ? compileUnitTokens(part, ignoreCase) : null,
@@ -373,8 +443,8 @@ export function matchPartString(
   }
 
   if (
-    len < program.minLen[0] ||
-    len > program.maxLen[0] ||
+    len < program.minLength ||
+    len > program.maxLength ||
     (program.staticPrefix.length > 0 && !input.startsWith(program.staticPrefix)) ||
     (program.staticSuffix.length > 0 && !input.endsWith(program.staticSuffix))
   ) {
@@ -419,6 +489,12 @@ function matchLinearOrSingleWildcard(
     kind === 'single-wildcard' ? input.length - program.staticSuffix.length : input.length
 
   let pos = 0
+  let startIdx = 0
+  if (program.staticPrefix.length > 0 && stopIdx > 0) {
+    // Already verified by matchPartString's staticPrefix guard
+    pos = program.staticPrefix.length
+    startIdx = 1
+  }
   let curIdx = 0
   let curEncOffset = 0
   let captures: Array<MatchParamMeta> = []
@@ -437,7 +513,7 @@ function matchLinearOrSingleWildcard(
     captures.push({ type, name, value, begin: encBegin, end: encEnd })
   }
 
-  for (let i = 0; i < stopIdx; i++) {
+  for (let i = startIdx; i < stopIdx; i++) {
     let token = tokens[i]
     if (token.type === 'text') {
       if (!input.startsWith(token.text, pos)) return null
@@ -468,8 +544,8 @@ function matchStateString(
   let n = tokens.length
   let len = input.length
   let isPathname = program.type === 'pathname'
-  let minLen = program.minLen
-  let maxLen = program.maxLen
+  let minLen = program.minLen!
+  let maxLen = program.maxLen!
 
   // Guard JS recursion depth for unusually large patterns (e.g. >512 tokens)
   if (n > 512) {
@@ -488,25 +564,48 @@ function matchStateString(
     if (rem < minLen[state] || rem > maxLen[state]) return null
     if (state === n) return pos === len ? emptySolution : null
 
+    let token = tokens[state]
+    if (token.type === ')') {
+      consumeMatchWork(budget, 1)
+      return solve(state + 1, pos)
+    }
+
     let key = state * stride + pos
     let cached = flatMemo !== null ? flatMemo[key] : sparseMemo!.get(key)
     if (cached !== undefined) return cached
 
     consumeMatchWork(budget, 1)
-    let token = tokens[state]
     let result: Solution | null
 
-    if (token.type === ')') {
-      result = solve(state + 1, pos)
-    } else if (token.type === '(') {
-      result = betterSolution(
-        len,
-        hostnameOrder,
-        solve(token.end + 1, pos),
-        solve(state + 1, pos),
-        budget,
-        pos,
-      )
+    if (token.type === '(') {
+      let firstInner = tokens[state + 1]
+      if (firstInner.type === 'text') {
+        let include: Solution | null = null
+        if (input.startsWith(firstInner.text, pos)) {
+          let nextState = state + 2 === token.end ? token.end + 1 : state + 2
+          include = solve(nextState, pos + firstInner.text.length)
+        }
+        // Zero captures (emptySolution) cannot be beaten by any alternative, and ties are identical.
+        if (include === emptySolution) {
+          result = emptySolution
+        } else {
+          result = betterSolution(
+            len,
+            hostnameOrder,
+            solve(token.end + 1, pos),
+            include,
+            budget,
+            pos,
+          )
+        }
+      } else {
+        let omit = solve(token.end + 1, pos)
+        if (omit === emptySolution) {
+          result = emptySolution
+        } else {
+          result = betterSolution(len, hostnameOrder, omit, solve(state + 1, pos), budget, pos)
+        }
+      }
     } else if (token.type === 'text') {
       result = input.startsWith(token.text, pos) ? solve(state + 1, pos + token.text.length) : null
     } else if (token.type === ':') {
@@ -548,7 +647,9 @@ function matchStateString(
             endPos = input.indexOf(nextToken.text, endPos + 1)
           }
         } else {
-          for (let endPos = pos; endPos <= maxEnd; endPos++) {
+          let minEnd = len - maxLen[state + 1]
+          let startPos = minEnd > pos ? minEnd : pos
+          for (let endPos = startPos; endPos <= maxEnd; endPos++) {
             consumeMatchWork(budget, 1)
             let tail = solve(state + 1, endPos)
             if (tail !== null) {
@@ -584,8 +685,8 @@ function matchStateStringBottomUp(
   let n = tokens.length
   let len = input.length
   let isPathname = program.type === 'pathname'
-  let minLen = program.minLen
-  let maxLen = program.maxLen
+  let minLen = program.minLen!
+  let maxLen = program.maxLen!
   let stride = len + 1
   consumeMatchWork(budget, (n + 1) * stride)
 
@@ -850,8 +951,8 @@ function compareSolutions(
       pos = nextA < nextB ? nextA : nextB
     }
   } else {
-    let aEncoding = encodeSpecificity(inputLength, a.captures, budget)
-    let bEncoding = encodeSpecificity(inputLength, b.captures, budget)
+    let aEncoding = encodeSpecificity(inputLength, a.captures, budget, true)
+    let bEncoding = encodeSpecificity(inputLength, b.captures, budget, false)
     for (let position of hostnameOrder) {
       consumeMatchWork(budget, 1)
       if (aEncoding[position] < bEncoding[position]) return 1
@@ -863,13 +964,28 @@ function compareSolutions(
   return 0
 }
 
+// Reusable scratch buffers for synchronous, non-reentrant hostname specificity comparisons
+const hostSpecBufs = {
+  a: new Uint8Array(256),
+  b: new Uint8Array(256),
+}
+
 function encodeSpecificity(
   length: number,
   captures: CaptureNode | null,
   budget: MatchWorkBudget,
+  useA: boolean,
 ): Uint8Array {
   consumeMatchWork(budget, length)
-  let encoding = new Uint8Array(length)
+  let encoding: Uint8Array
+  if (useA) {
+    if (hostSpecBufs.a.length < length) hostSpecBufs.a = new Uint8Array(length)
+    encoding = hostSpecBufs.a
+  } else {
+    if (hostSpecBufs.b.length < length) hostSpecBufs.b = new Uint8Array(length)
+    encoding = hostSpecBufs.b
+  }
+  encoding.fill(0, 0, length)
   for (let capture = captures; capture !== null; capture = capture.next) {
     consumeMatchWork(budget, 1 + capture.end - capture.begin)
     encoding.fill(capture.type === ':' ? 1 : 2, capture.begin, capture.end)
