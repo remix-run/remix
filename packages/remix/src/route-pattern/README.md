@@ -419,7 +419,7 @@ apiUser.toString()
 
 ## Benchmarks
 
-Average time compared with [`find-my-way`](https://github.com/delvedor/find-my-way) and [`path-to-regexp`](https://github.com/pillarjs/path-to-regexp) on pathname patterns all three support, plus production patterns from Shopify that `find-my-way` can't represent. Lower is better. More benchmarks live in [`bench/`](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench).
+Average time compared with [`find-my-way`](https://github.com/delvedor/find-my-way), [`path-to-regexp`](https://github.com/pillarjs/path-to-regexp), and built-in [`URLPattern`](https://developer.mozilla.org/en-US/docs/Web/API/URLPattern) on pathname patterns all four support, plus production patterns from Shopify that `find-my-way` can't represent. Lower is better. We plan to add `URLPatternList` once it lands in common JavaScript runtimes. More benchmarks live in [`bench/`](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench).
 
 <!-- Update with `pnpm run bench:update-readme` -->
 <!-- benchmarks:start -->
@@ -428,25 +428,25 @@ Average time compared with [`find-my-way`](https://github.com/delvedor/find-my-w
 
 Matching one URL with a matcher built ahead of time, as in a long-running server.
 
-| Routes          | `route-pattern` | `find-my-way` | `path-to-regexp` |
-| --------------- | --------------: | ------------: | ---------------: |
-| 100             |          175 ns |        129 ns |          1.45 µs |
-| 1,000           |          188 ns |        139 ns |          43.8 µs |
-| 5,000           |          192 ns |        138 ns |           284 µs |
-| 2,506 (Shopify) |          208 ns |           n/a |          52.0 µs |
+| Routes          | `route-pattern` | `find-my-way` | `path-to-regexp` | `URLPattern` |
+| --------------- | --------------: | ------------: | ---------------: | -----------: |
+| 100             |          182 ns |        151 ns |          1.44 µs |      15.4 µs |
+| 1,000           |          188 ns |        160 ns |          42.2 µs |       140 µs |
+| 5,000           |          202 ns |        157 ns |           322 µs |       746 µs |
+| 2,506 (Shopify) |          173 ns |           n/a |          51.7 µs |       183 µs |
 
 ### Building and matching
 
 Building a matcher and matching one URL, as in a cold start.
 
-| Routes          | `route-pattern` | `find-my-way` | `path-to-regexp` |
-| --------------- | --------------: | ------------: | ---------------: |
-| 100             |         43.7 µs |        245 µs |           106 µs |
-| 1,000           |          455 µs |       4.94 ms |          1.26 ms |
-| 5,000           |         2.37 ms |       81.7 ms |          10.5 ms |
-| 2,506 (Shopify) |         1.55 ms |           n/a |          3.99 ms |
+| Routes          | `route-pattern` | `find-my-way` | `path-to-regexp` | `URLPattern` |
+| --------------- | --------------: | ------------: | ---------------: | -----------: |
+| 100             |         59.5 µs |        292 µs |           118 µs |       237 µs |
+| 1,000           |          624 µs |       6.00 ms |          1.26 ms |      2.51 ms |
+| 5,000           |         2.72 ms |       97.8 ms |          10.6 ms |      13.2 ms |
+| 2,506 (Shopify) |          949 µs |           n/a |          3.91 ms |      6.08 ms |
 
-Measured 2026-11-25 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `route-pattern@1.0.0` (`8a8adc7b70`), `find-my-way@9.3.0`, and `path-to-regexp@8.4.2`.
+Measured 2026-11-28 on Apple M5 Pro (Darwin 25.6.0) with Node.js v24.18.0, `route-pattern@1.0.0` (`a6bced7033`), `find-my-way@9.3.0`, and `path-to-regexp@8.4.2`.
 
 <!-- benchmarks:end -->
 

@@ -36,7 +36,7 @@ pnpm bench --compare=main.json
 
 ## Latest Results
 
-Match results comparing `route-pattern` with `find-my-way` and `path-to-regexp` are published in the [package README](https://github.com/remix-run/remix/tree/main/packages/route-pattern#benchmarks). Regenerate them with `pnpm update-readme`.
+Match results comparing `route-pattern` with `find-my-way`, `path-to-regexp`, and built-in `URLPattern` are published in the [package README](https://github.com/remix-run/remix/tree/main/packages/route-pattern#benchmarks). Regenerate them with `pnpm update-readme`. Once `URLPatternList` lands in common JavaScript runtimes, we plan to include it alongside `URLPattern`.
 
 The results below were recorded on November 25, 2026 at commit `8a8adc7b70` on an Apple M5 Pro running macOS 26.7.3 and Node.js v24.18.0, with Vitest 4.1.6.
 

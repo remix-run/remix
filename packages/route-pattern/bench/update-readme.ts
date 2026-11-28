@@ -10,7 +10,7 @@ const benchDir = path.dirname(fileURLToPath(import.meta.url))
 const readmePath = path.resolve(benchDir, '../README.md')
 const benchmarkStart = '<!-- benchmarks:start -->'
 const benchmarkEnd = '<!-- benchmarks:end -->'
-const matchers = ['route-pattern', 'find-my-way', 'path-to-regexp']
+const matchers = ['route-pattern', 'find-my-way', 'path-to-regexp', 'URLPattern']
 
 interface VitestBenchReport {
   files: Array<{
