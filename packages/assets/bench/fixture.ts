@@ -59,7 +59,7 @@ async function readBasicFixture(): Promise<BenchFixture> {
       '/assets/packages/component/',
     ],
     expectedEntrySourceSubstrings: [
-      '@remix-run/component',
+      '/assets/packages/component/',
       '#packages/shared/strings.ts',
       '@bench/ui/panel.tsx',
       './summary.ts',

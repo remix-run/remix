@@ -37,7 +37,7 @@ describe('createBarrelFileImportOptimizer', () => {
       })
     }
 
-    let optimized = createBarrelFileImportOptimizer()(graph)
+    let optimized = createBarrelFileImportOptimizer().optimize(graph)
 
     assert.equal(optimized.size, graph.size)
     assert.equal(optimized.get('/module-0.js'), graph.get('/module-0.js'))

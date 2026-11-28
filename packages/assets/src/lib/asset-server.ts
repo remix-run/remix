@@ -437,6 +437,10 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   let fileCompiler: FileCompiler | null = null
   let closed = false
   let unsubscribeBrowserHmrFileEvents: (() => void) | undefined
+  let pendingWatchDirectoryDeltas: Array<{
+    delta: { add: readonly string[]; remove: readonly string[] }
+    includeAncestors: boolean
+  }> | null = resolvedOptions.watchOptions && resolvedOptions.hmr ? [] : null
   // Protect initial preloads while a configured channel starts without delaying script responses.
   let varyHmrScripts = resolvedOptions.hmr !== null
   let browserHmrChannelPromise = createBrowserHmrChannel(
@@ -447,37 +451,18 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       unsubscribeBrowserHmrFileEvents = unsubscribe
     },
   )
-  void browserHmrChannelPromise.then(
-    (channel) => {
-      varyHmrScripts = channel !== null
-    },
-    () => {
-      // The HMR client request and close() still report the original factory failure.
-      varyHmrScripts = false
-    },
-  )
-  let sendHmrPayload = resolvedOptions.hmr ? createHmrPayloadSender() : null
-  let hmrPathnames = getHmrPathnames(resolvedOptions.basePath)
+  let hmrClientPathname = `${resolvedOptions.basePath}/__remix_hmr/client.js`
   let hmrDataKey = `remix/assets@1:${resolvedOptions.basePath}`
   let scriptCompiler = createScriptCompiler({
     define: resolvedOptions.define,
     external: resolvedOptions.external,
     fingerprintAssets: resolvedOptions.fingerprintAssets,
     loaders: resolvedOptions.loaders,
-    hmr: sendHmrPayload
-      ? {
-          clientPathname: hmrPathnames.client,
-          send(updates) {
-            let payload = createScriptHmrPayload(updates)
-            if (payload) sendHmrPayload(payload)
-          },
-        }
-      : undefined,
+    hmr: resolvedOptions.hmr ? { clientPathname: hmrClientPathname } : undefined,
     isAllowed: accessPolicy.isAllowed,
     minify: resolvedOptions.minify,
     onWatchDirectoriesChange: (delta) => {
-      if (!watcher) return
-      watcher.updateWatchedDirectories(delta)
+      recordWatchDirectoryDelta(delta, true)
     },
     onWatchFilesChange: (delta) => {
       updateBrowserHmrWatchedFiles(delta)
@@ -505,30 +490,13 @@ export function createAssetServer<const transforms extends AssetRequestTransform
 
       return fileCompiler.getHref(identityPath, { transform: options.transform })
     },
-    hmr: sendHmrPayload
-      ? {
-          send(pathname, timestamp) {
-            sendHmrPayload({
-              timestamp,
-              type: 'browser:update',
-              updates: [
-                {
-                  path: pathname,
-                  type: 'css',
-                },
-              ],
-            })
-          },
-        }
-      : undefined,
     isAllowed: accessPolicy.isAllowed,
     isServedFilePath(filePath) {
       return fileCompiler?.isServedFilePath(filePath) ?? false
     },
     minify: resolvedOptions.minify,
     onWatchDirectoriesChange: (delta) => {
-      if (!watcher) return
-      watcher.updateWatchedDirectories(delta, { includeAncestors: false })
+      recordWatchDirectoryDelta(delta, false)
     },
     onWatchFilesChange: (delta) => {
       updateBrowserHmrWatchedFiles(delta)
@@ -539,6 +507,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     sourceMaps: resolvedOptions.sourceMaps,
     targets: resolvedOptions.stylesTarget,
     watchIgnore: resolvedOptions.watchOptions?.ignore,
+    watchMode: resolvedOptions.watchOptions !== null,
   })
   if (resolvedOptions.files.extensions.length > 0) {
     fileCompiler = createFileCompiler({
@@ -554,7 +523,24 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       routes: resolvedOptions.routes,
     })
   }
-  if (resolvedOptions.watchOptions) {
+  if (resolvedOptions.watchOptions && !resolvedOptions.hmr) {
+    startLocalWatcher()
+  }
+
+  function recordWatchDirectoryDelta(
+    delta: { add: readonly string[]; remove: readonly string[] },
+    includeAncestors: boolean,
+  ): void {
+    if (watcher) {
+      watcher.updateWatchedDirectories(delta, { includeAncestors })
+      return
+    }
+    pendingWatchDirectoryDeltas?.push({ delta, includeAncestors })
+  }
+
+  function startLocalWatcher(): void {
+    if (closed || watcher || !resolvedOptions.watchOptions) return
+
     watcher = createAssetServerWatcher({
       ...resolvedOptions.watchOptions,
       onChokidarWatcherCreated(createdWatcher) {
@@ -567,6 +553,12 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       { add: accessPolicy.getPackageWatchDirectories(), remove: [] },
       { includeAncestors: false },
     )
+    if (pendingWatchDirectoryDeltas) {
+      for (let item of pendingWatchDirectoryDeltas) {
+        watcher.updateWatchedDirectories(item.delta, { includeAncestors: item.includeAncestors })
+      }
+      pendingWatchDirectoryDeltas = null
+    }
   }
   async function responseForError(error: unknown): Promise<Response> {
     try {
@@ -611,6 +603,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
 
     for (let event of events) {
       let normalizedFilePath = normalizeFilePath(event.filePath)
+      accessPolicy.handleFileEvent(normalizedFilePath)
       let scriptUpdates = await scriptCompiler.classifyHmrFileEvent(normalizedFilePath, event.event)
       let scriptPayload = await createScriptHmrPayloadWithImportMaps(scriptUpdates)
       if (scriptPayload) {
@@ -690,10 +683,11 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     },
     async fetch(request) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return null
-      let requestPathname = new URL(request.url).pathname
+      let requestUrl = new URL(request.url)
+      let requestPathname = requestUrl.pathname
 
       if (resolvedOptions.hmr) {
-        if (requestPathname === hmrPathnames.client) {
+        if (requestPathname === hmrClientPathname) {
           let browserHmrChannel = await browserHmrChannelPromise
           assertBrowserEventUrl(browserHmrChannel?.url)
           return await createHmrClientResponse(
@@ -706,7 +700,6 @@ export function createAssetServer<const transforms extends AssetRequestTransform
         }
       }
 
-      let requestUrl = new URL(request.url)
       let requestedTransform = normalizeRequestedTransformQuery(requestUrl.searchParams)
       let parsedRequestPathname = parseAssetRequestPathname(requestPathname, {
         fingerprintAssets: resolvedOptions.fingerprintAssets,
@@ -731,7 +724,10 @@ export function createAssetServer<const transforms extends AssetRequestTransform
           if (styleResult.type === 'not-modified') {
             return new Response(null, {
               status: 304,
-              headers: { ETag: styleResult.etag },
+              headers: {
+                'Cache-Control': parsedRequestPathname.cacheControl,
+                ETag: styleResult.etag,
+              },
             })
           }
 
@@ -768,7 +764,10 @@ export function createAssetServer<const transforms extends AssetRequestTransform
           if (fileResult.type === 'not-modified') {
             return new Response(null, {
               status: 304,
-              headers: { ETag: fileResult.etag },
+              headers: {
+                'Cache-Control': parsedRequestPathname.cacheControl,
+                ETag: fileResult.etag,
+              },
             })
           }
 
@@ -799,7 +798,10 @@ export function createAssetServer<const transforms extends AssetRequestTransform
         if (scriptResult.type === 'not-modified') {
           response = new Response(null, {
             status: 304,
-            headers: { ETag: scriptResult.etag },
+            headers: {
+              'Cache-Control': parsedRequestPathname.cacheControl,
+              ETag: scriptResult.etag,
+            },
           })
         } else {
           let compiledScript = scriptResult.script
@@ -892,18 +894,28 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     async getScriptEntry(filePath) {
       let entry = scriptEntries.get(filePath)
       if (!entry) {
-        entry = Promise.all([
-          assetServer.getHref(filePath),
-          assetServer.getPreloads(filePath),
-          assetServer.getImportMap(filePath),
-        ]).then(([href, preloads, importMap]) => ({ href, preloads, importMap }))
+        entry = (async () => {
+          let typeCheckFilePath = stripFilePathUrlSuffix(filePath)
+          if (!isScriptFilePath(typeCheckFilePath)) {
+            throw new TypeError(
+              `assetServer.getImportMap() only supports script files: ${filePath}`,
+            )
+          }
+          let extraImportMapRoots = resolvedOptions.hmrModuleImporter
+            ? [
+                (await scriptCompiler.resolveSpecifierFromRoot(resolvedOptions.hmrModuleImporter))
+                  .identityPath,
+              ]
+            : undefined
+          return scriptCompiler.getScriptEntry(filePath, { extraImportMapRoots })
+        })()
         scriptEntries.set(filePath, entry)
         void entry.catch(() => {
           if (scriptEntries.get(filePath) === entry) scriptEntries.delete(filePath)
         })
       }
 
-      return structuredClone(await entry)
+      return cloneScriptEntry(await entry)
     },
     async getPreloads(filePath) {
       let filePaths = Array.isArray(filePath) ? filePath : [filePath]
@@ -992,6 +1004,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     async close() {
       if (closed) return
       closed = true
+      pendingWatchDirectoryDeltas = null
       let unsubscribe = unsubscribeBrowserHmrFileEvents
       unsubscribeBrowserHmrFileEvents = undefined
       unsubscribe?.()
@@ -1009,6 +1022,40 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   }
   if (watcher) {
     watcherByAssetServer.set(assetServer, watcher)
+  }
+
+  if (resolvedOptions.hmr) {
+    void browserHmrChannelPromise.then(
+      (channel) => {
+        varyHmrScripts = channel !== null
+        if (channel !== null) {
+          pendingWatchDirectoryDeltas = null
+          let packageWatchFiles = accessPolicy.getPackageWatchFiles()
+          if (packageWatchFiles.length > 0) {
+            channel.updateWatchedFiles({ add: packageWatchFiles, remove: [] })
+          }
+        } else {
+          startLocalWatcher()
+          if (chokidarWatcher) {
+            chokidarWatcherByAssetServer.set(assetServer, chokidarWatcher)
+          }
+          if (watcher) {
+            watcherByAssetServer.set(assetServer, watcher)
+          }
+        }
+      },
+      () => {
+        // The HMR client request and close() still report the original factory failure.
+        varyHmrScripts = false
+        startLocalWatcher()
+        if (chokidarWatcher) {
+          chokidarWatcherByAssetServer.set(assetServer, chokidarWatcher)
+        }
+        if (watcher) {
+          watcherByAssetServer.set(assetServer, watcher)
+        }
+      },
+    )
   }
 
   return assetServer
@@ -1046,11 +1093,22 @@ function badRequest(message: string): Response {
   })
 }
 
-function getHmrPathnames(basePath: string): { client: string; events: string } {
-  let hmrBase = `${basePath}/__remix_hmr`
+function cloneScriptEntry(entry: ScriptEntry): ScriptEntry {
+  let importMap: ScriptImportMap = {
+    imports: { ...entry.importMap.imports },
+  }
+  if (entry.importMap.scopes) {
+    let scopes: Record<string, Record<string, string>> = {}
+    for (let [scope, entries] of Object.entries(entry.importMap.scopes)) {
+      scopes[scope] = { ...entries }
+    }
+    importMap.scopes = scopes
+  }
+
   return {
-    client: `${hmrBase}/client.js`,
-    events: `${hmrBase}/events`,
+    href: entry.href,
+    importMap,
+    preloads: [...entry.preloads],
   }
 }
 
@@ -1081,10 +1139,6 @@ function assertBrowserEventUrl(url: string | undefined): asserts url is string {
   if (url === undefined) {
     throw new TypeError('hmr must be provided')
   }
-}
-
-function createHmrPayloadSender(): (payload: HmrPayload) => void {
-  return () => {}
 }
 
 function createBrowserHmrEvent(

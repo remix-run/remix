@@ -48,16 +48,17 @@ export async function emitResolvedModule(
       rewriteImports(resolvedModule, options),
       options,
     )
-    let sourceMap = finalSourceMap ? await createEmittedAsset(finalSourceMap) : null
+    let sourceMap: EmittedAsset | null = null
 
     if (finalSourceMap) {
       if (options.sourceMaps === 'inline') {
         let encoded = Buffer.from(finalSourceMap).toString('base64')
         finalCode += `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
       } else if (options.sourceMaps === 'external') {
+        sourceMap = await createEmittedAsset(finalSourceMap)
         finalCode += `\n//# sourceMappingURL=${formatFingerprintedPathname(
           resolvedModule.stableUrlPathname,
-          options.fingerprintAssets && sourceMap ? sourceMap.fingerprint : null,
+          options.fingerprintAssets ? sourceMap.fingerprint : null,
         )}.map`
       }
     }

@@ -17,7 +17,9 @@ import { transformStyle } from './transform.ts'
 import type { TransformArgs, TransformedStyle } from './transform.ts'
 import {
   appendTimestampQuery,
+  createRealFilePathCache,
   getCacheKey,
+  getCompiledAssetByteSize,
   getEmittedAssetForRequest,
   getNotModifiedResult,
   isFresh,
@@ -62,9 +64,6 @@ type StyleCompilerOptions = {
       transform: readonly string[] | null
     },
   ): Promise<string>
-  hmr?: {
-    send(pathname: string, timestamp: number): void
-  }
   isAllowed(absolutePath: string): boolean
   isServedFilePath(filePath: string): boolean
   minify: boolean
@@ -76,6 +75,7 @@ type StyleCompilerOptions = {
   sourceMaps?: 'external' | 'inline'
   targets?: ResolvedStyleTarget
   watchIgnore?: readonly string[]
+  watchMode: boolean
 }
 
 type StyleCompiler = {
@@ -97,6 +97,7 @@ export type StyleHmrUpdate = {
 
 const preloadConcurrency = Math.max(1, Math.min(8, os.availableParallelism() - 1))
 const styleExtension = '.css'
+const maxStyleEmittedBytes = 64 * 1024 * 1024
 
 export function createStyleCompiler(options: StyleCompilerOptions): StyleCompiler {
   let resolvedOptions = {
@@ -105,12 +106,17 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       createFileMatcher(pattern, options.rootDir),
     ),
   }
+  let realPathCache = createRealFilePathCache()
   let styleStore: StyleStore = createModuleStore<TransformedStyle, ResolvedStyle, EmittedStyle>({
     getDependencies(resolvedStyle) {
       return resolvedStyle.deps
     },
+    getEmittedByteSize: getCompiledAssetByteSize,
+    maxEmittedBytes: maxStyleEmittedBytes,
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
     onWatchFilesChange: options.onWatchFilesChange,
+    retainIntermediate: resolvedOptions.watchMode,
+    retainLastResolved: resolvedOptions.watchMode,
   })
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedStyle>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedStyle>>()
@@ -118,6 +124,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     isAllowed: resolvedOptions.isAllowed,
     isServedFilePath: resolvedOptions.isServedFilePath,
     isWatchIgnored,
+    resolveActualPath: realPathCache.resolve,
     routes: resolvedOptions.routes,
   }
   let transformArgs: TransformArgs = {
@@ -162,21 +169,20 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       while (queue.length > 0) {
         let frontier = queue
         queue = []
-        let layer: string[] = []
 
         for (let identityPath of frontier) {
           let graphEntry = graph.get(identityPath)
           if (!graphEntry) throw new Error(`Missing resolved style ${identityPath}`)
-          let resolvedStyle = graphEntry.resolvedStyle
-          layer.push(await getServedUrlFromGraph(identityPath, graph))
-
-          for (let dep of resolvedStyle.deps) {
+          for (let dep of graphEntry.resolvedStyle.deps) {
             if (visited.has(dep)) continue
             visited.add(dep)
             queue.push(dep)
           }
         }
 
+        let layer = await mapWithConcurrency(frontier, preloadConcurrency, (identityPath) =>
+          getServedUrlFromGraph(identityPath, graph),
+        )
         layers.push(layer)
       }
 
@@ -215,11 +221,11 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       let updatePathnames =
         event === 'change' ? getHmrUpdatePathnames(normalizedFilePath, timestamp) : []
 
+      if (event !== 'change') {
+        realPathCache.clear()
+      }
       styleStore.invalidateForFileEvent(normalizedFilePath, event)
 
-      for (let updatePathname of updatePathnames) {
-        resolvedOptions.hmr?.send(updatePathname, timestamp)
-      }
       return updatePathnames.map((path) => ({
         filePath: normalizedFilePath,
         path,
@@ -230,6 +236,9 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     invalidateFileEvent(filePath, event) {
       let normalizedFilePath = normalizeFilePath(filePath)
       if (isWatchIgnored(normalizedFilePath)) return
+      if (event !== 'change') {
+        realPathCache.clear()
+      }
       styleStore.invalidateForFileEvent(normalizedFilePath, event)
     },
   }
@@ -301,6 +310,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       styleStore.isEmittedFresh(record) &&
       !hasHmrTimestampedDependency(record.resolved)
     ) {
+      styleStore.touchEmitted(record.identityPath)
       return record.emitted
     }
 
@@ -323,6 +333,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       styleStore.isEmittedFresh(record) &&
       !hasHmrTimestampedDependency(record.resolved)
     ) {
+      styleStore.touchEmitted(record.identityPath)
       return record.emitted
     }
 
@@ -346,6 +357,10 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
 
       if (isFresh(record, graphEntry.invalidationVersion)) {
         styleStore.setEmitted(record.identityPath, emitResolvedStyleResult.value, null)
+        if (!resolvedOptions.watchMode) {
+          graphEntry.resolvedStyle.rawCode = ''
+          graphEntry.resolvedStyle.sourceMap = null
+        }
       }
 
       return emitResolvedStyleResult.value

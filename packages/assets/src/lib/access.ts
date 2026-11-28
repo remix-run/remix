@@ -28,6 +28,7 @@ export type AssetAccessRule =
 export type AccessPolicy = {
   getAllowedPackageRoots(): readonly string[]
   getPackageWatchDirectories(): readonly string[]
+  getPackageWatchFiles(): readonly string[]
   handleFileEvent(filePath: string): void
   inspect(filePath: string): AssetAccessDetails
   isAllowed(filePath: string): boolean
@@ -44,6 +45,7 @@ const packageStateFileNames = new Set([
 ])
 const packageManagerRootFileNames = packageStateFileNames
 const packageNamePartPattern = /^[A-Za-z0-9._~-]+$/
+const maxInspectCacheEntries = 16_384
 
 export function createAccessPolicy(options: {
   allowFiles: readonly string[]
@@ -70,6 +72,7 @@ export function createAccessPolicy(options: {
   let packageStateDirectories =
     allowPackageNames.size === 0 ? [] : getPackageStateDirectories(packageSearchRoots)
   let packageRootsDirty = false
+  let inspectCache = new Map<string, AssetAccessDetails>()
 
   function refreshPackageRootPathTries(): void {
     if (!packageRootsDirty) return
@@ -79,6 +82,7 @@ export function createAccessPolicy(options: {
       searchRoots: packageSearchRoots,
     })
     allowPackageRootPathTrie = createPackageRootPathTrie(packageRootPaths)
+    inspectCache.clear()
     packageRootsDirty = false
   }
 
@@ -90,6 +94,21 @@ export function createAccessPolicy(options: {
   }
 
   function inspect(filePath: string): AssetAccessDetails {
+    if (packageRootsDirty) {
+      refreshPackageRootPathTries()
+    }
+    let cached = inspectCache.get(filePath)
+    if (cached !== undefined) return cached
+
+    let details = computeAccessDetails(filePath)
+    if (inspectCache.size >= maxInspectCacheEntries) {
+      inspectCache.clear()
+    }
+    inspectCache.set(filePath, details)
+    return details
+  }
+
+  function computeAccessDetails(filePath: string): AssetAccessDetails {
     if (isInjectedPackageFilePath(filePath)) {
       return { allowed: true, allowedBy: { kind: 'injected', value: '@remix-run/assets' } }
     }
@@ -124,11 +143,23 @@ export function createAccessPolicy(options: {
       if (allowPackageNames.size === 0) return []
       return packageStateDirectories
     },
+    getPackageWatchFiles() {
+      if (allowPackageNames.size === 0) return []
+      let files: string[] = []
+      for (let directory of packageStateDirectories) {
+        let normalizedDirectory = directory.replace(/\/+$/, '')
+        for (let fileName of packageStateFileNames) {
+          files.push(`${normalizedDirectory}/${fileName}`)
+        }
+      }
+      return files
+    },
     handleFileEvent(filePath) {
       if (allowPackageNames.size === 0) return
       if (!isPackageStateFileEvent(filePath, packageStateDirectories)) return
 
       packageRootsDirty = true
+      inspectCache.clear()
     },
     inspect,
     isAllowed(filePath) {

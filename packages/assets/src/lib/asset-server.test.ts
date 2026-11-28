@@ -3006,11 +3006,21 @@ describe('asset-server', () => {
     )
   })
 
-  it('reuses script entry metadata across concurrent and later requests', async (t) => {
+  it('reuses script entry metadata across concurrent and later requests', async () => {
     await write(dir, 'app/cached-entry.ts', 'import "./cached-dep.ts"')
     await write(dir, 'app/cached-dep.ts', 'export const value = 1')
-    let assetServer = createTestServer(dir, { fingerprint: true })
-    let getImportMap = t.mock.method(assetServer, 'getImportMap')
+    let loadedUrls: string[] = []
+    let assetServer = createTestServer(dir, {
+      fingerprint: true,
+      scripts: {
+        loaders: [
+          (url, context, nextLoad) => {
+            loadedUrls.push(url)
+            return nextLoad(url, context)
+          },
+        ],
+      },
+    })
 
     try {
       let [first, concurrent] = await Promise.all([
@@ -3020,11 +3030,12 @@ describe('asset-server', () => {
       let later = await assetServer.getScriptEntry('app/cached-entry.ts')
       assert.deepEqual(concurrent, first)
       assert.deepEqual(later, first)
-      assert.equal(getImportMap.mock.calls.length, 1)
+      assert.equal(loadedUrls.filter((url) => url.endsWith('/cached-entry.ts')).length, 1)
+      assert.equal(loadedUrls.filter((url) => url.endsWith('/cached-dep.ts')).length, 1)
 
       let dependency = await assetServer.getScriptEntry('app/cached-dep.ts')
       assert.notEqual(dependency.href, first.href)
-      assert.equal(getImportMap.mock.calls.length, 2)
+      assert.equal(loadedUrls.filter((url) => url.endsWith('/cached-dep.ts')).length, 1)
 
       first.preloads.length = 0
       first.importMap.imports['/assets/app/cached-dep.ts'] = '/changed.ts'
@@ -3035,14 +3046,19 @@ describe('asset-server', () => {
     }
   })
 
-  it('retries script entry metadata after a failed request', async (t) => {
+  it('retries script entry metadata after a failed request', async () => {
     await write(dir, 'app/retried-entry.ts', 'export const value = 1')
-    let assetServer = createTestServer(dir, { fingerprint: true })
-    let getImportMap = assetServer.getImportMap.bind(assetServer)
     let fail = true
-    t.mock.method(assetServer, 'getImportMap', (filePath: string | readonly string[]) => {
-      if (fail) return Promise.reject(new Error('Temporary failure'))
-      return getImportMap(filePath)
+    let assetServer = createTestServer(dir, {
+      fingerprint: true,
+      scripts: {
+        loaders: [
+          (url, context, nextLoad) => {
+            if (fail) throw new Error('Temporary failure')
+            return nextLoad(url, context)
+          },
+        ],
+      },
     })
 
     try {
@@ -11668,6 +11684,172 @@ describe('asset-server', () => {
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
+  })
+
+  it('does not start a duplicate chokidar watcher when a browser HMR channel is active', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let watchedFiles = new Set<string>()
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr() {
+          return {
+            close() {},
+            onFileEvents() {
+              return () => {}
+            },
+            updateWatchedFiles(delta) {
+              for (let filePath of delta.remove) watchedFiles.delete(filePath)
+              for (let filePath of delta.add) watchedFiles.add(filePath)
+            },
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        await Promise.resolve()
+
+        assert.equal(getInternalChokidarWatcher(assetServer), undefined)
+        assert.ok(watchedFiles.size > 0)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('starts the fallback chokidar watcher when the HMR channel factory opts out', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      let entryPath = await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: async () => undefined,
+      })
+
+      try {
+        let first = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(first)
+        assert.match(await first.text(), /value = 1/)
+        await Promise.resolve()
+
+        assert.ok(getInternalChokidarWatcher(assetServer))
+        await write(caseDir, 'app/entry.ts', 'export const value = 2')
+        await emitWatchEvent(assetServer, entryPath, 'change')
+
+        let second = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(second)
+        assert.match(await second.text(), /value = 2/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not retain or serve external .map assets when sourceMaps is inline', async () => {
+    await write(dir, 'app/inline-only.ts', 'export const value: number = 1')
+    await write(dir, 'app/inline-only.css', 'body { color: red; }')
+    let assetServer = createTestServer(dir, {
+      sourceMaps: 'inline',
+    })
+
+    let scriptResponse = await get(assetServer, '/assets/app/inline-only.ts')
+    assert.ok(scriptResponse)
+    assert.equal(scriptResponse.status, 200)
+    assert.match(await scriptResponse.text(), /sourceMappingURL=data:application\/json;base64,/)
+
+    let scriptMapResponse = await get(assetServer, '/assets/app/inline-only.ts.map')
+    assert.ok(scriptMapResponse)
+    assert.equal(scriptMapResponse.status, 404)
+
+    let styleResponse = await get(assetServer, '/assets/app/inline-only.css')
+    assert.ok(styleResponse)
+    assert.equal(styleResponse.status, 200)
+    assert.match(await styleResponse.text(), /sourceMappingURL=data:application\/json;base64,/)
+
+    let styleMapResponse = await get(assetServer, '/assets/app/inline-only.css.map')
+    assert.ok(styleMapResponse)
+    assert.equal(styleMapResponse.status, 404)
+  })
+
+  it('includes Cache-Control on 304 responses and Content-Length on 200 and HEAD responses', async () => {
+    await write(dir, 'app/headers-entry.ts', 'export const value = 1')
+    await write(dir, 'app/headers-style.css', 'body { color: blue; }')
+    await write(dir, 'app/content/headers-file.txt', 'hello world')
+    let assetServer = createTestServer(dir, {
+      files: { extensions: ['.txt'] },
+      fingerprint: true,
+    })
+
+    for (let filePath of [
+      'app/headers-entry.ts',
+      'app/headers-style.css',
+      'app/content/headers-file.txt',
+    ]) {
+      let href = await assetServer.getHref(filePath)
+      let response = await get(assetServer, href)
+      assert.ok(response)
+      assert.equal(response.status, 200)
+      let body = await response.arrayBuffer()
+      assert.equal(response.headers.get('Content-Length'), String(body.byteLength))
+
+      let headResponse = await assetServer.fetch(
+        new Request(`http://localhost${href}`, { method: 'HEAD' }),
+      )
+      assert.ok(headResponse)
+      assert.equal(headResponse.status, 200)
+      assert.equal(headResponse.headers.get('Content-Length'), String(body.byteLength))
+
+      let notModified = await get(assetServer, href, {
+        'If-None-Match': response.headers.get('ETag')!,
+      })
+      assert.ok(notModified)
+      assert.equal(notModified.status, 304)
+      assert.equal(notModified.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
+    }
+  })
+
+  it('avoids rehashing transformed file bodies on filesystem cache hits', async (t) => {
+    await write(dir, 'app/content/cached-hash.txt', 'hello')
+    let cache = createFsFileCache({ directory: path.join(dir, 'cached-hash-cache') })
+    let assetServer = createTestServer(dir, {
+      files: {
+        cache,
+        extensions: ['.txt'],
+        transforms: {
+          upper: defineFileTransform({
+            transform(bytes) {
+              return new TextDecoder().decode(bytes).toUpperCase()
+            },
+          }),
+        },
+      },
+    })
+
+    let href = '/assets/app/content/cached-hash.txt?transform=upper'
+    let first = await get(assetServer, href)
+    assert.ok(first)
+    assert.equal(await first.text(), 'HELLO')
+
+    let digest = t.mock.method(crypto.subtle, 'digest')
+    let second = await get(assetServer, href)
+    assert.ok(second)
+    assert.equal(await second.text(), 'HELLO')
+    // Verify the cached transformed body bytes are not re-hashed separately for ETag/fingerprint.
+    let hashedBodyDirectly = digest.mock.calls.some((call) => {
+      let data = call.arguments[1]
+      let bytes = ArrayBuffer.isView(data)
+        ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+        : new Uint8Array(data)
+      return new TextDecoder().decode(bytes) === 'HELLO'
+    })
+    assert.equal(hashedBodyDirectly, false)
   })
 })
 

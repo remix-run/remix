@@ -87,6 +87,7 @@ export type ModuleStore<transformed, resolved, emitted> = {
   setResolved(identityPath: string, resolved: resolved, tracking: readonly ModuleTracking[]): void
   clearResolved(identityPath: string, tracking: readonly ModuleTracking[]): void
   setEmitted(identityPath: string, emitted: emitted, snapshot: ModuleSnapshot | null): void
+  touchEmitted(identityPath: string): void
   invalidateForFileEvent(filePath: string, event: ModuleWatchEvent): void
   invalidateAll(): void
 }
@@ -95,9 +96,14 @@ export function createModuleStore<transformed, resolved, emitted>(
   options: {
     getAcceptedDependencies?: (resolved: resolved) => readonly string[]
     getDependencies?: (resolved: resolved) => readonly string[]
+    getEmittedByteSize?: (emitted: emitted) => number
     invalidateImportersOnFileEvent?: boolean
+    maxEmittedBytes?: number
+    onEmittedEvicted?: (identityPath: string) => void
     onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
     onWatchFilesChange?: (delta: { add: string[]; remove: string[] }) => void
+    retainIntermediate?: boolean
+    retainLastResolved?: boolean
   } = {},
 ): ModuleStore<transformed, resolved, emitted> {
   let recordsByIdentityPath = new Map<string, MutableModuleRecord<transformed, resolved, emitted>>()
@@ -106,6 +112,10 @@ export function createModuleStore<transformed, resolved, emitted>(
   let recordsByTrackedFile = new Map<string, Set<string>>()
   let watchDirectoryRefCountByPath = new Map<string, number>()
   let watchFileRefCountByPath = new Map<string, number>()
+  let emittedLruBytesByIdentityPath = new Map<string, number>()
+  let emittedTotalBytes = 0
+  let retainIntermediate = options.retainIntermediate ?? true
+  let retainLastResolved = options.retainLastResolved ?? true
   let emptyImporters = new Set<string>()
 
   return {
@@ -148,6 +158,7 @@ export function createModuleStore<transformed, resolved, emitted>(
 
     clearTransformed(identityPath, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
+      removeFromEmittedLru(identityPath)
       record.transformed = undefined
       record.transformedVersion = undefined
       record.resolved = undefined
@@ -162,6 +173,7 @@ export function createModuleStore<transformed, resolved, emitted>(
 
     setTransformed(identityPath, transformed, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
+      removeFromEmittedLru(identityPath)
       record.transformed = transformed
       record.transformedVersion = record.contentVersion
       record.resolved = undefined
@@ -176,10 +188,17 @@ export function createModuleStore<transformed, resolved, emitted>(
 
     setResolved(identityPath, resolved, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
+      removeFromEmittedLru(identityPath)
       removeResolvedIndexes(record)
       record.resolved = resolved
       record.resolvedVersion = record.invalidationVersion
-      record.lastResolved = resolved
+      if (retainLastResolved) {
+        record.lastResolved = resolved
+      }
+      if (!retainIntermediate) {
+        record.transformed = undefined
+        record.transformedVersion = undefined
+      }
       record.links = createLinks(resolved)
       record.emitted = undefined
       record.emittedVersion = undefined
@@ -192,6 +211,7 @@ export function createModuleStore<transformed, resolved, emitted>(
 
     clearResolved(identityPath, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
+      removeFromEmittedLru(identityPath)
       record.resolved = undefined
       record.resolvedVersion = undefined
       record.emitted = undefined
@@ -209,6 +229,16 @@ export function createModuleStore<transformed, resolved, emitted>(
       record.emittedSnapshot = snapshot ?? undefined
       record.staleEmitted = undefined
       record.staleEmittedSnapshot = undefined
+      if (options.maxEmittedBytes !== undefined && options.getEmittedByteSize) {
+        trackEmittedLru(identityPath, options.getEmittedByteSize(emitted))
+      }
+    },
+
+    touchEmitted(identityPath) {
+      let size = emittedLruBytesByIdentityPath.get(identityPath)
+      if (size === undefined) return
+      emittedLruBytesByIdentityPath.delete(identityPath)
+      emittedLruBytesByIdentityPath.set(identityPath, size)
     },
 
     invalidateForFileEvent(filePath, event) {
@@ -347,8 +377,53 @@ export function createModuleStore<transformed, resolved, emitted>(
   function removeResolvedIndexes(
     record: MutableModuleRecord<transformed, resolved, emitted>,
   ): void {
-    removeFromIndexedSets(importersByDepPath, record.identityPath)
-    removeFromIndexedSets(acceptedImportersByDepPath, record.identityPath)
+    for (let depPath of record.links.dependencies) {
+      removeFromIndexedSet(importersByDepPath, depPath, record.identityPath)
+    }
+
+    for (let depPath of record.links.acceptedDependencies) {
+      removeFromIndexedSet(acceptedImportersByDepPath, depPath, record.identityPath)
+    }
+  }
+
+  function removeFromEmittedLru(identityPath: string): void {
+    let previousSize = emittedLruBytesByIdentityPath.get(identityPath)
+    if (previousSize === undefined) return
+    emittedLruBytesByIdentityPath.delete(identityPath)
+    emittedTotalBytes -= previousSize
+  }
+
+  function trackEmittedLru(identityPath: string, byteSize: number): void {
+    let maxEmittedBytes = options.maxEmittedBytes
+    if (maxEmittedBytes === undefined) return
+
+    removeFromEmittedLru(identityPath)
+    emittedLruBytesByIdentityPath.set(identityPath, byteSize)
+    emittedTotalBytes += byteSize
+
+    if (emittedTotalBytes <= maxEmittedBytes) return
+
+    for (let [oldestIdentityPath, oldestByteSize] of emittedLruBytesByIdentityPath) {
+      if (emittedTotalBytes <= maxEmittedBytes || emittedLruBytesByIdentityPath.size <= 1) break
+      if (oldestIdentityPath === identityPath) continue
+      emittedLruBytesByIdentityPath.delete(oldestIdentityPath)
+      emittedTotalBytes -= oldestByteSize
+      let evicted = recordsByIdentityPath.get(oldestIdentityPath)
+      if (evicted) {
+        evicted.emitted = undefined
+        evicted.emittedVersion = undefined
+        evicted.emittedSnapshot = undefined
+        evicted.staleEmitted = undefined
+        evicted.staleEmittedSnapshot = undefined
+        if (!retainIntermediate) {
+          evicted.resolved = undefined
+          evicted.resolvedVersion = undefined
+          evicted.transformed = undefined
+          evicted.transformedVersion = undefined
+        }
+      }
+      options.onEmittedEvicted?.(oldestIdentityPath)
+    }
   }
 
   function setTracking(
@@ -474,15 +549,6 @@ function removeFromIndexedSet(map: Map<string, Set<string>>, key: string, value:
   existing.delete(value)
   if (existing.size === 0) {
     map.delete(key)
-  }
-}
-
-function removeFromIndexedSets(map: Map<string, Set<string>>, value: string): void {
-  for (let [key, values] of map) {
-    values.delete(value)
-    if (values.size === 0) {
-      map.delete(key)
-    }
   }
 }
 

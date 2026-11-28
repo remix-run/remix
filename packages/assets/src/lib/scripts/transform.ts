@@ -1,4 +1,3 @@
-import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -57,6 +56,7 @@ const scriptModuleTypes = [
 const sourceLanguageByExtension = new Map<string, SourceLanguage>(
   scriptModuleTypes.map(({ extension, lang }) => [extension, lang] as const),
 )
+const textDecoder = new TextDecoder()
 
 const supportedTsconfigTransformCompilerOptions = {
   allowNamespaces: 'allowNamespaces',
@@ -159,9 +159,9 @@ export function createTsconfigTransformOptionsResolver() {
         return transformOptions
       }
 
-      let tsconfigPath = findNearestTsconfigPath(directory)
+      let tsconfigPath = normalizeFilePath(tsconfig.path)
       let transformOptions: TsconfigTransformOptions = {
-        trackedFiles: tsconfigPath && !isWatchIgnored(tsconfigPath) ? [tsconfigPath] : [],
+        trackedFiles: !isWatchIgnored(tsconfigPath) ? [tsconfigPath] : [],
         tsconfigRaw: tsconfig.config,
       }
 
@@ -412,21 +412,6 @@ function getAcceptedDependencies(node: Node, source: string): HmrAcceptedDepende
   return deps
 }
 
-function findNearestTsconfigPath(directory: string): string | null {
-  let currentDirectory = directory
-
-  while (true) {
-    let tsconfigPath = path.join(currentDirectory, 'tsconfig.json')
-    if (fs.existsSync(tsconfigPath)) {
-      return normalizeFilePath(tsconfigPath)
-    }
-
-    let parentDirectory = path.dirname(currentDirectory)
-    if (parentDirectory === currentDirectory) return null
-    currentDirectory = parentDirectory
-  }
-}
-
 async function analyzeModuleSource(
   sourceText: string,
   resolvedPath: string,
@@ -597,7 +582,7 @@ function getModuleLoadSource(url: string, result: ModuleLoadResult): ModuleLoadS
 
 function moduleLoadSourceToString(source: ModuleLoadSource): string {
   if (typeof source === 'string') return source
-  return new TextDecoder().decode(source)
+  return textDecoder.decode(source)
 }
 
 function appendInlineSourceMap(source: string, sourceMap: string): string {

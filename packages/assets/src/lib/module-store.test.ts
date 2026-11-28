@@ -29,7 +29,7 @@ function createTransformedModule(): TransformedModule {
 function createEmittedModule(): EmittedModule {
   return {
     code: {
-      content: 'export const value = 1',
+      content: new TextEncoder().encode('export const value = 1'),
       etag: 'W/"code"',
       fingerprint: 'code',
     },
@@ -547,5 +547,63 @@ describe('createModuleStore', () => {
     assert.deepEqual([...record.links.acceptedDependencies], ['/app/value.ts'])
     assert.deepEqual([...store.getImporters('/app/value.ts')], ['/app/entry.ts'])
     assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], ['/app/entry.ts'])
+  })
+
+  it('drops intermediate transformed and lastResolved records when retention is disabled', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      retainIntermediate: false,
+      retainLastResolved: false,
+    })
+    let transformed = createTransformedModule()
+    let resolved = createResolvedModule()
+
+    store.setTransformed('/app/entry.ts', transformed, [transformed])
+    store.setResolved('/app/entry.ts', resolved, [resolved])
+
+    let record = store.get('/app/entry.ts')
+    assert.equal(record.transformed, undefined)
+    assert.equal(record.resolved, resolved)
+    assert.equal(store.getLastResolved('/app/entry.ts'), undefined)
+  })
+
+  it('evicts least recently used emitted assets when exceeding maxEmittedBytes', () => {
+    let evicted: string[] = []
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getEmittedByteSize(emitted) {
+        return emitted.code.content.byteLength
+      },
+      maxEmittedBytes: 20,
+      onEmittedEvicted(identityPath) {
+        evicted.push(identityPath)
+      },
+      retainIntermediate: false,
+    })
+
+    let makeEmitted = (text: string): EmittedModule => ({
+      code: {
+        content: new TextEncoder().encode(text),
+        etag: `W/"${text}"`,
+        fingerprint: text,
+      },
+      fingerprint: null,
+      sourceMap: null,
+    })
+
+    store.setResolved('/app/a.ts', createResolvedModule({ identityPath: '/app/a.ts' }), [])
+    store.setEmitted('/app/a.ts', makeEmitted('1234567890'), null)
+    store.setResolved('/app/b.ts', createResolvedModule({ identityPath: '/app/b.ts' }), [])
+    store.setEmitted('/app/b.ts', makeEmitted('abcdefghij'), null)
+
+    // Refresh a.ts so b.ts becomes the least recently used entry.
+    store.touchEmitted('/app/a.ts')
+
+    store.setResolved('/app/c.ts', createResolvedModule({ identityPath: '/app/c.ts' }), [])
+    store.setEmitted('/app/c.ts', makeEmitted('klmnopqrst'), null)
+
+    assert.deepEqual(evicted, ['/app/b.ts'])
+    assert.equal(store.get('/app/b.ts').emitted, undefined)
+    assert.equal(store.get('/app/b.ts').resolved, undefined)
+    assert.ok(store.get('/app/a.ts').emitted)
+    assert.ok(store.get('/app/c.ts').emitted)
   })
 })
