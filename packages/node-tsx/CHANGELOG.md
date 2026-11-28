@@ -2,6 +2,12 @@
 
 This is the changelog for [`node-tsx`](https://github.com/remix-run/remix/tree/main/packages/node-tsx). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Stop `loadModule()` from printing a `module.register()` deprecation warning (`DEP0205`) on Node.js 26. Scoped loaders now register synchronous in-thread hooks with `module.registerHooks()`. ([#12460](https://github.com/remix-run/remix/pull/12460))
+
 ## v1.0.0
 
 ### Major Changes

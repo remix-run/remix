@@ -2,6 +2,67 @@
 
 This is the changelog for [`component`](https://github.com/remix-run/remix/tree/main/packages/component). It follows [semantic versioning](https://semver.org/).
 
+## v1.4.0
+
+### Minor Changes
+
+- Added the `Portal` component for rendering children into the document body or a custom container. In server-rendered apps, portals must be nested within a client entry to render their content. Pages that don't use `Portal` don't download its renderer. ([#12344](https://github.com/remix-run/remix/pull/12344))
+
+### Patch Changes
+
+- The browser runtime is smaller and does less work, with no changes to app code. In our measurements, a minimal `createRoot()` app is about 40% smaller minified and gzipped, an app that also uses `on()` and `css()` is about 20% smaller, and an app that hydrates with `run()` is about 10% smaller. Apps served as unbundled ESM by `remix/assets` also make fewer module requests. ([#12398](https://github.com/remix-run/remix/pull/12398))
+  - Standalone `createRoot()` apps only load the code for the features they import. Stylesheet management and class-name generation load with `css()`, the mixin engine loads with `createMixin()`, and CSP nonce tracking and the frame runtime load only with `Frame` or `run()`.
+  - Standalone calls to `navigate()`, `updateUrl()`, `defaultPrefetch()`, and `spaResponse`, and components that use the `link()` mixin, no longer load the frame renderer.
+  - Updates to lists that mix keyed and unkeyed children skip repeated searches for child types with no match, and appending keyed children skips a pass over the old children.
+  - Frame updates that reorder client entries or nested frames no longer search the same sibling list for each entry, and frame responses that add import map entries no longer copy the mappings the page already installed.
+  - Hydration finds frames and client entries in one pass and only waits on DOM branches that contain frames.
+  - Focus, text selection, and scroll positions are only saved and restored when moving an element drops focus, instead of on every update.
+
+- Fix a boolean attribute given an empty string, such as `disabled: ""` from an untyped attribute object, being removed at hydration. The server rendered `disabled=""`, but the browser set the `disabled` property to `""`, which is false, so a control disabled in the server HTML became enabled without a warning. ([#12385](https://github.com/remix-run/remix/pull/12385))
+
+- Fix an element rendering at the end of its parent when it replaces a hydrated empty string, such as `{text && <p>{text}</p>}` after `text` changes from `''`. The server renders nothing for an empty string, so hydration had appended the empty text node after the parent's other children, and the new element took that position. ([#12348](https://github.com/remix-run/remix/pull/12348))
+
+- Preserve the form data and submit button of intercepted form submissions in Firefox, including when the submit button is removed before the navigation event, so frame navigations receive the submitter's overrides and the native form data. ([#12391](https://github.com/remix-run/remix/pull/12391))
+
+- Fix a frame that is still waiting for its preloads staying on its server HTML when a sibling frame finishes hydrating first. ([#12410](https://github.com/remix-run/remix/pull/12410))
+
+- Fix a retried frame response appending an import map again after the browser had already installed it. When a later import map in the same response failed to install, Remix discarded its record of the maps that succeeded. ([#12411](https://github.com/remix-run/remix/pull/12411))
+
+- Preserve the submit button's name and value in a frame POST when the button is disabled after the browser collects the form data. ([#12388](https://github.com/remix-run/remix/pull/12388))
+
+- Preserve input focus and selection when a frame reload reorders surviving client entries or nested frames. ([#12461](https://github.com/remix-run/remix/pull/12461))
+
+- Show streamed child frame content as soon as its template arrives, even when the opening `<template>` tag is split across two network chunks. Previously the content could wait until the parent response finished. ([#12407](https://github.com/remix-run/remix/pull/12407))
+
+- Client hydration and rendering are faster, with no changes to app code. In our 4x CPU-throttled Chromium benchmarks, hydration is 2.1x–2.8x faster (table hydration 27.6 ms → 13.3 ms total, dashboard hydration 24.2 ms → 8.6 ms total) and client list and dashboard updates do 15%–30% less scripting work. ([#12465](https://github.com/remix-run/remix/pull/12465))
+  - Hydrating matched server-rendered elements skips redundant DOM attribute and inline `style` writes (avoiding unnecessary style recalculation) while still patching mismatched attributes, styles, and property-only props.
+  - All-primitive interpolated text children consolidate into a single text node so hydration adopts the server text node without calling `splitText()`.
+  - `jsx()`, host reconciliation, and child diffing allocate fewer objects and avoid unnecessary DOM `instanceof` checks and ancestor `<select>` traversals.
+
+- Send the page being left as the `Referer` of a client navigation's request. Previously the request carried its own destination as the `Referer`, because the Navigation API commits the destination URL before Remix fetches it. A server that redirects back after a form post, such as a cart endpoint that returns to the referring page, redirected to the form's action instead. ([#12384](https://github.com/remix-run/remix/pull/12384))
+
+  Nested frame loads keep the document's default referrer. Links with an explicit `referrerpolicy`, and links or forms with `rel="noreferrer"`, now use native document navigation so the browser enforces their referrer restrictions, and these links are no longer prefetched.
+
+- Rendering and hydration fixes: ([#12441](https://github.com/remix-run/remix/pull/12441))
+  - A mixin can read its own `handle.signal` in `beforeUpdate` and `commit` listeners when its component schedules an update.
+  - A client entry whose loader throws synchronously can load again on a later render instead of staying failed.
+  - A keyed element that returns during its exit animation reuses its existing mixins without running setup again and picks up changes to its `innerHTML`.
+  - Range roots created with `createRangeRoot()` keep hydration inside their boundaries when a server-rendered tag differs from the client tag or text spans several DOM nodes. Content outside the range is no longer changed or removed when the root is disposed.
+
+- Server rendering with `renderToString()` and `renderToStream()` is faster and uses less memory, with no changes to app code. In our measurements on Node 24, `renderToString()` throughput improves 2.4x–6.7x across representative page, table, dashboard, deep component tree, and escaping-heavy benchmarks, and `renderToStream()` improves 1.1x–5.4x. ([#12454](https://github.com/remix-run/remix/pull/12454))
+  - `renderToString()` renders directly to an HTML string without going through a `ReadableStream` or UTF-8 encode/decode round-trip.
+  - Large component trees, inline `style` objects, `class`/`className` attributes, and HTML escaping allocate less per render while producing identical HTML output.
+
+- Keep focus, iframe documents, running CSS animations, and open dialogs and popovers intact when keyed rendering or a frame reload reorders elements, in browsers that support `moveBefore()`. Custom elements that define `connectedMoveCallback()` receive it for these moves instead of `disconnectedCallback()` and `connectedCallback()`. Other browsers keep using `insertBefore()` and restore focus and selection after the move. ([#12416](https://github.com/remix-run/remix/pull/12416))
+
+- SVG `xlinkHref` and `xlink:href` props now render as the SVG2 `href` attribute on the server and in the browser, so `<use xlinkHref="#icon-star" />` renders `<use href="#icon-star">` instead of `<use xlink:href="#icon-star">`. All supported browsers resolve `href` on SVG elements. Other xlink props, such as `xlinkTitle`, still render with the `xlink:` prefix. Update any CSS selectors, tests, or scripts that look for `xlink:href` in rendered SVG. ([#12441](https://github.com/remix-run/remix/pull/12441))
+
+- Skip allocating an `AbortController` and registering request abort listeners in `renderToStream()` when a tree finishes synchronously without streaming frames or async client entries, return an empty stream immediately for pre-aborted signals, and resolve synchronous `resolveClientEntry` results without extra promise wrapping. ([#12463](https://github.com/remix-run/remix/pull/12463))
+
+- Improve Back and Forward scroll restoration in Safari and Firefox when the destination takes time to load, while honoring manual restoration and visitor input during navigation. Positions saved after completed visits are restored once the destination renders. Entries left during an interrupted, failed, or superseded navigation fall back to browser restoration until a later navigation completes, so an older saved position does not override the browser. ([#12295](https://github.com/remix-run/remix/pull/12295))
+
+- Preserve typed text and checkbox changes when an input renders again with `value={undefined}` or `checked={undefined}`. ([#12405](https://github.com/remix-run/remix/pull/12405))
+
 ## v1.3.0
 
 ### Minor Changes

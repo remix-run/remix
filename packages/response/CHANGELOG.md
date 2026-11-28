@@ -2,6 +2,17 @@
 
 This is the changelog for [`response`](https://github.com/remix-run/remix/tree/main/packages/response). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.4
+
+### Patch Changes
+
+- Fix `compressStream()`, used by `compressResponse()` and the `compression()` middleware, buffering the entire compressed response in memory when the client reads slowly. Compression now pauses the source stream until the client catches up. Cancelling a compressed response after its source stream finished also no longer throws a `TypeError`. ([#12426](https://github.com/remix-run/remix/pull/12426))
+
+- Combine prepended DOCTYPE bytes into the first chunk of streamed `createHtmlResponse()` responses, forward stream cancellation to the underlying reader, and avoid unnecessary `Headers` and `TextEncoder` allocations. ([#12463](https://github.com/remix-run/remix/pull/12463))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`mime@1.0.1`](https://github.com/remix-run/remix/releases/tag/mime@1.0.1)
+
 ## v1.0.3
 
 ### Patch Changes

@@ -1,3 +1,20 @@
+## v1.2.1
+
+### Patch Changes
+
+- Declare Bun 1.4.3 as the minimum supported Bun version in `engines`. Upgrade Bun to 1.4.3 or later before updating if you run Remix on Bun. ([#12367](https://github.com/remix-run/remix/pull/12367))
+
+- Speed up browser tests by reusing compiled scripts across test files within a browser run. The runner checks file metadata before serving a cached script so source edits and replacements are picked up on subsequent requests. ([#12390](https://github.com/remix-run/remix/pull/12390))
+
+- Stop `remix test --coverage` from printing a `module.register()` deprecation warning (`DEP0205`) in server test workers on Node.js 26. The coverage loader now registers synchronous in-thread hooks with `module.registerHooks()`. ([#12460](https://github.com/remix-run/remix/pull/12460))
+
+- Run each Firefox browser test file in a fully loaded top-level window so intercepted Back and Forward navigations use top-level history. ([#12391](https://github.com/remix-run/remix/pull/12391))
+
+- Prevent history-quota failures caused by earlier WebKit browser test files. Each file gets a fresh history budget, with an 11-second backoff and one retry if a test exhausts it. See [WebKit history limits](https://github.com/remix-run/remix/tree/main/packages/test#webkit-history-limits) for recovery behavior. ([#12350](https://github.com/remix-run/remix/pull/12350))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`node-tsx@1.0.1`](https://github.com/remix-run/remix/releases/tag/node-tsx@1.0.1)
+
 ## v1.2.0
 
 ### Minor Changes

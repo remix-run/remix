@@ -1,1 +1,0 @@
-Fix `compressStream()`, used by `compressResponse()` and the `compression()` middleware, buffering the entire compressed response in memory when the client reads slowly. Compression now pauses the source stream until the client catches up. Cancelling a compressed response after its source stream finished also no longer throws a `TypeError`.

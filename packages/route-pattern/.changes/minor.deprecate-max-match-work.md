@@ -1,1 +1,0 @@
-Deprecated `limits.maxMatchWork` in `MatcherOptions` (`MatcherLimits.maxMatchWork`). Match work budgeting is an internal safeguard whose unit count depends on matcher implementation details; rely on the built-in default instead of configuring `maxMatchWork`. Passing `limits.maxMatchWork` continues to work in `1.x` and will be removed in a future major release.

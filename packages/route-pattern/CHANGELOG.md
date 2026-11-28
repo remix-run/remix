@@ -2,6 +2,18 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v1.1.0
+
+### Minor Changes
+
+- Deprecated `limits.maxMatchWork` in `MatcherOptions` (`MatcherLimits.maxMatchWork`). Match work budgeting is an internal safeguard whose unit count depends on matcher implementation details; rely on the built-in default instead of configuring `maxMatchWork`. Passing `limits.maxMatchWork` continues to work in `1.x` and will be removed in a future major release. ([#12467](https://github.com/remix-run/remix/pull/12467))
+
+### Patch Changes
+
+- `createMatcher()`, `createMultiMatcher()`, and `createHref()` are significantly faster and use less memory, especially with large route tables. In our benchmarks, matching against 1,000 to 5,000 patterns is 20 to 60 times faster, building a matcher is 5 to 9 times faster, `createHref()` is 1.2 to 1.9 times faster, and patterns with many optional segments, wildcards, or `matchAll()` candidates no longer slow down sharply. Match results, specificity, and generated hrefs are unchanged. ([#12427](https://github.com/remix-run/remix/pull/12427))
+
+- `createHref()` now throws a `CreateHrefError` with `details.type` of `invalid-pathname-variable` when a pathname variable produces a standalone `.` or `..` segment, such as `createHref('/posts/:id', { id: '..' })`. URL parsers remove these segments, so the generated href could resolve to a different route. This also applies to the `href()` method of routes created with `route()` from `remix/routes`. ([#12424](https://github.com/remix-run/remix/pull/12424))
+
 ## v1.0.0
 
 ### Major Changes

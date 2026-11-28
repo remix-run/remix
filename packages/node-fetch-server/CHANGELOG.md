@@ -2,6 +2,16 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.2
+
+### Patch Changes
+
+- Improve request and response handling throughput in `createRequestListener()`, `createRequest()`, and `sendResponse()`. As part of this change, `sendResponse()` no longer releases its reader lock on the consumed `response.body` stream after writing, bodyless HTTP/1.x requests (with `Content-Length: 0` or neither `Content-Length` nor `Transfer-Encoding`) now leave `request.body` as `null` instead of wrapping an empty stream, and `createRequestListener()` now always constructs and passes a `Request` to handlers with `.length === 0` (such as rest-parameter handlers) and routes their errors through `onError` consistently with other handlers. ([#12450](https://github.com/remix-run/remix/pull/12450))
+
+- Reject incoming requests with a literal backslash (`\`) in the URL path. `createRequestListener()` responds with `400 Bad Request` unless `onError` returns a custom response, and `createRequest()` throws. Percent-encoded backslashes (`%5C`) and backslashes in the query string are still accepted. ([#12368](https://github.com/remix-run/remix/pull/12368))
+
+- Finish single-chunk responses that include a matching `Content-Length` header directly with `res.end(chunk)` instead of calling `res.write()` followed by a separate `res.end()`. ([#12463](https://github.com/remix-run/remix/pull/12463))
+
 ## v1.0.1
 
 ### Patch Changes

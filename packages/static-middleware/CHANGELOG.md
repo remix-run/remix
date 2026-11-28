@@ -2,6 +2,16 @@
 
 This is the changelog for [`static-middleware`](https://github.com/remix-run/remix/tree/main/packages/static-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.4
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@1.1.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@1.1.0)
+  - [`fs@1.0.1`](https://github.com/remix-run/remix/releases/tag/fs@1.0.1)
+  - [`mime@1.0.1`](https://github.com/remix-run/remix/releases/tag/mime@1.0.1)
+  - [`response@1.0.4`](https://github.com/remix-run/remix/releases/tag/response@1.0.4)
+
 ## v1.0.3
 
 ### Patch Changes

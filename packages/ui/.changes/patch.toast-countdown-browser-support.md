@@ -1,1 +1,0 @@
-Timed toasts with `countdown: true` no longer report errors in browsers without `CSS.registerProperty()`, including Firefox 125–127. The countdown animation is skipped while timers, pausing, and dismissal continue normally.

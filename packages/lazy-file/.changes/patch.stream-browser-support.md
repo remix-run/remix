@@ -1,1 +1,0 @@
-Read `LazyBlob` and `LazyFile` contents in browsers without native `ReadableStream` async iteration, including Chrome and Edge 123 and Safari 17.5. Reading Blob parts and slices preserves stream cancellation and reader cleanup.

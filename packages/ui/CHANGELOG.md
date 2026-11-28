@@ -2,6 +2,122 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.15.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Popovers, menus, selects, and comboboxes now render ordinary DOM elements instead of native top-layer popovers. Use the matching Portal component to escape clipping ancestors, and wrap each popup surface in its matching context component, as shown below. The context is required for inline rendering too. ([#12170](https://github.com/remix-run/remix/pull/12170))
+
+  Replace `:popover-open` styles with `[data-state="open"]`. Use `[data-open]` for styles that should remain during exit animations. Native `beforetoggle` and `toggle` events no longer fire.
+
+  Place the surface context inside the Portal. Omit the Portal when the surface can remain inline.
+
+  Popovers:
+
+  ```diff
+   import * as popover from '@remix-run/ui/popover'
+
+   <popover.Context>
+     <button mix={popover.anchor({ placement: 'bottom-start' })}>Open popover</button>
+  -  <div mix={popover.surface({ open, onHide })}>Content</div>
+  +  <popover.Portal>
+  +    <popover.SurfaceContext>
+  +      <div mix={popover.surface({ open, onHide })}>Content</div>
+  +    </popover.SurfaceContext>
+  +  </popover.Portal>
+   </popover.Context>
+
+   const surfaceStyle = css({
+  -  '&:popover-open': { opacity: 1 },
+  +  '&[data-state="open"]': { opacity: 1 },
+   })
+  ```
+
+  Menus:
+
+  ```diff
+   import * as menu from '@remix-run/ui/menu'
+
+   <menu.Context label="Menu">
+     <button mix={menu.trigger()}>Open menu</button>
+  -  <div mix={menu.popover()}>
+  -    <div mix={menu.list()}>{/* Items */}</div>
+  -  </div>
+  +  <menu.Portal>
+  +    <menu.PopoverContext>
+  +      <div mix={menu.popover()}>
+  +        <div mix={menu.list()}>{/* Items */}</div>
+  +      </div>
+  +    </menu.PopoverContext>
+  +  </menu.Portal>
+   </menu.Context>
+  ```
+
+  Selects no longer need a separate `popover.Context`. Replace it with `select.PopoverContext` around the popup surface:
+
+  ```diff
+  -import * as popover from '@remix-run/ui/popover'
+   import * as select from '@remix-run/ui/select'
+
+   <select.Context defaultLabel="Choose">
+     <button mix={select.trigger()} />
+  -  <popover.Context>
+  -    <div mix={select.popover()}>
+  -      <div mix={select.list()}>{/* Options */}</div>
+  -    </div>
+  -  </popover.Context>
+  +  <select.Portal>
+  +    <select.PopoverContext>
+  +      <div mix={select.popover()}>
+  +        <div mix={select.list()}>{/* Options */}</div>
+  +      </div>
+  +    </select.PopoverContext>
+  +  </select.Portal>
+   </select.Context>
+  ```
+
+  Comboboxes:
+
+  ```diff
+   import * as combobox from '@remix-run/ui/combobox'
+
+   <combobox.Context>
+     <input aria-label="Combobox" mix={combobox.input()} />
+  -  <div mix={combobox.popover()}>
+  -    <div mix={combobox.list()}>{/* Options */}</div>
+  -  </div>
+  +  <combobox.Portal>
+  +    <combobox.PopoverContext>
+  +      <div mix={combobox.popover()}>
+  +        <div mix={combobox.list()}>{/* Options */}</div>
+  +      </div>
+  +    </combobox.PopoverContext>
+  +  </combobox.Portal>
+   </combobox.Context>
+  ```
+
+  DOM events, form ownership, and inherited styles follow the Portal destination.
+
+  Popups no longer use the browser's top layer. Wrap your app content in an element with `css({ isolation: 'isolate' })` so popups portaled to `document.body` appear above the app's z-index layers. For other layering setups, `--rmx-layer-base` can optionally raise the dialog and popup stack. It defaults to `0`.
+
+- Added `@remix-run/ui/dialog` with providers and mixins for accessible dialogs. ([#12170](https://github.com/remix-run/remix/pull/12170))
+
+### Patch Changes
+
+- Keep IME candidate navigation and confirmation from selecting combobox options, dismissing the popup, or moving the active option. This includes Safari's confirming Enter key after composition ends. ([#12415](https://github.com/remix-run/remix/pull/12415))
+
+- Fix `anchor()` positioning and scroll tracking for fixed-position floating surfaces inside positioned or transformed ancestors. ([#12396](https://github.com/remix-run/remix/pull/12396))
+
+- Escape and outside clicks now dismiss only the topmost popup in nested menus and dialogs. Keyboard input inside a nested popup no longer activates the parent menu, and closing a parent also closes its nested popups. ([#12170](https://github.com/remix-run/remix/pull/12170))
+
+- Pressing tab or shift+tab in an open Select now closes the popup and moves focus through the form instead of keeping it in the list. ([#12170](https://github.com/remix-run/remix/pull/12170))
+
+- Timed toasts with `countdown: true` no longer report errors in browsers without `CSS.registerProperty()`, including Firefox 125–127. The countdown animation is skipped while timers, pausing, and dismissal continue normally. ([#12370](https://github.com/remix-run/remix/pull/12370))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`component@1.4.0`](https://github.com/remix-run/remix/releases/tag/component@1.4.0)
+  - [`data-schema@1.0.2`](https://github.com/remix-run/remix/releases/tag/data-schema@1.0.2)
+
 ## v0.14.0
 
 ### Minor Changes

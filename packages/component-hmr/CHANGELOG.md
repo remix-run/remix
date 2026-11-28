@@ -2,6 +2,18 @@
 
 This is the changelog for [`component-hmr`](https://github.com/remix-run/remix/tree/main/packages/component-hmr). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.3
+
+### Patch Changes
+
+- Improve HMR support for default and destructured parameters, nested declarations, assignments during render, and components sharing a variable declaration with other exports. ([#12404](https://github.com/remix-run/remix/pull/12404))
+
+- Fix component setup running twice after a setup edit when the component has no retained setup bindings or parameters. ([#12430](https://github.com/remix-run/remix/pull/12430))
+
+- Fix failed HMR edits replacing working component implementations when a module throws or rejects a top-level `await`. Existing references and setup callbacks continue to use the last working version. ([#12455](https://github.com/remix-run/remix/pull/12455))
+
+- Improve source map coverage for moved setup code, parameter defaults and rewritten binding references. ([#12399](https://github.com/remix-run/remix/pull/12399))
+
 ## v1.0.2
 
 ### Patch Changes

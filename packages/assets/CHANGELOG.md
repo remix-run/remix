@@ -2,6 +2,20 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.4
+
+### Patch Changes
+
+- Fix full-page HMR reloads in WebKit rendering stale JavaScript when a module had been preloaded. With HMR enabled, the asset server now sends `Vary: *` on compiled JavaScript responses to WebKit so the browser always requests current modules. This can add a request for a preloaded dependency, and because the Cache API rejects responses with `Vary: *`, a service worker can't cache these development scripts in WebKit. ([#12392](https://github.com/remix-run/remix/pull/12392))
+
+- Account for injected HMR setup code in source maps for modules that use `import.meta.hot`. ([#12402](https://github.com/remix-run/remix/pull/12402))
+
+- Fix asset source maps attributing explicitly unmapped generated code to preceding authored source locations after loader transforms or minification. ([#12397](https://github.com/remix-run/remix/pull/12397))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`file-storage@1.0.2`](https://github.com/remix-run/remix/releases/tag/file-storage@1.0.2)
+  - [`mime@1.0.1`](https://github.com/remix-run/remix/releases/tag/mime@1.0.1)
+
 ## v1.0.3
 
 ### Patch Changes

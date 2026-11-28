@@ -1,1 +1,0 @@
-Fix `detectMimeType()` and `detectContentType()` throwing for filenames whose extension matches an inherited object property, such as `file.constructor` or `file.__proto__`. These extensions are now treated as unknown.

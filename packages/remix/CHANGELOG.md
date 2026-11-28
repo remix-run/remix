@@ -2,6 +2,102 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.4.0
+
+### Minor Changes
+
+- Render children into the document body or a custom container with the new `Portal` component from `remix/component`. In server-rendered apps, portals must be nested within a client entry to render their content. Pages that don't use `Portal` don't download its renderer. ([#12344](https://github.com/remix-run/remix/pull/12344))
+
+- `remix/router` now treats `request.signal` cooperatively. When a request aborts, the router stops running middleware and handlers and rejects with the abort reason, but it waits for work already in progress instead of rejecting immediately. Pass `context.request.signal` to work that should stop when the client disconnects, such as `fetch()` calls and database queries. See the [`@remix-run/fetch-router` changelog](https://github.com/remix-run/remix/blob/main/packages/fetch-router/CHANGELOG.md) for details. ([#12446](https://github.com/remix-run/remix/pull/12446))
+
+### Patch Changes
+
+- `remix` now declares Bun 1.4.3 as its minimum supported Bun version in `engines`. Upgrade Bun to 1.4.3 or later before updating if you run Remix on Bun. ([#12367](https://github.com/remix-run/remix/pull/12367))
+
+- Fix failed HMR edits replacing working component implementations in `remix/component-hmr` when a module throws or rejects a top-level `await`. ([#12455](https://github.com/remix-run/remix/pull/12455))
+
+- Rendering, hydration, and navigation fixes in `remix/component`: ([#12441](https://github.com/remix-run/remix/pull/12441))
+  - Client navigations send the page being left as the `Referer`, so servers that redirect back after a form post return to the right page. Links with an explicit `referrerpolicy` and links or forms with `rel="noreferrer"` use native document navigation.
+  - Frame form submissions keep the submit button's name and value when the button is disabled or removed during submission, including in Firefox.
+  - Back and Forward restore scroll positions more reliably in Safari and Firefox when the destination takes time to load.
+  - Reordering elements keeps focus, iframe documents, CSS animations, and open dialogs and popovers intact in browsers that support `moveBefore()`. Custom elements that define `connectedMoveCallback()` receive it for these moves.
+  - Controls disabled in server HTML with `disabled=""` stay disabled after hydration, and an element that replaces a hydrated empty string renders in the right position.
+  - Inputs that render again with `value={undefined}` or `checked={undefined}` keep what the visitor typed or toggled.
+  - Streamed child frames show their content as soon as it arrives, and a frame waiting for preloads no longer stays on its server HTML when a sibling finishes first.
+
+  See the [`@remix-run/component` changelog](https://github.com/remix-run/remix/blob/main/packages/component/CHANGELOG.md) for the complete list.
+
+- Preserve input focus and selection in `remix/component` when a frame reload reorders surviving client entries or nested frames. ([#12461](https://github.com/remix-run/remix/pull/12461))
+
+- Client hydration and rendering in `remix/component` are faster, with no changes to app code. In our 4x CPU-throttled Chromium benchmarks, hydration is 2.1x–2.8x faster and client list and dashboard updates do 15%–30% less scripting work while preserving mismatch patching and DOM behavior. See the [`@remix-run/component` changelog](https://github.com/remix-run/remix/blob/main/packages/component/CHANGELOG.md) for details. ([#12465](https://github.com/remix-run/remix/pull/12465))
+
+- The `remix/component` browser runtime is smaller, with no changes to app code. In our measurements, a minimal `createRoot()` app is about 40% smaller minified and gzipped, and an app that hydrates with `run()` is about 10% smaller. Standalone roots and navigation helpers such as `navigate()` only load the code for the features they import, apps served unbundled by `remix/assets` make fewer module requests, and list, frame, and hydration updates do less work. See the [`@remix-run/component` changelog](https://github.com/remix-run/remix/blob/main/packages/component/CHANGELOG.md) for details. ([#12441](https://github.com/remix-run/remix/pull/12441))
+
+- Server rendering with `remix/component/server` (`renderToString()` and `renderToStream()`) is faster and uses less memory, with no changes to app code. In our benchmarks on Node 24, `renderToString()` throughput improves 2.4x–6.7x and `renderToStream()` improves 1.1x–5.4x while producing identical HTML output. See the [`@remix-run/component` changelog](https://github.com/remix-run/remix/blob/main/packages/component/CHANGELOG.md) for details. ([#12457](https://github.com/remix-run/remix/pull/12457))
+
+- SVG `xlinkHref` and `xlink:href` props in `remix/component` now render as the SVG2 `href` attribute instead of the namespaced `xlink:href` attribute. Other xlink props, such as `xlinkTitle`, are unchanged. Update any CSS selectors, tests, or scripts that look for `xlink:href` in rendered SVG. ([#12441](https://github.com/remix-run/remix/pull/12441))
+
+- Development fixes in `remix/assets` and `remix/component-hmr`: ([#12441](https://github.com/remix-run/remix/pull/12441))
+  - Full-page HMR reloads in WebKit no longer render stale JavaScript after a module was preloaded.
+  - Component HMR handles default and destructured parameters, nested declarations, assignments during render, and components that share a variable declaration with other exports. Editing the setup of a component without retained setup bindings or parameters no longer runs its setup twice.
+  - Source maps account for injected HMR setup code and component HMR transforms, and explicitly unmapped generated code no longer points at the preceding authored source after loader transforms or minification.
+
+  See the [`@remix-run/assets`](https://github.com/remix-run/remix/blob/main/packages/assets/CHANGELOG.md) and [`@remix-run/component-hmr`](https://github.com/remix-run/remix/blob/main/packages/component-hmr/CHANGELOG.md) changelogs for details.
+
+- Other fixes: ([#12441](https://github.com/remix-run/remix/pull/12441))
+  - `compressResponse()` from `remix/response/compress` and the `compression()` middleware from `remix/middleware/compression` no longer buffer the entire compressed response in memory when the client reads slowly.
+  - `detectMimeType()` and `detectContentType()` from `remix/mime` no longer throw for extensions that match inherited object properties, such as `file.constructor`.
+  - `object()` and `record()` from `remix/data-schema` no longer omit keys that passed validation from their results.
+  - `LazyBlob` and `LazyFile` from `remix/lazy-file` can be read in supported browsers without native `ReadableStream` async iteration, including Chrome and Edge 123 and Safari 17.5.
+
+- Stricter handling of untrusted input. Each of these rejects values that were previously accepted: ([#12441](https://github.com/remix-run/remix/pull/12441))
+  - `remix/node-fetch-server` responds with `400 Bad Request` to requests with a literal backslash in the URL path. Percent-encoded backslashes are still accepted.
+  - `createHref()` from `remix/route-pattern/href`, and the `href()` method of routes from `remix/routes`, throw a `CreateHrefError` when a pathname variable produces a standalone `.` or `..` segment, which could otherwise resolve to a different route.
+  - `bigint()` from `remix/data-schema/coerce` fails validation for strings longer than 4,096 characters.
+
+- Stop `loadModule()` from `remix/node-tsx/load-module` and `remix test --coverage` from printing a `module.register()` deprecation warning (`DEP0205`) on Node.js 26. Both now register synchronous in-thread hooks with `module.registerHooks()`. See the [`@remix-run/node-tsx`](https://github.com/remix-run/remix/blob/main/packages/node-tsx/CHANGELOG.md) and [`@remix-run/test`](https://github.com/remix-run/remix/blob/main/packages/test/CHANGELOG.md) changelogs for details. ([#12466](https://github.com/remix-run/remix/pull/12466))
+
+- Request and response handling in `remix/node-fetch-server` (`createRequestListener()`, `createRequest()`, and `sendResponse()`) has higher throughput and lower per-request overhead. As part of this change, `sendResponse()` no longer releases its reader lock on the consumed `response.body` stream, bodyless HTTP/1.x requests (`Content-Length: 0` or neither `Content-Length` nor `Transfer-Encoding`) now leave `request.body` as `null` instead of an empty stream, and `createRequestListener()` always constructs and passes a `Request` to zero-argument or rest-parameter handlers while routing their errors through `onError`. See the [`@remix-run/node-fetch-server` changelog](https://github.com/remix-run/remix/blob/main/packages/node-fetch-server/CHANGELOG.md) for details. ([#12466](https://github.com/remix-run/remix/pull/12466))
+
+- `remix/router` dispatches requests about twice as fast, and `remix/route-pattern` matches large route tables 20 to 60 times faster, builds matchers 5 to 9 times faster, and generates hrefs up to nearly twice as fast in our benchmarks. Routing behavior is unchanged. See the [`@remix-run/fetch-router`](https://github.com/remix-run/remix/blob/main/packages/fetch-router/CHANGELOG.md) and [`@remix-run/route-pattern`](https://github.com/remix-run/remix/blob/main/packages/route-pattern/CHANGELOG.md) changelogs for details. ([#12441](https://github.com/remix-run/remix/pull/12441))
+
+- Browser tests in `remix/test` run faster by reusing compiled scripts across test files. Firefox runs each test file in a top-level window so Back and Forward navigations behave as they do in the browser, and WebKit runs recover from the browser's history quota instead of failing later test files. See the [`@remix-run/test` changelog](https://github.com/remix-run/remix/blob/main/packages/test/CHANGELOG.md) for details. ([#12441](https://github.com/remix-run/remix/pull/12441))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.4`](https://github.com/remix-run/remix/releases/tag/assets@1.0.4)
+  - [`async-context-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@1.0.2)
+  - [`auth@1.0.3`](https://github.com/remix-run/remix/releases/tag/auth@1.0.3)
+  - [`auth-middleware@1.0.3`](https://github.com/remix-run/remix/releases/tag/auth-middleware@1.0.3)
+  - [`cli@1.0.4`](https://github.com/remix-run/remix/releases/tag/cli@1.0.4)
+  - [`component@1.4.0`](https://github.com/remix-run/remix/releases/tag/component@1.4.0)
+  - [`component-hmr@1.0.3`](https://github.com/remix-run/remix/releases/tag/component-hmr@1.0.3)
+  - [`compression-middleware@1.0.4`](https://github.com/remix-run/remix/releases/tag/compression-middleware@1.0.4)
+  - [`cop-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/cop-middleware@1.0.2)
+  - [`cors-middleware@1.0.4`](https://github.com/remix-run/remix/releases/tag/cors-middleware@1.0.4)
+  - [`csp-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/csp-middleware@1.0.2)
+  - [`csrf-middleware@1.0.3`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@1.0.3)
+  - [`data-schema@1.0.2`](https://github.com/remix-run/remix/releases/tag/data-schema@1.0.2)
+  - [`fetch-router@1.1.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@1.1.0)
+  - [`file-storage@1.0.2`](https://github.com/remix-run/remix/releases/tag/file-storage@1.0.2)
+  - [`file-storage-s3@1.1.2`](https://github.com/remix-run/remix/releases/tag/file-storage-s3@1.1.2)
+  - [`form-data-middleware@1.1.3`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@1.1.3)
+  - [`form-data-parser@1.1.3`](https://github.com/remix-run/remix/releases/tag/form-data-parser@1.1.3)
+  - [`fs@1.0.1`](https://github.com/remix-run/remix/releases/tag/fs@1.0.1)
+  - [`lazy-file@5.0.9`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.9)
+  - [`logger-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/logger-middleware@1.0.2)
+  - [`method-override-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@1.0.2)
+  - [`mime@1.0.1`](https://github.com/remix-run/remix/releases/tag/mime@1.0.1)
+  - [`multipart-parser@1.1.3`](https://github.com/remix-run/remix/releases/tag/multipart-parser@1.1.3)
+  - [`node-fetch-server@1.0.2`](https://github.com/remix-run/remix/releases/tag/node-fetch-server@1.0.2)
+  - [`node-tsx@1.0.1`](https://github.com/remix-run/remix/releases/tag/node-tsx@1.0.1)
+  - [`render-middleware@1.1.2`](https://github.com/remix-run/remix/releases/tag/render-middleware@1.1.2)
+  - [`response@1.0.4`](https://github.com/remix-run/remix/releases/tag/response@1.0.4)
+  - [`route-pattern@1.1.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@1.1.0)
+  - [`session-middleware@1.0.4`](https://github.com/remix-run/remix/releases/tag/session-middleware@1.0.4)
+  - [`spa@1.0.4`](https://github.com/remix-run/remix/releases/tag/spa@1.0.4)
+  - [`static-middleware@1.0.4`](https://github.com/remix-run/remix/releases/tag/static-middleware@1.0.4)
+  - [`test@1.2.1`](https://github.com/remix-run/remix/releases/tag/test@1.2.1)
+
 ## v3.3.0
 
 ### Minor Changes
