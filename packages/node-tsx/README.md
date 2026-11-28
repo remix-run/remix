@@ -4,7 +4,7 @@ Run Node.js with TypeScript and JSX syntax support in `.ts`, `.tsx`, and `.jsx` 
 
 `node-tsx` transforms supported source files before Node.js executes them, including TypeScript syntax that requires JavaScript code generation such as enums, runtime namespaces, and parameter properties. JSX compiler options are read from the nearest `tsconfig.json` for each loaded file.
 
-The loader does not type check, change Node.js module resolution, apply TypeScript path aliases, or downlevel JavaScript syntax for older runtimes.
+The loader does not type check, change Node.js module resolution, apply TypeScript path aliases, or downlevel JavaScript syntax for older runtimes. Use [subpath imports](#import-aliases) in place of path aliases.
 
 ## Installation
 
@@ -44,6 +44,24 @@ Since import resolution still follows Node.js, configure type checking to match 
 - [`rewriteRelativeImportExtensions`](https://www.typescriptlang.org/tsconfig/#rewriteRelativeImportExtensions) preserves a `tsc` emit path by rewriting relative `.ts` and `.tsx` imports to JavaScript extensions.
 
 Do not enable `erasableSyntaxOnly` if you want TypeScript to accept the same transform-only syntax that `node-tsx` can execute.
+
+### Import aliases
+
+Node.js doesn't read `paths` from `tsconfig.json`, so TypeScript path aliases fail when the code runs. Use [subpath imports](https://nodejs.org/api/packages.html#subpath-imports) in `package.json` instead. Node.js resolves them natively, and TypeScript (with `NodeNext`), the [asset server](https://github.com/remix-run/remix/tree/main/packages/assets) and [`remix test`](https://github.com/remix-run/remix/tree/main/packages/test) follow the same mapping:
+
+```json
+{
+  "imports": {
+    "#app/*": "./app/*"
+  }
+}
+```
+
+```ts
+import { routes } from '#app/routes.ts'
+```
+
+`rewriteRelativeImportExtensions` only rewrites relative imports, so while it's enabled, TypeScript reports every subpath import of a `.ts` or `.tsx` file as an error (TS2877). Leave it out unless you emit JavaScript with `tsc`.
 
 ### Programmatic usage
 
