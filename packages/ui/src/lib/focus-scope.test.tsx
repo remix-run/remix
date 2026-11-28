@@ -39,6 +39,98 @@ afterEach(() => {
 })
 
 describe('dialog focus scope', () => {
+  it('reapplies mixed nested shielding without making trap-focus siblings inert', async (t) => {
+    document.body.innerHTML =
+      '<main id="background"></main><div id="parent" tabindex="-1"><button id="sibling">Parent</button><div id="child" tabindex="-1"><input /></div></div>'
+    activate(get('#parent'))
+    let child = activate(get('#child'), { modal: 'trap-focus' })
+    get('#sibling').removeAttribute('aria-hidden')
+    get('#background').removeAttribute('inert')
+    await t.waitFor(() => {
+      expect(get('#background').inert).toBe(true)
+      expect(get('#sibling').getAttribute('aria-hidden')).toBe('true')
+    })
+    expect(get('#sibling').inert).toBe(false)
+    child.dispose()
+    expect(get('#sibling').hasAttribute('aria-hidden')).toBe(false)
+    expect(get('#background').inert).toBe(true)
+  })
+
+  it('recovers the last modal control after navigation resets focus', () => {
+    document.body.innerHTML =
+      '<div id="dialog" tabindex="-1"><input /><button id="last">Last</button></div>'
+    activate(get('#dialog'))
+    get('#last').focus()
+    get('#last').blur()
+    window.navigation.dispatchEvent(new Event('navigatesuccess'))
+    expect(document.activeElement).toBe(get('#last'))
+  })
+
+  it('recovers the innermost focus trap after navigation', () => {
+    document.body.innerHTML =
+      '<div id="parent" tabindex="-1"><button>Parent</button><div id="child" tabindex="-1"><input id="inside" /></div></div>'
+    activate(get('#parent'))
+    let child = activate(get('#child'), { modal: 'trap-focus' })
+    get('#inside').blur()
+    window.navigation.dispatchEvent(new Event('navigatesuccess'))
+    expect(document.activeElement).toBe(get('#inside'))
+    child.dispose()
+    get('#parent').focus()
+    get('#parent').blur()
+    window.navigation.dispatchEvent(new Event('navigatesuccess'))
+    expect(document.activeElement).toBe(get('#parent'))
+  })
+
+  it('does not recover navigation focus for a nonmodal scope', () => {
+    document.body.innerHTML = '<div id="dialog" tabindex="-1"><input id="inside" /></div>'
+    activate(get('#dialog'), { modal: false })
+    get('#inside').blur()
+    window.navigation.dispatchEvent(new Event('navigatesuccess'))
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('keeps disabled autofocus until focus has entered the modal', () => {
+    document.body.innerHTML = '<div id="dialog" tabindex="-1"><input /></div>'
+    activate(get('#dialog'), { modal: true, initialFocus: false })
+    window.navigation.dispatchEvent(new Event('navigatesuccess'))
+    expect(document.activeElement).toBe(document.body)
+
+    let field = get('input')
+    field.focus()
+    field.blur()
+    window.navigation.dispatchEvent(new Event('navigatesuccess'))
+    expect(document.activeElement).toBe(field)
+  })
+
+  it('leaves interactive modal-exempt focus alone on navigation', () => {
+    document.body.innerHTML =
+      '<div id="dialog" tabindex="-1"><input /></div><section id="notifications"><button id="action">Undo</button></section>'
+    let unregister = registerModalExemptRegion({ node: get('#notifications') })
+    try {
+      activate(get('#dialog'))
+      get('#action').focus()
+      window.navigation.dispatchEvent(new Event('navigatesuccess'))
+      expect(document.activeElement).toBe(get('#action'))
+    } finally {
+      unregister()
+    }
+  })
+
+  it('reapplies shielding removed by an attribute-only update', async (t) => {
+    document.body.innerHTML =
+      '<main id="background"></main><div id="dialog" tabindex="-1"><input /></div>'
+    let scope = activate(get('#dialog'))
+    get('#background').removeAttribute('inert')
+    get('#background').setAttribute('aria-hidden', 'false')
+    await t.waitFor(() => {
+      expect(get('#background').inert).toBe(true)
+      expect(get('#background').getAttribute('aria-hidden')).toBe('true')
+    })
+    scope.dispose()
+    expect(get('#background').hasAttribute('inert')).toBe(false)
+    expect(get('#background').hasAttribute('aria-hidden')).toBe(false)
+  })
+
   it('focuses the first tabbable control and restores the opener', () => {
     document.body.innerHTML = `
       <button id="opener">Open</button>

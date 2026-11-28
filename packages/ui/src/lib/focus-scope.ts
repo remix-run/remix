@@ -209,7 +209,6 @@ function createManager(doc: Document) {
     if (pending.length) queueMicrotask(restoreRemovedFocus)
     if (scopes.length > 0) {
       for (let root of roots) {
-        observer.observe(root, { childList: true, subtree: true })
         for (let node of root.querySelectorAll('*')) {
           if (node.shadowRoot) roots.push(node.shadowRoot)
         }
@@ -272,6 +271,15 @@ function createManager(doc: Document) {
       else restoreAttribute(node, 'inert', previous.inert)
       node.setAttribute('aria-hidden', 'true')
     }
+    // Observe after applying shielding so our own attribute writes cannot trigger another scan.
+    for (let root of scopes.length > 0 ? roots : []) {
+      observer.observe(root, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['inert', 'aria-hidden'],
+      })
+    }
   }
 
   function onFocusIn(event: FocusEvent) {
@@ -295,6 +303,20 @@ function createManager(doc: Document) {
     }
     if (!containsScope(scope, target) && scope.options.modal === false) {
       scope.options.onFocusOutside?.(event)
+    }
+  }
+
+  function onNavigateSuccess() {
+    let scope = scopes.findLast((scope) => scope.options.modal)
+    let active = getActiveElement(doc)
+    // The browser can reset Toast focus to body too; only recover focus owned by the modal.
+    if (
+      scope?.lastFocused &&
+      (!active || active === doc.body) &&
+      !isInModalExemptRegion(doc, active) &&
+      !isInModalExemptRegion(doc, focusedRegion ?? null)
+    ) {
+      focusInside(scope)
     }
   }
 
@@ -348,6 +370,7 @@ function createManager(doc: Document) {
       focusInside(scope)
     }
   })
+  doc.defaultView?.navigation?.addEventListener('navigatesuccess', onNavigateSuccess)
   doc.addEventListener('focusin', onFocusIn)
   doc.addEventListener('keydown', onKeyDown)
 
@@ -383,6 +406,7 @@ function createManager(doc: Document) {
         stopObservingBoundaries()
         stopObservingLayers()
         stopObservingRegions()
+        doc.defaultView?.navigation?.removeEventListener('navigatesuccess', onNavigateSuccess)
         doc.removeEventListener('focusin', onFocusIn)
         doc.removeEventListener('keydown', onKeyDown)
         managers.delete(doc)
