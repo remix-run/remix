@@ -117,7 +117,9 @@ let router = createRouter({
 
 ### Compression Options
 
-**Default:** Uses Node.js defaults for [zlib](https://nodejs.org/api/zlib.html#class-options) and [Brotli](https://nodejs.org/api/zlib.html#class-brotlioptions), with streaming-safe flush handling for HTML and server-sent events.
+**Default:** Uses Node.js defaults for [zlib](https://nodejs.org/api/zlib.html#class-options) and [Brotli](https://nodejs.org/api/zlib.html#class-brotlioptions), except Brotli quality, with streaming-safe flush handling for HTML and server-sent events.
+
+Brotli uses quality 5 instead of Node's 11. Quality 11 is meant for compressing files once ahead of time: compressing each response at 11 can take tens of milliseconds for a 50 KB page and hundreds for a large one, while quality 5 takes under a millisecond for that page, and its output is still smaller than gzip's.
 
 For `text/html` and `text/event-stream` responses, gzip and deflate use `Z_SYNC_FLUSH`, while Brotli uses `BROTLI_OPERATION_FLUSH`. This keeps each response chunk available to clients without waiting for the stream to finish. Explicit `flush` options override these defaults.
 
@@ -154,11 +156,12 @@ import { compression } from 'remix/middleware/compression'
 let router = createRouter({
   middleware: [
     compression({
+      // Browsers and CDNs keep fingerprinted assets, so they're compressed rarely and can take longer
       brotli: (response) => {
-        let contentType = response.headers.get('Content-Type')
+        let cacheControl = response.headers.get('Cache-Control')
         return {
           params: {
-            [zlib.constants.BROTLI_PARAM_QUALITY]: contentType?.startsWith('text/html;') ? 4 : 11,
+            [zlib.constants.BROTLI_PARAM_QUALITY]: cacheControl?.includes('immutable') ? 11 : 5,
           },
         }
       },

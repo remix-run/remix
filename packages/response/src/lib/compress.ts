@@ -51,6 +51,10 @@ export interface CompressResponseOptions {
   /**
    * node:zlib options for Brotli compression.
    *
+   * Quality defaults to 5 rather than Node's 11, which is meant for compressing once ahead of
+   * time and can take longer than generating the response. Set `params[BROTLI_PARAM_QUALITY]` to
+   * change it.
+   *
    * For HTML and SSE responses (`text/html` and `text/event-stream`),
    * `flush: BROTLI_OPERATION_FLUSH` is automatically applied unless you explicitly set a flush
    * value.
@@ -239,6 +243,10 @@ export function createCompressionOptions(
     ...options,
     brotli: {
       ...options.brotli,
+      params: {
+        [constants.BROTLI_PARAM_QUALITY]: 5,
+        ...options.brotli?.params,
+      },
       ...(shouldFlush && options.brotli?.flush === undefined ? brotliFlushOptions : null),
     },
     zlib: {
