@@ -6,7 +6,11 @@ export interface MatcherLimits {
   /** Maximum combined size of all patterns, measured in UTF-8 bytes. Defaults to 16,777,216. */
   maxMatcherSize: number
 
-  /** Maximum aggregate work performed by one URL match. Defaults to 1,000,000. */
+  /**
+   * Maximum aggregate work performed by one URL match. Defaults to 1,000,000.
+   *
+   * @deprecated Match work budgeting uses a built-in default and will no longer be configurable in a future major release. Rely on the default limit instead of passing `limits.maxMatchWork`.
+   */
   maxMatchWork: number
 }
 
