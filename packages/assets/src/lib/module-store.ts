@@ -158,37 +158,26 @@ export function createModuleStore<transformed, resolved, emitted>(
 
     clearTransformed(identityPath, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
-      removeFromEmittedLru(identityPath)
       record.transformed = undefined
       record.transformedVersion = undefined
       record.resolved = undefined
       record.resolvedVersion = undefined
-      record.emitted = undefined
-      record.emittedVersion = undefined
-      record.emittedSnapshot = undefined
-      record.staleEmitted = undefined
-      record.staleEmittedSnapshot = undefined
+      clearEmitted(record)
       setTracking(record, tracking)
     },
 
     setTransformed(identityPath, transformed, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
-      removeFromEmittedLru(identityPath)
       record.transformed = transformed
       record.transformedVersion = record.contentVersion
       record.resolved = undefined
       record.resolvedVersion = undefined
-      record.emitted = undefined
-      record.emittedVersion = undefined
-      record.emittedSnapshot = undefined
-      record.staleEmitted = undefined
-      record.staleEmittedSnapshot = undefined
+      clearEmitted(record)
       setTracking(record, tracking)
     },
 
     setResolved(identityPath, resolved, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
-      removeFromEmittedLru(identityPath)
       removeResolvedIndexes(record)
       record.resolved = resolved
       record.resolvedVersion = record.invalidationVersion
@@ -200,25 +189,16 @@ export function createModuleStore<transformed, resolved, emitted>(
         record.transformedVersion = undefined
       }
       record.links = createLinks(resolved)
-      record.emitted = undefined
-      record.emittedVersion = undefined
-      record.emittedSnapshot = undefined
-      record.staleEmitted = undefined
-      record.staleEmittedSnapshot = undefined
+      clearEmitted(record)
       setTracking(record, tracking)
       addResolvedIndexes(record)
     },
 
     clearResolved(identityPath, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
-      removeFromEmittedLru(identityPath)
       record.resolved = undefined
       record.resolvedVersion = undefined
-      record.emitted = undefined
-      record.emittedVersion = undefined
-      record.emittedSnapshot = undefined
-      record.staleEmitted = undefined
-      record.staleEmittedSnapshot = undefined
+      clearEmitted(record)
       setTracking(record, tracking)
     },
 
@@ -386,6 +366,15 @@ export function createModuleStore<transformed, resolved, emitted>(
     }
   }
 
+  function clearEmitted(record: MutableModuleRecord<transformed, resolved, emitted>): void {
+    removeFromEmittedLru(record.identityPath)
+    record.emitted = undefined
+    record.emittedVersion = undefined
+    record.emittedSnapshot = undefined
+    record.staleEmitted = undefined
+    record.staleEmittedSnapshot = undefined
+  }
+
   function removeFromEmittedLru(identityPath: string): void {
     let previousSize = emittedLruBytesByIdentityPath.get(identityPath)
     if (previousSize === undefined) return
@@ -403,24 +392,20 @@ export function createModuleStore<transformed, resolved, emitted>(
 
     if (emittedTotalBytes <= maxEmittedBytes) return
 
-    for (let [oldestIdentityPath, oldestByteSize] of emittedLruBytesByIdentityPath) {
+    for (let oldestIdentityPath of emittedLruBytesByIdentityPath.keys()) {
       if (emittedTotalBytes <= maxEmittedBytes || emittedLruBytesByIdentityPath.size <= 1) break
       if (oldestIdentityPath === identityPath) continue
-      emittedLruBytesByIdentityPath.delete(oldestIdentityPath)
-      emittedTotalBytes -= oldestByteSize
       let evicted = recordsByIdentityPath.get(oldestIdentityPath)
       if (evicted) {
-        evicted.emitted = undefined
-        evicted.emittedVersion = undefined
-        evicted.emittedSnapshot = undefined
-        evicted.staleEmitted = undefined
-        evicted.staleEmittedSnapshot = undefined
+        clearEmitted(evicted)
         if (!retainIntermediate) {
           evicted.resolved = undefined
           evicted.resolvedVersion = undefined
           evicted.transformed = undefined
           evicted.transformedVersion = undefined
         }
+      } else {
+        removeFromEmittedLru(oldestIdentityPath)
       }
       options.onEmittedEvicted?.(oldestIdentityPath)
     }

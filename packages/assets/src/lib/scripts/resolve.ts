@@ -1,4 +1,3 @@
-import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { ResolverFactory } from 'oxc-resolver'
 
@@ -111,7 +110,7 @@ type ResolveResult = {
 
 export type ResolveArgs = {
   concurrency: number
-  findNearestPackageJsonPath?: (filePath: string) => string | null
+  findNearestPackageJsonPath(filePath: string): string | null
   isDirectoryResolutionFileIndependent(directory: string): boolean
   isAllowed(absolutePath: string): boolean
   isWatchIgnored(filePath: string): boolean
@@ -243,8 +242,7 @@ export async function resolveModule(
 
     if (transformed.packageSpecifiers.includes(unresolved.specifier)) {
       let packageJsonPath =
-        resolvedSpec.packageJsonPath ??
-        (args.findNearestPackageJsonPath ?? findNearestPackageJsonPath)(resolvedImport.resolvedPath)
+        resolvedSpec.packageJsonPath ?? args.findNearestPackageJsonPath(resolvedImport.resolvedPath)
       if (packageJsonPath && !args.isWatchIgnored(packageJsonPath)) {
         trackedFiles.add(packageJsonPath)
       }
@@ -413,9 +411,7 @@ export async function resolveModule(
     })
   }
 
-  let packageJsonPath = (args.findNearestPackageJsonPath ?? findNearestPackageJsonPath)(
-    transformed.resolvedPath,
-  )
+  let packageJsonPath = args.findNearestPackageJsonPath(transformed.resolvedPath)
   let resolveTrackingFiles = new Set(trackedFiles)
   if (packageJsonPath && !args.isWatchIgnored(packageJsonPath)) {
     trackedFiles.add(packageJsonPath)
@@ -557,21 +553,6 @@ async function getBareImportScopePathname(args: {
 
 function ensureTrailingSlash(value: string): string {
   return value.endsWith('/') ? value : `${value}/`
-}
-
-function findNearestPackageJsonPath(filePath: string): string | null {
-  let directory = path.dirname(filePath)
-
-  while (true) {
-    let packageJsonPath = path.join(directory, 'package.json')
-    if (fs.existsSync(packageJsonPath)) {
-      return normalizeFilePath(packageJsonPath)
-    }
-
-    let parentDirectory = path.dirname(directory)
-    if (parentDirectory === directory) return null
-    directory = parentDirectory
-  }
 }
 
 function getPackageJsonCandidatePaths(

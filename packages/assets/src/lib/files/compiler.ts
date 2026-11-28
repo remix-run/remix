@@ -23,6 +23,7 @@ import type {
 } from './store.ts'
 import { isNoEntityError } from '../fs-errors.ts'
 import {
+  createNotModifiedResponse,
   getCacheKey,
   getFileSnapshot,
   getNotModifiedResult,
@@ -318,7 +319,9 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
         return sourceFile
       }
 
+      let contentHash = await hashContent(transformedFile.body)
       let emittedFile = await createEmittedFile(transformedFile.body, {
+        contentHash,
         extension: transformedFile.extension,
         filePath: record.identityPath,
       })
@@ -329,10 +332,7 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
         let cachedFile = new File([toArrayBufferView(emittedFile.body)], name, {
           type: emittedFile.contentType,
         })
-        setFileCacheMeta(cachedFile, {
-          body: emittedFile.body,
-          contentHash: emittedFile.etag.slice(3, -1),
-        })
+        setFileCacheMeta(cachedFile, { contentHash })
         await cache.put(transformedCacheKey, cachedFile)
       }
       return emittedFile
@@ -455,15 +455,15 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
 
     let meta = getFileCacheMeta(file)
     let body = meta?.body ?? new Uint8Array(await file.arrayBuffer())
-    let emitted = await createEmittedFile(body, {
-      contentHash: meta?.contentHash,
+    let contentHash = meta?.contentHash ?? (await hashContent(body))
+    if (meta && meta.contentHash === undefined) {
+      meta.onContentHash?.(contentHash)
+    }
+    return createEmittedFile(body, {
+      contentHash,
       extension: path.extname(file.name),
       filePath: identityPath,
     })
-    if (meta && meta.contentHash === undefined) {
-      meta.onContentHash?.(emitted.etag.slice(3, -1))
-    }
-    return emitted
   }
 
   async function createEmittedFile(
@@ -553,13 +553,7 @@ export function createResponseForFile(
   },
 ): Response {
   if (IfNoneMatch.from(options.ifNoneMatch).matches(result.etag)) {
-    return new Response(null, {
-      status: 304,
-      headers: {
-        'Cache-Control': options.cacheControl,
-        ETag: result.etag,
-      },
-    })
+    return createNotModifiedResponse(result.etag, options.cacheControl)
   }
 
   let body = toArrayBufferView(result.body)

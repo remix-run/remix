@@ -11,7 +11,6 @@ import type { ModuleRecord, ModuleTracking } from '../module-store.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { EmittedStyle } from './emit.ts'
 import type { TransformedStyle } from './transform.ts'
-import { resolveRealFilePath } from '../compiler-utils.ts'
 
 type StyleRecord = ModuleRecord<TransformedStyle, ResolvedStyle, EmittedStyle>
 
@@ -50,7 +49,7 @@ export type ResolveArgs = {
   isAllowed(absolutePath: string): boolean
   isServedFilePath(filePath: string): boolean
   isWatchIgnored(filePath: string): boolean
-  resolveActualPath?: (filePath: string) => string | null
+  resolveActualPath(filePath: string): string | null
   routes: CompiledRoutes
 }
 
@@ -148,7 +147,7 @@ export function resolveServedStyleOrThrow(
   identityPath: string
   stableUrlPathname: string
 } {
-  let identityPath = (args.resolveActualPath ?? resolveRealFilePath)(filePath)
+  let identityPath = args.resolveActualPath(filePath)
   if (!identityPath) {
     throw createAssetServerCompilationError(`File not found: ${filePath}`, {
       code: 'FILE_NOT_FOUND',
@@ -209,7 +208,7 @@ function resolveImportDependency(
 
   let { hash, resolvedPath, search } = parsedUrl
   let resolvedFilePath = resolvedPath
-  let identityPath = (args.resolveActualPath ?? resolveRealFilePath)(resolvedFilePath)
+  let identityPath = args.resolveActualPath(resolvedFilePath)
   if (!identityPath || !isStyleFilePath(identityPath)) {
     throw createAssetServerCompilationError(
       `Failed to resolve import "${url}" in ${importerPath}.`,
@@ -272,7 +271,7 @@ function resolveUrlDependency(
 
   let { hash, resolvedPath, search } = parsedUrl
   let resolvedFilePath = resolvedPath
-  let identityPath = (args.resolveActualPath ?? resolveRealFilePath)(resolvedFilePath)
+  let identityPath = args.resolveActualPath(resolvedFilePath)
   if (!identityPath) {
     throw createAssetServerCompilationError(`Failed to resolve url("${url}") in ${importerPath}.`, {
       code: 'URL_RESOLUTION_FAILED',

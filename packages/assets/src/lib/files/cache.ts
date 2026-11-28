@@ -190,17 +190,7 @@ export function createFsFileCache(options: FsFileCacheOptions = {}): FileCache {
       let digest = await hash(textEncoder.encode(key))
       let header = JSON.stringify([digest, file.name, file.type, file.lastModified])
       let isNativeBlob = file instanceof Blob
-      let content = new Blob([
-        header,
-        '\n',
-        meta?.body
-          ? meta.body.buffer instanceof ArrayBuffer
-            ? new Uint8Array(meta.body.buffer, meta.body.byteOffset, meta.body.byteLength)
-            : new Uint8Array(meta.body)
-          : isNativeBlob
-            ? file
-            : await file.arrayBuffer(),
-      ])
+      let content = new Blob([header, '\n', isNativeBlob ? file : await file.arrayBuffer()])
       if (65 + content.size > limit) return
       let bytes = new Uint8Array(await content.arrayBuffer())
       let checksum = await hash(bytes)

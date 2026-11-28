@@ -44,6 +44,16 @@ export function getNotModifiedResult(
   return { etag: asset.etag, type: 'not-modified' }
 }
 
+export function createNotModifiedResponse(etag: string, cacheControl: string): Response {
+  return new Response(null, {
+    status: 304,
+    headers: {
+      'Cache-Control': cacheControl,
+      ETag: etag,
+    },
+  })
+}
+
 export function createCompiledAssetResponse(
   result: CompiledAsset,
   contentType: string,
@@ -60,13 +70,7 @@ export function createCompiledAssetResponse(
   }
 
   if (IfNoneMatch.from(options.ifNoneMatch).matches(asset.etag)) {
-    return new Response(null, {
-      status: 304,
-      headers: {
-        'Cache-Control': options.cacheControl,
-        ETag: asset.etag,
-      },
-    })
+    return createNotModifiedResponse(asset.etag, options.cacheControl)
   }
 
   return new Response(options.method === 'HEAD' ? null : asset.content, {

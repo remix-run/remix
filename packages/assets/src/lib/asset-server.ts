@@ -32,7 +32,7 @@ import { createAssetServerWatcher } from './watch.ts'
 import { createAssetInspector, type AssetDetails } from './inspection.ts'
 import type { AssetServerWatcher, ChokidarWatcher } from './watch.ts'
 import { getVirtualStoreMountConfigs } from './virtual-store.ts'
-import { createCompiledAssetResponse } from './compiler-utils.ts'
+import { createCompiledAssetResponse, createNotModifiedResponse } from './compiler-utils.ts'
 
 interface AssetServerWatchOptions {
   /**
@@ -433,7 +433,6 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   })
   let watcher: AssetServerWatcher | null = null
   let scriptEntries = new Map<string, Promise<ScriptEntry>>()
-  let chokidarWatcher: ChokidarWatcher | null = null
   let fileCompiler: FileCompiler | null = null
   let closed = false
   let unsubscribeBrowserHmrFileEvents: (() => void) | undefined
@@ -523,10 +522,6 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       routes: resolvedOptions.routes,
     })
   }
-  if (resolvedOptions.watchOptions && !resolvedOptions.hmr) {
-    startLocalWatcher()
-  }
-
   function recordWatchDirectoryDelta(
     delta: { add: readonly string[]; remove: readonly string[] },
     includeAncestors: boolean,
@@ -544,11 +539,12 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     watcher = createAssetServerWatcher({
       ...resolvedOptions.watchOptions,
       onChokidarWatcherCreated(createdWatcher) {
-        chokidarWatcher = createdWatcher
+        chokidarWatcherByAssetServer.set(assetServer, createdWatcher)
       },
       onFileEvent: handleWatchEvent,
       rootDir: resolvedOptions.rootDir,
     })
+    watcherByAssetServer.set(assetServer, watcher)
     watcher.updateWatchedDirectories(
       { add: accessPolicy.getPackageWatchDirectories(), remove: [] },
       { includeAncestors: false },
@@ -722,13 +718,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
             requestedFingerprint: parsedRequestPathname.requestedFingerprint,
           })
           if (styleResult.type === 'not-modified') {
-            return new Response(null, {
-              status: 304,
-              headers: {
-                'Cache-Control': parsedRequestPathname.cacheControl,
-                ETag: styleResult.etag,
-              },
-            })
+            return createNotModifiedResponse(styleResult.etag, parsedRequestPathname.cacheControl)
           }
 
           let compiledStyle = styleResult.style
@@ -762,13 +752,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
             transform: requestedTransform,
           })
           if (fileResult.type === 'not-modified') {
-            return new Response(null, {
-              status: 304,
-              headers: {
-                'Cache-Control': parsedRequestPathname.cacheControl,
-                ETag: fileResult.etag,
-              },
-            })
+            return createNotModifiedResponse(fileResult.etag, parsedRequestPathname.cacheControl)
           }
 
           if (parsedRequestPathname.requestedFingerprint !== null) {
@@ -796,13 +780,10 @@ export function createAssetServer<const transforms extends AssetRequestTransform
         })
         let response: Response
         if (scriptResult.type === 'not-modified') {
-          response = new Response(null, {
-            status: 304,
-            headers: {
-              'Cache-Control': parsedRequestPathname.cacheControl,
-              ETag: scriptResult.etag,
-            },
-          })
+          response = createNotModifiedResponse(
+            scriptResult.etag,
+            parsedRequestPathname.cacheControl,
+          )
         } else {
           let compiledScript = scriptResult.script
 
@@ -898,7 +879,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
           let typeCheckFilePath = stripFilePathUrlSuffix(filePath)
           if (!isScriptFilePath(typeCheckFilePath)) {
             throw new TypeError(
-              `assetServer.getImportMap() only supports script files: ${filePath}`,
+              `assetServer.getScriptEntry() only supports script files: ${filePath}`,
             )
           }
           let extraImportMapRoots = resolvedOptions.hmrModuleImporter
@@ -1017,11 +998,8 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     },
   }
 
-  if (chokidarWatcher) {
-    chokidarWatcherByAssetServer.set(assetServer, chokidarWatcher)
-  }
-  if (watcher) {
-    watcherByAssetServer.set(assetServer, watcher)
+  if (resolvedOptions.watchOptions && !resolvedOptions.hmr) {
+    startLocalWatcher()
   }
 
   if (resolvedOptions.hmr) {
@@ -1036,24 +1014,12 @@ export function createAssetServer<const transforms extends AssetRequestTransform
           }
         } else {
           startLocalWatcher()
-          if (chokidarWatcher) {
-            chokidarWatcherByAssetServer.set(assetServer, chokidarWatcher)
-          }
-          if (watcher) {
-            watcherByAssetServer.set(assetServer, watcher)
-          }
         }
       },
       () => {
         // The HMR client request and close() still report the original factory failure.
         varyHmrScripts = false
         startLocalWatcher()
-        if (chokidarWatcher) {
-          chokidarWatcherByAssetServer.set(assetServer, chokidarWatcher)
-        }
-        if (watcher) {
-          watcherByAssetServer.set(assetServer, watcher)
-        }
       },
     )
   }

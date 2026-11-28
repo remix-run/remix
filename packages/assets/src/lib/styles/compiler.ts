@@ -195,13 +195,10 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
         resolveArgs,
       )
       let record = styleStore.get(resolvedStyle.identityPath)
-      if (
-        record.emitted &&
-        !hasHmrTimestampedDependency(record.resolved) &&
-        styleStore.isEmittedFresh(record)
-      ) {
+      let fresh = getFreshEmittedStyle(record)
+      if (fresh) {
         let notModified = getNotModifiedResult(
-          getEmittedAssetForRequest(record.emitted, getOptions.isSourceMapRequest),
+          getEmittedAssetForRequest(fresh, getOptions.isSourceMapRequest),
           getOptions,
         )
         if (notModified) return notModified
@@ -304,15 +301,22 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     return transformStyleResult.value
   }
 
-  async function getOrCreateEmittedStyle(record: StyleRecord): Promise<EmittedStyle> {
+  function getFreshEmittedStyle(record: StyleRecord): EmittedStyle | null {
     if (
-      record.emitted &&
-      styleStore.isEmittedFresh(record) &&
-      !hasHmrTimestampedDependency(record.resolved)
+      !record.emitted ||
+      !styleStore.isEmittedFresh(record) ||
+      hasHmrTimestampedDependency(record.resolved)
     ) {
-      styleStore.touchEmitted(record.identityPath)
-      return record.emitted
+      return null
     }
+
+    styleStore.touchEmitted(record.identityPath)
+    return record.emitted
+  }
+
+  async function getOrCreateEmittedStyle(record: StyleRecord): Promise<EmittedStyle> {
+    let fresh = getFreshEmittedStyle(record)
+    if (fresh) return fresh
 
     let graph = await resolveStyleGraph(record.identityPath)
     return getOrCreateEmittedStyleFromGraph(record, graph)
@@ -327,14 +331,9 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       throw new Error(`Missing resolved style ${record.identityPath}`)
     }
 
-    if (
-      record.invalidationVersion === graphEntry.invalidationVersion &&
-      record.emitted &&
-      styleStore.isEmittedFresh(record) &&
-      !hasHmrTimestampedDependency(record.resolved)
-    ) {
-      styleStore.touchEmitted(record.identityPath)
-      return record.emitted
+    if (record.invalidationVersion === graphEntry.invalidationVersion) {
+      let fresh = getFreshEmittedStyle(record)
+      if (fresh) return fresh
     }
 
     let cacheKey = getCacheKey(record.identityPath, graphEntry.invalidationVersion)

@@ -60,9 +60,10 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
       let targetsToRemove: string[] = []
 
       for (let directory of delta.remove) {
-        if (!watchedDirectories.delete(directory)) continue
+        let normalizedDirectory = normalizeWatchDirectory(directory)
+        if (!watchedDirectories.delete(normalizedDirectory)) continue
         for (let target of getDirectoryWatchTargets(
-          directory,
+          normalizedDirectory,
           normalizedRootDir,
           includeAncestors,
         )) {
@@ -78,10 +79,11 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
       }
 
       for (let directory of delta.add) {
-        if (watchedDirectories.has(directory)) continue
-        watchedDirectories.add(directory)
+        let normalizedDirectory = normalizeWatchDirectory(directory)
+        if (watchedDirectories.has(normalizedDirectory)) continue
+        watchedDirectories.add(normalizedDirectory)
         for (let target of getDirectoryWatchTargets(
-          directory,
+          normalizedDirectory,
           normalizedRootDir,
           includeAncestors,
         )) {
@@ -125,12 +127,15 @@ function resolveChokidarWatchOptions(
   }
 }
 
+function normalizeWatchDirectory(directory: string): string {
+  return normalizeFilePath(directory).replace(/\/+$/, '')
+}
+
 function getDirectoryWatchTargets(
-  directory: string,
+  normalizedDirectory: string,
   normalizedRootDir: string,
   includeAncestors: boolean,
 ): string[] {
-  let normalizedDirectory = normalizeFilePath(directory).replace(/\/+$/, '')
   if (!includeAncestors || !isSameOrDescendantPath(normalizedDirectory, normalizedRootDir)) {
     return [normalizedDirectory]
   }
