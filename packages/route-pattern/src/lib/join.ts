@@ -1,5 +1,6 @@
 import { createRoutePattern, RoutePattern } from './route-pattern.ts'
 import type { RoutePatternParts, PartPattern, PartPatternToken } from './route-pattern.ts'
+import { separatorToken } from './route-pattern/parse.ts'
 import type { JoinPatterns } from './types/join.ts'
 
 /**
@@ -71,7 +72,7 @@ function joinPathname(base: PartPattern, next: PartPattern): PartPattern {
   let nextFirstNonOptional = next.tokens.find((token) => token.type !== '(' && token.type !== ')')
   let needsSeparator =
     nextFirstNonOptional === undefined || nextFirstNonOptional.type !== 'separator'
-  if (needsSeparator) tokens.push({ type: 'separator' })
+  if (needsSeparator) tokens.push(separatorToken)
 
   let tokenOffset = tokens.length
   next.tokens.forEach((token) => tokens.push(token))
@@ -108,6 +109,9 @@ function joinSearch(
   base: RoutePatternParts['search'],
   next: RoutePatternParts['search'],
 ): RoutePatternParts['search'] {
+  if (base.size === 0) return next
+  if (next.size === 0) return base
+
   let result = new Map<string, Set<string>>()
 
   for (let [name, values] of base) {

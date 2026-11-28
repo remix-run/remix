@@ -60,6 +60,7 @@ export function consumeMatchWork(budget: MatchWorkBudget, count: number): void {
 }
 
 export function resolveMatcherLimits(limits?: Partial<MatcherLimits>): MatcherLimits {
+  if (limits === undefined) return defaultMatcherLimits
   let result = { ...defaultMatcherLimits, ...limits }
   for (let [limit, maximum] of Object.entries(result)) {
     if (!Number.isSafeInteger(maximum) || maximum < 0) {

@@ -53,6 +53,9 @@ type Optionalize<record extends Record<string, string | undefined>> =
   & { [key in keyof record as undefined extends record[key] ? never : key]: string | number }
   & { [key in keyof record as undefined extends record[key] ? key : never]?: string | number | null | undefined }
 
+const emptyParams: Record<string, unknown> = {}
+const dotSegmentCandidatePattern = /^[.2e]{1,6}$/i
+
 /**
  * Generate an href from a route pattern and the supplied params.
  *
@@ -74,6 +77,7 @@ export function createHref<source extends string>(
   pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
   let patternParts = pattern._parts
   let [params, options] = args
+  let resolvedParams = params ?? emptyParams
 
   let hasOrigin =
     patternParts.protocol !== null || patternParts.hostname !== null || patternParts.port !== null
@@ -88,23 +92,34 @@ export function createHref<source extends string>(
     if (patternParts.hostname === null) {
       throw new CreateHrefError({ type: 'missing-hostname', pattern })
     }
-    let hostname = hrefPart(pattern, patternParts.hostname, params ?? {})
+    let hostname = hrefPart(pattern, patternParts.hostname, resolvedParams, false) as string
 
     let port = patternParts.port === null ? '' : `:${patternParts.port}`
     targetOrigin = `${protocol}://${hostname}${port}`
   }
 
-  let variables: Array<PathnameVariable> = []
-  let renderedPathname = hrefPart(pattern, patternParts.pathname, params ?? {}, variables)
-  let pathname = '/' + renderedPathname.replace(/^\/+/, '')
+  let rendered = hrefPart(pattern, patternParts.pathname, resolvedParams, true)
+  let renderedPathname = typeof rendered === 'string' ? rendered : rendered.href
+  let variables = typeof rendered === 'string' ? null : rendered.variables
+  let pathname: string
+  if (renderedPathname.charCodeAt(0) === 47) {
+    let i = 1
+    while (i < renderedPathname.length && renderedPathname.charCodeAt(i) === 47) i += 1
+    pathname = '/' + renderedPathname.slice(i)
+  } else {
+    pathname = '/' + renderedPathname
+  }
 
-  let search = hrefSearch(patternParts.search, options?.searchParams)
+  let search =
+    patternParts.search.size === 0 && options?.searchParams === undefined
+      ? undefined
+      : hrefSearch(patternParts.search, options?.searchParams)
   let searchSuffix = search === undefined ? '' : `?${search}`
 
   let pathnameProtocol = 'https:'
   let relativePrefixLength = 0
   if (options?.baseURL !== undefined) {
-    let baseURL = new URL(options.baseURL)
+    let baseURL = options.baseURL instanceof URL ? options.baseURL : new URL(options.baseURL)
     let baseOrigin = baseURL.origin
     let targetURLOrigin = targetOrigin === undefined ? baseOrigin : new URL(targetOrigin).origin
     if (targetURLOrigin === baseOrigin) {
@@ -119,15 +134,17 @@ export function createHref<source extends string>(
   }
 
   let href = pathname + searchSuffix
-  // Relative formatting replaces a prefix and preserves the rest of the rendered path.
-  rejectVariableDotSegments(
-    pattern,
-    variables,
-    href,
-    pathname.length - renderedPathname.length,
-    relativePrefixLength,
-    pathnameProtocol,
-  )
+  if (variables !== null) {
+    // Relative formatting replaces a prefix and preserves the rest of the rendered path.
+    rejectVariableDotSegments(
+      pattern,
+      variables,
+      href,
+      pathname.length - renderedPathname.length,
+      relativePrefixLength,
+      pathnameProtocol,
+    )
+  }
   return (targetOrigin ?? '') + href
 }
 
@@ -177,16 +194,18 @@ function hrefPart(
   pattern: RoutePattern,
   part: PartPattern,
   params: Record<string, unknown>,
-  variables?: Array<PathnameVariable>,
-): string {
+  collectVariables: boolean,
+): string | { href: string; variables: Array<PathnameVariable> } {
   let separator = part.type === 'hostname' ? '.' : '/'
-  let missingParams: Array<string> = []
+  let missingParams: Array<string> | null = null
+  let variables: Array<PathnameVariable> | null = null
 
   let href = ''
-  let stack: Array<{ begin: number; offset: number; variableCount: number }> = []
+  let stack: Array<{ begin: number; offset: number; variableCount: number }> | null = null
+  let tokens = part.tokens
   let i = 0
-  while (i < part.tokens.length) {
-    let token = part.tokens[i]
+  while (i < tokens.length) {
+    let token = tokens[i]
     if (token.type === 'text') {
       href += token.text
       i += 1
@@ -198,34 +217,37 @@ function hrefPart(
       continue
     }
     if (token.type === '(') {
+      stack ??= []
       stack.push({ begin: i, offset: href.length, variableCount: variables?.length ?? 0 })
       i += 1
       continue
     }
     if (token.type === ')') {
-      stack.pop()
+      stack!.pop()
       i += 1
       continue
     }
     if (token.type === ':' || token.type === '*') {
       let value = params[token.name]
       if (value == null) {
-        let frame = stack.pop()
+        let frame = stack?.pop()
         if (frame === undefined) {
           if (token.name === '*') {
             throw new CreateHrefError({ type: 'nameless-wildcard', pattern })
           }
+          missingParams ??= []
           if (!missingParams.includes(token.name)) missingParams.push(token.name)
           i += 1
           continue
         }
         href = href.slice(0, frame.offset)
-        if (variables) variables.length = frame.variableCount
+        if (variables !== null) variables.length = frame.variableCount
         i = part.optionals.get(frame.begin)! + 1
+        let parentOffset = stack!.length > 0 ? stack![stack!.length - 1].offset : 0
         if (
-          href.length > (stack.at(-1)?.offset ?? 0) &&
+          href.length > parentOffset &&
           href.endsWith(separator) &&
-          part.tokens[i]?.type === 'separator'
+          tokens[i]?.type === 'separator'
         ) {
           i += 1
         }
@@ -234,7 +256,12 @@ function hrefPart(
       if (part.type === 'pathname' && token.type === ':') {
         let serialized = String(value)
         // The variable may supply part of an encoded dot next to literal pattern text.
-        if (variables && /^[.2e]{1,6}$/i.test(serialized)) {
+        if (
+          collectVariables &&
+          serialized.length <= 6 &&
+          dotSegmentCandidatePattern.test(serialized)
+        ) {
+          variables ??= []
           variables.push({ offset: href.length, name: token.name, value: serialized })
         }
         href += encodePathnameVariableParam(pattern, token.name, serialized)
@@ -250,7 +277,7 @@ function hrefPart(
     }
     unreachable(token.type)
   }
-  if (missingParams.length > 0) {
+  if (missingParams !== null) {
     throw new CreateHrefError({
       type: 'missing-params',
       pattern,
@@ -258,9 +285,9 @@ function hrefPart(
       params,
     })
   }
-  if (stack.length !== 0) unreachable()
+  if (stack !== null && stack.length !== 0) unreachable()
 
-  return href
+  return variables !== null && variables.length > 0 ? { href, variables } : href
 }
 
 function rejectVariableDotSegments(
@@ -328,8 +355,9 @@ function hrefSearch(
       if (urlSearchParams.has(key)) continue
       urlSearchParams.append(key, '')
     } else {
+      let existing = urlSearchParams.getAll(key)
       for (let value of requiredValues) {
-        if (urlSearchParams.getAll(key).includes(value)) continue
+        if (existing.includes(value)) continue
         urlSearchParams.append(key, value)
       }
     }
@@ -434,16 +462,32 @@ export function encodePathnameVariable(value: unknown) {
 
 export function encodePathnameWildcard(value: unknown) {
   let serialized = String(value)
-  return serialized
-    .split('/')
-    .map((segment) => {
-      // Percent-encoding dots cannot preserve these segments through URL normalization.
-      if (segment === '.' || segment === '..') {
-        throw new CreateHrefError({ type: 'invalid-pathname-wildcard', value: serialized, segment })
-      }
-      return encodePathnameSegment(segment)
-    })
-    .join('/')
+  let slash = serialized.indexOf('/')
+  if (slash === -1) {
+    if (serialized === '.' || serialized === '..') {
+      throw new CreateHrefError({
+        type: 'invalid-pathname-wildcard',
+        value: serialized,
+        segment: serialized,
+      })
+    }
+    return encodePathnameSegment(serialized)
+  }
+
+  let result = ''
+  let pos = 0
+  while (true) {
+    let segment = slash === -1 ? serialized.slice(pos) : serialized.slice(pos, slash)
+    // Percent-encoding dots cannot preserve these segments through URL normalization.
+    if (segment === '.' || segment === '..') {
+      throw new CreateHrefError({ type: 'invalid-pathname-wildcard', value: serialized, segment })
+    }
+    result += encodePathnameSegment(segment)
+    if (slash === -1) return result
+    result += '/'
+    pos = slash + 1
+    slash = serialized.indexOf('/', pos)
+  }
 }
 
 function encodePathnameSegment(value: string): string {
@@ -451,29 +495,19 @@ function encodePathnameSegment(value: string): string {
 }
 
 function encodePathnameVariableSegment(value: string): string {
-  return encodePathnameSegment(value).replaceAll('.', '%2E')
+  let encoded = encodePathnameSegment(value)
+  return encoded.indexOf('.') === -1 ? encoded : encoded.replaceAll('.', '%2E')
 }
-
-/**
- * Keep hostname params from changing URL authority structure when parsed. `@` ends userinfo,
- * `:` starts the port, and `/`, `?`, and `#` start the path, query, and fragment. A backslash
- * also starts the path for special URL schemes such as HTTP and HTTPS. Hostname
- * variables also reject `.` because dots separate host labels; hostname wildcards allow `.` to
- * span labels intentionally.
- *
- * @see https://url.spec.whatwg.org/#authority-state
- * @see https://url.spec.whatwg.org/#host-parsing
- */
-const HOSTNAME_PARAM_STRUCTURAL_CHARS = ['@', ':', '/', '\\', '?', '#', '%']
 
 export function validateHostnameVariable(value: unknown): string {
   let serialized = String(value)
-  for (let char of serialized) {
-    if (char === '.' || isInvalidHostnameParamChar(char)) {
+  for (let i = 0; i < serialized.length; i++) {
+    let code = serialized.charCodeAt(i)
+    if (code === 46 || isInvalidHostnameParamCode(code)) {
       throw new CreateHrefError({
         type: 'invalid-hostname-variable',
         value: serialized,
-        char,
+        char: serialized[i],
       })
     }
   }
@@ -482,19 +516,36 @@ export function validateHostnameVariable(value: unknown): string {
 
 export function validateHostnameWildcard(value: unknown): string {
   let serialized = String(value)
-  for (let char of serialized) {
-    if (isInvalidHostnameParamChar(char)) {
+  for (let i = 0; i < serialized.length; i++) {
+    let code = serialized.charCodeAt(i)
+    if (isInvalidHostnameParamCode(code)) {
       throw new CreateHrefError({
         type: 'invalid-hostname-wildcard',
         value: serialized,
-        char,
+        char: serialized[i],
       })
     }
   }
   return serialized
 }
 
-function isInvalidHostnameParamChar(char: string): boolean {
-  let code = char.charCodeAt(0)
-  return code <= 0x1f || code === 0x7f || HOSTNAME_PARAM_STRUCTURAL_CHARS.includes(char)
+// Keep hostname params from changing URL authority structure when parsed. `@` ends userinfo,
+// `:` starts the port, and `/`, `?`, and `#` start the path, query, and fragment. A backslash
+// also starts the path for special URL schemes such as HTTP and HTTPS. Hostname
+// variables also reject `.` because dots separate host labels; hostname wildcards allow `.` to
+// span labels intentionally.
+// https://url.spec.whatwg.org/#authority-state
+// https://url.spec.whatwg.org/#host-parsing
+function isInvalidHostnameParamCode(code: number): boolean {
+  return (
+    code <= 0x1f ||
+    code === 0x7f ||
+    code === 64 || // '@'
+    code === 58 || // ':'
+    code === 47 || // '/'
+    code === 92 || // '\\'
+    code === 63 || // '?'
+    code === 35 || // '#'
+    code === 37 // '%'
+  )
 }
