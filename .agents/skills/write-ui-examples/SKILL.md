@@ -118,6 +118,8 @@ When it fails, return to scenario selection and compare alternatives. Shortening
 
 ## Verify the result
 
+For changed motion, theme behavior, layout stability or modal interactions, use the matching [browser check](../remix/references/browser-checks.md). Consult [modern browser UI](../remix/references/modern-web.md) when translating a web-platform example into Remix.
+
 Review complete interaction sequences, not only isolated actions. Selection should still be valid after closing, blurring and submitting. Check that aliases or custom labels remain compatible with later validation, and distinguish internal state, visible text and submitted values. Verify native behaviors such as form reset instead of assuming that using a native input integrates the primitive with them.
 
 Keep live-example tests focused on the behavior each example teaches. For each test, identify a plausible regression and temporarily introduce it to verify that the test fails for the expected reason, then restore the source. A companion filename or successful render is not enough. Assert the intended visible outcome as well as relevant state, focus or form behavior. Programmatic clicks can activate hidden elements, and unrelated transitions can satisfy broad animation checks. Keep assertions specific to the element and behavior being taught. Use a small docs-site smoke test for shared hydration and real browser interaction rather than duplicating every example as an end-to-end test. Keep exhaustive primitive coverage in the library tests.

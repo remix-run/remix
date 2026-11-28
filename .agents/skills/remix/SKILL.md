@@ -106,6 +106,10 @@ Event handlers run only when the component is mounted or hydrated in the browser
 - Prefer Web APIs, native links, buttons, and forms, plus existing first-party Remix primitives, over custom abstractions.
 - Treat browser-reachable modules as public: keep secrets and trusted server logic out of them. In the starter, colocated `public/` directories mark browser-reachable source.
 
+## Modern Browser UI
+
+When adapting web-platform examples, implementing native dialogs or popovers, or changing motion, theme behavior, or layout stability, read [modern browser UI](references/modern-web.md). It maps browser guidance to installed Remix APIs and the app's browser requirements. Load only the relevant external guide and [browser check](references/browser-checks.md) for the task.
+
 ## Verify the Behavior
 
 Use the app's scripts for relevant tests and typechecking, then verify the changed behavior directly. For UI changes, exercise the interaction in the browser, not just the rendered appearance. When enhancing a server-rendered page, check both ordinary document behavior and the enhanced path. Test rejection and failure paths for changes involving untrusted input or access control.

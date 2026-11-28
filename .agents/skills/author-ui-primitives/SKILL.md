@@ -9,6 +9,11 @@ Use this skill when building or revising `packages/ui` primitive APIs. The publi
 `@remix-run/ui/*` entries are sourced from `packages/ui/src/*` and are not
 available through the `remix` package.
 
+For native top-layer behavior, modern CSS or motion, consult the relevant parts of
+[modern browser UI](../remix/references/modern-web.md). Use its
+[browser checks](../remix/references/browser-checks.md) when verifying focus,
+reduced motion or layout stability against the primitive's contract.
+
 ## Source Layout
 
 Each public primitive has a top-level `packages/ui/src/<name>.ts` or
