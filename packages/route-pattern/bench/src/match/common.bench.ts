@@ -56,6 +56,7 @@ for (let count of [10, 100, 1000, 5000]) {
         matchers.routePattern,
         matchers.findMyWay,
         matchers.pathToRegexp,
+        matchers.urlPattern,
       ],
       patterns,
       urls: generateUrls(),

@@ -86,6 +86,50 @@ export let matchers = {
       }
     },
   },
+  // TODO: Add a `URLPatternList` adapter once `URLPatternList` lands in common JS runtimes.
+  urlPattern: {
+    name: 'URLPattern',
+    supportsDetailedVerification: false,
+    createMatcher: () => {
+      let specific: Array<{ pattern: URLPattern; data: unknown }> = []
+      let catchAlls: Array<{ pattern: URLPattern; data: unknown }> = []
+
+      return {
+        ignoreCase: false,
+        add(pattern: string, data: unknown) {
+          let translated = (pattern.startsWith('/') ? pattern : `/${pattern}`)
+            // optionals
+            .replaceAll('(', '{')
+            .replaceAll(')', '}?')
+            // named wildcards
+            .replace(/\*([a-zA-Z_$][a-zA-Z0-9_$]*)/g, ':$1(.*)')
+          let entry = { pattern: new URLPattern({ pathname: translated }), data }
+          if (translated === '/*') catchAlls.push(entry)
+          else specific.push(entry)
+        },
+        match(url: string | URL) {
+          let href = typeof url === 'string' ? url : url.href
+          for (let entry of specific) {
+            if (entry.pattern.test(href)) {
+              let result = entry.pattern.exec(href)!
+              return { params: result.pathname.groups, data: entry.data } as any
+            }
+          }
+          for (let entry of catchAlls) {
+            if (entry.pattern.test(href)) {
+              let result = entry.pattern.exec(href)!
+              return { params: result.pathname.groups, data: entry.data } as any
+            }
+          }
+          return null
+        },
+        matchAll(url: string | URL) {
+          let result = this.match(url)
+          return result ? [result] : []
+        },
+      }
+    },
+  },
 } satisfies Record<
   string,
   {
