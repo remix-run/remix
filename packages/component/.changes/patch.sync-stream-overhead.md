@@ -1,1 +1,0 @@
-Skip allocating an `AbortController` and registering request abort listeners in `renderToStream()` when a tree finishes synchronously without streaming frames or async client entries, return an empty stream immediately for pre-aborted signals, and resolve synchronous `resolveClientEntry` results without extra promise wrapping.

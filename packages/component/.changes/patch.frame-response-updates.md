@@ -1,1 +1,0 @@
-Show streamed child frame content as soon as its template arrives, even when the opening `<template>` tag is split across two network chunks. Previously the content could wait until the parent response finished.

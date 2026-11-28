@@ -1,1 +1,0 @@
-`bigint()` from `remix/data-schema/coerce` now rejects strings longer than 4,096 UTF-16 code units, including surrounding whitespace, with an `Expected bigint string of at most 4096 characters` issue. This bounds the work `BigInt()` does on untrusted input such as form fields and query parameters.

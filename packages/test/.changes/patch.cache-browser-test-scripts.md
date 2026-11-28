@@ -1,1 +1,0 @@
-Speed up browser tests by reusing compiled scripts across test files within a browser run. The runner checks file metadata before serving a cached script so source edits and replacements are picked up on subsequent requests.

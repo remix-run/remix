@@ -2,6 +2,12 @@
 
 This is the changelog for [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser). It follows [semantic versioning](https://semver.org/).
 
+## v1.1.3
+
+### Patch Changes
+
+- Speed up multipart boundary search on Bun, which now uses native `Buffer.indexOf` like Node.js, and on runtimes without a global `Buffer`, such as Deno, which now use a Knuth–Morris–Pratt search. Bun 1.4.3 is now the minimum supported Bun version. ([#12367](https://github.com/remix-run/remix/pull/12367))
+
 ## v1.1.2
 
 ### Patch Changes

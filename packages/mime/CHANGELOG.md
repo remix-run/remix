@@ -2,6 +2,12 @@
 
 This is the changelog for [`mime`](https://github.com/remix-run/remix/tree/main/packages/mime). It follows [semantic versioning](https://semver.org/).
 
+## v1.0.1
+
+### Patch Changes
+
+- Fix `detectMimeType()` and `detectContentType()` throwing for filenames whose extension matches an inherited object property, such as `file.constructor` or `file.__proto__`. These extensions are now treated as unknown. ([#12422](https://github.com/remix-run/remix/pull/12422))
+
 ## v1.0.0
 
 ### Major Changes

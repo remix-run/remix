@@ -2,6 +2,18 @@
 
 This is the changelog for [`render-middleware`](https://github.com/remix-run/remix/tree/main/packages/render-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v1.1.2
+
+### Patch Changes
+
+- Fold DOCTYPE prepending into shell tracking in `render()` to eliminate an extra wrapper `ReadableStream` and resolve non-`file:` client entries synchronously. ([#12463](https://github.com/remix-run/remix/pull/12463))
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@1.0.4`](https://github.com/remix-run/remix/releases/tag/assets@1.0.4)
+  - [`component@1.4.0`](https://github.com/remix-run/remix/releases/tag/component@1.4.0)
+  - [`csp-middleware@1.0.2`](https://github.com/remix-run/remix/releases/tag/csp-middleware@1.0.2)
+  - [`fetch-router@1.1.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@1.1.0)
+
 ## v1.1.1
 
 ### Patch Changes
