@@ -32,6 +32,7 @@ export type { UnsafeHTML } from './runtime/vnode.ts'
 export { Portal } from './runtime/portal.ts'
 export { Frame } from './runtime/frame.ts'
 export type { PortalProps } from './runtime/component.ts'
+export type { FrameUpdateDetail, FrameUpdateEvent } from './runtime/frame.ts'
 export type {
   Task,
   Handle,

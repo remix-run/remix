@@ -25,6 +25,7 @@ import {
   type ResolveFrame,
   type ResolveFrameOptions,
 } from './frame-runtime.ts'
+import { closeLiveFrames, resolveLiveFrame, type RequestLiveFrame } from './live-connections.ts'
 import {
   getInterceptableNavigation,
   setAppFrames,
@@ -165,7 +166,7 @@ export async function defaultResolveFrame(
       request.headers = { 'Content-Type': 'application/x-www-form-urlencoded' }
     }
   }
-  let response = await fetchFrame(src, options?.target, request, overrides?.fetch)
+  let response = await requestFrame(src, options, request, overrides)
   if (response.status >= 500 || (response.status >= 300 && !isHtmlResponse(response))) {
     throw new Error(`Failed to resolve frame: ${response.status} ${response.statusText}`.trimEnd())
   }
@@ -173,6 +174,32 @@ export async function defaultResolveFrame(
   if (overrides?.commit) setFrameCommit(response, overrides.commit)
 
   return response
+}
+
+// A plain GET can be answered by a live connection, which outlives the frame that opened it and is
+// shared with every other frame reading the same source. Submissions always make their own request.
+function requestFrame(
+  src: string,
+  options: ResolveFrameOptions | undefined,
+  request: RequestInit,
+  overrides?: DefaultResolveFrameOverrides,
+): Promise<Response> {
+  let send: RequestLiveFrame = ({ lastEventId, signal } = {}) => {
+    let init = signal === undefined ? request : { ...request, signal }
+    if (lastEventId !== undefined) {
+      // Resuming a dropped connection tells the server where the frame got to.
+      let headers = new Headers(init.headers)
+      headers.set('Last-Event-Id', lastEventId)
+      init = { ...init, headers }
+    }
+
+    return fetchFrame(src, options?.target, init, overrides?.fetch)
+  }
+
+  let method = (options?.method ?? 'get').toLowerCase()
+  if (request.body != null || (method !== 'get' && method !== 'head')) return send({})
+
+  return resolveLiveFrame(new URL(src, document.baseURI).href, send, options?.signal)
 }
 
 /**
@@ -237,6 +264,7 @@ export function run(init: RunInit): AppRuntime {
     flush: () => topFrame.flush(),
     dispose: () => {
       appController.abort()
+      closeLiveFrames()
       topFrame.dispose()
       styleManager.dispose()
       clearAppFrames()

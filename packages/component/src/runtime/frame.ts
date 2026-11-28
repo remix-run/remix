@@ -69,6 +69,7 @@ import {
   findOptionalEndMarker,
   getClientEntryKey,
 } from './diff-dom.ts'
+import { createLiveFrameStream, isEventStreamResponse, isLiveFrameStream } from './event-stream.ts'
 import {
   createStyleManager,
   getDefaultStyleManager,
@@ -85,6 +86,7 @@ import {
   type FlushKind,
   getFrameId,
   getHydrationId,
+  inferFlushKind,
   isFrameEnd,
   isFrameStart,
   isFrameTemplateEnd,
@@ -223,15 +225,27 @@ function createLinkedAbortController(signal?: AbortSignal): {
   return { controller, disconnect: () => signal?.removeEventListener('abort', abort) }
 }
 
-// Marker-less HTML is a whole document when it starts with a doctype or `<html>`.
-// `renderToString` strips flush markers before returning, and so does any comment-stripping
-// minifier run over static output, so the marker alone cannot tell the two apart here.
-// Diffing such HTML as a fragment parses it inside a `<template>`, which drops the
-// `<html>`/`<head>`/`<body>` wrappers and makes the document diff throw HierarchyRequestError.
-const FULL_DOCUMENT_PATTERN = /^\s*(?:<!doctype\b|<html\b)/i
+/**
+ * What a live frame did with the event it just rendered.
+ */
+export type FrameUpdateDetail = {
+  /** `append` added the event's HTML to the frame; `replace` reconciled the frame against it. */
+  kind: 'append' | 'replace'
+}
 
-function inferFlushKind(html: string): FlushKind {
-  return FULL_DOCUMENT_PATTERN.test(html) ? 'document' : 'fragment'
+/**
+ * Event dispatched from a frame after it renders an event from its live connection.
+ *
+ * It bubbles, so listening on any element around the frame reports every update to it, which is
+ * how surrounding UI learns that the frame's content changed.
+ */
+export type FrameUpdateEvent = CustomEvent<FrameUpdateDetail>
+
+declare global {
+  // Declared on every element, so listening for it is typed wherever a frame can be wrapped.
+  interface ElementEventMap {
+    'rmx:update': FrameUpdateEvent
+  }
 }
 
 /**
@@ -360,6 +374,9 @@ export type FrameInstance = {
 type RenderOptions = {
   reloadOrigin?: ReloadOrigin
   nonce?: string
+  // Identifies the live stream a batch belongs to, so the batch is not mistaken for the new
+  // content that should supersede its own connection.
+  live?: symbol
   navigationType?: NavigationType
   from?: NavigationHistoryEntry
   documentHref?: string
@@ -379,6 +396,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
   let container = createContainer(root)
   let nonceManager = getNonceManager()
   let contentRoot: VirtualRoot | undefined
+  // The open live (server-sent event) connection rendering into this frame, if any.
+  let liveStream: { token: symbol; controller: AbortController } | undefined
   // The style registry is document-level and shared by every frame; only the
   // frame that created it (the runtime root) disposes it.
   let ownsStyleManager = !init.styleManager
@@ -497,10 +516,23 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
       return renderContent(html, options, kind)
     }
 
+    // Any content that isn't a batch of the open connection replaces it, so the frame never has
+    // two sources writing into its region.
+    if (liveStream && liveStream.token !== options.live) {
+      liveStream.controller.abort()
+      liveStream = undefined
+    }
+
     if (content instanceof ReadableStream) {
       let signal = options.signal
         ? AbortSignal.any([lifecycleController.signal, options.signal])
         : lifecycleController.signal
+
+      if (isLiveFrameStream(content)) {
+        await renderLiveStream(content, options, signal)
+        return
+      }
+
       await renderFrameStream(
         content,
         container.doc,
@@ -576,7 +608,28 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     let responseContext = { ...options, ...context, data: options.data }
     let hydrationContainer = container
 
-    if (source instanceof HTMLElement) {
+    if (flushKind === 'append' && source instanceof DocumentFragment) {
+      if (isRenderAborted(options.signal)) return
+
+      let appended = Array.from(source.childNodes)
+      let parent =
+        container.regionParent ??
+        (container.root instanceof Document ? container.doc.body : (container.root as ParentNode))
+      for (let node of appended) {
+        insertDomNode(node, parent, container.regionTailRef ?? undefined)
+      }
+
+      // Only the new nodes are hydrated; what the frame already showed keeps its client entries,
+      // its frames, and whatever state they hold.
+      hydrationContainer = {
+        doc: container.doc,
+        root: container.root,
+        childNodes: appended,
+        regionStart: container.regionStart,
+        regionTailRef: container.regionTailRef,
+        regionParent: container.regionParent,
+      }
+    } else if (source instanceof HTMLElement) {
       let head = source.querySelector('head')
       let body = source.querySelector('body')
       invariant(head && body, 'Missing document head or body')
@@ -693,6 +746,92 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     )
     // Resolution reports errors before rejecting.
     void resolveAndRenderReload(controller, undefined, { navigationType, from }).catch(() => {})
+  }
+
+  // A live stream stays open after its first batch renders. Awaiting the whole connection would
+  // leave the reload, and any fallback, pending until the server hangs up, so the first batch
+  // settles the render and later batches keep rendering into the same region in the background.
+  async function renderLiveStream(
+    content: ReadableStream<Uint8Array>,
+    options: ActiveRenderOptions,
+    parentSignal: AbortSignal,
+  ): Promise<void> {
+    let controller = new AbortController()
+    let signal = AbortSignal.any([parentSignal, controller.signal])
+    let active = { token: Symbol('LiveFrameStream'), controller }
+    liveStream = active
+
+    let firstBatch = Promise.withResolvers<void>()
+    let rendered = false
+
+    let connection = renderFrameStream(
+      content,
+      container.doc,
+      async (html, kind) => {
+        if (isRenderAborted(signal)) return
+
+        if (rendered) {
+          // Later batches own their own frame data, the way a fresh render does.
+          let batch: ActiveRenderOptions = {
+            nonce: options.nonce,
+            documentHref: options.documentHref,
+            live: active.token,
+            signal,
+            data: {},
+          }
+          try {
+            await renderContent(html, batch, kind)
+          } finally {
+            clearRmxData(batch.data)
+          }
+
+          if (isRenderAborted(signal)) return
+          dispatchUpdate(kind)
+          return
+        }
+
+        rendered = true
+        try {
+          await renderContent(html, { ...options, live: active.token }, kind)
+        } finally {
+          firstBatch.resolve()
+        }
+
+        if (isRenderAborted(signal)) return
+        dispatchUpdate(kind)
+      },
+      options.nonce,
+      signal,
+      options.clientStreamSignal,
+    )
+
+    void connection
+      .catch((error) => {
+        if (isRenderAborted(signal)) return
+        firstBatch.reject(error)
+        if (rendered) init.errorTarget.dispatchEvent(createComponentErrorEvent(error))
+      })
+      .finally(() => {
+        if (liveStream === active) liveStream = undefined
+        firstBatch.resolve()
+      })
+
+    await firstBatch.promise
+  }
+
+  // Dispatched from the frame's start marker, which bubbles into the surrounding document, so
+  // UI around the frame can react to content it did not render itself.
+  function dispatchUpdate(flushKind: FlushKind): void {
+    let target: EventTarget =
+      container.regionStart ??
+      (container.root instanceof Document ? container.doc.body : (container.root as Element))
+
+    target.dispatchEvent(
+      new CustomEvent<FrameUpdateDetail>('rmx:update', {
+        bubbles: true,
+        detail: { kind: flushKind === 'append' ? 'append' : 'replace' },
+      }),
+    )
   }
 
   function startRendering(): void {
@@ -929,6 +1068,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): FrameInstance {
     disposed = true
     cancelDeferral()
     lifecycleController.abort()
+    liveStream?.controller.abort()
+    liveStream = undefined
     cancelCommit()
     clearRmxData(context.data)
     currentRequest?.abort()
@@ -3280,7 +3421,11 @@ export async function unwrapFrameResolution(
     }
   }
 
-  let content = resolution.body ?? (await resolution.text())
+  let body = resolution.body
+  let content: FrameContent =
+    body && isEventStreamResponse(resolution)
+      ? createLiveFrameStream(body)
+      : (body ?? (await resolution.text()))
   return {
     content,
     nonce: getResponseNonce(resolution),

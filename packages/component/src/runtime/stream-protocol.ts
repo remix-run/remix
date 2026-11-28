@@ -2,7 +2,14 @@ import { invariant } from './vnode.ts'
 
 export const ESCAPED_OBJECT = '$rmxObject'
 
-export type FlushKind = 'document' | 'fragment'
+/**
+ * How a flushed batch of HTML joins the frame it belongs to.
+ *
+ * `document` and `fragment` batches are reconciled against the frame's current content, replacing
+ * it. An `append` batch is added after that content instead, which lets a live frame push new rows,
+ * lines, or messages without resending what it already showed.
+ */
+export type FlushKind = 'document' | 'fragment' | 'append'
 
 // Comment markers the server writes around frames and client entries, and the client creates and
 // reads back. Readers trim the comment data, so the padding spaces are cosmetic.
@@ -61,7 +68,7 @@ function isStartMarker(node: Node | null | undefined, prefix: string): node is C
   return isCommentNode(node) && node.data.trim().startsWith(prefix)
 }
 
-const FLUSH_MARKER_PATTERN = /<!--\s*rmx:flush\s+(document|fragment)\s*-->/g
+const FLUSH_MARKER_PATTERN = /<!--\s*rmx:flush\s+(document|fragment|append)\s*-->/g
 
 export function appendFlushMarker(html: string, kind: FlushKind): string {
   return `${html}<!-- rmx:flush ${kind} -->`
@@ -73,4 +80,15 @@ export function stripFlushMarkers(html: string): string {
 
 export function findFlushMarkers(html: string) {
   return html.matchAll(FLUSH_MARKER_PATTERN)
+}
+
+// Marker-less HTML is a whole document when it starts with a doctype or `<html>`.
+// `renderToString` strips flush markers before returning, and so does any comment-stripping
+// minifier run over static output, so the marker alone cannot tell the two apart here.
+// Diffing such HTML as a fragment parses it inside a `<template>`, which drops the
+// `<html>`/`<head>`/`<body>` wrappers and makes the document diff throw HierarchyRequestError.
+const FULL_DOCUMENT_PATTERN = /^\s*(?:<!doctype\b|<html\b)/i
+
+export function inferFlushKind(html: string): FlushKind {
+  return FULL_DOCUMENT_PATTERN.test(html) ? 'document' : 'fragment'
 }

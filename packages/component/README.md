@@ -1397,6 +1397,7 @@ Every request sends `X-Remix-Frame: true`. Named frames also send `X-Remix-Targe
 - GET form values are already encoded in `src`. POST submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for `text/plain`, or `FormData` for `multipart/form-data`. Fetch generates multipart boundaries.
 - The resolver accepts `2xx` responses and HTML `3xx` or `4xx` responses, matching `text/html` case-insensitively. It rejects other `3xx` or `4xx` responses and all `5xx` responses with their status and status text.
 - The default fetch uses `same-origin` mode, which rejects cross-origin sources and redirects even when the destination allows CORS.
+- A `text/event-stream` body renders as a live frame, described in [Live Frames](#live-frames). Any resolver can return such a response, including a custom one.
 
 To use another body encoding or response policy, provide `resolveFrame` without delegating. It can return frame content directly or a `Response` with any status to stream its body. When Fetch follows a redirect, frames other than the top frame render the final content without changing the frame source or browser URL.
 
@@ -1470,6 +1471,75 @@ let viewTransition = document.startViewTransition(async () => {
 Add the application-defined `data-view-transition-image` attribute only to images needed for the snapshot, such as the destination's main product image. `Promise.allSettled()` handles decode failures. Preloading can reduce the wait but does not guarantee decoding has finished.
 
 Response bodies remain streamed. A slow body or image decode can delay the snapshot or cause the browser to skip the animation. Avoid awaiting `requestAnimationFrame` inside the update callback: rendering is paused and may prevent it from running.
+
+### Live Frames
+
+A frame renders a `text/event-stream` response as live content. Events named `rmx-replace` and `rmx-append` carry frame HTML, so a route can push UI updates over one connection instead of waiting for the next reload:
+
+```tsx
+<Frame name="order" src="/orders/42/live" fallback={<p>Connecting…</p>} />
+```
+
+```tsx
+// The route behind `src` keeps the response open and writes one event per update
+function liveOrder(): Response {
+  let stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let encoder = new TextEncoder()
+      for await (let order of watchOrder(42)) {
+        let html = await renderToString(<OrderStatus order={order} />)
+        controller.enqueue(encoder.encode(`event: rmx-replace\ndata: ${html}\n\n`))
+      }
+      controller.close()
+    },
+  })
+
+  return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } })
+}
+```
+
+- The frame resolves as soon as the first event renders. That replaces the `fallback`, settles `frame.reload()`, and unblocks a navigation, while the connection stays open for later events.
+- An `rmx-replace` event's HTML is reconciled against the frame's current content, the same way reload HTML is, so send a snapshot of the whole frame. Matching elements keep their DOM, including focus, scroll position, and client-owned state.
+- A frame renders only those two names. Every other event, an unnamed `message` event included, belongs to whatever else reads the stream, so one connection can carry an app's own events without a frame rendering them.
+- Comment lines such as `: ping` are dropped, which makes them the keepalive for an idle connection, and multi-line `data:` fields are joined with newlines.
+- Event data is trusted frame HTML and isn't sanitized, like every other frame resolution. It can select client entries and contribute import maps, styles, and nested frames.
+- A frame rendered on the server is already resolved, so it never opens a connection. A connection belongs to a frame the browser resolves: one created in the browser, a lazy frame reaching the viewport, a `frame.reload()`, or a navigation.
+- The default resolver sends `Accept: text/html, text/event-stream`, so one route can serve a document, a fragment, or a live stream depending on the request.
+
+#### Appending Instead of Replacing
+
+An `rmx-append` event adds its HTML after what the frame already shows, for streams that only ever grow, such as a log, a feed, or a transcript:
+
+```
+event: rmx-append
+id: 184
+data: <p>01:12:04 Signal box handover complete</p>
+```
+
+- Appended HTML joins the frame's content, not an element inside it. Put the list, the border, or the scroll container around the `<Frame>` rather than in the streamed HTML.
+- Existing nodes are untouched, so their client entries, nested frames, and state survive each append.
+- An `rmx-replace` event replaces everything the frame shows, appended content included, so a stream can mix the two: catch a frame up with a snapshot, then append to it.
+
+#### Reacting to Live Content
+
+A frame dispatches a bubbling `rmx:update` event after each event renders, so UI around the frame can react to content it didn't render itself:
+
+```tsx
+<div mix={on('rmx:update', (event) => setCount(event.currentTarget.querySelectorAll('li').length))}>
+  <Frame src="/orders/42/live" fallback={<p>Connecting…</p>} />
+</div>
+```
+
+`event.detail.kind` is `append` or `replace`. The event is declared on `ElementEventMap`, so its handler is typed without declaring anything in the app.
+
+#### Connections
+
+- Frames reading the same source share one connection. The first frame requests it, the rest subscribe, and a frame that joins an open connection is caught up at once with the last snapshot and the appends since it, up to the most recent 64.
+- The connection outlives the frame that opened it and closes once the last frame stops reading it, which happens when those frames reload, render other content, or are removed.
+- A connection that drops is requested again while frames are still reading it, sending `Last-Event-Id` when the stream sent ids, so the server can resume. Frames keep what they last rendered and aren't resolved again. Reconnection waits for the delay the stream asked for with `retry:`, three seconds by default, doubling up to thirty while attempts keep failing.
+- A response that isn't an event stream ends the connection for good, the way a browser `EventSource` stops on one.
+- Only plain GET requests are shared this way. A submission, or any request with a body, always makes its own request. Frames requesting the same source at the same time wait for the first response to see whether it is a live connection to share.
+- Sharing and reconnection belong to the default resolver. A custom `resolveFrame` that returns an event-stream response still renders as a live frame, with its own connection, and doesn't reconnect on its own.
 
 ### Preserving Client-Owned DOM
 
